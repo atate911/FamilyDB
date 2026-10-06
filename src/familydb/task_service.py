@@ -15,7 +15,7 @@ from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from typing import Any
 
-from familydb import audience, voice
+from familydb import audience, presents, voice
 from familydb.dates import utc_iso
 from familydb.errors import ToolError
 from familydb.store import ideas, members, messages, tasks, wishes
@@ -317,14 +317,21 @@ def reminder_for(
     chat_id: str,
     due_when: str | None = None,
 ) -> str:
+    gifts = gifts_for(conn, task)
+    readers = {member.id for member in audience.readers(conn, channel, chat_id)}
+    kept = presents.of_presents(conn, gifts, members.list_all(conn))
+    shown = [idea for idea in gifts if not (kept[idea.id].ids & readers)]
     return reminder_text(
         task,
         settings,
         due_when=due_when,
-        gifts=gifts_for(conn, task),
+        gifts=shown,
         wished=birthday_wishes(conn, task),
         plain=audience.plain(conn, channel, chat_id),
-        presents=audience.everyone_may(conn, channel, chat_id, "decide"),
+        # Somebody reading may not see them (a kid, or the one a present is hidden from): say
+        # nothing of presents at all, rather than that there are none.
+        presents=audience.everyone_may(conn, channel, chat_id, "decide")
+        and len(shown) == len(gifts),
     )
 
 

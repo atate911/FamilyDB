@@ -140,6 +140,45 @@ def rating_text(idea: Idea) -> str | None:
     return f"done {times}, rated {idea.avg_rating:g}/10"
 
 
+STATUS_WORDS = {"idea": "An idea", "planned": "Planned", "done": "Done", "dropped": "Dropped"}
+
+
+def filter_words(kind: str, who: str, status: str) -> str:
+    """What the ideas filter holds, in words, for the fold's summary: "Any kind, anyone, any but
+    dropped"."""
+    return ", ".join(
+        [
+            kind_text(kind).capitalize() if kind else "Any kind",
+            who or "anyone",
+            STATUS_WORDS.get(status, status).lower() if status else "any but dropped",
+        ]
+    )
+
+
+def went_text(idea: Idea) -> str | None:
+    """ "Went Thu 1 Oct" for an idea the family has done, by its last time."""
+    if not idea.times_done or not idea.last_done_at:
+        return None
+    try:
+        return f"Went {day_short(date.fromisoformat(idea.last_done_at[:10]))}"
+    except ValueError:
+        return None
+
+
+def original_by(message: Any, people: Sequence[Any], tz: ZoneInfo) -> str:
+    """Who said the thought an idea came from, and when: "Maya, Sun 20 Sep"."""
+    name = next((p.display_name for p in people if p.id == message.member_id), None)
+    day = day_short(date.fromisoformat(local_day(message.received_at, tz)))
+    return f"{name}, {day}" if name else day
+
+
+def kind_name(kind: str) -> str:
+    """A kind as a label: "Day trip", and "Gift idea" for a present."""
+    if kind.strip().lower() == "gift":
+        return "Gift idea"
+    return kind_text(kind).capitalize()
+
+
 def kind_text(kind: str) -> str:
     """`day_trip` as "day trip"."""
     return kind.replace("_", " ")
@@ -179,14 +218,20 @@ def glyph_for(kind: str | None, *, gift: bool = False) -> str:
     return KIND_GLYPHS.get((kind or "").lower().replace(" ", "_"), "sparkle")
 
 
-def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
+def idea_row(idea: Idea, tz: ZoneInfo, *, hidden: str | None = None) -> dict[str, Any]:
+    """An idea as the pages draw it. `hidden` is who a present is kept from ("Maya and Theo"),
+    said on its tag wherever it shows."""
     return {
+        "hidden": hidden or None,
+        "gift": hidden is not None,
         "id": idea.id,
         "title": idea.title,
         "added": local_day(idea.created_at, tz),
+        "added_words": day_short(date.fromisoformat(local_day(idea.created_at, tz))),
         # Links come from chat and fetched pages: anything but an ordinary web address is dropped.
         "url": clean_url(idea.url),
         "kind": kind_text(idea.kind),
+        "kind_name": kind_name(idea.kind),
         "status": idea.status,
         "where": idea.location_name,
         "on": on_text(idea),
@@ -639,10 +684,20 @@ def freshness_text(place: Place | None, now: datetime, stale_days: int) -> str |
     return f"{when}, may be out of date" if is_stale(place, now, stale_days) else when
 
 
-def place_panel(place: Place | None, now: datetime, stale_days: int) -> dict[str, Any] | None:
+def hours_today(place: Place | None, today: date) -> str | None:
+    """ "open today 11:30 to 21:00", "closed today", or None where the hours are not known."""
+    state, ranges = open_on(place, today)
+    words = TODAY_HOURS[state]
+    return words.format(ranges=format_ranges(ranges) or "").strip() if words else None
+
+
+def place_panel(
+    place: Place | None, now: datetime, stale_days: int, today: date | None = None
+) -> dict[str, Any] | None:
     if place is None:
         return None
     return {
+        "today": hours_today(place, today) if today else None,
         "name": place.name,
         "summary": place.summary,
         "address": place.address,
@@ -666,10 +721,6 @@ TODAY_HOURS = {"open": "open today {ranges}", "closed": "closed today", "unknown
 def restaurant_card(
     idea: Idea, place: Place | None, today: date, now: datetime, stale_days: int
 ) -> dict[str, Any]:
-    state, ranges = open_on(place, today)
-    hours_today = TODAY_HOURS[state]
-    if hours_today:
-        hours_today = hours_today.format(ranges=format_ranges(ranges) or "").strip()
     return {
         "id": idea.id,
         "title": idea.title,
@@ -679,7 +730,7 @@ def restaurant_card(
         "cost": cost_text(idea.cost_level) or (place.price_note if place else None),
         "tags": idea.tags,
         "rating": rating_text(idea),
-        "today": hours_today,
+        "today": hours_today(place, today),
         "travel": travel_text(place),
         "website": clean_url(place.website if place else idea.url),
         "booking_url": clean_url(place.booking_url) if place else None,
@@ -907,28 +958,16 @@ def people_dot() -> dict[str, Any]:
     return {"name": EVERYONE, "slot": 0, "initial": ""}
 
 
-# The home radar: a dial 200 units across, rings at a week, two and four. (days away, distance).
-RADAR_RINGS = ((0, 12.0), (7, 33.0), (14, 66.0), (28, 92.0))
-# Blips sit on twelve bearings, 30 degrees apart; style.css (`.b1` to `.b11`) times each flare to
-# the sweep passing it (bearing 0 needs no delay).
-RADAR_BEARINGS = 12
-
-
-def radar_distance(away: float, rings: tuple[tuple[int, float], ...] = RADAR_RINGS) -> float:
-    """How far from the middle something `away` shows (days or minutes), within the last ring."""
-    away = max(0, away)
-    for (near_away, near), (far_away, far) in pairwise(rings):
-        if away <= far_away:
-            return near + (far - near) * (away - near_away) / (far_away - near_away)
-    return rings[-1][1]
-
-
-# The ideas radar is a map: home at the middle, north up, rings at 15 min, 45 min and 2 h by road.
-# (minutes away, distance), as in RADAR_RINGS.
-PLACE_RINGS = ((0, 8.0), (15, 33.0), (45, 66.0), (120, 92.0))
-PLACE_RING_LABELS = ("15m", "45m", "2h")
+# The ideas map: home at the middle, north up. A drive of this many minutes lies this share of the
+# way out; the first half hour gets 70% of the radius, so the places a family really goes spread.
+MAP_RINGS = (
+    (15, "15 min", 0.40),
+    (30, "30 min", 0.70),
+    (60, "1 h", 0.80),
+    (120, "2 h", 0.90),
+    (180, "3 h", 1.0),
+)
 COMPASS = ("north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west")
-POINTS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 
 
 def bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -974,13 +1013,6 @@ class Away:
             return "under 5 min from home"
         return f"{drive_text(self.minutes)} drive, {COMPASS[round(self.degrees / 45) % 8]}"
 
-    @property
-    def short(self) -> str:
-        """For the green screen beside the radar: "25 min NE"."""
-        if self.near:
-            return "under 5 min"
-        return f"{drive_text(self.minutes)} {POINTS[round(self.degrees / 45) % 8]}"
-
 
 def away_from_home(place: Place | None, settings: Settings) -> Away | None:
     """How far and which way a place is from home; None unless both are on the map."""
@@ -994,36 +1026,157 @@ def away_from_home(place: Place | None, settings: Settings) -> Away | None:
     return Away(estimate[0], bearing(settings.home_lat, settings.home_lon, place.lat, place.lon))
 
 
-def places_radar(placed: list[tuple[Idea, Away]]) -> dict[str, Any] | None:
-    """The ideas radar and the words beside it; None when nothing listed is on the map. The
-    nearest place is the brightest, since the words beside the radar name it."""
-    if not placed:
-        return None
-    ordered = sorted(placed, key=lambda pair: (pair[1].minutes, pair[0].id))
-    blips = []
-    for index, (_, away) in enumerate(ordered):
-        distance = radar_distance(away.minutes, PLACE_RINGS)
-        angle = math.radians(away.degrees)
-        blips.append(
-            {
-                "x": round(100 + distance * math.sin(angle), 1),
-                "y": round(100 - distance * math.cos(angle), 1),
-                "bearing": round(away.degrees / 30) % RADAR_BEARINGS,
-                "next": index == 0,
-            }
+def map_share(minutes: float) -> float:
+    """How far from home, as a share of the map's radius, a drive of this many minutes shows."""
+    stops = [(0.0, 0.0)] + [(float(m), share) for m, _, share in MAP_RINGS]
+    for (near_min, near), (far_min, far) in pairwise(stops):
+        if minutes <= far_min:
+            return near + (far - near) * (max(minutes, 0) - near_min) / (far_min - near_min)
+    return 1.0
+
+
+# The two drawings of the map: a wide one for the desktop (names 15 px, drawn at 1:1) and a narrow
+# one for the phone (names 14 px). (width, height, centre x, centre y, radius, name size, gap).
+MAP_SIZES = {
+    "wide": (860, 440, 430, 220, 200.0, 15, 12),
+    "narrow": (360, 400, 180, 196, 160.0, 14, 10),
+}
+# The words that say what an idea is, not where: left off a short name ("Silver Falls hike").
+KIND_WORDS = frozenset(
+    {"day", "trip", "hike", "weekend", "night", "roller", "rink", "walk", "visit"}
+)
+NAME_JOINS = (" at ", " in ", " for ", " with ", " to ", " on ")
+
+
+def short_name(title: str) -> str:
+    """What names an idea's dot on the map: "Pumpkin patch at Bi-Mart farm" is "Pumpkin patch",
+    "Oaks Park roller rink" is "Oaks Park". The card beside it has the whole title."""
+    text = " ".join(title.split())
+    lowered = text.lower()
+    for join in NAME_JOINS:
+        at = lowered.find(join)
+        if at > 0:
+            head = text[:at]
+            if len(head.split()) >= 2 or len(head) >= 8:
+                text = head
+            break
+    words = text.split()[:3]
+    while len(words) > 1 and words[-1].lower() in KIND_WORDS:
+        words.pop()
+    return " ".join(words)
+
+
+Box = tuple[float, float, float, float]
+
+
+def _meets(one: Box, other: Box) -> bool:
+    return one[0] < other[2] and other[0] < one[2] and one[1] < other[3] and other[1] < one[3]
+
+
+def _label(
+    x: float, y: float, name: str, size: str, taken: list[Box]
+) -> tuple[float, float, str, Box]:
+    """Where a dot's name goes: beside it on the side with room, above or below at the very edge
+    where it would meet the compass letters, and anywhere else that clears the other dots and
+    names (`taken`, which the caller adds this one to). Returns its x, y, anchor and box."""
+    width, _, cx, cy, radius, text_size, gap = MAP_SIZES[size]
+    room = len(name) * text_size * 0.52
+    left = x < cx
+    beside_left = (x - gap, y + 5, "end")
+    beside_right = (x + gap, y + 5, "start")
+    candidates = [beside_left, beside_right] if left else [beside_right, beside_left]
+    above = [(x - 8, y - 18, "end"), (x + 8, y - 18, "start")]
+    below = [(x + 8, y + 22, "start"), (x - 8, y + 22, "end")]
+    if abs(x - cx) > radius - 40 and abs(y - cy) < 16:
+        # Out at the end of the west-east axis, where the compass letter is: above, or below.
+        candidates = above[:1] + below[:1] if left else above[1:] + below[1:]
+        if left and x - gap - room < 8:
+            candidates = [(x - 12, y + 22, "start")]
+        elif not left and x + gap + room > width - 8:
+            candidates = [(x + 12, y + 22, "end")]
+    else:
+        candidates += above + below
+
+    def box(spot: tuple[float, float, float | str]) -> Box:
+        lx, ly, anchor = spot[0], spot[1], spot[2]
+        left_edge = lx - room if anchor == "end" else lx
+        return (left_edge, ly - text_size * 0.8, left_edge + room, ly + text_size * 0.3)
+
+    def fits(spot: tuple[float, float, str]) -> bool:
+        one = box(spot)
+        return one[0] >= 4 and one[2] <= width - 4 and not any(_meets(one, t) for t in taken)
+
+    chosen = next((c for c in candidates if fits(c)), None)
+    if chosen is None:
+        chosen = next(
+            (c for c in candidates if box(c)[0] >= 4 and box(c)[2] <= width - 4), candidates[0]
         )
+    one = box(chosen)
+    taken.append(one)
+    return round(chosen[0], 1), round(chosen[1], 1), chosen[2], one
 
-    def named(pair: tuple[Idea, Away]) -> dict[str, Any]:
-        idea, away = pair
-        return {"id": idea.id, "title": idea.title, "away": away.short}
 
-    return {
-        "blips": blips,
-        "rings": PLACE_RING_LABELS,
-        "count": len(ordered),
-        "nearest": named(ordered[0]),
-        "furthest": named(ordered[-1]) if len(ordered) > 1 else None,
-    }
+def places_map(placed: list[tuple[Idea, Away]]) -> dict[str, Any] | None:
+    """The map of how far each idea is from home, drawn at both sizes; None when there is nothing
+    to show (no idea has a drive time, or every one is inside the first ring, where the cards say
+    all there is to say)."""
+    if not placed or max(away.minutes for _, away in placed) <= MAP_RINGS[0][0]:
+        return None
+    ordered = sorted(placed, key=lambda pair: (pair[1].degrees, pair[1].minutes, pair[0].id))
+    plots = {}
+    for size, (width, height, cx, cy, radius, _, _) in MAP_SIZES.items():
+        rings = [
+            {
+                "r": round(radius * share, 1),
+                "name": name,
+                "x": cx + (6 if index % 2 == 0 else -6),
+                "y": round(cy - radius * share + 15, 1),
+                "anchor": "start" if index % 2 == 0 else "end",
+            }
+            for index, (_, name, share) in enumerate(MAP_RINGS)
+        ]
+        dots: list[dict[str, Any]] = []
+        for idea, away in ordered:
+            reach = radius * map_share(away.minutes)
+            degrees = away.degrees
+            for _ in range(6):  # ideas in the same direction are spread a few degrees apart
+                angle = math.radians(degrees)
+                x, y = cx + reach * math.sin(angle), cy - reach * math.cos(angle)
+                if all(math.hypot(x - one["x"], y - one["y"]) >= 26 for one in dots):
+                    break
+                degrees += 5
+            dots.append({"x": round(x, 1), "y": round(y, 1), "name": short_name(idea.title)})
+        # What a name must stay clear of: home, its name, the compass letters and every dot.
+        taken: list[Box] = [
+            (cx - 8, cy - 8, cx + 8, cy + 8),
+            (cx - 22, cy + 8, cx + 22, cy + 26),
+            (cx - 12, cy - radius - 20, cx + 2, cy - radius - 2),
+            (cx - 12, cy + radius + 2, cx + 2, cy + radius + 20),
+            (cx - radius - 20, cy - 6, cx - radius - 2, cy + 10),
+            (cx + radius + 2, cy - 6, cx + radius + 20, cy + 10),
+        ]
+        taken += [(d["x"] - 9, d["y"] - 9, d["x"] + 9, d["y"] + 9) for d in dots]
+        for dot in dots:
+            dot["label_x"], dot["label_y"], dot["anchor"], _ = _label(
+                dot["x"], dot["y"], dot["name"], size, taken
+            )
+        plots[size] = {
+            "width": width,
+            "height": height,
+            "cx": cx,
+            "cy": cy,
+            "radius": radius,
+            "rings": rings,
+            "axis": f"M{cx} {cy - radius:g}V{cy + radius:g}M{cx - radius:g} {cy}H{cx + radius:g}",
+            "compass": [
+                ("N", cx - 6, cy - radius - 5, "end"),
+                ("S", cx - 6, cy + radius + 15, "end"),
+                ("W", cx - radius - 8, cy + 5, "end"),
+                ("E", cx + radius + 8, cy + 5, "start"),
+            ],
+            "dots": dots,
+        }
+    return {"wide": plots["wide"], "narrow": plots["narrow"], "count": len(ordered)}
 
 
 AGENDA_NOTES = {

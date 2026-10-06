@@ -263,6 +263,11 @@ def _with_place(conn, idea, **fields):
     return place
 
 
+def _cards(text: str) -> int:
+    """How many idea cards a page draws."""
+    return len(re.findall(r'<article class="idea[ "]', text))
+
+
 def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> None:
     ramen = _idea(
         conn,
@@ -278,13 +283,13 @@ def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> N
     _idea(conn, "Museum day", kind="outing", participants=["with the girls"])
     page = _client(settings, clock).get("/ideas")
     assert page.status_code == 200
-    assert page.text.count('class="panel card"') == 2
+    assert _cards(page.text) == 2
     assert "2 ideas" in page.text
     # Titles come from chat, so they are escaped rather than rendered as markup.
     assert "Ramen &amp; noodles &lt;Main St&gt;" in page.text
     assert "<Main St>" not in page.text
     assert f'href="/idea/{ramen.id}"' in page.text
-    assert "for whole family" in page.text and "$$" in page.text
+    assert "<span>whole family</span>" in page.text  # whom it is for, with the house beside it
 
 
 def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
@@ -293,14 +298,14 @@ def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
     _idea(conn, "Old plan", kind="outing", status="done")
     dropped = _idea(conn, "Never again", kind="outing", status="dropped")
     client = _client(settings, clock)
-    assert client.get("/ideas").text.count('class="panel card"') == 3  # dropped is hidden
+    assert _cards(client.get("/ideas").text) == 3  # dropped is hidden
     assert "Ramen place" in client.get("/ideas?kind=restaurant").text
     assert "Museum day" not in client.get("/ideas?kind=restaurant").text
-    assert client.get("/ideas?status=done").text.count('class="panel card"') == 1
+    assert _cards(client.get("/ideas?status=done").text) == 1
     assert f'href="/idea/{dropped.id}"' in client.get("/ideas?status=dropped").text
-    assert client.get("/ideas?who=with+the+girls").text.count('class="panel card"') == 1
+    assert _cards(client.get("/ideas?who=with+the+girls").text) == 1
     assert "Museum" in client.get("/ideas?q=museum").text
-    assert client.get("/ideas?q=nothinglikethis").text.count('class="panel card"') == 0
+    assert _cards(client.get("/ideas?q=nothinglikethis").text) == 0
     assert "Clear" in client.get("/ideas?kind=outing").text  # a way back to everything
 
 
@@ -319,44 +324,112 @@ def test_where_a_place_lies_from_home_in_words_and_on_the_dial() -> None:
     ]
     assert views.Away(12, 44.0).text == "about 12 min north-east of home (estimate)"
     assert views.Away(3, 200.0).text == "under 5 min from home (estimate)"
-    assert views.places_radar([]) is None
-    mountain = (SimpleNamespace(id=2, title="Mount St Helens"), views.Away(150, 0.0))
-    ramen = (SimpleNamespace(id=3, title="Ramen"), views.Away(12, 90.0))
+    assert views.places_map([]) is None
+    mountain = (SimpleNamespace(id=2, title="Mount St Helens day trip"), views.Away(150, 0.0))
+    ramen = (SimpleNamespace(id=3, title="Ramen at Afuri"), views.Away(12, 90.0))
     park = (SimpleNamespace(id=4, title="Corner park"), views.Away(3, 225.0))
-    radar = views.places_radar([mountain, ramen, park])
-    assert radar["count"] == 3 and radar["rings"] == ("15m", "45m", "2h")
-    assert radar["nearest"] == {"id": 4, "title": "Corner park", "away": "under 5 min"}
-    assert radar["furthest"] == {"id": 2, "title": "Mount St Helens", "away": "2 h 30 min N"}
-    near, east, north = radar["blips"]  # nearest first, and it is the one that pings
-    assert [near["next"], east["next"], north["next"]] == [True, False, False]
-    assert (east["x"], east["y"]) == (128.0, 100.0)  # east to the right, 12 min along the rings
-    assert (north["x"], north["y"]) == (100.0, 8.0)  # north at the top, held to the last ring
-    # Each flares as the sweep passes its bearing, one of the twelve the stylesheet times.
-    assert [blip["bearing"] for blip in radar["blips"]] == [8, 3, 0]
+    assert views.places_map([ramen, park]) is None  # all inside the first ring: the cards say it
+    drawn = views.places_map([mountain, ramen, park])
+    assert drawn["count"] == 3
+    wide = drawn["wide"]
+    by_name = {dot["name"]: dot for dot in wide["dots"]}
+    assert set(by_name) == {"Mount St Helens", "Ramen at Afuri", "Corner park"}
+    # North at the top, east to the right; the first half hour gets 70% of the way out.
+    assert (by_name["Mount St Helens"]["x"], by_name["Mount St Helens"]["y"]) == (430.0, 30.0)
+    assert (by_name["Ramen at Afuri"]["x"], by_name["Ramen at Afuri"]["y"]) == (494.0, 220.0)
+    assert [ring["name"] for ring in wide["rings"]] == ["15 min", "30 min", "1 h", "2 h", "3 h"]
+    assert wide["rings"][1]["r"] == 140.0 and drawn["narrow"]["rings"][1]["r"] == 112.0
+    assert wide["axis"] == "M430 20V420M230 220H630"
+    assert [(name, x) for name, x, *_ in wide["compass"]] == [
+        ("N", 424),
+        ("S", 424),
+        ("W", 222),
+        ("E", 638),
+    ]
+    assert views.map_share(0) == 0 and views.map_share(500) == 1.0
 
 
-def test_the_ideas_list_draws_its_places_on_a_radar(settings, clock, conn, family) -> None:
+def test_a_dot_is_named_by_the_first_words_of_its_idea() -> None:
+    names = {
+        "Pumpkin patch at Bi-Mart farm": "Pumpkin patch",
+        "Lava tubes at Ape Cave": "Lava tubes",
+        "Oaks Park roller rink": "Oaks Park",
+        "Mount St. Helens day trip": "Mount St. Helens",
+        "Nutcracker at the Keller": "Nutcracker",
+        "Silver Falls hike": "Silver Falls",
+        "Ramen at Afuri": "Ramen at Afuri",  # a head too short to name it alone
+        "Pho Oregon": "Pho Oregon",
+    }
+    assert {title: views.short_name(title) for title in names} == names
+
+
+def test_a_name_goes_where_it_fits_and_clear_of_the_compass_letters() -> None:
+    near_west = views.Away(180, 270.0)  # three hours west: out at the edge, on the axis
+    cannon = SimpleNamespace(id=1, title="Cannon Beach weekend")
+    drawn = views.places_map([(cannon, near_west)])
+    wide, narrow = drawn["wide"]["dots"][0], drawn["narrow"]["dots"][0]
+    assert (wide["label_x"], wide["label_y"], wide["anchor"]) == (222.0, 202.0, "end")  # above
+    assert narrow["anchor"] == "start" and narrow["label_y"] > narrow["y"]  # no room: below
+    east = views.places_map([(cannon, views.Away(120, 100.0))])["wide"]["dots"][0]
+    assert east["anchor"] == "start" and east["label_x"] > east["x"]  # on the right, beside it
+
+
+def test_no_two_names_on_the_map_sit_on_each_other_or_on_home() -> None:
+    def put(idea_id, title, minutes, degrees):
+        return (SimpleNamespace(id=idea_id, title=title), views.Away(minutes, degrees))
+
+    crowded = [
+        put(1, "Pumpkin patch at Bi-Mart farm", 23, 316.0),
+        put(2, "Cannon Beach weekend", 170, 300.0),
+        put(3, "Nutcracker at the Keller", 4, 85.0),  # almost at home, where "Home" is written
+        put(4, "Ramen at Afuri", 10, 130.0),
+        put(5, "Lava tubes at Ape Cave", 115, 40.0),
+    ]
+    for size in ("wide", "narrow"):
+        plot = views.places_map(crowded)[size]
+        text_size = 15 if size == "wide" else 14
+        boxes = []
+        for dot in plot["dots"]:
+            room = len(dot["name"]) * text_size * 0.52
+            left = dot["label_x"] - room if dot["anchor"] == "end" else dot["label_x"]
+            boxes.append((left, dot["label_y"] - 12, left + room, dot["label_y"] + 4))
+            assert left >= 4 and left + room <= plot["width"] - 4, (size, dot["name"])
+        for index, one in enumerate(boxes):
+            for other in boxes[index + 1 :]:
+                apart = (
+                    one[2] <= other[0]
+                    or other[2] <= one[0]
+                    or one[3] <= other[1]
+                    or other[3] <= one[1]
+                )
+                assert apart, (size, plot["dots"][index]["name"])
+            home = (plot["cx"] - 22, plot["cy"] + 8, plot["cx"] + 22, plot["cy"] + 26)
+            assert not (
+                one[0] < home[2] and home[0] < one[2] and one[1] < home[3] and home[1] < one[3]
+            )
+
+
+def test_the_ideas_list_draws_its_places_on_a_map(settings, clock, conn, family) -> None:
     ramen = _idea(conn, "Ramen <Main St>", kind="restaurant")
     _with_place(conn, ramen, lat=45.70, lon=-122.67)  # north of home
     museum = _idea(conn, "Museum day", kind="outing")
     _with_place(conn, museum, lat=45.63, lon=-122.40)  # east, and further
-    _idea(conn, "A picnic somewhere", kind="outing")  # not one place: listed, not on the radar
+    _idea(conn, "A picnic somewhere", kind="outing")  # not one place: listed, not on the map
     client = _client(settings, clock, home_lat=45.63, home_lon=-122.67)
     page = client.get("/ideas").text
-    assert '<div class="radar" aria-hidden="true">' in page  # a picture of what the words say
-    assert "2 places from home" in page
-    assert f'href="/idea/{ramen.id}">#{ramen.id} Ramen &lt;Main St&gt;</a>' in page
-    assert "[" not in page.split("Nearest", 1)[1].split("</p>", 1)[0]  # brackets are the CSS's
-    assert ">15m<" in page and ">1w<" not in page  # rings of drive time, not of weeks
-    # Every card with a place says the drive and the way, which is all the radar shows.
-    assert "about 12 min north of home (estimate)" in page
-    assert "about 33 min east of home (estimate)" in page
-    # It follows the filters.
+    assert 'class="radar radar--wide"' in page and 'class="radar radar--narrow"' in page
+    assert 'aria-hidden="true" focusable="false"' in page  # the cards are the list
+    assert ">Ramen &lt;Main St&gt;</text>" in page  # a title from chat, escaped on the map too
+    assert ">15 min<" in page and ">3 h<" in page and ">1w<" not in page
+    assert "1 idea has no drive time yet" in page  # the picnic
+    # Every card with a place says the drive and the way, which is all the map shows.
+    assert "12 min drive, north" in page and "33 min drive, east" in page
+    # It follows the filters, and an idea inside the first ring is not worth a map.
     restaurants = client.get("/ideas?kind=restaurant").text
-    assert "1 place from home" in restaurants and "Museum day" not in restaurants
-    # Nothing listed on the map, or no home to measure from: no radar.
-    assert 'class="radar"' not in client.get("/ideas?q=picnic").text
-    assert 'class="radar"' not in _client(settings, clock).get("/ideas").text
+    assert "Museum day" not in restaurants and 'class="radar' not in restaurants
+    # Nothing listed on the map, or no home to measure from: none.
+    assert 'class="radar' not in client.get("/ideas?q=picnic").text
+    assert 'class="radar' not in _client(settings, clock).get("/ideas").text
 
 
 def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> None:
@@ -415,7 +488,7 @@ def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> 
     assert "Saturday" in page.text and "10:00-20:00" in page.text
     assert "closed" in page.text and "not known" in page.text  # Monday closed, Sunday unknown
     assert "about 45 min away, 38 km (estimate)" in page.text
-    assert "needed, about 2 days ahead" in page.text
+    assert "Needed, about 2 days ahead" in page.text
     assert "adults $28, kids free" in page.text
     assert "9/10" in page.text and "would go again" in page.text
     assert "The girls loved it" in page.text
@@ -501,7 +574,7 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
     _idea(conn, "Museum day", kind="outing")
     page = _client(settings, clock).get("/restaurants")
     assert page.status_code == 200
-    assert page.text.count('class="panel card"') == 2  # the outing is not here
+    assert _cards(page.text) == 0 and page.text.count('class="place"') == 2  # not the outing
     assert "Museum day" not in page.text and "2 places" in page.text
     assert "Small counter, long queue." in page.text and "1 Main St" in page.text
     assert "open today 11:00-21:00" in page.text  # the shared clock is a Sunday
@@ -516,7 +589,7 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
 def test_the_restaurants_page_when_there_are_none(settings, clock, conn, family) -> None:
     _idea(conn, "Museum day", kind="outing")
     page = _client(settings, clock).get("/restaurants")
-    assert "No restaurants yet" in page.text and page.text.count('class="panel card"') == 0
+    assert "No restaurants yet" in page.text and 'class="place"' not in page.text
 
 
 def test_the_plans_page_shows_what_is_coming_and_what_just_happened(
@@ -1014,7 +1087,7 @@ def test_a_page_the_bot_serves_is_never_cached(settings, clock, conn, family) ->
     [
         # Pages on the new frame, and pages not moved to it yet: each names its own files.
         ("/", "style-kitchen.css", "icons-kitchen.svg", "atkinson-400.woff2"),
-        ("/ideas", "style.css", "icons.svg", "dm-sans.woff2"),
+        ("/memory", "style.css", "icons.svg", "dm-sans.woff2"),
     ],
 )
 def test_a_browser_keeps_what_the_page_links_to_until_it_changes(
@@ -1028,7 +1101,7 @@ def test_a_browser_keeps_what_the_page_links_to_until_it_changes(
     assert stylesheet is not None
     style = (Path(web_module.__file__).parent / "static" / sheet).read_bytes()
     assert stylesheet.group(2) == hashlib.sha256(style).hexdigest()[:12]
-    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page) or path == "/ideas"
+    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page) or path == "/memory"
     assert re.search(rf'<use href="/static/{re.escape(sprite)}\?v=[0-9a-f]{{12}}#i-', page)
     kept = client.get(stylesheet.group(1))
     assert kept.status_code == 200 and "immutable" in kept.headers["Cache-Control"]
@@ -1051,4 +1124,4 @@ def test_the_added_date_is_the_family_s_date(settings, clock, conn, family) -> N
             conn, title="Late night idea", kind="activity", now="2026-09-21T02:30:00Z"
         )
     page = _client(settings, clock).get(f"/idea/{idea.id}")
-    assert "added 2026-09-20" in page.text
+    assert "added Sun 20 Sep" in page.text

@@ -9,12 +9,16 @@ This file is what the family decided and how it is built.
 
 ## What the family decided
 
-- **Sisters never see each other's wishes.** Gifts are private too: a present for Chloe is never
-  shown to Chloe, and the parents' gift ideas are never shown to the kids.
+- **Sisters never see each other's wishes.** A present is hidden from exactly the people it names:
+  whoever it is for, unless somebody chooses others (or nobody) on the idea, and every page that
+  shows it says whom it is hidden from ("Hidden from Chloe"), so a sister who may know can keep
+  it quiet. A present that names nobody is kept from the kids, as every present once was. Vera
+  never tells a kid of a present in the chat, and a grown-up's own present is kept from them too
+  (`familydb/presents.py`).
 - **The girls use iPads, through the page.** No Telegram for them. Each has a private conversation
   with Vera that the parents can read. Everything goes through tools, so another home app can be
   connected later.
-- **What a kid may do** (`roles.py`): sign in, read the ideas and plans (not gifts), talk to Vera,
+- **What a kid may do** (`roles.py`): sign in, read the ideas and plans (a present hidden from her excepted), talk to Vera,
   keep her own wishes, and see and tick off her own things to do. Nothing else changes from her
   screen.
 - **Everyday wishes** have daily rules. **Christmas and birthday wishes** are flagged (`occasion`),

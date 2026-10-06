@@ -41,6 +41,15 @@ older than what is installed. It gets a date when it is released.
   days in the colour of who it is for, and a list beside it; a plan that has
   happened asks how it went right there, with three faces. A kid sees one list
   of what is next.
+- **A new Ideas, idea page, idea form and Restaurants.** Idea cards show whom each
+  is for in their colours, how far away it is and whether it is a surprise; the map
+  of how far each idea is from home now has each idea's name beside its dot, drawn
+  to fit a phone as well as a desktop. A present is now hidden from exactly the
+  people it names (by default whoever it is for, and anyone else you tick on the
+  idea), and every page that shows it says whom: "Hidden from Theo". That includes
+  a grown-up's own present, and a present for somebody else now shows to a kid,
+  tagged, so she knows to keep it quiet. A present that names nobody is still kept
+  from the kids, and Vera still never tells a kid of one in the chat.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

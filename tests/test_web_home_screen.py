@@ -99,7 +99,9 @@ def test_every_page_points_a_phone_at_the_manifest_and_the_icon(
     for page in (login, ideas):
         assert '<link rel="manifest" href="/manifest.webmanifest" />' in page
         assert re.search(
-            r'<link rel="apple-touch-icon" href="/static/apple-touch-icon.png\?v=\w+" />', page
+            r'<link rel="apple-touch-icon" href="/static/(?:brand/)?apple-touch-icon\.png'
+            r'(?:\?v=\w+)?" />',
+            page,
         )
         assert '<meta name="apple-mobile-web-app-title" content="The Tates" />' in page
         assert '<meta name="apple-mobile-web-app-capable" content="yes" />' in page

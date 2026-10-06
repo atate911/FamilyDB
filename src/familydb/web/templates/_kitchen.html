@@ -263,3 +263,68 @@
     </span>
   </form>
 {%- endmacro %}
+
+{# The two views of the ideas: all of them, and the restaurants. `current` is 'all' or 'restaurants'; the counts are of what this person may see. #}
+{% macro idea_tabs(current, total, restaurants) -%}
+  <div class="toolbar">
+    <nav class="seg" aria-label="Which ideas">
+      <a href="{{ url_for('web.ideas') }}"{% if current == 'all' %} aria-current="page"{% endif %}>All ideas <span class="n">{{ total }}</span></a>
+      <a href="{{ url_for('web.restaurants') }}"{% if current == 'restaurants' %} aria-current="page"{% endif %}>{{ icon('utensils', size='sm') }}Restaurants <span class="n">{{ restaurants }}</span></a>
+    </nav>
+  </div>
+{%- endmacro %}
+
+{# The tag on a present, which says whom it is kept from wherever it shows. #}
+{% macro surprise(words) -%}
+  <span class="tag tag--surprise">{{ icon('eyeoff') }}Surprise<span class="tag__more"> · hidden from {{ words }}</span></span>
+{%- endmacro %}
+
+{# One idea as a card (a compact row on the phone). `kid` is the plain card a kid sees: no who, no drive, no looking-up. #}
+{% macro idea_card(row, kid=false) -%}
+  <article class="idea{{ ' idea--kid' if kid }}{{ ' idea--unknown' if row.pending and not kid }}">
+    {{ tile(row.glyph) }}<span class="idea__kind">{{ row.kind_name }}</span>
+    <h3><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></h3>
+    {% if kid %}
+      {% if row.where or row.on %}<p class="idea__for">
+        {%- if row.where %}<span>{{ icon('pin', size='sm') }}{{ row.where }}</span>{% endif -%}
+        {%- if row.on %}<span>{{ icon('cal', size='sm') }}{{ row.on }}</span>{% endif -%}
+      </p>{% endif %}
+    {% else %}
+      <p class="idea__for"><span class="kindw">{{ row.kind_name }} · </span>
+        {%- if row.people | length == 1 and not row.people[0].initial %}{{ avatar(0, '', 'sm') }}
+        {%- else %}<span class="avs">{% for one in row.people %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor %}</span>{% endif -%}
+        <span>{{ row.who }}</span>
+        {%- if row.away %}<span class="drive phone-only"> · {{ row.away }}</span>
+        {%- elif row.pending %}<span class="drive phone-only"> · Not looked up yet</span>{% endif -%}
+      </p>
+    {% endif %}
+    {% if row.hidden or row.went or (row.on and not kid) or row.status in ('planned', 'dropped') %}
+      <div class="idea__tags">
+        {%- if row.hidden %}{{ surprise(row.hidden) }}{% endif -%}
+        {%- if row.status == 'planned' %}<span class="tag tag--ok">{{ icon('cal') }}Planned</span>{% endif -%}
+        {%- if row.on and not kid %}<span class="tag tag--when">{{ icon('cal') }}{{ row.on }}</span>{% endif -%}
+        {%- if row.went %}<span class="tag tag--been">{{ row.went }}</span>{% endif -%}
+        {%- if row.status == 'dropped' %}<span class="tag tag--off">Dropped</span>{% endif -%}
+      </div>
+    {% endif %}
+    {% if not kid %}
+      <p class="idea__foot">
+        {%- if row.away %}{{ icon('car') }}<span>{{ row.away }}</span>
+        {%- elif row.pending %}{{ icon('compass') }}<span>Not looked up yet</span>
+        {%- elif row.where %}{{ icon('pin') }}<span>{{ row.where }}</span>
+        {%- else %}{{ icon('compass') }}<span>{{ row.details }}</span>{% endif -%}
+      </p>
+    {% endif %}
+  </article>
+{%- endmacro %}
+
+{# The map of how far each idea is from home, drawn twice from the same data so names stay readable: wide for a desktop, narrow for a phone. `plot` is `views.places_map(...)["wide"]` or `["narrow"]`. #}
+{% macro map_plot(plot, which) -%}
+  <svg class="radar radar--{{ which }}" viewBox="0 0 {{ plot.width }} {{ plot.height }}" aria-hidden="true" focusable="false">
+    {%- for ring in plot.rings %}<circle class="ring" cx="{{ plot.cx }}" cy="{{ plot.cy }}" r="{{ ring.r }}"/><text class="rl" x="{{ ring.x }}" y="{{ ring.y }}" text-anchor="{{ ring.anchor }}">{{ ring.name }}</text>{% endfor -%}
+    <path class="axis" d="{{ plot.axis }}"/>
+    {%- for letter, x, y, anchor in plot.compass %}<text class="cp" x="{{ x }}" y="{{ y }}" text-anchor="{{ anchor }}">{{ letter }}</text>{% endfor -%}
+    <circle class="home" cx="{{ plot.cx }}" cy="{{ plot.cy }}" r="4"/><text class="hm" x="{{ plot.cx }}" y="{{ plot.cy + 20 }}" text-anchor="middle">Home</text>
+    {%- for dot in plot.dots %}<circle class="halo" cx="{{ dot.x }}" cy="{{ dot.y }}" r="7"/><circle class="dot" cx="{{ dot.x }}" cy="{{ dot.y }}" r="3.5"/><text class="nm" x="{{ dot.label_x }}" y="{{ dot.label_y }}" text-anchor="{{ dot.anchor }}">{{ dot.name }}</text>{% endfor -%}
+  </svg>
+{%- endmacro %}
