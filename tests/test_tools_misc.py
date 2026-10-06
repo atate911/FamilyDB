@@ -85,3 +85,24 @@ def test_a_null_at_any_depth_leaves_the_field_to_its_default(registry, ctx) -> N
     )
     assert not result.is_error, data
     assert data["remembered"][0]["about"] == "family"
+
+
+def test_every_tool_call_is_kept_with_who_made_it_and_from_where(settings, clock, conn, family):
+    """Only the chat's model's calls and a tap's were kept; a page form's, a command's and the
+    command line's were not. Dispatch keeps every one (tools/registry.py)."""
+    from familydb.tools import ToolContext, build_registry
+    from tests.test_web_edits import _client
+    from tests.test_web_edits import _idea_form as idea_form
+
+    registry = build_registry()
+    asked = ToolContext(conn=conn, settings=settings, clock=clock, member=family["alex"])
+    first = registry.dispatch("list_tasks", {}, asked, call_id="call_1", iteration=2)
+    page = _client(settings, clock)
+    page.post("/ideas/new", data=idea_form(page, who="Sam"))
+    rows = conn.execute("SELECT * FROM tool_calls ORDER BY id").fetchall()
+    kept = [(r["tool_name"], r["source"], r["member_id"], r["tool_use_id"]) for r in rows]
+    assert kept == [
+        ("list_tasks", "chat", family["alex"].id, "call_1"),
+        ("add_idea", "page", family["sam"].id, None),
+    ]
+    assert first.call_id == rows[0]["id"] and rows[0]["iteration"] == 2

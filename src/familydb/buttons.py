@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from datetime import time as clock_time
@@ -22,7 +21,7 @@ from typing import Any
 
 from familydb import roles, voice
 from familydb.dates import utc_iso
-from familydb.store import calls, ideas, members, messages, outcomes, plans, tasks, wishes
+from familydb.store import ideas, members, messages, outcomes, plans, tasks, wishes
 from familydb.store.db import transaction
 from familydb.tools.registry import ToolContext
 
@@ -149,22 +148,10 @@ def tap(
         calendar=app.calendar,
         weather=app.weather,
         geocoder=app.geocoder,
+        source="tap",
     )
-    started = time.monotonic()
-    result = app.registry.dispatch(job.tool, job.values, ctx)
+    result = app.registry.dispatch(job.tool, job.values, ctx, call_id=update_id)
     with transaction(conn):
-        calls.log_tool_call(
-            conn,
-            message_id=kept.id,
-            iteration=0,
-            tool_use_id=update_id,
-            tool_name=job.tool,
-            input=job.values,
-            output=result.content,
-            is_error=result.is_error,
-            duration_ms=int((time.monotonic() - started) * 1000),
-            now=now,
-        )
         messages.mark_processed(conn, kept.id, [] if result.is_error else [result.summary], now=now)
     if result.is_error:
         log.warning("tap %s on #%s did not go through: %s", action, number, result.content)

@@ -117,6 +117,9 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP TABLE calendar_sync_state")
         conn.execute("DROP INDEX plans_google_event_idx")
         conn.execute("ALTER TABLE ideas DROP COLUMN hidden_from")
+        conn.execute("DROP INDEX tool_calls_undo_idx")
+        for column in ("member_id", "source", "undo", "undone_at"):
+            conn.execute(f"ALTER TABLE tool_calls DROP COLUMN {column}")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
         assert db.migrate(conn) == [v for v, _, _ in db.list_migrations() if v >= 8]

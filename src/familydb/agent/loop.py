@@ -239,22 +239,10 @@ def run_turn(
             return TurnResult("ok", reply.text, actions, iteration, totals, provider=active.name)
 
         for call in reply.tool_calls:
-            tool_started = time.monotonic()
-            result = registry.dispatch(call.name, call.arguments, ctx)
-            with transaction(ctx.conn):
-                calls.log_tool_call(
-                    ctx.conn,
-                    message_id=ctx.message_id,
-                    iteration=iteration,
-                    tool_use_id=call.id,
-                    tool_name=call.name,
-                    input=call.arguments,
-                    output=result.content,
-                    is_error=result.is_error,
-                    duration_ms=int((time.monotonic() - tool_started) * 1000),
-                    now=ctx.now_iso(),
-                    turn=ctx.turn,
-                )
+            # Kept as it goes (tool_calls), with the turn and the model's id for the call.
+            result = registry.dispatch(
+                call.name, call.arguments, ctx, call_id=call.id, iteration=iteration
+            )
             actions.append(result.summary)
             exchange.outcomes.append(
                 ToolOutcome(

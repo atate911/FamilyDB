@@ -154,6 +154,8 @@ POINTING_AT = {
     ("suggestions", "asked_by"): "unname",
     ("tasks", "created_by_member_id"): "unname",
     ("tasks", "owner_id"): "unname",
+    # Who made a tool call: the call stays, as what was done (tools/registry.py).
+    ("tool_calls", "member_id"): "unname",
     ("telegram_invites", "made_by"): "unname",
     ("telegram_invites", "member_id"): "delete",
     # A kid's wish lists go with her; a parent's answer stays on the others', unnamed.

@@ -71,6 +71,7 @@ def run_worker_turn(
         geocoder=geocoder,
         worker_idea_id=idea_id,
         about=about,
+        source="worker",
     )
     result = gateway.ask(
         kind,

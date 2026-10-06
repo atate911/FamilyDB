@@ -196,7 +196,7 @@ def test_a_tap_that_does_not_go_through_says_so(settings, clock, conn, family, m
     app = App(settings, clock)
     task = _task(settings, clock, conn, family)
     monkeypatch.setattr(
-        app.registry, "dispatch", lambda *_: ToolResult('{"error": "busy"}', is_error=True)
+        app.registry, "dispatch", lambda *_, **__: ToolResult('{"error": "busy"}', is_error=True)
     )
     tapped = _tap(app, conn, f"done:{task['id']}")
     assert tapped == buttons.Tapped("That didn't go through. Could you tell me in words?")

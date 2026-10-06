@@ -388,6 +388,7 @@ def tool_cmd(
             member=_acting_member(application, conn, as_member),
             calendar=application.calendar,
             weather=application.weather,
+            source="cli",
         )
         result = registry.dispatch(name, payload, ctx)
     typer.echo(result.content, err=result.is_error)
@@ -895,6 +896,7 @@ def suggest(
             geocoder=application.geocoder,
             api=api,
             discover_cache=application.discover_cache,
+            source="cli",
         )
         result = application.registry.dispatch("suggest", payload, ctx)
     if result.is_error:

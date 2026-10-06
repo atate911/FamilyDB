@@ -371,6 +371,7 @@ def _lookup(
         clock=app.clock,
         member=member,
         message_id=seed,
+        source="command",
     )
     result = app.registry.dispatch("look_up_now", {}, ctx)
     answered = json.loads(result.content)

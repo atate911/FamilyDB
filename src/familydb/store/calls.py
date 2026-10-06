@@ -28,10 +28,14 @@ def log_tool_call(
     duration_ms: int | None,
     now: str | None = None,
     turn: str | None = None,
+    member_id: int | None = None,
+    source: str | None = None,
+    undo: dict[str, Any] | None = None,
 ) -> int:
     cur = conn.execute(
         "INSERT INTO tool_calls (message_id, iteration, tool_use_id, tool_name, input, output, "
-        "is_error, duration_ms, created_at, turn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "is_error, duration_ms, created_at, turn, member_id, source, undo) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             message_id,
             iteration,
@@ -43,6 +47,9 @@ def log_tool_call(
             duration_ms,
             now or utcnow_iso(),
             turn,
+            member_id,
+            source,
+            to_json(undo) if undo is not None else None,
         ),
     )
     return int(cur.lastrowid or 0)

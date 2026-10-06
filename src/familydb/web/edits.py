@@ -109,6 +109,7 @@ def run(
             idea_revision=request.form.get("revision") if name == "update_idea" else None,
             task_revision=_task_revision(request.form) if name == "update_task" else None,
             hidden_from=hidden_from,
+            source="page",
         )
         result = app.registry.dispatch(name, values, ctx)
     payload = json.loads(result.content)
