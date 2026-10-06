@@ -107,6 +107,8 @@ def _heads_up(
     span = _span(plan)
     label = f"#{idea.id} {plan.title}"
     needs_dry = idea.setting == "outdoor" or idea.weather == "dry"
+    # The plan's own hours when the forecast has them: a shower at dawn spoils no picnic at noon.
+    forecast = forecast.between(*span) if forecast is not None else None
     if needs_dry and forecast is not None and day_is_dry(forecast) is False:
         chance = forecast.rain_chance
         weather = f"{chance}% chance of rain" if chance else forecast.summary.lower()

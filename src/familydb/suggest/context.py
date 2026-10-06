@@ -10,6 +10,7 @@ from familydb.availability import calendar_available
 from familydb.clock import season_for
 from familydb.errors import ToolError
 from familydb.free_time import events_by_day, free_spans
+from familydb.integrations.open_meteo import DayForecast
 from familydb.saved_plans import SavedPlans
 from familydb.suggest.types import Context, DayBounds, DayContext
 from familydb.tools import ToolContext
@@ -81,13 +82,19 @@ def build_context(
                 date=day,
                 spans=free_by_day.get(day.isoformat(), _unknown(limits[day])),
                 free_known=free_known,
-                forecast=forecasts.get(day),
+                forecast=_part(forecasts.get(day), limits[day]),
                 commitments=commitments.get(day.isoformat(), []),
                 bounds=limits[day],
             )
         )
         day += timedelta(days=1)
     return Context((start, end), days, season_for(start, southern=southern), today, skipped)
+
+
+def _part(forecast: DayForecast | None, limits: tuple[int, int]) -> DayForecast | None:
+    """The day's weather for the hours asked about, when the forecast has them: rain at six in
+    the morning says nothing about this afternoon."""
+    return forecast.between(*limits) if forecast is not None else None
 
 
 def _unknown(limits: tuple[int, int]) -> list[tuple[int, int]]:

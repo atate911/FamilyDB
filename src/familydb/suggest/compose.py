@@ -30,6 +30,8 @@ def _forecast_text(forecast: DayForecast | None) -> str | None:
         parts.append(f"high {forecast.high:g}")
     if forecast.rain_chance is not None:
         parts.append(f"rain {forecast.rain_chance}%")
+    if forecast.span is not None:  # hour by hour, for the part of the day asked about
+        parts.append(f"{clock(forecast.span[0])}-{clock(forecast.span[1])}")
     return ", ".join(parts)
 
 

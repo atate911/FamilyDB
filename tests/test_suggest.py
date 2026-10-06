@@ -1138,3 +1138,25 @@ def test_an_idea_a_kid_coming_is_too_young_for_is_left_out(env, family) -> None:
     asked = SuggestInput(window="someday", participants=["adults"], discover=False, question="?")
     said = {c.idea_id: c for c in run(env.ctx, asked).candidates}
     assert said[tramp.id].verdict == "good"
+
+
+def test_now_is_judged_by_its_own_hours(conn, settings, clock, family) -> None:
+    """Rain all morning and a dry afternoon: at 14:03, an outdoor idea is good for now, and the
+    day's line says the forecast is for those hours."""
+    from familydb.integrations.open_meteo import Hour
+
+    today = clock.today()  # Sunday 20 September, 14:03
+    hours = tuple(Hour(h * 60, 61 if h < 12 else 2, 90 if h < 12 else 10, 15.0) for h in range(24))
+    wet_day = DayForecast(today, 61, "light rain", 17.0, 9.0, 90, 4.0, hours=hours)
+    ctx = _ctx(conn, settings, clock, family, weather=fakes.FakeForecast([wet_day]))
+    kite = _idea(conn, "Kite flying", setting="outdoor", duration_min=60)
+    result = run(ctx, SuggestInput(window="now", discover=False, question="bored!"))
+    said = {c.idea_id: c for c in result.candidates}[kite.id]
+    assert said.verdict != "ruled_out" and not any("rain" in r for r in said.reasons)
+    assert result.days[0].forecast == "partly cloudy, high 15, rain 10%, 14:05-18:05"
+    # Asked about the whole of today from first light, the morning's rain counts.
+    early = clock.now().replace(hour=7, minute=0)
+    ctx.clock = type(clock)(early, clock.tz)
+    result = run(ctx, SuggestInput(window="today", discover=False, question="today?"))
+    said = {c.idea_id: c for c in result.candidates}[kite.id]
+    assert said.verdict == "ruled_out" and said.reasons[0].startswith("rain likely Sunday (90%)")
