@@ -427,3 +427,109 @@ def test_a_birthday_is_graded_on_whose_it_is_and_a_gift_on_its_kind(settings) ->
     outing = {**apron, "kind": "home"}
     api = _answer([fakes.tool_use("t1", "add_idea", outing)], [fakes.text("Saved.")])
     assert "not a gift, for Grandma" in " ".join(grade(case, run_case(case, settings, api=api)))
+
+
+# -- what a case may set up, and what it can see
+
+
+def test_a_cases_seed_is_in_the_household_before_the_first_message(settings) -> None:
+    """Sam's firm rule is there when the question comes: it goes with the message (memory.py)."""
+    case = by_name("must_is_respected")
+    api = _answer([fakes.text("The ramen place or Sushi Hana, both close by.")])
+    run = run_case(case, settings, api=api)
+    assert "No drives over 30 minutes until my back is better" in _said(api.requests[0])
+    assert "never called suggest" in grade(case, run)
+
+
+def test_a_firm_rule_broken_without_a_word_fails(settings) -> None:
+    case = by_name("must_is_respected")
+    frame = {"window": "this_weekend", "question": "anything fun?", "discover": False}
+
+    def replying(words: str) -> list[str]:
+        api = _answer([fakes.tool_use("t1", "suggest", frame)], [fakes.text(words)])
+        return grade(case, run_case(case, settings, api=api))
+
+    assert any("offers Hopscotch" in p for p in replying("Hopscotch on Saturday morning?"))
+    assert replying("Hopscotch is out: 35 minutes is too far for your back.") == []
+    assert replying("The ramen place, 12 minutes away.") == []
+
+
+def test_a_case_without_a_calendar_runs_with_none(settings) -> None:
+    """With no calendar the tool answers that it is not there, which is not an error: the case
+    reads what it answered, and how many plans were kept."""
+    case = by_name("plan_without_a_calendar")
+    plan = {"title": "Symphony", "start": "2026-10-03T20:00"}
+    api = _answer(
+        [fakes.tool_use("t1", "create_event", plan)],
+        [fakes.text("The calendar isn't connected, so I couldn't add it.")],
+    )
+    run = run_case(case, settings, api=api)
+    assert run.calls[0].ok and run.calls[0].result["available"] is False
+    problems = grade(case, run)
+    assert "create_event was called, but not kept, with no calendar connected" in " ".join(problems)
+    assert "plans: 0, expected 1" in problems
+
+
+def test_reminders_are_read_on_the_familys_clock(settings) -> None:
+    """A reminder moved by hand with its plan passes as well as one code moves for it."""
+    case = by_name("plan_moves_reminder")
+    beck = {"title": "Beck, Crystal Ballroom", "start": "2026-11-18T20:00"}
+    week_before = {"title": "Beck next week", "remind_at": "2026-11-11T09:00"}
+    moved = [
+        fakes.tool_use("t3", "update_event", {"plan_id": 1, "start": "2026-11-19T20:00"}),
+        fakes.tool_use("t4", "update_task", {"task_id": 1, "remind_at": "2026-11-12T09:00"}),
+    ]
+    first = [
+        [
+            fakes.tool_use("t1", "create_event", beck),
+            fakes.tool_use("t2", "add_task", week_before),
+        ],
+        [fakes.text("On for Wed 18 Nov, 8pm; reminder Wed 11 Nov, 9am.")],
+    ]
+    run = run_case(case, settings, api=_answer(*first, moved, [fakes.text("Moved to the 19th.")]))
+    assert grade(case, run) == []
+    assert [r.at for r in run.reminders if r.live] == ["2026-11-12T09:00"]
+
+    left = _answer(*first, moved[:1], [fakes.text("Moved to the 19th.")])
+    assert "no live reminder on 2026-11-12" in " ".join(
+        grade(case, run_case(case, settings, api=left))
+    )
+
+
+def test_a_claim_of_a_booking_never_made_fails(settings) -> None:
+    case = by_name("kiggins_movie")
+    api = _answer([fakes.text("I booked it for 7:30 tonight.")])
+    problems = grade(case, run_case(case, settings, api=api))
+    assert "says 'i booked', 'booked it'" in problems
+    assert "gives a time it was never given: '7:30'" in problems
+    api = _answer([fakes.text("Want me to save the Kiggins as an idea?")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+
+
+def test_a_case_waiting_for_work_is_a_gap_not_a_failure(settings, monkeypatch, capsys) -> None:
+    api = _answer(
+        [fakes.tool_use("t1", "create_event", {"title": "Symphony", "start": "2026-10-03T20:00"})],
+        [fakes.text("The calendar isn't connected.")],
+    )
+    monkeypatch.setattr(evals_cli, "Settings", lambda: settings)
+    monkeypatch.setattr(evals_cli, "run_case", functools.partial(run_case, api=api))
+
+    assert evals_cli.main(["--case", "plan_without_a_calendar"]) == 0
+
+    printed = capsys.readouterr().out
+    assert "gap  0/1  plan_without_a_calendar  (waits for M1.3" in printed
+    assert "1 of the rest wait for work not built yet" in printed
+
+
+def test_the_web_is_only_searched_when_asked(settings, monkeypatch) -> None:
+    seen: list[bool] = []
+
+    def recording(case, base, *, limit, web):
+        seen.append(web)
+        return run_case(case, base, api=_answer([fakes.text("Any time.")]), limit=limit, web=web)
+
+    monkeypatch.setattr(evals_cli, "Settings", lambda: settings)
+    monkeypatch.setattr(evals_cli, "run_case", recording)
+    evals_cli.main(["--case", "thanks"])
+    evals_cli.main(["--case", "thanks", "--web"])
+    assert seen == [False, True]

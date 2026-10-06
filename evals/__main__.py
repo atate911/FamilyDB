@@ -41,6 +41,12 @@ def main(argv: list[str] | None = None) -> int:
         "model call, so only the call that crosses it can go over (default 0.50)",
     )
     parser.add_argument("--json", dest="json_path", help="also write the results here")
+    parser.add_argument(
+        "--web",
+        action="store_true",
+        help="let lookups and discovery search the web: billed per search, and the web changes, "
+        "so a case may not answer the same way twice (default off)",
+    )
     args = parser.parse_args(argv)
 
     base = Settings()  # the keys, as the bot itself would find them
@@ -87,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
                     return _finish(results, spent, sent, args.json_path, stopped=True)
                 # What is left of the budget is the run's own daily limit, checked before each
                 # call.
-                run = run_case(case, settings, limit=args.budget - spent)
+                run = run_case(case, settings, limit=args.budget - spent, web=args.web)
                 spent += run.cost
                 sent += run.input_tokens
                 if spent >= args.budget:
@@ -104,8 +110,10 @@ def main(argv: list[str] | None = None) -> int:
                     for call in run.calls:
                         print(f"    {call.name} {json.dumps(call.input, sort_keys=True)}")
                     print("    > " + run.reply.replace("\n", "\n      "))
-            mark = "ok  " if passes == args.repeat else "FAIL"
-            print(f"{mark} {passes}/{args.repeat}  {named}")
+            # A case for something not built yet is a gap while it fails, not a regression.
+            mark = "ok  " if passes == args.repeat else "gap " if case.waits_for else "FAIL"
+            waits = f"  (waits for {case.waits_for})" if case.waits_for else ""
+            print(f"{mark} {passes}/{args.repeat}  {named}{waits}")
             for problem in sorted(set(problems)):
                 print(f"         - {problem}")
             results.append(
@@ -117,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
                     "input_tokens": tokens,
                     "cost_usd": cost,
                     "problems": problems,
+                    "waits_for": case.waits_for,
                 }
             )
     return _finish(results, spent, sent, args.json_path, stopped=False)
@@ -142,9 +151,12 @@ def _finish(
             )
     runs = sum(r["runs"] for r in results)
     passed = sum(r["passes"] for r in results)
+    # Runs of cases waiting for something not built yet: counted, but never a failure.
+    gaps = sum(r["runs"] - r["passes"] for r in results if r.get("waits_for"))
     print(
         f"{passed}/{runs} runs passed, {sent:,} input tokens, about ${spent:.4f} "
         "(estimated from the price table)"
+        + (f"; {gaps} of the rest wait for work not built yet" if gaps else "")
     )
     if json_path:
         with open(json_path, "w", encoding="utf-8") as out:
@@ -155,7 +167,7 @@ def _finish(
                 "spent_usd": spent,
             }
             json.dump(summary, out, indent=2)
-    return 0 if passed == runs and not stopped else 1
+    return 0 if passed + gaps == runs and not stopped else 1
 
 
 if __name__ == "__main__":
