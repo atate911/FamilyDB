@@ -128,6 +128,22 @@ older than what is installed. It gets a date when it is released.
   your list fits ("Thai food, what's open now?"), Vera can look nearby and offer
   a few, said as found on the web. It costs a little each time, so it is off
   until you turn it on (Lookups, "Look for a place when nothing saved fits").
+- **Your data, to take away.** Download the plans for another calendar, and the
+  ideas and to-dos as spreadsheets, from the foot of those pages; an admin can
+  download everything the family has kept, after typing their password again.
+  `familydb export` does the same on the server. Never a key or a password.
+- **How long messages are kept is yours to choose.** For good, as before, unless
+  you set a number of days under Sign-in and security: older messages then keep
+  their place in the conversation but not their words.
+- **Backups that are checked.** Each night's backup is read back to make sure it
+  could be restored, Status says when the last good one was, and admins are told
+  when none has worked for a day and a half, or the disk is nearly full. A
+  Telegram token that stopped working shows on Status.
+- **A health check that means it.** `/healthz` and the new `familydb health` say
+  whether the database answers and the scheduled jobs are running, and Docker
+  uses it to mark the bot unhealthy.
+- **What's new** at the bottom of the Status page: this list, for the version
+  running.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
