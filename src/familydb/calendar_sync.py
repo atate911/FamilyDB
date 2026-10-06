@@ -10,6 +10,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from familydb import plan_service
 from familydb.dates import iso_date, iso_datetime
@@ -45,7 +46,7 @@ def event_changes(event: CalendarEvent) -> dict[str, Any]:
 
 
 def apply_event(
-    conn: sqlite3.Connection, plan: Plan, event: CalendarEvent | None, now: str
+    conn: sqlite3.Connection, plan: Plan, event: CalendarEvent | None, now: str, *, tz: ZoneInfo
 ) -> Plan:
     changes = event_changes(event) if event is not None else {"status": "cancelled"}
     if all(getattr(plan, key) == value for key, value in changes.items()):
@@ -53,7 +54,7 @@ def apply_event(
     with transaction(conn):
         updated = plans.update(conn, plan.id, changes, now=now)
         if updated is not None:
-            plan_service.changed(conn, plan, updated, now=now)
+            plan_service.changed(conn, plan, updated, now=now, tz=tz)
         if event is None and plan.idea_id:
             idea = ideas.get(conn, plan.idea_id)
             if idea is not None and idea.status == "planned":
@@ -115,15 +116,26 @@ def _times(plan: Plan) -> tuple[datetime | date, datetime | date]:
 
 
 def refresh_plan(
-    conn: sqlite3.Connection, calendar: CalendarAPI, plan: Plan, calendar_id: str | None, now: str
+    conn: sqlite3.Connection,
+    calendar: CalendarAPI,
+    plan: Plan,
+    calendar_id: str | None,
+    now: str,
+    *,
+    tz: ZoneInfo,
 ) -> Plan:
     if not plan.google_event_id or plan.calendar_id != calendar_id:
         return plan
-    return apply_event(conn, plan, calendar.get_event(plan.google_event_id), now)
+    return apply_event(conn, plan, calendar.get_event(plan.google_event_id), now, tz=tz)
 
 
 def sync_plans(
-    conn: sqlite3.Connection, calendar: CalendarAPI, calendar_id: str | None, now: str
+    conn: sqlite3.Connection,
+    calendar: CalendarAPI,
+    calendar_id: str | None,
+    now: str,
+    *,
+    tz: ZoneInfo,
 ) -> None:
     """Bring every live plan in line with Google in one request.
 
@@ -145,8 +157,8 @@ def sync_plans(
     for row in live:
         plan = Plan.from_row(row)
         if plan.google_event_id in changed.events:
-            apply_event(conn, plan, changed.events[plan.google_event_id], now)
+            apply_event(conn, plan, changed.events[plan.google_event_id], now, tz=tz)
         elif changed.full:
-            apply_event(conn, plan, None, now)
+            apply_event(conn, plan, None, now, tz=tz)
     with transaction(conn):
         calendar_sync_state.save(conn, calendar_id, changed.token, now=now)

@@ -65,6 +65,12 @@ EVENTS: dict[str, Event] = {
         ("asker",),
         {"asker": "Sam"},
     ),
+    "reminder_plan": Event(
+        "Under a reminder set before a plan: when the plan is",
+        "It's {when}.",
+        ("when",),
+        {"when": "on Wed 19 Nov at 19:30"},
+    ),
     "gift_ideas": Event(
         "Gift ideas under a birthday's reminder",
         "Gift ideas saved for {who}: {ideas}.",

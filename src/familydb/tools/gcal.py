@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
-from familydb import plan_service, routing
+from familydb import plan_service, routing, task_service
 from familydb.availability import calendar_available
 from familydb.calendar_sync import adopt, event_changes, refresh_plan, sync_plans
 from familydb.dates import (
@@ -26,12 +26,14 @@ from familydb.dates import (
     parse_date,
     parse_date_range,
     parse_datetime,
+    utc_iso,
 )
 from familydb.errors import ToolError, ToolUnavailable
 from familydb.free_time import events_by_day, free_blocks
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
+from familydb.plan_service import RemindBefore
 from familydb.saved_plans import SavedPlans
-from familydb.store import calendar_ops, ideas, messages, plans
+from familydb.store import calendar_ops, ideas, messages, plans, tasks
 from familydb.store.db import to_json, transaction
 from familydb.tools.registry import ToolContext, tool
 
@@ -52,6 +54,9 @@ class GetCalendarInput(BaseModel):
     end: str = Field(description="Last day, YYYY-MM-DD (inclusive).")
 
 
+REMIND_HELP = "Reminders before it, which move with it; at most 2."
+
+
 class CreateEventInput(BaseModel):
     title: str
     start: str = Field(description="YYYY-MM-DDTHH:MM in the family timezone, or YYYY-MM-DD.")
@@ -60,6 +65,7 @@ class CreateEventInput(BaseModel):
     location: str | None = None
     notes: str | None = None
     idea_id: int | None = Field(default=None, description="The idea this plan is for, if any.")
+    remind_before: list[RemindBefore] = Field(default_factory=list, description=REMIND_HELP)
 
 
 PLAN_HELP = "The plan number, from create_event, search_plans or get_calendar."
@@ -83,6 +89,9 @@ class UpdateEventInput(BaseModel):
     location: str | None = None
     notes: str | None = None
     status: Literal["confirmed", "tentative", "cancelled"] | None = None
+    remind_before: list[RemindBefore] | None = Field(
+        default=None, description="Replaces its reminders; [] takes them off."
+    )
 
 
 class DeleteEventInput(BaseModel):
@@ -105,7 +114,9 @@ class SearchPlansInput(BaseModel):
 def search_plans(ctx: ToolContext, args: SearchPlansInput) -> dict[str, Any]:
     checked = ctx.calendar is not None
     if checked:
-        sync_plans(ctx.conn, ctx.calendar, ctx.settings.google_calendar_id, ctx.now_iso())
+        sync_plans(
+            ctx.conn, ctx.calendar, ctx.settings.google_calendar_id, ctx.now_iso(), tz=ctx.clock.tz
+        )
     rows = ctx.conn.execute(
         "SELECT * FROM plans WHERE lower(title) LIKE ? AND (? OR status != 'cancelled') "
         "ORDER BY start DESC LIMIT 50",
@@ -230,7 +241,7 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
         _number(days, kept)
         return {"calendar": None, "plans": KEPT_HERE, "days": days}
     days = calendar_days(calendar, start, end, ctx.clock.tz)
-    sync_plans(ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso())
+    sync_plans(ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso(), tz=ctx.clock.tz)
     owned = {
         event_id: plan.id
         for event_id, plan in plans.by_google_event(
@@ -251,7 +262,6 @@ def _number(days: list[dict[str, Any]], owned: dict[str, int]) -> None:
 
 
 def _created(ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None) -> dict[str, Any]:
-
     idea = ideas.get(ctx.conn, plan.idea_id) if plan.idea_id is not None else None
     made = {
         "plan": plan.model_dump(mode="json"),
@@ -311,7 +321,7 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
     event = calendar.get_event(event_id) if calendar is not None else None
     existing = plans.for_event(ctx.conn, event_id)
     if existing is not None:
-        return _created(ctx, existing, event)  # finished before: say so again
+        return _made(ctx, existing, event, args.remind_before)  # finished before: say so again
     if event is None:
         ensure_not_past(start, ctx.clock)
     if event is None and calendar is not None:
@@ -354,7 +364,14 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             )
             if args.idea_id is not None:
                 ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
-        return _created(ctx, plan, event)
+    return _made(ctx, plan, event, args.remind_before)
+
+
+def _made(
+    ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None, remind_before: list[str]
+) -> dict[str, Any]:
+    made = _created(ctx, plan, event)
+    return {**made, **_remind(ctx, plan, remind_before)} if remind_before else made
 
 
 def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
@@ -363,7 +380,7 @@ def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
     with transaction(ctx.conn):
         updated = plans.update(ctx.conn, plan.id, {"status": "cancelled"}, now=ctx.now_iso())
         if updated is not None:
-            plan_service.changed(ctx.conn, plan, updated, now=ctx.now_iso())
+            plan_service.changed(ctx.conn, plan, updated, now=ctx.now_iso(), tz=ctx.clock.tz)
         idea = None
         if plan.idea_id is not None:
             current = ideas.get(ctx.conn, plan.idea_id)
@@ -430,7 +447,12 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
     if plan is not None:
         if calendar is not None:
             plan = refresh_plan(
-                ctx.conn, calendar, plan, ctx.settings.google_calendar_id, ctx.now_iso()
+                ctx.conn,
+                calendar,
+                plan,
+                ctx.settings.google_calendar_id,
+                ctx.now_iso(),
+                tz=ctx.clock.tz,
             )
         if plan.status == "cancelled":
             raise ToolError(f"plan #{plan.id} is cancelled; create a new event instead")
@@ -473,23 +495,107 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
         changes.update({"start": stored_start, "end": stored_end, "all_day": all_day})
         patch.update({"start": start, "end": end, "all_day": all_day})
 
-    if not changes:
+    if not changes and args.remind_before is None:
         raise ToolError("nothing to change")
     if plan is None:
         assert event is not None and calendar is not None
+        if args.remind_before is not None:
+            raise ToolError("reminders go only on the bot's own plans; add_task for this one")
         moved = calendar.patch_event(event.id, **patch)
         return {"plan": None, "event": moved.to_public(), "was": event.to_public()}
     patched = None
-    if patch and calendar is not None and _on_google(ctx, plan):
-        patched = calendar.patch_event(plan.google_event_id, **patch)  # type: ignore[arg-type]
-    with transaction(ctx.conn):
-        updated = plans.update(ctx.conn, plan.id, changes, now=ctx.now_iso())
-        if updated is not None:
-            plan_service.changed(ctx.conn, plan, updated, now=ctx.now_iso())
-    return {
+    updated: plans.Plan | None = plan
+    if changes:
+        if patch and calendar is not None and _on_google(ctx, plan):
+            patched = calendar.patch_event(plan.google_event_id, **patch)  # type: ignore[arg-type]
+        with transaction(ctx.conn):
+            updated = plans.update(ctx.conn, plan.id, changes, now=ctx.now_iso())
+            if updated is not None:
+                plan_service.changed(ctx.conn, plan, updated, now=ctx.now_iso(), tz=ctx.clock.tz)
+    result = {
         "plan": updated.model_dump(mode="json") if updated else None,
         "event": patched.to_public() if patched else None,
     }
+    if args.remind_before is not None and updated is not None:
+        result.update(_remind(ctx, updated, args.remind_before, replace=True))
+    return result
+
+
+MAX_REMINDERS = 2
+
+
+def _remind(
+    ctx: ToolContext, plan: plans.Plan, words: list[str], *, replace: bool = False
+) -> dict[str, Any]:
+    """Reminders tied to a plan, one task each (plan_service): they move with it and go with it.
+    `replace` takes off the ones not named again. Each goes to the person asking, as any
+    reminder they set would (routing.for_task)."""
+    wanted = list(dict.fromkeys(words))
+    if len(wanted) > MAX_REMINDERS:
+        raise ToolError(f"at most {MAX_REMINDERS} reminders for one plan")
+    now = ctx.now_iso()
+    have = {task.plan_remind: task for task in tasks.linked_to(ctx.conn, plan.id)}
+    if replace:
+        with transaction(ctx.conn):
+            for word, task in have.items():
+                if word not in wanted:
+                    tasks.cancel(ctx.conn, task.id, now)
+    origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
+    channel, chat_id = (origin.channel, origin.chat_id) if origin else ("web", "web")
+    if channel == "console":  # nobody hears the console once it is closed
+        channel, chat_id = "web", "web"
+    scope = ctx.operation_id or (
+        f"message:{ctx.message_id}" if ctx.message_id is not None else uuid.uuid4().hex
+    )
+    member = ctx.member.id if ctx.member else None
+    set_for: list[dict[str, Any]] = []
+    not_set: list[str] = []
+    for word in wanted:
+        if word in have:
+            set_for.append(_reminder_brief(ctx, have[word]))
+            continue
+        try:
+            when = plan_service.remind_at(ctx.conn, plan, word, ctx.clock.tz)
+        except ToolError as exc:
+            not_set.append(f"{word}: {exc}")
+            continue
+        if when <= ctx.clock.now():
+            not_set.append(f"{word}: that time has passed")
+            continue
+        key = f"plan:{plan.id}:{word}:{scope}"
+        earlier = tasks.find_by_operation(ctx.conn, key)
+        if earlier is not None and earlier.status != "open":
+            key = f"{key}:{earlier.id}"  # taken off earlier in this request, and wanted again
+        task = task_service.create(
+            ctx.conn,
+            {
+                "title": plan.title,
+                "owner_id": member,
+                "created_by_member_id": member,
+                "plan_id": plan.id,
+                "plan_remind": word,
+            },
+            reminder=utc_iso(when),
+            operation_key=key,
+            channel=channel,
+            chat_id=chat_id,
+            now=now,
+        )
+        set_for.append(_reminder_brief(ctx, task))
+    found: dict[str, Any] = {"reminders": set_for}
+    if not_set:
+        found["reminders_not_set"] = not_set
+    return found
+
+
+def _reminder_brief(ctx: ToolContext, task: tasks.Task) -> dict[str, Any]:
+    at = task.reminder.remind_at if task.reminder else None
+    local = (
+        datetime.fromisoformat(at).astimezone(ctx.clock.tz).strftime("%Y-%m-%dT%H:%M")
+        if at
+        else None
+    )
+    return {"task": task.id, "before": task.plan_remind, "at": local}
 
 
 @tool(

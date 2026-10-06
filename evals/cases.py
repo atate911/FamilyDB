@@ -700,12 +700,8 @@ CASES: tuple[Case, ...] = (
                 asked(),
                 what="neither on the calendar for the 18th nor a question about the time",
             ),
-            either(
-                called("add_task", where=starts("remind_at", "2026-11-11"), what="a week before"),
-                asked(),
-                what="no reminder a week before",
-            ),
-            wrote_only("create_event", "add_task", "add_idea", "update_idea"),
+            either(reminds_on("2026-11-11"), asked(), what="no reminder a week before"),
+            wrote_only("create_event", "update_event", "add_task", "add_idea", "update_idea"),
         ),
         "A plan on the 18th and a reminder on the 11th, or a question first.",
     ),
@@ -724,7 +720,6 @@ CASES: tuple[Case, ...] = (
             ),
         ),
         "A reminder set for a plan moves with it: a week before the 19th, no longer the 11th.",
-        waits_for="M1.4, reminders tied to their plan",
     ),
     Case(
         "plan_without_a_calendar",

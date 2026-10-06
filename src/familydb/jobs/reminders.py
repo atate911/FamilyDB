@@ -5,7 +5,7 @@ is the retry job's (`run_deliveries`). Also releases held messages no reply carr
 from contextlib import closing
 from datetime import datetime
 
-from familydb import buttons, routing, voice
+from familydb import buttons, plan_service, routing, voice
 from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
@@ -20,6 +20,8 @@ def run_reminders(app: App) -> int:
     queued: list[tuple[int, str, str, str, str]] = []
     with closing(app.connect()) as conn:
         with transaction(conn):
+            # A reminder tied to a plan that is over has had its day, sent or not (plan_service).
+            plan_service.finish_over(conn, today=app.clock.today().isoformat(), now=now)
             for reminder in tasks.due_reminders(conn, now):
                 task = tasks.get(conn, reminder.task_id)
                 if task is None:
@@ -32,7 +34,13 @@ def run_reminders(app: App) -> int:
                     channel=channel,
                     chat_id=chat,
                     text=reminder_for(
-                        conn, task, app.settings, channel=channel, chat_id=chat, due_when=due_when
+                        conn,
+                        task,
+                        app.settings,
+                        channel=channel,
+                        chat_id=chat,
+                        due_when=due_when,
+                        at=moment,
                     ),
                     now=now,
                     buttons=buttons.for_reminder(task.id),

@@ -43,6 +43,9 @@ class Task(BaseModel):
     # Whose birthday or anniversary it is: its reminder lists the gifts saved for them.
     gift_for: str | None = None
     nudged_at: str | None = None
+    # A reminder tied to a plan, and which (plan_service.REMIND_BEFORE): it moves with the plan.
+    plan_id: int | None = None
+    plan_remind: str | None = None
     channel: str
     chat_id: str
     created_at: str
@@ -100,6 +103,33 @@ def in_chat(
     return [task for row in rows if (task := get(conn, row["id"])) is not None]
 
 
+def linked_to(conn: sqlite3.Connection, plan_id: int) -> list[Task]:
+    """The open reminders tied to a plan (plan_service)."""
+    rows = conn.execute(
+        "SELECT id FROM tasks WHERE plan_id=? AND status='open' ORDER BY id", (plan_id,)
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def cancel(conn: sqlite3.Connection, task_id: int, now: str) -> None:
+    """Cancel one open task with its reminders. Call inside a transaction."""
+    _cancel(conn, "SELECT id FROM tasks WHERE id = ? AND status = 'open'", (task_id,), now)
+
+
+def finish_linked(conn: sqlite3.Connection, *, ended_before: str, now: str) -> int:
+    """Mark done the open reminders tied to a plan that ended before `ended_before` (a date),
+    cancelling any reminder of theirs not yet sent; returns how many. Dates compare as the
+    plans' own (`plans.due_for_follow_up`). Call inside a transaction."""
+    return _cancel(
+        conn,
+        "SELECT t.id FROM tasks t JOIN plans p ON p.id = t.plan_id WHERE t.plan_id IS NOT NULL "
+        "AND t.status = 'open' AND substr(coalesce(p.end, p.start), 1, 10) < ?",
+        (ended_before,),
+        now,
+        status="done",
+    )
+
+
 def find_by_operation(conn: sqlite3.Connection, operation_key: str) -> Task | None:
     """The task an earlier attempt at the same request saved, if any."""
     row = conn.execute("SELECT id FROM tasks WHERE operation_key=?", (operation_key,)).fetchone()
@@ -135,6 +165,8 @@ def insert(
     repeat: dict[str, Any] | None = None,
     gift_for: str | None = None,
     created_by_member_id: int | None = None,
+    plan_id: int | None = None,
+    plan_remind: str | None = None,
 ) -> int:
     """A new task. `repeat` holds the four repeat_ columns, when it comes round again."""
     row = {
@@ -151,6 +183,7 @@ def insert(
         **(repeat or {}),
         **({"gift_for": gift_for} if gift_for else {}),
         **({"created_by_member_id": created_by_member_id} if created_by_member_id else {}),
+        **({"plan_id": plan_id, "plan_remind": plan_remind} if plan_id is not None else {}),
     }
     cur = conn.execute(
         f"INSERT INTO tasks({','.join(row)}) VALUES ({','.join('?' * len(row))})",
@@ -243,14 +276,20 @@ def open_for(
     return [task for row in rows if (task := get(conn, row["id"])) is not None]
 
 
-def _cancel(conn: sqlite3.Connection, query: str, params: tuple[Any, ...], now: str) -> int:
+def _cancel(
+    conn: sqlite3.Connection,
+    query: str,
+    params: tuple[Any, ...],
+    now: str,
+    *,
+    status: Literal["cancelled", "done"] = "cancelled",
+) -> int:
     open_ids = [int(row["id"]) for row in conn.execute(query, params)]
     for task_id in open_ids:
         cancel_reminders(conn, task_id, now)
         conn.execute(
-            "UPDATE tasks SET status = 'cancelled', revision = revision + 1, updated_at = ? "
-            "WHERE id = ?",
-            (now, task_id),
+            "UPDATE tasks SET status = ?, revision = revision + 1, updated_at = ? WHERE id = ?",
+            (status, now, task_id),
         )
     return len(open_ids)
 

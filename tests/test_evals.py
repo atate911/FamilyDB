@@ -497,6 +497,23 @@ def test_reminders_are_read_on_the_familys_clock(settings) -> None:
     )
 
 
+def test_a_reminder_set_with_its_plan_moves_with_it(settings) -> None:
+    """Set with the plan (remind_before), the reminder is moved by code when the plan is: the
+    concert's reminder is on the 11th, and on the 12th once the concert is on the 19th."""
+    beck = {"title": "Beck", "start": "2026-11-18T20:00", "remind_before": ["1 week"]}
+    made = [
+        [fakes.tool_use("t1", "create_event", beck)],
+        [fakes.text("On for Wed 18 Nov, 8pm; reminder Wed 11 Nov, 9am.")],
+    ]
+    concert = by_name("concert_and_reminder")
+    assert grade(concert, run_case(concert, settings, api=_answer(*made))) == []
+    case = by_name("plan_moves_reminder")
+    moved = [fakes.tool_use("t2", "update_event", {"plan_id": 1, "start": "2026-11-19T20:00"})]
+    run = run_case(case, settings, api=_answer(*made, moved, [fakes.text("Moved to the 19th.")]))
+    assert grade(case, run) == []
+    assert [r.at for r in run.reminders if r.live] == ["2026-11-12T09:00"]
+
+
 def test_a_claim_of_a_booking_never_made_fails(settings) -> None:
     case = by_name("kiggins_movie")
     api = _answer([fakes.text("I booked it for 7:30 tonight.")])

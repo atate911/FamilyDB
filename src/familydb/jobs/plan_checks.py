@@ -46,7 +46,9 @@ def run_plan_checks(app: App) -> int:
         if app.calendar is not None:
             try:
                 now = utc_iso(app.clock.now())
-                sync_plans(conn, app.calendar, app.settings.google_calendar_id, now)
+                sync_plans(
+                    conn, app.calendar, app.settings.google_calendar_id, now, tz=app.clock.tz
+                )
             except Exception:
                 log.exception("plan checks deferred: the calendar could not be checked")
                 return 0
