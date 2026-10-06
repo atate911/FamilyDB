@@ -754,9 +754,7 @@ def edit_task(task_id: int) -> str:
     tz = app.settings.tzinfo
     slots = views.slot_map(people)
     row = views.task_row(task, tz, app.clock.today(), nudging=app.settings.task_nudges)
-    row["changed"] = views.changed_line(
-        changed, tz, assistant=personas.active(app.settings).name
-    )
+    row["changed"] = views.changed_line(changed, tz, assistant=personas.active(app.settings).name)
     return render_template(
         "task_form.html",
         task=task,
