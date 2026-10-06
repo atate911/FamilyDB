@@ -1085,9 +1085,7 @@ def test_a_page_the_bot_serves_is_never_cached(settings, clock, conn, family) ->
 @pytest.mark.parametrize(
     ("path", "sheet", "sprite", "font"),
     [
-        # Pages on the new frame, and pages not moved to it yet: each names its own files.
         ("/", "style-kitchen.css", "icons-kitchen.svg", "atkinson-400.woff2"),
-        ("/status", "style.css", "icons.svg", "dm-sans.woff2"),
     ],
 )
 def test_a_browser_keeps_what_the_page_links_to_until_it_changes(

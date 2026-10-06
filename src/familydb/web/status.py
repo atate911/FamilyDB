@@ -9,7 +9,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from familydb import alerts
+from familydb import alerts, personas, presents
 from familydb import model_watch as watch
 from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
@@ -358,6 +358,264 @@ def vera_today(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
     }
 
 
+def _action(label: str, endpoint: str, **values: Any) -> dict[str, Any]:
+    """A button beside a part that needs something: where it goes is a page's name, not a URL."""
+    return {"label": label, "endpoint": endpoint, "values": values}
+
+
+def _health_row(
+    area: str, glyph: str, state: str, tag: str, words: str, action: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """One part of "How each part is doing". `state` is ok, look, broken, better (not connected
+    yet, which is a choice) or off; with `tag`, the words that say it, it is never colour alone."""
+    return {
+        "area": area,
+        "glyph": glyph,
+        "state": state,
+        "tag": tag,
+        "words": words,
+        "action": action,
+    }
+
+
+def health(app: App, conn: sqlite3.Connection, *, name: str) -> list[dict[str, Any]]:
+    """How each part stands, in plain words: what the page, the verdict and the family read
+    alike, from the same signals as the pill (`pill`). No network, no model."""
+    live = app.settings
+    steps = {one.name: one for one in setup_progress(app, conn)}
+    standing = pill(app, conn, name=name)
+    limit = live.daily_spend_limit
+    spent = spent_today(conn, live, app.clock.now())
+    linked = telegram_working(app)
+    rows: list[dict[str, Any]] = []
+
+    # The assistant herself.
+    if standing.state == "down":
+        missing = [
+            one.title.lower() for one in steps.values() if one.need == "needed" and not one.done
+        ]
+        if missing:
+            words = f"Not ready to answer yet: it still needs {', '.join(missing)}."
+            action = _action("Open setup", "setup.overview")
+        else:
+            words = "Something only an admin can fix is stopping her: see Needs a look below."
+            action = None
+        rows.append(_health_row(name, "presence", "broken", "Can\u2019t answer", words, action))
+    elif standing.state == "rest":
+        rows.append(
+            _health_row(
+                name,
+                "presence",
+                "look",
+                "Resting",
+                "Resting until midnight: the day\u2019s limit is spent.",
+            )
+        )
+    else:
+        where = "here on the website and on Telegram" if linked else "here on the website"
+        tag = "Writing back" if standing.state == "busy" else "Ready"
+        rows.append(_health_row(name, "presence", "ok", tag, f"Ready to answer {where}."))
+
+    # What it may spend.
+    if not limit:
+        rows.append(
+            _health_row(
+                "Spending",
+                "dollar",
+                "off",
+                "No limit",
+                "There is no daily limit, so nothing stops it spending.",
+                _action("Set a limit", "settings.section", name="spending"),
+            )
+        )
+    elif spent >= limit:
+        rows.append(
+            _health_row(
+                "Spending",
+                "dollar",
+                "look",
+                "Limit reached",
+                f"The {views.money_text(limit)} daily limit is reached; nothing more is asked of "
+                "a model until midnight.",
+            )
+        )
+    elif spent >= limit * 0.75:
+        rows.append(
+            _health_row(
+                "Spending",
+                "dollar",
+                "look",
+                "Near the limit",
+                f"About {views.money_text(spent)} of the {views.money_text(limit)} daily limit "
+                "is spent.",
+            )
+        )
+    else:
+        rows.append(
+            _health_row(
+                "Spending",
+                "dollar",
+                "ok",
+                "Working",
+                f"Well under the {views.money_text(limit)} daily limit.",
+            )
+        )
+
+    # Who may sign in.
+    password = steps["password"]
+    rows.append(
+        _health_row(
+            "Sign-in",
+            "lock",
+            "ok" if password.done else "look",
+            "Working" if password.done else "Needs a look",
+            password.detail,
+            None if password.done else _action("Set up sign-ins", "setup.step", name="password"),
+        )
+    )
+
+    # A second company to fall back on.
+    spare = app.fallback("chat", app.provider("chat").name)
+    if spare is not None:
+        rows.append(
+            _health_row(
+                "Backup",
+                "sparkle",
+                "ok",
+                "Ready",
+                f"If the first company is down, {PROVIDER_LABELS.get(spare.name, spare.name)} "
+                "answers instead.",
+            )
+        )
+    else:
+        rows.append(
+            _health_row(
+                "Backup",
+                "sparkle",
+                "off",
+                "Optional",
+                f"A second AI company {name} can switch to if the first is down. It only costs "
+                "when used.",
+                _action("Add a backup key", "settings.section", name="model", _anchor="keys"),
+            )
+        )
+
+    # Telegram.
+    telegram = steps["telegram"]
+    if telegram.done:
+        rows.append(_health_row("Telegram", "send", "ok", "Working", telegram.detail))
+    elif live.telegram_bot_token:
+        rows.append(
+            _health_row(
+                "Telegram",
+                "send",
+                "look",
+                "Needs a look",
+                telegram.detail,
+                _action("Open the Telegram step", "setup.step", name="telegram"),
+            )
+        )
+    else:
+        rows.append(
+            _health_row(
+                "Telegram",
+                "send",
+                "better",
+                "Not connected",
+                f"The family can\u2019t text {name} from their phones. Reminders still appear in "
+                "the chat.",
+                _action("Connect Telegram", "setup.step", name="telegram"),
+            )
+        )
+
+    # Google Calendar.
+    if calendar_available(live):
+        rows.append(
+            _health_row(
+                "Google Calendar", "cal", "ok", "Connected", "Plans are put on the family calendar."
+            )
+        )
+    elif live.google_calendar_id:
+        rows.append(
+            _health_row(
+                "Google Calendar",
+                "cal",
+                "look",
+                "Needs a look",
+                "A calendar is named but not connected yet.",
+                _action("Connect Google Calendar", "setup.step", name="calendar"),
+            )
+        )
+    else:
+        rows.append(
+            _health_row(
+                "Google Calendar",
+                "cal",
+                "better",
+                "Not connected",
+                "Plans stay inside FamilyDB.",
+                _action("Connect Google Calendar", "setup.step", name="calendar"),
+            )
+        )
+
+    # Reading the web for new ideas.
+    if enrichment_available(live):
+        rows.append(
+            _health_row(
+                "Looking things up",
+                "compass",
+                "ok",
+                "On",
+                "New ideas get hours, prices and drive times.",
+            )
+        )
+    else:
+        rows.append(
+            _health_row(
+                "Looking things up",
+                "compass",
+                "off",
+                "Off",
+                "New ideas don\u2019t get hours, prices or drive times.",
+                _action("Turn it on", "settings.section", name="lookups"),
+            )
+        )
+    return rows
+
+
+def verdict(
+    parts: list[dict[str, Any]], *, name: str, standing: Pill, spent: float, thirty: float
+) -> dict[str, str]:
+    """The line at the top of Status: whether she is ready, said with what is worth a look. Built
+    from `health` and the pill, so it cannot say something the rows below do not."""
+    limit_spoken = {
+        "ready": f"{name} is ready, and well under budget.",
+        "busy": f"{name} is writing back.",
+        "rest": f"{name} is resting until midnight.",
+        "down": f"{name} can\u2019t answer right now.",
+    }
+    heading = limit_spoken[standing.state]
+    if standing.state == "ready" and any(
+        one["area"] == "Spending" and one["state"] != "ok" for one in parts
+    ):
+        heading = f"{name} is ready."
+    today = "Nothing spent today" if spent <= 0 else f"About {views.money_text(spent)} spent today"
+    words = [f"{today}; the last 30 days cost {views.money_text(thirty)}."]
+    looks = [
+        one["area"] for one in parts if one["state"] in ("look", "broken") and one["area"] != name
+    ]
+    if looks:
+        words.append(
+            f"{presents.join_names(looks)} {'needs' if len(looks) == 1 else 'need'} a look."
+        )
+    absent = [one["area"] for one in parts if one["state"] == "better"]
+    if absent:
+        isnt = "isn\u2019t" if len(absent) == 1 else "aren\u2019t"
+        words.append(f"{presents.join_names(absent)} {isnt} connected yet.")
+    tone = {"ready": "ok", "busy": "ok", "rest": "warn", "down": "alert"}[standing.state]
+    return {"tone": tone, "heading": heading, "text": " ".join(words)}
+
+
 def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """What only an admin can fix, while it lasts. New models are under Models and prices."""
     now = app.clock.now()
@@ -436,6 +694,26 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "model_watch": model_watch(app, conn),
         "activity": activity(app, conn),
         "activity_days": ACTIVITY_DAYS,
+        **overview(app, conn, since),
+    }
+
+
+def overview(app: App, conn: sqlite3.Connection, since: str) -> dict[str, Any]:
+    """The top of the page: the verdict, how each part is doing, and the month in figures."""
+    name = personas.active(app.settings).name
+    now = app.clock.now()
+    spent = spent_today(conn, app.settings, now)
+    thirty = sum(row["cost_usd"] for row in calls.usage_since(conn, since=since))
+    parts = health(app, conn, name=name)
+    standing = pill(app, conn, name=name)
+    usual = calls.usual_day(conn, since=utc_iso(now - timedelta(days=USUAL_DAYS)))
+    answered = sum(
+        row["calls"] for row in calls.usage_by_kind(conn, since=since) if row["kind"] == "chat"
+    )
+    return {
+        "health": parts,
+        "verdict": verdict(parts, name=name, standing=standing, spent=spent, thirty=thirty),
+        "thirty": {"dollars": thirty, "usual": usual, "answered": answered},
     }
 
 

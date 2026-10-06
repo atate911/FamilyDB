@@ -1721,3 +1721,9 @@ li:target { border-radius: var(--r-md); }
 
 /* ---------- 14. Added with the family pages (step 9) ---------- */
 .item--off { opacity: .72; }
+
+/* Status: the share of a call's input each part took, and a press beside a line that wants one */
+.sharebar { width: 96px; height: 10px; flex: none; }
+.share-cell { display: inline-flex; align-items: center; gap: var(--s2); }
+.tables { display: grid; gap: var(--s5); margin-top: var(--s4); }
+.inline-action { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }

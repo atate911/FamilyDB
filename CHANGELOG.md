@@ -73,6 +73,14 @@ older than what is installed. It gets a date when it is released.
   steps along the top, Back and Next at the foot, and the Calendar step in three
   cards. What each step asks and does is as before. Where it said "the password
   the installer made up" it now says "the password FamilyDB started with".
+- **A new Status, activity, sign-in and error pages.** Status opens with one
+  line on whether she is ready and what is worth a look, then today's spending
+  against the limit, how each part is doing (with a button beside the ones that
+  need something), and the rest as before. It is for every grown-up, a parent
+  included; a kid has no Status and no health pill. One message's full history,
+  the sign-in page, "Page not found" and the pages that say "for an admin" or
+  "for grown-ups" are on the new look too. A kid who opens Settings is told who
+  to ask.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

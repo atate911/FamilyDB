@@ -69,6 +69,8 @@
         {%- if late %}<span class="badge badge--late">{{ late }}<span class="sr"> late</span></span>{% endif %}</a>
     {% endmacro %}
 
+    {# The whole frame; a page with no menu (sign-in) puts its own here. #}
+    {% block frame %}
     {# The phone's top bar: the brand, how she is, and the picture that opens the menu (a dot while something is worth a look). #}
     <header class="topbar">
       <a class="brand" href="{{ url_for('web.home') }}" aria-label="{{ site_title }}, home">{{ brand_mark() }}{{ wordmark(site_title) }}</a>
@@ -145,5 +147,6 @@
       {{ tab('Plans', plans_url, 'plans', 'cal') }}
       {{ tab('To do', url_for('web.tasks'), 'todo', 'todo', late=shell.late) }}
     </nav>
+    {% endblock %}
   </body>
 </html>

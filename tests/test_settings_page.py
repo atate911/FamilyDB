@@ -311,7 +311,7 @@ def test_each_level_says_which_model_it_means_and_what_it_costs(page) -> None:
 def test_the_daily_limit_is_on_the_page(page) -> None:
     page.post("/settings", data=_whole_form(page, daily_spend_limit="0.5"))
     assert page.app.settings.daily_spend_limit == 0.5
-    assert "of the $0.50 daily limit" in page.get("/status").text
+    assert "$0.50</span> daily limit" in page.get("/status").text
 
 
 class _Company:
