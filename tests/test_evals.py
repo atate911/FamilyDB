@@ -514,6 +514,16 @@ def test_a_reminder_set_with_its_plan_moves_with_it(settings) -> None:
     assert [r.at for r in run.reminders if r.live] == ["2026-11-12T09:00"]
 
 
+def test_what_they_are_out_of_goes_on_the_list(settings) -> None:
+    case = by_name("shopping_add")
+    added = {"action": "add", "items": ["milk", "eggs"]}
+    api = _answer([fakes.tool_use("t1", "shopping_list", added)], [fakes.text("On the list.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    as_task = {"title": "Buy milk and eggs"}
+    api = _answer([fakes.tool_use("t1", "add_task", as_task)], [fakes.text("Added.")])
+    assert "never called shopping_list" in grade(case, run_case(case, settings, api=api))
+
+
 def test_a_claim_of_a_booking_never_made_fails(settings) -> None:
     case = by_name("kiggins_movie")
     api = _answer([fakes.text("I booked it for 7:30 tonight.")])

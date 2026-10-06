@@ -603,6 +603,22 @@ def repeat_text(task: Task, tz: ZoneInfo) -> str | None:
     return words
 
 
+def list_title(name: str) -> str:
+    """A list as the page names it: "Shopping list", "Hardware list"."""
+    return f"{name[:1].upper()}{name[1:]} list"
+
+
+# What a list's form says it did (edits.change_list), by what was asked.
+LIST_SAID = {
+    "add": "Added to the {list}: {items}.",
+    "tick": "Got: {items}.",
+    "untick": "Back on the {list}: {items}.",
+    "remove": "Taken off the {list}: {items}.",
+    "clear_ticked": "Cleared what was got from the {list}.",
+}
+LIST_ALREADY = "Already on it: {items}."
+
+
 # Notifications on this device (/you, static/push.js): what the section says as it stands.
 PUSH_WORDS = {
     "is_on": "On for this device: a notice says when {name} has written.",

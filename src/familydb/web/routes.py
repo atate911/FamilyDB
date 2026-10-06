@@ -26,6 +26,7 @@ from familydb.availability import enrichment_available
 from familydb.dates import next_birthday
 from familydb.store import calls
 from familydb.store import ideas as idea_store
+from familydb.store import lists as list_store
 from familydb.store import members as member_store
 from familydb.store import memories as memory_store
 from familydb.store import messages as message_store
@@ -525,6 +526,27 @@ def edit_idea(idea_id: int) -> str:
     if record is None:
         abort(404)
     return _idea_form(record)
+
+
+@bp.get("/lists")
+def lists_page() -> str:
+    """The family's lists: what is still to get, a box to add to each, a tick for each thing
+    (forms through shopping_list, edits.change_list). The shopping list is always there."""
+    with closing(_app().connect()) as conn:
+        names = list_store.names(conn)
+        shown = []
+        for name in ["shopping", *(other for other in names if other != "shopping")]:
+            ref = list_store.find(conn, name)
+            held = list_store.items(conn, ref) if ref is not None else []
+            shown.append(
+                {
+                    "name": name,
+                    "title": views.list_title(name),
+                    "to_get": [item.text for item in held if item.ticked_at is None],
+                    "ticked": [item.text for item in held if item.ticked_at is not None],
+                }
+            )
+    return render_template("lists.html", lists=shown)
 
 
 @bp.get("/memory")

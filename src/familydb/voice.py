@@ -183,6 +183,12 @@ EVENTS: dict[str, Event] = {
         ("who", "when"),
         {"who": "Sam", "when": "19:00 on Sun 04 Oct"},
     ),
+    "tap_ticked": Event(
+        "A thing on the list ticked with its button",
+        "Got it ✓ {item} ({who}).",
+        ("item", "who"),
+        {"item": "milk", "who": "Sam"},
+    ),
     "tap_undone": Event(
         "Undo tapped under a reply",
         "Undone ({who}): {what}.",
@@ -266,6 +272,10 @@ EVENTS: dict[str, Event] = {
             "found": "• #31 Hopscotch: Indoor play · hours saved for sat, sun\n"
             "• #32 Ramen Ryoma: Noodle bar · closed mon",
         },
+    ),
+    "cmd_list": Event("Heading /list", "On the shopping list:", (), {}),
+    "cmd_list_empty": Event(
+        "Answering /list when it is empty", "Nothing on the shopping list.", (), {}
     ),
     "undo_done": Event(
         "Answering /undo",

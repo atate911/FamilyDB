@@ -587,6 +587,38 @@ def undo() -> Response:
     return redirect(back)
 
 
+LIST_ACTIONS = frozenset(views.LIST_SAID)
+
+
+@bp.post("/lists/change")
+@once
+def change_list() -> Response:
+    """A list's box, ticks and clearing: shopping_list, as she would call it, as whoever is signed
+    in (a kid may not, until the family decides)."""
+    action = request.form.get("action", "")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.lists_page")
+    if action not in LIST_ACTIONS:
+        return _back("web.lists_page")
+    name = _text(request.form, "name") or "shopping"
+    things = [line.strip() for line in request.form.get("items", "").splitlines() if line.strip()]
+    result, complaint = run("shopping_list", {"action": action, "items": things, "name": name})
+    if result is None:
+        _say(complaint or "")
+        return _back("web.lists_page")
+    title = views.list_title(result["list"]).lower()
+    said = []
+    if done := result.get(action):
+        said.append(views.LIST_SAID[action].format(list=title, items=", ".join(done)))
+    elif action == "clear_ticked":
+        said.append(views.LIST_SAID[action].format(list=title, items=""))
+    if already := result.get("already"):
+        said.append(views.LIST_ALREADY.format(items=", ".join(already)))
+    _say(" ".join(said))
+    return _back("web.lists_page")
+
+
 @bp.post("/memory/new")
 @once
 def add_memory() -> Response:

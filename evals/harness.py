@@ -36,6 +36,8 @@ WRITES = frozenset(
         "add_task",
         "update_task",
         "remember",
+        "shopping_list",
+        "undo",
     }
 )
 

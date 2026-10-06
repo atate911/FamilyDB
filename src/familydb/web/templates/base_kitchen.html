@@ -35,6 +35,7 @@
     'ideas': ['web.ideas', 'web.idea', 'web.new_idea', 'web.edit_idea', 'web.restaurants'],
     'plans': ['web.plans', 'web.plans_month'],
     'todo': ['web.tasks', 'web.edit_task'],
+    'lists': ['web.lists_page'],
     'wishes': ['web.wishes'],
     'memory': ['web.memory'],
     'status': ['web.status', 'activity.show'],
@@ -91,6 +92,7 @@
               {{ nav_item('Ideas', url_for('web.ideas'), 'ideas', 'bulb') }}
               {{ nav_item('Plans', plans_url, 'plans', 'cal', count=(badge('quiet', shell.rate, 'to rate') if shell.rate else none)) }}
               {{ nav_item('To do' if grownup else 'My to-dos', url_for('web.tasks'), 'todo', 'todo', count=(badge('late', shell.late, 'late') if shell.late else none)) }}
+              {% if viewer.may('change') %}{{ nav_item('Lists', url_for('web.lists_page'), 'lists', 'list') }}{% endif %}
               {% if wishing == 'decide' %}{{ nav_item('Kids’ lists', url_for('web.wishes'), 'wishes', 'gift', count=(badge('act', shell.decide, 'to decide') if shell.decide else none)) }}
               {% elif wishing %}{{ nav_item('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
               {% if grownup %}{{ nav_item('What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', url_for('web.memory'), 'memory', 'memory') }}{% endif %}

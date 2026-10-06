@@ -26,13 +26,14 @@ import sqlite3
 from collections.abc import Callable
 from contextlib import closing
 from datetime import date, datetime, timedelta
+from typing import Any
 
-from familydb import agenda, family, task_service, voice
+from familydb import agenda, buttons, family, roles, task_service, voice
 from familydb.agenda import Agenda
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.dates import utc_iso
-from familydb.store import knocks, members, messages, tasks
+from familydb.store import knocks, lists, members, messages, tasks
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.store.tasks import Task
@@ -49,6 +50,7 @@ MENU = (
     ("now", "What could start right now"),
     ("lookup", "Look up the ideas waiting, now"),
     ("undo", "Undo your last change here"),
+    ("list", "The shopping list"),
 )
 NAMES = frozenset(name for name, _ in MENU)
 MAX_TASKS = 12
@@ -201,12 +203,22 @@ def _answer(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> Outgoin
     except sqlite3.IntegrityError:
         log.info("command %s/%s arrived twice at once", msg.channel, msg.channel_update_id)
         return None
-    text = ANSWERS[name](app, conn, msg, member, asked.id)
+    said = ANSWERS[name](app, conn, msg, member, asked.id)
+    # An answer may come with buttons (/list's ticks), kept with it like a reminder's.
+    text, row = said if isinstance(said, tuple) else (said, [])
     with transaction(conn):
         out = messages.insert_out(
-            conn, channel=msg.channel, chat_id=msg.chat_id, text=text, reply_to=asked.id, now=now
+            conn,
+            channel=msg.channel,
+            chat_id=msg.chat_id,
+            text=text,
+            reply_to=asked.id,
+            now=now,
+            buttons=row or None,
         )
-    return OutgoingMessage(msg.chat_id, text, "ok", in_message_id=asked.id, out_message_id=out.id)
+    return OutgoingMessage(
+        msg.chat_id, text, "ok", in_message_id=asked.id, out_message_id=out.id, buttons=row
+    )
 
 
 def _today(
@@ -383,11 +395,36 @@ def _undo(
     return voice.say(app.settings, "undo_done", seed=seed, what=answered["undone"])
 
 
-ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, int], str]] = {
+# At most this many ticks under /list; the rest are on the page.
+MAX_LIST_BUTTONS = 12
+
+
+def _list(
+    app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
+) -> tuple[str, list[buttons.Button]]:
+    """/list: what is still to get on the shopping list, with a tick for each for whoever may
+    change things (a tap takes off its own row)."""
+    list_ref = lists.find(conn, "shopping")
+    held = (
+        [item for item in lists.items(conn, list_ref) if item.ticked_at is None] if list_ref else []
+    )
+    if not held:
+        return voice.say(app.settings, "cmd_list_empty", seed=seed), []
+    row: list[buttons.Button] = []
+    if roles.may(member.role, "change"):
+        for item in held[:MAX_LIST_BUTTONS]:
+            tick = [{"label": f"✓ {item.text[:28]}", "data": f"tick:{item.id}"}]
+            row += buttons.in_row(tick, str(item.id))
+    said = voice.say(app.settings, "cmd_list", seed=seed)
+    return _under(said, [item.text for item in held]), row
+
+
+ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, int], Any]] = {
     "today": _today,
     "week": _week,
     "tasks": _tasks,
     "now": _now,
     "lookup": _lookup,
     "undo": _undo,
+    "list": _list,
 }

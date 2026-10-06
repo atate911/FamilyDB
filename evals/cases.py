@@ -396,6 +396,26 @@ CASES: tuple[Case, ...] = (
         "A reminder on Tuesday 29 September, or a question about the time; never an idea.",
     ),
     Case(
+        "shopping_add",
+        ("We're out of milk and eggs",),
+        (
+            called(
+                "shopping_list",
+                1,
+                lambda c: (
+                    c.input.get("action") == "add"
+                    and all(
+                        any(word in str(item).casefold() for item in c.input.get("items") or [])
+                        for word in ("milk", "eggs")
+                    )
+                ),
+                "adding milk and eggs",
+            ),
+            wrote_only("shopping_list"),
+        ),
+        "What the family needs to get goes on the shopping list: not a task, not an idea.",
+    ),
+    Case(
         "someday_saturday_morning",
         (
             "One of these Saturday mornings I need to get my knife sharpened at the "

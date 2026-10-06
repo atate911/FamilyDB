@@ -112,6 +112,8 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "edits.snooze_task": "own_tasks",
     # Taking back a change: anybody may try; undo.py says whose they may (a kid, her own tasks).
     "edits.undo": "own_tasks",
+    # The lists are the grown-ups' until the family decides what a kid may do with them.
+    "web.lists_page": "change",
     # Notices on one's own devices, for anybody signed in as themselves (push.py).
     "family.push_on": "sign_in",
     "family.push_off": "sign_in",

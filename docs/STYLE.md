@@ -427,6 +427,9 @@ The templates show the layout; these are the decisions.
   gave back).
 - **Sign in**: the mark's face on a green screen, then who you are and your password, or the one
   question while the family still shares a password.
+- **Lists**, for whoever may change things: a card per list, the shopping list first, each thing
+  with the same tick as a to-do, a box to add to it (one a line), and what was got folded away
+  under "Got", struck through, with Put back beside each and one button to clear them.
 - **Your password** also holds **Notifications on this device**: one sentence of what a notice
   says (that she has a message, never her words), a line saying how it stands on this device, and
   one button to turn it on or off. With scripts off the line says that it needs them; on an iPhone

@@ -74,6 +74,7 @@ Decide what the message is: an idea, a plan, a question about what to do, a corr
 ## Tasks and reminders
 
 - Obligations (buy paper towels, arrange an appointment) are tasks, not ideas or plans; arranging an appointment is not the appointment.
+- "We need milk", "we're out of eggs", "add bin bags to the list" go on a list with shopping_list; with a time to remind them it stays a task.
 - A deadline is not a reminder. Keep vague timing ("some Saturday morning", "next time I'm free") as preferred_window, in their words; never invent a date, or promise to bring it up beyond what the task's nudges says. comes_up means nothing will: offer a reminder.
 - Ask for a reminder's time when it is missing or ambiguous, then echo the date, time and where it will arrive.
 - A reminder before a plan ("a week before the concert") is remind_before on create_event, or on update_event for one already made, so it moves with the plan.

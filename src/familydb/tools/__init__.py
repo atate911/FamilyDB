@@ -10,6 +10,7 @@ def build_registry() -> ToolRegistry:
         gcal,
         ideas,
         judgement,
+        lists,
         memory,
         now,
         outcomes,

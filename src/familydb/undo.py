@@ -10,7 +10,8 @@ undoes somebody else's later change. A call is undone once (`undone_at`).
 What can be taken back: an idea added (dropped) or changed (its fields put back); a task added
 (cancelled) or changed, snoozed, done or cancelled when it does not repeat (put back, its reminder
 again if that time is still to come); a plan made (cancelled, its reminders with it) or moved or
-renamed (put back); something remembered (forgotten). What cannot: how a plan went (counted into
+renamed (put back); something remembered (forgotten); a list's things added, taken off, ticked or
+unticked (the opposite). What cannot: how a plan went (counted into
 the idea's numbers), a repeating task's round, a plan cancelled or a hand-made event deleted
 (gone from Google), a kid's wish answered (she has been told), a memory replaced or forgotten, a
 lookup asked for, and anything already sent.
@@ -198,6 +199,16 @@ def _forget(ctx: ToolContext, inverse: dict[str, Any]) -> None:
             )
 
 
+def _list(ctx: ToolContext, inverse: dict[str, Any]) -> None:
+    """The opposite on the same things: added are taken off, ticked are unticked."""
+    from familydb.tools.lists import ShoppingListInput, shopping_list
+
+    shopping_list(
+        _apart(ctx),
+        ShoppingListInput(action=inverse["action"], items=inverse["items"], name=inverse["list"]),
+    )
+
+
 def _apart(ctx: ToolContext) -> ToolContext:
     """The context for a tool run to put something back: its own scratch, so what that run would
     leave to undo is not kept (undoing an undo is not offered)."""
@@ -212,4 +223,5 @@ OPS: dict[str, Callable[[ToolContext, dict[str, Any]], None]] = {
     "cancel_plan": _cancel_plan,
     "restore_plan": _restore_plan,
     "forget": _forget,
+    "list": _list,
 }

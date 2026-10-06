@@ -1723,3 +1723,10 @@ li:target { border-radius: var(--r-md); }
   .wm__cur, .pill-health--busy::before, .typing i { animation: none; }
   .typing i { opacity: .7; }
 }
+
+/* The family's lists (/lists): a tick beside each thing, what was got folded away. */
+.list-items { list-style: none; margin: 0 0 var(--s4); padding: 0; }
+.list-items li { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.list-items form { margin: 0; }
+.list-got { margin-top: var(--s4); }
+.list-got summary { cursor: pointer; font-weight: 700; }

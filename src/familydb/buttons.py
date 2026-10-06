@@ -21,7 +21,17 @@ from typing import Any
 
 from familydb import roles, voice
 from familydb.dates import utc_iso
-from familydb.store import calls, ideas, members, messages, outcomes, plans, tasks, wishes
+from familydb.store import (
+    calls,
+    ideas,
+    lists,
+    members,
+    messages,
+    outcomes,
+    plans,
+    tasks,
+    wishes,
+)
 from familydb.store.db import from_json, transaction
 from familydb.tools.registry import ToolContext
 
@@ -32,7 +42,9 @@ REMINDER = (("done", "✓ Done"), ("hour", "In an hour"), ("tomorrow", "Tomorrow
 FOLLOW_UP = (("again", "Yes, again"), ("not_again", "Not again"), ("missed", "Didn't go"))
 WISH = (("wish_yes", "Yes!"), ("wish_no", "Not this time"), ("wish_later", "Later"))
 UNDO = (("undo", "↩ Undo"),)
-LABELS = dict(REMINDER + FOLLOW_UP + WISH + UNDO)
+# A thing on a list, ticked as bought (/list); its label is the thing's own.
+TICK = (("tick", "✓"),)
+LABELS = dict(REMINDER + FOLLOW_UP + WISH + UNDO + TICK)
 SNOOZES = ("hour", "tomorrow")
 # "Tomorrow" is the same time of day, on the wall clock, between these; else nine.
 TOMORROW_FROM, TOMORROW_UNTIL = clock_time(8, 0), clock_time(20, 0)
@@ -129,6 +141,8 @@ def tap(
         planned = _task_job
     elif action == "undo":
         planned = _undo_job
+    elif action == "tick":
+        planned = _list_job
     else:
         planned = _plan_job
     job = planned(app, conn, action, int(number))
@@ -236,6 +250,18 @@ def _undo_job(app: Any, conn: sqlite3.Connection, action: str, call_id: int) -> 
         return "tap_already"
     what = (from_json(row["undo"]) or {}).get("about", "")
     return _Job("undo", {}, f"undo {what}", "tap_undone", {"what": what}, target=call_id)
+
+
+def _list_job(app: Any, conn: sqlite3.Connection, action: str, item_id: int) -> _Job | str:
+    item = lists.item(conn, item_id)
+    name = lists.name_by_id(conn, item.list_id) if item is not None else None
+    if item is None or name is None:
+        return "tap_stale"
+    if item.ticked_at is not None:
+        return "tap_already"
+    values = {"action": "tick", "items": [item.text], "name": name}
+    about = f"{item.text} on the {name} list"
+    return _Job("shopping_list", values, about, "tap_ticked", {"item": item.text})
 
 
 def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> _Job | str:
