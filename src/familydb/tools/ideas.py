@@ -8,6 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from familydb import presents
+from familydb import undo as taking_back
 from familydb.agent.render import render_idea_line
 from familydb.dates import parse_date, parse_datetime
 from familydb.errors import ToolError
@@ -230,6 +231,9 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
             **fields,
         )
         _keep_presents(ctx, idea)
+    taking_back.keep(
+        ctx, "drop_idea", f"added idea #{idea.id} {idea.title}", idea=idea.id, status=idea.status
+    )
     return idea.model_dump(mode="json")
 
 
@@ -263,7 +267,16 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
             _keep_presents(ctx, idea)
     if idea is None:
         raise ToolError(f"no idea #{args.id}")
-    return idea.model_dump(mode="json")
+    was, now_is = current.model_dump(mode="json"), idea.model_dump(mode="json")
+    taking_back.keep(
+        ctx,
+        "restore_idea",
+        f"changed idea #{idea.id} {idea.title}",
+        idea=idea.id,
+        before={key: was.get(key) for key in changes},
+        after={key: now_is.get(key) for key in changes},
+    )
+    return now_is
 
 
 @tool(

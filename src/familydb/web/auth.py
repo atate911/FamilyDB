@@ -108,6 +108,8 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     # A kid may tick or snooze only her own (update_task holds that for page and chat alike).
     "edits.finish_task": "own_tasks",
     "edits.snooze_task": "own_tasks",
+    # Taking back a change: anybody may try; undo.py says whose they may (a kid, her own tasks).
+    "edits.undo": "own_tasks",
 }
 EVERYBODY_S_OWN = CHOOSING
 HOME = "/"

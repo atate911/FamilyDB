@@ -21,11 +21,12 @@ from flask import (
     url_for,
 )
 
-from familydb import audience, buttons, personas, roles
+from familydb import audience, buttons, personas, roles, undo
 from familydb.agent import spending
 from familydb.app import App
 from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
 from familydb.config import Settings
+from familydb.dates import utc_iso
 from familydb.store import calls
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
@@ -261,6 +262,7 @@ def page(
             ]
         left = messages_left(app, conn, visitor.member)
         pressed = {} if reading is not None else _task_buttons(conn, thread)
+        undoing = {} if reading is not None else _undoable(app, conn, thread, visitor)
     # The log keeps a turn's tool calls against the question; the page shows them under the answer.
     answered = {message.reply_to for message in thread if message.reply_to is not None}
     actions = {message.id: message.actions for message in thread}
@@ -276,8 +278,9 @@ def page(
         )
         for message in thread
     ]
-    for line in lines:
+    for line, message in zip(lines, thread, strict=True):
         line["tasks"] = pressed.get(line["id"], [])
+        line["undo"] = undoing.get(message.reply_to) if line["from_bot"] else None
     last = thread[-1] if thread else None
     # Older messages are only to be read: nothing is on its way there, so nothing waits.
     state, handing = (None, None) if before else standing(app, thread, chat_id)
@@ -357,6 +360,19 @@ def _task_buttons(conn: Any, thread: list[Message]) -> dict[int, list[dict[str, 
                 {"id": task.id, "title": task.title, "revision": task.revision}
             )
     return drawn
+
+
+def _undoable(app: App, conn: Any, thread: list[Message], visitor: auth.Visitor) -> dict[int, int]:
+    """By the message a reply answers, the change its turn made that this visitor may still take
+    back (familydb/undo.py: within a day, theirs, or anybody's for whoever may change things)."""
+    asked = [message.id for message in thread if message.direction == "in"]
+    since = utc_iso(app.clock.now() - undo.WINDOW)
+    mine = visitor.member.id if visitor.member else None
+    return {
+        message_id: int(row["id"])
+        for message_id, row in calls.undoable_for(conn, asked, since=since).items()
+        if visitor.may("change") or (mine is not None and row["member_id"] == mine)
+    }
 
 
 def _readers(family: list[member_store.Member]) -> str:

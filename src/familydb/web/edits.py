@@ -49,6 +49,10 @@ CANCELLED = "Cancelled."
 TICKED = "Done: #{id} {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
+# Beside the notice after a change that can be taken back: the call to undo (undo.py).
+UNDO_NOTICE = "undo"
+UNDONE = "Undone: {what}."
+NOTHING_TO_UNDO = "There is nothing here to undo."
 SNOOZED = "#{id} {title} comes back at {when}."
 SNOOZED_PLAIN = "{title} comes back at {when}."
 NOT_A_SNOOZE = "Choose In an hour or Tomorrow."
@@ -77,10 +81,15 @@ def _app() -> App:
 
 
 def run(
-    name: str, values: dict[str, Any], *, hidden_from: list[int] | None = None
+    name: str,
+    values: dict[str, Any],
+    *,
+    hidden_from: list[int] | None = None,
+    undo_target: int | None = None,
 ) -> tuple[dict[str, Any] | None, str | None]:
     """Run one tool as whoever is signed in, or, under the shared password, whoever the form said.
-    Returns its result, or what went wrong (an unavailable tool's reason included)."""
+    Returns its result, or what went wrong (an unavailable tool's reason included). A change that
+    can be taken back leaves an Undo beside the notice the page shows next."""
     app = _app()
     with closing(app.connect()) as conn:
         who = auth.visitor().name or _remember(request.form.get("who", ""))
@@ -110,6 +119,7 @@ def run(
             task_revision=_task_revision(request.form) if name == "update_task" else None,
             hidden_from=hidden_from,
             source="page",
+            undo_target=undo_target,
         )
         result = app.registry.dispatch(name, values, ctx)
     payload = json.loads(result.content)
@@ -117,6 +127,8 @@ def run(
         return None, payload.get("error", "that did not work")
     if payload.get("available") is False:
         return None, payload.get("reason", "that is not set up yet")
+    if result.undoable:
+        flash(str(result.call_id), UNDO_NOTICE)
     log.info("%s from the page by %s", name, auth.client_address())
     return payload, None
 
@@ -510,6 +522,27 @@ def snooze_task(task_id: int) -> Response:
         when = buttons.when_text(moment, clock.today())
         _say(complaint or said.format(id=task_id, title=result["task"]["title"], when=when))
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/undo")
+@once
+def undo() -> Response:
+    """Undo beside a form's notice, and under her reply in the chat: the undo tool for the one
+    change the button names (ToolContext.undo_target, never the tool's input), as whoever is
+    signed in; it says who may. Back to the page the button was on."""
+    target = request.form.get("target", "")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif not (target.isascii() and target.isdigit() and len(target) <= 18):
+        _say(NOTHING_TO_UNDO)
+    else:
+        result, complaint = run("undo", {}, undo_target=int(target))
+        _say(complaint or UNDONE.format(what=result["undone"]))
+    back = request.form.get("back", "")
+    # Only a path on this page: never somewhere else a form could be made to send a person.
+    if not back.startswith("/") or back.startswith("//") or "\\" in back:
+        back = url_for("web.home")
+    return redirect(back)
 
 
 @bp.post("/memory/new")

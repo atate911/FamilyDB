@@ -66,12 +66,21 @@
 {%- endmacro %}
 
 {# What the last form said, with a way to take it back when there is one. #}
-{% macro flash(message, undo_url=none) -%}
+{# A form's notice; `undo` is the change it made, when that can be taken back (edits.undo), returning to `back`. #}
+{% macro flash(message, undo=none, back='/') -%}
   <div class="banner banner--ok flash" role="status" tabindex="-1">
     <span class="banner__ic">{{ icon('check') }}</span>
     <p class="banner__text">{{ message }}</p>
-    {% if undo_url %}<form method="post" action="{{ undo_url }}"><button class="btn btn--quiet btn--sm" type="submit">Undo</button></form>{% endif %}
+    {% if undo %}{{ undo_form(undo, back) }}{% endif %}
   </div>
+{%- endmacro %}
+
+{% macro undo_form(target, back) -%}
+  <form class="undo-form" method="post" action="{{ url_for('edits.undo') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="target" value="{{ target }}" /><input type="hidden" name="back" value="{{ back }}" />
+    <button class="btn btn--quiet btn--sm" type="submit">Undo</button>
+  </form>
 {%- endmacro %}
 
 
@@ -193,6 +202,7 @@
             </div>
           {% endfor %}
         {% endif %}
+        {% if line.undo %}<div class="msg__buttons">{{ undo_form(line.undo, url_for('chat.show', _anchor='latest')) }}</div>{% endif %}
       </div>
     </div>
   {% else %}

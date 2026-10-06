@@ -147,6 +147,12 @@ EVENTS: dict[str, Event] = {
         ("who", "when"),
         {"who": "Sam", "when": "19:00 on Sun 04 Oct"},
     ),
+    "tap_undone": Event(
+        "Undo tapped under a reply",
+        "Undone ({who}): {what}.",
+        ("who", "what"),
+        {"who": "Sam", "what": "added task #12 Call the plumber"},
+    ),
     "tap_snoozed": Event(
         "A reminder snoozed with its button",
         "Snoozed until {when} ({who}).",
@@ -224,6 +230,18 @@ EVENTS: dict[str, Event] = {
             "found": "• #31 Hopscotch: Indoor play · hours saved for sat, sun\n"
             "• #32 Ramen Ryoma: Noodle bar · closed mon",
         },
+    ),
+    "undo_done": Event(
+        "Answering /undo",
+        "Undone: {what}.",
+        ("what",),
+        {"what": "added task #12 Call the plumber"},
+    ),
+    "undo_not": Event(
+        "Answering /undo when nothing was undone",
+        "Nothing undone: {why}.",
+        ("why",),
+        {"why": "nothing of yours to undo here from the last day"},
     ),
     "lookups_asked": Event(
         "Answering /lookup",

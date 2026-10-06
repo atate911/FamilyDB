@@ -16,6 +16,7 @@ def build_registry() -> ToolRegistry:
         places,
         suggest,
         tasks,
+        undo,
         weather,
         wishes,
     )

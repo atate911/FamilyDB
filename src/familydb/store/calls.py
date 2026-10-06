@@ -274,6 +274,59 @@ def last_lookup_turn(conn: sqlite3.Connection, idea_id: int) -> str | None:
     return row["turn"] if row else None
 
 
+def get(conn: sqlite3.Connection, call_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM tool_calls WHERE id = ?", (call_id,)).fetchone()
+
+
+def last_undoable(
+    conn: sqlite3.Connection, *, member_id: int, message_id: int, since: str
+) -> sqlite3.Row | None:
+    """This person's last change that can be taken back, made since `since` in the chat
+    `message_id` was said in, and before it (undo.py)."""
+    return conn.execute(
+        "SELECT t.* FROM tool_calls t JOIN messages m ON m.id = t.message_id "
+        "JOIN messages here ON here.id = ? "
+        "WHERE t.member_id = ? AND t.undo IS NOT NULL AND t.undone_at IS NULL "
+        "AND t.created_at >= ? AND t.message_id != here.id "
+        "AND m.channel = here.channel AND m.chat_id = here.chat_id "
+        "ORDER BY t.id DESC LIMIT 1",
+        (message_id, member_id, since),
+    ).fetchone()
+
+
+def undoable_for(
+    conn: sqlite3.Connection, message_ids: list[int], *, since: str
+) -> dict[int, sqlite3.Row]:
+    """By message, the last change its turn made that can still be taken back: the Undo under a
+    reply (the page's chat, and Telegram's button)."""
+    if not message_ids:
+        return {}
+    marks = ",".join("?" * len(message_ids))
+    rows = conn.execute(
+        f"SELECT * FROM tool_calls WHERE message_id IN ({marks}) AND undo IS NOT NULL "
+        "AND undone_at IS NULL AND created_at >= ? ORDER BY id",
+        (*message_ids, since),
+    ).fetchall()
+    return {int(row["message_id"]): row for row in rows}
+
+
+def claim_undo(conn: sqlite3.Connection, call_id: int, *, now: str) -> bool:
+    """Mark a call undone before undoing it, so two presses undo it once. Call inside a
+    transaction; False when it was undone already."""
+    return (
+        conn.execute(
+            "UPDATE tool_calls SET undone_at = ? WHERE id = ? AND undone_at IS NULL",
+            (now, call_id),
+        ).rowcount
+        == 1
+    )
+
+
+def release_undo(conn: sqlite3.Connection, call_id: int) -> None:
+    """The undo did not go through: the call can be undone again."""
+    conn.execute("UPDATE tool_calls SET undone_at = NULL WHERE id = ?", (call_id,))
+
+
 def tool_calls_for_message(conn: sqlite3.Connection, message_id: int) -> list[dict[str, Any]]:
     rows = conn.execute(
         "SELECT * FROM tool_calls WHERE message_id = ? ORDER BY id", (message_id,)

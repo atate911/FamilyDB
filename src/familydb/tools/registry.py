@@ -69,6 +69,8 @@ class ToolContext:
     # Where the call comes from, kept with it (tool_calls.source): the chat's model, a button
     # tapped, a page form, a command, a job, a worker turn, the command line.
     source: Source = "chat"
+    # The call a page's or a button's Undo names (tool_calls.id); never the tool's input.
+    undo_target: int | None = None
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())
@@ -86,8 +88,9 @@ class ToolResult:
     content: str
     is_error: bool = False
     summary: dict[str, Any] = field(default_factory=dict)
-    # The tool_calls row it was kept as (dispatch), for a page's Undo.
+    # The tool_calls row it was kept as (dispatch), and whether it can be taken back (undo.py).
     call_id: int | None = None
+    undoable: bool = False
 
 
 Handler = Callable[[ToolContext, Any], Any]
@@ -230,7 +233,7 @@ class ToolRegistry:
         else:
             with transaction(ctx.conn):
                 row = calls.log_tool_call(ctx.conn, **values)
-        return dataclasses.replace(result, call_id=row)
+        return dataclasses.replace(result, call_id=row, undoable=values["undo"] is not None)
 
     def _run(self, name: str, raw_input: Any, ctx: ToolContext) -> ToolResult:
         if ctx.allowed_tools is not None and name not in ctx.allowed_tools:

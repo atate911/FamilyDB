@@ -48,6 +48,7 @@ MENU = (
     ("tasks", "Open tasks: this chat's and yours"),
     ("now", "What could start right now"),
     ("lookup", "Look up the ideas waiting, now"),
+    ("undo", "Undo your last change here"),
 )
 NAMES = frozenset(name for name, _ in MENU)
 MAX_TASKS = 12
@@ -384,10 +385,31 @@ def _lookup(
     return voice.say(app.settings, "lookups_asked", seed=seed, count=count)
 
 
+def _undo(
+    app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
+) -> str:
+    """/undo: the undo tool, as the member asking, in this chat (familydb/undo.py)."""
+    ctx = ToolContext(
+        conn=conn,
+        settings=app.settings,
+        clock=app.clock,
+        member=member,
+        message_id=seed,
+        calendar=app.calendar,
+        source="command",
+    )
+    result = app.registry.dispatch("undo", {}, ctx)
+    answered = json.loads(result.content)
+    if result.is_error:
+        return voice.say(app.settings, "undo_not", seed=seed, why=answered.get("error", ""))
+    return voice.say(app.settings, "undo_done", seed=seed, what=answered["undone"])
+
+
 ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, int], str]] = {
     "today": _today,
     "week": _week,
     "tasks": _tasks,
     "now": _now,
     "lookup": _lookup,
+    "undo": _undo,
 }

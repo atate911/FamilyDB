@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, Field
 
 from familydb import plan_service, routing, task_service
+from familydb import undo as taking_back
 from familydb.availability import calendar_available
 from familydb.calendar_sync import adopt, event_changes, refresh_plan, sync_plans
 from familydb.dates import (
@@ -344,6 +345,7 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
     )
     with transaction(ctx.conn):
         plan = plans.for_event(ctx.conn, event_id)  # a concurrent attempt may have finished
+        made = plan is None
         if plan is None:
             plan = plans.insert(
                 ctx.conn,
@@ -364,6 +366,14 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             )
             if args.idea_id is not None:
                 ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
+    if made:
+        taking_back.keep(
+            ctx,
+            "cancel_plan",
+            f"put {plan.title} on the calendar (plan #{plan.id})",
+            plan=plan.id,
+            updated_at=plan.updated_at,
+        )
     return _made(ctx, plan, event, args.remind_before)
 
 
@@ -512,6 +522,15 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
             updated = plans.update(ctx.conn, plan.id, changes, now=ctx.now_iso())
             if updated is not None:
                 plan_service.changed(ctx.conn, plan, updated, now=ctx.now_iso(), tz=ctx.clock.tz)
+        if updated is not None and set(changes) <= MOVES:
+            taking_back.keep(
+                ctx,
+                "restore_plan",
+                f"changed plan #{plan.id} {plan.title}",
+                plan=plan.id,
+                updated_at=updated.updated_at,
+                before={key: getattr(plan, key) for key in MOVES},
+            )
     result = {
         "plan": updated.model_dump(mode="json") if updated else None,
         "event": patched.to_public() if patched else None,
@@ -522,6 +541,8 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
 
 
 MAX_REMINDERS = 2
+# A change to these can be put back (undo.py); a new place or notes, or a cancel, cannot.
+MOVES = frozenset({"title", "start", "end", "all_day"})
 
 
 def _remind(

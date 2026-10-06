@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from familydb import undo as taking_back
 from familydb.dates import parse_date
 from familydb.errors import ToolError
 from familydb.store import members
@@ -174,6 +175,10 @@ def remember(ctx: ToolContext, args: RememberInput) -> dict[str, Any]:
         raise ToolError(f"at most {MAX_CHANGES} changes at once")
     with transaction(ctx.conn):
         done = [_apply(ctx, change) for change in args.changes]
+    saved = [item["id"] for item in done if item["result"] == "saved"]
+    if saved and len(saved) == len(done):  # new things only: a replace or a forget stays
+        facts = "; ".join(item["fact"] for item in done)
+        taking_back.keep(ctx, "forget", f"remembered {facts}", memories=saved)
     reply = (args.reply or "").strip()[:MAX_REPLY]
     if reply and all(item["result"] != "not saved" for item in done):
         ctx.offer_reply(reply)

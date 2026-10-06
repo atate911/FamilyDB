@@ -21,8 +21,8 @@ from typing import Any
 
 from familydb import roles, voice
 from familydb.dates import utc_iso
-from familydb.store import ideas, members, messages, outcomes, plans, tasks, wishes
-from familydb.store.db import transaction
+from familydb.store import calls, ideas, members, messages, outcomes, plans, tasks, wishes
+from familydb.store.db import from_json, transaction
 from familydb.tools.registry import ToolContext
 
 log = logging.getLogger(__name__)
@@ -31,7 +31,8 @@ log = logging.getLogger(__name__)
 REMINDER = (("done", "✓ Done"), ("hour", "In an hour"), ("tomorrow", "Tomorrow"))
 FOLLOW_UP = (("again", "Yes, again"), ("not_again", "Not again"), ("missed", "Didn't go"))
 WISH = (("wish_yes", "Yes!"), ("wish_no", "Not this time"), ("wish_later", "Later"))
-LABELS = dict(REMINDER + FOLLOW_UP + WISH)
+UNDO = (("undo", "↩ Undo"),)
+LABELS = dict(REMINDER + FOLLOW_UP + WISH + UNDO)
 SNOOZES = ("hour", "tomorrow")
 # "Tomorrow" is the same time of day, on the wall clock, between these; else nine.
 TOMORROW_FROM, TOMORROW_UNTIL = clock_time(8, 0), clock_time(20, 0)
@@ -51,6 +52,12 @@ def for_follow_up(plan_id: int) -> list[Button]:
 
 def for_wish(wish_id: int) -> list[Button]:
     return _row(WISH, wish_id)
+
+
+def for_undo(call_id: int) -> list[Button]:
+    """Under a reply that changed something: take it back (familydb/undo.py), on a row of its
+    own beside any a reminder it carries brought."""
+    return in_row(_row(UNDO, call_id), "undo")
 
 
 def _row(choices: tuple[tuple[str, str], ...], number: int) -> list[Button]:
@@ -82,6 +89,8 @@ class _Job:
     about: str
     event: str
     facts: dict[str, Any] = field(default_factory=dict)
+    # The call an Undo names (ToolContext.undo_target).
+    target: int | None = None
 
 
 def tap(
@@ -118,6 +127,8 @@ def tap(
         planned: Any = _wish_job
     elif action in SNOOZES or action == "done":
         planned = _task_job
+    elif action == "undo":
+        planned = _undo_job
     else:
         planned = _plan_job
     job = planned(app, conn, action, int(number))
@@ -149,6 +160,7 @@ def tap(
         weather=app.weather,
         geocoder=app.geocoder,
         source="tap",
+        undo_target=job.target,
     )
     result = app.registry.dispatch(job.tool, job.values, ctx, call_id=update_id)
     with transaction(conn):
@@ -214,6 +226,16 @@ def _task_job(app: Any, conn: sqlite3.Connection, action: str, task_id: int) -> 
         "tap_snoozed",
         {"when": when_text(moment, now.date())},
     )
+
+
+def _undo_job(app: Any, conn: sqlite3.Connection, action: str, call_id: int) -> _Job | str:
+    row = calls.get(conn, call_id)
+    if row is None or row["undo"] is None:
+        return "tap_stale"
+    if row["undone_at"] is not None:
+        return "tap_already"
+    what = (from_json(row["undo"]) or {}).get("about", "")
+    return _Job("undo", {}, f"undo {what}", "tap_undone", {"what": what}, target=call_id)
 
 
 def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> _Job | str:

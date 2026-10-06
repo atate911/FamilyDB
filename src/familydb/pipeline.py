@@ -13,10 +13,13 @@ from typing import Any
 
 from familydb import (
     audience,
+    buttons,
     family,
     memory,
     personas,
     roles,
+    routing,
+    undo,
     voice,
     whereabouts,
     wish_service,
@@ -710,6 +713,14 @@ def _answer(
     ]
     reply_buttons = carried[0] if len(carried) == 1 else None
     now = utc_iso(app.clock.now())
+    # In somebody's own Telegram chat, a reply that changed something can take it back: an Undo
+    # under it (familydb/undo.py), on its own row. A group is spared one under every "saved".
+    if msg.channel == "telegram" and not routing.is_group(msg.channel, msg.chat_id):
+        since = utc_iso(app.clock.now() - undo.WINDOW)
+        changed = calls.undoable_for(conn, [inbound_id], since=since).get(inbound_id)
+        if changed is not None:
+            carried_too = buttons.in_row(reply_buttons, "carried") if reply_buttons else []
+            reply_buttons = carried_too + buttons.for_undo(int(changed["id"]))
     with transaction(conn):
         # Carried by this reply: marked sent with it, so the delivery job finds nothing.
         messages.mark_delivered(conn, [h.message_id for h in taken], now=now)

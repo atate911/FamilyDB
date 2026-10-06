@@ -10,6 +10,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from familydb import personas, roles, routing, task_service, windows
+from familydb import undo as taking_back
 from familydb.dates import parse_datetime, utc_iso
 from familydb.errors import ToolError
 from familydb.store import members, messages, tasks
@@ -179,6 +180,13 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         now=ctx.now_iso(),
         repeat=_repeat(args),
     )
+    taking_back.keep(
+        ctx,
+        "cancel_task",
+        f"added task #{task.id} {task.title}",
+        task=task.id,
+        revision=task.revision,
+    )
     return _with_nudges(
         ctx,
         task,
@@ -230,6 +238,7 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
     if args.stop_repeating and args.repeat_every:
         raise ToolError("Choose a repeat or stop it, not both.")
     reminder = _time(ctx, args.remind_at, future=True)
+    before = tasks.get(ctx.conn, args.task_id)
     task = task_service.update(
         ctx.conn,
         args.task_id,
@@ -242,7 +251,43 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
         repeat=_repeat(args),
         stop_repeating=args.stop_repeating,
     )
+    if before is not None:
+        _keep_undo(
+            ctx, before, task, values, reminder_changed=bool(args.remind_at or args.clear_reminder)
+        )
     return _with_nudges(ctx, task, {"task": task.model_dump(mode="json")})
+
+
+# What a change to a task can be put back to (undo.py); its repeat is not among them.
+RESTORABLE = frozenset(
+    {"title", "notes", "owner_id", "due_at", "preferred_window", "window_until", "status"}
+    | {"gift_for"}
+)
+
+
+def _keep_undo(
+    ctx: ToolContext, before: Task, after: Task, values: dict[str, Any], *, reminder_changed: bool
+) -> None:
+    """How to put a task back as it was, for undo: its boxes, and its reminder if the change
+    moved it or ended it. Not for a repeating task, whose rounds and schedule move on their own."""
+    if before.repeats or after.repeats or set(values) - RESTORABLE:
+        return
+    pending = before.reminder if before.reminder and not before.reminder.delivered_at else None
+    ended = after.status != "open" and before.status == "open"
+    name = f"task #{after.id} {after.title}"
+    about = f"changed {name}"
+    if ended:
+        about = f"marked {name} done" if after.status == "done" else f"cancelled {name}"
+    taking_back.keep(
+        ctx,
+        "restore_task",
+        about,
+        task=after.id,
+        revision=after.revision,
+        before={key: getattr(before, key) for key in values},
+        reminder=pending.remind_at if pending else None,
+        reminder_changed=reminder_changed or (ended and pending is not None),
+    )
 
 
 def _window_until(ctx: ToolContext, window: str) -> str | None:
