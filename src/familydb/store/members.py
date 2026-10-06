@@ -154,6 +154,8 @@ POINTING_AT = {
     ("suggestions", "asked_by"): "unname",
     ("tasks", "created_by_member_id"): "unname",
     ("tasks", "owner_id"): "unname",
+    # A device somebody turned notifications on for goes with them (push.py).
+    ("push_subscriptions", "member_id"): "delete",
     # Who made a tool call: the call stays, as what was done (tools/registry.py).
     ("tool_calls", "member_id"): "unname",
     ("telegram_invites", "made_by"): "unname",

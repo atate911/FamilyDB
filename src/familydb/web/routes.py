@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from contextlib import closing
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any
 
 from flask import (
@@ -83,6 +84,16 @@ def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
 def healthz() -> Response:
     """A liveness check for a monitor or proxy, open before sign-in."""
     return Response("ok\n", mimetype="text/plain")
+
+
+@bp.get("/sw.js")
+def service_worker() -> Response:
+    """The service worker that shows "she has a message" (push.py), served from the top so it
+    may show for every page. Open before sign-in, like the manifest: it holds nothing but code."""
+    folder = Path(current_app.static_folder or "")
+    response = Response((folder / "sw.js").read_text("utf-8"), mimetype="text/javascript")
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @bp.get("/manifest.webmanifest")

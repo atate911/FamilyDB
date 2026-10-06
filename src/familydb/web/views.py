@@ -603,6 +603,19 @@ def repeat_text(task: Task, tz: ZoneInfo) -> str | None:
     return words
 
 
+# Notifications on this device (/you, static/push.js): what the section says as it stands.
+PUSH_WORDS = {
+    "is_on": "On for this device: a notice says when {name} has written.",
+    "is_off": "Off for this device.",
+    "unable": "This browser cannot show notices from a page. On an iPhone or iPad, add this page "
+    "to the Home Screen (Share, then Add to Home Screen) and open it from there; it needs iOS 16.4 "
+    "or later.",
+    "refused": "The browser was told not to show notices from this page; that is changed in its "
+    "settings for the site.",
+    "failed": "That did not work. Try again in a moment.",
+}
+
+
 # Where a change came from (tool_calls.source), as the history line under an idea or task says it.
 CHANGED_FROM = {
     "chat": "through {name}",

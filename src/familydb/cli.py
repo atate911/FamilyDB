@@ -99,6 +99,16 @@ def _ready(application: App) -> sqlite3.Connection:
     return conn
 
 
+def _push_key(application: App) -> None:
+    """The key that signs pushes to the family's devices, made once at start (push.py), never on
+    a page view."""
+    from familydb import push
+    from familydb.dates import utc_iso
+
+    with closing(application.connect()) as conn:
+        push.ensure_key(conn, utc_iso(application.clock.now()))
+
+
 FROM_PAGE = "set on the settings page"
 FROM_ENV = "from the environment"
 # How much of a long Personality-page text `familydb config` prints: enough to tell which one (a
@@ -680,6 +690,7 @@ def run() -> None:
     """Start the bot: apply migrations, then serve the configured channels until stopped."""
     application = build_app()
     application.migrate()
+    _push_key(application)
     privacy.tighten(application.settings)
     application.refresh()
     settings = application.settings
@@ -923,6 +934,7 @@ def web(
         overrides["web_port"] = port
     application = build_app(**overrides)
     application.migrate()
+    _push_key(application)
     privacy.tighten(application.settings)
     try:
         serve(application)

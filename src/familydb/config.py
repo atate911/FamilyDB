@@ -259,6 +259,8 @@ class Settings(BaseSettings):
     deadline_heads_up: bool = True
     forgotten_roundup: bool = True
     roundup_day: Weekday = "sun"
+    # "Vera has a message" on the phones and tablets of people who use only the page (push.py).
+    web_push: bool = True
     google_calendar_id: str | None = None
     google_key_path: Path = Path("data/google_key.json")
     enrichment_notes: bool = True

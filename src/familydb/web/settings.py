@@ -919,6 +919,7 @@ LINE_GROUPS = (
             "gift_ideas_none",
             "birthday_wishes",
             "nudge",
+            "push_note",
             "morning",
             "morning_ending",
             "morning_chase",

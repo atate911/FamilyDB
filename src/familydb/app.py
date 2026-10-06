@@ -61,6 +61,11 @@ class App:
         self.channel_facts: dict[str, dict[str, Any]] = {}
         self.discover_cache: dict[str, Any] = {}
         self.held = Holds()
+        # Told once one of her messages is delivered on a channel, to reach a device the channel
+        # cannot (familydb/push.py for the page): never changes whether it counts as delivered.
+        from familydb.push import Pusher
+
+        self.notifiers: dict[str, Callable[[sqlite3.Connection, Any], None]] = {"web": Pusher(self)}
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)
         self._registry: ToolRegistry | None = None
 

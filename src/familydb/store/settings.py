@@ -77,6 +77,7 @@ BEHAVIOUR = (
     "deadline_heads_up",
     "forgotten_roundup",
     "roundup_day",
+    "web_push",
     "retry_interval_minutes",
     "retry_max_attempts",
     "telegram_require_mention",

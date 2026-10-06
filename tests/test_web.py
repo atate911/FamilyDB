@@ -855,8 +855,10 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     reading = {"revision", "age_on"}
     # Taking somebody off the list for good (the family asked for it; DESIGN.md section 16).
     removing = {"remove"}
-    assert ruled <= {"add", "change"} | reading | signing_in | linking | removing, ruled
-    assert {"add", "change"} | signing_in | linking | removing <= ruled
+    # Notices on one's own devices, turned on and off on Your password (familydb/push.py).
+    pushing = {"subscribe_push", "unsubscribe_push"}
+    assert ruled <= {"add", "change"} | reading | signing_in | linking | removing | pushing, ruled
+    assert {"add", "change"} | signing_in | linking | removing | pushing <= ruled
 
     # The doors are shut to everything else, but not whole packages: `views.py` reads opening hours
     # from `tools.places` and tidies links with `tools.urls`, which write nothing.

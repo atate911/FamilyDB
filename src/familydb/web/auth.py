@@ -79,6 +79,8 @@ MAX_ADDRESS = 64
 # icons, which a phone fetches without the cookie.
 OPEN_ENDPOINTS = frozenset(
     {"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "web.manifest", "static"}
+    # The service worker, which a phone fetches to show a notice, without the cookie (push.py).
+    | {"web.service_worker"}
 )
 # Where somebody signed in with a starting password may go before they have chosen their own.
 CHOOSING = frozenset({"family.you", "family.choose"})
@@ -110,6 +112,9 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "edits.snooze_task": "own_tasks",
     # Taking back a change: anybody may try; undo.py says whose they may (a kid, her own tasks).
     "edits.undo": "own_tasks",
+    # Notices on one's own devices, for anybody signed in as themselves (push.py).
+    "family.push_on": "sign_in",
+    "family.push_off": "sign_in",
 }
 EVERYBODY_S_OWN = CHOOSING
 HOME = "/"

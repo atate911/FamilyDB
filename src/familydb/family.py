@@ -30,6 +30,7 @@ from familydb.dates import age_on as age_on
 from familydb.dates import next_birthday as next_birthday
 from familydb.dates import utc_iso
 from familydb.store import invites, logins, members, messages, plans, tasks
+from familydb.store import push as push_store
 from familydb.store.db import transaction
 from familydb.store.members import Gender, Member, Role
 
@@ -465,3 +466,42 @@ def accept_invite(
         raise InviteRefused("taken") from exc
     assert linked is not None
     return linked
+
+
+# -- notifications on somebody's own devices (push.py)
+
+MAX_ENDPOINT = 1000
+
+
+class PushRefused(ValueError):
+    """Why a device was not turned on: not a browser's push address, or keys that are not."""
+
+
+def subscribe_push(
+    conn: sqlite3.Connection,
+    member: Member,
+    *,
+    endpoint: str,
+    p256dh: str,
+    auth: str,
+    now: datetime,
+) -> None:
+    """Tell this person on this device (push.py): a browser's push address and the keys to
+    encrypt to it, checked. Done again for the same device, it is that device still; a device
+    somebody else turned on before is theirs now."""
+    from familydb import push
+
+    if not endpoint.startswith("https://") or len(endpoint) > MAX_ENDPOINT:
+        raise PushRefused("that is not a browser's push address")
+    if not push.valid_device(p256dh, auth):
+        raise PushRefused("those are not a browser's keys")
+    with transaction(conn):
+        push_store.subscribe(
+            conn, member.id, endpoint=endpoint, p256dh=p256dh, auth=auth, now=utc_iso(now)
+        )
+
+
+def unsubscribe_push(conn: sqlite3.Connection, member: Member, *, endpoint: str) -> bool:
+    """This device tells this person nothing now; False when it told them nothing already."""
+    with transaction(conn):
+        return push_store.unsubscribe(conn, member.id, endpoint) > 0

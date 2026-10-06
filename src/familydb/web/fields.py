@@ -789,6 +789,22 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "messages",
+        "push",
+        "On phones and tablets",
+        "For anybody who uses only the page: each turns it on for their own device, under Your "
+        "password.",
+        (
+            field(
+                "web_push",
+                "Say when she has written",
+                "A notice on the device that she has a message, when she writes of her own accord "
+                "(a reminder, the morning message), never the words. Apple's or Google's push "
+                "service carries it and sees only that one went.",
+            ),
+        ),
+    ),
+    Group(
+        "messages",
         "admins",
         "When something needs fixing",
         "Written, not thought up, so they cost nothing. The status page lists the same.",

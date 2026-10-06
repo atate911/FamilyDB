@@ -106,6 +106,12 @@ EVENTS: dict[str, Event] = {
     "cmd_now": Event(
         "Answering /now", "From the list, {window}:", ("window",), {"window": "now until 19:30"}
     ),
+    "push_note": Event(
+        "The notice on a phone or tablet when she writes on the page (never the words)",
+        "{name} has a message",
+        (),
+        {},
+    ),
     "morning": Event(
         "The morning message: its first line",
         "Good morning. Here's {day}:",
