@@ -68,6 +68,11 @@ older than what is installed. It gets a date when it is released.
   new look: the same settings and the same saving, with each one's help under
   it, and a bar at the foot of a form that says what an empty box does. The
   sign-in page now says "the one FamilyDB started with" for the first password.
+- **A new Setup.** The list of steps, each step and the last page are on the
+  new look: a row to a step tagged Done, Needed, Recommended or Optional, the
+  steps along the top, Back and Next at the foot, and the Calendar step in three
+  cards. What each step asks and does is as before. Where it said "the password
+  the installer made up" it now says "the password FamilyDB started with".
 
 
 ## v0.2.0 — second alpha (2026-10-05)

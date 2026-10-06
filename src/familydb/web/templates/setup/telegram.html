@@ -1,156 +1,116 @@
-<p class="why">
-  With Telegram, everyone can message {{ site_title }} from their phone the way they would text a
-  person, and it can send reminders and the weekend’s ideas. Telegram is free. Skip this if you
-  would rather not: the family can use the <a href="{{ url_for('chat.show') }}">Chat page</a>
-  instead, and you can come back to it at any time.
-</p>
+{% from "_kitchen.html" import icon with context %}
+<p class="lede">With Telegram, everyone can message {{ site_title }} from their phone the way they would text a person, and it can send reminders and the weekend’s ideas. Telegram is free. Skip this if you would rather not: the family can use the <a href="{{ url_for('chat.show') }}">Chat page</a> instead, and you can come back to it at any time.</p>
 
 {% if stage in ('token', 'refused') %}
-  <section class="panel">
-    <h2>1. Make your bot</h2>
+  <section class="card setup-card" aria-labelledby="h-bot">
+    <h2 class="card__head" id="h-bot">1. Make your bot</h2>
     {% if stage == 'refused' %}
-      <p class="error" role="alert">Telegram did not accept the token that was saved. Copy it
-        again from BotFather (send it <code>/mybots</code>, choose your bot, then
-        <em>API Token</em>) and paste it below.</p>
+      <div class="banner banner--alert banner--slim mb-4" role="alert"><span class="banner__ic">{{ icon('alert') }}</span><p class="banner__text">Telegram did not accept the token that was saved. Copy it again from BotFather (send it <code class="cmd-inline">/mybots</code>, choose your bot, then <em>API Token</em>) and paste it below.</p></div>
     {% endif %}
     <ol class="steps">
-      <li>On your phone, install <a href="{{ links.telegram }}" target="_blank" rel="noopener noreferrer">Telegram</a>
-        if you do not have it yet, and open it.</li>
-      <li>Open <a href="{{ links.botfather }}" target="_blank" rel="noopener noreferrer">@BotFather</a>:
-        search for <em>BotFather</em> in Telegram and choose the one with the blue tick. It is
-        Telegram’s own tool for making bots.</li>
-      <li>Send it <code>/newbot</code>.</li>
-      <li>It asks for a <strong>name</strong>: what the family will see. <em>{{ assistant }}</em>
-        will do. Once the bot is connected, its name in Telegram follows
+      <li><div><p>On your phone, install <a href="{{ links.telegram }}" target="_blank" rel="noopener noreferrer">Telegram</a> if you do not have it yet, and open it.</p></div></li>
+      <li><div><p>Open <a href="{{ links.botfather }}" target="_blank" rel="noopener noreferrer">@BotFather</a>: search for <em>BotFather</em> in Telegram and choose the one with the blue tick. It is Telegram’s own tool for making bots.</p></div></li>
+      <li><div><p>Send it <code class="cmd-inline">/newbot</code>.</p></div></li>
+      <li><div><p>It asks for a <b>name</b>: what the family will see. <em>{{ assistant }}</em> will do. Once the bot is connected, its name in Telegram follows
         {%- if has_persona %} hers, and changes with it if you rename her under Personality.
-        {%- else %} what it calls itself, and becomes hers if you choose a persona under
-        Personality.{% endif %}</li>
-      <li>It asks for a <strong>username</strong>: one word ending in <code>bot</code>, such as
-        <em>tate_family_bot</em>. If it is taken, try another.</li>
-      <li>It replies with a <strong>token</strong>, a long line like
-        <code>7123456789:AAH4k…</code>. Press on it to copy all of it, and paste it below. It is
-        the key to your bot, so keep it to yourself.</li>
+        {%- else %} what it calls itself, and becomes hers if you choose a persona under Personality.{% endif %}</p></div></li>
+      <li><div><p>It asks for a <b>username</b>: one word ending in <code class="cmd-inline">bot</code>, such as <em>tate_family_bot</em>. If it is taken, try another.</p></div></li>
+      <li><div><p>It replies with a <b>token</b>, a long line like <code class="cmd-inline">7123456789:AAH4k…</code>. Press on it to copy all of it, and paste it below. It is the key to your bot, so keep it to yourself.</p></div></li>
     </ol>
-    <form class="form" method="post" action="{{ url_for('settings.save_keys') }}">
+    <form class="form form--tight mt-4" method="post" action="{{ url_for('settings.save_keys') }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
       <input type="hidden" name="then" value="{{ then }}" />
-      <div class="field wide">
-        <label for="bot-token">The token BotFather sent</label>
-        <input id="bot-token" name="telegram_bot_token" type="password" autocomplete="off"
-               spellcheck="false" required placeholder="7123456789:AA…" />
-      </div>
-      <div class="field wide actions"><button type="submit">Connect the bot</button></div>
+      <div class="field"><label class="field__label" for="bot-token">The token BotFather sent</label>
+        <input id="bot-token" name="telegram_bot_token" type="password" autocomplete="off" spellcheck="false" required placeholder="7123456789:AA…" /></div>
+      <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('send') }}Connect the bot</button></div>
     </form>
   </section>
 
 {% elif stage == 'connecting' %}
-  <section class="panel">
-    <h2>Connecting to Telegram…</h2>
+  <section class="card setup-card" aria-labelledby="h-connecting">
+    <h2 class="card__head" id="h-connecting">Connecting to Telegram…</h2>
     {% if gave_up %}
-      <p>Nothing has been heard from Telegram yet. {% if state %}Last word: {{ state }}.{% endif %}
-        If this goes on, check that {{ site_title }} itself is running (the
-        <a href="{{ url_for('web.status') }}">Status page</a> says), then
-        <a href="{{ url_for('setup.step', name='telegram') }}">look again</a>.</p>
+      <p>Nothing has been heard from Telegram yet.{% if state %} Last word: {{ state }}.{% endif %} If this goes on, check that {{ site_title }} itself is running (the <a href="{{ url_for('web.status') }}">Status page</a> says), then <a href="{{ url_for('setup.step', name='telegram') }}">look again</a>.</p>
     {% else %}
-      <p class="waiting">The token is saved. This page looks again by itself every few seconds
-        until the bot is connected{% if state %} ({{ state }}){% endif %}.</p>
+      <p class="waiting">The token is saved. This page looks again by itself every few seconds until the bot is connected{% if state %} ({{ state }}){% endif %}.</p>
     {% endif %}
   </section>
 
 {% else %}
-  <p class="state done">✓ Your bot is <a href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">@{{ bot }}</a>.</p>
+  <p class="state-done">{{ icon('check') }}Your bot is <a href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">@{{ bot }}</a>.</p>
 
   {% if stage == 'nobody' %}
-    <p>Next it needs to know which Telegram is yours. <a href="{{ url_for('setup.step', name='you') }}">Add
-      yourself first</a>, then come back here.</p>
+    <p>Next it needs to know which Telegram is yours. <a href="{{ url_for('setup.step', name='you') }}">Add yourself first</a>, then come back here.</p>
 
   {% elif stage == 'link' %}
-    <section class="panel">
-      <h2>2. Link your phone</h2>
+    <section class="card setup-card" aria-labelledby="h-link">
+      <h2 class="card__head" id="h-link">2. Link your phone</h2>
       <ol class="steps">
-        <li>On your phone, open <a href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">@{{ bot }}</a>
-          and press <em>Start</em>, or send it any message.</li>
-        <li>It answers that it does not know you yet. That is expected: your message appears here
-          within a few seconds. Press <em>That’s me</em> beside it.</li>
+        <li><div><p>On your phone, open <a href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">@{{ bot }}</a> and press <em>Start</em>, or send it any message.</p></div></li>
+        <li><div><p>It answers that it does not know you yet. That is expected: your message appears here within a few seconds. Press <em>That’s me</em> beside it.</p></div></li>
       </ol>
       {% if knocks %}
-        <ul class="plain knocks">
+        <ul class="knocks mt-4">
           {% for knock in knocks %}
             <li class="knock">
-              <div>
-                <strong>{{ knock.name or 'Somebody' }}</strong>
-                <span class="muted">{% if knock.handle %}{{ knock.handle }} · {% endif %}{{ knock.when }}</span>
-              </div>
+              <div><b>{{ knock.name or 'Somebody' }}</b><span class="small muted"> {% if knock.handle %}{{ knock.handle }} · {% endif %}{{ knock.when }}</span></div>
               <form method="post" action="{{ url_for('family.link_telegram', member_id=admin.id) }}">
                 <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
                 <input type="hidden" name="once" value="{{ once_token() }}" />
                 <input type="hidden" name="then" value="{{ then }}" />
                 <input type="hidden" name="telegram_id" value="{{ knock.telegram_id }}" />
-                <button type="submit">That’s me, {{ admin.display_name }}</button>
+                <button class="btn btn--primary btn--sm" type="submit">That’s me, {{ admin.display_name }}</button>
               </form>
             </li>
           {% endfor %}
         </ul>
-        <p class="muted">Not there? Send it another message, then <a href="{{ url_for('setup.step', name='telegram') }}">look again</a>.</p>
+        <p class="small muted mt-3">Not there? Send it another message, then <a href="{{ url_for('setup.step', name='telegram') }}">look again</a>.</p>
       {% elif gave_up %}
-        <p>No message has arrived yet. Send one to @{{ bot }}, then
-          <a href="{{ url_for('setup.step', name='telegram') }}">look again</a>.</p>
+        <p class="mt-4">No message has arrived yet. Send one to @{{ bot }}, then <a href="{{ url_for('setup.step', name='telegram') }}">look again</a>.</p>
       {% else %}
-        <p class="waiting">Waiting for your message. This page looks again by itself every few
-          seconds.</p>
+        <p class="waiting mt-4">Waiting for your message. This page looks again by itself every few seconds.</p>
       {% endif %}
     </section>
 
   {% else %}
-    <p>It knows your Telegram, so it answers you there as {{ admin.display_name }}. Try it:
-      send @{{ bot }} <em>what should we do this weekend?</em></p>
+    <p>It knows your Telegram, so it answers you there as {{ admin.display_name }}. Try it: send @{{ bot }} <em>what should we do this weekend?</em></p>
     {% if digest_here %}
-      <section class="panel">
-        <h2>The weekend ideas, on Telegram</h2>
-        <p class="muted">Every {{ digest_day }} {{ site_title }} sends ideas for the weekend. At the moment
-          they go to the Chat page, where nobody might see them.</p>
+      <section class="card setup-card" aria-labelledby="h-digest">
+        <h2 class="card__head" id="h-digest">The weekend ideas, on Telegram</h2>
+        <p class="small muted mb-4">Every {{ digest_day }} {{ site_title }} sends ideas for the weekend. At the moment they go to the Chat page, where nobody might see them.</p>
         <form class="form" method="post" action="{{ url_for('settings.save') }}">
           <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
           <input type="hidden" name="then" value="{{ then }}" />
           <input type="hidden" name="digest_chat_id" value="{{ admin.channel_user_id }}" />
-          <button type="submit">Send them to me on Telegram</button>
+          <div class="actions"><button class="btn btn--quiet" type="submit">{{ icon('send') }}Send them to me on Telegram</button></div>
         </form>
       </section>
     {% endif %}
   {% endif %}
 
-  <details class="more">
-    <summary>A family group chat, as well</summary>
-    <div class="inner">
+  <details class="fieldfold">
+    <summary>A family group chat, as well{{ icon('chev', size='sm', cls='chev') }}</summary>
+    <div class="fieldfold__body">
       {% if reads_groups %}
-        <p class="state done">✓ Its privacy setting is off, so it can read a group’s messages.</p>
+        <p class="state-done">{{ icon('check') }}Its privacy setting is off, so it can read a group’s messages.</p>
       {% endif %}
       <ol class="steps">
         {% if not reads_groups %}
-          <li>In BotFather, send <code>/setprivacy</code>, choose @{{ bot }}, then <em>Disable</em>,
-            so the bot can read the group’s messages. If it is in the group already, take it out
-            and add it back afterwards: that is when Telegram applies the change.</li>
+          <li><div><p>In BotFather, send <code class="cmd-inline">/setprivacy</code>, choose @{{ bot }}, then <em>Disable</em>, so the bot can read the group’s messages. If it is in the group already, take it out and add it back afterwards: that is when Telegram applies the change.</p></div></li>
         {% endif %}
-        <li>Add @{{ bot }} to your family group, the way you would add a person. It says hello
-          there, and how to talk to it.</li>
-        <li>Everyone in the group who should be answered needs to be on the family list: the
-          next step adds them.</li>
+        <li><div><p>Add @{{ bot }} to your family group, the way you would add a person. It says hello there, and how to talk to it.</p></div></li>
+        <li><div><p>Everyone in the group who should be answered needs to be on the family list: the next step adds them.</p></div></li>
       </ol>
     </div>
   </details>
-  <details class="more">
-    <summary>Use a different bot</summary>
-    <div class="inner">
-      <form class="form" method="post" action="{{ url_for('settings.save_keys') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-        <input type="hidden" name="then" value="{{ then }}" />
-        <div class="field wide">
-          <label for="bot-token-new">A new token from BotFather</label>
-          <input id="bot-token-new" name="telegram_bot_token" type="password" autocomplete="off"
-                 spellcheck="false" required />
-        </div>
-        <div class="field wide actions"><button type="submit">Use this bot instead</button></div>
-      </form>
-    </div>
+  <details class="fieldfold">
+    <summary>Use a different bot{{ icon('chev', size='sm', cls='chev') }}</summary>
+    <form class="fieldfold__body" method="post" action="{{ url_for('settings.save_keys') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="then" value="{{ then }}" />
+      <div class="field"><label class="field__label" for="bot-token-new">A new token from BotFather</label>
+        <input id="bot-token-new" name="telegram_bot_token" type="password" autocomplete="off" spellcheck="false" required /></div>
+      <div><button class="btn btn--quiet btn--sm" type="submit">Use this bot instead</button></div>
+    </form>
   </details>
 {% endif %}

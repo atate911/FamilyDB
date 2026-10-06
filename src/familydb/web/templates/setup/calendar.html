@@ -1,52 +1,31 @@
-<p class="why">
-  When the family settles on a plan, {{ site_title }} can put it on your shared Google Calendar,
-  and it checks the calendar before suggesting anything. Google makes this the longest step:
-  about ten minutes, once. Skip it if you do not use Google Calendar; plans are still kept here.
-</p>
+<p class="lede">When the family settles on a plan, {{ site_title }} can put it on your shared Google Calendar, and it checks the calendar before suggesting anything. Google makes this the longest step: about ten minutes, once. Skip it if you do not use Google Calendar; plans are still kept here.</p>
 
 {% if google.connected and google.calendar %}
-  <p>Connected, using <code>{{ google.calendar }}</code>.
-    {% if google.email %}Shared with <code>{{ google.email }}</code>.{% endif %}
-    To use a different calendar or key, go through it again below.</p>
+  <p class="small">Connected, using <code class="cmd-inline">{{ google.calendar }}</code>.{% if google.email %} Shared with <code class="cmd-inline">{{ google.email }}</code>.{% endif %} To use a different calendar or key, go through it again below.</p>
 {% endif %}
 
-<section class="panel">
-  <h2>1. Give {{ site_title }} its own account at Google</h2>
-  <p class="muted">Google lets an app into a calendar through a “service account”: a robot
-    account with an address of its own, which you then share the calendar with. It is free, it
-    never asks anybody to sign in, and it does not expire. Sign in to Google Cloud as any account
-    you like.</p>
+<section class="card setup-card" aria-labelledby="h-gkey">
+  <h2 class="card__head" id="h-gkey">1. Give {{ site_title }} its own account at Google</h2>
+  <p class="small muted mb-4">Google lets an app into a calendar through a “service account”: a robot account with an address of its own, which you then share the calendar with. It is free, it never asks anybody to sign in, and it does not expire. Sign in to Google Cloud as any account you like.</p>
   <ol class="steps">
-    <li><a href="{{ links.google_project }}" target="_blank" rel="noopener noreferrer">Make
-      a project</a>: name it {{ site_title }} and press <em>Create</em>. Wait for it to finish,
-      and check that it is the project chosen at the top of the page.</li>
-    <li><a href="{{ links.google_calendar_api }}" target="_blank" rel="noopener noreferrer">Turn
-      on the Google Calendar API</a>: press <em>Enable</em>.</li>
-    <li><a href="{{ links.google_service_accounts }}" target="_blank" rel="noopener noreferrer">Make
-      the service account</a>: <em>Create service account</em>, name it {{ site_title }}, press
-      <em>Create and continue</em>, then <em>Done</em>: it needs no role.</li>
-    <li>Open the account you just made, then <em>Keys</em>, <em>Add key</em>, <em>Create new
-      key</em>, <strong>JSON</strong>. A file is saved. Open it and copy everything in it.</li>
+    <li><div><p><a href="{{ links.google_project }}" target="_blank" rel="noopener noreferrer">Make a project</a>: name it {{ site_title }} and press <em>Create</em>. Wait for it to finish, and check that it is the project chosen at the top of the page.</p></div></li>
+    <li><div><p><a href="{{ links.google_calendar_api }}" target="_blank" rel="noopener noreferrer">Turn on the Google Calendar API</a>: press <em>Enable</em>.</p></div></li>
+    <li><div><p><a href="{{ links.google_service_accounts }}" target="_blank" rel="noopener noreferrer">Make the service account</a>: <em>Create service account</em>, name it {{ site_title }}, press <em>Create and continue</em>, then <em>Done</em>: it needs no role.</p></div></li>
+    <li><div><p>Open the account you just made, then <em>Keys</em>, <em>Add key</em>, <em>Create new key</em>, <b>JSON</b>. A file is saved. Open it and copy everything in it.</p></div></li>
   </ol>
 </section>
 
-<section class="panel">
-  <h2>2. Share the family calendar with it</h2>
+<section class="card setup-card" aria-labelledby="h-gshare">
+  <h2 class="card__head" id="h-gshare">2. Share the family calendar with it</h2>
   <ol class="steps">
-    <li>In <a href="{{ links.google_calendar_settings }}" target="_blank" rel="noopener noreferrer">Google
-      Calendar’s settings</a>, choose the family calendar under <em>Settings for my
-      calendars</em>.</li>
-    <li>Under <em>Share with specific people</em>, add the service account’s address: it is the
-      <code>client_email</code> line in the file, ending
-      <code>iam.gserviceaccount.com</code>. Set its permission to <strong>Make changes to
-      events</strong>.</li>
-    <li>Further down, under <em>Integrate calendar</em>, copy the <em>Calendar ID</em>.</li>
+    <li><div><p>In <a href="{{ links.google_calendar_settings }}" target="_blank" rel="noopener noreferrer">Google Calendar’s settings</a>, choose the family calendar under <em>Settings for my calendars</em>.</p></div></li>
+    <li><div><p>Under <em>Share with specific people</em>, add the service account’s address: it is the <code class="cmd-inline">client_email</code> line in the file, ending <code class="cmd-inline">iam.gserviceaccount.com</code>. Set its permission to <b>Make changes to events</b>.</p></div></li>
+    <li><div><p>Further down, under <em>Integrate calendar</em>, copy the <em>Calendar ID</em>.</p></div></li>
   </ol>
 </section>
 
-<section class="panel">
-  <h2>3. Paste both here</h2>
-  <p class="muted">{{ site_title }} tries them on the calendar before it keeps them, so if
-    something is not right it says what.</p>
+<section class="card setup-card" aria-labelledby="h-gpaste">
+  <h2 class="card__head" id="h-gpaste">3. Paste both here</h2>
+  <p class="small muted mb-4">{{ site_title }} tries them on the calendar before it keeps them, so if something is not right it says what.</p>
   {% include "_google_connect.html" %}
 </section>

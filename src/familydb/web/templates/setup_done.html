@@ -1,45 +1,43 @@
-{% extends "base.html" %}
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, tile with context %}
+{% from "_settings.html" import told with context %}
 {% block title %}Set up · {{ site_title }}{% endblock %}
+{% block body_class %}page-setup{% endblock %}
 {% block content %}
   <header class="step-head">
-    <span class="eyebrow">Setting up</span>
+    <p class="overline">Setting up</p>
     <h1>{% if ready %}You’re set up{% else %}Not quite ready yet{% endif %}</h1>
   </header>
-  {% include "setup_told.html" %}
+  {{ told(said | join(' '), problems | join(' ')) }}
   {% if ready %}
-    <p class="lead">{{ site_title }} can answer now. Ask it something to see it work:</p>
-    <div class="actions">
-      <a class="button" href="{{ url_for('chat.show', ask=question, _anchor='latest') }}">Ask “{{ question }}”</a>
-      {% if bot %}<a class="button secondary" href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">Or message @{{ bot }}</a>{% endif %}
+    <p class="lede">{{ site_title }} can answer now. Ask it something to see it work:</p>
+    <div class="stack-actions mt-4">
+      <a class="btn btn--primary" href="{{ url_for('chat.show', ask=question, _anchor='latest') }}">{{ icon('chat') }}Ask “{{ question }}”</a>
+      {% if bot %}<a class="btn btn--quiet" href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">{{ icon('send') }}Or message @{{ bot }}</a>{% endif %}
     </div>
   {% else %}
-    <p class="lead">It still needs {% for one in later if one.need == 'needed' %}{{ one.title|lower }}{{ ', ' if not loop.last }}{% endfor %}
-      before it can answer anyone.</p>
+    <p class="lede">It still needs {% for one in later if one.need == 'needed' %}{{ one.title|lower }}{{ ', ' if not loop.last }}{% endfor %} before it can answer anyone.</p>
   {% endif %}
 
   {% if later %}
-    <section class="panel">
-      <h2>Left for later</h2>
-      <ul class="plain">
+    <section class="card mt-6" aria-labelledby="h-later">
+      <h2 class="card__head" id="h-later">Left for later</h2>
+      <ul class="items">
         {% for one in later %}
-          <li><a href="{{ url_for('setup.step', name=one.name) }}">{{ one.title }}</a>
-            <span class="muted">· {{ one.detail }}</span></li>
+          <li><a class="item item--divided" href="{{ url_for('setup.step', name=one.name) }}">
+            {{ tile(step_glyphs[one.name]) }}
+            <span><span class="item__title">{{ one.title }}</span><span class="meta"><span>{{ one.detail }}</span></span></span>
+            <span class="item__trail">{{ icon('chev') }}</span></a></li>
         {% endfor %}
       </ul>
-      <p class="muted">The home page keeps a list of these until they are done.</p>
+      <p class="small muted mt-3">The home page keeps a list of these until they are done.</p>
     </section>
   {% endif %}
 
-  <p class="muted">
-    {% if has_persona %}{{ assistant }} is who answers. Her name, how she talks, or no persona at
-      all are chosen under <a href="{{ url_for('settings.personality') }}">Personality</a>.
-    {% else %}It answers plainly, with no persona. One can be chosen under
-      <a href="{{ url_for('settings.personality') }}">Personality</a>.{% endif %}
+  <p class="mt-5">
+    {% if has_persona %}{{ assistant }} is who answers. Her name, how she talks, or no persona at all are chosen under <a href="{{ url_for('settings.personality') }}">Personality</a>.
+    {% else %}It answers plainly, with no persona. One can be chosen under <a href="{{ url_for('settings.personality') }}">Personality</a>.{% endif %}
   </p>
-
-  <p class="muted">Everything here can be changed later on the
-    <a href="{{ url_for('settings.show') }}">Settings</a> and
-    <a href="{{ url_for('family.show') }}">Family</a> pages, or by going through
-    <a href="{{ url_for('setup.overview') }}">setup</a> again.</p>
-  <div class="actions"><a class="button{% if ready %} secondary{% endif %}" href="{{ url_for('web.home') if ready else url_for('setup.overview') }}">{% if ready %}Go to the home page{% else %}Back to setup{% endif %}</a></div>
+  <p class="small muted mt-3">Everything here can be changed later on the <a href="{{ url_for('settings.show') }}">Settings</a> and <a href="{{ url_for('family.show') }}">Family</a> pages, or by going through <a href="{{ url_for('setup.overview') }}">setup</a> again.</p>
+  <div class="step-nav step-nav--end"><a class="btn {% if ready %}btn--quiet{% else %}btn--primary{% endif %}" href="{{ url_for('web.home') if ready else url_for('setup.overview') }}">{% if ready %}Go to the home page{% else %}Back to setup{% endif %}{{ icon('chev', size='sm') }}</a></div>
 {% endblock %}

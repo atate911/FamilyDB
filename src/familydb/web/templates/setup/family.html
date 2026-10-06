@@ -1,87 +1,67 @@
-<p class="why">
-  Add the people {{ site_title }} should know. Everyone who will message it needs to be on the
-  list. Children can be added too, so plans can include them, even if they never message it.
-</p>
+{% from "_kitchen.html" import icon, avatar with context %}
+<p class="lede">Add the people {{ site_title }} should know. Everyone who will message it needs to be on the list. Children can be added too, so plans can include them, even if they never message it.</p>
 
-<ul class="panel plain people">
-  {% for person in people %}
-    <li>
-      <div class="person">
-        <strong>{{ person.display_name }}</strong>
-        <span class="tag">{{ person.role }}</span>
-      </div>
-      <div class="muted">
-        {% if person.channel_user_id %}on Telegram
-        {% elif person.role == 'kid' %}included in plans
-        {% else %}the Chat page only, until they message the bot on Telegram{% endif %}
-      </div>
-    </li>
-  {% else %}
-    <li class="muted">Nobody yet. <a href="{{ url_for('setup.step', name='you') }}">Add yourself first.</a></li>
-  {% endfor %}
-</ul>
+<section class="card setup-card" aria-labelledby="h-onlist">
+  <h2 class="sr" id="h-onlist">On the list</h2>
+  <ul class="items">
+    {% for person in people %}
+      <li class="item item--divided">
+        {{ avatar(person.slot, person.display_name[:1] | upper, 'lg') }}
+        <span><span class="item__title">{{ person.display_name }}</span>
+          <span class="meta"><span class="role role--{{ person.role }}">{{ person.role | capitalize }}</span>
+            <span>{% if person.channel_user_id %}on Telegram
+              {%- elif person.role == 'kid' %}included in plans
+              {%- else %}the Chat page only, until they message the bot on Telegram{% endif %}</span></span></span>
+        <span></span>
+      </li>
+    {% else %}
+      <li class="small muted">Nobody yet. <a href="{{ url_for('setup.step', name='you') }}">Add yourself first.</a></li>
+    {% endfor %}
+  </ul>
+</section>
 
 {% if knocks %}
-  <section class="panel">
-    <h2>Waiting to be let in</h2>
-    <p class="muted">They messaged @{{ bot }} and were told it does not know them yet. Add the
-      ones you know.</p>
-    <ul class="plain knocks">
-      {% for knock in knocks %}
-        <li>
-          <form class="form" method="post" action="{{ url_for('family.add') }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-            <input type="hidden" name="once" value="{{ once_token() }}" />
-            <input type="hidden" name="then" value="{{ then }}" />
-            <input type="hidden" name="telegram_id" value="{{ knock.telegram_id }}" />
-            <div class="field">
-              <label for="knock-{{ loop.index }}">Name</label>
-              <input id="knock-{{ loop.index }}" name="name" required maxlength="80" value="{{ knock.name }}" />
-              <p class="muted hint">{% if knock.handle %}{{ knock.handle }} · {% endif %}{{ knock.when }}</p>
-            </div>
-            <div class="field">
-              <label for="knock-role-{{ loop.index }}">Role</label>
-              <select id="knock-role-{{ loop.index }}" name="role">
-                {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="field actions"><button type="submit">Let them in</button></div>
-          </form>
-        </li>
-      {% endfor %}
-    </ul>
+  <section class="card setup-card" aria-labelledby="h-knocks">
+    <h2 class="card__head" id="h-knocks">Waiting to be let in</h2>
+    <p class="small muted mb-4">They messaged @{{ bot }} and were told it does not know them yet. Add the ones you know.</p>
+    {% for knock in knocks %}
+      <form class="form__row form__row--3 knock-form" method="post" action="{{ url_for('family.add') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="then" value="{{ then }}" />
+        <input type="hidden" name="telegram_id" value="{{ knock.telegram_id }}" />
+        <div class="field"><label class="field__label" for="knock-{{ loop.index }}">Name</label>
+          <input id="knock-{{ loop.index }}" type="text" name="name" required maxlength="80" value="{{ knock.name }}" aria-describedby="knock-{{ loop.index }}-h" /></div>
+        <div class="field"><label class="field__label" for="knock-role-{{ loop.index }}">Role</label>
+          <select id="knock-role-{{ loop.index }}" name="role">
+            {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role | capitalize }}</option>{% endfor %}
+          </select></div>
+        <div class="field field--end"><button class="btn btn--primary" type="submit">Let them in</button></div>
+        <p class="field__hint span-all" id="knock-{{ loop.index }}-h">{% if knock.handle %}{{ knock.handle }} · {% endif %}{{ knock.when }}</p>
+      </form>
+    {% endfor %}
   </section>
 {% endif %}
 
-<section class="panel">
-  <h2>Add somebody</h2>
+<section class="card setup-card" aria-labelledby="h-addsb">
+  <h2 class="card__head" id="h-addsb">Add somebody</h2>
   {% if bot %}
-    <p class="muted">The easy way for anyone with Telegram: send them the link
-      <a href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">t.me/{{ bot }}</a>.
-      When they open it and press Start, they appear above, ready to let in. Or, for somebody
-      already on the list, open them on the <a href="{{ url_for('family.show') }}">Family page</a>
-      and make them a link of their own, which links their Telegram as they press Start.</p>
+    <p class="small mb-4">The easy way for anyone with Telegram: send them the link <a href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">t.me/{{ bot }}</a>. When they open it and press Start, they appear above, ready to let in. Or, for somebody already on the list, open them on the <a href="{{ url_for('family.show') }}">Family page</a> and make them a link of their own, which links their Telegram as they press Start.</p>
   {% endif %}
-  <form class="form" method="post" action="{{ url_for('family.add') }}">
+  <form class="form__row form__row--3" method="post" action="{{ url_for('family.add') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="once" value="{{ once_token() }}" />
     <input type="hidden" name="then" value="{{ then }}" />
-    <div class="field">
-      <label for="add-name">Name</label>
-      <input id="add-name" name="name" required maxlength="80" placeholder="Alex" />
-    </div>
-    <div class="field">
-      <label for="add-role">Role</label>
+    <div class="field"><label class="field__label" for="add-name">Name</label>
+      <input id="add-name" type="text" name="name" required maxlength="80" placeholder="Alex" /></div>
+    <div class="field"><label class="field__label" for="add-role">Role</label>
       <select id="add-role" name="role">
-        {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role }}</option>{% endfor %}
-      </select>
-    </div>
-    <div class="field wide actions"><button type="submit">Add</button></div>
+        {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role | capitalize }}</option>{% endfor %}
+      </select></div>
+    <div class="field field--end"><button class="btn btn--quiet" type="submit">{{ icon('plus') }}Add</button></div>
   </form>
-  <dl class="facts roles">
-    {% for role in roles %}<dt>{{ role }}</dt><dd>{{ role_words[role] }}</dd>{% endfor %}
+  <dl class="roles roles--after">
+    {% for role in roles %}<dt><span class="role role--{{ role }}">{{ role | capitalize }}</span></dt><dd>{{ role_words[role] }}</dd>{% endfor %}
   </dl>
-  <p class="muted">To let somebody use this page as well, open them on the
-    <a href="{{ url_for('family.show') }}">Family page</a> and make them a starting password.
-    They choose their own the first time they sign in.</p>
+  <p class="small muted mt-4">To let somebody use this page as well, open them on the <a href="{{ url_for('family.show') }}">Family page</a> and make them a starting password. They choose their own the first time they sign in.</p>
 </section>

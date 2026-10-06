@@ -145,7 +145,7 @@ def services(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     elif password_chosen(live):
         page = "one password the family shares; give each person their own on the setup page"
     else:
-        page = "the installer's password; choose your own on the setup page"
+        page = "the password FamilyDB started with; choose your own on the setup page"
     if web_is_public(live):
         page += "; reachable from other machines"
         page += ", behind a proxy" if live.web_trust_proxy else ", with no proxy declared"
@@ -471,7 +471,7 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
     elif password_chosen(live):
         password = (False, "Everybody still shares one password.")
     else:
-        password = (False, "Still the password the installer made up.")
+        password = (False, "Still the password FamilyDB started with.")
     telegram_state = app.channel_states.get("telegram", "")
     if telegram_working(app) and linked:
         telegram = f"@{bot}, and it knows {linked[0].display_name}." if bot else "Connected."
