@@ -1,26 +1,14 @@
-// The page's one script, for the box everyone writes to her in (form.ask, on Home and at the foot
-// of the chat). Everything here is a help, never a need: with scripts off the box still sends and
-// every page still works. It does what a browser gives to nothing else:
-//
-// - Keeps what is being written. An unsent message is kept in this tab as it is typed, and put
-//   back if the box comes back empty: after a change of page, signing in again, the page looking
-//   again for an answer, or a send that never arrived. It is forgotten once the conversation
-//   shows it arrived, and the tab forgets it when it closes.
-// - Fills the box from the ways to start under it, instead of fetching the page again, and puts
-//   them away once something is written, so a tap never replaces a draft.
-// - Sends where the phone is with a message while "Send where I am" is ticked, so "what's open
-//   near here?" needs nothing typed. Nothing is asked of the browser, and nothing is sent, until
-//   someone ticks it; the box stays as they left it. Without this script there is no box, and
-//   suggestions start from home.
-// - Looks again for an answer when the page says to (data-refresh) and the box is open, as the
-//   meta refresh does with scripts off, but never while somebody is writing.
+// The box everyone writes to her in (form.ask). Every part is a help, never a need: with scripts off
+// the box still sends. It keeps an unsent draft in the tab's session storage (put back if the box comes
+// back empty, forgotten once the thread shows it arrived), fills the box from the ways to start, sends
+// the phone's position only while "Send where I am" is ticked, and looks again for an answer when the
+// page says to (data-refresh), never while somebody is writing.
 (function () {
   "use strict";
   var form = document.querySelector("form.ask");
   var box = form && form.querySelector('textarea[name="text"]');
   if (!box) return;
 
-  // ---- What is being written ---------------------------------------------------------------
   var KEY = "familydb.draft";
 
   function kept() {
@@ -36,7 +24,7 @@
       if (box.value.trim()) window.sessionStorage.setItem(KEY, box.value);
       else window.sessionStorage.removeItem(KEY);
     } catch (e) {
-      // nothing kept, and nothing lost that the box does not still hold
+      // nothing kept; the box still holds it
     }
   }
 
@@ -44,16 +32,16 @@
     return text.replace(/\s+/g, " ").trim();
   }
 
-  // The newest thing the family said in the thread: when it is what was kept, it arrived.
+  // When the draft is the newest thing the family said in the thread, it arrived.
   var theirs = document.querySelectorAll(".said-them .said-text");
   var newest = theirs.length ? theirs[theirs.length - 1].textContent : "";
   var draft = kept();
   if (draft && newest && words(draft) === words(newest)) draft = "";
   if (!box.value.trim() && draft) box.value = draft;
-  keep(); // whatever the box holds now, put back here or handed back by the page
+  keep();
   box.addEventListener("input", keep);
 
-  // Ctrl+Enter, or Cmd+Enter on a Mac, sends; Enter alone starts a new line, as in any text box.
+  // Ctrl or Cmd+Enter sends; Enter alone is a new line.
   box.addEventListener("keydown", function (event) {
     if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return;
     event.preventDefault();
@@ -61,7 +49,6 @@
     else if (form.reportValidity()) form.submit();
   });
 
-  // ---- Ways to start -----------------------------------------------------------------------
   var starters = document.querySelector(".starters");
 
   function tidy() {
@@ -83,7 +70,6 @@
     tidy();
   }
 
-  // ---- Where I am --------------------------------------------------------------------------
   var here = form.querySelector('input[name="send_where"]');
   if (here && navigator.geolocation) {
     var lat = form.querySelector('input[name="lat"]');
@@ -105,7 +91,7 @@
       say("Finding where you are…");
       navigator.geolocation.getCurrentPosition(
         function (position) {
-          if (!here.checked) return; // unticked while the phone was looking
+          if (!here.checked) return; // unticked while looking
           lat.value = position.coords.latitude.toFixed(5);
           lon.value = position.coords.longitude.toFixed(5);
           say("Where you are goes with this message.");
@@ -125,8 +111,7 @@
     if (here.checked) locate();
   }
 
-  // ---- Looking again -----------------------------------------------------------------------
-  // Only a page drawn for a plain visit says to, so this never sends a form again.
+  // Only a page drawn for a plain visit says to, so this never resends a form.
   var every = parseInt(form.getAttribute("data-refresh"), 10);
   if (every > 0) {
     window.setInterval(function () {

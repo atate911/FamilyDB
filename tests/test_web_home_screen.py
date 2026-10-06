@@ -1,7 +1,8 @@
 """The page kept on a phone's home screen: the manifest, the icons and the tags that point at them.
 
-A phone asks for the manifest and the icons without the page's cookie, so they are served before
-anybody signs in. The icons are drawn by scripts/icons.py, and these hold the files to it.
+A phone asks for these without the page's cookie, so they are served before sign-in.
+scripts/icons.py draws the icons; these hold the files to it.
+
 """
 
 import importlib.util
@@ -105,9 +106,10 @@ def test_every_page_points_a_phone_at_the_manifest_and_the_icon(
 
 
 def test_the_app_s_colours_are_the_page_s(settings, clock) -> None:
-    """Phosphor, the look a home screen opens in, is one colour from the icon to the page: the
-    manifest's, the browser bar's and the page's own. A look somebody chose themselves only moves
-    the bar's (`theme-color`, from `looks.py`), which a test in test_look.py holds to its CSS."""
+    """Phosphor, the look a home screen opens in, is one colour from icon to page: the manifest's,
+    the browser bar's and the page's own. A chosen look only moves the bar's (`theme-color`,
+    `looks.py`), held to its CSS in test_look.py.
+    """
     manifest = _manifest(_client(settings, clock, web_password=PASSWORD))
     page = _client(settings, clock, web_password=PASSWORD).get("/login").text
     theme = re.search(r'<meta name="theme-color" content="(#[0-9a-f]{6})"', page)

@@ -10,24 +10,19 @@ from pydantic import BaseModel
 
 from familydb.store.db import from_json, to_json, utcnow_iso
 
-# What the Ideas page's "save a thought" box puts before the words, so the model knows to save
-# them. It is an instruction, not what anybody said, so `as_said` takes it off again.
+# The Ideas page's "save a thought" box puts this before the words; it is an instruction, not
+# what anybody said, so `as_said` takes it off again.
 CAPTURE_PREFIX = "Save this idea for later:\n"
-# A voice note is stored as the words heard in it after this mark, so the model, the history and
-# an idea's original thought all say they were spoken and written down by machine, not typed.
-# Until it has been heard it is `unheard`: the mark with how long it was, and nothing else.
+# Marks that say how a message arrived, so the model, history and page know it was not typed.
+# A voice note keeps its heard words after VOICE_PREFIX (UNHEARD, with its length, until then).
 VOICE_PREFIX = "(voice note) "
 UNHEARD = "(voice note, {length}, not heard)"
-# A button tapped is kept as a message from whoever tapped it, after this mark, so the history
-# says it was a tap and what it was on (familydb/buttons.py).
+# A tapped button is kept as a message from whoever tapped it (familydb/buttons.py).
 TAP_PREFIX = "(tapped) "
-# Words that came with something nobody could look at (a video, a file) are kept after this mark,
-# so the model, the history and the page all say what came with them and that it was not seen.
+# Words that came with something nobody could look at (a video, a file).
 UNSEEN = "(with {what}, not seen) "
-# A photo is kept as what a model saw in it, written down, after this mark, so everything after
-# the pipeline's first step treats it as said and knows it was read from a picture; the picture
-# is not kept. Until it has been looked at it is only the mark saying so. An album's photos are
-# each kept under their number.
+# A photo is kept as what a model saw in it (the picture is not kept); an album's photos each
+# under their number.
 PHOTO_PREFIX = "(photo) "
 UNLOOKED = "(photo, not looked at)"
 UNLOOKED_ALBUM = "({count} photos, not looked at)"
@@ -40,8 +35,7 @@ def as_said(text: str) -> str:
 
 
 def unseen(what: str, words: str) -> str:
-    """Words that came with something not looked at, as they are kept: "(with a video, not
-    seen) we should do this hike"."""
+    """Words that came with something not looked at: "(with a video, not seen) we should..."."""
     return UNSEEN.format(what=what) + words
 
 
@@ -62,8 +56,7 @@ def is_unlooked(text: str) -> bool:
 
 
 def seen_in_photos(seen: list[str | None], total: int) -> str:
-    """What was seen in a photo, or in an album, as it is kept: "(photo) …" for one; for several,
-    each under its number, one not seen said to be, and any not looked at counted."""
+    """What was seen in a photo or album as kept: "(photo) ..." for one, else each by number."""
     if total == 1 and seen and seen[0]:
         return PHOTO_PREFIX + seen[0]
     parts = [
@@ -103,8 +96,7 @@ class Message(BaseModel):
     delivered_at: str | None = None
     cancelled_at: str | None = None
     buttons: list[dict[str, str]] | None = None
-    # Which kind of message she sent of her own accord (a voice event, or "digest"); None for
-    # a reply or a message in.
+    # The kind of message she sent unprompted (a voice event, or "digest"); None otherwise.
     sent_as: str | None = None
 
     @classmethod
@@ -124,8 +116,7 @@ def exists_update(conn: sqlite3.Connection, channel: str, channel_update_id: str
 
 
 def has_written(conn: sqlite3.Connection, channel: str, chat_id: str) -> bool:
-    """Whether anybody has written in this chat: for a Telegram chat with one person, that the
-    bot may write to them there, which it may not before they have."""
+    """Whether anybody has written in this chat (the bot may not write first)."""
     row = conn.execute(
         "SELECT 1 FROM messages WHERE channel = ? AND chat_id = ? AND direction = 'in' LIMIT 1",
         (channel, chat_id),
@@ -175,9 +166,9 @@ def insert_out(
         "reply_to": reply_to,
         "processed_at": stamp,
     }
-    if buttons:  # named only when there are some, so a database before 0021 can still be written
+    if buttons:  # columns named only when used, so an older database can still be written
         row["buttons"] = to_json(buttons)
-    if sent_as:  # the same, for 0029
+    if sent_as:
         row["sent_as"] = sent_as
     cur = conn.execute(
         f"INSERT INTO messages ({', '.join(row)}) VALUES ({', '.join('?' * len(row))})",
@@ -265,9 +256,8 @@ def gathering(
     after: int | None = None,
     before: int | None = None,
 ) -> list[Message]:
-    """Messages from one person in one chat waiting to be answered together (pipeline.receive),
-    newer or older than one of them, oldest first. One whose hold has lapsed is the retry
-    job's, not part of a burst any more."""
+    """One person's messages in one chat held to be answered together (pipeline.receive), oldest
+    first; one whose hold lapsed is the retry job's."""
     sql = (
         "SELECT * FROM messages WHERE direction = 'in' AND chat_id = ? AND member_id = ? "
         "AND status = 'received' AND give_up = 0 AND claim_token = 'gather' AND claim_until > ?"
@@ -284,9 +274,8 @@ def gathering(
 
 
 def fold_into(conn: sqlite3.Connection, message_ids: list[int], into: int, *, now: str) -> None:
-    """The earlier messages of a burst, answered as part of a later one: done with as themselves,
-    and pointing at it (reply_to), so that its reply, or a retry of it, answers them too. Call
-    inside a transaction."""
+    """Mark a burst's earlier messages processed and `reply_to` the later one, so its reply or
+    retry answers them too. Call inside a transaction."""
     conn.executemany(
         "UPDATE messages SET status = 'processed', processed_at = ?, reply_to = ? WHERE id = ?",
         [(now, into, message_id) for message_id in message_ids],
@@ -366,11 +355,7 @@ def give_up_for_member(conn: sqlite3.Connection, member_id: int, *, now: str) ->
 
 
 def last_for_chat(conn: sqlite3.Connection, chat_id: str, *, limit: int) -> list[Message]:
-    """The last `limit` messages in a chat, however old, oldest first.
-
-    What the page shows. The agent's own view of a chat is `recent_for_chat`, which also draws a
-    line under anything said long enough ago that the model should not be reading it again.
-    """
+    """The last `limit` messages in a chat, however old, oldest first (what the page shows)."""
     rows = conn.execute(
         "SELECT * FROM messages WHERE chat_id = ? AND cancelled_at IS NULL "
         "ORDER BY id DESC LIMIT ?",
@@ -400,7 +385,7 @@ def pending(conn: sqlite3.Connection, *, max_retries: int, now: str) -> list[Mes
 
 
 def recent_failures(conn: sqlite3.Connection, *, limit: int = 10) -> list[Message]:
-    """Inbound messages that did not go through, newest first, whether or not they are done with."""
+    """Inbound messages that failed, newest first, retried or not."""
     rows = conn.execute(
         "SELECT * FROM messages WHERE direction = 'in' AND status = 'failed' "
         "ORDER BY id DESC LIMIT ?",
@@ -415,7 +400,7 @@ def give_up(conn: sqlite3.Connection, message_id: int) -> None:
 
 
 def reset_retries(conn: sqlite3.Connection) -> int:
-    """Make every failed message eligible again (after fixing a configuration problem)."""
+    """Make every failed message eligible for retry again."""
     cur = conn.execute(
         "UPDATE messages SET retries = 0, give_up = 0 WHERE status = 'failed' AND direction = 'in'"
     )

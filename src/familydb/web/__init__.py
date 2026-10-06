@@ -1,15 +1,5 @@
-"""The web page: the whole bot in a browser.
-
-`create_app` builds a Flask application around an existing `App`, so the page works on the same
-database and settings as the bot itself. Most of it reads — the ideas list, one idea, the
-restaurants, the plans, what is connected and what it has cost. Four parts write, each through
-one door: `chat.py` hands a message to the pipeline, `edits.py` changes an idea, an outcome, a
-plan, a task or a memory through the same tools the model calls, `family.py` changes who is in
-the family and how they sign in through `familydb.family`, and `settings.py` is the only thing
-that writes `app_settings` (and two files, the session key and the Google key). Every other
-module in this package reads and nothing else, bar `look.py`, whose Look page keeps which of the
-page's looks this one browser wears in a cookie: it changes nothing the family's data knows.
-"""
+"""The web page: a Flask application over an `App`. Which modules may write, and through what
+door, is in CLAUDE.md and held by `tests/test_web.py`."""
 
 from __future__ import annotations
 
@@ -59,11 +49,9 @@ CONTENT_SECURITY_POLICY = (
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 )
 HSTS = "max-age=31536000"
-# What the page links to is named with a fingerprint of what is in it (`style.css?v=…`), so a
-# browser keeps it for a year, and still fetches the new one the moment an upgrade changes it,
-# rather than asking again about every file on every page. The fonts are named by the stylesheet,
-# where no fingerprint reaches, and the page's preload has to name them the same way or the
-# browser fetches them twice, so they go unmarked and are kept a day.
+# Static files carry a content fingerprint (`style.css?v=…`) and are kept a year. Fonts are named
+# by the stylesheet, where no fingerprint reaches, and the preload must name them the same way or
+# they are fetched twice, so they go unmarked and are kept a day.
 STATIC_FOREVER = "public, max-age=31536000, immutable"
 STATIC_FONTS = "public, max-age=86400"
 FONTS = "fonts/"
@@ -89,11 +77,8 @@ NO_PROXY_TRUSTED = (
 
 
 def check_configuration(settings: Settings, *, own_passwords: bool = False) -> None:
-    """Refuse to serve a page the network could walk into. Raises ConfigError.
-
-    `own_passwords` says people sign in as themselves, each with a password the page would not
-    take too short, so there is no need for a shared one at all.
-    """
+    """Refuse to serve a page the network could walk into. Raises ConfigError. With
+    `own_passwords` there is no need for a shared password."""
     if not web_password_required(settings) or own_passwords:
         return
     if settings.web_password_hash:
@@ -112,11 +97,8 @@ def security_headers(response: Any) -> Any:
         response.headers.setdefault("Cache-Control", "no-store")
     response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    # Not "no-referrer": under that policy a browser sends `Origin: null` with every form it
-    # posts, and `auth.origin_ok` rightly refuses a null origin, so nobody could sign in or send
-    # a form from a real browser (the test client sends no Origin at all, so only a real browser
-    # shows it). "same-origin" still sends no referrer with a link out to a restaurant's site,
-    # while this site's own posts say where they came from.
+    # Not "no-referrer": a browser then posts `Origin: null`, which `auth.origin_ok` refuses, so
+    # nobody could sign in (the test client sends no Origin, so only a real browser shows it).
     response.headers.setdefault("Referrer-Policy", REFERRER_POLICY)
     response.headers.setdefault("X-Frame-Options", "DENY")
     if request.is_secure:
@@ -125,8 +107,7 @@ def security_headers(response: Any) -> Any:
 
 
 def fingerprints(folder: str | Path) -> Callable[[str], str | None]:
-    """A short hash of each static file's contents, read once: they change only with an upgrade,
-    which restarts the page. None for a file that is not there."""
+    """A short hash of each static file, read once. None for a file that is not there."""
     known: dict[str, str | None] = {}
 
     def fingerprint(filename: str) -> str | None:
@@ -169,11 +150,7 @@ def _static_caching(web: Flask) -> None:
 
 
 def create_app(app: App, *, api: Any = None) -> Flask:
-    """A Flask application over this App's database and settings.
-
-    `api` stands in for the model on the chat page, which is how the tests drive a whole turn
-    without a network. Left alone, every turn picks its provider from the settings in force.
-    """
+    """A Flask application over this App. `api` stands in for the chat page's model, for tests."""
     app.refresh()  # start from the settings in force, not only from what the environment said
     settings = app.settings
     try:
@@ -189,38 +166,28 @@ def create_app(app: App, *, api: Any = None) -> Flask:
         SECRET_KEY=session_secret(settings),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
-        # Behind a proxy we assume it terminates TLS, so the cookie must never cross plain HTTP.
+        # A proxy is assumed to terminate TLS.
         SESSION_COOKIE_SECURE=settings.web_trust_proxy,
         PERMANENT_SESSION_LIFETIME=timedelta(days=settings.web_session_days),
         MAX_CONTENT_LENGTH=MAX_BODY_BYTES,
         FAMILYDB_APP=app,
         FAMILYDB_LOCKOUT=auth.Lockout(),
-        # A turn outlives the request that asked for it, so the thing running turns belongs to
-        # the application rather than to any one view.
+        # A turn outlives its request.
         FAMILYDB_CHAT=WebChat(app, api=api),
-        # Where each form's first post went, so a second one goes there too (see once.py).
         FAMILYDB_ONCE=once.Once(),
     )
 
-    # Who is asking, as the login gate found them: whether to offer signing out, whose name to
-    # show, and whether the pages only an admin changes are in reach.
     web.jinja_env.globals["visitor"] = auth.visitor
     web.jinja_env.globals["csrf_token"] = auth.csrf_token
     web.jinja_env.globals["once_token"] = once.once_token
-    # Every page outside FamilyDB it links to (web/links.py).
     web.jinja_env.globals["links"] = links.LINKS
-    # Every page of settings, for the menu in the bar.
     web.jinja_env.globals["settings_sections"] = fields.SECTIONS
 
     def every_page() -> dict[str, Any]:
-        # Who the family talks to, for every page that speaks of her: her name, and whether
-        # there is a her at all, both from the persona in force. With no persona the bot is
-        # FamilyDB and the place is "Chat".
         her = personas.active(app.settings)
         # A kid sees nothing of how it works, its version included (roles.py `browse`).
         who = auth.visitor()
         plain = who.member is not None and not who.may("browse")
-        # An admin's Status tile lights up while something only an admin can fix goes on.
         light = None
         if who.may("manage"):
             try:
@@ -236,7 +203,6 @@ def create_app(app: App, *, api: Any = None) -> Flask:
             "status_words": views.STATUS_LIGHTS.get(light or ""),
             "assistant": her.name,
             "has_persona": her is not personas.PLAIN,
-            # How this browser asked the page to look (web/looks.py): a theme, and day or night.
             **_look(),
         }
 
@@ -250,8 +216,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.register_blueprint(look.bp)
     web.register_blueprint(settings_page.bp)
     web.register_blueprint(setup.bp)
-    # The gate first: somebody who is not signed in should not be able to make the page work,
-    # not even for one small query.
+    # The gate first: nobody signed out may cost even a query.
     web.before_request(auth.require_login)
     web.before_request(_picking_up_settings(app, web))
     web.after_request(security_headers)
@@ -264,20 +229,14 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     return web
 
 
-# Nothing these two serve depends on a setting, and a monitor may ask for the first every few
-# seconds, so neither is worth a query.
+# A monitor may ask healthz every few seconds, so these are not worth a query.
 SETTINGS_FREE = frozenset({"web.healthz", "static"})
 
 
 def _picking_up_settings(app: App, web: Flask) -> Any:
-    """A before_request hook that serves each page from the settings in force.
-
-    One small query per request when nothing has changed. It is registered after the login gate,
-    so a request about to be turned away costs nothing. Flask keeps its own copy of the session
-    lifetime, so that one is handed over again on every request: the form that changed it has
-    already refreshed by the time this runs, so asking `refresh()` whether to bother would mean
-    the new lifetime never arrived.
-    """
+    """A before_request hook that serves each page from the settings in force. Flask keeps its own
+    copy of the session lifetime, so it is handed over on every request: the form that changed it
+    has already refreshed, so `refresh()` would report nothing moved."""
 
     def hook() -> None:
         if request.endpoint in SETTINGS_FREE:
@@ -289,8 +248,7 @@ def _picking_up_settings(app: App, web: Flask) -> Any:
 
 
 def _look() -> dict[str, Any]:
-    """The look this browser chose, as the templates want it. Anything the cookie says that is
-    not one of ours is the default."""
+    """The look this browser chose, as the templates want it."""
     wearing, mode = looks.parse(request.cookies.get(looks.COOKIE))
     return {
         "look": wearing,

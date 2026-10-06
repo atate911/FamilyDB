@@ -1,10 +1,6 @@
-"""Memories: what the family has told the bot about itself (docs/MEMORY.md).
-
-Rows are never deleted. A corrected memory is marked `replaced` and points at what replaced it;
-a forgotten one keeps its words, marked `forgotten`, so the same thing said before the forgetting
-can be recognised and not saved again. Which memories a message needs is chosen elsewhere
-(`familydb/memory.py`); the rules for changing them are the `remember` tool's.
-"""
+"""Memories: what the family told the bot about itself (docs/MEMORY.md). Never deleted: a
+corrected one is `replaced` (pointing at its successor), a forgotten one keeps its words so it
+is not saved again. Selection is familydb/memory.py's; change rules are the `remember` tool's."""
 
 from __future__ import annotations
 
@@ -119,7 +115,7 @@ def matching(
 
 
 def firm_up(conn: sqlite3.Connection, memory_id: int, *, firm: bool, now: str) -> None:
-    """Said again, and outright this time: no longer a guess, and a must if it now is one."""
+    """Said again outright: no longer a guess, and a must if it now is one."""
     conn.execute(
         "UPDATE memories SET inferred = 0, firm = max(firm, ?), updated_at = ? WHERE id = ?",
         (int(firm), now, memory_id),
@@ -151,5 +147,5 @@ def active(conn: sqlite3.Connection, *, today: date) -> list[Memory]:
 
 
 def list_all(conn: sqlite3.Connection) -> list[Memory]:
-    """Every memory there has been, newest first, for the page."""
+    """Every memory there has been, newest first."""
     return [Memory.from_row(row) for row in conn.execute(f"{_SELECT} ORDER BY r.id DESC")]

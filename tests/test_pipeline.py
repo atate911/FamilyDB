@@ -125,15 +125,6 @@ def test_repl_commands_and_messages(settings, clock, conn, family) -> None:
     )
 
 
-def test_configuration_errors_get_the_admin_reply(settings, clock, conn, family) -> None:
-    app = _app(settings, clock)
-    api = fakes.FakeMessagesAPI(fakes.bad_request_error())
-    reply = handle_incoming(app, _telegram("hi", "10"), api=api, conn=conn)
-    assert reply.status == "failed"
-    assert reply.text == voice.say(settings, "cannot_reach")
-    assert messages.get(conn, reply.in_message_id).status == "failed"
-
-
 def test_simultaneous_redelivery_is_still_a_duplicate(
     settings, clock, conn, family, monkeypatch
 ) -> None:

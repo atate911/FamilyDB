@@ -1,4 +1,4 @@
-"""Stage: which ideas plausibly fit the window. Pure rules; the first failing rule is the reason."""
+"""Stage: which ideas plausibly fit the window; pure rules, the first failing one is the reason."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def day_text(day: date) -> str:
 
 
 def dates_text(idea: Idea) -> str:
-    """When a dated idea is on, in a few words: "only on Sun 18 Oct", "on from Thu 1 Oct"."""
+    """When a dated idea is on, in a few words ("only on Sun 18 Oct")."""
     first, last = idea.first_day, idea.last_day
     if first is None:
         return "on no day given"
@@ -85,14 +85,14 @@ def dates_text(idea: Idea) -> str:
 
 
 def dates_reason(idea: Idea, context: Context) -> str | None:
-    """Why an idea tied to dates cannot be done in this window: over, or on other days."""
+    """Why a dated idea cannot be done in this window (over, or other days)."""
     if idea.first_day is None and idea.last_day is None:
         return None
     last = idea.last_day
     if last is not None and last < context.today:
         return f"was over on {day_text(last)}"
     if context.window is None:
-        return None  # someday: anything still to come will do
+        return None
     if any(idea.on(day.date) for day in context.days):
         return None
     return dates_text(idea)
@@ -141,7 +141,7 @@ def _weather_fit(
     bad: list[str] = []
     for day in context.days:
         if not idea.on(day.date):
-            continue  # a dated idea is only ever a candidate on its own days
+            continue
         forecast = day.forecast
         if forecast is not None:
             known = True
@@ -214,7 +214,7 @@ def shortlist(
         if constraints.idea_ids and idea.id not in constraints.idea_ids:
             continue
         if idea.status == "dropped" or idea.kind.casefold() == GIFT:
-            continue  # a present to give is not something to go and do
+            continue
         reason = _status_reason(idea, context.today)
         if reason:
             out(idea, reason)

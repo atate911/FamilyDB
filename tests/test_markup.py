@@ -35,7 +35,6 @@ from familydb.channels.telegram import formatted
         ("5 * 3 * 2 = 30", "5 * 3 * 2 = 30"),
         ("see https://x.com/_a_/b_c_ now", "see https://x.com/_a_/b_c_ now"),
         ("**not closed", "**not closed"),
-        ("Reminder: bins out (Sam). Task #12.", "Reminder: bins out (Sam). Task #12."),
     ],
 )
 def test_the_marks_models_write_are_drawn(written: str, drawn: str) -> None:

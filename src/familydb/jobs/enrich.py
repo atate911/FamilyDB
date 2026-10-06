@@ -1,11 +1,7 @@
-"""Enrichment: look up each new idea's place on the web and store what was found.
-
-Filling an idea in rarely changes what the family does next, so by default the lookups wait for
-the evening (`lookups_when`, `lookup_hour`): the first run after that hour takes every idea that
-was waiting before it, and each chat gets one note for all it found there. An idea somebody asked
-for now (`look_up_now`, the page's button, /lookup) is looked up on the next run whatever the
-hour, with a note of its own. With `lookups_when` "asap" every idea is looked up as it comes.
-"""
+"""Enrichment: look up each new idea's place on the web and store what was found. By default
+lookups wait for the evening (`lookups_when`, `lookup_hour`) and each chat gets one note; an idea
+asked for now (`look_up_now`) goes on the next run with its own note; "asap" looks each up as it
+comes."""
 
 from __future__ import annotations
 
@@ -34,18 +30,17 @@ from familydb.store.places import Place
 log = logging.getLogger(__name__)
 
 OUTCOMES = ("done", "skipped", "failed", "deferred")
-# The most one evening looks up; any more wait for the next. The day's limit still holds.
+# The most one evening looks up; the rest wait.
 EVENING_MOST = 40
-# Kinds that are never a place to look up. Kept narrow on purpose: a title alone can name a place
-# ("Pizza Luna"), so only a kind that means "not out anywhere" decides it, and only while the
-# family has given nothing to look up (no location, no link, no place already attached). A gift's
-# link is to the thing itself, so only a place named for it (a class somewhere) is looked up.
+# Kinds that are never a place. Narrow on purpose (a title can name a place, "Pizza Luna"): only
+# while no location, link or place is attached. A gift's link is to the thing itself, so only a
+# place named for it is looked up.
 NO_LOOKUP_KINDS = frozenset({"home", GIFT})
 NO_LOOKUP_NOTE = "nothing to look up: a {kind} idea with no place or link"
 
 
 def needs_lookup(idea: Idea) -> bool:
-    """Whether a worker turn could find anything for this idea. Decided in code, for free."""
+    """Whether a worker turn could find anything for this idea (decided in code)."""
     if idea.kind not in NO_LOOKUP_KINDS:
         return True
     link = idea.url if idea.kind != GIFT else None
@@ -53,7 +48,7 @@ def needs_lookup(idea: Idea) -> bool:
 
 
 def render_enrich_request(idea: Idea, place: Place | None, settings: Settings) -> str:
-    """What the worker is told about the idea it should look up."""
+
     lines = [f"Idea #{idea.id}: {idea.title}", f"Kind: {idea.kind}"]
     if idea.location_name:
         lines.append(f"Location as the family said it: {idea.location_name}")
@@ -83,8 +78,8 @@ def render_enrich_request(idea: Idea, place: Place | None, settings: Settings) -
 
 
 def lookups_due_before(settings: Settings, now: datetime) -> str | None:
-    """None when each idea is looked up as it comes; otherwise the last evening lookup hour that
-    has passed, as the UTC stamp ideas are stored under: those waiting since before it are due."""
+    """None when each idea is looked up as it comes; else the last evening lookup hour passed,
+    as a UTC stamp: ideas waiting since before it are due."""
     if settings.lookups_when == "asap":
         return None
     zone = settings.tzinfo
@@ -98,14 +93,14 @@ def lookups_due_before(settings: Settings, now: datetime) -> str | None:
 
 
 def render_place_note(idea: Idea, place: Place, settings: Any) -> str:
-    """The one-line chat note after an idea is filled in, in the assistant's voice."""
+    """The one-line chat note after an idea is filled in."""
     return voice.say(
         settings, "lookup_done", idea=idea.id, place=place.name, details=place_details(place)
     )
 
 
 def render_evening_note(found: list[tuple[Idea, Place]], settings: Any) -> str:
-    """One note for everything the evening's lookups found for a chat."""
+
     if len(found) == 1:
         return render_place_note(*found[0], settings)
     listed = "\n".join(
@@ -115,7 +110,7 @@ def render_evening_note(found: list[tuple[Idea, Place]], settings: Any) -> str:
 
 
 def place_details(place: Place) -> str:
-    """What was found, in a line: what it is, its hours, how far, tickets, prices."""
+    """What was found, in a line."""
     parts: list[str] = []
     if place.summary:
         parts.append(place.summary.rstrip("."))
@@ -149,7 +144,7 @@ def _mark(conn: Any, app: App, idea_id: int, status: str, note: str | None) -> N
 
 
 def _origin(app: App, conn: Any, idea: Idea) -> tuple[Any, Place] | None:
-    """The message an idea came from and its place, when a note about it can be sent there."""
+    """The message an idea came from and its place, when a note can be sent there."""
     if not app.settings.enrichment_notes or idea.source_message_id is None:
         return None
     origin = messages.get(conn, idea.source_message_id)
@@ -160,7 +155,7 @@ def _origin(app: App, conn: Any, idea: Idea) -> tuple[Any, Place] | None:
 
 
 def _notify(app: App, conn: Any, idea: Idea) -> None:
-    """Post the 'filled in' note to the chat the idea came from, when possible and wanted."""
+    """Post the 'filled in' note to the idea's chat, when possible and wanted."""
     found = _origin(app, conn, idea)
     if found is None:
         return
@@ -169,13 +164,12 @@ def _notify(app: App, conn: Any, idea: Idea) -> None:
 
 
 def _to(app: App, conn: Any, origin: Any) -> tuple[str, str]:
-    """Where a note on an idea goes: to whoever told her it, in their own chat when it came from
-    a group (routing.py), else where it came from."""
+    """Where a note goes: the teller's own chat when it came from a group (routing.py)."""
     return routing.for_person(conn, app.settings, origin.channel, origin.chat_id, origin.member_id)
 
 
 def _notify_together(app: App, conn: Any, done: list[int]) -> None:
-    """One note in each chat for everything the evening's lookups found for it."""
+
     by_chat: dict[tuple[str, str], list[tuple[Any, Idea, Place]]] = defaultdict(list)
     for idea_id in done:
         idea = ideas.get(conn, idea_id)
@@ -216,9 +210,8 @@ def _send_note(
 def enrich_idea(
     app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = None, note: bool = True
 ) -> str:
-    """Look one idea up. Returns done, skipped, failed or deferred (try again later).
-
-    With `note` off (the evening's lookups) nothing is said here: the run says it all at once."""
+    """Look one idea up; returns done, skipped, failed or deferred. With `note` off (the
+    evening's lookups) the run says it all at once."""
     if not needs_lookup(idea):
         _mark(conn, app, idea.id, "skipped", NO_LOOKUP_NOTE.format(kind=idea.kind))
         log.info("idea %s enrichment skipped without a model call", idea.id)
@@ -246,7 +239,7 @@ def enrich_idea(
         _mark(conn, app, idea.id, "failed", f"worker: {exc}")
         return "failed"
     except Exception as exc:
-        # Anything else would leave the idea pending and burn a model call every run.
+        # Left pending it would burn a model call every run.
         log.exception("enrichment of idea %s crashed", idea.id)
         _mark(conn, app, idea.id, "failed", f"error: {type(exc).__name__}: {exc}")
         return "failed"
@@ -286,7 +279,6 @@ def run_enrichment(
             log.debug("enrichment skipped: web tools are off")
             return counts
         if not app.can_ask("worker", api=api):
-            # Not a failure: the ideas wait, pending, and are looked up once a key is added.
             log.debug("enrichment waits: there is no model key yet")
             return counts
         before = lookups_due_before(app.settings, app.clock.now())
@@ -302,7 +294,7 @@ def run_enrichment(
         if spending.used_up(conn, app.settings, app.clock.now()):
             log.debug("enrichment waits for tomorrow: the daily spending limit is used up")
             return counts
-        found: list[int] = []  # the evening's, said together once the run is over
+        found: list[int] = []  # the evening's, noted together after the run
         try:
             for idea in batch:
                 together = evening and idea.lookup_wanted_at is None

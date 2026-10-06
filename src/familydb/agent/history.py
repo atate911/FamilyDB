@@ -13,10 +13,9 @@ from familydb.clock import Clock
 from familydb.dates import utc_iso
 from familydb.store import members, messages
 
-# History is sent at full price on every call of a turn, so it is kept under a budget: the newest
-# messages that fit in HISTORY_CHARS, each cut to MESSAGE_CHARS, so one long paste is not paid for
-# again on every message for the next six hours. Characters, because this runs before any
-# provider is chosen; about 1,500 tokens in all.
+# History is paid for on every call, so it is budgeted: the newest messages fitting HISTORY_CHARS
+# (about 1,500 tokens), each cut to MESSAGE_CHARS so one long paste is not re-paid for hours.
+# Characters, because this runs before any provider is chosen.
 HISTORY_CHARS = 6000
 MESSAGE_CHARS = 1500
 CUT = " [...]"
@@ -41,23 +40,18 @@ def load_history(
     also_exclude: Collection[int] = (),
     before_id: int | None = None,
 ) -> list[HistoryTurn]:
-    """The last `limit` messages of a chat from the last `since_hours`, as plain text turns.
-
-    `exclude_replies_to` drops the bot's own notices about a message (used when retrying it).
-    Then `budget` keeps only the newest of them that fit (see `HISTORY_CHARS`).
-    """
+    """The last `limit` messages of a chat from the last `since_hours`, as text turns within
+    `budget`. `exclude_replies_to` drops the bot's own notices about a message (on retry)."""
     since = utc_iso(clock.now() - timedelta(hours=since_hours))
     names = {m.id: m.display_name for m in members.list_all(conn, active_only=False)}
-    # The current inbound message is already stored and is the newest row; fetch one extra
-    # so excluding it still leaves `limit` earlier messages.
-    # `also_exclude` are the earlier messages of a burst answered with it (pipeline.receive).
+    # The current message is already stored as the newest row, so fetch one extra; `also_exclude`
+    # are the earlier messages of a burst answered with it (pipeline.receive).
     fetch = (limit + 1 if exclude_message_id is not None else limit) + len(also_exclude)
     turns: list[HistoryTurn] = []
     for message in messages.recent_for_chat(conn, chat_id, limit=fetch, since=since):
         if message.id == exclude_message_id or message.id in also_exclude:
             continue
-        # A message somebody sent after this one is not the conversation before it: it is
-        # still waiting for a turn of its own (a burst from somebody else, pipeline.receive).
+        # A later message still waits for its own turn (pipeline.receive).
         if before_id is not None and message.direction == "in" and message.id > before_id:
             continue
         if exclude_replies_to is not None and message.reply_to == exclude_replies_to:
@@ -73,7 +67,7 @@ def load_history(
 def within_budget(
     turns: list[HistoryTurn], budget: int, *, each: int = MESSAGE_CHARS
 ) -> list[HistoryTurn]:
-    """The newest turns whose text fits in `budget` characters, each cut to `each` first."""
+    """The newest turns fitting `budget` characters, each cut to `each` first."""
     kept: list[HistoryTurn] = []
     used = 0
     for turn in reversed(turns):

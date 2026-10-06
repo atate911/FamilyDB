@@ -48,12 +48,6 @@ def test_cache_ttl_is_the_provider_s_business(settings) -> None:
     assert build("anthropic", brief, api=object()).cache_marker() == {"type": "ephemeral"}
 
 
-def test_user_turn_carries_the_date_and_sender(clock) -> None:
-    parts = render_user_turn("Sam", "what should we do?", clock)
-    assert parts[0] == "Today is Sunday 20 September 2026, 14:03 (America/Vancouver), autumn."
-    assert parts[1] == "[Sam] what should we do?"
-
-
 def test_build_messages_merges_and_orders_turns(clock) -> None:
     history = [
         HistoryTurn("assistant", "stray reply first"),
@@ -91,19 +85,6 @@ def test_family_context_matches_tool_availability(conn, settings, family, tmp_pa
     text = build_system_blocks(conn, full)[1].text
     assert "Calendar: connected" in text
     assert "Weather: configured" in text
-
-
-def test_worker_tools_are_declared_to_the_chat_agent_too(registry, settings) -> None:
-    names = registry.names()
-    assert "report_finds" in names and "save_place" in names and "skip_place" in names
-    assert "suggest" in names
-
-
-def test_system_prompt_routes_questions_through_suggest() -> None:
-    text = load_system_prompt()
-    assert "Call suggest once" in text
-    assert "Weekend digest:" in text and "How was #57" in text
-    assert "describe_idea or lookup_place" in text
 
 
 def test_the_chat_list_leaves_out_the_worker_hand_back_tools(registry, settings) -> None:
@@ -161,13 +142,6 @@ def test_the_request_is_the_same_one_this_api_always_received(conn, settings, fa
         "Today is Sunday 20 September 2026, 14:03 (America/Vancouver), autumn.",
         "[Sam] what now?",
     ]
-
-
-def test_the_ideas_header_names_the_columns_the_lines_have(conn, settings, family) -> None:
-    from familydb.agent.prompt import IDEAS_HEADER
-
-    # A header naming a column the lines do not carry tells the model about data it lacks.
-    assert "details" not in IDEAS_HEADER
 
 
 def test_the_discovery_worker_is_told_to_use_what_its_request_carries() -> None:

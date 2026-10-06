@@ -4,8 +4,6 @@
 {% block content %}
   {{ page_head('Look', 'How the page looks on this phone or computer. It is kept in this browser, so each person and each screen can have their own.', 'palette') }}
 
-  {# One form: a look, and whether to follow the device's day and night. Each look is drawn in its
-     own colours by putting its name on the sample (data-theme), so the choice is seen, not described. #}
   <form class="look-form" method="post" action="{{ url_for('look.save') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
 
@@ -51,9 +49,7 @@
   </form>
 {% endblock %}
 
-{# A small page drawn in a look's colours: its band, a card, today's stamp, the one button, and the
-   colours it keeps for kinds of things. Nothing on it is a link or a control, and it says nothing a
-   screen reader needs: the look's name above it does. #}
+{# A small page in a look's colours. Decoration: the look's name above it is what a screen reader needs. #}
 {% macro sample(key, mode, caption) %}
   <span class="look-shot">
     <span class="look-sample" data-theme="{{ key }}"{% if mode %} data-mode="{{ mode }}"{% endif %}>

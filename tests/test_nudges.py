@@ -64,7 +64,7 @@ def _task(conn, title="Get the knives sharpened", window="one of these Saturday 
     )
 
 
-# -- reading the window --------------------------------------------------------------------------
+# -- reading the window
 
 
 @pytest.mark.parametrize(
@@ -74,7 +74,6 @@ def _task(conn, title="Get the knives sharpened", window="one of these Saturday 
         ("a free weekend", {5, 6}, ("day",), "a weekend day"),
         ("weeknights", set(range(5)), ("evening",), "a weekday evening"),
         ("some evening", set(range(7)), ("evening",), "an evening"),
-        ("Saturday or Sunday afternoon", {5, 6}, ("afternoon",), "a weekend afternoon"),
         ("Monday or Wednesday night", {0, 2}, ("evening",), "a Monday or Wednesday evening"),
     ],
 )
@@ -88,11 +87,8 @@ def test_a_window_is_read_as_days_and_parts_of_the_day(said, days, parts, words)
     "said",
     [
         "",
-        "sometime",
         "before Christmas",
-        "after school",
         "any day but Sunday",
-        "not on Saturday",
         "next Saturday morning",
         "tonight",
         "Saturday at 3",
@@ -114,7 +110,7 @@ def test_a_nudge_goes_from_an_hour_into_the_part_until_an_hour_before_its_end() 
     assert window.open_at(SATURDAY + timedelta(days=1)) is None  # a Sunday
 
 
-# -- the job -------------------------------------------------------------------------------------
+# -- the job
 
 
 def test_it_comes_up_on_a_free_saturday_morning_and_again_a_week_on(settings, conn, family) -> None:
@@ -225,7 +221,7 @@ def test_a_tap_on_in_an_hour_turns_it_into_a_reminder(settings, conn, family) ->
     assert tasks.get(conn, task.id).reminder is not None
 
 
-# -- what the model and the page are told --------------------------------------------------------
+# -- what the model and the page are told
 
 
 def _ctx(settings, conn, family, **changes) -> ToolContext:

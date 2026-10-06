@@ -417,7 +417,7 @@ def test_create_event_records_the_originating_chat(
     assert data["plan"]["channel"] == "telegram" and data["plan"]["chat_id"] == "-100"
 
 
-# --- calendar writes safe to repeat, and Google's own dates ------------------------------------
+# --- calendar writes safe to repeat, and Google's own dates
 
 
 def test_lost_calendar_response_reuses_persisted_identity_after_context_restart(env):
@@ -486,9 +486,9 @@ def test_the_calendar_tool_names_the_plan_behind_each_event_and_reads_google_s_d
 
 
 def test_reading_the_calendar_rewrites_nothing_that_did_not_change(env):
-    """Plans are stored to the minute with their offset, so Google's own spelling of the same
-    time, seconds included, is no change: counting it as one would rewrite every plan on every
-    read."""
+    """Plans are stored to the minute with their offset, so Google's spelling of the same time,
+    seconds included, is no change.
+    """
     _, timed = call(env, "create_event", title="Museum", start="2026-09-26T10:00")
     _, whole = call(env, "create_event", title="Camping", start="2026-10-03", end="2026-10-04")
     before = {p["plan"]["id"]: plans.get(env.conn, p["plan"]["id"]) for p in (timed, whole)}
@@ -556,7 +556,7 @@ def test_the_page_asks_google_at_most_once_a_minute_and_sees_the_bot_s_writes_at
     assert client.recent_events(start, end) == ["third"]
 
 
-# --- keeping plans in step with Google: one request, then only what changed --------------------
+# --- keeping plans in step with Google: one request, then only what changed
 
 
 def _plan_with_idea(env, title="Museum", start="2026-09-26T10:00"):
@@ -680,7 +680,7 @@ def test_google_changes_starts_again_when_the_token_is_too_old():
     assert result.full and result.token == "t9"
 
 
-# --- a form drawn again after a lost reply finds the event Google may already have made ----------
+# --- a form drawn again after a lost reply finds the event Google may already have made
 
 
 def _with_session(env, session, operation):

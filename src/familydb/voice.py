@@ -1,25 +1,17 @@
-"""The voice layer: every message the bot sends of its own accord is worded here.
+"""The voice layer: every message the bot sends of its own accord is worded here, by code, with no
+model call.
 
-The chat model speaks for itself, in the persona the prompt gives it. Everything else the bot
-says (a reminder, "how was it?", a lookup note, a notice that it cannot answer) is written by
-code, and comes through `say`: the line the persona in force has for that event
-(`personas.active`: her own, `personas/<key>/lines.toml`, or the family's rewrite of it from the
-Personality page), or the plain wording below when she has none. Any line may say {name}, which
-is her name as the persona in force gives it: her own, or the one the family call her. No model
-call, so it works when the model is down, the key is missing or the day's limit is spent.
+`say` returns the line the persona in force has for an event (`personas.active`: hers, or the
+family's rewrite), else the plain wording below. Any line may say {name}.
 
-A line may have several wordings, kept as a list, and she picks one each time. Code chooses, not
-chance: the same event with the same seed (a message's own id), or with no seed the same facts,
-always chooses the same wording, so a resend or a retry says the same words, the same reminder
-reads the same every time, and another message may say it another way. A line kept as a string
-is one wording, line breaks and all, as older installs stored every line. The plain wordings are
-one each.
+A line may have several wordings. Code chooses, not chance: the same event with the same seed (a
+message's id), or with no seed the same facts, always chooses the same wording, so a resend or
+retry says the same words. A string line is one wording, as older installs stored every line.
 
-A proactive message that lands while the family is talking (`FOLDABLE`) is not sent on its own.
-`hand_over` holds it for a moment; the chat turn that comes next takes it (`take`), the model
-mentions it in its own reply, and the message is marked delivered with that reply. If no turn
-comes within `HOLD`, or the model's reply forgets it, the written line goes after all. Holds are
-kept in memory: after a restart a held message is simply sent, the way it would have been.
+A proactive message landing while the family is talking (`FOLDABLE`) is held by `hand_over`; the
+next chat turn takes it (`take`), the model mentions it, and it is marked delivered with that
+reply. If no turn comes within `HOLD`, or the reply forgets it, the written line goes. Holds are
+in memory: after a restart a held message is simply sent.
 """
 
 from __future__ import annotations
@@ -43,15 +35,13 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class Event:
-    label: str  # what the Personality page calls it
-    plain: str  # the wording with no persona, and whenever a line cannot be used
-    fields: tuple[str, ...]  # the {names} of its own a line may use; {name} goes with every one
-    # Facts like those it is said with, for the Personality page to show how a line reads, and
-    # for nothing else.
+    label: str
+    plain: str
+    fields: tuple[str, ...]
+    # Facts like those it is said with, for the Personality page to show how a line reads.
     example: Mapping[str, Any] = field(default_factory=dict)
 
 
-# What any line may use, whatever the event: her name, from the persona in force.
 HERS = ("name",)
 
 
@@ -98,7 +88,6 @@ EVENTS: dict[str, Event] = {
             "task": 14,
         },
     ),
-    # The heading of each command's answer (commands.py), one line, which the facts follow.
     "cmd_today": Event("Answering /today", "Today, {day}:", ("day",), {"day": "Sat 26 Sep"}),
     "cmd_week": Event("Answering /week", "The next seven days:", ()),
     "cmd_tasks": Event("Answering /tasks", "Open tasks in this chat:", ()),
@@ -137,8 +126,8 @@ EVENTS: dict[str, Event] = {
         ("plan", "day"),
         {"plan": "#31 Hopscotch", "day": "Saturday"},
     ),
-    # A button under one of those tapped (buttons.py). Each is shown to whoever tapped, and the
-    # ones that did something are added under the message, for everyone in the chat.
+    # A button tapped (buttons.py): shown to whoever tapped; ones that did something are added under
+    # the message for everyone.
     "tap_done": Event("A reminder's Done tapped", "Done ✓ ({who}).", ("who",), {"who": "Sam"}),
     "tap_done_again": Event(
         "A repeating reminder's Done tapped",
@@ -528,9 +517,9 @@ EVENTS: dict[str, Event] = {
     ),
 }
 
-# A line that speaks of how the bot works (a key, a model, a limit in dollars, an admin, the
-# settings page), and the one said instead where somebody reads who may not see that: a kid
-# (audience.plain). The grown-ups who can mend it are told the cause another way (alerts.py).
+# A line about how the bot works (a key, a model, a dollar limit, an admin, the settings page), and
+# the one said instead where a kid reads (audience.plain). Grown-ups who can mend it are told the
+# cause another way (alerts.py).
 PLAIN: dict[str, str] = {
     "cannot_reach": "kid_later",
     "no_key": "kid_later",
@@ -543,53 +532,44 @@ PLAIN: dict[str, str] = {
     "reminder_late": "reminder",
 }
 
-# Messages the bot sends unasked, which a conversation under way can carry instead.
 FOLDABLE = frozenset(
     {"reminder", "reminder_late", "nudge", "follow_up", "plan_rain", "plan_closed", "lookup_done"}
 )
-# A chat whose family wrote this recently is a conversation under way.
 ACTIVE = timedelta(minutes=5)
-# How long a held message waits for the next turn before it is sent as written.
 HOLD = timedelta(minutes=2)
-# How long a turn that took held messages may keep them before they are sent anyway.
 IN_TURN = timedelta(minutes=10)
 
 
-# A line: one wording, whatever rows it has, or a list of several.
 Line = str | Sequence[str]
 
 
 def wording(persona: personas.Persona) -> dict[str, list[str]]:
-    """Every event's wordings in this persona's words, and the plain one where she has none."""
     return {name: _wordings_of(persona, name) for name in EVENTS}
 
 
 def wordings(line: Line) -> list[str]:
-    """A line's wordings: a string is one, whatever rows it has; a list is several, with the
-    blank ones left out."""
+    """A line's wordings: a string is one, a list is several, blanks left out."""
     several = [line] if isinstance(line, str) else list(line)
     return [words.strip() for words in several if words.strip()]
 
 
 def boxed(line: Line) -> str:
-    """A line as its box on the Personality page shows it: its wordings one to a row. A string
-    is shown as it is."""
+    """A line as its Personality-page box shows it, one wording to a row."""
     return line if isinstance(line, str) else "\n".join(wordings(line))
 
 
 def usable(event: str) -> tuple[str, ...]:
-    """The {names} a line for this event may use: hers, then the event's own."""
     return HERS + EVENTS[event].fields
 
 
 def say(settings: Any, event: str, *, seed: Any = None, plain: bool = False, **facts: Any) -> str:
     """The words for one event: one wording of the line in force, filled in.
 
-    Which wording is chosen from the event and the seed, a message's own id when the caller has
-    one, or with no seed from the facts, so the same inputs always say the same words. A wording
-    that cannot be filled in falls back to the plain line. A {name} is always hers: the persona
-    in force gives it, not the caller. `plain` is for a chat somebody reads who may not see how
-    the bot works (audience.plain): a line about the workings says its `PLAIN` one instead."""
+    The wording is chosen from the event and the seed (a message's id), or with no seed the
+    facts, so the same inputs say the same words. One that cannot be filled in falls back to the
+    plain line. {name} is always hers. `plain` is for a chat a kid reads (audience.plain): a line
+    about the workings says its `PLAIN` one.
+    """
     if plain:
         event = PLAIN.get(event, event)
     persona = personas.active(settings)
@@ -598,28 +578,27 @@ def say(settings: Any, event: str, *, seed: Any = None, plain: bool = False, **f
 
 
 def reads_as(settings: Any, event: str) -> list[str]:
-    """How the line in force for this event reads: each of its wordings filled in with the
-    event's example facts, as `say` fills them. For the Personality page, and nothing else."""
+    """Each wording of the line in force filled in with the event's example facts, for the
+    Personality page.
+    """
     persona = personas.active(settings)
     example = EVENTS[event].example
     return [_filled(event, one, persona.name, example) for one in _wordings_of(persona, event)]
 
 
 def _wordings_of(persona: personas.Persona, event: str) -> list[str]:
-    """The wordings of this persona's line for an event, or the plain one when she has none."""
     return wordings(persona.lines.get(event, "")) or [EVENTS[event].plain]
 
 
 def _turn(event: str, seed: Any, facts: Mapping[str, Any]) -> int:
-    """A number that is the same wherever and whenever the same event is said with the same seed,
-    or with no seed the same facts. CRC-32, because Python's hash() is salted afresh in every
-    process."""
+    """The same number wherever the same event is said with the same seed (or facts). CRC-32,
+    because hash() is salted per process.
+    """
     basis = [str(seed)] if seed is not None else [f"{key}={facts[key]}" for key in sorted(facts)]
     return zlib.crc32("\n".join([event, *basis]).encode("utf-8"))
 
 
 def _filled(event: str, words: str, name: str, facts: Mapping[str, Any]) -> str:
-    """One wording with the facts and her name filled in, or the plain line when it cannot be."""
     known = {**facts, "name": name}
     values = {wanted: known.get(wanted, "") for wanted in usable(event)}
     try:
@@ -631,7 +610,8 @@ def _filled(event: str, words: str, name: str, facts: Mapping[str, Any]) -> str:
 
 def problems(written: Mapping[str, Line]) -> dict[str, str]:
     """What is wrong with lines the family wrote: an unknown event, or a wording with a {…} it
-    cannot fill in. In a line of several wordings, which of them is wrong is said too."""
+    cannot fill in.
+    """
     found: dict[str, str] = {}
     for event, line in written.items():
         if event not in EVENTS:
@@ -646,7 +626,6 @@ def problems(written: Mapping[str, Line]) -> dict[str, str]:
 
 
 def _wrong(event: str, words: str) -> str | None:
-    """What is wrong with one wording of a line for this event, if anything."""
     try:
         names = [name for _, name, _, _ in string.Formatter().parse(words) if name is not None]
     except ValueError:
@@ -659,9 +638,6 @@ def _wrong(event: str, words: str) -> str | None:
     return None
 
 
-# -- folding into a conversation under way -------------------------------------------------------
-
-
 @dataclass
 class Held:
     message_id: int
@@ -672,8 +648,6 @@ class Held:
 
 
 class Holds:
-    """Messages waiting for the conversation under way to carry them. Shared by every thread."""
-
     def __init__(self) -> None:
         self._held: dict[int, Held] = {}
         self._lock = threading.Lock()
@@ -688,7 +662,6 @@ class Holds:
             return held is not None and held.until > now
 
     def take(self, chat: tuple[str, str], now: datetime) -> list[Held]:
-        """The messages a turn in this chat should carry; kept back from delivery while it runs."""
         with self._lock:
             taken = [h for h in self._held.values() if h.chat == chat and h.until > now]
             for held in taken:
@@ -696,20 +669,17 @@ class Holds:
             return taken
 
     def done(self, taken: list[Held]) -> None:
-        """The turn carried them: nothing is left to send."""
         with self._lock:
             for held in taken:
                 self._held.pop(held.message_id, None)
 
     def let_go(self, taken: list[Held], now: datetime) -> None:
-        """The turn failed: send them as written at the next chance."""
         with self._lock:
             for held in taken:
                 if held.message_id in self._held:
                     self._held[held.message_id].until = now
 
     def due(self, now: datetime) -> list[int]:
-        """Messages whose wait is over, taken off the list to be sent as written."""
         with self._lock:
             over = [i for i, held in self._held.items() if held.until <= now]
             for message_id in over:
@@ -727,15 +697,12 @@ def hand_over(
     chat_id: str,
     mention: str,
 ) -> bool:
-    """Send a stored proactive message, or hold it for the conversation under way.
-
-    True when it went (or was held); the caller counts it either way. Anything that is not
-    `FOLDABLE`, or a chat nobody is talking in, is delivered at once.
+    """Send a stored proactive message, or hold it for the conversation under way. True when it went
+    or was held. Anything not `FOLDABLE`, or in a chat nobody is talking in, goes at once.
     """
     from familydb.delivery import deliver
     from familydb.store.db import transaction
 
-    # Kept with the message, so the Messages page can say what went out unasked, and how often.
     with transaction(conn):
         messages.mark_sent_as(conn, message_id, event)
     now = app.clock.now()
@@ -750,7 +717,6 @@ def hand_over(
 
 
 def release(app: Any) -> int:
-    """Send, as written, every held message no turn carried in time. For the minute job."""
     from familydb.delivery import deliver
 
     return sum(deliver(app, message_id) for message_id in app.held.due(app.clock.now()))

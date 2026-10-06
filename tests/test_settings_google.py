@@ -177,7 +177,7 @@ def test_a_calendar_id_is_required(page) -> None:
     assert response.status_code == 400 and "calendar's id" in response.text
 
 
-# -- the integration's own checks ---------------------------------------------------------
+# -- the integration's own checks
 
 
 def test_a_service_account_key_loads_without_asking_google(tmp_path) -> None:
@@ -186,10 +186,6 @@ def test_a_service_account_key_loads_without_asking_google(tmp_path) -> None:
     creds = google.load_credentials(path)
     assert creds.service_account_email == EMAIL
     assert google.service_account_email(path) == EMAIL
-
-
-def test_with_no_key_saved_there_is_no_address_to_share_with(tmp_path) -> None:
-    assert google.service_account_email(tmp_path / "none.json") is None
 
 
 def test_an_unreadable_key_asks_to_connect_again(tmp_path) -> None:

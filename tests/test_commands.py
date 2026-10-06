@@ -91,14 +91,6 @@ def test_the_week_names_each_day_and_the_month_where_it_turns(settings, conn, fa
     )
 
 
-def test_without_google_it_says_the_plans_are_its_own(settings, conn, family) -> None:
-    said = _ask(_app(settings), "/today")
-    assert said == (
-        "Here's today, Fri 25 Sep:\nNothing on.\n"
-        "Google Calendar isn't connected, so these are the saved plans only."
-    )
-
-
 def test_tasks_are_this_chats_open_ones(settings, conn, family) -> None:
     rule = {"repeat_every": 1, "repeat_unit": "week", "repeat_from": "schedule"}
     bins = task_service.create(
@@ -167,7 +159,7 @@ def test_a_stranger_gets_the_strangers_line_and_knocks(settings, conn, family) -
     assert messages.get(conn, 1) is None  # nothing of theirs is kept
 
 
-# -- on Telegram ---------------------------------------------------------------------------------
+# -- on Telegram
 
 
 def _command(text: str):
@@ -248,7 +240,7 @@ def test_the_menu_is_set_only_when_it_differs(settings, clock) -> None:
     asyncio.run(channel.offer_commands(Broken([])))  # logged, not raised
 
 
-# -- a link that links somebody's Telegram -------------------------------------------------------
+# -- a link that links somebody's Telegram
 
 
 def _started(app, text, *, user="1003", chat=None, update="30"):

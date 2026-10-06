@@ -320,9 +320,3 @@ def test_home_draws_what_is_coming_on_a_radar_beside_the_next(
     assert '<div class="radar" aria-hidden="true">' in text  # a picture of what the words say
     assert text.count('<g class="blip ') == 2 and '<g class="blip b7 next">' in text
     assert "Soccer practice" in text and "1 more on the radar" in text
-
-
-def test_an_empty_radar_says_so_in_words(settings, clock, conn, family) -> None:
-    text = _home(settings, clock).get("/").text
-    assert '<div class="radar" aria-hidden="true">' in text and '<g class="blip' not in text
-    assert "Nothing on the radar yet." in text

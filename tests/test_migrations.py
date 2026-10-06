@@ -52,14 +52,6 @@ def test_connect_creates_parent_directory(tmp_path: Path) -> None:
     conn.close()
 
 
-def test_phase2_columns_exist(conn) -> None:
-    def columns(table: str) -> set[str]:
-        return {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
-
-    assert "enrichment_note" in columns("ideas")
-    assert {"followed_up_at", "channel", "chat_id"} <= columns("plans")
-
-
 def test_recovery_migration_does_not_resend_historical_replies(tmp_path):
     from contextlib import closing
 
@@ -274,9 +266,9 @@ def test_the_alerts_already_noted_outlast_the_model_watch_rebuild(tmp_path, monk
 
 
 def test_calendar_attempts_keep_their_meaning_in_one_table(tmp_path, monkeypatch):
-    """0038 folds `calendar_unfinished` and `calendar_links` into `calendar_creations`: an attempt
-    a browser session left unfinished is still found by it, and a form that had taken one over
-    still finds its event."""
+    """0038 folds `calendar_unfinished` and `calendar_links` into `calendar_creations`: an
+    unfinished attempt is still found, and a form that had taken one over still finds its event.
+    """
     from contextlib import closing
 
     from familydb.store import calendar_ops

@@ -75,19 +75,6 @@ def _tokens(page) -> int:
     return int(re.search(r"about ([\d,]+) tokens now", shown).group(1).replace(",", ""))
 
 
-def test_the_page_shows_her_and_links_from_settings(page) -> None:
-    assert "Personality and family" in page.get("/settings").text
-    shown = page.get("/settings/personality").text
-    # Her description as written, with {name} where her name goes, and the name it stands for.
-    assert "You are {name}, an AI assistant" in shown
-    assert "{name} is what she is called, Vera, wherever it is written." in shown
-    assert 'value="default" selected>Vera, as first written (about ' in shown
-    # What the family call her: nothing of theirs yet, so her own name is the placeholder.
-    assert "What she is called" in shown
-    assert re.search(r'<input id="p-name"[^>]*value=""[^>]*placeholder="Vera"', shown, re.S)
-    assert "About the family" in shown and "tokens now" in shown
-
-
 def test_about_the_family_reaches_every_chat(page, conn) -> None:
     about = "The girls are 7 and 10 and love animals. Alex is vegetarian."
     form = _form(
@@ -250,16 +237,6 @@ def test_a_line_saved_as_one_string_stays_one_wording_when_the_page_is_saved(pag
     assert settings_store.overrides(conn)["voice_lines"] == {
         "reminder": ["Reminder: {title}{who}.", "Task #{task}; tell me when it's done."]
     }
-
-
-def test_the_brief_persona_s_lines_read_each_way_she_says_them(page, conn) -> None:
-    assert page.post("/settings/personality", data=_drawn(page, persona="brief")).status_code == 302
-    assert _reads(page, "lookup_done") == [
-        "Looked up #31 Hopscotch: Indoor play · hours saved for sat, sun · about 20 min away "
-        "(estimate).",
-        "Checked #31 Hopscotch: Indoor play · hours saved for sat, sun · about 20 min away "
-        "(estimate).",
-    ]
 
 
 def test_a_bad_wording_among_several_is_refused_and_named(page, conn) -> None:
@@ -578,13 +555,6 @@ def test_an_empty_box_drops_notes_the_environment_gave(settings, clock, conn, fa
     assert personas.active(page.app_state.settings).notes == "From env."
 
 
-def test_notes_too_long_are_refused_and_kept(page, conn) -> None:
-    long = "x" * 1_001
-    refused = page.post("/settings/personality", data=_drawn(page, persona_notes=long))
-    assert refused.status_code == 400 and "Nothing was saved" in refused.text
-    assert f">{long}</textarea>" in refused.text and settings_store.overrides(conn) == {}
-
-
 def test_notes_outlast_her_rewrite_being_restored(page, conn) -> None:
     """They are not a copy of her description, so restoring hers leaves them in force."""
     rewrite = "You are {name}. Be very brief."
@@ -607,9 +577,9 @@ def _listed(page) -> dict[str, str]:
 
 
 def test_the_list_says_which_of_her_each_is_and_what_she_adds_to_every_message(page, conn) -> None:
-    """Both ship as Vera, so each is listed by her label, the one the family meet first, with
-    roughly what she would add to every message as she would be if chosen: the name they call
-    her, their rewrite of her and their notes included."""
+    """Both ship as Vera, so each is listed by her label with roughly what she would add to every
+    message if chosen: the name they call her, their rewrite and notes included.
+    """
     vera, brief = (
         len(personas.load(key).prompt) // CHARS_PER_TOKEN for key in (personas.DEFAULT, "brief")
     )

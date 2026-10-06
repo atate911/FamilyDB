@@ -1,13 +1,7 @@
-"""The evening before a plan: look at its weather and its place's hours again. No model call.
-
-A plan was made against the forecast and the opening hours of the day it was made. The evening
-before, this job checks again, in code: an outdoor idea, or one that needs it dry, against
-tomorrow's forecast, and the place's hours as last looked up against the plan's time. When all
-is well it says nothing. When something is off it says so in the chat the plan was made in, in
-her words, with a backup when the suggestion engine finds one for the same time: indoors when it
-is the rain, anything open when it is the hours. Each plan is checked once (`plans.checked_at`),
-whether or not anything was said.
-"""
+"""The evening before a plan, in code (no model call): a dry-needing idea against tomorrow's
+forecast and the place's last-looked-up hours against the plan's time. All well says nothing;
+otherwise a heads-up in the plan's chat, with a backup from the suggestion engine when one fits
+(indoors for rain, anything open for hours). Each plan is checked once (`plans.checked_at`)."""
 
 from __future__ import annotations
 
@@ -40,7 +34,7 @@ ASSUMED_MINUTES = 120
 
 
 def run_plan_checks(app: App) -> int:
-    """Check each plan that starts tomorrow and was not checked yet. Returns how many heads-ups."""
+    """Check each unchecked plan starting tomorrow; returns how many heads-ups."""
     app.refresh()
     if not app.settings.plan_checks:
         return 0
@@ -48,8 +42,7 @@ def run_plan_checks(app: App) -> int:
     with closing(app.connect()) as conn:
         if not plans.due_for_check(conn, day=tomorrow.isoformat()):
             return 0
-        # A heads-up about a plan somebody cancelled in Google would be noise. When Google cannot
-        # be asked, the checks wait for a run that can, as the follow-ups do.
+        # A heads-up about a plan cancelled in Google is noise; if Google cannot be asked, wait.
         if app.calendar is not None:
             try:
                 now = utc_iso(app.clock.now())
@@ -67,7 +60,7 @@ def run_plan_checks(app: App) -> int:
             heads_up = _heads_up(app, conn, plan, idea, forecast) if idea else None
             now = utc_iso(app.clock.now())
             with transaction(conn):
-                # Asked again under the write lock: a run by hand can race the scheduler.
+                # Re-read under the write lock: a manual run can race the scheduler.
                 current = plans.get(conn, plan.id)
                 if current is None or current.checked_at is not None:
                     continue
@@ -78,7 +71,6 @@ def run_plan_checks(app: App) -> int:
                 out = messages.insert_out(
                     conn, channel=plan.channel or "", chat_id=plan.chat_id, text=text, now=now
                 )
-            # Stored first, sent second: one that cannot go now is the retry job's.
             voice.hand_over(
                 app,
                 conn,
@@ -93,7 +85,7 @@ def run_plan_checks(app: App) -> int:
 
 
 def _forecast(app: App, day: date) -> DayForecast | None:
-    """Tomorrow's forecast at home; None without one, and then the weather is not checked."""
+    """Tomorrow's forecast at home; None skips the weather check."""
     if app.weather is None:
         return None
     try:
@@ -107,7 +99,7 @@ def _forecast(app: App, day: date) -> DayForecast | None:
 def _heads_up(
     app: App, conn: sqlite3.Connection, plan: Plan, idea: Idea, forecast: DayForecast | None
 ) -> tuple[str, str] | None:
-    """What to say about this plan, as (event, words), or None when all is well."""
+    """What to say about this plan as (event, words), or None when all is well."""
     settings = app.settings
     day = date.fromisoformat(plan.start[:10])
     span = _span(plan)
@@ -136,7 +128,7 @@ def _heads_up(
 
 
 def _span(plan: Plan) -> tuple[int, int]:
-    """The plan's time on its first day, in minutes after midnight."""
+
     if plan.all_day or len(plan.start) < 16:
         return DAY_START, DAY_END
     start = int(plan.start[11:13]) * 60 + int(plan.start[14:16])
@@ -169,9 +161,8 @@ def _backup(
     span: tuple[int, int],
     setting: str | None,
 ) -> str | None:
-    """Another idea for the same time, from the engine, or None when none fits well.
-
-    The calendar is left out: it holds the plan itself, which would leave no time free."""
+    """Another idea for the same time from the engine, or None. The calendar is left out: it
+    holds the plan itself, leaving no time free."""
     ctx = ToolContext(
         conn=conn,
         settings=app.settings,

@@ -2,9 +2,7 @@
 {% from "_ui.html" import icon, kind_label, page_head, crt, radar %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block content %}
-  {# Somebody who does not browse the household (a kid) sees the ideas as plain cards, what and
-     where, and nothing to search, filter or count, nor how they are looked up (docs/STYLE.md,
-     "A kid's screen"). #}
+  {# Somebody who does not browse the household (a kid) sees plain cards, no search, filter, count or workings (docs/STYLE.md, "A kid's screen"). #}
   {% set browsing = visitor().may('browse') %}
   {% if not browsing %}
     {{ page_head('Ideas', 'Places to go and things to try together. Tell ' ~ assistant ~ ' if you have one.', 'idea') }}
@@ -27,7 +25,6 @@
     {% if visitor().may('change') %}<a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif %}
   {% endcall %}
 
-  {# Folded until wanted, so the list is on the first screen; the summary says what it is. #}
   {% if visitor().may('change') %}
   <details class="panel capture">
     <summary>{{ icon('sparkles') }}Save a thought for later</summary>
@@ -102,10 +99,7 @@
     </div>
   </form>
 
-  {# Where the listed places are, on a green screen: a radar that is a map, home at the middle,
-     north at the top, the nearer by road the nearer the middle, and the nearest pinging. It
-     follows the filters. The words beside it are the page's own, and each card below says its
-     own distance and direction. #}
+  {# Where the listed places are: a radar that is a map. It follows the filters. #}
   {% if on_radar %}
     {% call crt('on-radar', hidden=false) %}
       {{ radar(on_radar.blips, rings=on_radar.rings) }}

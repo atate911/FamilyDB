@@ -57,8 +57,7 @@
   </li>
 {% endmacro %}
 {% block content %}
-  {# Somebody who does not browse the household (a kid) gets the one list, what is coming up, with
-     no way of showing it to choose (docs/STYLE.md, "A kid's screen"). #}
+  {# Somebody who does not browse the household (a kid) gets one list, no way to choose (docs/STYLE.md, "A kid's screen"). #}
   {% set browsing = visitor().may('browse') %}
   {{ page_head('Plans', none if browsing else 'What the family is doing next.', 'plans') }}
   {% if browsing %}

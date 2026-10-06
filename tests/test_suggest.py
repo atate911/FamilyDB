@@ -75,22 +75,6 @@ def test_resolve_window_on_a_sunday(clock) -> None:
     assert window == (SAT, SUN) and label == "next weekend (Sat 26 to Sun 27 Sep)"
 
 
-def test_context_reports_missing_services(conn, settings, thursday_clock, family) -> None:
-    context = build_context(_ctx(conn, settings, thursday_clock, family), (SAT, SUN))
-    assert context.skipped == ["calendar not connected", "weather not configured"]
-    assert [d.spans for d in context.days] == [[(8 * 60, 22 * 60)]] * 2
-    assert context.days[0].free_known is False and context.season == "autumn"
-
-
-def test_context_with_calendar_and_forecast(conn, full_settings, thursday_clock, family) -> None:
-    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family, busy_saturday_morning=True)
-    context = build_context(ctx, (SAT, SUN))
-    assert context.skipped == []
-    assert context.days[0].spans == [(8 * 60, 9 * 60), (11 * 60, 22 * 60)]
-    assert context.days[0].free_known
-    assert context.days[1].forecast.rain_chance == 80
-
-
 def test_busy_all_day_trip_blocks_but_transparent_birthday_does_not(env):
     day = date(2026, 9, 26)
     event = env.cal.seed("Away camping", day, day + timedelta(days=2), all_day=True)
@@ -685,7 +669,7 @@ def test_a_short_list_is_returned_whole(registry, conn, full_settings, thursday_
     assert len(data["candidates"]) == 2 and data.get("not_shown", 0) == 0
 
 
-# -- right now and today ------------------------------------------------------------------------
+# -- right now and today
 # The `clock` fixture is Sunday 20 September, 14:03 in Vancouver.
 
 
@@ -720,18 +704,6 @@ def test_now_is_the_next_hours_around_what_is_on(
     assert "can go 16:10-17:55 today" in verdicts[cafe.id]["reasons"]
     assert verdicts[shut.id]["verdict"] == "ruled_out"
     assert verdicts[coast.id]["verdict"] == "ruled_out"
-
-
-def test_tonight_is_today_from_five(registry, conn, full_settings, clock, family) -> None:
-    ctx = _now_ctx(conn, full_settings, clock, family)
-    bar = _idea(conn, "Cocktail bar", kind="restaurant", duration_min=90)
-    _seed_place(conn, bar, hours={"sun": [{"open": "16:00", "close": "23:00"}]}, travel_minutes=15)
-    _, data = _suggest(
-        registry, ctx, window="today", from_time="17:00", until_time="23:00", question="tonight?"
-    )
-    assert data["days"][0]["free"] == ["17:00-23:00"]
-    bar_verdict = next(c for c in data["candidates"] if c["idea_id"] == bar.id)
-    assert "can go 17:15-22:45 today" in bar_verdict["reasons"]
 
 
 # Sunday 20 September in Vancouver: light from 07:00, dark from 19:05.

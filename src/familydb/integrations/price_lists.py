@@ -1,15 +1,7 @@
-"""Two public lists of what AI models cost, read for the daily check (familydb/model_watch.py).
-
-- LiteLLM's model_prices_and_context_window.json, kept on GitHub by the LiteLLM project for the
-  thousands of tools that use it to count costs.
-- OpenRouter's list of models, the prices it bills by. Read without an account or a key.
-
-Each is kept to the three companies FamilyDB talks to, by the company's own name for each model,
-as `Listed`: US dollars a million tokens, whether it can use tools, the day it came out and a
-day it goes when the list gives them (OpenRouter gives the first, either may give the second).
-Two lists, read against each other, because neither belongs to the family: a price is taken
-when they agree (model_watch.py). Nothing about the family is sent to either.
-"""
+"""Two public price lists for the daily check (familydb/model_watch.py): LiteLLM's
+model_prices_and_context_window.json and OpenRouter's models (no key). Each is kept to the three
+companies as `Listed` (USD per million tokens, tool use, release and retirement days where
+given). Read against each other since neither is the family's; nothing about the family is sent."""
 
 from __future__ import annotations
 
@@ -26,7 +18,7 @@ LITELLM_URL = (
 OPENROUTER_URL = "https://openrouter.ai/api/v1/models"
 PER_MILLION = 1_000_000
 TIMEOUT = 30
-# The most either list may be: LiteLLM's is about 3 MB.
+# LiteLLM's list is about 3 MB.
 MAX_BYTES = 40 * 1024 * 1024
 
 # Each list's name for a company, and ours.
@@ -60,7 +52,7 @@ class PriceListsAPI(Protocol):
 
 
 def _per_million(value: Any) -> float | None:
-    """A per-token price, as a number or a string, in dollars a million; None when not given."""
+    """A per-token price (number or string) in dollars a million; None when not given."""
     if value is None or value == "":
         return None
     try:
@@ -71,7 +63,7 @@ def _per_million(value: Any) -> float | None:
 
 
 def parse_litellm(document: Any) -> Prices:
-    """LiteLLM's file: model name -> its details, `litellm_provider` saying whose it is."""
+
     if not isinstance(document, dict):
         raise PriceListError("LiteLLM's list is not what it used to be: not a JSON object")
     found: Prices = {}
@@ -81,7 +73,7 @@ def parse_litellm(document: Any) -> Prices:
         company = LITELLM_PROVIDERS.get(str(entry.get("litellm_provider", "")))
         if company is None or entry.get("mode") not in CHAT_MODES or ":" in key.split("/")[-1]:
             continue
-        name = key.split("/")[-1].lower()  # a fine-tuned "ft:gpt-..." was left out above
+        name = key.split("/")[-1].lower()
         found.setdefault(company, {})[name] = Listed(
             input=_per_million(entry.get("input_cost_per_token")),
             output=_per_million(entry.get("output_cost_per_token")),
@@ -95,8 +87,7 @@ def parse_litellm(document: Any) -> Prices:
 
 
 def parse_openrouter(document: Any) -> Prices:
-    """OpenRouter's list: `data`, each with an `id` such as "anthropic/claude-sonnet-4.5" and its
-    `pricing` per token, as strings."""
+
     rows = document.get("data") if isinstance(document, dict) else None
     if not isinstance(rows, list):
         raise PriceListError("OpenRouter's list is not what it used to be: no data")
@@ -128,7 +119,7 @@ def parse_openrouter(document: Any) -> Prices:
 
 
 def _released(value: Any) -> str | None:
-    """OpenRouter's `created`, seconds since 1970, as the day; None for anything else."""
+    """OpenRouter's `created` (epoch seconds) as the day, else None."""
     if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
         return None
     try:
@@ -138,13 +129,13 @@ def _released(value: Any) -> str | None:
 
 
 def _day(value: Any) -> str | None:
-    """A date a list gives, as YYYY-MM-DD; None for anything else."""
+    """A list's date as YYYY-MM-DD, else None."""
     text = str(value or "")[:10]
     return text if len(text) == 10 and text[4] == "-" and text[7] == "-" else None
 
 
 class PriceLists:
-    """Both lists, fetched over HTTPS. Each call fetches afresh; the check runs once a day."""
+    """Both lists over HTTPS, fetched afresh each call (the check runs daily)."""
 
     @staticmethod
     def _fetch(url: str) -> Any:

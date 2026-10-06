@@ -1,16 +1,8 @@
-"""What each model costs, and so which models the settings page suggests.
+"""What each model costs (an estimate, not a bill), and which models the settings page suggests.
 
-No SDK is imported here, so the page and the spending limit can read it without loading one.
-What the daily check found (familydb/model_watch.py: each company's own list of models for the
-family's key, and two public price lists read against each other) is laid over the built-in
-table below by `use`, so a new model and a new price arrive without a new release. The built-in
-table, US dollars per million tokens as the vendors published them in September 2026, is where a
-new install starts and what stands for anything the check has not found. Either is an estimate
-for the daily limit and the status page, not a bill.
-
-A model that is not listed is counted at `UNLISTED`, which is dearer than anything listed, so
-a new or mistyped name makes the daily limit stop early rather than late.
-"""
+SDK-free. What the daily check found (familydb/model_watch.py) is laid over the built-in table
+(US dollars per million tokens, September 2026) by `use`. A model not listed is counted at
+`UNLISTED`, dearer than any listed, so the daily limit stops early rather than late."""
 
 from __future__ import annotations
 
@@ -52,8 +44,7 @@ PRICES: dict[str, dict[str, Price]] = {
         "claude-haiku-4-5": _claude(1.0, 5.0),
     },
     "openai": {
-        # Up to 272K tokens of input; past that a request costs twice as much, which a family
-        # conversation never reaches.
+        # Up to 272K tokens of input; past that twice as much.
         "gpt-6-luna": Price(input=0.10, output=0.50, cached=0.01, search=0.01),
         "gpt-6-sol": Price(input=2.0, output=10.0, cached=0.20, search=0.01),
         "gpt-6-astra": Price(input=10.0, output=50.0, cached=1.0, search=0.01),
@@ -61,8 +52,7 @@ PRICES: dict[str, dict[str, Price]] = {
         "gpt-5": Price(input=1.25, output=10.0, cached=0.125, search=0.01),
     },
     "gemini": {
-        # Up to 200K tokens of input, and $14 for a thousand grounded searches on Gemini 3.
-        # Google has said the Flash prices double on January 1, 2027.
+        # Up to 200K tokens of input; $14 per thousand grounded searches on Gemini 3.
         "gemini-3.1-flash-lite": Price(input=0.25, output=1.50, cached=0.025, search=0.014),
         "gemini-3.8-flash": Price(input=0.75, output=3.75, cached=0.075, search=0.014),
         "gemini-3.1-pro-preview": Price(input=2.0, output=12.0, cached=0.20, search=0.014),
@@ -71,9 +61,8 @@ PRICES: dict[str, dict[str, Price]] = {
 }
 
 
-# Models that only hear voice notes, apart from PRICES so none is offered as a chat model. The
-# audio a token-billed one hears is counted as input tokens; whisper-1 is billed by the minute.
-# Gemini hears with its ordinary models, so it has nothing here.
+# Models that only hear voice notes, apart from PRICES so none is offered for chat. Audio is
+# counted as input tokens; whisper-1 is billed by the minute.
 HEARING: dict[str, dict[str, Price]] = {
     "openai": {
         "gpt-4o-mini-transcribe": Price(input=1.25, output=5.0, cached=0.0, search=0.0),
@@ -86,9 +75,7 @@ HEARING: dict[str, dict[str, Price]] = {
 # One hosted web search, by company, for a price the lists gave without one.
 SEARCH = {"anthropic": 0.01, "openai": 0.01, "gemini": 0.014}
 
-# What the daily check found, laid over PRICES: each company's priced models, and the ones worth
-# offering (listed for the family's key, able to use tools, not retiring), cheapest first. Set
-# whole by `use`, from the store, by whichever process reads it (App.refresh).
+# The daily check's findings, laid over PRICES; set whole by `use` (App.refresh).
 _LIVE: dict[str, dict[str, Price]] = {}
 _OFFERED: dict[str, tuple[str, ...]] = {}
 _NOTES: dict[tuple[str, str], str] = {}
@@ -101,26 +88,24 @@ def use(
     notes: dict[tuple[str, str], str] | None = None,
     swaps: dict[tuple[str, str], str] | None = None,
 ) -> None:
-    """Put what the daily check found in force, in place of what it found before."""
+    """Put what the daily check found in force."""
     global _LIVE, _OFFERED, _NOTES, _SWAPS
     _LIVE, _OFFERED, _NOTES, _SWAPS = live, offered, notes or {}, swaps or {}
 
 
 def swapped(provider: str, model: str) -> str:
-    """The model to ask in this one's place: itself, unless the daily check found it gone or
-    past its day, when the one it chose to take its place (model_watch.replacement)."""
+    """The model to ask in this one's place: itself, unless gone or past its day
+    (model_watch.replacement)."""
     return _SWAPS.get((provider, model.lower()), model)
 
 
 def note(provider: str, model: str) -> str | None:
-    """What the daily check says of a model worth knowing when choosing it: new lately, or the
-    day it goes."""
+    """The daily check's word on a model: new, or the day it goes."""
     return _NOTES.get((provider, model.lower()))
 
 
 def price(provider: str | None, model: str | None) -> Price | None:
-    """The price for this model, as the daily check found it or else as built in; None when
-    neither knows it."""
+    """The price as the daily check found it, else built in; None when neither knows it."""
     named = (model or "").lower()
     for tables in (_LIVE, PRICES, HEARING):
         table = tables.get(provider or "", {})
@@ -131,8 +116,7 @@ def price(provider: str | None, model: str | None) -> Price | None:
 
 
 def suggestions(provider: str) -> tuple[str, ...]:
-    """Models worth offering on the settings page for this provider, cheapest first: what the
-    daily check found, or before it has run, the built-in table."""
+    """Models to offer on the settings page, cheapest first: the daily check's, else built in."""
     if _OFFERED.get(provider):
         return _OFFERED[provider]
     table = PRICES.get(provider, {})
@@ -152,11 +136,8 @@ def cost(
     *,
     cache_ttl: str = "1h",
 ) -> tuple[float, bool]:
-    """What one call cost in dollars, and whether the model was listed or counted as UNLISTED.
-
-    `input_tokens` is the uncached part only, as every provider reports it to the loop.
-    `audio_seconds` is a recording heard by a model that bills by the minute.
-    """
+    """Dollars for one call, and whether the model was listed. `input_tokens` is the uncached
+    part only; `audio_seconds` is for a model that bills by the minute."""
     listed = price(provider, model)
     rate = listed or UNLISTED
     write = rate.input * CACHE_WRITE.get(cache_ttl, 2.0) if provider == "anthropic" else rate.input

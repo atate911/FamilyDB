@@ -1,14 +1,6 @@
-"""The setup pages: FamilyDB set up one step at a time, in order, with the how-to beside each form.
-
-The home page sends an admin here until it can answer anyone. Each step says why it matters,
-what to do outside FamilyDB (where to get a key, what to send BotFather, what to click in Google
-Cloud), and has one small form. The forms are the ones the rest of the page already uses: each
-posts to the module that owns that change (settings.py, family.py) and asks to be brought back
-here, so this module only reads, and setting up is never a second way of changing anything.
-
-Nothing records progress. A step is done when what it sets up is there (`status.setup_progress`),
-so leaving half way, or doing a step on the settings page instead, never leaves setup out of step.
-"""
+"""The setup pages, one step at a time. Each form posts to the module that owns the change
+(settings.py, family.py) and asks to come back here, so this module only reads. Progress is
+never stored: a step is done when what it sets up is there (`status.setup_progress`)."""
 
 from __future__ import annotations
 
@@ -38,9 +30,8 @@ from familydb.web.settings import company_choice, google_panel
 bp = Blueprint("setup", __name__)
 
 TELEGRAM = "telegram"
-# How long the Telegram step keeps looking again by itself while it waits: for the bot to connect,
-# or for the first message from somebody's phone. Every WAIT_SECONDS, at most WAIT_TIMES times,
-# and only while there is something to wait for; after that a link does it by hand.
+# The Telegram step reloads itself every WAIT_SECONDS, at most WAIT_TIMES times, while it waits
+# for the bot to connect or a first message; after that a link does it by hand.
 WAIT_SECONDS = 4
 WAIT_TIMES = 45
 NEED_WORDS = {
@@ -55,7 +46,7 @@ def _app() -> App:
 
 
 def _told() -> dict[str, list[str]]:
-    """What the form that sent the browser back here said, good news and bad kept apart."""
+    """What the form that sent the browser back here said."""
     return {
         "said": get_flashed_messages(category_filter=[auth.SETUP_SAID]),
         "problems": get_flashed_messages(category_filter=[auth.SETUP_PROBLEM]),
@@ -68,7 +59,7 @@ def _admin(conn: Any) -> member_store.Member | None:
 
 @bp.get("/setup")
 def overview() -> str:
-    """Every step and how far each has got, with one button to the next thing to do."""
+    """Every step and how far each has got."""
     app = _app()
     with closing(app.connect()) as conn:
         steps = status_page.setup_progress(app, conn)
@@ -85,7 +76,7 @@ def overview() -> str:
 
 @bp.get("/setup/done")
 def done() -> str:
-    """The end: what is set up, what was left for later, and the first thing to try."""
+    """The end: what is set up and what was left for later."""
     app = _app()
     with closing(app.connect()) as conn:
         steps = status_page.setup_progress(app, conn)
@@ -104,7 +95,6 @@ def done() -> str:
 
 @bp.get("/setup/<name>")
 def step(name: str) -> str:
-    """One step: why, how, the form, and the way on."""
     if name not in status_page.SETUP_ORDER:
         abort(404)
     app = _app()
@@ -132,7 +122,6 @@ def step(name: str) -> str:
 
 
 def _password(app: App, conn: Any) -> dict[str, Any]:
-    """Your own password: the first admin's, which ends the shared one, or yours to change."""
     return {
         "personal": auth.own_passwords(conn),
         "admin": _admin(conn),
@@ -149,7 +138,6 @@ def _model(app: App, conn: Any) -> dict[str, Any]:
     choice = company_choice(live, request.args.get("company", ""))
     return {
         **choice,
-        # The company's lineup, cheapest first, and what each level of it costs.
         "lineup": [
             {"label": model.label, "level": model.level, "price": views.price_text(model.price)}
             for model in providers.catalog.lineup(choice["company"])
@@ -167,8 +155,7 @@ def _home(app: App, conn: Any) -> dict[str, Any]:
             "lat": live.home_lat,
             "lon": live.home_lon,
             "tz": live.tzinfo.key,
-            # The server's own zone may be one the list does not offer (Etc/UTC, say): it is
-            # then offered too, chosen, so saving home as it stands keeps it.
+            # The server's own zone may not be on the list (Etc/UTC): it is then offered, chosen.
             "tz_listed": live.tzinfo.key in offered,
             "units": live.weather_units,
         },
@@ -177,7 +164,6 @@ def _home(app: App, conn: Any) -> dict[str, Any]:
 
 
 def _telegram(app: App, conn: Any) -> dict[str, Any]:
-    """The bot, whether it is connected, and whether it knows whoever is setting it up."""
     live = app.settings
     state = app.channel_states.get(TELEGRAM, "")
     bot = status_page.telegram_name(app)
@@ -209,7 +195,6 @@ def _telegram(app: App, conn: Any) -> dict[str, Any]:
     return {
         "stage": stage,
         "state": state,
-        # What to call the bot in Telegram: what she is called everywhere else.
         "assistant": personas.active(live).name,
         "bot": bot,
         "admin": admin,

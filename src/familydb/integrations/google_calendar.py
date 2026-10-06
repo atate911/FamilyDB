@@ -24,10 +24,9 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 KEY_REFUSED = (
     "Google no longer accepts the saved key; connect the calendar again on the settings page"
 )
-# How long the page may show what Google said rather than ask again. Asking took a few hundred
-# milliseconds of every Home and Plans view. A plan the bot makes, moves or cancels shows at once,
-# since its own writes forget what was read; an event added on a phone may take this long to
-# show, which the family chose, as this calendar is kept for the bot.
+# How long the page may show what Google said rather than ask again (a few hundred ms per view).
+# The bot's own writes forget what was read; an event added on a phone may take this long to show
+# (the family's choice).
 PAGE_READ_SECONDS = 60.0
 
 
@@ -44,8 +43,7 @@ class CalendarEvent:
     description: str | None = None
     status: str = "confirmed"
     link: str | None = None
-    # Whether it takes the time up. Google calls this transparency: an event marked "free",
-    # like a birthday, is on the calendar without keeping anybody from doing something.
+    # Whether it takes the time up (Google's transparency: a "free" birthday does not).
     busy: bool = True
 
     def to_public(self) -> dict[str, Any]:
@@ -65,12 +63,9 @@ class CalendarEvent:
 
 @dataclass(frozen=True)
 class CalendarChanges:
-    """What Google says changed on the calendar since a sync token, and the token to ask from next.
-
-    `events` maps an event's id to the event as it now stands, or to None when it is gone. With
-    `full` set the token was missing or too old, so `events` is every event on the calendar and an
-    id not in it is gone too.
-    """
+    """What changed since a sync token, and the next token. `events` maps an id to the event, or
+    None when gone; with `full` the token was missing or too old, so `events` is the whole
+    calendar and an id absent from it is gone too."""
 
     events: dict[str, CalendarEvent | None]
     token: str
@@ -78,19 +73,19 @@ class CalendarChanges:
 
 
 class CalendarAPI(Protocol):
-    """What the tools need from a calendar. `GoogleCalendar` implements it; tests fake it."""
+    """What the tools need from a calendar; tests fake it."""
 
     def list_events(self, start: datetime, end: datetime) -> list[CalendarEvent]: ...
 
     def recent_events(self, start: datetime, end: datetime) -> list[CalendarEvent]:
-        """What the page shows: `list_events`, or a recent enough answer to the same question."""
+        """What the page shows: `list_events`, or a recent enough answer."""
         ...
 
     def get_event(self, event_id: str) -> CalendarEvent | None: ...
 
     def changes(self, sync_token: str | None) -> CalendarChanges:
-        """Everything that changed since `sync_token`, in one request however many events there
-        are; with no token, or one Google no longer honours, the whole calendar."""
+        """Everything changed since `sync_token` in one request; the whole calendar with no token
+        or a stale one."""
         ...
 
     def insert_event(
@@ -149,11 +144,8 @@ def event_body(
     status: str | None = None,
     clear_other_time_key: bool = False,
 ) -> dict[str, Any]:
-    """The request body for insert or patch. Times come as a set: start, end and all_day.
-
-    Patches merge into the existing event, so switching between timed and all-day must null
-    the key the event no longer uses (`clear_other_time_key`).
-    """
+    """The request body for insert or patch. Patches merge, so switching timed/all-day must null
+    the key no longer used (`clear_other_time_key`)."""
     body: dict[str, Any] = {}
     if title is not None:
         body["summary"] = title
@@ -186,7 +178,7 @@ def build_service(creds: Any) -> Any:
 
 
 def load_credentials(key_path: Path) -> Any:
-    """Credentials from the saved service account key. Google's tokens are fetched as needed."""
+    """Credentials from the saved service account key."""
     from google.oauth2 import service_account
 
     if not key_path.exists():
@@ -205,13 +197,11 @@ def save_key(key_path: Path, text: str) -> None:
     handle = os.open(fresh, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
     with os.fdopen(handle, "w", encoding="utf-8") as out:
         out.write(text)
-    os.chmod(fresh, 0o600)  # in case an older file of that name was there with other rights
+    os.chmod(fresh, 0o600)  # in case an older file of that name had other rights
     os.replace(fresh, key_path)
 
 
-# Connecting. The family makes a service account in Google Cloud, shares the calendar with its
-# address and pastes its key file and the calendar's id into the page, which tries both before it
-# keeps either.
+# Connecting: the page tries the pasted key and calendar id before keeping either.
 NOT_JSON = "That is not the file Google gave you: it should be JSON, starting with {."
 NOT_A_KEY = (
     "That is not a service account key. In Google Cloud, open the service account, then Keys, "
@@ -241,7 +231,7 @@ class GoogleSetupError(ValueError):
 
 
 def service_account_key(text: str) -> dict[str, Any]:
-    """The key file pasted into the page, checked for being a service account's."""
+    """The pasted key file, checked for being a service account's."""
     from google.oauth2 import service_account
 
     try:
@@ -260,7 +250,7 @@ def service_account_key(text: str) -> dict[str, Any]:
 
 
 def service_account_email(key_path: Path) -> str | None:
-    """Who the calendar must be shared with: the saved key's address, if there is a key."""
+    """The saved key's address, which the calendar must be shared with."""
     try:
         return str(json.loads(key_path.read_text(encoding="utf-8"))["client_email"])
     except (OSError, ValueError, KeyError, TypeError):
@@ -268,11 +258,8 @@ def service_account_email(key_path: Path) -> str | None:
 
 
 def check_access(info: dict[str, Any], calendar_id: str) -> None:
-    """Prove the key can read and change the calendar, leaving it as it was found.
-
-    Changing is tried by making an event and taking it off again, since a calendar shared for
-    reading only looks the same as any other until something is written.
-    """
+    """Prove the key can read and change the calendar, leaving it as found: a read-only share looks
+    the same until an event is made and deleted."""
     from google.auth.exceptions import RefreshError
     from google.oauth2 import service_account
     from googleapiclient.errors import HttpError
@@ -302,7 +289,7 @@ def check_access(info: dict[str, Any], calendar_id: str) -> None:
 
 
 def _explain(exc: Any, email: str) -> str:
-    """What Google's refusal means for the person connecting, in their words."""
+
     status = getattr(exc.resp, "status", None)
     content = exc.content or b""
     if status == 403 and (b"accessNotConfigured" in content or b"SERVICE_DISABLED" in content):
@@ -324,17 +311,17 @@ class GoogleCalendar:
         self.key_path = Path(settings.google_key_path)
         self.tz = settings.tzinfo
         self._service: Any = None
-        # The underlying HTTP client is not thread-safe; the bot and the scheduler share this.
+        # The HTTP client is not thread-safe; the bot and the scheduler share this.
         self._lock = threading.Lock()
-        # What the page was last told for each span of days, and when (see PAGE_READ_SECONDS).
+        # What the page was last told per span of days, and when (PAGE_READ_SECONDS).
         self._read: dict[tuple[str, str], tuple[float, int, list[CalendarEvent]]] = {}
         self._read_lock = threading.Lock()
         self._writes = 0
         self._now = time.monotonic
-        # Told when Google stops letting the bot in (what it said) and when it answers again
-        # (None), for an admin (alerts.py). Set by App; nobody listens in a test or a command.
+        # Told when Google shuts the bot out (what it said) and when it answers again (None), for
+        # an admin (alerts.py); set by App.
         self.report: Callable[[str | None], None] | None = None
-        # Unknown at first, so the first answer clears a note left from before a restart.
+        # Unknown at first, so the first answer clears a note from before a restart.
         self._troubled = True
 
     def _events(self) -> Any:
@@ -395,8 +382,8 @@ class GoogleCalendar:
         return [parse_event(i, self.tz) for i in items if i.get("status") != "cancelled"]
 
     def recent_events(self, start: datetime, end: datetime) -> list[CalendarEvent]:
-        """The page's read: what Google said about these days within the last minute, unless
-        something has been written since. A failure is never kept, so the next view asks again."""
+        """What Google said about these days within the last minute, unless written since; a
+        failure is never kept."""
         key = (start.isoformat(), end.isoformat())
         with self._read_lock:
             kept = self._read.get(key)
@@ -406,7 +393,7 @@ class GoogleCalendar:
         asked = self._now()
         events = self.list_events(start, end)
         with self._read_lock:
-            # A write while Google was being asked may have come after its answer: keep nothing.
+            # A write while Google was asked may postdate its answer: keep nothing.
             if self._writes == writes:
                 self._read[key] = (asked, writes, events)
         return list(events)
@@ -424,7 +411,7 @@ class GoogleCalendar:
                     fields="nextPageToken,nextSyncToken,items("
                     "id,status,summary,start,end,location,description,htmlLink,transparency)",
                 ),
-                ignore=(410,),  # Google has forgotten that token: start again from nothing
+                ignore=(410,),  # token forgotten: start again from nothing
             )
             if response is None:
                 if sync_token is None:
@@ -498,7 +485,7 @@ class GoogleCalendar:
         return parse_event(item, self.tz)
 
     def delete_event(self, event_id: str) -> None:
-        """Delete an event. One already deleted by hand (404 or 410) counts as done."""
+        """Delete an event; one already deleted by hand (404/410) counts as done."""
         try:
             self._execute(
                 self._events().delete(calendarId=self.calendar_id, eventId=event_id),

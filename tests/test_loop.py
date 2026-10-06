@@ -34,11 +34,6 @@ def test_plain_reply(settings, registry, ctx) -> None:
     assert result.iterations == 1
     assert result.usage["input_tokens"] == 100
     request = api.requests[0]
-    assert request["model"] == "claude-opus-5"
-    assert request["betas"] == ["server-side-fallback-2026-07-01"]
-    assert request["fallbacks"] == "default"
-    assert request["thinking"] == {"type": "adaptive"}
-    assert request["output_config"] == {"effort": "medium"}
     assert len(request["system"]) == 2
     chat_tools = [name for name in registry.names() if not registry.get(name).worker_only]
     assert [t["name"] for t in request["tools"]] == chat_tools

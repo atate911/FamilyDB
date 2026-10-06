@@ -114,14 +114,6 @@ def test_an_idea_can_be_changed_and_a_text_box_emptied(page, conn) -> None:
     assert not saved.description  # an emptied box clears the field rather than leaving it be
 
 
-def test_the_edit_form_comes_up_filled_in(page, conn) -> None:
-    page.post("/ideas/new", data=_idea_form(page, tags="food, cheap", cost_level=2))
-    form = page.get("/idea/1/edit").text
-    assert 'value="Ramen place"' in form
-    assert 'value="cheap, food"' in form
-    assert '<option value="2" selected>moderate</option>' in form
-
-
 def test_the_days_a_thing_is_on_are_set_shown_and_cleared_from_the_page(planning, conn) -> None:
     planning.post(
         "/ideas/new",

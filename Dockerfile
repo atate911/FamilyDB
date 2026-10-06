@@ -1,4 +1,3 @@
-# FamilyDB bot image. Build with `docker compose build`; run with `docker compose up -d`.
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 ENV UV_COMPILE_BYTECODE=1 \
@@ -27,8 +26,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     FAMILYDB_PATH=/data/familydb.sqlite3 \
     GOOGLE_KEY_PATH=/data/google_key.json
 
-# The web page (chat, forms, status, settings), when WEB_ENABLED is set: on 8080 unless WEB_PORT
-# says otherwise. The compose file publishes whichever it is.
+# The web page: 8080 unless WEB_PORT says otherwise; the compose file publishes whichever.
 EXPOSE 8080
 
 VOLUME ["/data"]

@@ -1,10 +1,6 @@
-"""Deterministic text rendering shared by the prompt builder, the pipeline and the CLI.
-
-The idea list and the family context are part of the cached prompt prefix, so they may not depend
-on the current time or on who is asking: any variation defeats the cache. What does vary (the
-date, the sender, who reads the chat, where they are, what is remembered) is rendered here for
-the current user turn only.
-"""
+"""Deterministic text rendering. The idea list and family context are in the cached prefix, so
+nothing in them may vary with time or sender; what does vary is rendered for the current user
+turn only."""
 
 from __future__ import annotations
 
@@ -36,9 +32,7 @@ def _duration(idea: Idea) -> str | None:
 
 
 def render_dates(idea: Idea) -> str | None:
-    """When a dated idea is on, as stored: "on 2026-11-18T20:00", "on 2026-10-01 to 2026-10-31",
-    "from 2026-10-01". None for an idea tied to no date. Never relative to today: the idea list
-    is cached."""
+    """When a dated idea is on, as stored ("on 2026-11-18T20:00"); never relative to today."""
     first, last = idea.happens_from, idea.happens_until
     if not first:
         return None
@@ -50,7 +44,7 @@ def render_dates(idea: Idea) -> str | None:
 
 
 def render_idea_line(idea: Idea) -> str:
-    """One compact line per idea, exactly what the model sees in its context."""
+    """One compact line per idea, as the model sees it."""
     parts = [f"#{idea.id}", f"[{idea.kind}]", idea.title]
     if idea.location_name:
         parts.append(f"at {idea.location_name}")
@@ -77,8 +71,7 @@ def render_idea_line(idea: Idea) -> str:
         if idea.avg_rating is not None:
             done += f", rating {idea.avg_rating:g}/10"
         parts.append(done)
-    # Not whether its details have been looked up: that flips a minute after every new idea and
-    # would make the next message write the cached prefix again. describe_idea says it.
+    # Lookup state is left out: it flips after every new idea and would rewrite the cached prefix.
     return " | ".join(parts)
 
 
@@ -89,7 +82,7 @@ def render_idea_list(ideas: list[Idea]) -> str:
 
 
 def render_family_context(family: list[Member], settings: Settings) -> str:
-    """The stable family block: who, where, which integrations exist. No dates, no sender."""
+    """The stable family block (cached): no dates, no sender."""
     lines = ["Family:"]
     for member in family:
         if member.active:
@@ -98,7 +91,6 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
         lines.append("- (no members configured yet)")
     about = settings.about_family.strip()
     if about:
-        # In their own words, from the Personality page. Stable, so it belongs in the prefix.
         lines.append(f"About the family, in their words:\n{about}")
     lines.append(f"Home area: {settings.home_area or 'not set'}")
     lines.append(f"Timezone: {settings.tz}")
@@ -110,15 +102,9 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
 
 
 def render_audience_line(channel: str, chat_id: str, family: list[Member]) -> str | None:
-    """Who reads the reply besides the sender, for the current turn only: it depends on the chat.
-
-    None for a private chat (the console, a Telegram chat with one person, a kid's own
-    conversation on the page), which is what no line means to the model. A Telegram group's chat
-    id is negative; the page's "web" chat is one conversation the whole family shares. Whether
-    kids are among them is read from the family list, since code cannot see who is in a group.
-    In a Telegram group she is told that a reply saying only that something was saved is
-    `CONFIRMED`, which the channel shows as a reaction rather than a message to everyone.
-    """
+    """Who else reads the reply, for the current turn only; None for a private chat. A Telegram
+    group's chat id is negative; kids are read from the family list. In a group, a bare
+    `CONFIRMED` is shown as a reaction."""
     if channel == "web" and chat_id == "web":
         line = "This is the family's conversation on the page: everyone who signs in reads it"
     elif channel == "telegram" and chat_id.startswith("-"):
@@ -128,7 +114,6 @@ def render_audience_line(channel: str, chat_id: str, family: list[Member]) -> st
     if any(member.active and member.role == "kid" for member in family):
         line += ", kids among them"
     if channel == "telegram":
-        # Shown as a reaction on their message, so a plain "saved" buzzes nobody (routing.py).
         line += (
             f". When you have only saved what was asked and have nothing to add, reply with "
             f"just {CONFIRMED}"
@@ -139,11 +124,8 @@ def render_audience_line(channel: str, chat_id: str, family: list[Member]) -> st
 def render_user_turn(
     sender: str, text: str, clock: Clock, audience: str | None = None
 ) -> list[str]:
-    """The current message in parts: the date line, who reads the chat when it is shared, then
-    the sender-prefixed text.
-
-    They stay separate so the volatile date never merges into the message itself.
-    """
+    """The current message in parts (date, audience, text), kept separate so the volatile date
+    never merges into the message."""
     parts = [f"Today is {clock.describe()}."]
     if audience:
         parts.append(audience)
@@ -162,9 +144,8 @@ def render_kid_line(
     topics: list[tuple[str, str | None]] | None,
     wording: str | None,
 ) -> str:
-    """Who a kid is and where her wishes stand, for the current turn only: code chose each part
-    (docs/WISHES.md), and it changes with her birthday and her lists, so never in the prefix.
-    Her topics are left out (None) where anybody else reads the reply."""
+    """Who a kid is and where her wishes stand (docs/WISHES.md), for the current turn only;
+    topics are None where anybody else reads the reply."""
     who = {"female": "a girl", "male": "a boy"}.get(gender or "", "a kid")
     line = f"{name} is {who}" + (f", {age}" if age is not None else "") + "."
     if topics:
@@ -181,7 +162,7 @@ def render_kid_line(
 def render_location_line(
     sender: str, label: str | None, lat: float, lon: float, minutes_ago: int
 ) -> str:
-    """Where the sender's phone last said they were, for the current turn only: it changes."""
+    """Where the sender's phone last said they were, for the current turn only."""
     where = f"{label} " if label else ""
     return (
         f"{sender}'s location, from their phone {minutes_ago} min ago: {where}"
@@ -190,8 +171,7 @@ def render_location_line(
 
 
 def render_memories(chosen: Chosen) -> str | None:
-    """What the family told the bot about itself that goes with this message (familydb/memory.py),
-    for the current turn only: it is chosen per message, so it never goes near the cache."""
+    """What the family told the bot that goes with this message (familydb/memory.py); per turn."""
     if not chosen.memories:
         return None
     lines = ["What the family has told you about itself (m numbers are for remember):"]
@@ -202,7 +182,7 @@ def render_memories(chosen: Chosen) -> str | None:
 
 
 def render_folded_line(lines: list[str]) -> str:
-    """Messages that came due in this chat while they were talking, for the reply to carry."""
+    """Messages that came due while they were talking, for the reply to carry."""
     return (
         "Also due in this chat just now; mention each in your reply, briefly and in your own "
         "words, keeping its number:\n" + "\n".join(f"- {line}" for line in lines)

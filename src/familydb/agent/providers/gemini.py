@@ -1,13 +1,6 @@
-"""Gemini, through the google-genai SDK.
-
-The third provider behind the same protocol. What differs here: the system prompt is one
-`system_instruction`; tools are function declarations grouped into a Tool, and the hosted search
-is a Tool of its own alongside them; a tool call's arguments arrive already parsed; caching is
-implicit for a long enough prefix, so the cacheable flag steers nothing; and thinking is a level
-(low or high) on Gemini 3 and a token budget before it, rather than a named effort. A voice note
-is heard by the same endpoint, sent the recording itself with a line asking for its words, and a
-photo is looked at the same way.
-"""
+"""Gemini, through the google-genai SDK. Caching is implicit, so `cacheable` steers nothing;
+thinking is a level on Gemini 3 and a token budget before it; voice notes and photos go to the
+same endpoint as inline data."""
 
 from __future__ import annotations
 
@@ -45,13 +38,10 @@ log = logging.getLogger(__name__)
 
 NAME = "gemini"
 NO_CREDENTIALS = "no Gemini credentials configured: set GEMINI_API_KEY (see .env.example)"
-# Our five effort names as a thinking budget in tokens, for the models before Gemini 3 (which
-# take a level instead, in `config`). -1 lets the model decide.
+# Effort as a thinking budget in tokens for pre-Gemini 3 models (-1: the model decides).
 THINKING = {"low": 0, "medium": -1, "high": -1, "xhigh": 24576, "max": 32768}
-# The generations before Gemini 3, which take a thinking budget and cannot search alongside our
-# own tools. Named by what they are rather than by what works, as anthropic.OLDER_MODELS is, so
-# a model released later (a Gemini 4, an alias such as gemini-flash-latest) is sent the current
-# shape: the daily check offers new models as they come.
+# Generations before Gemini 3: a thinking budget, no search beside our own tools. Older ones are
+# named so later releases and aliases get the current shape.
 OLDER_MODELS = ("gemini-1", "gemini-2")
 
 
@@ -60,8 +50,7 @@ def current(model: str) -> bool:
     return not model.lower().startswith(OLDER_MODELS)
 
 
-# What a request carries that a model may not take: sent again without it when a 400 names it
-# (providers/parts.py). Gemini 2.5 Pro cannot switch its thinking off, which a budget of 0 asks.
+# Parts a model may refuse (providers/parts.py); Gemini 2.5 Pro cannot take a budget of 0.
 THINKING_OFF = parts.Part("switching thinking off", ("budget 0", "thinking mode", "budget"))
 THINKING_LEVEL = parts.Part("the thinking level", ("thinking_level", "thinking level"))
 SEARCH_BESIDE_TOOLS = parts.Part(
@@ -93,12 +82,11 @@ REFUSAL_REASONS = {
 }
 RETRYABLE_STATUS = (429, 500, 502, 503, 504)
 TIMEOUT_MS = 120_000
-# What a recording is sent with: its words, nothing added, so they can be answered as if typed.
 HEAR = (
     "Write down what is said in this recording, word for word, in the language it is spoken. "
     "Only the words: no timestamps, speaker labels, notes or summary."
 )
-# Room for the words of a recording: generous for fast speech, plus the thinking it may do.
+# Output room for a recording's words plus thinking.
 HEARD_TOKENS = 400
 HEARD_TOKENS_PER_SECOND = 8
 
@@ -106,7 +94,7 @@ HEARD_TOKENS_PER_SECOND = 8
 def make_client(settings: Settings, timeout_ms: int = TIMEOUT_MS) -> Any:
     if not settings.gemini_api_key:
         raise AgentError(NO_CREDENTIALS, retryable=False)
-    # The same two minutes the other vendors' clients allow; the SDK's default is no limit.
+    # The SDK's default is no timeout.
     return genai.Client(
         api_key=settings.gemini_api_key, http_options=genai_types.HttpOptions(timeout=timeout_ms)
     )
@@ -134,7 +122,6 @@ class GeminiProvider:
         self.settings = settings
         self._api = api
 
-    # -- wiring ---------------------------------------------------------------------------
     def configured(self) -> bool:
         return self._api is not None or bool(self.settings.gemini_api_key)
 
@@ -149,14 +136,12 @@ class GeminiProvider:
             return self.settings.gemini_worker_model or self.settings.gemini_model
         return self.settings.gemini_model
 
-    # -- translation ----------------------------------------------------------------------
     def instructions(self, system: list[SystemBlock]) -> str:
         return "\n\n".join(block.text for block in system if block.text)
 
     def tools(self, request: TurnRequest) -> list[dict[str, Any]]:
-        """Our own tools in one group, then the hosted search as its own, which is how this API
-        expects them. Only Gemini 3 takes the two together, so a web worker on an older model is
-        refused here, before anything is sent."""
+        """Our tools in one group, hosted search as its own. Only Gemini 3 takes both, so an older
+        web worker is refused here, before anything is sent."""
         tools: list[dict[str, Any]] = []
         model = request.model or self.settings.gemini_model
         if request.web is not None and request.tools and not current(model):
@@ -202,7 +187,7 @@ class GeminiProvider:
         left_out = parts.left_out(NAME, model)
         budget = THINKING.get(effort, -1)
         if budget == 0 and THINKING_OFF.name in left_out:
-            budget = -1  # let the model decide, since it cannot not think
+            budget = -1
         config: dict[str, Any] = {
             "system_instruction": self.instructions(request.system) or None,
             "max_output_tokens": request.max_tokens or settings.max_output_tokens,
@@ -259,11 +244,11 @@ class GeminiProvider:
         cached = getattr(usage, "cached_content_token_count", None)
         prompt = getattr(usage, "prompt_token_count", None)
         if prompt is not None and cached:
-            prompt = max(prompt - cached, 0)  # this API counts cached tokens inside the prompt
+            prompt = max(prompt - cached, 0)  # cached tokens are counted inside the prompt
         answer = getattr(usage, "candidates_token_count", None)
         thoughts = getattr(usage, "thoughts_token_count", None)
         if thoughts:
-            # Thinking is billed as output, so it belongs in the same column as the answer.
+            # Thinking is billed as output.
             answer = (answer or 0) + thoughts
         grounding = getattr(candidate, "grounding_metadata", None)
         searches = len(getattr(grounding, "web_search_queries", None) or [])
@@ -284,7 +269,6 @@ class GeminiProvider:
             raw=[part.model_dump(exclude_none=True) for part in parts],
         )
 
-    # -- the call -------------------------------------------------------------------------
     def model_exists(self, model: str) -> bool | None:
         try:
             client = make_client(self.settings)
@@ -308,7 +292,7 @@ class GeminiProvider:
         except AgentError:
             return None
         try:
-            # Named "models/gemini-3.8-flash" in the list, and sent without the prefix.
+            # Listed as "models/<name>", sent without the prefix.
             return [str(model.name).removeprefix("models/") for model in client.models.list()]
         except Exception as exc:  # unreachable, unauthorised: not an answer about the models
             log.info("could not ask Gemini for its models: %s", exc)
@@ -344,7 +328,7 @@ class GeminiProvider:
         return dataclasses.replace(self.reply(response), dropped=dropped)
 
     def _create(self, build: Callable[[], dict[str, Any]]) -> tuple[Any, tuple[str, ...]]:
-        """One request, and again without any part a 400 names (PARTS), each at most once."""
+        """One request, retried without any part a 400 names (PARTS), each once."""
         dropped: list[str] = []
         while True:
             payload = build()
@@ -360,16 +344,14 @@ class GeminiProvider:
             except (genai_errors.APIError, httpx.TransportError) as exc:
                 raise _failure(exc) from exc
 
-    # -- hearing --------------------------------------------------------------------------
     def listener(self) -> str | None:
         return self.settings.gemini_transcribe_model or self.model_for("worker")
 
     def hearing(self, audio: Audio, hints: str) -> dict[str, Any]:
-        """The request for one recording: the audio, then the line asking for its words."""
+
         model = self.listener() or self.settings.gemini_model
         ask = f"{HEAR} {hints}".strip()
         budget = HEARD_TOKENS + HEARD_TOKENS_PER_SECOND * max(audio.seconds, 1)
-        # Thinking as a lookup gets it (low effort), for the same models, so it is known to work.
         shape = TurnRequest(system=[], messages=[], model=model, effort="low", max_tokens=budget)
         config = self.config(shape)
         config["max_output_tokens"] = min(budget, self.settings.max_output_tokens)
@@ -402,13 +384,11 @@ class GeminiProvider:
             dropped=dropped,
         )
 
-    # -- looking --------------------------------------------------------------------------
     def viewer(self) -> str | None:
         return self.model_for("worker")
 
     def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
-        """The request for one picture: the picture, then what to write down about it, to the
-        lookup model with a lookup's thinking."""
+
         model = self.viewer() or self.settings.gemini_model
         shape = TurnRequest(
             system=[], messages=[], model=model, effort="low", max_tokens=LOOK_TOKENS
@@ -444,14 +424,13 @@ class GeminiProvider:
 
 
 def _failure(exc: Exception) -> AgentError:
-    """A failed request as the loop understands it: worth trying again later, or not."""
+    """A failed request as the loop understands it."""
     if isinstance(exc, genai_errors.ServerError):
         return AgentError(f"server error: {exc}", retryable=True)
     if isinstance(exc, genai_errors.ClientError):
         status = _status(exc)
         said = str(exc).lower()
-        # Google refuses a bad key with a 400 as often as a 401 or 403, and says an account is
-        # out of prepaid credit with a 429, the status it also uses for "slow down".
+        # A bad key is as often a 400 as a 401/403; out of credit is a 429, like "slow down".
         if status in (401, 403) or (status == 400 and "api key" in said):
             return AgentError(f"API error {status}: {exc}", retryable=False, trouble="key")
         if status == 429 and ("billing" in said or "credit" in said or "prepay" in said):
@@ -466,12 +445,12 @@ def _failure(exc: Exception) -> AgentError:
         )
     if isinstance(exc, genai_errors.APIError):
         return AgentError(f"Gemini error: {exc}", retryable=_status(exc) in RETRYABLE_STATUS)
-    # httpx.TransportError: timed out, or never reached Google
+    # httpx.TransportError
     return AgentError(f"could not reach Gemini: {exc}", retryable=True)
 
 
 def _declaration(tool: ToolDef) -> dict[str, Any]:
-    """Our JSON Schema goes through untouched; this API takes it as it stands."""
+
     return {
         "name": tool.name,
         "description": tool.description,
@@ -480,7 +459,7 @@ def _declaration(tool: ToolDef) -> dict[str, Any]:
 
 
 def _search(access: WebAccess) -> dict[str, Any]:
-    """Grounded search. There is no per-turn cap on this API, so the iteration budget is it."""
+    """Grounded search; no per-turn cap here, the iteration budget is it."""
     if access.user_location:
         log.debug("gemini search takes no location; %s is ignored", access.user_location)
     return {}

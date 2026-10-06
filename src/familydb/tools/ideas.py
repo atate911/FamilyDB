@@ -136,22 +136,19 @@ def _dated(
     given_until: str | None,
     before: ideas.Idea | None = None,
 ) -> dict[str, str | None]:
-    """What changes in the days an idea is on, checked and spelled one way; {} for nothing.
-
-    `before` is the idea as it stands. An empty string clears one, and clearing the first day
-    clears both. A first day with a time and no last day is a one-day thing. Days given again
-    as they were are no change, so a form sent back as drawn passes; changed ones that are
-    already over are refused, since an idea is for something still to come.
-    """
+    """What changes in the days an idea is on ({} for nothing); `before` is the idea as it stands.
+    An empty string clears one, clearing the first clears both; a timed first day with no last
+    is one day. Days unchanged are no change (a form sent back as drawn passes); changed ones
+    already over are refused."""
     changes: dict[str, str | None] = {}
     if given_from is not None:
         changes["happens_from"] = _first(ctx, given_from) if given_from.strip() else None
     if given_until is not None:
-        # The last day only: an end time ("until 11pm") says nothing about which days it is on.
+        # The last day only: an end time says nothing about which days it is on.
         last_day = given_until.strip().split("T")[0]
         changes["happens_until"] = parse_date(last_day).isoformat() if last_day else None
     elif given_from is not None and not given_from.strip():
-        changes["happens_until"] = None  # no longer tied to dates at all
+        changes["happens_until"] = None
     was = {
         "happens_from": before.happens_from if before else None,
         "happens_until": before.happens_until if before else None,
@@ -173,7 +170,7 @@ def _dated(
 
 
 def _first(ctx: ToolContext, text: str) -> str:
-    """A first day as stored: the date, with the time of day when one was said."""
+
     text = text.strip()
     if len(text) <= 10:
         return parse_date(text).isoformat()
@@ -190,8 +187,7 @@ def _resolve_member_name(ctx: ToolContext, name: str | None) -> int | None:
 
 
 def _gifts_kept_from(ctx: ToolContext) -> bool:
-    """Whether the person asking is somebody presents are kept from: a kid, who may not see what
-    the grown-ups decide (roles.py). A job or the page with no one signed in sees everything."""
+    """Whether the asker is kept from presents (a kid, roles.py); a job sees everything."""
     return ctx.member is not None and not roles.may(ctx.member.role, "decide")
 
 

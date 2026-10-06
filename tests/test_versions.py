@@ -1,7 +1,8 @@
 """Which version an install follows, and that an upgrade never goes backwards.
 
-Runs the shell functions from scripts/lib/common.sh against real git repositories: a "remote"
-with a release tag and later work, and a clone of it standing in for an install.
+Runs scripts/lib/common.sh's functions against real git repositories: a "remote" with a release
+tag and later work, and a clone standing in for an install.
+
 """
 
 from __future__ import annotations

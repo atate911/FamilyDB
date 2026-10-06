@@ -127,7 +127,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
     reminder = _time(ctx, args.remind_at, future=True)
     origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id else None
     channel, chat_id = (origin.channel, origin.chat_id) if origin else ("web", "web")
-    # Console cannot receive future notifications after it exits.
+    # The console cannot receive notifications after it exits.
     if channel == "console":
         channel, chat_id = "web", "web"
     task = task_service.create(
@@ -205,8 +205,7 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
 
 
 def _may_update(ctx: ToolContext, task_id: int) -> None:
-    """Whoever may change things may change any task; somebody who may only change their own
-    (a kid, roles.py `own_tasks`) only a task that is theirs. A job, with nobody asking, any."""
+    """Whoever may change things may change any task; a kid (`own_tasks`) only their own."""
     if ctx.member is None or roles.may(ctx.member.role, "change"):
         return
     task = tasks.get(ctx.conn, task_id)
@@ -219,7 +218,7 @@ def _may_update(ctx: ToolContext, task_id: int) -> None:
 
 
 def _repeat(args: AddTaskInput | UpdateTaskInput) -> dict[str, Any] | None:
-    """How often it comes round, as asked, or None when nothing was said about it."""
+
     if args.repeat_every is None and args.repeat_unit is None:
         return None
     return {
@@ -249,13 +248,11 @@ def list_tasks(ctx: ToolContext, args: ListTasksInput) -> dict[str, Any]:
     }
 
 
-# Enough to answer "what's unfinished?"; a narrower query finds the rest.
 LISTED = 25
 NOTES_SHOWN = 200
 
 
 def _brief(ctx: ToolContext, task: Task) -> dict[str, Any]:
-    """What the model needs to talk about a task or change it, and nothing it does not."""
 
     def local(value: str | None) -> str | None:
         if not value:
@@ -284,8 +281,8 @@ def _brief(ctx: ToolContext, task: Task) -> dict[str, Any]:
 
 
 def nudges(ctx: ToolContext, task: Task) -> str | None:
-    """When the task will be brought up by itself (jobs/nudges.py), for the model to say:
-    "on a free Saturday morning". None when it will not, and then nothing may be promised."""
+    """When the task will be brought up by itself (jobs/nudges.py), e.g. "on a free Saturday
+    morning"; None when it will not, so nothing may be promised."""
     if not ctx.settings.task_nudges or task.status != "open" or task.repeats:
         return None
     window = windows.read(task.preferred_window)

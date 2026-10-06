@@ -8,7 +8,7 @@
   {{ page_head('Edit #%d'|format(idea.id) if editing else 'New idea',
                none if editing else 'Only a title and a kind are needed; the rest can wait.',
                'edit' if editing else 'plus', crumbs) }}
-  <form class="panel form idea-form"
+  <form class="panel form"
         method="post"
         action="{{ url_for('edits.edit_idea', idea_id=idea.id) if editing else url_for('edits.add_idea') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />

@@ -1,14 +1,7 @@
-"""Stage: where travel is estimated from. Home, unless the family said, or shared, where they are.
-
-- `near` names a place ("downtown Portland", "the Pearl"): it is looked up with the free geocoder,
-  and a match far from home is tried again with the home area added, so "Main St" is the local one.
-- `near` says "here": the asker's location from the last few hours, shared on Telegram or sent
-  with a message from the page (`familydb/whereabouts.py`).
-- Nothing said, but a question about now or today and a fresh shared location: that location.
-  Someone who shared where they are and asks what's open now means near there.
-
-Nothing here costs a model call; a failed lookup is a skipped check and travel is from home.
-"""
+"""Stage: where travel is estimated from: home, unless `near` names a place (geocoded; a far
+match is retried with the home area added), says "here" (the asker's fresh shared location,
+`familydb/whereabouts.py`), or is empty on a now/today question with a fresh share. No model
+call; a failed lookup is a skipped check and travel is from home."""
 
 from __future__ import annotations
 
@@ -70,7 +63,7 @@ def _place(ctx: ToolContext, name: str) -> GeoPoint | None:
     for query in tries:
         try:
             point = ctx.geocoder.geocode(query)
-        except Exception:  # a lookup failure is a skipped check, never a failed suggestion
+        except Exception:  # a skipped check, never a failed suggestion
             log.warning("could not geocode %r", query, exc_info=True)
             return None
         if point is None:

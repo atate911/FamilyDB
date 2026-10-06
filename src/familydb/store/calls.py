@@ -131,8 +131,8 @@ def spent_since_by(conn: sqlite3.Connection, *, since: str, member_id: int) -> f
 def answered_for(
     conn: sqlite3.Connection, member_id: int, *, since: str, other_than: int | None = None
 ) -> int:
-    """How many of a member's messages since a UTC timestamp went to a model. A command or a
-    tap on a button, which ask none, is not among them; `other_than` is the one being asked."""
+    """How many of a member's messages since a timestamp went to a model (commands and taps ask
+    none); `other_than` is the one being asked."""
     row = conn.execute(
         "SELECT count(DISTINCT m.id) AS n FROM messages m JOIN llm_calls c ON c.message_id = m.id "
         "WHERE m.member_id = ? AND m.direction = 'in' AND m.received_at >= ? AND m.id != ?",
@@ -179,9 +179,8 @@ ENDED_BADLY = ("refusal", "max_tokens", "error")
 def figures_between(
     conn: sqlite3.Connection, *, since: str, until: str
 ) -> dict[str, dict[str, Any]]:
-    """What each kind of call came to between two moments: calls, answers (a message or a
-    turn), dollars, tokens read (the cache included) and written back, time, calls that ended
-    badly, and the model most of them went to."""
+    """Per kind of call between two moments: calls, asks, dollars, tokens sent and back, time,
+    bad endings, and the commonest model."""
     marks = ", ".join("?" for _ in ENDED_BADLY)
     rows = conn.execute(
         "SELECT kind, count(*) AS calls, "
@@ -207,8 +206,8 @@ def figures_between(
 
 
 def activity_since(conn: sqlite3.Connection, *, since: str, limit: int) -> list[dict[str, Any]]:
-    """What the models were asked lately, newest first: one row for each message answered (its
-    calls, a lookup it started included) and one for each turn with no message (a lookup)."""
+    """What the models were asked lately, newest first: a row per message answered and per
+    message-less turn (a lookup)."""
     rows = conn.execute(
         "SELECT CASE WHEN message_id IS NOT NULL THEN 'm' || message_id ELSE 't' || turn END "
         "AS key, min(created_at) AS started, max(id) AS last_id, "
@@ -265,7 +264,7 @@ def tool_calls_for_message(conn: sqlite3.Connection, message_id: int) -> list[di
 
 
 def usage_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
-    """Token totals per model since a timestamp, busiest first. For `familydb debug cost`."""
+    """Token totals per model since a timestamp, busiest first (`debug cost`)."""
     rows = conn.execute(
         "SELECT coalesce(served_model, model) AS model, count(*) AS calls, "
         "coalesce(sum(input_tokens), 0) AS input_tokens, "
@@ -282,11 +281,8 @@ def usage_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]
 
 
 def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
-    """Calls, tokens and estimated dollars per kind of call since a timestamp, dearest first.
-
-    A kind is what a call was for (answering the family, looking ideas up, ...), as declared in
-    `agent.gateway.KINDS`. Calls an older version recorded have none.
-    """
+    """Calls, tokens and estimated dollars per kind (`gateway.KINDS`) since a timestamp, dearest
+    first."""
     rows = conn.execute(
         "SELECT kind, count(*) AS calls, "
         "coalesce(sum(input_tokens), 0) + coalesce(sum(cache_read_input_tokens), 0) "
@@ -302,7 +298,7 @@ def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any
 
 
 def sections_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
-    """Each call's kind, the size of each part of what it sent, and the input tokens it sent."""
+    """Each call's kind, section sizes and input tokens."""
     rows = conn.execute(
         "SELECT kind, sections, coalesce(input_tokens, 0) + coalesce(cache_read_input_tokens, 0) "
         "+ coalesce(cache_creation_input_tokens, 0) AS sent "

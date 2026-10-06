@@ -1,8 +1,6 @@
-// Dragging a wish into place on her list (docs/WISHES.md). The page works without this: each
-// wish opens to Top, Up and Down buttons, forms of their own. With it, the grip at the left of
-// each line is shown and is a handle: press it, drag the line up or down, and let go; the wish's
-// own Move form is sent with its new place, so the move goes through the same form, token and
-// tool as a button's. The grip sits outside the line's <summary>, so a drag never opens it.
+// Drag a wish into place by its grip (docs/WISHES.md). Letting go sends the wish's own Move form with
+// the new position, so the move goes through the same token and tool as a button. The grip sits outside
+// the line's <summary>, so a drag never opens it.
 (function () {
   "use strict";
 
@@ -20,8 +18,7 @@
     event.preventDefault();
     const before = place(list, card);
     card.classList.add("dragging");
-    // On the document, not the handle: moving the card in the page would drop a capture.
-
+    // On the document: moving the card would drop a pointer capture on the handle.
     function move(e) {
       const others = Array.from(list.querySelectorAll(":scope > .wish")).filter((c) => c !== card);
       const below = others.find((c) => {

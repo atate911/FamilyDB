@@ -1,12 +1,10 @@
 """A task's preferred window, read in code as days of the week and parts of the day.
 
-"One of these Saturday mornings" is kept as the family said it (`tasks.preferred_window`), and
-nothing schedules it. So that such a task can be brought up when a Saturday morning comes round
-(jobs/nudges.py), its words are read here against a short list: the days of the week, the
-weekend and weekdays, and morning, afternoon and evening. A window with any other word in it
-("before Christmas", "after school", "any day but Sunday", "next Saturday") is not read at all,
-so a nudge never comes at a time the family did not mean. Such a task stays as it was, waiting
-to be asked about.
+"One of these Saturday mornings" is kept as said (`tasks.preferred_window`); so it can be nudged
+when one comes round (jobs/nudges.py) its words are read against a short list: days, weekend,
+weekdays, morning, afternoon, evening. Any other word ("before Christmas", "after school", "next
+Saturday") means not read at all, so a nudge never comes at a time the family did not mean and
+the task stays as it was.
 """
 
 from __future__ import annotations
@@ -20,9 +18,9 @@ WEEKDAYS = frozenset(range(5))
 WEEKEND = frozenset({5, 6})
 EVERY_DAY = frozenset(range(7))
 
-# The parts of a day a window can name, in minutes after midnight on the family's clock. "day" is
-# a day named with no part of it. A nudge goes from an hour into the part to an hour before its
-# end (`LEAD`), so none arrives at eight on a Saturday morning or late in the evening.
+# Parts of a day in minutes after midnight, family clock; "day" is a day named with no part. A nudge
+# goes from an hour into the part to an hour before its end (`LEAD`), never at eight on a Saturday
+# morning or late in the evening.
 PARTS: dict[str, tuple[int, int]] = {
     "morning": (8 * 60, 12 * 60),
     "afternoon": (12 * 60, 17 * 60),
@@ -50,7 +48,6 @@ _PART_WORDS = {
     "nights": "evening",
 }
 _BOTH = {"weeknight": (WEEKDAYS, "evening"), "weeknights": (WEEKDAYS, "evening")}
-# Words that say nothing about when: "one of these", "some", "a free", "any time".
 _FILLER = frozenset(
     {"a", "an", "and", "any", "of", "one", "or", "some", "the", "these", "those"}
     | {"at", "day", "days", "during", "in", "on", "over", "sometime", "time", "week"}
@@ -60,11 +57,10 @@ _FILLER = frozenset(
 
 @dataclass(frozen=True)
 class Window:
-    days: frozenset[int]  # Monday is 0
-    parts: tuple[str, ...]  # keys of PARTS, earliest first
+    days: frozenset[int]
+    parts: tuple[str, ...]
 
     def open_at(self, moment: datetime) -> str | None:
-        """The part of the day a nudge may go in at this moment on the family's clock, if any."""
         if moment.weekday() not in self.days:
             return None
         minute = moment.hour * 60 + moment.minute
@@ -75,9 +71,9 @@ class Window:
         return None
 
     def words(self, before: str = "") -> str:
-        """The window as the page and the chat model say it: "a Saturday morning", "a weekend
-        day", "an evening", "a Monday or Wednesday afternoon"; `before` goes after the article,
-        as in "a free evening"."""
+        """The window as the page and the model say it ("a Saturday morning", "a weekend day");
+        `before` goes after the article ("a free evening").
+        """
         days = self.days
         if days == EVERY_DAY:
             named = ""
@@ -96,15 +92,13 @@ class Window:
         return f"{'an' if said[0].lower() in 'aeiou' else 'a'} {said}"
 
     def now_words(self, moment: datetime, part: str) -> str:
-        """Today's instance of it, for the nudge: "Saturday morning", or "Saturday"."""
         day = DAYS[moment.weekday()]
         return day if part == "day" else f"{day} {part}"
 
 
 def read(text: str) -> Window | None:
-    """The window in these words, or None when any word is not one this module knows, or none
-    of them says when."""
-    words = re.sub(r"['\u2019]s\b", "", text.lower())  # "Saturday's" is Saturday
+    """The window in these words, or None when any word is unknown or none says when."""
+    words = re.sub(r"['\u2019]s\b", "", text.lower())
     days: set[int] = set()
     parts: set[str] = set()
     for word in re.split(r"[^a-z]+", words):

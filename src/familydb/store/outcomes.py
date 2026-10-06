@@ -65,7 +65,7 @@ def list_for_idea(conn: sqlite3.Connection, idea_id: int) -> list[Outcome]:
 def exists_since(
     conn: sqlite3.Connection, *, idea_id: int | None, plan_id: int | None, since: str
 ) -> bool:
-    """Whether an outcome for this idea or plan was recorded for a date on or after `since`."""
+    """Whether an outcome for this idea or plan is dated on or after `since`."""
     conditions = []
     params: list[object] = []
     if idea_id is not None:
@@ -90,7 +90,7 @@ def average_rating(conn: sqlite3.Connection, idea_id: int) -> float | None:
 
 
 def do_not_repeat(conn: sqlite3.Connection) -> set[int]:
-    """Latest explicit preference wins; unrated feedback does not erase a preference."""
+    """Ideas whose latest explicit preference is not to repeat; unrated feedback keeps it."""
     rows = conn.execute(
         "SELECT idea_id, would_repeat FROM outcomes "
         "WHERE idea_id IS NOT NULL AND would_repeat IS NOT NULL ORDER BY happened_on, id"

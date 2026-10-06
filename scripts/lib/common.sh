@@ -1,23 +1,14 @@
 #!/usr/bin/env bash
-# Shared machinery for the FamilyDB scripts: output, logging, error reporting, retries, undo, the
-# ledger of what an install changed, and which version to install. Source it, do not run it.
-#
-# The point of this file is that a script using it cannot fail quietly. Every step runs through
-# `step` or `retry`, which capture the command's output, and any failure prints what was being
-# done, the command, its exit code, the last lines of what it said, and the one thing to try next.
-# The whole run is also written to a log file that the failure message names, so somebody who
-# needs help has one file to send.
-#
-#   source "$(dirname "$0")/lib/common.sh"
-#   log_to /var/log/familydb-install.log
-#   step "Installing the dependencies" apt-get install -y git
-#   retry 3 "Downloading uv" curl -fsSL https://example -o /tmp/uv
-#   on_failure_hint "Read RUNBOOK section 13."
+# Shared machinery for the FamilyDB scripts: output, logging, errors, retries, undo, the install
+# ledger, which version to install. Source it, do not run it.
+# A script using it cannot fail quietly: every step runs through `step` or `retry`, which capture
+# output, and a failure prints what was being done, the command, its exit code, the last lines it
+# said and what to try next. The run is logged to a file the failure names.
+#   log_to FILE; step "What" cmd...; retry 3 "What" cmd...; on_failure_hint "..."
 
 [ -n "${FAMILYDB_COMMON_SOURCED:-}" ] && return 0
 FAMILYDB_COMMON_SOURCED=1
 
-# ---------------------------------------------------------------- output ----
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   B=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; YEL=$'\033[33m'; GRN=$'\033[32m'; OFF=$'\033[0m'
 else
@@ -35,7 +26,6 @@ LOG_FILE=""
 HINT=""
 DRY_RUN="${DRY_RUN:-0}"
 
-# ----------------------------------------------------------------- log ----
 log_to() { # log_to PATH - start writing a transcript. Falls back to a temp file.
   local wanted="$1" dir
   dir="$(dirname -- "$wanted")"
@@ -61,27 +51,23 @@ log_line() { # one line into the transcript, never onto the screen
 }
 
 on_failure_hint() { HINT="$*"; }  # what to say at the bottom of any failure from here on
-# How to carry on once the cause is fixed, said the same way at the foot of every failure. A script
-# names its own command with again_hint; FAMILYDB_AGAIN, set by the pasted install block, wins,
-# because that block is what the person actually ran and it is safe to run again.
+# The foot of every failure. A script names its command with again_hint; FAMILYDB_AGAIN, set by
+# the pasted install block, wins: that is what the person actually ran.
 AGAIN=""
 again_hint() { AGAIN="$*"; }
 
-# ---------------------------------------------------------------- ledger ----
-# Everything the install changes outside its own directory is written down here as it happens,
-# so `uninstall.sh --from-zero` can undo exactly that: the packages it added (not ones that were
-# there already), the files, directories and links it made, the files it replaced (a copy of each
-# original is kept), the users and groups, the cron lines and the firewall rules. One line per
-# change, KIND then a tab then what. It lives outside /opt/familydb so removing the install cannot
-# lose it, and it goes last.
+# Everything the install changes outside its own directory, written down as it happens so
+# `uninstall.sh --from-zero` undoes exactly that (packages it added, files, links, replaced files
+# with a kept copy, users, cron lines, firewall rules). One line per change: KIND, tab, what.
+# Outside /opt/familydb so removing the install cannot lose it; it goes last.
 LEDGER_DIR=/var/lib/familydb-install
 LEDGER="${LEDGER_DIR}/ledger"
 # Where the install's SSH keeps GitHub's host key, rather than root's own known_hosts.
 # shellcheck disable=SC2034  # read by bootstrap.sh, which sources this
 KNOWN_HOSTS="${LEDGER_DIR}/known_hosts"
 
-# Only an install run as root changes the system, so only that one writes anything down. A run as
-# somebody else is a development checkout, and must not stop to ask for a sudo password.
+# Only a root install changes the system; a run as somebody else is a development checkout and
+# must not ask for a sudo password.
 _ledger_on() { [ "$(id -u)" = 0 ] && [ "${DRY_RUN:-0}" != 1 ]; }
 
 ledger() { # ledger KIND WHAT - write down one change, once
@@ -132,7 +118,6 @@ noting_user() { # noting_user NAME - after creating a system user: it, and the g
   return 0
 }
 
-# --------------------------------------------------------------- failure ----
 # Things to undo if the script dies part-way. Registered as shell commands, run in reverse.
 UNDO=()
 undo_on_failure() { UNDO+=("$*"); }
@@ -202,17 +187,14 @@ enable_failure_reporting() { # call once, after sourcing
   trap 'FAILED_STEP="$BASH_COMMAND"' ERR
 }
 
-# ----------------------------------------------------------------- steps ----
-# `step "What this is" cmd args...` runs a command with its output captured. On success it
-# prints a tick. On failure it prints everything needed to understand why, then stops.
+# `step "What this is" cmd args...`: output captured, a tick on success, the full story on failure.
 step() {
   local what="$1"; shift
   _run_step "$what" 1 "$@"
 }
 
-# Same, but a failure is a warning and the script carries on. It always returns 0, so that a
-# bare call cannot trip `set -e` and stop a script that was written to survive this exact
-# failure. The command's own exit code is left in LAST_STEP_STATUS for anyone who cares.
+# Same, but a failure is a warning. Always returns 0 so a bare call cannot trip `set -e`; the
+# command's exit code is left in LAST_STEP_STATUS.
 # shellcheck disable=SC2034  # read by the scripts that source this file.
 LAST_STEP_STATUS=0
 try_step() {
@@ -232,9 +214,8 @@ _run_step() {
   fi
   FAILED_STEP="$what"
   log_line "step: $what :: $*"
-  # `|| status=$?` rather than a bare assignment: under `set -e` a failing command substitution
-  # would exit the script before its status could be read, and none of this reporting would run.
-  # It must not be `if ! ...` either, because there $? is the negation, which is always 0.
+  # `|| status=$?`: under `set -e` a bare failing substitution would exit before the report runs,
+  # and `if ! ...` would make $? the negation, always 0.
   local output status=0
   output="$("$@" 2>&1)" || status=$?
   if [ -n "$output" ]; then
@@ -269,8 +250,7 @@ _run_step() {
   return "$status"
 }
 
-# `retry N "What this is" cmd args...` for anything that touches the network. Waits 2, 4, 8...
-# seconds between attempts, because a VPS that has just booted often has no DNS for a moment.
+# `retry N "What" cmd...` for the network. Waits 2, 4, 8... s: a VPS just booted may lack DNS.
 retry() {
   local tries="$1" what="$2"; shift 2
   if [ "$DRY_RUN" = 1 ]; then
@@ -317,7 +297,6 @@ retry() {
   done
 }
 
-# ---------------------------------------------------------- preconditions ----
 have() { command -v "$1" >/dev/null 2>&1; }
 
 SYSTEM_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -356,10 +335,8 @@ last_checkpoint() {
   tail -1 "$CHECKPOINT_FILE" 2>/dev/null | awk '{print $2}'
 }
 
-# ------------------------------------------------------------- diagnosis ----
-# A failing command usually says why in a way only somebody who has seen it before can read.
-# `diagnose` matches what it printed against the handful of things that actually go wrong on a
-# fresh server, and turns each into: what this means, how to check, how to fix.
+# `diagnose` matches a failing command's output against what goes wrong on a fresh server and
+# gives: what it means, how to check, how to fix.
 diagnose() { # diagnose "<the command's output>"
   local text="$1" matched=0
   _explain() { # _explain "meaning" "how to check" "how to fix"...
@@ -435,10 +412,8 @@ diagnose() { # diagnose "<the command's output>"
   return 0
 }
 
-# ------------------------------------------------- saying what will change ----
-# Nothing that changes the machine should be a surprise. A script declares its system-level
-# changes up front with `plan_item`, shows them with `show_plan`, and then says again, at the
-# moment each one happens, what it is doing and why.
+# System changes are declared up front with `plan_item`, shown by `show_plan`, and said again
+# when each happens.
 
 PLAN_WHAT=()
 PLAN_WHY=()
@@ -475,7 +450,6 @@ system_change() { # system_change "what" "why"
   log_line "change: $1 :: $2"
 }
 
-# ------------------------------------------------------------- questions ----
 # Two different questions, deliberately kept apart:
 #
 #   confirm  — a preference, where --yes means "take the default you offered".
@@ -504,11 +478,8 @@ confirm() { # confirm "question" yes|no  - honours ASSUME_YES and a missing term
   case "$reply" in [Yy]*|yes) return 0 ;; *) return 1 ;; esac
 }
 
-# --------------------------------------------------------- which version ----
-# While the newest version in CHANGELOG.md is still being built, its heading says so
-# ("## v0.1.0 — in progress") and an install follows the default branch, where it is being
-# built. Once it is released the heading carries a date instead, and an install follows the
-# release tags. Either way, an upgrade only ever moves forward.
+# While CHANGELOG.md's newest heading says "in progress" an install follows the default branch;
+# once it carries a date, the release tags. An upgrade only ever moves forward.
 
 in_progress() { # in_progress DIR REF - succeeds when REF's changelog says its newest version is unreleased
   as_root git -C "$1" show "${2}:CHANGELOG.md" 2>/dev/null \

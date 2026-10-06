@@ -1,7 +1,8 @@
 """A fresh install has no model key yet, and nothing may break or be lost for want of one.
 
-Everything that would ask a model checks first: chat says plainly that a key is missing, lookups
-wait with the ideas still pending, the digest is skipped, and discovery says why it did not run.
+Chat says a key is missing, lookups wait with ideas pending, the digest is skipped, and discovery
+says why it did not run.
+
 """
 
 from __future__ import annotations

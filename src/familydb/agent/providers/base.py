@@ -1,9 +1,4 @@
-"""What the agent loop knows about a model provider, and nothing more.
-
-The loop speaks in these types; each provider translates them into its own API and back. Keeping
-the conversation provider-neutral is what lets a turn start again on the other provider when one
-is failing, and what keeps the loop free of any one vendor's response shape.
-"""
+"""The provider-neutral types the loop speaks in; each provider translates to and from its API."""
 
 from __future__ import annotations
 
@@ -12,16 +7,13 @@ from typing import Any, Literal, Protocol
 
 Stop = Literal["end", "tool_use", "refusal", "max_tokens", "paused"]
 Surface = Literal["chat", "worker"]
-# What a vendor said about a key when asked the free way (`Provider.check_key`). Only "refused"
-# is a definite no; "unchecked" covers everything that is not an answer, such as no network, a
-# timeout, or a key allowed to write replies but not to list models.
+# `Provider.check_key`'s answer. Only "refused" is a definite no; "unchecked" is no answer.
 KeyCheck = Literal["works", "refused", "unknown_model", "unchecked", "no_key"]
 
 
 @dataclass(frozen=True)
 class SystemBlock:
-    """A piece of the system prompt. `cacheable` marks a prefix worth caching where that is paid
-    for explicitly; providers that cache on their own ignore it."""
+    """A piece of the system prompt; `cacheable` is ignored by providers that cache on their own."""
 
     text: str
     cacheable: bool = False
@@ -29,8 +21,7 @@ class SystemBlock:
 
 @dataclass(frozen=True)
 class Message:
-    """A turn of the conversation. Several parts are sent as separate blocks where that is
-    supported, so the date line and the message itself stay distinguishable."""
+    """A turn of the conversation; parts of the newest go as separate blocks where supported."""
 
     role: Literal["user", "assistant"]
     parts: list[str]
@@ -49,7 +40,7 @@ class ToolDef:
 
 @dataclass(frozen=True)
 class WebAccess:
-    """Hosted search and page reading for a worker turn. Never granted to the chat surface."""
+    """Hosted search and page reading for a worker turn; never the chat surface."""
 
     max_uses: int | None = None
     user_location: dict[str, Any] | None = None
@@ -72,7 +63,7 @@ class ToolOutcome:
 
 @dataclass(frozen=True)
 class ModelReply:
-    """One answer from a model, in the only terms the loop cares about."""
+    """One answer from a model, in the loop's terms."""
 
     stop: Stop
     text: str = ""
@@ -82,19 +73,18 @@ class ModelReply:
     request_id: str | None = None
     refusal: str | None = None
     raw: Any = None  # the provider's own assistant output, replayed when resuming a paused turn
-    # Parts of the request the company refused and the provider sent it again without
-    # (providers/parts.py), for an admin to hear of.
+    # Parts the company refused and the request was resent without (providers/parts.py).
     dropped: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class Audio:
-    """A recording to be heard, such as a voice note, as its channel handed it over."""
+    """A recording to be heard, as its channel handed it over."""
 
     data: bytes
     mime: str  # what the channel says it is, e.g. audio/ogg
     seconds: int
-    name: str = "voice.ogg"  # with the right extension: one vendor goes by it
+    name: str = "voice.ogg"  # one vendor goes by the extension
 
 
 @dataclass(frozen=True)
@@ -105,13 +95,11 @@ class Heard:
     usage: dict[str, int | None] = field(default_factory=dict)
     model: str | None = None
     request_id: str | None = None
-    # How it ended, as a reply's `stop` does: a refusal or an answer cut short is still billed,
-    # so it comes back to be recorded, and the gateway decides what it means.
+    # As a reply's `stop`: a refusal or cut-short answer is still billed, so it comes back.
     stop: Stop = "end"
     dropped: tuple[str, ...] = ()  # as a reply's: parts of the request left out on refusal
 
 
-# What a model saw in a picture, written down: the same shape as what it heard.
 Seen = Heard
 
 
@@ -120,11 +108,10 @@ class Picture:
     """A photo to be looked at, as its channel handed it over."""
 
     data: bytes
-    mime: str  # image/jpeg, image/png or image/webp, which every vendor here reads
+    mime: str  # image/jpeg, image/png or image/webp
 
 
-# Room for what a picture says: a hundred and twenty words asked for, and the thinking a lookup
-# model may do before it writes them.
+# Output room for a picture's description plus thinking.
 LOOK_TOKENS = 1024
 
 
@@ -138,7 +125,7 @@ class Exchange:
 
 @dataclass
 class TurnRequest:
-    """Everything one call needs. The loop appends to `exchanges` as the turn goes on."""
+    """Everything one call needs; the loop appends to `exchanges`."""
 
     system: list[SystemBlock]
     messages: list[Message]
@@ -151,65 +138,56 @@ class TurnRequest:
 
 
 class Provider(Protocol):
-    """A model vendor. Implementations live beside this file, one per vendor."""
+    """A model vendor; one module beside this file each."""
 
     name: str
 
     def configured(self) -> bool:
-        """Whether credentials are present. False means try the other provider, not fail."""
+        """Whether credentials are present; False means try the other provider."""
         ...
 
-    def model_for(self, surface: Surface) -> str:
-        """The model this provider uses for chat or for the mechanical worker turns."""
-        ...
+    def model_for(self, surface: Surface) -> str: ...
 
     def payload(self, request: TurnRequest) -> dict[str, Any]:
-        """The request as it would be sent. Used by `familydb debug prompt` and by send()."""
+        """The request as it would be sent (`debug prompt`, `send`)."""
         ...
 
     def send(self, request: TurnRequest) -> ModelReply:
-        """One round trip. Raises AgentError, with `retryable` set, for anything that failed."""
+        """One round trip; raises AgentError (with `retryable`) on failure."""
         ...
 
     def model_exists(self, model: str) -> bool | None:
-        """Whether the vendor knows this model name. None when it cannot be asked (no key, no
-        network), which must never be taken as a no. Costs no tokens."""
+        """Whether the vendor knows this model. None when it cannot be asked: never a no. Free."""
         ...
 
     def listed_models(self) -> list[str] | None:
-        """Every model name the vendor lists for this key, as the names are sent. None when it
-        cannot be asked (no key, no network), which must never be taken as "none". Costs no
-        tokens: it is how the daily check (model_watch.py) learns what is there."""
+        """Every model name listed for this key, as sent (model_watch.py). None when it cannot be
+        asked: never "none". Free."""
         ...
 
     def check_key(self) -> KeyCheck:
-        """Whether the vendor takes this key, found by looking the chat model up: the same free
-        question as `model_exists`, read for what it says about the key instead. For the
-        company-and-key form (setup and the AI model page), which checks a key before storing it."""
+        """Whether the vendor takes this key, by looking the chat model up (free); for the
+        company-and-key form."""
         ...
 
     def count_tokens(self, request: TurnRequest) -> int:
-        """What this request would cost in input tokens. Also how `validate-tools` checks the
-        schemas: the API rejects a malformed tool before counting anything."""
+        """Input tokens this request would cost; `validate-tools` uses it to check schemas."""
         ...
 
     def listener(self) -> str | None:
-        """The model this vendor hears recordings with, or None when it cannot hear at all."""
+        """The model that hears recordings, or None."""
         ...
 
     def transcribe(self, audio: Audio, hints: str) -> Heard:
-        """The words in a recording. `hints` names people and places it may mention, so they
-        are spelled as the family spells them. Raises AgentError, with `retryable` set, for a
-        request that failed; one the model declined comes back with its `stop` saying so."""
+        """The words in a recording; `hints` names people and places. A declined request comes
+        back with its `stop`."""
         ...
 
     def viewer(self) -> str | None:
-        """The model this vendor looks at pictures with, or None when it cannot see at all: its
-        lookup model, since writing down what a picture says is extraction, not judgement."""
+        """The model that looks at pictures (the lookup model), or None."""
         ...
 
     def describe(self, picture: Picture, ask: str) -> Seen:
-        """What a picture shows, written down as `ask` asks, in one request. Raises AgentError,
-        with `retryable` set, for a request that failed; one the model declined comes back with
-        its `stop` saying so."""
+        """What a picture shows, as `ask` asks, in one request; a declined one comes back with its
+        `stop`."""
         ...

@@ -27,8 +27,7 @@ KIND_SUGGESTIONS: tuple[str, ...] = (
     "gift",
     "other",
 )
-# A present somebody would like: kept with the ideas, listed under their birthday's reminder,
-# and never offered as something to go and do.
+# A present somebody would like: listed under their birthday's reminder, never offered to do.
 GIFT = "gift"
 Setting = Literal["indoor", "outdoor", "either"]
 Weather = Literal["any", "dry", "warm", "snow"]
@@ -87,7 +86,7 @@ class Idea(BaseModel):
     cost_level: int | None = None
     needs_booking: bool = False
     lead_time_days: int | None = None
-    # When it is on, for an idea tied to dates (see migration 0019); both None for the rest.
+    # When it is on, for an idea tied to dates; both None for the rest.
     happens_from: str | None = None
     happens_until: str | None = None
     status: Status = "idea"
@@ -95,7 +94,7 @@ class Idea(BaseModel):
     enrichment: Enrichment = "pending"
     enriched_at: str | None = None
     enrichment_note: str | None = None
-    # Somebody asked for it to be looked up now, rather than with the evening's lookups.
+    # Asked to be looked up now rather than with the evening's lookups.
     lookup_wanted_at: str | None = None
     suggested_by: int | None = None
     suggested_by_name: str | None = None
@@ -115,22 +114,22 @@ class Idea(BaseModel):
 
     @property
     def first_day(self) -> date | None:
-        """The first day a dated idea is on; None when it has no start."""
+
         return date.fromisoformat(self.happens_from[:10]) if self.happens_from else None
 
     @property
     def last_day(self) -> date | None:
-        """The last day a dated idea is on; None when it has no end."""
+
         return date.fromisoformat(self.happens_until) if self.happens_until else None
 
     def on(self, day: date) -> bool:
-        """Whether it is on that day. An idea tied to no date always is."""
+        """Whether it is on that day; an idea tied to no date always is."""
         first, last = self.first_day, self.last_day
         return (first is None or first <= day) and (last is None or day <= last)
 
 
 def normalize_title(title: str) -> str:
-    """Casefolded, punctuation-free, single-spaced form used for duplicate checks."""
+    """Casefolded, punctuation-free, single-spaced form for duplicate checks."""
     return " ".join(re.sub(r"[^\w\s]", " ", title.casefold()).split())
 
 
@@ -197,14 +196,13 @@ def get(conn: sqlite3.Connection, idea_id: int) -> Idea | None:
 
 
 def list_for_prompt(conn: sqlite3.Connection) -> list[Idea]:
-    """Every idea the model should know about, oldest first. Dropped ideas are left out, and so
-    are presents: the prefix is the same for every chat, a kid's included, and a present is a
-    surprise (docs/WISHES.md). A grown-up's chat finds one with search_ideas."""
+    """Every idea for the cached prefix, oldest first, minus dropped ones and presents (the prefix
+    is the same for a kid's chat; docs/WISHES.md). search_ideas finds presents."""
     return [idea for idea in list_all(conn, include_dropped=False) if not is_gift(idea)]
 
 
 def is_gift(idea: Idea) -> bool:
-    """Whether this idea is a present, kept from the kids."""
+    """Whether this idea is a present (kept from the kids)."""
     return idea.kind.strip().lower() == GIFT
 
 
@@ -218,7 +216,7 @@ def pending_enrichment(conn: sqlite3.Connection, *, limit: int) -> list[Idea]:
 
 
 def enrichment_counts(conn: sqlite3.Connection) -> dict[str, int]:
-    """How many live ideas sit in each lookup state, for the status page."""
+    """How many live ideas are in each lookup state."""
     rows = conn.execute(
         "SELECT enrichment, count(*) AS n FROM ideas WHERE status != 'dropped' GROUP BY 1"
     ).fetchall()
@@ -226,7 +224,7 @@ def enrichment_counts(conn: sqlite3.Connection) -> dict[str, int]:
 
 
 def failed_enrichment(conn: sqlite3.Connection, *, limit: int = 5) -> list[Idea]:
-    """The ideas whose lookup gave up, newest first, so the page can say why."""
+    """The ideas whose lookup gave up, newest first."""
     rows = conn.execute(
         f"{_SELECT} WHERE i.enrichment = 'failed' AND i.status != 'dropped' "
         "ORDER BY coalesce(i.enriched_at, i.created_at) DESC LIMIT ?",
@@ -238,7 +236,7 @@ def failed_enrichment(conn: sqlite3.Connection, *, limit: int = 5) -> list[Idea]
 def requeue_enrichment(
     conn: sqlite3.Connection, idea_ids: Iterable[int], *, now: str | None = None
 ) -> int:
-    """Put ideas back in the lookup queue (stale details). Returns how many changed."""
+    """Put ideas back in the lookup queue; returns how many changed."""
     ids = [int(i) for i in idea_ids]
     if not ids:
         return 0
@@ -252,8 +250,8 @@ def requeue_enrichment(
 
 
 def want_lookup(conn: sqlite3.Connection, idea_ids: Iterable[int] | None, *, now: str) -> list[int]:
-    """Ask for ideas to be looked up now: the ones named, looked up again if they were already,
-    or with none named every idea waiting. Never a dropped idea. Returns the ones asked for."""
+    """Ask for ideas to be looked up now: those named (again if already done), or every idea
+    waiting when none named; never a dropped one. Returns the ones asked for."""
     if idea_ids is None:
         rows = conn.execute(
             "SELECT id FROM ideas WHERE enrichment = 'pending' AND status != 'dropped'"
@@ -276,13 +274,13 @@ def want_lookup(conn: sqlite3.Connection, idea_ids: Iterable[int] | None, *, now
 
 
 def lookup_asked_for(conn: sqlite3.Connection, idea_id: int) -> None:
-    """The lookup somebody asked for has run: the next one waits for the evening again."""
+    """The asked-for lookup has run: the next waits for the evening again."""
     conn.execute("UPDATE ideas SET lookup_wanted_at = NULL WHERE id = ?", (idea_id,))
 
 
 def due_enrichment(conn: sqlite3.Connection, *, before: str | None, limit: int) -> list[Idea]:
-    """Ideas whose lookup is due, the ones somebody asked for first, then oldest first: every one
-    waiting when `before` is None, or else those asked for and those waiting since before it."""
+    """Ideas whose lookup is due, asked-for first then oldest: all waiting when `before` is None,
+    else those asked for and those waiting since before it."""
     rows = conn.execute(
         f"{_SELECT} WHERE i.enrichment = 'pending' AND i.status != 'dropped' "
         "AND (i.lookup_wanted_at IS NOT NULL OR ? IS NULL OR i.updated_at < ?) "
@@ -299,8 +297,7 @@ def list_all(conn: sqlite3.Connection, *, include_dropped: bool = False) -> list
 
 
 def gifts_for(conn: sqlite3.Connection, who: str, *, limit: int = 5) -> list[Idea]:
-    """Presents saved for somebody, newest first: ideas of kind gift, not yet given or dropped,
-    with them among the participants as a whole word ("Grandma", "for Grandma")."""
+    """Open gift ideas for somebody (a whole word among the participants), newest first."""
     wanted = re.compile(rf"\b{re.escape(who.strip().casefold())}\b")
     rows = conn.execute(
         f"{_SELECT} WHERE lower(i.kind) = ? AND i.status IN ('idea', 'planned') ORDER BY i.id DESC",
@@ -330,8 +327,7 @@ def search(
     limit: int = 50,
     without_gifts: bool = False,
 ) -> list[Idea]:
-    """Filtered ideas. No filters returns everything that isn't dropped. `without_gifts` leaves
-    out the presents, for somebody they are kept from."""
+    """Filtered ideas; no filters returns everything not dropped. `without_gifts` hides presents."""
     where: list[str] = []
     params: list[Any] = []
     if without_gifts:
@@ -443,7 +439,7 @@ def apply_outcome(
     avg_rating: float | None,
     now: str | None = None,
 ) -> Idea | None:
-    """Bookkeeping after an outcome is recorded: done count, last date, average, status."""
+    """Bookkeeping after an outcome: done count, last date, average, status."""
     conn.execute(
         "UPDATE ideas SET times_done = times_done + 1, "
         "last_done_at = CASE WHEN last_done_at IS NULL OR last_done_at < ? THEN ? "
@@ -455,5 +451,5 @@ def apply_outcome(
 
 
 def revision(idea: Idea) -> str:
-    """A content revision, including changes made within the same clock second."""
+    """A content revision hash (sees changes within the same clock second)."""
     return hashlib.sha256(idea.model_dump_json().encode()).hexdigest()

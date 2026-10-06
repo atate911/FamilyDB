@@ -16,8 +16,8 @@ from familydb.suggest.types import (
 
 MAX_REASONS = 3
 VERDICT_ORDER = {"good": 0, "possible": 1, "ruled_out": 2}
-# The reply names three to five options and a few of the ideas that did not fit. Everything past
-# that is tokens the model pays for twice and never uses, so it is counted rather than listed.
+# The reply names 3-5 options and a few misses; the rest is paid for twice and unused, so it is
+# counted, not listed.
 MAX_OFFERED = 12
 MAX_RULED_OUT = 6
 
@@ -53,10 +53,8 @@ def day_summaries(context: Context) -> list[DaySummary]:
 def order_candidates(
     candidates: list[Candidate], by_id: dict[int, Idea], recently: set[int]
 ) -> list[Candidate]:
-    """Good first (never done, then best rated), then possible, then ruled out.
-
-    Ideas suggested recently sink to the end of their group so the family sees variety.
-    """
+    """Good first (never done, then best rated), then possible, then ruled out; recently
+    suggested ideas sink within their group for variety."""
 
     def key(c: Candidate) -> tuple:
         idea = by_id.get(c.idea_id)
