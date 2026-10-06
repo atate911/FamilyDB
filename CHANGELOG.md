@@ -14,6 +14,10 @@ older than what is installed. It gets a date when it is released.
   whether to follow the device's day and night or hold to one. The choice is
   kept in the browser and touches nothing the family's data holds, and every
   look is tested for readable contrast by day and by night.
+- **Kitchen Table, a new look to try.** Cream paper by day, charcoal at night,
+  and deep green for what you act on. Open Look from the menu to try it; nothing
+  else on the page moves yet, and Phosphor is still what everybody sees until
+  they choose.
 
 ## v0.2.0 — second alpha (2026-10-05)
 

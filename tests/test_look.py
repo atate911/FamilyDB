@@ -78,6 +78,16 @@ def test_choosing_a_look_keeps_it_in_this_browser(page) -> None:
     assert 'media="(prefers-color-scheme: light)"' in head and 'content="#252B4A"' in head
 
 
+def test_kitchen_table_can_be_chosen_and_worn(page) -> None:
+    sent = page.post("/look", data={"csrf": _token(page), "theme": "kitchen", "mode": "light"})
+    assert "fdb_look=kitchen.light" in sent.headers["Set-Cookie"]
+    assert _wearing(page) == ("kitchen", "light")
+    head = page.get("/").text
+    assert '<meta name="color-scheme" content="light" />' in head
+    assert 'content="#EFE7D7"' in head  # the browser's own bar is the cream panel
+    assert page.get("/look").text.count('class="look-sample" data-theme="kitchen"') == 2
+
+
 def test_phosphor_has_no_day_to_choose(page) -> None:
     page.post("/look", data={"csrf": _token(page), "theme": "phosphor", "mode": "light"})
     assert _wearing(page) == ("phosphor", None)
@@ -139,9 +149,18 @@ def test_every_look_is_written_down_once_in_the_stylesheets() -> None:
     def tokens(body: str) -> set[str]:
         return set(re.findall(r"^\s+(--[a-z0-9-]+):", body, re.M))
 
-    first = tokens(next(iter(blocks.values()))) - {"--sect"}  # the quiet themes' one extra
+    # The roles Kitchen Table's layout reads that the built set lacks sit in one block every look
+    # shares (`[data-theme]`), worked out from its own tokens; a look may name one to set itself
+    # apart, so they are left out of the comparison. The block comes first, so a look's own wins.
+    shared = set(_shared(themes))
+    assert themes.index("\n[data-theme] {") < themes.index('\n[data-theme="')
+    # The page reads these two with a fallback, and Phosphor (in style.css) leaves them unset on
+    # purpose: a value for every look would change Phosphor's current page.
+    assert not shared & {"--here-icon", "--here-pill"}
+    ignored = {"--sect"} | shared  # --sect: the quiet themes' one extra
+    first = tokens(next(iter(blocks.values()))) - ignored
     for key, body in blocks.items():
-        assert tokens(body) - {"--sect"} == first, f"{key}: {tokens(body) ^ first}"
+        assert tokens(body) - ignored == first, f"{key}: {(tokens(body) - ignored) ^ first}"
     # Phosphor, the default, sits on <html> under every theme (`:root`), so a token it names that
     # a theme does not would leak into that theme: a theme names every one of them.
     phosphor = (STATIC / "style.css").read_text("utf-8").split("/* ---- Names the page uses")[0]
@@ -194,6 +213,50 @@ def _luminance(colour: str) -> float:
 def _contrast(a: str, b: str) -> float:
     high, low = sorted((_luminance(a), _luminance(b)), reverse=True)
     return (high + 0.05) / (low + 0.05)
+
+
+def _declared(block: str) -> dict[str, str]:
+    return {k: v.strip() for k, v in re.findall(r"^\s+(--[a-z0-9-]+): ([^;]+);", block, re.M)}
+
+
+def _shared(themes: str) -> dict[str, str]:
+    """The tokens of the bare `[data-theme]` block every look takes unless it names its own."""
+    found = re.search(r"\n\[data-theme\] \{(.*?)\n\}", themes, re.S)
+    assert found
+    return _declared(found.group(1))
+
+
+def _pair(value: str) -> tuple[str, str]:
+    """`light-dark(a, b)` as (a, b); anything else is the same in both modes."""
+    inside = re.fullmatch(r"light-dark\((.*)\)", value)
+    if not inside:
+        return value, value
+    depth = 0
+    for at, char in enumerate(inside.group(1)):
+        depth += (char == "(") - (char == ")")
+        if char == "," and depth == 0:
+            return inside.group(1)[:at].strip(), inside.group(1)[at + 1 :].strip()
+    raise AssertionError(value)
+
+
+def _colour(tokens: dict[str, str], value: str, which: int, depth: int = 0) -> str | None:
+    """A token's value as #RRGGBB in one mode, following var(), light-dark() and color-mix() in
+    sRGB; None for what is not a plain colour (a shadow, a transparent fill)."""
+    value = value.strip()
+    if value.startswith("light-dark("):
+        value = _pair(value)[which]
+    if depth > 12:
+        return None
+    if re.fullmatch(r"#[0-9A-Fa-f]{6}", value):
+        return value
+    named = re.fullmatch(r"var\((--[a-z0-9-]+)\)", value)
+    if named:
+        return _colour(tokens, tokens[named[1]], which, depth + 1) if named[1] in tokens else None
+    mixed = re.fullmatch(r"color-mix\(in srgb, (.+?) (\d+(?:\.\d+)?)%, (.+)\)", value)
+    if mixed:
+        a, b = (_colour(tokens, mixed[i], which, depth + 1) for i in (1, 3))
+        return _mixed(a, b, float(mixed[2]) / 100) if a and b else None
+    return None
 
 
 def _mixed(colour: str, into: str, share: float) -> str:
@@ -251,4 +314,47 @@ def test_every_look_keeps_the_contrast_floors_by_day_and_by_night() -> None:
                 got = _contrast(foreground, background)
                 if got < floor - 0.005:
                     short.append(f"{key} {mode} {name}: {got:.2f} < {floor}")
+    assert not short, "\n".join(short)
+
+
+# What Kitchen Table's layout draws that the built pages do not: (what, words, ground, floor).
+KITCHEN_LAYOUT = (
+    [
+        ("the panel's links on its current item", "band-link", "band-hi", 4.5),
+        ("the panel's mark on its current item", "here-icon", "here", 3.0),
+        ("Vera's words in her box", "ask-ink", "ask-bg", 4.5),
+        ("Vera's quiet words in her box", "ask-ink-2", "ask-bg", 4.5),
+        ("Send", "on-send", "send", 4.5),
+        ("words on Vera's fill", "on-vera", "vera-bg", 4.5),
+        ("Vera on her wash (the pill)", "vera", "vera-soft", 4.5),
+        ("the late plate", "on-red", "red", 4.5),
+    ]
+    + [(f"{m} on its wash", m, f"{m}-soft", 4.5) for m in ("ok", "amber", "red")]
+    + [(f"p{i}'s name on its wash", f"p{i}-ink", f"p{i}-soft", 4.5) for i in range(1, 9)]
+    + [(f"p{i}'s name on a card", f"p{i}-ink", "card", 4.5) for i in range(1, 9)]
+    + [(f"p{i}'s letter", f"p{i}-on", f"p{i}", 4.5) for i in range(1, 9)]
+    + [(f"p{i}'s mark on a card", f"p{i}-mark", "card", 3.0) for i in range(1, 9)]
+)
+
+
+def test_every_look_keeps_the_floors_kitchen_tables_layout_needs() -> None:
+    """The roles Kitchen Table's layout reads are worked out for each look from its own tokens (or
+    named by the look), and they hold the same floors by day and by night. The people are Kitchen
+    Table's own eight, so they are measured on Kitchen Table's card only. Colour never has to carry
+    a person alone (a name or an initial is beside it), so people are not held apart from each
+    other: the family decided against that floor."""
+    themes = (STATIC / "themes.css").read_text("utf-8")
+    shared = _shared(themes)
+    blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
+    short: list[str] = []
+    for key, body in blocks.items():
+        tokens = {**shared, **_declared(body)}
+        pairs = [p for p in KITCHEN_LAYOUT if key == "kitchen" or not re.match(r"p\d", p[1])]
+        for mode, which in (("day", 0), ("night", 1)):
+            for what, words, ground, floor in pairs:
+                a = _colour(tokens, tokens[f"--{words}"], which)
+                b = _colour(tokens, tokens[f"--{ground}"], which)
+                assert a and b, f"{key} {mode} {what}: --{words} or --{ground} is not a colour"
+                if _contrast(a, b) < floor - 0.005:
+                    short.append(f"{key} {mode} {what}: {_contrast(a, b):.2f} < {floor}")
     assert not short, "\n".join(short)

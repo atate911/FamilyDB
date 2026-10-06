@@ -31,6 +31,14 @@ class Look:
 
 LOOKS = (
     Look(
+        "kitchen",
+        "Kitchen Table",
+        "The family's table: cream paper by day, charcoal at night, and deep green for what "
+        "you act on.",
+        True,
+        ("#EFE7D7", "#121816"),
+    ),
+    Look(
         "phosphor",
         "Phosphor",
         "The page as first drawn: charcoal with a breath of green, lit the way an old "
