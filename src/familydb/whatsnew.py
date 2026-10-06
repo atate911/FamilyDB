@@ -57,4 +57,14 @@ def _read(path: Path, _stamp: float) -> WhatsNew | None:
             items[-1][1] = f"{items[-1][1]} {line.strip()}".strip()
     if heading is None:
         return None
-    return WhatsNew(heading, tuple((what, said.replace("**", "")) for what, said in items))
+    return WhatsNew(heading, tuple((_plain(what), _sentence(_plain(said))) for what, said in items))
+
+
+def _plain(text: str) -> str:
+    """Markdown's marks left out: the page shows words, not `code` or **bold**."""
+    return text.replace("**", "").replace("`", "")
+
+
+def _sentence(text: str) -> str:
+    """Words that went on from a bold title ("**A new Home**, the first page") start a sentence."""
+    return text[:1].upper() + text[1:]

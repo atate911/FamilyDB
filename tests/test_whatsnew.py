@@ -17,7 +17,7 @@ Still being built.
 - **Looks.** Each browser can choose
   how the page looks.
 - **A new Home**, the first page of
-  the new layout, with **bold** words.
+  the new layout, with **bold** words and `code`.
 
 ## v0.2.0 — second alpha (2026-10-05)
 
@@ -34,7 +34,7 @@ def test_the_top_section_is_what_is_new(tmp_path: Path) -> None:
     assert new is not None and new.heading == "v0.3.0 — in progress"
     assert new.items == (
         ("Looks", "Each browser can choose how the page looks."),
-        ("A new Home", "the first page of the new layout, with bold words."),
+        ("A new Home", "The first page of the new layout, with bold words and code."),
     )
     assert whatsnew.latest(tmp_path / "missing.md") is None
 
