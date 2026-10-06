@@ -127,6 +127,15 @@ class Constraints:
     max_travel_minutes: int | None = None
     max_duration_minutes: int | None = None
     topic: str = ""  # what the family asked for, for discovery only
+    avoid: list[str] = field(default_factory=list)  # idea tags a firm rule leaves out
+    # The memory behind each limit a firm rule set (suggest/rules.py), by the limit's name, or
+    # "avoid:<tag>": {"max_travel_minutes": 4}.
+    held_by: dict[str, int] = field(default_factory=dict)
+
+    def because(self, name: str) -> str | None:
+        """'m4' when memory 4 set this limit, for a reason to name it."""
+        memory = self.held_by.get(name)
+        return f"m{memory}" if memory is not None else None
 
 
 # Minutes after midnight. Without a time given, a day is counted from 08:00 to 22:00.

@@ -348,6 +348,11 @@ def test_the_page_shows_what_is_remembered_and_where_it_came_from(
     assert "<strong>vegetarian</strong>" in text and ">must<" in text
     assert "Sam, Sunday 20 September, in a voice note" in text
     assert "so the girls are vegetarian now" in text and "(voice note)" not in text
+    # A must with a rule says what suggestions are held to.
+    rule = {"max_travel_minutes": 30, "setting": "indoor", "avoid_tags": ["loud"]}
+    _call(registry, ctx, changes=[{**BACK, "rule": rule}])
+    shown = _page(settings, clock).get("/memory").text
+    assert "held to: a 30 min drive at most, indoors, nothing loud" in shown
     assert 'href="/memory"' in text  # in the bar, for everybody signed in
 
 
@@ -404,3 +409,41 @@ def test_a_long_message_is_quoted_where_the_memory_is() -> None:
     assert "allergic to shellfish" in quoted and len(quoted) <= 82
     assert quoted.startswith("…") and quoted.endswith("…")
     assert excerpt("short and sweet", "sweet") == "short and sweet"
+
+
+# -- rules held by code (suggest/rules.py)
+
+BACK = {
+    "action": "add",
+    "about": "Sam",
+    "category": "health",
+    "fact": "no drives over 30 minutes until my back is better",
+    "firm": True,
+    "rule": {"max_travel_minutes": 30},
+}
+
+
+def test_a_must_keeps_a_rule_and_a_taste_or_a_guess_does_not(registry, said) -> None:
+    _, data = _call(registry, said, changes=[BACK])
+    done = data["remembered"][0]
+    assert done["held"] == {"max_travel_minutes": 30} and "rule" not in done
+    assert memories.get(said.conn, done["id"]).rule == {"max_travel_minutes": 30}
+    loud = {**BACK, "fact": "hates loud places", "rule": {"avoid_tags": [" Loud ", "loud"]}}
+    _, data = _call(registry, said, changes=[{**loud, "firm": False}])
+    taste = data["remembered"][0]
+    assert "held" not in taste and taste["rule"].startswith("a rule is held only for a must")
+    assert memories.get(said.conn, taste["id"]).rule is None
+    _, data = _call(registry, said, changes=[{**loud, "firm": True, "inferred": True}])
+    assert "held" not in data["remembered"][0]
+    # Said again as a must, with its rule: the same memory, held now.
+    _, data = _call(registry, said, changes=[{**loud, "firm": True}])
+    again = data["remembered"][0]
+    assert again["id"] == taste["id"] and again["result"] == "already remembered"
+    assert again["held"] == {"avoid": ["loud"]}
+    assert memories.get(said.conn, taste["id"]).rule == {"avoid": ["loud"]}
+    assert [m.id for m in memories.held(said.conn, today=said.clock.today())] == [
+        done["id"],
+        taste["id"],
+    ]
+    refused, data = _call(registry, said, changes=[{**BACK, "rule": {"max_travel_minutes": 0}}])
+    assert refused.is_error and "max_travel_minutes" in data["error"]

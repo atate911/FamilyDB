@@ -452,6 +452,13 @@ def test_a_firm_rule_broken_without_a_word_fails(settings) -> None:
     assert any("offers Hopscotch" in p for p in replying("Hopscotch on Saturday morning?"))
     assert replying("Hopscotch is out: 35 minutes is too far for your back.") == []
     assert replying("The ramen place, 12 minutes away.") == []
+    # Held by code: the engine itself leaves Hopscotch out, naming the memory.
+    api = _answer([fakes.tool_use("t1", "suggest", frame)], [fakes.text("The ramen place.")])
+    run = run_case(case, settings, api=api)
+    hopscotch = next(
+        c for c in run.calls[0].result["candidates"] if c["title"].startswith("Hopscotch")
+    )
+    assert hopscotch["verdict"] == "ruled_out" and "further than m1 allows" in hopscotch["reasons"]
 
 
 def test_a_case_without_a_calendar_runs_with_none(settings) -> None:

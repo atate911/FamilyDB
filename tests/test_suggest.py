@@ -622,6 +622,10 @@ def test_discovery_request_for_someday(conn, settings, thursday_clock, family) -
     assert "Window: no fixed dates; look at the next four weeks or so." in text
     assert "Home area: not set." in text and "asked" not in text
     assert cache_key(None) == "someday" and cache_key((SAT, SAT)) == "2026-09-26:2026-09-26"
+    # The family's firm rules, folded in, go with it: the web is searched within them too.
+    held = Constraints(max_travel_minutes=30, avoid=["loud"], held_by={"max_travel_minutes": 4})
+    text = render_discover_request(context, held, settings)
+    assert 'Constraints: {"avoid": ["loud"], "max_travel_minutes": 30}' in text
 
 
 def test_discovery_crash_is_a_note_and_not_cached(
@@ -1060,3 +1064,54 @@ def test_favourites_come_first_when_asked_for(env) -> None:
     shown = run(env.ctx, SuggestInput(**asked, prefer="favourites")).candidates
     assert [c.idea_id for c in shown] == [loved["id"], fine["id"], new["id"]]
     assert shown[0].reasons[0] == "loved last time" and "loved last time" not in shown[1].reasons
+
+
+def _must(conn, family, who, fact, rule):
+    from familydb.store import memories
+
+    with db.transaction(conn):
+        return memories.insert(
+            conn,
+            member_id=family[who].id if who else None,
+            category="other",
+            fact=fact,
+            firm=True,
+            inferred=False,
+            until=None,
+            source_message_id=None,
+            said_by=family["sam"].id,
+            now=NOW_ISO,
+            rule=rule,
+        )
+
+
+def test_a_firm_rule_is_held_by_code_and_named(env, family) -> None:
+    """A must with a rule leaves out what breaks it, whatever the question said, and the reason
+    names the memory so the reply can say why."""
+    back = _must(env.conn, family, "sam", "no long drives", {"max_travel_minutes": 30})
+    cheap = _must(env.conn, family, None, "saving up", {"max_cost_level": 1})
+    cast = _must(env.conn, family, "girls", "a cast on her leg", {"setting": "indoor"})
+    quiet = _must(env.conn, family, None, "no loud places", {"avoid": ["loud"]})
+    far = _idea(env.conn, "Hopscotch", setting="indoor", location_name="Hopscotch")
+    with db.transaction(env.conn):
+        place = places.insert(env.conn, name="Hopscotch", travel_minutes=35, now=NOW_ISO)
+        ideas.update(env.conn, far.id, {"place_id": place.id}, now=NOW_ISO)
+    dear = _idea(env.conn, "Fancy dinner", kind="restaurant", cost_level=3, setting="indoor")
+    park = _idea(env.conn, "Splash park", setting="outdoor")
+    arcade = _idea(env.conn, "Arcade", setting="indoor", tags=["Loud"])
+    unknown = _idea(env.conn, "Somewhere new", setting="indoor", location_name="Over the river")
+    result = run(env.ctx, SuggestInput(window="someday", discover=False, question="?"))
+    said = {c.idea_id: c for c in result.candidates}
+    assert f"further than m{back.id} allows" in said[far.id].reasons
+    assert said[dear.id].reasons == [f"dearer than m{cheap.id} allows"]
+    assert said[park.id].reasons == [f"outdoor only, and m{cast.id} says indoor"]
+    assert said[arcade.id].reasons == [f"loud, which m{quiet.id} rules out"]
+    assert said[unknown.id].verdict == "possible"
+    assert f"how far is unknown; m{back.id} allows 30 min" in said[unknown.id].reasons
+    # Only the girls are coming, and Sam is not the one asking: his back is not their rule.
+    env.ctx.member = family["alex"]
+    asked = SuggestInput(window="someday", participants=["the girls"], discover=False, question="?")
+    said = {c.idea_id: c for c in run(env.ctx, asked).candidates}
+    assert said[far.id].verdict != "ruled_out"
+    assert said[park.id].verdict == "ruled_out"  # hers holds, and so does the family's
+    assert said[dear.id].verdict == "ruled_out"

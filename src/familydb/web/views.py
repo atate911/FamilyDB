@@ -274,6 +274,23 @@ def excerpt(text: str, fact: str, room: int = SOURCE_CHARS) -> str:
     return piece
 
 
+def rule_text(rule: dict[str, Any] | None) -> str | None:
+    """What suggestions are held to by a firm memory's rule (suggest/rules.py), in a few words:
+    "held to: a 30 min drive at most, indoors"."""
+    if not rule:
+        return None
+    said = []
+    if (minutes := rule.get("max_travel_minutes")) is not None:
+        said.append(f"a {minutes} min drive at most")
+    if (level := rule.get("max_cost_level")) is not None:
+        said.append("free things" if level == 0 else f"{cost_text(level)} at most")
+    if setting := rule.get("setting"):
+        said.append(f"{setting}s")
+    if avoid := rule.get("avoid"):
+        said.append("nothing " + " or ".join(avoid))
+    return "held to: " + ", ".join(said) if said else None
+
+
 def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
     when = day_text(local_day(memory.created_at, tz))
     who = memory.said_by_name
@@ -291,6 +308,7 @@ def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
         "about": memory.about_name or "The family",
         "kind": MEMORY_KINDS.get(memory.category, memory.category),
         "firm": memory.firm,
+        "held": rule_text(memory.rule),
         "guess": memory.inferred,
         "until": day_text(memory.until) if memory.until else None,
         "ended": bool(memory.until and memory.until < today.isoformat()),

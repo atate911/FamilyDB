@@ -8,7 +8,7 @@ from datetime import date, datetime, time, timedelta
 from familydb.availability import enrichment_available
 from familydb.dates import parse_date_range, utc_iso, weekend_window
 from familydb.errors import ToolError
-from familydb.store import ideas, members, outcomes, plans, suggestions
+from familydb.store import ideas, members, memories, outcomes, plans, suggestions
 from familydb.store.db import transaction
 from familydb.suggest.compose import choose, compose
 from familydb.suggest.context import build_context
@@ -16,6 +16,7 @@ from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.origin import resolve as resolve_origin
+from familydb.suggest.rules import fold
 from familydb.suggest.shortlist import FAVOURITE_RATING, RATING_DAYS, shortlist
 from familydb.suggest.types import (
     DAY_END,
@@ -126,6 +127,10 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         # Folded, so the same subject is the same search.
         topic=" ".join(args.topic.casefold().split())[:MAX_TOPIC],
     )
+    # The family's firm rules for who is coming, held by code (suggest/rules.py).
+    people = members.list_all(ctx.conn)
+    held = memories.held(ctx.conn, today=ctx.clock.today())
+    constraints = fold(constraints, held, people, ctx.member)
     # What the family said of what they did: "not again" leaves it out, a rating counts for a
     # year, and "again" or a high rating is a favourite.
     again = outcomes.latest_preferences(ctx.conn)
@@ -140,7 +145,7 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         context,
         constraints,
         ctx.settings,
-        people=members.list_all(ctx.conn),
+        people=people,
         plans=plans.latest_by_idea(ctx.conn),
         ratings=ratings,
         prefer=args.prefer,

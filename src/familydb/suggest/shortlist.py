@@ -172,14 +172,23 @@ def participants_match(
 
 
 def _constraint_reason(idea: Idea, constraints: Constraints) -> str | None:
+    """Why the question's limits, or a firm rule's (named by its memory), leave it out."""
     if (
         constraints.max_cost_level is not None
         and idea.cost_level is not None
         and idea.cost_level > constraints.max_cost_level
     ):
-        return "over the budget asked for"
+        held = constraints.because("max_cost_level")
+        return f"dearer than {held} allows" if held else "over the budget asked for"
     if constraints.setting and idea.setting not in (constraints.setting, "either"):
+        held = constraints.because("setting")
+        if held:
+            return f"{idea.setting} only, and {held} says {constraints.setting}"
         return f"{idea.setting} only"
+    tags = {" ".join(tag.casefold().split()) for tag in idea.tags}
+    for tag in constraints.avoid:
+        if tag in tags:
+            return f"{tag}, which {constraints.because(f'avoid:{tag}')} rules out"
     if (
         constraints.max_duration_minutes is not None
         and idea.duration_min is not None

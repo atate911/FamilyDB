@@ -336,6 +336,7 @@ def _bad_back(conn: sqlite3.Connection, house: Household) -> None:
             source_message_id=None,
             said_by=sam.id,
             now=NOW_ISO,
+            rule={"max_travel_minutes": 30},
         )
 
 
@@ -698,8 +699,8 @@ CASES: tuple[Case, ...] = (
             caveated("Hopscotch", "back", "drive", "far", "30 min", "minutes"),
             wrote_only(),
         ),
-        "Sam's firm rule (no drives over 30 minutes) is kept: Hopscotch, 35 minutes away, is "
-        "not offered, or only with the reason it is out.",
+        "Sam's firm rule (no drives over 30 minutes) is kept, by code: Hopscotch, 35 minutes "
+        "away, is not offered, or only with the reason it is out.",
         seed=_bad_back,
     ),
     # -- feedback, plans

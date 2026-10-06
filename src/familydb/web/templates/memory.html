@@ -17,6 +17,7 @@
             <p class="memory-fact">
               <strong>{{ row.fact }}</strong>
               {% if row.firm %}<span class="tag warn">must</span>{% endif %}
+              {% if row.held %}<span class="tag">{{ row.held }}</span>{% endif %}
               {% if row.guess %}<span class="tag">a guess</span>{% endif %}
               {% if row.until %}<span class="tag">{{ 'ended' if row.ended else 'until' }} {{ row.until }}</span>{% endif %}
               <span class="tag">{{ row.kind }}</span>

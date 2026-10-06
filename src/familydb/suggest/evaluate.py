@@ -244,6 +244,13 @@ def evaluate(
         if place is not None and context.origin is not None and travel is None:
             soft = True
             reasons.append(f"distance from {context.origin.label} unknown")
+        held = constraints.because("max_travel_minutes")
+        somewhere = place is not None or bool(idea.location_name)
+        if held and somewhere and travel is None:
+            # A firm rule on the drive, and nobody knows how far it is: worth a word.
+            soft = True
+            limit = constraints.max_travel_minutes
+            reasons.append(f"how far is unknown; {held} allows {limit} min")
         if travel is not None:
             minutes = travel
             checks.travel_minutes = minutes
@@ -255,7 +262,7 @@ def evaluate(
                 and minutes > constraints.max_travel_minutes
             ):
                 hard_fail = True
-                reasons.append("further than asked for")
+                reasons.append(f"further than {held} allows" if held else "further than asked for")
             elif fits and context.window is not None:
                 spans = [
                     d.longest

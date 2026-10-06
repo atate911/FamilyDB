@@ -69,6 +69,7 @@ def render_discover_request(context: Context, constraints: Constraints, settings
         "setting": constraints.setting,
         "max_travel_minutes": constraints.max_travel_minutes,
         "max_duration_minutes": constraints.max_duration_minutes,
+        "avoid": constraints.avoid or None,
     }
     wanted = {k: v for k, v in wanted.items() if v is not None}
     if wanted:
