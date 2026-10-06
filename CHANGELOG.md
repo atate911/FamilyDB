@@ -74,6 +74,35 @@ older than what is installed. It gets a date when it is released.
   weekend" are understood, so Vera brings them up then; when nothing will
   bring one up, she offers a reminder. /tasks shows a reminder already sent,
   and Tomorrow under a reminder is never the middle of the night.
+- **A morning message.** At seven (Messages, Each morning), one message a chat
+  with what is on today, a reminder from yesterday nobody acted on, what is due
+  tomorrow, and on Sundays the to-dos nothing will bring up. An idea that ends
+  this week, with a free day before then, is mentioned once. Nothing is sent on
+  an empty day, and each part has its own switch.
+- **Notices on phones and tablets for people who use only the page.** The Chat
+  link says how many of Vera's messages are new, and each of you can turn on
+  notices for your own device under Your password: "Vera has a message", never
+  her words. On an iPhone or iPad the page must be added to the Home Screen
+  first.
+- **Undo.** "Undo that", /undo, an Undo beside the page's notice after a change,
+  and a ↩ Undo button under her reply in your own Telegram chat take back your
+  last change within a day: an idea added or changed, a to-do, a plan made or
+  moved, something remembered, a list change. What cannot be taken back (how a
+  plan went, a message already sent) is said so. An idea's page and a to-do say
+  who changed them last, and from where.
+- **Shopping lists.** "We're out of milk" goes on the shopping list, once however
+  it is written; other lists by name ("the hardware list"). /list on Telegram
+  shows it with a ✓ to tap for each thing, and a new Lists page (in the menu on
+  a phone) adds, ticks and clears. For now a kid can read the lists and is told
+  to ask a parent to add.
+- **Buttons on the page.** A reminder in the page's chat has Done and the
+  snoozes under it, as on Telegram, so a kid without Telegram can tick off her
+  own. On Telegram, a tap takes away only the row it was on.
+- **A clash is said.** A plan made or moved onto something already on the
+  calendar says what it clashes with.
+- **Getting things in.** Several ideas at once on the new-idea page, one a line;
+  a photo from the page's chat, as from Telegram; and on Android, sharing a page
+  or some words to the installed page opens the chat with them in the box.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
