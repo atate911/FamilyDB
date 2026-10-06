@@ -62,11 +62,12 @@
       <li><a href="{{ target }}"{% if section == ns.section %} aria-current="page"{% endif %}>
         {{- icon(glyph) }}<span>{{ label }}</span>{{ count if count }}</a></li>
     {% endmacro %}
-    {# One tab of the phone's bar: always the word, and the count only for what is late. #}
-    {% macro tab(label, target, section, glyph, late=0) %}
+    {# One tab of the phone's bar: always the word, and a count for what is late, or new from her. #}
+    {% macro tab(label, target, section, glyph, late=0, new=0) %}
       <a href="{{ target }}"{% if section == ns.section %} aria-current="page"{% endif %}>
         {{- icon(glyph) }}<span>{{ label }}</span>
-        {%- if late %}<span class="badge badge--late">{{ late }}<span class="sr"> late</span></span>{% endif %}</a>
+        {%- if late %}<span class="badge badge--late">{{ late }}<span class="sr"> late</span></span>{% endif %}
+        {%- if new %}<span class="badge badge--act">{{ new }}<span class="sr"> new</span></span>{% endif %}</a>
     {% endmacro %}
 
     {# The phone's top bar: the brand, how she is, and the picture that opens the menu (a dot while something is worth a look). #}
@@ -86,7 +87,7 @@
           <nav aria-label="Pages">
             <ul class="nav">
               {{ nav_item('Home', url_for('web.home'), 'home', 'home') }}
-              {% if viewer.may('chat') %}{{ nav_item('Chat with ' ~ assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}{% endif %}
+              {% if viewer.may('chat') %}{{ nav_item('Chat with ' ~ assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat', count=(badge('act', shell.unread, 'new') if shell.unread else none)) }}{% endif %}
               {{ nav_item('Ideas', url_for('web.ideas'), 'ideas', 'bulb') }}
               {{ nav_item('Plans', plans_url, 'plans', 'cal', count=(badge('quiet', shell.rate, 'to rate') if shell.rate else none)) }}
               {{ nav_item('To do' if grownup else 'My to-dos', url_for('web.tasks'), 'todo', 'todo', count=(badge('late', shell.late, 'late') if shell.late else none)) }}
@@ -140,7 +141,7 @@
     {# The phone's tabs: five, by what a role may do. A kid has her list where a grown-up has Ideas; the rest is in the menu behind the picture. #}
     <nav class="tabbar" aria-label="Pages">
       {{ tab('Home', url_for('web.home'), 'home', 'home') }}
-      {% if viewer.may('chat') %}{{ tab('Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}{% endif %}
+      {% if viewer.may('chat') %}{{ tab('Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat', new=shell.unread) }}{% endif %}
       {% if grownup %}{{ tab('Ideas', url_for('web.ideas'), 'ideas', 'bulb') }}
       {% elif wishing %}{{ tab('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
       {{ tab('Plans', plans_url, 'plans', 'cal') }}

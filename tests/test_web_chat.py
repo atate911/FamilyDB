@@ -505,3 +505,19 @@ def test_a_parent_moves_between_conversations_and_never_reads_a_kids_words_on_th
     assert "a secret wish" in hers and "Her own conversation, for you to read" in hers
     assert '<form class="composer"' not in hers  # a parent only reads
     assert 'aria-current="page"' in re.search(r'<nav class="convos".*?</nav>', hers, re.S).group(0)
+
+
+def test_the_chat_link_counts_what_she_said_since_this_browser_looked(settings, clock, family):
+    """Somebody who uses only the page had no way to know she had written: the Chat link says
+    "2 new" until the chat is opened. Kept in this browser's session, no write."""
+    client = _client(settings, clock)
+    badge = re.compile(r'class="badge badge--act">(\d+) new<')
+    assert badge.search(client.get("/").text) is None  # a new browser starts from now
+    with closing(db.connect(settings.familydb_path)) as conn, db.transaction(conn):
+        for words in ("Reminder: bins out.", "Reminder: call the plumber."):
+            messages.insert_out(
+                conn, channel="web", chat_id=DEFAULT_CHAT, text=words, now="2026-09-20T21:05:00Z"
+            )
+    assert badge.search(client.get("/").text).group(1) == "2"
+    client.get("/chat")
+    assert badge.search(client.get("/").text) is None

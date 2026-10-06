@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
+from flask import session
+
 from familydb import personas
 from familydb.app import App
 from familydb.store import messages as message_store
@@ -45,10 +47,13 @@ class Frame:
     decide: int = 0
     rate: int = 0
     check: int = 0
+    # Her messages in this visitor's page conversation since this browser last looked.
+    unread: int = 0
 
     @property
     def look_at(self) -> int:
-        """Things worth a look now; the phone's picture carries a dot while there are any."""
+        """Things worth a look now; the phone's picture carries a dot while there are any. (What
+        she said that is new has its own count on Chat.)"""
         return self.late + self.decide + self.rate + self.check
 
     @property
@@ -83,7 +88,22 @@ def frame(app: App) -> Frame:
         rate = _to_rate(conn, visitor, today)
         check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
         pill = _pill(app, conn, visitor) if visitor.may("browse") else None
-    return Frame(me, pill, late, decide, rate, check)
+        unread = _unread(conn) if visitor.may("chat") else 0
+    return Frame(me, pill, late, decide, rate, check, unread)
+
+
+def _unread(conn: sqlite3.Connection) -> int:
+    """Her messages in this visitor's conversation since this browser last saw it. A browser
+    that never looked starts from now, not from everything ever said."""
+    chat_id = chat.my_chat()
+    seen = session.get(chat.SEEN_KEY)
+    if not isinstance(seen, dict) or seen.get("chat") != chat_id:
+        session[chat.SEEN_KEY] = {
+            "chat": chat_id,
+            "id": message_store.newest_from_her(conn, chat_id),
+        }
+        return 0
+    return message_store.unread(conn, chat_id, after=int(seen.get("id") or 0))
 
 
 def _late(conn: sqlite3.Connection, visitor: auth.Visitor, tz: Any, today: Any) -> int:

@@ -367,6 +367,26 @@ def last_for_chat(
     return [Message.from_row(row) for row in reversed(rows)]
 
 
+def newest_from_her(conn: sqlite3.Connection, chat_id: str) -> int:
+    """The id of the newest message she sent to a page conversation (0 for none)."""
+    row = conn.execute(
+        "SELECT max(id) FROM messages WHERE channel = 'web' AND chat_id = ? "
+        "AND direction = 'out' AND cancelled_at IS NULL",
+        (chat_id,),
+    ).fetchone()
+    return int(row[0] or 0)
+
+
+def unread(conn: sqlite3.Connection, chat_id: str, *, after: int) -> int:
+    """How many messages she sent to a page conversation after message `after`."""
+    row = conn.execute(
+        "SELECT count(*) FROM messages WHERE channel = 'web' AND chat_id = ? "
+        "AND direction = 'out' AND cancelled_at IS NULL AND id > ?",
+        (chat_id, after),
+    ).fetchone()
+    return int(row[0])
+
+
 def has_before(conn: sqlite3.Connection, chat_id: str, message_id: int) -> bool:
     """Whether a chat holds anything older than this message."""
     return (

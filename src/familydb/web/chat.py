@@ -44,6 +44,9 @@ bp = Blueprint("chat", __name__)
 WHO_KEY = "who"
 # Whether this browser sends where it is with each message: off until someone ticks the box.
 WHERE_KEY = "send_where"
+# The newest of her messages this browser has seen, and in which conversation: the Chat link's
+# "2 new" (shell.py). Kept in the session cookie, so per device and never a write.
+SEEN_KEY = "seen"
 THREAD_LIMIT = 60
 # While an answer is on its way a page asks again soon, then less often, then stops and leaves a
 # visible link: a page left open does not ask all night. Seconds before each next look, by what the
@@ -262,6 +265,11 @@ def page(
             ]
         left = messages_left(app, conn, visitor.member)
         pressed = {} if reading is not None else _task_buttons(conn, thread)
+        if reading is None and before is None:  # the newest is on screen: nothing is new now
+            session[SEEN_KEY] = {
+                "chat": chat_id,
+                "id": message_store.newest_from_her(conn, chat_id),
+            }
         undoing = {} if reading is not None else _undoable(app, conn, thread, visitor)
     # The log keeps a turn's tool calls against the question; the page shows them under the answer.
     answered = {message.reply_to for message in thread if message.reply_to is not None}
