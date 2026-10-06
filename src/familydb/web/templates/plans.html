@@ -63,4 +63,5 @@
       </div>
     {% endif %}
   </div>
+  {% if grownup %}<p class="page-foot mt-6"><a href="{{ url_for('web.export_plans') }}">{{ icon('arrowdown', size='sm') }}Download the plans for another calendar</a></p>{% endif %}
 {% endblock %}

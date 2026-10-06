@@ -160,6 +160,14 @@ sudo systemctl start familydb                      # or: docker compose start bo
 
 A key or token saved on the settings page lives in this file, so it is in every backup; section 11 says when to keep keys in `.env` instead.
 
+**Taking the data away.** A backup is the database itself, for FamilyDB to read. To take the family's data somewhere else:
+
+```bash
+familydb export ~/familydb-export       # docker compose exec bot familydb export /data/export
+```
+
+writes `plans.ics` (every plan, for any calendar), `ideas.csv` and `tasks.csv` (spreadsheets), and `everything.json` (people, ideas, places, how things went, plans, things to do, what is remembered, wish lists, lists and every message), with no key, password, Telegram id or device in any of them. On the page, a grown-up downloads the first three from the foot of Plans, Ideas and To do; an admin downloads everything from Sign-in and security, after typing their password again.
+
 ## 8. Upgrades
 
 ```bash

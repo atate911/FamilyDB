@@ -41,7 +41,7 @@ from flask import (
 )
 from pydantic import ValidationError
 
-from familydb import passwords, personas, voice
+from familydb import export, passwords, personas, voice
 from familydb.agent import gateway, providers
 from familydb.agent.providers import prices
 from familydb.agent.spending import spent_today
@@ -731,6 +731,36 @@ def reveal() -> tuple[str, int]:
         revealed=(name, value),
         said=f"The {KEY_LABELS[name]} is shown below, this once.",
     )
+
+
+@bp.post("/settings/export")
+def export_everything() -> Response | tuple[str, int]:
+    """Everything the family has kept, as one JSON file (export.py), after the sign-in password
+    is typed again as for showing a key, and counted with it against guessing."""
+    app = _app()
+    if (complaint := auth.refused()) is not None:
+        return page("security", error=complaint, status=400)
+    who = auth.client_address()
+    attempt = f"{who} reveal"
+    lockout = current_app.config["FAMILYDB_LOCKOUT"]
+    now = app.clock.now()
+    if lockout.locked(attempt, now):
+        return page("security", error=LOCKED_OUT, status=429)
+    if auth.visitor().signed_in:
+        given = request.form.get("password", "")
+        if not given:
+            return page("security", error=NEEDS_PASSWORD, status=400)
+        if not auth.confirms(given):
+            lockout.failed(attempt, now)
+            return page("security", error=WRONG_PASSWORD, status=401)
+        lockout.passed(attempt)
+    with closing(app.connect()) as conn:
+        text = export.everything_json(conn, now)
+    log.warning("everything the family keeps was taken away by %s", who)
+    response = Response(text, mimetype="application/json")
+    response.headers["Content-Disposition"] = 'attachment; filename="familydb-everything.json"'
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 # -- which company answers, and its key --------------------------------------------------------

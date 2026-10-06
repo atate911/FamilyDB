@@ -101,6 +101,10 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "web.edit_task": "change",
     "web.memory": "browse",
     "web.status": "browse",
+    # The family's data to take away (export.py): a grown-up's; everything is an admin's.
+    "web.export_plans": "browse",
+    "web.export_ideas": "browse",
+    "web.export_tasks": "browse",
     "web.wishes": "wish",
     "edits.add_wish": "wish",
     "edits.move_wish": "wish",

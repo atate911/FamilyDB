@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from contextlib import closing
 from datetime import date, timedelta
 from pathlib import Path
@@ -20,7 +21,7 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, health, personas, presents, roles
+from familydb import agenda, export, health, personas, presents, roles
 from familydb.app import App
 from familydb.availability import enrichment_available
 from familydb.dates import next_birthday
@@ -40,6 +41,7 @@ from familydb.web import auth, chat, shell, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
+log = logging.getLogger(__name__)
 bp = Blueprint("web", __name__)
 
 LIST_LIMIT = 200
@@ -549,6 +551,39 @@ def lists_page() -> str:
                 }
             )
     return render_template("lists.html", lists=shown)
+
+
+def _download(text: str, name: str, mimetype: str) -> Response:
+    log.info("%s was downloaded by %s", name, auth.client_address())
+    response = Response(text, mimetype=mimetype)
+    response.headers["Content-Disposition"] = f'attachment; filename="{name}"'
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@bp.get("/export/plans.ics")
+def export_plans() -> Response:
+    """The plans as a calendar file any calendar can open (export.py), for a grown-up."""
+    app = _app()
+    with closing(app.connect()) as conn:
+        text = export.plans_ics(conn, app.settings, app.clock.now())
+    return _download(text, "familydb-plans.ics", "text/calendar")
+
+
+@bp.get("/export/ideas.csv")
+def export_ideas() -> Response:
+    """The ideas as a spreadsheet, without a present kept from whoever asks (presents.py)."""
+    with closing(_app().connect()) as conn:
+        text = export.ideas_csv(conn, presents.kept_ids(conn, auth.visitor().member))
+    return _download(text, "familydb-ideas.csv", "text/csv")
+
+
+@bp.get("/export/tasks.csv")
+def export_tasks() -> Response:
+    """The things to do as a spreadsheet, for a grown-up, who sees everybody's."""
+    with closing(_app().connect()) as conn:
+        text = export.tasks_csv(conn)
+    return _download(text, "familydb-to-dos.csv", "text/csv")
 
 
 @bp.get("/memory")

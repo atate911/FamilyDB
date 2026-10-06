@@ -686,6 +686,21 @@ def doctor(
 
 
 @app.command()
+def export(
+    folder: Path = typer.Argument(..., help="Where to write the four files."),
+) -> None:
+    """Write the family's data to a folder: plans.ics, ideas.csv, tasks.csv and everything.json,
+    with no key, password or device in them (familydb/export.py)."""
+    from familydb import export as taking
+
+    application = build_app()
+    with closing(_ready(application)) as conn:
+        written = taking.write_all(conn, application.settings, folder, application.clock.now())
+    for path in written:
+        typer.echo(str(path))
+
+
+@app.command()
 def health() -> None:
     """Whether FamilyDB is well: the database answers and the scheduled jobs are running.
     Exits 1 when not, for Docker's HEALTHCHECK or a monitor."""

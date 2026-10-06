@@ -135,6 +135,12 @@ def latest_by_idea(conn: sqlite3.Connection) -> dict[int, tuple[date, date]]:
     }
 
 
+def everything(conn: sqlite3.Connection) -> list[Plan]:
+    """Every plan not cancelled, earliest first: for the calendar file (export.py)."""
+    rows = conn.execute("SELECT * FROM plans WHERE status != 'cancelled' ORDER BY start, id")
+    return [Plan.from_row(row) for row in rows]
+
+
 def list_between(conn: sqlite3.Connection, start: str, end: str) -> list[Plan]:
     rows = conn.execute(
         "SELECT * FROM plans WHERE status != 'cancelled' AND start >= ? AND start < ? "

@@ -99,6 +99,12 @@ def list_all(
     return [task for row in rows if (task := get(conn, row["id"])) is not None]
 
 
+def everything(conn: sqlite3.Connection) -> list[Task]:
+    """Every task, whatever became of it, oldest first: for the spreadsheet (export.py)."""
+    rows = conn.execute("SELECT id FROM tasks ORDER BY id").fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
 def in_chat(
     conn: sqlite3.Connection, channel: str, chat_id: str, *, limit: int = 100
 ) -> list[Task]:

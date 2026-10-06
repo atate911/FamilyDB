@@ -431,6 +431,7 @@ The templates show the layout; these are the decisions.
   phone's menu, for the shop): a card per list, the shopping list first, each thing
   with the same tick as a to-do, a box to add to it (one a line), and what was got folded away
   under "Got", struck through, with Put back beside each and one button to clear them.
+- **Taking the data away**: one quiet link at the foot of Plans, Ideas and To do for a grown-up ("Download the plans for another calendar", "…the ideas as a spreadsheet"), and on Sign-in and security a card for an admin with the three links and one form, the password again, for everything.
 - **Your password** also holds **Notifications on this device**: one sentence of what a notice
   says (that she has a message, never her words), a line saying how it stands on this device, and
   one button to turn it on or off. With scripts off the line says that it needs them; on an iPhone
