@@ -11,7 +11,8 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 
-COPY README.md ./
+# The changelog too: the Status page shows what is new in the version running (whatsnew.py).
+COPY README.md CHANGELOG.md ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev

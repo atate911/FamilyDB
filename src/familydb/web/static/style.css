@@ -2274,3 +2274,7 @@ button.mic.listening {
 .ls-dots .d4 { background: var(--pink); }
 .ls-dots .d5 { background: var(--orange); }
 .ls-dots .d6 { background: var(--red); }
+
+/* What is new in the version running, on the Status page (whatsnew.py). */
+.whats-new dt { font-weight: 600; margin-top: 0.75rem; }
+.whats-new dd { margin: 0.2rem 0 0; }

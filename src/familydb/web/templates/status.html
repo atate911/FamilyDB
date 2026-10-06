@@ -305,6 +305,21 @@
     {% endif %}
   </section>
 
+  {% if whats_new %}
+    <section class="panel" id="whats-new">
+      <h2>{{ icon('sparkles') }}What’s new</h2>
+      <p class="muted">In the version running now: {{ whats_new.heading }}.</p>
+      {% if whats_new.items %}
+        <details>
+          <summary>{{ whats_new.items | length }} change{{ '' if whats_new.items | length == 1 else 's' }} since the last</summary>
+          <dl class="whats-new">
+            {% for what, said in whats_new.items %}<dt>{{ what }}</dt><dd>{{ said }}</dd>{% endfor %}
+          </dl>
+        </details>
+      {% endif %}
+    </section>
+  {% endif %}
+
   {% if troubles.calls or troubles.lookups %}
     <section class="panel trouble">
       <h2>{{ icon('warning') }}Worth a look</h2>

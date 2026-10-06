@@ -9,7 +9,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from familydb import alerts
+from familydb import alerts, whatsnew
 from familydb import model_watch as watch
 from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
@@ -436,6 +436,7 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "model_watch": model_watch(app, conn),
         "activity": activity(app, conn),
         "activity_days": ACTIVITY_DAYS,
+        "whats_new": whatsnew.latest(),
     }
 
 
