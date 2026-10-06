@@ -43,7 +43,7 @@ from familydb.config import Settings
 from familydb.store import logins
 from familydb.store.logins import Login, SignIn
 from familydb.store.members import Member
-from familydb.web import views
+from familydb.web import looks, views
 
 log = logging.getLogger(__name__)
 
@@ -565,6 +565,8 @@ def sign_in() -> Response | tuple[str, int]:
         log.info("web login as member %s from %s", found.member.id, who)
         response = redirect(url_for("family.you") if found.login.temporary else target or HOME)
         remember_device(response, settings, found.login)
+        # Their look comes with them to this phone, and the sign-in page here wears it next time.
+        looks.remember(response, found.member.look, secure=settings.web_trust_proxy)
         return response
     if found is None and name:
         passwords.hash_matches(_decoy(), given)

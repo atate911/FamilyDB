@@ -14,7 +14,7 @@
 
   <ul class="slist mt-3">
     {% set lead %}{{ tile('palette') }}{% endset %}
-    {{ srow(url_for('look.show'), 'Look', 'How the page looks, in this browser', lead=lead) }}
+    {{ srow(url_for('look.show'), 'Look', ('Yours, on every phone and computer you use' if not grownup else 'Yours, on every phone and computer you sign in on') if shell.me.name else 'How the page looks, in this browser', lead=lead) }}
     {% if not grownup %}
       {% set lead %}{{ tile('bulb') }}{% endset %}
       {{ srow(url_for('web.ideas'), 'Ideas', 'Places to go and things to try', lead=lead) }}

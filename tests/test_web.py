@@ -877,7 +877,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
             for alias in node.names
         }
         assert synced <= {"event_changes"}, f"{name} imports {synced}"
-        if name != "family.py":
+        if name not in {"family.py", "look.py"}:
             family_rules = any(
                 isinstance(node, ast.ImportFrom)
                 and (
@@ -1125,3 +1125,25 @@ def test_the_added_date_is_the_family_s_date(settings, clock, conn, family) -> N
         )
     page = _client(settings, clock).get(f"/idea/{idea.id}")
     assert "added Sun 20 Sep" in page.text
+
+
+def test_the_look_page_writes_only_a_look_and_only_through_the_rules() -> None:
+    """Somebody's look follows them (`members.look`), written through `family.choose_look`: that
+    is the one call the Look page makes into the rules, and it reaches no table itself."""
+    import ast
+
+    import familydb.web as package
+
+    module = Path(package.__file__).parent / "look.py"
+    tree = ast.parse(module.read_text("utf-8"), filename=module.name)
+    called = {
+        node.func.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "rules"
+    }
+    assert called == {"choose_look"}
+    reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+    assert not any(name.startswith("familydb.store") for name in reached)

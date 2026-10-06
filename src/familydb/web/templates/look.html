@@ -1,23 +1,19 @@
-{% extends "base.html" %}
-{% from "_ui.html" import page_head, icon %}
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, page_head with context %}
 {% block title %}Look · {{ site_title }}{% endblock %}
 {% block content %}
-  {{ page_head('Look', 'How the page looks on this phone or computer. It is kept in this browser, so each person and each screen can have their own.', 'palette') }}
+  {{ page_head('Look', 'How the page looks for you. It is kept with your name, so it comes with you to every phone and computer you sign in on, and everybody else keeps their own.' if follows else 'How the page looks on this phone or computer. It is kept in this browser, so each screen can have its own.') }}
 
   <form class="look-form" method="post" action="{{ url_for('look.save') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-
-    <fieldset class="look-modes">
-      <legend>Day and night</legend>
+    <fieldset class="card look-modes">
+      <legend class="sgroup__h">{{ icon('sun') }}Day and night</legend>
       <div class="look-mode-row">
         {% for key, words in mode_words.items() %}
-          <label class="look-mode">
-            <input type="radio" name="mode" value="{{ key }}"{% if key == mode %} checked{% endif %} />
-            <span><strong>{{ words[0] }}</strong><span class="muted">{{ words[1] }}</span></span>
-          </label>
+          <label class="look-mode"><input type="radio" name="mode" value="{{ key }}"{% if key == mode %} checked{% endif %} /><span><b>{{ words[0] }}</b><span class="small muted">{{ words[1] }}</span></span></label>
         {% endfor %}
       </div>
-      <p class="hint">{{ icon('sun') }}Phosphor is a green screen, so it has no day: it is always night.</p>
+      <p class="field__hint mt-3">Phosphor and Afterglow are green screens, so they have no day: they are always night, whatever is chosen here.</p>
     </fieldset>
 
     <fieldset class="looks">
@@ -28,24 +24,19 @@
             <label class="look-choice">
               <span class="look-head">
                 <input type="radio" name="theme" value="{{ one.key }}"{% if one.key == wearing.key %} checked{% endif %} />
-                <span class="look-name">{{ one.name }}{% if one.key == wearing.key %} <span class="tag">In use</span>{% endif %}{% if one.key == default %} <span class="tag">The default</span>{% endif %}</span>
+                <span class="look-name">{{ one.name }}{% if one.key == wearing.key %}<span class="tag tag--ok">{{ icon('check') }}In use</span>{% endif %}{% if one.key == default %}<span class="tag tag--off">The default</span>{% endif %}</span>
               </span>
               <span class="look-blurb">{{ one.blurb }}</span>
               <span class="look-samples" aria-hidden="true">
-                {% if one.has_day %}
-                  {{ sample(one.key, 'light', 'Day') }}
-                  {{ sample(one.key, 'dark', 'Night') }}
-                {% else %}
-                  {{ sample(one.key, none, 'Night only') }}
-                {% endif %}
+                {% if one.has_day %}{{ sample(one.key, 'light', 'Day') }}{{ sample(one.key, 'dark', 'Night') }}
+                {% else %}{{ sample(one.key, none, 'Night only') }}{% endif %}
               </span>
             </label>
           </li>
         {% endfor %}
       </ul>
     </fieldset>
-
-    <div class="actions"><button type="submit">{{ icon('palette') }}Use this look</button></div>
+    <div class="save-bar"><p class="small">{{ 'Yours alone, on every device you use.' if follows else 'Kept in this browser.' }}</p><button class="btn btn--primary" type="submit">{{ icon('palette') }}Use this look</button></div>
   </form>
 {% endblock %}
 

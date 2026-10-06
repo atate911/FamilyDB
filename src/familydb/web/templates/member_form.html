@@ -1,158 +1,127 @@
-{% extends "base.html" %}
-{% from "_ui.html" import icon, page_head %}
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, avatar with context %}
 {% block title %}{{ person.name }} · {{ site_title }}{% endblock %}
 {% block content %}
-  {{ page_head(person.name, none, 'user', [('Family', url_for('family.show'))]) }}
-  <form class="panel form" method="post" action="{{ url_for('family.change', member_id=person.id) }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-    <input type="hidden" name="once" value="{{ once_token() }}" />
-    {# What the profile was when this was drawn: a save on top of somebody else's is refused. #}
-    <input type="hidden" name="revision" value="{{ person.revision }}" />
-    <div class="field">
-      <label for="name">Name</label>
-      <input id="name" name="name" required maxlength="80" value="{{ person.name }}" />
-    </div>
-    <div class="field">
-      <label for="role">Role</label>
-      <select id="role" name="role">
-        {% for role in roles %}
-          <option value="{{ role }}" {{ 'selected' if role == person.role }}>{{ role }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="field">
-      <label for="birth_date">Birthday <span class="optional">optional</span></label>
-      <input id="birth_date" name="birth_date" type="date" max="{{ today }}"
-             value="{{ person.birth_date or '' }}" />
-      <span class="muted">{% if person.age is not none %}{{ person.age }} today. {% endif %}Only the age goes to {{ assistant }}, never the date.</span>
-    </div>
-    {# Kids only: it shapes her screen and how {{ assistant }} speaks to her (docs/WISHES.md).
-       Anybody else's form sends nothing, so what is stored stays. #}
-    {% if person.role == 'kid' %}
-      <div class="field">
-        <label for="gender">Male or female</label>
-        <select id="gender" name="gender">
-          <option value="" {{ 'selected' if not person.gender }}>Not said</option>
-          {% for value, words in genders.items() %}
-            <option value="{{ value }}" {{ 'selected' if value == person.gender }}>{{ words }}</option>
-          {% endfor %}
-        </select>
+  <a class="crumb" href="{{ url_for('family.show') }}">{{ icon('chevl', size='sm') }}Family</a>
+  <div class="page-head">
+    <div class="idea-head">{{ avatar(person.slot, person.name[:1] | upper, 'xl') }}<div><h1>{{ person.name }}</h1>
+      <p class="lede">{{ person.role | capitalize }}{% if person.age is not none %} · {{ person.age }}{% endif %} · {{ 'on the list' if person.active else 'switched off' }}</p></div></div>
+  </div>
+  {% if made %}
+    <section class="banner banner--ok shown-once" role="status" tabindex="-1" id="made" aria-labelledby="h-made">
+      <span class="banner__ic">{{ icon('lock') }}</span>
+      <div class="banner__text">
+        <h2 id="h-made">{{ person.name }}’s starting password</h2>
+        <p class="made"><code class="code made__pw">{{ made }}</code></p>
+        <p>Shown this once: send it to {{ person.name }} now. They sign in as {{ person.name }} with it, and choose their own password straight away. Once you leave this page it can’t be shown again; make a new one if it’s lost.</p>
       </div>
-    {% endif %}
-    <div class="field">
-      <label for="telegram_id">Telegram id</label>
-      <input id="telegram_id" name="telegram_id" inputmode="numeric"
-             value="{{ person.telegram_id or '' }}" placeholder="none" />
-      {% if person.elsewhere %}<span class="muted">Also known on {{ person.elsewhere }}.</span>{% endif %}
-    </div>
-    <div class="field">
-      <label for="active">On the list</label>
-      <select id="active" name="active">
-        <option value="yes" {{ 'selected' if person.active }}>yes, the bot talks to them</option>
-        <option value="no" {{ 'selected' if not person.active }}>no, switched off</option>
-      </select>
-    </div>
-    <div class="field wide actions">
-      <button type="submit">{{ icon('check') }}Save</button>
-      <a class="button ghost" href="{{ url_for('family.show') }}">Cancel</a>
-    </div>
-  </form>
-  <p class="muted small">Switching somebody off keeps everything they ever said and did; the bot just
-    stops answering them, including anything they sent that is still waiting.</p>
+    </section>
+  {% endif %}
+  {% if invite %}
+    <section class="banner banner--ok shown-once" role="status" tabindex="-1" id="invited" aria-labelledby="h-invite">
+      <span class="banner__ic">{{ icon('send') }}</span>
+      <div class="banner__text">
+        <h2 id="h-invite">A link for {{ person.name }}’s Telegram</h2>
+        <p class="made"><code class="code made__pw">{{ invite }}</code></p>
+        <p>Shown this once. It works once, for {{ invite_hours }} hours: opened on their phone, pressing Start links their Telegram to {{ person.name }}, and {{ assistant }} welcomes them. Whoever opens it first is taken for {{ person.name }}, so send it to them alone.</p>
+      </div>
+    </section>
+  {% endif %}
 
-  {# A link that links their Telegram to them: shown once, since only a hash of it is kept. #}
-  <section class="panel" id="telegram-link">
-    <h2>{{ icon('send') }}Linking their Telegram</h2>
-    {% if invite %}
-      <p class="said" role="status">Send {{ person.name }} this link:
-        <code class="made">{{ invite }}</code></p>
-      <p class="muted">Shown this once. It works once, for {{ invite_hours }} hours: opened on their
-        phone, pressing Start links their Telegram to {{ person.name }}, and the bot welcomes them.
-        Whoever opens it first is taken for {{ person.name }}, so send it to them alone.</p>
-    {% elif not person.active %}
-      <p class="muted">Switched off, so there is nothing to link.</p>
-    {% elif bot %}
-      <p class="muted">
-        {%- if person.telegram_id %} The bot knows {{ person.name }} on Telegram. For a new phone
-          or account, make them a link:
-        {%- else %} Instead of looking up their Telegram id, make {{ person.name }} a link:
-        {%- endif %} opened on their phone, pressing Start links their Telegram to them. It works
-        once, for {{ invite_hours }} hours, and a new one replaces the last.</p>
-      <form method="post" action="{{ url_for('family.invite', member_id=person.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-        <input type="hidden" name="once" value="{{ once_token() }}" />
-        <button type="submit">{{ icon('send') }}Make a link for {{ person.name }}</button>
-      </form>
-    {% else %}
-      <p class="muted">Once the Telegram bot is connected, a link can be made here that links
-        {{ person.name }}'s Telegram when they open it and press Start.</p>
-    {% endif %}
-  </section>
-
-  <section class="panel" id="signing-in">
-    <h2>{{ icon('key') }}Signing in to this page</h2>
-    {% if made %}
-      <p class="said" role="status">{{ person.name }}'s starting password:
-        <code class="made">{{ made }}</code></p>
-      <p class="muted">Shown this once: send it to {{ person.name }} now. They sign in as
-        {{ person.name }} with it, and choose their own password straight away.</p>
-    {% endif %}
-    {% if not personal %}
-      <p class="muted">Everybody signs in with the family password for now.
-        <a href="{{ url_for('family.you') }}">Choose your own password first</a>, as an admin;
-        then you can give everybody else a starting password here.</p>
-    {% elif mine %}
-      <p class="muted">This is you. <a href="{{ url_for('family.you') }}">Change your
-        password</a> on the Your password page.</p>
-    {% elif not person.role_may_sign_in %}
-      <p class="muted">A {{ person.role }} does not sign in to this page.</p>
-    {% elif not person.active %}
-      <p class="muted">Switched off, so they cannot sign in.</p>
-    {% else %}
-      <p class="muted">
-        {% if person.sign_in == 'own' %}Signs in with a password of their own.
-        {% elif person.sign_in == 'starting' %}Has a starting password they have not used yet.
-        {% else %}Cannot sign in to this page yet.{% endif %}
-      </p>
-      <div class="actions">
-        <form method="post" action="{{ url_for('family.sign_in_for', member_id=person.id) }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-          <input type="hidden" name="once" value="{{ once_token() }}" />
-          <input type="hidden" name="action" value="start" />
-          <button type="submit">{{ icon('key') }}{{ 'Make a new starting password' if person.sign_in else 'Make a starting password' }}</button>
-        </form>
-        {% if person.sign_in %}
-          <form method="post" action="{{ url_for('family.sign_in_for', member_id=person.id) }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-            <input type="hidden" name="once" value="{{ once_token() }}" />
-            <input type="hidden" name="action" value="remove" />
-            <button class="danger" type="submit">Take their password away</button>
-          </form>
+  <div class="idea-grid mt-4">
+    <form class="card form form--tight" method="post" action="{{ url_for('family.change', member_id=person.id) }}" aria-labelledby="h-prof">
+      <h2 class="card__head" id="h-prof">About {{ person.name }}</h2>
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+      {# What the profile was when this was drawn: a save on top of somebody else's is refused. #}
+      <input type="hidden" name="revision" value="{{ person.revision }}" />
+      <div class="form__row">
+        <div class="field"><label class="field__label" for="p-name">Name</label><input id="p-name" type="text" name="name" value="{{ person.name }}" required maxlength="80" /></div>
+        <div class="field"><label class="field__label" for="p-role">Role</label>
+          <select id="p-role" name="role">{% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == person.role }}>{{ role | capitalize }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="form__row">
+        <div class="field"><label class="field__label" for="p-bd">Birthday <span class="opt">(optional)</span></label>
+          <input id="p-bd" type="date" name="birth_date" value="{{ person.birth_date or '' }}" max="{{ today }}" aria-describedby="p-bd-h" />
+          <span class="field__hint" id="p-bd-h">{% if person.age is not none %}{{ person.age }} today. {% endif %}Only the age goes to {{ assistant }}, never the date.</span></div>
+        {# Kids only: it shapes her screen and how she is spoken to (docs/WISHES.md). Anybody else's form sends nothing, so what is stored stays. #}
+        {% if person.role == 'kid' %}
+          <div class="field"><label class="field__label" for="p-g">Male or female</label>
+            <select id="p-g" name="gender" aria-describedby="p-g-h"><option value="" {{ 'selected' if not person.gender }}>Not said</option>
+              {% for value, words in genders.items() %}<option value="{{ value }}" {{ 'selected' if value == person.gender }}>{{ words | capitalize }}</option>{% endfor %}</select>
+            <span class="field__hint" id="p-g-h">Kids only: it shapes how {{ assistant }} speaks to them.</span></div>
         {% endif %}
       </div>
-      {% if person.sign_in %}
-        <p class="muted small">A new starting password signs them out on every phone and
-          computer: the thing to do for a lost phone.</p>
+      <div class="form__row">
+        <div class="field"><label class="field__label" for="p-tg">Telegram id</label>
+          <input id="p-tg" type="text" name="telegram_id" inputmode="numeric" value="{{ person.telegram_id or '' }}" placeholder="None" />
+          {% if person.elsewhere %}<span class="field__hint">Also known on {{ person.elsewhere }}.</span>{% endif %}</div>
+        <div class="field"><label class="field__label" for="p-on">On the list</label>
+          <select id="p-on" name="active"><option value="yes" {{ 'selected' if person.active }}>Yes, {{ assistant }} talks to them</option><option value="no" {{ 'selected' if not person.active }}>No, switched off</option></select></div>
+      </div>
+      <p class="small muted">Switching somebody off keeps everything they ever said and did; {{ assistant }} just stops answering them, including anything they sent that is still waiting.</p>
+      <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}Save</button><a class="linkbtn" href="{{ url_for('family.show') }}">Cancel</a></div>
+    </form>
+
+    <div class="aside-stack">
+      <section class="card" id="signing-in" aria-labelledby="h-si">
+        <h2 class="card__head" id="h-si">{{ icon('lock') }}Signing in to this page</h2>
+        {% if not personal %}
+          <p class="small">Everybody signs in with the family password for now. <a href="{{ url_for('family.you') }}">Choose your own password first</a>, as an admin; then you can give everybody else a starting password here.</p>
+        {% elif mine %}
+          <p>This is you. <a href="{{ url_for('family.you') }}">Change your password</a> on the Your password page.</p>
+        {% elif not person.role_may_sign_in %}
+          <p>A {{ person.role }} does not sign in to this page.</p>
+        {% elif not person.active %}
+          <p>Switched off, so they cannot sign in.</p>
+        {% else %}
+          <p>{% if person.sign_in == 'own' %}Signs in with a password of their own.
+            {%- elif person.sign_in == 'starting' %}Has a starting password they haven’t used yet.
+            {%- else %}Cannot sign in to this page yet.{% endif %}</p>
+          <div class="stack-actions">
+            <form method="post" action="{{ url_for('family.sign_in_for', member_id=person.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="action" value="start" />
+              <button class="btn btn--quiet btn--sm" type="submit">{{ icon('lock', size='sm') }}{{ 'Make a new starting password' if person.sign_in else 'Make a starting password' }}</button></form>
+            {% if person.sign_in %}
+              <form method="post" action="{{ url_for('family.sign_in_for', member_id=person.id) }}">
+                <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="action" value="remove" />
+                <button class="textbtn textbtn--danger" type="submit">Take their password away</button></form>
+            {% endif %}
+          </div>
+          {% if person.sign_in %}<p class="small muted mt-3">A new starting password signs them out on every phone and computer: the thing to do for a lost phone.</p>{% endif %}
+        {% endif %}
+      </section>
+
+      {# A link that links their Telegram to them: shown once, since only a hash of it is kept. #}
+      <section class="card" id="telegram-link" aria-labelledby="h-tl">
+        <h2 class="card__head" id="h-tl">{{ icon('send') }}Linking their Telegram</h2>
+        {% if not person.active %}
+          <p class="small">Switched off, so there is nothing to link.</p>
+        {% elif bot %}
+          <p class="small">
+            {%- if person.telegram_id %}{{ assistant }} knows {{ person.name }} on Telegram. For a new phone or account, make them a link:
+            {%- else %}Instead of looking up their Telegram id, make {{ person.name }} a link:{% endif %}
+            opened on their phone, pressing Start links their Telegram to them. It works once, for {{ invite_hours }} hours, and a new one replaces the last.</p>
+          <form method="post" action="{{ url_for('family.invite', member_id=person.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+            <button class="btn btn--quiet btn--sm" type="submit">{{ icon('send', size='sm') }}Make a link for {{ person.name }}</button></form>
+        {% else %}
+          <p class="small">Once the Telegram bot is connected, a link can be made here that links {{ person.name }}’s Telegram when they open it and press Start.</p>
+          {% if visitor().may('manage') %}<a class="linkbtn" href="{{ url_for('settings.section', name='connections') }}">Connect Telegram</a>{% endif %}
+        {% endif %}
+      </section>
+
+      {# Folded, red, behind a tick box. Never yourself: another admin takes you off, so nobody locks themselves out. #}
+      {% if not mine %}
+        <details class="card fold fold--danger" id="remove">
+          <summary><h2>Take {{ person.name }} off the list for good</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+          <form class="fold__body" method="post" action="{{ url_for('family.remove', member_id=person.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="revision" value="{{ person.revision }}" />
+            <p class="small">Their name, how they sign in, their Telegram link, where they last were and what {{ assistant }} remembers about them are deleted. What they said stays in the chat without their name, so conversations still read, and the ideas, plans and things to do they added stay, as the family’s. This can’t be undone: to stop {{ assistant }} answering them for now, switch them off instead.</p>
+            <label class="check"><input type="checkbox" name="sure" value="yes" required />I’m sure: take {{ person.name }} off for good</label>
+            <div class="actions"><button class="btn btn--danger" type="submit">{{ icon('x') }}Take {{ person.name }} off</button></div>
+          </form>
+        </details>
       {% endif %}
-    {% endif %}
-  </section>
-  {# Folded, red, behind a tick box. Never yourself: another admin takes you off, so nobody locks themselves out. #}
-  {% if not mine %}
-    <details class="panel fold danger-zone" id="remove">
-      <summary><span class="h2">Take {{ person.name }} off the list for good</span></summary>
-      <p class="muted">Their name, how they sign in, their Telegram link, where they last were and
-        what {{ assistant if has_persona else 'the bot' }} remembers about them are deleted. What
-        they said stays in the chat without their name, so conversations still read, and the
-        ideas, plans and things to do they added stay, as the family's. This cannot be undone:
-        to stop the bot answering them for now, switch them off above instead.</p>
-      <form method="post" action="{{ url_for('family.remove', member_id=person.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-        <input type="hidden" name="once" value="{{ once_token() }}" />
-        <input type="hidden" name="revision" value="{{ person.revision }}" />
-        <label class="check"><input type="checkbox" name="sure" value="yes" required />I am sure: take
-          {{ person.name }} off for good</label>
-        <div class="actions"><button class="danger" type="submit">{{ icon('x') }}Take {{ person.name }} off</button></div>
-      </form>
-    </details>
-  {% endif %}
+    </div>
+  </div>
 {% endblock %}

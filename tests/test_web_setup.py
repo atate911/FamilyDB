@@ -106,7 +106,7 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     # 2. Your own password, which signs this browser in as Sam and ends the installer's.
     sam = members.find_by_name(conn, "Sam")
     page = fresh.get("/setup/password").text
-    assert f'name="member" value="{sam.id}"' in page and "For <strong>Sam</strong>" in page
+    assert f'name="member" value="{sam.id}"' in page and "For <b>Sam</b>" in page
     ours = "pancakes on sunday mornings"
     back = _post(fresh, "password", "/you", member=str(sam.id), new=ours, again=ours)
     assert back.headers["Location"] == "/setup/password"

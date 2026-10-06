@@ -315,7 +315,20 @@ def you() -> str | tuple[str, int]:
 def _you_page(*, error: str | None = None, status: int = 200) -> tuple[str, int]:
     with closing(_app().connect()) as conn:
         own = own_form(conn)
-    return render_template("you.html", error=error, own=own), status
+        parents = [
+            person.display_name
+            for person in member_store.list_all(conn)
+            if person.active and roles.may(person.role, "decide")
+        ]
+    return (
+        render_template(
+            "you.html",
+            error=error,
+            own=own,
+            parents_text=views.names_text([{"name": name} for name in parents]),
+        ),
+        status,
+    )
 
 
 def own_form(conn: Any) -> dict[str, Any]:
@@ -438,6 +451,7 @@ def _person(person: member_store.Member, login: Login | None = None) -> dict[str
     return {
         "id": person.id,
         "name": person.display_name,
+        "slot": person.slot or 0,
         "role": person.role,
         "birth_date": person.birth_date,
         "age": rules.age_on(person.birth_date, today),

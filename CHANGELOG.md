@@ -56,6 +56,12 @@ older than what is installed. It gets a date when it is released.
   and what was answered lately, and a kid sees what to do next about what Vera
   could not put on her list. What Vera knows groups what the family has told her
   by person, in each person's colour.
+- **A new Family, Your password and Look.** The family list, each person's page
+  and the password pages are redone, with a starting password shown once in a
+  box of its own. Each person's look is now kept with them, so it comes with
+  them to every phone and computer they sign in on, and everybody else keeps
+  their own. A new look, Afterglow, joins the others: charcoal glass with faint
+  scanlines, always night.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

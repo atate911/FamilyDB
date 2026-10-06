@@ -1718,3 +1718,6 @@ li:target { border-radius: var(--r-md); }
   .wm__cur, .pill-health--busy::before, .typing i { animation: none; }
   .typing i { opacity: .7; }
 }
+
+/* ---------- 14. Added with the family pages (step 9) ---------- */
+.item--off { opacity: .72; }

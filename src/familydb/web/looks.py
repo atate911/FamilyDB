@@ -5,6 +5,7 @@ the page."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 COOKIE = "fdb_look"
 COOKIE_DAYS = 365
@@ -12,7 +13,7 @@ DEFAULT = "kitchen"
 AUTO, LIGHT, DARK = "auto", "light", "dark"
 MODES = (AUTO, LIGHT, DARK)
 MODE_WORDS = {
-    AUTO: ("Match my device", "Day by day and night by night, as the phone or computer does."),
+    AUTO: ("Match my device", "Day by day and night by night, as each phone or computer does."),
     LIGHT: ("Always day", "The light version, whatever the device is set to."),
     DARK: ("Always night", "The dark version, whatever the device is set to."),
 }
@@ -45,6 +46,14 @@ LOOKS = (
         "green screen was.",
         False,
         ("#0b0e0d", "#0b0e0d"),
+    ),
+    Look(
+        "afterglow",
+        "Afterglow",
+        "From the Phosphor family of green screens: Kitchen Table as charcoal glass with faint "
+        "scanlines, and Vera the one thing that glows. Always night.",
+        False,
+        ("#060A08", "#060A08"),
     ),
     Look(
         "midnight",
@@ -96,6 +105,21 @@ LOOKS = (
     ),
 )
 BY_KEY = {look.key: look for look in LOOKS}
+
+
+def remember(response: Any, value: str | None, *, secure: bool) -> None:
+    """Set the browser's look cookie, or clear it for somebody who has not chosen one."""
+    if value is None:
+        response.delete_cookie(COOKIE)
+        return
+    response.set_cookie(
+        COOKIE,
+        value,
+        max_age=COOKIE_DAYS * 24 * 3600,
+        httponly=True,
+        samesite="Lax",
+        secure=secure,
+    )
 
 
 def parse(value: str | None) -> tuple[Look, str]:

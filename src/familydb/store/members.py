@@ -31,6 +31,8 @@ class Member(BaseModel):
     gender: Gender | None = None
     # Which of the page's eight person colours is theirs (1 to 8); None until given one.
     slot: int | None = None
+    # The look they chose for the page, as the look cookie holds it ("rail.dark"); None until then.
+    look: str | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Member:
@@ -99,6 +101,10 @@ def resolve(conn: sqlite3.Connection, channel: str, channel_user_id: str) -> Mem
         (channel, channel_user_id),
     ).fetchone()
     return Member.from_row(row) if row else None
+
+
+def set_look(conn: sqlite3.Connection, member_id: int, value: str | None) -> None:
+    conn.execute("UPDATE members SET look = ? WHERE id = ?", (value, member_id))
 
 
 def set_active(conn: sqlite3.Connection, member_id: int, active: bool) -> None:

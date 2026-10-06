@@ -265,6 +265,114 @@
   --bar-bg: rgb(18 22 21 / 0.9);
 }
 
+/* ---- Afterglow: a look from the Phosphor design language, on Kitchen Table ---------------- */
+/* One fixed look, whatever the device or the Look page's day and night say (as the Phosphor look
+   is): charcoal glass with a breath of green, a darker glass band with faint scanlines, and Vera's
+   things the one lit thing (--fx-glow: her sign's wider halo and full rim, her Send, her lines).
+   The family's links are a soft mint and their button a pale plate, never the phosphor. Page titles
+   and the wordmark are set in VT323. It has no day, so it is color-scheme: dark and the two
+   data-mode rules skip it. Phosphor is the design language; Afterglow is one look derived from it
+   (HANDOFF.md §8.8). */
+[data-theme="afterglow"] {
+  color-scheme: dark;
+  /* the effects (style.css section 11) */
+  --fx-page: radial-gradient(1100px 520px at 18% -120px, rgb(109 255 156 / .07), transparent 70%);
+  --fx-scan: rgb(190 255 215 / .035);
+  --fx-glow: 1;
+  --fx-title: "VT323", var(--font-head);
+  --fx-title-adjust: cap-height .7;
+  /* surfaces and words */
+  --paper: #0A100E;
+  --paper-2: #0F1714;
+  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
+  --card: #131C19;
+  --field: #0C1311;
+  --line: #1E2A26;
+  --line-2: #2B3A34;
+  --edge: #6E8479;
+  --ink: #E9F1E5;
+  --ink-2: #C3CEC2;
+  --ink-3: #9DAA9F;
+  --faint-ink: var(--ink-3);
+  /* the band: darker glass, the screen's own frame */
+  --band: #060A08;
+  --band-hi: #111A17;
+  --band-line: #1A2622;
+  --on-band: #E9F1E5;
+  --on-band-2: #B9C6BF;
+  --here: #13221C;
+  --on-here: #E9F1E5;
+  --here-icon: #6DFF9C;
+  --here-pill: #10241A;
+  --band-link: #8EE0B9;
+  /* the action, focus, today */
+  --link: #8EE0B9;
+  --primary: #D3EEDD;
+  --primary-hover: #EAF7EE;
+  --on-primary: #0A100E;
+  --focus: #E9F1E5;
+  --lit: #6DFF9C;
+  --today: #6DFF9C;
+  --on-today: #06100B;
+  --today-rule: #6DFF9C;
+  --today-wash: #0E2318;
+  /* meanings */
+  --ok: #7FE3A5;
+  --amber: #F5B94A;
+  --red: #FF8B74;
+  --error-ink: #FF8B74;
+  /* Vera on the page */
+  --vera: #6DFF9C;
+  --vera-bg: #4FE08A;
+  --cursor: #6DFF9C;
+  --ask-bg: #0B1813;
+  /* the built set's part colours, as Kitchen Table's */
+  --lilac: #B5AEF0;
+  --cyan: #8DD0E0;
+  --lemon: #C3D27A;
+  --pink: #EBA6D3;
+  --orange: #EDB67C;
+  --on-bright: #06100B;
+  --person: #2F5D9B;
+  --on-person: #FFFFFF;
+  /* depth and light */
+  --bloom: 1;
+  --glow: 0 0 0 1px rgb(109 255 156 / .35), 0 8px 28px -10px rgb(109 255 156 / .6);
+  --glow-hover: 0 0 0 1px rgb(109 255 156 / .5), 0 10px 34px -10px rgb(109 255 156 / .8);
+  --shadow: inset 0 1px 0 rgb(233 241 229 / .035), 0 1px 0 rgb(0 0 0 / .4);
+  --pop: 0 8px 22px -14px rgb(0 0 0 / .9);
+  --pop-up: 0 -8px 24px -16px rgb(0 0 0 / .9);
+  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
+  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
+  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
+  --hi: rgb(233 241 229 / .035);
+  --scan: rgb(255 255 255 / .028);
+  --raster: rgb(0 0 0 / .22);
+  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
+  --band-tabs: var(--card);
+  /* Kitchen Table's own roles */
+  --ok-soft: #10241A;
+  --ok-line: #24503A;
+  --amber-soft: #261E10;
+  --amber-line: #5E4620;
+  --red-soft: #2E1716;
+  --red-line: #5C2E2B;
+  --on-red: #06100B;
+  --on-vera: #06100B;
+  --vera-soft: #0E2318;
+  --vera-line: #22513A;
+  --ask-ink: #E9F1E5;
+  --ask-ink-2: #BFD0C4;
+  --ask-rim: inset 0 0 0 1.5px #3E8A66, inset 0 0 32px rgb(109 255 156 / .07), 0 0 30px -12px rgb(109 255 156 / .5);
+  --ask-edge: #6E8479;
+  --send: #6DFF9C;
+  --send-2: #93FFB6;
+  --on-send: #06100B;
+  --ask-rule: rgb(233 241 229 / .16);
+  --ask-fill: rgb(233 241 229 / .1);
+  --ask-fill-2: rgb(233 241 229 / .16);
+}
+
 [data-theme="rail"] {
   color-scheme: light dark;
   --paper: light-dark(#F5F6F8, #0D1420);
@@ -663,5 +771,5 @@
 }
 
 /* A browser may choose day or night instead of following the device. Phosphor has no day. */
-[data-theme]:not([data-theme="phosphor"])[data-mode="light"] { color-scheme: light; }
-[data-theme]:not([data-theme="phosphor"])[data-mode="dark"] { color-scheme: dark; }
+[data-theme]:not([data-theme="phosphor"]):not([data-theme="afterglow"])[data-mode="light"] { color-scheme: light; }
+[data-theme]:not([data-theme="phosphor"]):not([data-theme="afterglow"])[data-mode="dark"] { color-scheme: dark; }

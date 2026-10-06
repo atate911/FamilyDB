@@ -78,7 +78,7 @@ def _start(browser, member_id: int) -> str:
     sent = browser.post(f"/family/{member_id}/password", data=form)
     assert sent.status_code == 302 and sent.headers["Location"] == f"/family/{member_id}"
     page = browser.get(f"/family/{member_id}").text
-    return re.search(r'<code class="made">([^<]+)</code>', page).group(1)
+    return re.search(r'<code class="code made__pw">([^<]+)</code>', page).group(1)
 
 
 @pytest.fixture
@@ -215,7 +215,7 @@ def test_a_starting_password_is_shown_once_and_must_be_replaced(app, sam, family
     made = _start(sam, family["alex"].id)
     assert len(made) == passwords.STARTING_LENGTH
     again = sam.get(f"/family/{family['alex'].id}").text
-    assert made not in again and "Has a starting password they have not used yet." in again
+    assert made not in again and "Has a starting password they haven\u2019t used yet." in again
 
     alex = _browser(app)
     signed_in = alex.post("/login", data={"name": "Alex", "password": made, "next": "/ideas"})
@@ -482,7 +482,7 @@ def test_a_kid_signs_in_reads_and_talks_but_changes_nothing(app, sam, family) ->
     nav = girls.get("/").text
     assert 'href="/status"' not in nav and 'href="/memory"' not in nav
     assert "Add an idea" not in girls.get("/ideas").text
-    assert '<span class="tag">signs in</span>' in sam.get("/family").text
+    assert '<span class="tag tag--ok">Signs in</span>' in sam.get("/family").text
 
 
 def test_a_permission_taken_from_kids_is_kept_everywhere(app, sam, family, monkeypatch) -> None:
