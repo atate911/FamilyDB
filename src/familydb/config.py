@@ -251,6 +251,9 @@ class Settings(BaseSettings):
     task_nudges: bool = True
     # The nightly tidy (jobs/tidy.py): an idea whose dates are a week past leaves the list.
     tidy_ideas: bool = True
+    # A place nothing saved fits, looked for on the web (suggest/places.py). Spending, so the
+    # family's to turn on (docs/DESIGN.md section 16): off until they do.
+    find_places: bool = False
     follow_ups: bool = True
     plan_checks: bool = True
     plan_check_hour: int = Field(default=19, ge=0, le=23)

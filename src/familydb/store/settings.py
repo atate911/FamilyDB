@@ -58,6 +58,7 @@ BEHAVIOUR = (
     "follow_up_hour",
     "task_nudges",
     "tidy_ideas",
+    "find_places",
     "admin_alerts",
     "model_watch",
     "judgements",

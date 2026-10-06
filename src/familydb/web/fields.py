@@ -847,6 +847,14 @@ GROUPS: tuple[Group, ...] = (
                 "Days before details look old",
                 "After this, an idea's hours and prices are marked as worth checking again.",
             ),
+            field(
+                "find_places",
+                "Look for a place when nothing saved fits",
+                "Asked for a kind of place nothing on the list fits (\u201cThai food, what\u2019s "
+                "open now?\u201d), for now or the next two days, a lookup searches nearby and "
+                "offers a few, said as found on the web. Each search costs a little, within the "
+                "daily limit; the same ask within the hour is searched once.",
+            ),
         ),
     ),
     Group(

@@ -44,7 +44,7 @@ from familydb.tools import ToolContext, ToolRegistry
 
 log = logging.getLogger(__name__)
 
-Kind = Literal["chat", "digest", "retry", "enrich", "discover", "judge", "price_check"]
+Kind = Literal["chat", "digest", "retry", "enrich", "discover", "places", "judge", "price_check"]
 
 
 @dataclass(frozen=True)
@@ -103,6 +103,17 @@ KINDS: dict[str, CallSpec] = {
             "discover",
             "searching for what is on",
             prompt="discover",
+            tools=("report_finds",),
+            hand_back=("report_finds",),
+            web_searches=4,
+            **_WORKER,
+        ),
+        # A place nothing saved fits, found on the web for now or the next days, while the family
+        # has `find_places` on (suggest/places.py); never an event, which is discovery's.
+        CallSpec(
+            "places",
+            "searching for a place nothing saved fits",
+            prompt="places",
             tools=("report_finds",),
             hand_back=("report_finds",),
             web_searches=4,

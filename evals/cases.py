@@ -673,7 +673,9 @@ CASES: tuple[Case, ...] = (
             never(*DIRECT),
             wrote_only(),
         ),
-        "Nothing Thai is saved: the engine is asked about Thai for now, and nothing is invented.",
+        "Nothing Thai is saved: the engine is asked about Thai for now, and nothing is invented. "
+        "With --web, a place is looked for (find_places), and what it finds is said as found.",
+        settings={"find_places": True},
     ),
     Case(
         "kiggins_movie",

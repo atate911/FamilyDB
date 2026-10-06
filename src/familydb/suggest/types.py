@@ -87,6 +87,11 @@ class WebFind(BaseModel):
     dates: str | None = None
     summary: str = ""
     source: str | None = None
+    # A place found for what nothing saved fits (suggest/places.py): never checked here.
+    kind: str | None = None
+    hours: str | None = None  # as the page writes them
+    address: str | None = None
+    saved_as: int | None = None  # already on the list, as this idea
 
 
 class DaySummary(BaseModel):

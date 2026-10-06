@@ -12,6 +12,7 @@ from familydb.tools.registry import ToolContext, tool
 from familydb.tools.urls import clean_url
 
 MAX_FINDS = 6
+MAX_FIELD = 200
 
 
 class Find(BaseModel):
@@ -19,6 +20,10 @@ class Find(BaseModel):
     url: str = Field(description="The page you saw, exactly as given.")
     dates: str | None = Field(default=None, description="Dates or times as written on the page.")
     summary: str = Field(description="One line.")
+    # For a place (the places worker): what it is, and where and when, as the page writes them.
+    kind: str | None = Field(default=None, description="For a place: restaurant, park, ...")
+    hours: str | None = Field(default=None, description="For a place: opening hours as written.")
+    address: str | None = Field(default=None, description="For a place: its street address.")
 
 
 class ReportFindsInput(BaseModel):
@@ -30,7 +35,7 @@ class ReportFindsInput(BaseModel):
 @tool(
     name="report_finds",
     description=(
-        "Used by the discovery worker to hand back time-bound options found on the web. "
+        "Used by the discovery and places workers to hand back what they found on the web. "
         "Not for chat."
     ),
     worker_only=True,
@@ -55,6 +60,15 @@ def report_finds(ctx: ToolContext, args: ReportFindsInput) -> dict[str, Any]:
                 "dates": find.dates.strip() if find.dates else None,
                 "summary": find.summary.strip(),
                 "source": urlsplit(url).hostname,
+                **{
+                    key: value.strip()[:MAX_FIELD]
+                    for key, value in (
+                        ("kind", find.kind),
+                        ("hours", find.hours),
+                        ("address", find.address),
+                    )
+                    if value and value.strip()
+                },
             }
         )
         recorded += 1

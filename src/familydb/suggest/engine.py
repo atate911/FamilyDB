@@ -16,6 +16,8 @@ from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.origin import resolve as resolve_origin
+from familydb.suggest.places import find_places
+from familydb.suggest.places import wanted as places_wanted
 from familydb.suggest.rules import fold
 from familydb.suggest.shortlist import FAVOURITE_RATING, RATING_DAYS, shortlist
 from familydb.suggest.types import (
@@ -183,10 +185,16 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         skipped.append("stale place details re-queued for a refresh")
 
     finds, note = ([], None)
+    # A place nothing saved fits, found on the web, when the family has it on (suggest/places.py).
+    if places_wanted(context, constraints, candidates, ctx.settings):
+        finds, note = find_places(ctx, context, constraints)
+        if note:
+            skipped.append(note)
     if args.discover:
-        finds, note = discover(ctx, context, constraints)
-    if note:
-        skipped.append(note)
+        events, note = discover(ctx, context, constraints)
+        finds = finds + events
+        if note:
+            skipped.append(note)
 
     suggestion_id = log_suggestion(
         ctx.conn,

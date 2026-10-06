@@ -429,7 +429,7 @@ def debug_prompt(
     from familydb.jobs.weekend_digest import digest_channel
     from familydb.store import places
 
-    if kind not in gateway.KINDS or kind == "discover":
+    if kind not in gateway.KINDS or kind in ("discover", "places"):
         typer.echo("--kind is one of chat, digest, retry or enrich", err=True)
         raise typer.Exit(code=2)
     application = build_app()

@@ -8,7 +8,7 @@ import hashlib
 import json
 import logging
 from datetime import date, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from familydb.agent import providers
 from familydb.agent.worker import home_location, run_worker_turn
@@ -86,11 +86,24 @@ def discover(
     if not providers.ready(ctx.settings, "worker", api=ctx.api):
         return [], NOTE_NO_KEY
     request = render_discover_request(context, constraints, ctx.settings)
-    key = (
-        cache_key(context.window)
-        + ":"
-        + hashlib.sha256((str(context.today) + request).encode()).hexdigest()
-    )
+    window = cache_key(context.window)
+    about = f"what is on, {window.replace(':', ' to ')}"
+    return search(ctx, "discover", window, request, about, failed=NOTE_FAILED)
+
+
+def search(
+    ctx: ToolContext,
+    kind: Literal["discover", "places"],
+    prefix: str,
+    request: str,
+    about: str,
+    *,
+    failed: str,
+    seconds: int = DISCOVER_CACHE_SECONDS,
+) -> tuple[list[WebFind], str | None]:
+    """One worker turn of `kind` that hands back with `report_finds`, kept in the shared cache
+    under the request (with the day) for `seconds`; a failure is a note, never cached."""
+    key = f"{prefix}:" + hashlib.sha256((str(ctx.clock.today()) + request).encode()).hexdigest()
     # Shared by the chat and scheduler threads; a dict suffices (worst case one duplicate search).
     cache: dict[str, Any] = ctx.discover_cache if ctx.discover_cache is not None else {}
     now = ctx.clock.now()
@@ -100,7 +113,7 @@ def discover(
 
     try:
         turn = run_worker_turn(
-            kind="discover",
+            kind=kind,
             api=ctx.api,
             settings=ctx.settings,
             clock=ctx.clock,
@@ -109,22 +122,22 @@ def discover(
             request=request,
             message_id=ctx.message_id,
             user_location=home_location(ctx.settings),
-            about=f"what is on, {cache_key(context.window).replace(':', ' to ')}",
+            about=about,
         )
     except AgentError as exc:
-        log.warning("discovery failed for %s: %s", key, exc)
-        return [], f"{NOTE_FAILED}: {exc}"
+        log.warning("%s failed for %s: %s", kind, key, exc)
+        return [], f"{failed}: {exc}"
     except Exception as exc:  # must not fail the whole suggestion
-        log.exception("discovery crashed for %s", key)
-        return [], f"{NOTE_FAILED}: {type(exc).__name__}: {exc}"
+        log.exception("%s crashed for %s", kind, key)
+        return [], f"{failed}: {type(exc).__name__}: {exc}"
     if turn.result.status != "ok":
         reason = turn.result.error or turn.result.status
-        log.warning("discovery turn for %s ended %s: %s", key, turn.result.status, reason)
-        return [], f"{NOTE_FAILED}: {reason}"
+        log.warning("%s turn for %s ended %s: %s", kind, key, turn.result.status, reason)
+        return [], f"{failed}: {reason}"
     if not turn.handed_back("report_finds"):
-        return [], f"{NOTE_FAILED}: worker ended without reporting"
+        return [], f"{failed}: worker ended without reporting"
 
     finds: list[dict[str, Any]] = list(turn.ctx.scratch.get("finds", []))
-    cache[key] = {"expires_at": now + timedelta(seconds=DISCOVER_CACHE_SECONDS), "finds": finds}
-    log.info("discovery for %s found %d item(s)", key, len(finds))
+    cache[key] = {"expires_at": now + timedelta(seconds=seconds), "finds": finds}
+    log.info("%s for %s found %d item(s)", kind, key, len(finds))
     return [WebFind(**find) for find in finds], None
