@@ -78,6 +78,8 @@ def settings(tmp_path: Path) -> Settings:
         # The daily check of models and prices reads the internet; its own tests switch it on
         # with stand-ins for what it reads (test_model_watch.py).
         model_watch=False,
+        # Choosing makes a second, stronger call inside `suggest`; its own tests switch it on.
+        choosing=False,
     )
 
 

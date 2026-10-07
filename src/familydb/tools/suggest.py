@@ -4,11 +4,12 @@ the weekly search near home, and `report_feeds` for the lookup that finds calend
 from __future__ import annotations
 
 from datetime import date, time
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
 
+from familydb.errors import ToolError
 from familydb.suggest.types import SuggestInput
 from familydb.tools.registry import ToolContext, tool
 from familydb.tools.urls import clean_url
@@ -131,6 +132,87 @@ def report_feeds(ctx: ToolContext, args: ReportFeedsInput) -> dict[str, Any]:
         feeds.append({"title": feed.title.strip(), "url": url, "why": feed.why.strip()})
         recorded += 1
     return {"recorded": recorded, "rejected": rejected, "total": len(feeds)}
+
+
+class PickInput(BaseModel):
+    ref: str = Field(description="The option's reference exactly as listed: 'idea:12', 'find:2'.")
+    slot: Literal["favourite", "new", "wildcard"]
+    reason: str = Field(description="Under 200 characters, resting on something in the dossier.")
+    day: str | None = Field(default=None, description="YYYY-MM-DD, when the day matters.")
+    cites: list[str] = Field(
+        default_factory=list, description="What the reason rests on: 'm3', 'o5', 'p7', 'idea:12'."
+    )
+
+
+class GivePicksInput(BaseModel):
+    picks: list[PickInput] = Field(description="1 to 5 picks, the best first.")
+    framing: str | None = Field(
+        default=None, description="One line the picks share, under 200 characters, or none."
+    )
+
+
+MOST_PICKS = 5
+MOST_WORDS = 200
+
+
+@tool(
+    name="give_picks",
+    description=(
+        "Used by the call that chooses what to suggest to hand back its picks, each one of the "
+        "listed options. Not for chat."
+    ),
+    worker_only=True,
+)
+def give_picks(ctx: ToolContext, args: GivePicksInput) -> dict[str, Any]:
+    """Every check code can make of a choice (suggest/choose.py): the option exists and was not
+    picked twice, a favourite was done before and a new one never was, the day is one it fits,
+    the reason is short and what it cites is in the dossier. A pick that fails is refused, with
+    what would do, so the call can put it right in its one more step."""
+    options = ctx.scratch.get("options", {})
+    known = ctx.scratch.get("cites", frozenset())
+    window = ctx.scratch.get("window")
+    if not args.picks or len(args.picks) > MOST_PICKS:
+        raise ToolError(f"give 1 to {MOST_PICKS} picks")
+    chosen: list[dict[str, Any]] = []
+    for pick in args.picks:
+        option = options.get(pick.ref)
+        if option is None:
+            raise ToolError(f"{pick.ref!r} is not one of the options: {sorted(options)}")
+        if any(earlier["ref"] == pick.ref for earlier in chosen):
+            raise ToolError(f"{pick.ref} is picked twice")
+        if pick.slot == "favourite" and not option.done_before:
+            raise ToolError(f"{pick.ref} has not been done before, so it is not a favourite")
+        if pick.slot == "new" and option.done_before:
+            raise ToolError(f"{pick.ref} has been done before, so it is not new")
+        reason = " ".join(pick.reason.split())
+        if not reason or len(reason) > MOST_WORDS:
+            raise ToolError(f"the reason for {pick.ref} must be 1 to {MOST_WORDS} characters")
+        unknown = sorted(set(pick.cites) - set(known))
+        if unknown:
+            raise ToolError(f"{pick.ref} cites {unknown}, which are not in the dossier")
+        day = _pick_day(pick, option, window)
+        chosen.append(
+            {"ref": pick.ref, "slot": pick.slot, "reason": reason, "day": day, "cites": pick.cites}
+        )
+    framing = " ".join((args.framing or "").split()) or None
+    if framing and len(framing) > MOST_WORDS:
+        raise ToolError(f"the framing must be at most {MOST_WORDS} characters")
+    ctx.scratch["chosen"] = {"picks": chosen, "framing": framing}
+    return {"picked": len(chosen)}
+
+
+def _pick_day(pick: PickInput, option: Any, window: tuple[date, date] | None) -> str | None:
+    if not pick.day:
+        return None
+    try:
+        day = date.fromisoformat(pick.day.strip())
+    except ValueError:
+        raise ToolError(f"the day for {pick.ref} must be YYYY-MM-DD") from None
+    if window is not None and not window[0] <= day <= window[1]:
+        raise ToolError(f"{day} is outside the days asked about, {window[0]} to {window[1]}")
+    if option.days and day.isoformat() not in option.days:
+        raise ToolError(f"{pick.ref} fits {', '.join(option.days)}, not {day}")
+    return day.isoformat()
 
 
 @tool(

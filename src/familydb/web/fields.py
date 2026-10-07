@@ -496,6 +496,35 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "model",
+        "choosing",
+        "Choosing the suggestions",
+        'For a question like "what should we do this weekend?" or "where should we eat '
+        'tonight?", and the weekend digest, a stronger model is given everything the family has '
+        "told her and done that bears on it (ratings and notes, what she remembers, the last weeks "
+        "and the next, this chat's last few days) and chooses the picks; she then says them in her "
+        "own words. It goes to the company that answers the chat, nowhere else. Quick questions "
+        "about right now, and the kids' questions, are answered as before, at no extra cost.",
+        (
+            field(
+                "choosing",
+                "Have a stronger model choose the suggestions",
+                "About 3 to 13 cents a planning question, depending on the company.",
+            ),
+            field(
+                "choose_level",
+                "How strong a model chooses",
+                "Best by default: this is the judgement worth paying for.",
+            ),
+            field(
+                "choose_budget",
+                "Most to spend on it in a month (US$)",
+                "Counted within the daily limit as well. Once it is spent, suggestions are made as "
+                "before until the month turns. 0 chooses nothing.",
+            ),
+        ),
+    ),
+    Group(
+        "model",
         "stronger",
         "Better and best models",
         "The models a company answers with at the better and best levels. Empty uses the ones "

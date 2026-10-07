@@ -144,6 +144,17 @@ class Settings(BaseSettings):
     # put it back; anything dearer, and everything under `suggest`, waits for an admin's press.
     judgement_acts: Literal["within_cost", "suggest"] = "within_cost"
     judgement_budget: float = Field(default=1.0, ge=0, le=50)
+    # Choosing what to suggest (suggest/choose.py): for a planning question or the weekend
+    # digest, a stronger model is given everything the household knows that bears on it and
+    # chooses the picks, which the chat model then words. At most `choose_budget` US$ a month,
+    # within the daily limit; 0, or off, keeps the engine's own order. Never for a kid's
+    # question, a question about right now, or anything but a chat message.
+    choosing: bool = False
+    choose_level: Level = "best"
+    choose_budget: float = Field(default=5.0, ge=0, le=50)
+    # Model calls one choice may take: the answer, and one more if code refused a pick in it.
+    # Each re-sends the whole dossier at the strong level, so it stays small.
+    choose_max_iterations: int = Field(default=2, ge=1, le=5)
 
     # Each company's everyday models: its cheapest, for chat and for the lookups.
     gemini_api_key: str | None = None

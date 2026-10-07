@@ -61,7 +61,16 @@ from familydb.tools import ToolContext, ToolRegistry
 log = logging.getLogger(__name__)
 
 Kind = Literal[
-    "chat", "digest", "retry", "enrich", "discover", "scout", "find_feeds", "judge", "price_check"
+    "chat",
+    "digest",
+    "retry",
+    "enrich",
+    "discover",
+    "scout",
+    "find_feeds",
+    "choose",
+    "judge",
+    "price_check",
 ]
 
 
@@ -149,6 +158,22 @@ KINDS: dict[str, CallSpec] = {
             hand_back=("report_feeds",),
             web_searches=6,
             **_WORKER,
+        ),
+        # Choosing what to suggest for a planning question (suggest/choose.py): the family's own
+        # words and memories go into it, so it answers on the chat surface, the company the
+        # family already writes to, at the level the family chose for it, with no web. Its only
+        # output is one hand-back, checked by code; at most two calls, since each re-sends the
+        # whole dossier at the strong level.
+        CallSpec(
+            "choose",
+            "choosing what to suggest",
+            surface="chat",
+            level="choose_level",
+            prompt="choose",
+            tools=("give_picks",),
+            hand_back=("give_picks",),
+            iterations="choose_max_iterations",
+            max_tokens=6000,
         ),
         # Weighing a change the code has narrowed to a few options (familydb/judgement.py): a
         # stronger model, at the level the family chose for it, and no web. The day's questions
