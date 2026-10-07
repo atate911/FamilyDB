@@ -37,7 +37,7 @@ them first create or upgrade it, which is harmless. `doctor --fix` is the except
 | `familydb config` | Every setting, secrets masked. A value saved on the page is marked "set on the settings page", one that differs from the default because of `.env` or the environment is marked "from the environment", and a plain default has no mark |
 | `familydb db status` | The database's schema version, row counts, and the last few model calls with their cache figures |
 | `familydb members list [--all]` | The family list. `--all` includes people switched off |
-| `familydb ideas list [--all] [--json]` | The ideas, one line each, exactly as the model sees them |
+| `familydb ideas list [--all] [--json]` | The ideas, one line each, written the way the model's list writes them. Unlike the model's list, it includes presents, and `--all` adds dropped ideas |
 | `familydb debug cost [--days N]` | What each message pays for before anyone types, and what the last N days (30 by default) cost per purpose and model |
 | `familydb debug prompt [TEXT] [--as NAME] [--chat ID] [--kind KIND] [--idea N]` | The exact request that would be sent, without sending it. `--kind` is chat, digest, retry or enrich |
 | `familydb tool --list`, `familydb tool NAME --schema` | The tools, whether each is available and which write, and one tool's definition |

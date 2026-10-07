@@ -4,7 +4,7 @@ FamilyDB asks three free public services for what it cannot know itself: Open-Me
 
 ## The forecast
 
-Open-Meteo gives a daily forecast for the home position: conditions, high, low, chance of rain, precipitation, sunrise and sunset. Each request carries the home latitude and longitude, the dates, the family's time zone and the units, and nothing else. It reaches today and the next 15 days, and an answer is kept in memory for an hour for each range of dates.
+Open-Meteo gives a daily forecast for the home position: conditions, high, low, chance of rain, precipitation, sunrise and sunset. Each request carries the home latitude and longitude to four decimals, the dates, the family's time zone and the units, and nothing else. It reaches today and the next 15 days, and an answer is kept in memory for an hour for each range of dates.
 
 The forecast needs a home position, which the home town gives ([General](/wiki/controls/settings/general#where-home-is)). Without one the forecast tool is unavailable and the suggestions say weather is not configured.
 
@@ -14,7 +14,7 @@ It is used for:
 - the suggestion engine, to judge outdoor, dry, warm and snow ideas, and daylight left;
 - the evening-before check of a plan, which looks for rain on an outdoor idea.
 
-When Open-Meteo does not answer, the forecast tool reports "weather service unavailable". A suggestion skips the weather and notes "forecast failed". The evening-before check goes ahead without the weather. Days past the 15th have no forecast.
+When Open-Meteo does not answer, the forecast tool reports "weather service unavailable" (no connection, a timeout or an unreadable answer) or "weather service returned HTTP <code>". Requests give up after 15 seconds. A suggestion skips the weather and notes "forecast failed". The evening-before check goes ahead without the weather. Days past the 15th have no forecast.
 
 ## Finding places
 
@@ -26,17 +26,17 @@ When Open-Meteo does not answer, the forecast tool reports "weather service unav
 
 Every request carries a `User-Agent` naming FamilyDB. When an operator sets `GEOCODER_CONTACT` in `.env` ([Configuration](/wiki/operations/configuration)), Nominatim also gets that email address or web page, which its usage policy asks for. Open-Meteo's geocoder never gets it. Empty sends none.
 
-Nominatim's policy allows one request a second, and FamilyDB spaces its Nominatim requests at least a second apart. A named place that lands more than 150 km from home is retried with the home area added, since it probably matched somewhere else of the same name.
+Nominatim's policy allows one request a second, and FamilyDB spaces its Nominatim requests at least a second apart. A named place that lands more than 150 km from home is retried with the home area added, since it probably matched somewhere else of the same name. If the retry is also far, or no home area is set, the place is rejected. Geocoding gives up after 15 seconds.
 
-A shared position is named once and reused while the person stays within 200 metres. Lookups are cached in memory. A forward lookup that finds nothing, or fails, is remembered as nothing until FamilyDB restarts or a setting changes, so a town that failed during an outage can keep answering "not found" until then.
+A shared position is named once and reused while the person stays within 200 metres. Lookups are cached in memory, reverse ones to about 100 metres. A forward lookup that finds nothing, or fails, is remembered as nothing until FamilyDB restarts or a setting changes, so a town that failed during an outage can keep answering "not found" until then.
 
 ### When a lookup fails
 
 | Where | What you see |
 |---|---|
-| Saving the home town | "Could not find <town> on the map. Type its latitude and longitude as well." The previous position stays |
+| Saving the home town | "Could not find <town> on the map. Type its latitude and longitude as well." The previous position stays. Saving the same town text again does not retry the lookup, so type the latitude and longitude instead |
 | A place saved by a lookup | The place is saved without coordinates or travel time |
-| A suggestion near a named place | "Could not place <name>, so travel is from home" |
+| A suggestion near a named place | "Could not place <name>, so travel is from home", also when the place was found but too far from home |
 | A shared position | The bot still has the coordinates. The reply just does not name the place |
 
 ## Travel-time estimates
@@ -55,9 +55,9 @@ Once a day, at 05:17, the daily model check reads LiteLLM's list (a JSON file on
 |---|---|
 | Agree within 5% | That price |
 | Only one has the model | That list's price |
-| Disagree | The last good price is kept, and an admin is told. With no last price, the dearer list's |
-| A jump of more than fivefold in a day | The old price is kept, and an admin is told |
-| A price no model could cost, over $500 per million tokens | Ignored |
+| Disagree | The last good price is kept. With no last price, the dearer list's. An admin is told only if the model is one in use |
+| A jump of more than fivefold up or down (to under a fifth) in a day | The old price is kept. An admin is told only if the model is in use |
+| A price no model could cost: over $500 per million tokens, or an output price of zero | Ignored |
 
 If a list cannot be read, the last good prices stand. After three days running an admin is told, and the Status page's Models and prices shows when each list was read. Turning `model_watch` off stops both requests and puts back the prices built into this version. [Model companies](/wiki/boundaries/model-companies#the-daily-check) and [Models and prices](/wiki/controls/status/models-and-prices) say what the check does with them.
 
