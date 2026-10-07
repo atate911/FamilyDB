@@ -2,7 +2,7 @@
 
 The scheduled jobs are what FamilyDB does without being asked: reminders, lookups, the weekend ideas, the evening-before check and the housekeeping behind them. They run inside the long-running service (`familydb run`) on the family's time zone. `familydb web` serves only the page and runs none of them, so a page started alone sends no reminders.
 
-Each schedule is described once, in `jobs/scheduler.py`, and follows the settings. A job that a setting turns off is not scheduled at all.
+A job that a setting turns off is not scheduled at all.
 
 ## The jobs
 
@@ -39,9 +39,7 @@ A test hands retries, lookups, follow-ups and catch-up an API that fails on any 
 
 ### Reminders
 
-It takes open things to do with a reminder due, up to 100 a run. Each goes to the task's chat, or to the owner's own Telegram chat when it began in a group and `private_when_personal` is on, and a repeating thing to do gets its next reminder. After downtime the overdue ones go on the next minute, and one more than 10 minutes late says when it was due.
-
-While the family is talking in a chat, reminders, nudges, follow-ups, plan heads-ups and the note for one lookup wait about two minutes so the next reply carries them. [Tasks and reminders](/wiki/model/tasks-and-reminders) has the rest.
+It takes open things to do with a reminder due, up to 100 a run. Each goes to the task's chat, or to the owner's own Telegram chat when it began in a group and `private_when_personal` is on. After downtime the overdue ones go on the next minute, and one more than 10 minutes late says when it was due. While the family is talking in a chat, reminders, nudges, follow-ups, plan heads-ups and the note for one lookup wait about two minutes so the next reply carries them. [Tasks and reminders](/wiki/model/tasks-and-reminders) has the rest.
 
 ### Admin alerts
 
@@ -55,33 +53,29 @@ It first sends stored replies that never went, then retries each failed or unans
 
 By default it runs every 2 minutes but ideas wait for the evening: those waiting since before the last 21:00 are looked up together, up to 40 a run, and each chat gets one note. An idea asked for now goes first, with its own note. With `lookups_when` set to as soon as added, a run takes up to `enrich_batch` (3). See [Lookups](/wiki/controls/settings/lookups#when).
 
-A home or gift idea with nothing to look up is marked skipped in code. A busy company, or the day's limit, stops the run and leaves the rest waiting. A lookup that fails is marked failed and is not retried by itself: press **Look it up again** on the idea.
+A busy company, or the day's limit, stops the run and leaves the rest waiting. A lookup that fails is marked failed and is not retried by itself: press **Look it up again** on the idea.
 
 ### Weekend digest
 
-It sends the question "what should we do this weekend?" as the first admin through the chat pipeline, at `digest_level`. It can call tools, so one digest can be several calls and can include a web search for what is on. Its id carries the date, so a second run the same day sends nothing, and a failed turn is asked again by the retry job.
-
-It skips, and logs why, when no chat is set, there is no model key, nothing in this process can send to that chat (Telegram is not connected here), or there is no admin. The answer is kept as the digest kind on the Messages page.
+It asks "what should we do this weekend?" as the first admin through the chat pipeline, at `digest_level`. It can call tools, so one digest can be several calls and can include a web search for what is on ([how it is answered](/wiki/behavior/suggestions)). Its id carries the date, so a second run the same day sends nothing, and the retry job asks again after a failed turn. It skips, and logs why, when no chat is set, there is no model key, nothing in this process can send to that chat (Telegram is not connected here), or there is no admin.
 
 ### Follow-ups
 
-It asks once about each confirmed plan that ended before today and started within the last week. It first brings plans in line with Google Calendar, and waits when Google cannot be asked, so a cancelled plan is not asked about. A plan with an outcome already is marked asked without a message. The question goes to the plan's chat, or its maker's own chat when it began in a group.
+It asks once about each confirmed plan that ended before today and started within the last week. It first brings plans in line with Google Calendar and waits when Google cannot be asked, so a cancelled plan is not asked about. A plan with an outcome already is marked asked without a message. The question goes to the plan's chat, or its maker's own chat when it began in a group.
 
 ### Evening-before check
 
-It looks at plans for an idea, made in a chat, that start tomorrow and are unchecked, and returns before touching Google when there are none. Otherwise it syncs the calendar (waiting if Google cannot be asked), reads tomorrow's forecast (skipped without a home position) and checks rain for an outdoor idea and the place's saved hours against the plan's time. All well says nothing, and the plan is still marked checked. A heads-up goes to the plan's chat, with a backup idea from the engine when a good one fits. A plan nothing can send to is left for the next run.
+It looks at plans for an idea, made in a chat, that start tomorrow and are unchecked, and returns before touching Google when there are none. Otherwise it syncs the calendar (waiting if Google cannot be asked), reads tomorrow's forecast (skipped without a home position) and checks rain for an outdoor idea and the place's saved hours against the plan's time. All well says nothing, and the plan is still marked checked. A heads-up goes to the plan's chat, with a backup idea when the engine finds a good one. A plan nothing can send to waits for the next run.
 
-### Models and prices
+### Models and prices, and judgements
 
-It asks each company with a key which models the key may use (this costs no tokens), reads LiteLLM's and OpenRouter's price lists, and notes for admins what matters. It then compares the last week of each kind of call with the four weeks before. [Models and prices](/wiki/controls/status/models-and-prices) shows what it read.
+The daily check asks each company with a key which models the key may use (this costs no tokens), reads LiteLLM's and OpenRouter's price lists, and notes for admins what matters. It then compares the last week of each kind of call with the four weeks before. [Models and prices](/wiki/controls/status/models-and-prices) shows what it read.
 
-### Judgements
-
-Code files a question when a model change needs weighing. Once the lookup hour has passed (at once with lookups as soon as added), the day's questions go in one call at `judgement_level`; a refusal nobody can read goes at once. It stops when the month's spend plus 5 cents would pass `judgement_budget`, or the day's limit is used up, and runs at most two price checks a run. The answer must be one of the options code gave.
+Judgements ask a stronger model only about a question code filed. Once the lookup hour has passed (at once with lookups as soon as added), the day's questions go in one call at `judgement_level`; a refusal nobody can read goes at once. It stops when the month's spend plus 5 cents would pass `judgement_budget`, or the day's limit is used up.
 
 ### Nudges
 
-It brings up a thing to do whose preferred window code can read ("some Saturday morning"), from an hour into that part of the day. It skips tasks that repeat, have a reminder pending or are under 12 hours old, and any nudged in the last six days. Each chat gets at most one a day. It asks the calendar only when a nudge could go, and holds back when the next hour is busy; with no calendar, or one it cannot reach, it goes anyway.
+It brings up a thing to do whose preferred window code can read ("some Saturday morning"), from an hour into that part of the day. It skips tasks that repeat, have a reminder pending or are under 12 hours old, and any nudged in the last six days; each chat gets at most one a day. It holds back when the calendar shows the next hour busy; with no calendar, or one it cannot reach, it goes anyway.
 
 ### Forget locations and settings watch
 

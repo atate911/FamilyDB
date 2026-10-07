@@ -22,6 +22,36 @@
             "controls",
             "security"
           ]
+        },
+        {
+          "slug": "overview/how-its-built",
+          "title": "How it is built",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "overview/layers-and-flow",
+            "overview/building-blocks"
+          ]
+        },
+        {
+          "slug": "overview/layers-and-flow",
+          "title": "Layers and the path of a message",
+          "audience": "admin",
+          "depth": "overview",
+          "see_also": [
+            "overview/building-blocks",
+            "behavior"
+          ]
+        },
+        {
+          "slug": "overview/building-blocks",
+          "title": "Building blocks",
+          "audience": "admin",
+          "depth": "overview",
+          "see_also": [
+            "overview/how-its-built",
+            "operations/host"
+          ]
         }
       ]
     },
