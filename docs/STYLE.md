@@ -404,11 +404,11 @@ The templates show the layout; these are the decisions.
 - **Plans.** A list of dates, and a month with today amber and plans as cyan slips; on a phone the
   month is the busy days as a list.
 - **What is on near home** (its name is the family's, written once in `familydb/happening.py`).
-  A third tab beside Plans' List and Month, in Plans' cyan: a panel a day, today first, a line
-  each in the agenda's own type, with no day chip since the day is the panel's heading. Who
-  listed each is a tag, an outside link opens apart (`noopener noreferrer`), and a source that
-  could not be read is one muted line above. For grown-ups only, as Status is: Ticketmaster
-  lists shows for adults too, and a kid's Plans has no tabs.
+  A third tab in Plans' Month and List switch, drawn as Plans' list is: one card, a heading a
+  day, today first, and each find a plan row with no date tile (`plan--bare`), since the day is
+  its heading. Who listed each is a quiet tag, an outside link opens apart (`noopener
+  noreferrer`), and a source that could not be read is a note above the card. For grown-ups
+  only, as Status is: Ticketmaster lists shows for adults too, and a kid's Plans has no tabs.
 - **Settings.** A card to each part, saying how it stands and marking in amber what needs a look;
   each part a short page, the others listed down the side where there is room, with one Save in a
   bar that stays in reach while its form is on screen. A box that offers a list (a company's models
