@@ -51,6 +51,7 @@ CANCELLED = "Canceled."
 TICKED = "Done: {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
+REOPENED = "Back on your list: {title}."
 LOOKING = "Looking {what} up now: within a few minutes."
 NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
@@ -494,6 +495,18 @@ def finish_task(task_id: int) -> Response:
         result, complaint = run("update_task", {"task_id": task_id, "status": "done"})
         said = TICKED if auth.visitor().may("browse") else TICKED_PLAIN
         _say(complaint or said.format(id=task_id, title=result["task"]["title"]))
+    return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/task/<int(max=9223372036854775807):task_id>/reopen")
+@once
+def reopen_task(task_id: int) -> Response:
+    """Undo a tick: the to-do is open again. Only the status is sent, as for the tick."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    else:
+        result, complaint = run("update_task", {"task_id": task_id, "status": "open"})
+        _say(complaint or REOPENED.format(title=result["task"]["title"]))
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
 
 

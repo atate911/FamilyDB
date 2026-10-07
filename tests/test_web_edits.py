@@ -378,3 +378,15 @@ def test_a_to_do_flash_names_it_in_words_with_no_numbers(page, conn) -> None:
     saved = page.post("/tasks/new", data=form, follow_redirects=True)
     assert "Added to your to-dos: Buy paper towels." in _said(saved)
     assert "task" not in _said(saved).lower() and "#" not in _said(saved)
+
+
+def test_a_done_to_do_can_be_put_back_from_the_done_list(page, conn) -> None:
+    page.post(
+        "/tasks/new", data={"csrf": _token(page, "/tasks"), "once": "o9", "title": "Pay the bill"}
+    )
+    page.post("/task/1/done", data={"csrf": _token(page, "/tasks"), "once": "o10", "revision": "1"})
+    done = page.get("/tasks?status=done").text
+    assert 'action="/task/1/reopen"' in done and ">Undo<" in done.replace("\n", "")
+    page.post("/task/1/reopen", data={"csrf": _token(page, "/tasks"), "once": "o11"})
+    assert 'id="t-1"' in page.get("/tasks").text  # open again (this also shows the flash)
+    assert 'id="t-1"' not in page.get("/tasks?status=done").text

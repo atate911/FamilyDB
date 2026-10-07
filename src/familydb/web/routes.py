@@ -22,7 +22,7 @@ from flask import (
 from familydb import agenda, personas, presents, roles
 from familydb.app import App
 from familydb.availability import calendar_available, enrichment_available
-from familydb.dates import next_birthday
+from familydb.dates import next_birthday, utc_iso
 from familydb.store import calls
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
@@ -51,6 +51,8 @@ RATINGS = tuple(range(10, 0, -1))
 RESTAURANT_KIND = "restaurant"
 FILTERS = ("q", "kind", "status", "who")
 HOME_AHEAD_DAYS = 60
+# A kid's To do page keeps what she ticked off this long, with a way to undo it.
+DONE_LATELY_DAYS = 7
 HOME_PLANS = 4
 HOME_IDEAS = 4
 HOME_TASKS = 4
@@ -699,6 +701,15 @@ def tasks() -> str:
         )
         people = member_store.list_all(conn)
         creators = task_store.creators(conn, [task.id for task in rows]) if simple else {}
+        done_lately = (
+            presents.visible_tasks(
+                conn,
+                task_store.list_all(conn, status="done", owner_id=_own_only()),
+                visitor.member,
+            )
+            if simple
+            else []
+        )
     today = app.clock.today()
     tz = app.settings.tzinfo
     slots = views.slot_map(people)
@@ -716,10 +727,17 @@ def tasks() -> str:
         for task in rows
     ]
     groups = _todo_groups(shown) if status == "open" and not simple else []
+    since = utc_iso(app.clock.now() - timedelta(days=DONE_LATELY_DAYS))
+    lately = [
+        views.todo_page_row(task, tz, today, slots, kid=True, me=visitor.name)
+        for task in done_lately
+        if task.updated_at >= since
+    ]
     return render_template(
         "tasks.html",
         simple=simple,
         rows=shown,
+        lately=lately,
         groups=groups,
         open_count=open_count,
         late_count=sum(1 for row in shown if row["late"]) if status == "open" else None,

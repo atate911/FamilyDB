@@ -109,7 +109,7 @@
 {%- endmacro %}
 
 {# A to-do in a list: the tick (for whoever may tick it), what, who and when, how late. `compact` is Home's short row; `mine` a kid's own, which she ticks off herself and sees without an owner (and with who set it); `edit` adds the link to the to-do's own page. `back` is where a tick returns to. A done or cancelled one has no tick, only its mark. #}
-{% macro todo(row, back, compact=false, mine=false, edit=false) -%}
+{% macro todo(row, back, compact=false, mine=false, edit=false, undo=false) -%}
   {% set open = row.status is not defined or row.status == 'open' %}
   <li class="todo{{ ' todo--compact' if compact }}{{ ' todo--mine' if mine }}{{ ' todo--late' if row.late and not mine }}{{ ' todo--done' if row.status == 'done' }}" id="t-{{ row.id }}">
     {% if not open -%}
@@ -146,7 +146,13 @@
         {% if row.repeats %}<p class="small muted">{{ row.repeats }}</p>{% endif %}
       {% endif %}
     </div>
-    {% if edit -%}
+    {% if undo and row.status == 'done' -%}
+      <form method="post" action="{{ url_for('edits.reopen_task', task_id=row.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="back" value="{{ back }}" />
+        <button class="textbtn" type="submit">{{ icon('undo', size='sm') }}Undo<span class="sr"> done: {{ row.title }}</span></button>
+      </form>
+    {%- elif edit -%}
       <a class="todo__edit" href="{{ url_for('web.edit_task', task_id=row.id) }}">{{ icon('edit', size='sm') }}<span class="lbl">Edit</span><span class="sr"> {{ row.title }}</span></a>
     {%- else -%}
       <span></span>

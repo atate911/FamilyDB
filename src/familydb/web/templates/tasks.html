@@ -14,6 +14,10 @@
     {% else %}
       <p class="empty mt-4">{{ icon('todo') }}<span>Nothing to do right now.</span></p>
     {% endif %}
+    {% if lately %}
+      <h2 class="group-h" id="lately">{{ icon('check') }}Done lately · {{ lately | length }}</h2>
+      <ul class="todos">{% for row in lately %}{{ todo(row, 'tasks', mine=true, undo=true) }}{% endfor %}</ul>
+    {% endif %}
   {% else %}
     {% set lede = 'Errands, appointments to arrange, and things you mean to get done.' %}
     {% if status == 'open' and open_count %}{% set lede = lede ~ ' ' ~ open_count ~ ' open' ~ (', ' ~ late_count ~ ' of them late' if late_count else '') ~ '.' %}{% endif %}
@@ -70,10 +74,10 @@
     {% if groups %}
       {% for group in groups %}
         <h2 class="group-h{{ ' group-h--late' if group.tone == 'late' }}"{% if loop.first %} id="list"{% endif %}>{% if group.tone == 'late' %}{{ icon('clock') }}{% endif %}{{ group.title }} · {{ group.rows | length }}</h2>
-        <ul class="todos">{% for row in group.rows %}{{ todo(row, 'tasks', edit=visitor().may('change')) }}{% endfor %}</ul>
+        <ul class="todos">{% for row in group.rows %}{{ todo(row, 'tasks', edit=visitor().may('change'), undo=true) }}{% endfor %}</ul>
       {% endfor %}
     {% elif rows %}
-      <ul class="todos mt-4">{% for row in rows %}{{ todo(row, 'tasks', edit=visitor().may('change')) }}{% endfor %}</ul>
+      <ul class="todos mt-4">{% for row in rows %}{{ todo(row, 'tasks', edit=visitor().may('change'), undo=true) }}{% endfor %}</ul>
     {% else %}
       <p class="empty mt-4">{{ icon('todo') }}<span>No to-dos match.{% if visitor().may('change') %} Add one above, or ask {{ assistant }}.{% endif %}</span></p>
     {% endif %}

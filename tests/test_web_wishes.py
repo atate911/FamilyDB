@@ -316,3 +316,33 @@ def wish_service_chat(member_id: int) -> str:
     from familydb.web import chat
 
     return chat.private_chat(member_id)
+
+
+def test_a_kid_sees_what_she_ticked_lately_and_can_undo_it(app, family, girls) -> None:  # noqa: F811
+    kid = girls["mine"]
+    with closing(app.connect()) as conn, db.transaction(conn):
+        swim = tasks.insert(
+            conn,
+            title="Pack swim bag",
+            notes="",
+            owner_id=family["girls"].id,
+            due_at=None,
+            preferred_window="",
+            operation_key="swim",
+            channel="web",
+            chat_id="web",
+            now="2026-09-20T00:00:00Z",
+        )
+    assert "Done lately" not in kid.get("/tasks").text
+    kid.post(f"/task/{swim}/done", data={**_tokens(kid, "/you"), "revision": "1"})
+    page = kid.get("/tasks").text
+    assert "Done lately" in page and f'action="/task/{swim}/reopen"' in page
+    undone = kid.post(
+        f"/task/{swim}/reopen",
+        data={**_tokens(kid, "/you"), "back": "tasks"},
+        follow_redirects=True,
+    )
+    assert "Back on your list: Pack swim bag." in undone.text
+    with closing(app.connect()) as conn:
+        assert tasks.get(conn, swim).status == "open"
+    assert "Done lately" not in kid.get("/tasks").text
