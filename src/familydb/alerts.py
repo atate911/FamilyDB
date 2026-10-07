@@ -16,7 +16,11 @@ Four kinds of trouble:
 - refused: a company refused requests for a reason FamilyDB cannot read (about: the company),
   told once it has happened twice without an answer between, since one odd request is not news;
   then a judgement is asked what it most likely is (judgement.py);
-- advice: what a judgement call answered and what came of it (about: its kind and subject).
+- advice: what a judgement call answered and what came of it (about: its kind and subject);
+- happening: a source of what is on near home (a calendar, Ticketmaster, the weekly search)
+  could not be read three days running (about: the source; jobs/happening.py);
+- calendars: new event calendars were found near home, to tick on the settings page (told once,
+  about: the home area and the day).
 
 Five come from the daily check of models and prices (model_watch.py).
 
@@ -38,7 +42,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from typing import Any
 
-from familydb import voice
+from familydb import happening, voice
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
 from familydb.store import alerts as alert_store
@@ -60,6 +64,8 @@ KINDS = (
     "api",
     "refused",
     "advice",
+    "happening",
+    "calendars",
 )
 # About a company: the ones a company's own answer clears.
 COMPANY_KINDS = ("credit", "key", "refused")
@@ -171,12 +177,16 @@ def working(conn: sqlite3.Connection, kind: str, about: str = "") -> None:
 def wording(settings: Any, alert: alert_store.Alert) -> str:
     """What an admin is told, in her words: which company, or what the limit is."""
     company = COMPANY_NAMES.get(alert.subject, alert.subject)
+    # Only the lines about things near home name its page, so no other line's choice of wording
+    # moves (voice.say chooses by its facts).
+    page = {"page": happening.NAME} if alert.kind in ("happening", "calendars") else {}
     return voice.say(
         settings,
         f"alert_{alert.kind}",
         company=company,
         limit=f"{settings.daily_spend_limit:.2f}",
         detail=alert.detail,
+        **page,
     )
 
 

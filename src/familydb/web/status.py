@@ -22,6 +22,8 @@ from familydb.availability import (
     calendar_available,
     digest_configured,
     enrichment_available,
+    happening_available,
+    happening_search_available,
     weather_available,
     web_is_public,
 )
@@ -319,7 +321,7 @@ def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
 # (familydb/alerts.py). A price moving, a week's figures shifting, new models and a judgement's
 # answer are news, not trouble: they leave the light alone.
 STOPPING = frozenset({"credit", "key", "limit"})
-WORRYING = frozenset({"calendar", "model", "prices", "api", "refused"})
+WORRYING = frozenset({"calendar", "model", "prices", "api", "refused", "happening"})
 
 
 def light(app: App, conn: sqlite3.Connection) -> str | None:
@@ -342,7 +344,7 @@ def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     found = [
         one
         for one in alert_store.current(conn, since=utc_iso(now - alerts.KEEP))
-        if one.kind not in ("new", "advice")
+        if one.kind not in ("new", "advice", "calendars")
     ]
     if not found:
         return []
@@ -392,6 +394,25 @@ def model_watch(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
             for one in judgement_store.recent(conn, since=since)
         ],
         "judging": app.settings.judgements,
+    }
+
+
+def happening_status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """How each source of what is on near home last answered, what they list in the weeks
+    ahead, and what its model calls have cost this month against its budget."""
+    live = app.settings
+    tz = live.tzinfo
+    today = app.clock.now().astimezone(tz).date()
+    ahead = today + timedelta(days=happening.HORIZON_DAYS)
+    return {
+        "name": happening.NAME,
+        "on": happening_available(live),
+        "sources": [views.find_source_row(one, tz) for one in find_store.sources(conn)],
+        "upcoming": find_store.count_upcoming(conn, start=today, end=ahead),
+        "days": happening.HORIZON_DAYS,
+        "spent": happening.spent_this_month(conn, live, app.clock.now()),
+        "budget": live.happening_budget,
+        "searching": happening_search_available(live),
     }
 
 
@@ -445,6 +466,7 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "troubles": troubles(conn, since, tz),
         "attention": attention(app, conn),
         "model_watch": model_watch(app, conn),
+        "happening": happening_status(app, conn),
         "activity": activity(app, conn),
         "activity_days": ACTIVITY_DAYS,
     }

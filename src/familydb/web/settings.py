@@ -1093,6 +1093,8 @@ LINE_GROUPS = (
             "alert_api",
             "alert_refused",
             "alert_advice",
+            "alert_happening",
+            "alert_calendars",
         ),
     ),
 )

@@ -30,6 +30,7 @@ from familydb.app import App, build_app
 from familydb.availability import (
     digest_configured,
     enrichment_available,
+    happening_available,
     web_available,
     web_tools_available,
 )
@@ -1017,6 +1018,32 @@ def enrich(
         raise typer.Exit(code=1)
     _cli_senders(application)
     counts = run_enrichment(application, idea_id=idea_id, limit=limit)
+    typer.echo(", ".join(f"{key}: {value}" for key, value in counts.items()))
+
+
+@app.command("happening")
+def happening_now(
+    everything: bool = typer.Option(
+        False, "--now", help="Read every source now, even those read in the last day or week."
+    ),
+) -> None:
+    """Read what is on near home now (the running bot does this hourly, each source when due).
+
+    With --now the weekly search and the lookup for calendars run too, within the month's
+    budget for them."""
+    from familydb.jobs.happening import run_happening
+
+    application = build_app()
+    application.migrate()
+    if not happening_available(application.settings):
+        typer.echo(
+            "nothing to read: add a calendar or a Ticketmaster key, or turn on web lookups, "
+            "on the settings page",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    _cli_senders(application)
+    counts = run_happening(application, everything=everything)
     typer.echo(", ".join(f"{key}: {value}" for key, value in counts.items()))
 
 

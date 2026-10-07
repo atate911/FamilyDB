@@ -22,10 +22,11 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from familydb.alerts import run_alerts
 from familydb.app import App
-from familydb.availability import digest_configured, enrichment_available
+from familydb.availability import digest_configured, enrichment_available, happening_available
 from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.follow_ups import run_follow_ups
+from familydb.jobs.happening import run_happening
 from familydb.jobs.nudges import run_nudges
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.reminders import run_reminders
@@ -130,6 +131,13 @@ def job_specs(app: App) -> list[JobSpec]:
             run_judgements,
             IntervalTrigger(minutes=15),
             wanted=settings.judgements,
+        ),
+        JobSpec(
+            "happening",
+            "read what is on near home",
+            run_happening,
+            IntervalTrigger(hours=1),
+            wanted=happening_available(settings),
         ),
         JobSpec(
             "nudges",

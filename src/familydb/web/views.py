@@ -852,9 +852,13 @@ ALERT_TITLES = {
     "api": "A company stopped taking part of a request",
     "refused": "{company} is refusing requests",
     "advice": "A judgement on the models",
+    "happening": "A place read for what is on near home could not be read",
+    "calendars": "Event calendars found near home",
 }
 # Kinds whose detail says what happened: shown with the row.
-SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused", "advice"})
+SAID_IN_DETAIL = frozenset(
+    {"model", "price", "prices", "new", "shift", "api", "refused", "advice", "happening"}
+)
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
 
 
@@ -903,6 +907,20 @@ def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
     running = f", {source.failures} checks running" if source.failures > 1 else ""
     detail = f"Could not be read {when}{running}: {source.note}."
     return {"label": label, "detail": detail, "on": False}
+
+
+def find_source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
+    """A place read for what is on near home, as a light: when, and how it went."""
+    label = happening.source_name(source.source)
+    if happening.source_kind(source.source) == happening.FEED:
+        label = f"Calendar at {label}"
+    label = label[0].upper() + label[1:]
+    when = local_moment(source.checked_at, tz)
+    if source.ok:
+        return {"label": label, "detail": f"Read {when}: {source.note}.", "on": True}
+    running = f", {source.failures} days running" if source.failures > 1 else ""
+    detail = f"Could not be read {when}{running}: {source.note}."
+    return {"label": label, "detail": detail, "on": False if source.failures > 1 else None}
 
 
 JUDGEMENT_TITLES = {

@@ -13,8 +13,9 @@ from typing import Any
 from familydb import model_watch
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
-from familydb.availability import digest_configured
+from familydb.availability import digest_configured, happening_available
 from familydb.jobs.follow_ups import run_follow_ups
+from familydb.jobs.happening import run_happening
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.weekend_digest import run_digest
 from familydb.whereabouts import forget_old
@@ -63,5 +64,12 @@ def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
                 result["models"] = model_watch.check(app)
             except Exception:
                 log.exception("the check of models and prices failed on start")
+    # What is on near home: each source is read only when due, so this costs nothing when the
+    # hourly job read them before the restart.
+    if happening_available(app.settings):
+        try:
+            result["happening"] = run_happening(app, api=api)
+        except Exception:
+            log.exception("reading what is on near home failed on start")
     log.info("catch-up on start: %s", result)
     return result

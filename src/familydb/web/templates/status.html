@@ -240,6 +240,24 @@
     {% endif %}
   </section>
 
+  {# What is on near home (jobs/happening.py): each place read, how it last answered, and what
+     its model calls cost this month. Reading a calendar or Ticketmaster asks no model. #}
+  <section class="panel" id="happening">
+    <h2>{{ icon('event') }}{{ happening.name }}</h2>
+    {% if not happening.on %}
+      <p class="muted">Nothing near home is read yet.
+        {% if visitor().may('manage') %}<a href="{{ url_for('settings.section', name='happening') }}">Add a calendar, a Ticketmaster key or the weekly search</a>{% endif %}</p>
+    {% elif not happening.sources %}
+      <p class="muted">Read within the hour: nothing has been read yet.</p>
+    {% else %}
+      {{ lines(happening.sources) }}
+      <p class="muted small">{{ happening.upcoming }} on in the next {{ happening.days }} days.</p>
+    {% endif %}
+    {% if happening.searching or happening.spent %}
+      <p class="muted small">Its searches have cost ${{ '%.2f' % happening.spent }} this month{% if happening.budget %}, of ${{ '%.2f' % happening.budget }}{% endif %}.</p>
+    {% endif %}
+  </section>
+
   {# Admins only: the words here come from every chat. Each line opens its history in full. #}
   {% if visitor().may('manage') %}
     <section class="panel" id="activity">
