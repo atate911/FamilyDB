@@ -44,14 +44,14 @@ Each goes as one line with its number, marked "must", "a guess" or "until <date>
 
 A firm memory reaching the model does not force it to obey. The spec tells the model never to offer what breaks one and to say when one ruled something out. The suggestion engine does not apply them itself yet.
 
-Code does not look at who will read the reply, so a memory is sent in a shared chat too. Whether to say something personal there rests on the spec's rule to ask first. There are no private memories.
+Code does not look at who is asking or who will read the reply. Memories reach every chat, a kid's own page conversation and a kid's Telegram chat included, so an adult's firm memory can reach a kid's chat. The only guard is the spec's instruction to ask before putting a sensitive detail in a shared chat. There are no private memories.
 
 ## Said again, corrected, forgotten
 
 - **Same memory.** Two facts are the same when they are about the same person and match after lowercasing, dropping punctuation and collapsing spaces. "Vegetarian!" and "vegetarian" match. A reworded fact is new in code's eyes: whether two wordings mean the same is for the model, which corrects by replacing the old memory by number.
 - **Said again.** The memory is not kept twice. Said outright after a guess, it stops being a guess, and a firm repeat makes it firm.
 - **Corrected.** The old memory is marked replaced and points to its successor. Nothing is deleted.
-- **Forgotten.** The words are kept, marked with who forgot them and when, and the memory is no longer sent. Because the words stay, the model cannot save the same fact about the same person again from a conversation: the call comes back "not saved", with the date it was forgotten, and the other changes in that call still go through. Only a person typing it on the page can add it back.
+- **Forgotten.** The words are kept, marked with who forgot them and when, and the memory is no longer sent. Because the words stay, the model cannot save the same fact about the same person again from a conversation: the call comes back "not saved", with the date it was forgotten, and the other changes in that call still go through. Only a person on the page can add it back.
 
 **Forgetting does not erase.** The words remain in the database and its backups, the chat message stays in the chat, and what was already sent to the model company cannot be recalled. See [Data and privacy](/wiki/security/data-and-privacy).
 
@@ -63,7 +63,7 @@ Taking somebody off for good deletes every memory about them. A memory they said
 
 ## Not the same as About the family
 
-"About the family" on [Personality](/wiki/controls/settings/personality) is text an admin writes. It is sent as written in the cached family block with every chat request, so it costs its length on every message, and it changes only when somebody edits it. A memory is a row kept from conversation, chosen per message, in the uncached turn. Put what should always hold on Personality; let memory collect what comes up in passing.
+"About the family" on [Personality](/wiki/controls/settings/personality) is text an admin writes. It is sent as written in the cached family block with every chat request, so it costs its length at the cache-read price on every message, and it changes only when somebody edits it. A memory is a row kept from conversation, chosen per message, in the uncached turn. Put what should always hold on Personality; let memory collect what comes up in passing.
 
 ## Why it is built this way
 

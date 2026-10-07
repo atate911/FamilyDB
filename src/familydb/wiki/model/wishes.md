@@ -25,7 +25,7 @@ The model reads what a kid says, under rules in the product spec. A want of thei
 | Ask a parent | Offered only when the model judged the ask fair and it was not inappropriate, at most this many times in 7 days per kid. Default 2 | `parent_asks_per_week` |
 | "We should" to "I want" | See below. Default 3 | `wording_daily_after` |
 
-Values are on [Spending](/wiki/controls/settings/spending#the-kids-wish-lists). Moving wishes is free and capped at 300 a day per person, a limit in code, not a setting.
+Values are on [Spending](/wiki/controls/settings/spending#the-kids-wish-lists). Moving within a list, or onto Christmas or Birthday, is free, capped at 300 moves a day per person, a limit in code. For a kid, moving a wish onto Every day is held to the lock and the daily count, and counts as an every-day ask. A move into a full list is refused.
 
 **The lockout ladder.** A parent's "not this time" on an Every day wish locks that topic for 14 days, then 30, 90 and 120, then a year each time after. The count is the number of earlier declines of the same topic. A topic is a short key the bot gives (cat and dog can share "pet"), with a close title match as a backstop. Asking while locked adds nothing and does not lengthen the lock. A lock belongs to one list, so a locked Every day wish can go on Christmas or Birthday, which the bot encourages. On those lists a "not this time" lasts until the day after the occasion.
 
@@ -49,6 +49,6 @@ Every message from a kid carries one line, built by code, in the current turn (n
 
 ## Limits on spending
 
-Adding a wish goes through the bot, so it counts toward the kid's daily messages and dollar share ([The family and roles](/wiki/model/family-and-roles#kids)). Moving and taking off cost nothing.
+A kid adds a wish by talking to the bot, so it counts toward their daily messages and dollar share ([The family and roles](/wiki/model/family-and-roles#kids)). A parent can add for a kid with a form on the Wishes page, which runs `add_wish` with no model call and costs neither. Moving and taking off cost nothing, except that a kid's move onto Every day is held to the rules above.
 
 Developer docs: `docs/WISHES.md`, `src/familydb/wish_service.py`, `tools/wishes.py`, `wording.py`, `presents.py`, `buttons.py`, `agent/render.py` (`render_kid_line`), and `docs/DESIGN.md`, "Decisions" (the row "Kids' wish lists").

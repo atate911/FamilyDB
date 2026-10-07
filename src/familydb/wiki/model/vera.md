@@ -26,9 +26,9 @@ Her name is written once, in her folder. Her character and lines say `{name}` wh
 
 | Layer | Effect |
 |---|---|
-| Name | Fills `{name}` everywhere, and is kept under None, unused |
+| Name | Fills `{name}` everywhere, at most 40 characters, and is kept under None, unused |
 | Rewrite of her character | Replaces that one persona's character and no other's |
-| Notes | A few sentences in the family's own words, sent after her character whichever persona is chosen |
+| Notes | A few sentences in the family's own words, at most 1,000 characters, sent after her character, whichever of the two personas is chosen |
 | Lines | Replace her wording of one event at a time; an empty box uses her default |
 
 Under None the family's name, rewrite, notes and lines are kept and come back when a persona is chosen again. "About the family" is not part of this: it is still sent.
@@ -41,7 +41,7 @@ Only turns a person reads carry her: chat, the weekend digest and retries. Looku
 
 ## What she costs
 
-Her words go with every chat request, cached, so the cost is their length. At four characters a token, Vera as first written is about 2,800 tokens and Vera in brief about 740. A rewrite and the notes add their own length. The Personality page estimates the total for what you have written, and `familydb debug cost` on the server gives the figure. The audience line, a few tokens in the turn, is not cached.
+Her words go with every chat request, cached, so each message pays their length at the cache-read price. At four characters a token, Vera as first written is about 2,800 tokens and Vera in brief about 740. A rewrite and the notes add their own length. The Personality page estimates the total for what you have written, and `familydb debug cost` on the server gives the figure. The audience line, a few tokens in the turn, is not cached.
 
 ## How the bot words what it says unasked
 
@@ -57,7 +57,7 @@ In a shared chat, one line in the turn tells the model everyone there reads the 
 
 ## Her name elsewhere
 
-The page, Telegram's `/start` and the greeting in a group all use the name through one place, `personas.active`. After each connect and whenever the name or her `/start` line changes on the page, the bot's name and description in Telegram are set to match (FamilyDB's under None). Only what differs is sent, and it costs no model call. A name typed in BotFather lasts until the next such change.
+The page, Telegram's `/start` and the greeting in a group all use the name through one place, `personas.active`. After each connect and whenever the name or her `/start` line changes on the page, the bot's name and description in Telegram are set to match (FamilyDB's under None). Only what differs is sent, and it costs no model call. The name and description are set again after every connect (a restart, a reconnect, a new token), so a name typed in BotFather does not stick.
 
 ## Before you change her
 

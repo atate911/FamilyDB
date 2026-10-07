@@ -33,7 +33,7 @@ A person signs in if they are switched on, their role may sign in, and they have
 
 ## Why the list is not a tool
 
-A Telegram id on the list is permission to talk to the bot. If a tool could change the list, one message, or a fetched web page talking the model round, could let somebody in. So no tool touches it. The list changes only from the Family page or the command line, through one module of rules, `familydb/family.py`, and by a one-time link an admin makes for one person.
+A Telegram id on the list is permission to talk to the bot. If a tool could change the list, one message, or a fetched web page talking the model round, could let somebody in. So no tool touches it. The list changes only from the Family page or the command line, through one module of rules, `familydb/family.py`, and by a one-time link an admin makes for one person. Using that link clears the person's birthday and male or female, so set them again afterwards ([Family page](/wiki/controls/family)).
 
 ## Rules that keep an admin who can sign in
 
@@ -57,9 +57,9 @@ A kid can sign in, read the ideas and plans, chat, keep their own wish lists and
 
 **The kid line.** Each message from a kid carries one line built by code: name, "a girl", "a boy" or "a kid", and an age if a birthday is set. Code sends age and male or female only in this line. See [Kids' wish lists](/wiki/model/wishes).
 
-**Two limits.** A kid's messages are limited by `kid_daily_messages`, a count of messages a model answered (none by default), and by `kid_daily_spend`, a dollar share of the day (25 cents by default). Each is checked before the model is asked. Past one, the message is kept, given up rather than retried, and answered by a line from code. No model is asked. Both are on [Spending](/wiki/controls/settings/spending).
+**Two limits.** A kid's messages are limited by `kid_daily_messages`, a count of messages a model answered (no limit by default), and by `kid_daily_spend`, a dollar share of the day (25 cents by default). Each is checked before the model is asked. Past one, the message is kept, given up rather than retried, and answered by a line from code. No model is asked. Both are on [Spending](/wiki/controls/settings/spending).
 
-**Kids never see the workings.** This is the family's decision. Where a kid reads, a line about a key, a model, a dollar limit, an admin, the settings or the logs is said in one of three plain lines: can't answer now, try tomorrow, or type it for me. Where a kid reads means a kid's own chat and any group while a kid is on the list, since code cannot see who is in a group. Admins are still told the cause, and the page hides the workings from anybody without "browse".
+**Kids never see the workings.** This is the family's decision. Where a kid reads, a line about a key, a model, a dollar limit, an admin, the settings or the logs is said in one of three plain lines: can't answer now, try tomorrow, or type it for me. Where a kid reads means a kid's own chat and any group while an active kid is on the list, since code cannot see who is in a group. Admins are still told the cause, and the page hides the workings from anybody without "browse".
 
 **The audience line.** Separately, one line in the current turn tells the model who reads the reply. In a Telegram group, or the page's shared conversation, it says everyone there reads the reply, adding "kids among them" when an active kid is on the list. A private chat gets none. The line is cautious: a kid talks in their own conversation on the page, yet the shared one still carries the note. Staying suitable for kids is an instruction in the product spec, which the evals check.
 
