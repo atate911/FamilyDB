@@ -6,6 +6,11 @@
     <use href="{{ url_for('static', filename='icons.svg') }}#i-{{ name }}"></use></svg>
 {%- endmacro %}
 
+{# One of the family's drawings (docs/STYLE.md, "Drawings"): an empty list's first moment, at most one on a screen. #}
+{% macro drawing(name, cls='') -%}
+  <svg class="drawing{{ ' ' ~ cls if cls }}" focusable="false" aria-hidden="true"><use href="{{ url_for('static', filename='icons.svg') }}#d-{{ name }}"></use></svg>
+{%- endmacro %}
+
 {# FamilyDB's own mark, a monitor with a smile; the colours are the brand's, set in the stylesheet. `size` is '' or 'xs'. #}
 {% macro brand_mark(size='', cls='') -%}
   <svg class="{{ cls if cls else 'mark-fdb' ~ (' mark-fdb--' ~ size if size) }}" viewBox="0 0 32 32" aria-hidden="true"><rect class="mf__bg" width="32" height="32" rx="8"/><g class="mf__fg" transform="translate(4 4)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="13.5" rx="3.5"/><path d="M12 16.5V21M8.5 21h7M9 8.25v1.25M15 8.25v1.25M9 12.25c1.7 1.35 4.3 1.35 6 0"/></g></svg>

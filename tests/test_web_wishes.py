@@ -384,3 +384,17 @@ def test_a_wish_turned_away_without_a_button_says_whom_to_ask(app, family, girls
         )
     page = girls["mine"].get("/wishes").text
     assert "a phone of my own" in page and "about it." in page
+
+
+def test_at_most_one_drawing_on_a_screen_and_none_on_a_parents_list(
+    app,  # noqa: F811
+    family,
+    sam,  # noqa: F811
+    girls,
+) -> None:
+    """docs/STYLE.md, "Drawings": her empty list is drawn on her own page, once."""
+    for path in ("/", "/wishes", "/tasks", "/ideas"):
+        assert girls["mine"].get(path).text.count("#d-") <= 1, path
+        assert sam.get(path).text.count("#d-") <= 1, path
+    assert "#d-wish" in girls["mine"].get("/wishes").text
+    assert "#d-" not in sam.get("/wishes").text

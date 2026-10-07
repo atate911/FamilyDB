@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, page_head, idea_tabs, idea_card, map_plot with context %}
+{% from "_ui.html" import icon, drawing, page_head, idea_tabs, idea_card, map_plot with context %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block body_class %}page-ideas{% endblock %}
 {% block content %}
@@ -9,7 +9,7 @@
     <div class="ideas mt-4">
       {% for row in rows %}{{ idea_card(row, kid=true) }}
       {% else %}
-        <p class="empty">{{ icon('bulb') }}<span>No ideas yet. Tell {{ assistant }} one.</span></p>
+        <p class="empty empty--drawn">{{ drawing('ideas') }}<span>No ideas yet. Tell {{ assistant }} one.</span></p>
       {% endfor %}
     </div>
   {% else %}
@@ -56,7 +56,7 @@
         </nav>
       {% endif %}
     {% else %}
-      <p class="empty">{{ icon('bulb') }}<span>
+      <p class="empty{{ ' empty--drawn' if not filtered }}">{{ icon('bulb') if filtered else drawing('ideas') }}<span>
         {%- if filtered %}Nothing matches. <a href="{{ url_for('web.ideas') }}">Clear search and filters</a>
         {%- else %}No ideas yet. When someone says “we should try…”, {{ assistant }} saves it here.{% endif -%}
       </span></p>

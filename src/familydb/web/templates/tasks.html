@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, avatar, page_head, todo, when with context %}
+{% from "_ui.html" import icon, drawing, avatar, page_head, todo, when with context %}
 {% block title %}{{ 'To do' if grownup else 'My to-dos' }} · {{ site_title }}{% endblock %}
 {# One person to choose, as a pill: their colour and their letter, then their name. `value` is what the form sends. #}
 {% macro who_choice(value, one, checked=false, label=none) %}
@@ -12,7 +12,7 @@
     {% if rows %}
       <ul class="todos mt-4">{% for row in rows %}{{ todo(row, 'tasks', mine=true) }}{% endfor %}</ul>
     {% else %}
-      <p class="empty mt-4">{{ icon('todo') }}<span>Nothing to do right now.</span></p>
+      <p class="empty empty--drawn mt-4">{{ drawing('todos') }}<span>Nothing to do right now.</span></p>
     {% endif %}
     {% if lately %}
       <h2 class="group-h" id="lately">{{ icon('check') }}Done lately · {{ lately | length }}</h2>

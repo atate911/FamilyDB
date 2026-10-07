@@ -463,6 +463,12 @@ builds one by hand. Person classes are slots (`.p0` to `.p8`), never names.
 - **Faces** (`.faces`): "How did it go?", three labeled faces, for grown-ups.
 - **Empty state** (`.empty`): what will appear and how to start it. **Locked** (`.locked`): "Ask
   a parent".
+- **Drawings** (`drawing()` in `_ui.html`, `#d-*` in `icons.svg`): the family's moments in the
+  icons' round line, never a face, never her, never on glass, and at most one on a screen (a test
+  counts). Five: an empty Next up, To do or Ideas (`d-plans`, `d-todos`, `d-ideas`; on Home only
+  the first empty card), a kid's first empty list (`d-wish`) and her "Yes!" (`d-yes`), in her own
+  colour and only on her own page. Coloured by tokens, so every look carries them: the line
+  `--ink-3`, the fill `--paper-2`, one accent `--p-fill`.
 - **Key/value** (`.kv`), **data table** (`table.data`, scrolling sideways inside its box, never
   the page), **meter** (an SVG bar, its figure always written beside it).
 - The parts of a list page, of Settings and of setting up are under "Page by page"; the glass

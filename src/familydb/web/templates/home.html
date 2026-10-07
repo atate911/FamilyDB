@@ -1,8 +1,10 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, tile, tag, avatar, badge, vera_screen, date_tile, people, todo, idea_mini with context %}
+{% from "_ui.html" import icon, drawing, tile, tag, avatar, badge, vera_screen, date_tile, people, todo, idea_mini with context %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-home{% endblock %}
 {% block content %}
+  {# At most one drawing on a screen: the first empty card has it, the others keep their icon. #}
+  {% set drew = namespace(one=false) %}
   {# What this person sees: a grown-up the household, a kid only what is hers (docs/STYLE.md, "A kid's screen"). `grownup` comes from the frame. #}
   {% set first = coming[0] if coming else none %}
   {% set member = visitor().member %}
@@ -74,7 +76,7 @@
             <p class="card__foot phone-only"><a class="more" href="{{ plans_url }}">{{ more_plans }} more plan{{ '' if more_plans == 1 else 's' }}{{ icon('chev', size='sm') }}</a></p>
           {% endif %}
         {% else %}
-          <p class="empty">{{ icon('cal') }}<span>Nothing planned yet.
+          <p class="empty{{ ' empty--drawn' if not drew.one }}">{% if not drew.one %}{{ drawing('plans') }}{% set drew.one = true %}{% else %}{{ icon('cal') }}{% endif %}<span>Nothing planned yet.
             {%- if visitor().may('change') %} Pick an idea and put it on the calendar, or ask {{ assistant }} what fits this weekend.
             {%- elif talk %} Ask {{ assistant }} what fits this weekend.{% endif %}</span></p>
         {% endif %}
@@ -97,7 +99,7 @@
           <div class="mini-ideas">
             {% for idea in ideas %}{{ idea_mini(idea, 'phone-hide' if loop.index > 2) }}
             {% else %}
-              <p class="empty">{{ icon('bulb') }}<span>No ideas yet. When someone says “we should try…”, {{ assistant }} saves it here.</span></p>
+              <p class="empty{{ ' empty--drawn' if not drew.one }}">{% if not drew.one %}{{ drawing('ideas') }}{% set drew.one = true %}{% else %}{{ icon('bulb') }}{% endif %}<span>No ideas yet. When someone says “we should try…”, {{ assistant }} saves it here.</span></p>
             {% endfor %}
           </div>
           {% if restaurant_count or visitor().may('change') %}
@@ -159,7 +161,7 @@
             {% for row in tasks %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup) }}{% endfor %}
           </ul>
         {% else %}
-          <p class="empty">{{ icon('todo') }}<span>{% if grownup %}No to-dos. Tell {{ assistant }} “remind me to call the dentist on Tuesday”, or add one on To do.{% else %}Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.{% endif %}</span></p>
+          <p class="empty{{ ' empty--drawn' if not drew.one }}">{% if not drew.one %}{{ drawing('todos') }}{% set drew.one = true %}{% else %}{{ icon('todo') }}{% endif %}<span>{% if grownup %}No to-dos. Tell {{ assistant }} “remind me to call the dentist on Tuesday”, or add one on To do.{% else %}Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.{% endif %}</span></p>
         {% endif %}
         {% if grownup %}<p class="card__foot">{{ icon('bell', size='sm') }} {{ reminders_said }}</p>{% endif %}
       </section>

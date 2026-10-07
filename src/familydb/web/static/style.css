@@ -1709,6 +1709,16 @@ li:target { border-radius: var(--r-md); }
   .wish__open > summary .chev { transition: none; }
 }
 
+/* Drawings: the family's moments in the icons' round line, never a face, never Vera, never on glass,
+   at most one on a screen. Coloured by tokens only, so every look carries them: the line --ink-3, one
+   flat fill --paper-2, one accent (a kid's own colour on her list, else --ink-3). */
+.drawing { width: 56px; height: 56px; flex: none; fill: var(--paper-2); stroke: var(--ink-3); color: var(--p-fill, var(--ink-3)); stroke-width: 1.7143; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.empty--drawn { display: flex; align-items: center; gap: var(--s4); }
+.empty--drawn > .icon { display: none; }
+.wans--drawn { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s3); align-items: center; }
+.wish--empty > .drawing { margin: calc(-1 * var(--s1)) 0; }
+@media (forced-colors: active) { .drawing { fill: Canvas; stroke: CanvasText; color: CanvasText; } }
+
 /* ---------- 14. Added with the family pages (step 9) ---------- */
 .item--off { opacity: .72; }
 
