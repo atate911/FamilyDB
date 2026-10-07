@@ -70,6 +70,12 @@ def seed(conn) -> Household:
             "UPDATE members SET birth_date = '2017-03-14', gender = 'female' WHERE id = ?",
             (mia.id,),
         )
+        # Her little sister, so "Chloe got one, that's not fair" is about a sister the family has.
+        chloe = members.add(conn, "Chloe", "kid", channel=None, channel_user_id=None, now=NOW_ISO)
+        conn.execute(
+            "UPDATE members SET birth_date = '2019-07-02', gender = 'female' WHERE id = ?",
+            (chloe.id,),
+        )
         cat = wishes.insert(
             conn,
             member_id=mia.id,
