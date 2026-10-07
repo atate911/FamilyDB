@@ -1700,6 +1700,9 @@ li:target { border-radius: var(--r-md); }
 @media (prefers-reduced-motion: reduce) {
   .wm__cur, .pill-health--busy::before, .typing i { animation: none; }
   .typing i { opacity: .7; }
+  .disclose > summary .chev, .fold > summary .chev, .fieldfold > summary .chev, .tool > summary .chev,
+  .adder__more > summary .chev, .mapband__fold > summary .chev, .sentrow > summary .chev,
+  .wish__open > summary .chev { transition: none; }
 }
 
 /* ---------- 14. Added with the family pages (step 9) ---------- */
@@ -1716,6 +1719,11 @@ li:target { border-radius: var(--r-md); }
   .actions--sticky { position: sticky; bottom: var(--tabbar-total); z-index: 5; margin: 0 calc(-1 * var(--s4)); padding: var(--s3) var(--s4); background: var(--card); border-top: 1px solid var(--line); flex-wrap: nowrap; }
 }
 .actions--bare { border-top: 0; padding-top: 0; }
+
+/* a day and a time from the family's list, side by side, wrapping on a narrow screen */
+.when { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.when input[type="date"] { flex: 1 1 11em; min-width: 0; }
+.when select { flex: 1 1 8em; min-width: 0; }
 
 /* ---------- Utilities, last, so a spacing class on an element always wins ---------- */
 .mt-2 { margin-top: var(--s2); } .mt-3 { margin-top: var(--s3); } .mt-4 { margin-top: var(--s4); } .mt-5 { margin-top: var(--s5); } .mt-6 { margin-top: var(--s6); }

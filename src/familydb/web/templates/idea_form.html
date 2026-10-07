@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, avatar with context %}
+{% from "_ui.html" import icon, avatar, when with context %}
 {% set editing = idea is not none %}
 {% block title %}{{ 'Change this idea' if editing else 'Add an idea' }} · {{ site_title }}{% endblock %}
 {% block content %}
@@ -73,7 +73,7 @@
               <input id="i-from" type="date" name="happens_from" aria-describedby="i-from-h" value="{{ idea.happens_from[:10] if editing and idea.happens_from else '' }}" />
               <span class="field__hint" id="i-from-h">Only for a thing tied to dates: a festival, a show’s run.</span></div>
             <div class="field"><label class="field__label" for="i-time">Starting at</label>
-              <input id="i-time" type="time" name="happens_time" value="{{ idea.happens_from[11:16] if editing and idea.happens_from and 'T' in idea.happens_from else '' }}" /></div>
+              <select id="i-time" name="happens_time"><option value="">No time</option>{% set at = idea.happens_from[11:16] if editing and idea.happens_from and 'T' in idea.happens_from else '' %}{% if at and at not in (time_choices | map('first') | list) %}<option value="{{ at }}" selected>{{ at | spoken_clock }}</option>{% endif %}{% for value_at, words in time_choices %}<option value="{{ value_at }}"{% if value_at == at %} selected{% endif %}>{{ words }}</option>{% endfor %}</select></div>
           </div>
           <div class="form__row">
             <div class="field"><label class="field__label" for="i-until">Until</label>

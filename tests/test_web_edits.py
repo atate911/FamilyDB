@@ -131,9 +131,9 @@ def test_the_days_a_thing_is_on_are_set_shown_and_cleared_from_the_page(planning
     assert (saved.happens_from, saved.happens_until) == ("2026-10-17T18:30", "2026-10-18")
     shown = planning.get("/idea/1").text
     assert "Sat 17 Oct, 6:30\u00a0pm to Sun 18 Oct 2026" in shown
-    assert 'value="2026-10-17T18:30"' in shown  # the plan form starts at its start
+    assert 'value="2026-10-17"' in shown and '<option value="18:30" selected>' in shown
     form = planning.get("/idea/1/edit").text
-    assert 'value="2026-10-17"' in form and 'value="18:30"' in form
+    assert 'value="2026-10-17"' in form and '<option value="18:30" selected>' in form
     # Emptied boxes clear them, as an emptied text box does.
     planning.post(
         "/idea/1/edit",

@@ -138,6 +138,16 @@ def _text(form: MultiDict[str, str], key: str) -> str:
     return form.get(key, "").strip()
 
 
+def _when(form: MultiDict[str, str], key: str) -> str:
+    """A day and a time the form sent apart (`key`_day, `key`_time, a time from the family's
+    list), joined as "YYYY-MM-DDTHH:MM"; a day alone stays a day. A form that sends `key` whole
+    (an older page, a script) is taken as it is."""
+    if whole := _text(form, key):
+        return whole
+    day, at = _text(form, f"{key}_day"), _text(form, f"{key}_time")
+    return f"{day}T{at}" if day and at else day
+
+
 def _list(form: MultiDict[str, str], key: str) -> list[str]:
     """A comma-separated box as a list."""
     return [part.strip() for part in form.get(key, "").split(",") if part.strip()]
@@ -350,7 +360,7 @@ def add_plan() -> Response:
     idea_id = _text(form, "idea_id")
     back = ("web.idea", {"idea_id": int(idea_id)}) if idea_id else ("web.plans", {})
     all_day = bool(form.get("all_day"))
-    start = _text(form, "start")
+    start = _when(form, "start")
     values: dict[str, Any] = {
         "title": _text(form, "title"),
         # An all-day plan keeps only the date.
@@ -378,7 +388,7 @@ def move_plan(plan_id: int) -> Response:
         _say(complaint)
         return _back("web.plans")
     all_day = bool(request.form.get("all_day"))
-    start = _text(request.form, "start")
+    start = _when(request.form, "start")
     result, complaint = run(
         "update_event",
         {"plan_id": plan_id, "start": start[:10] if all_day else start, "all_day": all_day},
@@ -406,9 +416,9 @@ def task_fields() -> dict[str, Any]:
         "title": _text(request.form, "title"),
         "notes": _text(request.form, "notes"),
         "owner": _text(request.form, "owner") or None,
-        "due_at": _text(request.form, "due_at") or None,
+        "due_at": _when(request.form, "due_at") or None,
         "preferred_window": _text(request.form, "preferred_window"),
-        "remind_at": _text(request.form, "remind_at") or None,
+        "remind_at": _when(request.form, "remind_at") or None,
     }
 
 

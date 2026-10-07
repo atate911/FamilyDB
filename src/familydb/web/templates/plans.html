@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, page_head, plan %}
+{% from "_ui.html" import icon, page_head, plan, when with context %}
 {% block title %}Plans · {{ site_title }}{% endblock %}
 {% block content %}
   {# Somebody who does not browse the household (a kid) gets one list, no way to choose (docs/STYLE.md, "A kid's screen"). #}
@@ -37,7 +37,7 @@
                     <div class="field"><label class="field__label" for="title">What <span class="req">(required)</span></label>
                       <input id="title" name="title" required maxlength="200" placeholder="Dinner at the ramen place" data-dictate /></div>
                     <div class="field"><label class="field__label" for="start">When <span class="req">(required)</span></label>
-                      <input id="start" name="start" type="datetime-local" required />
+                      {{ when('start', 'start', required=true) }}
                       <label class="check"><input type="checkbox" name="all_day" value="yes" />All day</label></div>
                     <div class="field"><label class="field__label" for="location">Where <span class="opt">(optional)</span></label><input id="location" name="location" /></div>
                     {% if not visitor().member %}

@@ -448,6 +448,13 @@ REMINDERS_SAID = (
 PLAN_STATUS_WORDS = {"tentative": "Maybe", "cancelled": "Canceled", "confirmed": "On"}
 
 
+# The times a form offers, every quarter hour, worded as the family reads them ("6:30 pm"): the
+# browser's own time box would show its own clock, often 24-hour.
+TIME_CHOICES = tuple(
+    (f"{h:02d}:{m:02d}", clock_time(f"{h:02d}:{m:02d}")) for h in range(24) for m in (0, 15, 30, 45)
+)
+
+
 def money_text(dollars: float) -> str:
     """ "$0.00", "$2.00"; under ten cents "4¢", which a dollar figure would round to nothing."""
     if 0 < dollars < 0.1:

@@ -65,6 +65,19 @@
   </div>
 {%- endmacro %}
 
+{# A day and a time, the time from a list in the family's clock ("6:30 pm") rather than the browser's own box. `name` is what the server joins back ("start" from start_day and start_time); `value` is "YYYY-MM-DDTHH:MM" or a day. A time not on the list (set in the chat) is kept as one of its own. #}
+{% macro when(name, id, value='', required=false, described=none, time_label='Time') -%}
+  {% set day = value[:10] if value else '' %}{% set at = value[11:16] if value and 'T' in value else '' %}
+  <span class="when">
+    <input id="{{ id }}" type="date" name="{{ name }}_day" value="{{ day }}"{% if required %} required{% endif %}{% if described %} aria-describedby="{{ described }}"{% endif %} />
+    <select name="{{ name }}_time" aria-label="{{ time_label }}">
+      <option value="">{{ time_label }}</option>
+      {% if at and at not in (time_choices | map('first') | list) %}<option value="{{ at }}" selected>{{ at | spoken_clock }}</option>{% endif %}
+      {% for value_at, words in time_choices %}<option value="{{ value_at }}"{% if value_at == at %} selected{% endif %}>{{ words }}</option>{% endfor %}
+    </select>
+  </span>
+{%- endmacro %}
+
 {# What the last form said, with a way to take it back when there is one. #}
 {% macro flash(message, undo_url=none) -%}
   <div class="banner banner--ok flash" role="status" tabindex="-1">
@@ -236,7 +249,7 @@
             <form class="mini-fold__body" method="post" action="{{ url_for('edits.move_plan', plan_id=row.id) }}" novalidate>
               <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
               <div class="field"><label class="field__label" for="start-{{ row.id }}">New time</label>
-                <input id="start-{{ row.id }}" name="start" type="datetime-local" required value="{{ row.start_value }}" /></div>
+                {{ when('start', 'start-' ~ row.id, value=row.start_value, required=true) }}</div>
               <label class="check"><input type="checkbox" name="all_day" value="yes"{{ ' checked' if row.all_day }} />All day</label>
               <div class="actions"><button class="btn btn--primary btn--sm" type="submit">Move it</button></div>
             </form>

@@ -471,3 +471,48 @@ def test_the_people_and_the_main_buttons_edge_hold_their_floors_in_every_look() 
                     short.append(f"{one.key} {which} {what}: {_contrast(a, b):.2f} < {floor}")
     assert any("--primary-edge" in _declared(body) for body in blocks.values())
     assert not short, "\n".join(short)
+
+
+def _rules(css: str) -> list[tuple[tuple[str, ...], str, str]]:
+    """Each rule's at-rules around it, its selector and its body, from a stylesheet."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    found, stack, start = [], [], 0
+    for at, char in enumerate(css):
+        if char == "{":
+            stack.append(css[start:at].strip())
+            start = at + 1
+        elif char == "}":
+            prelude = stack.pop()
+            if not prelude.startswith("@") and not re.fullmatch(r"(from|to|[\d.%, ]+)", prelude):
+                found.append((tuple(stack), prelude, css[start:at]))
+            start = at + 1
+        elif char == ";" and not stack:
+            start = at + 1
+    return found
+
+
+def test_whatever_moves_is_still_when_the_device_asks_for_less_motion() -> None:
+    """docs/STYLE.md, "Accessibility": an animation or transition outside a
+    `prefers-reduced-motion: no-preference` block is switched off in the `reduce` block, by the
+    same selector, so no look or page moves for somebody who asked their device for less."""
+    css = (STATIC / "style.css").read_text(encoding="utf-8")
+    rules = _rules(css)
+    still: dict[str, set[str]] = {}
+    for media, selector, body in rules:
+        if any("prefers-reduced-motion: reduce" in at for at in media):
+            for part in selector.split(","):
+                for prop in ("animation", "transition"):
+                    if re.search(rf"(^|;)\s*{prop}\s*:\s*none", body):
+                        still.setdefault(part.strip(), set()).add(prop)
+    moving = []
+    for media, selector, body in rules:
+        if any("prefers-reduced-motion" in at for at in media) or "@keyframes" in " ".join(media):
+            continue
+        for prop in ("animation", "transition"):
+            if re.search(rf"(^|;)\s*{prop}(-name)?\s*:\s*(?!none)", body):
+                moving += [
+                    (part.strip(), prop)
+                    for part in selector.split(",")
+                    if prop not in still.get(part.strip(), set())
+                ]
+    assert moving == []

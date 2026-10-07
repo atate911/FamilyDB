@@ -316,7 +316,10 @@ slashed zero is a help to reading. `.code` keeps model names, keys and codes in 
 
 Times are 12-hour with no leading zero ("9 am", "1:30 pm"; the family chose it, and it
 keeps the slashed zero out of a time), through `dates.clock_time` on the page and in Telegram.
-What is stored and what the model is sent stay 24-hour. A number is held to its unit by a
+What is stored and what the model is sent stay 24-hour. A form asks for a day and a time
+apart: the browser's date box, and a list of the day's quarter hours worded the same way
+(`when` in `_ui.html`, `views.TIME_CHOICES`), because a browser's own time box follows the
+device, not the family; the two are joined in `edits._when`. A number is held to its unit by a
 no-break space ("18 min"). Paragraphs stop at about 62
 characters.
 
@@ -687,7 +690,9 @@ rim is 4.6:1 against the page, its box's edge 4.4:1.
   in once on Home, a flash and a landing place glow and fade, the cursor rests. Only her typing
   screen, the typing dots and the writing-back dot loop, and only while a reply is on its way.
   Under `prefers-reduced-motion` nothing moves at all: the motions are written only for people
-  who have not asked for less (`prefers-reduced-motion: no-preference`).
+  who have not asked for less (`prefers-reduced-motion: no-preference`), or switched off by
+  the same selector in the `reduce` block (the chevrons, the dots); a test reads the stylesheet
+  for anything else that moves.
 - **Forced colors.** Whatever is shown by a background alone (the current place, segments,
   choices, the looks, tags, the pill, ticks, today) gets a real border.
 - **Reflow.** Nothing scrolls sideways at 320 pixels or at 200 % zoom.

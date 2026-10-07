@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, avatar, page_head %}
+{% from "_ui.html" import icon, avatar, page_head, when with context %}
 {% block title %}Edit a to-do · {{ site_title }}{% endblock %}
 {% block content %}
   {{ page_head('Edit a to-do', task.title ~ ' · added' ~ (' by ' ~ made_by if made_by else '') ~ ' on ' ~ added, crumb=('To do', url_for('web.tasks'))) }}
@@ -26,13 +26,13 @@
       <fieldset class="fieldset">
         <legend>When, a reminder, repeats</legend>
         <div class="form__row">
-          <div class="field"><label class="field__label" for="e-due">Deadline</label><input id="e-due" type="datetime-local" name="due_at" value="{{ row.due_input }}" aria-describedby="e-due-h" />
+          <div class="field"><label class="field__label" for="e-due">Deadline</label>{{ when('due_at', 'e-due', value=row.due_input, described='e-due-h') }}
             <span class="field__hint{{ ' late' if words.late }}" id="e-due-h">{% if words.late %}{{ words.late }}. Pick a new one, or empty it for no date.{% else %}Times use {{ zone }}. Empty it for no date.{% endif %}</span></div>
           <div class="field"><label class="field__label" for="e-win">Preferred window</label><input id="e-win" type="text" name="preferred_window" maxlength="4000" placeholder="Some Saturday morning" value="{{ task.preferred_window }}" aria-describedby="e-win-h" />
             <span class="field__hint" id="e-win-h">{{ assistant }} brings it up on that day.</span></div>
         </div>
         <div class="form__row">
-          <div class="field"><label class="field__label" for="e-rem">New reminder or snooze until</label><input id="e-rem" type="datetime-local" name="remind_at" aria-describedby="e-rem-h" />
+          <div class="field"><label class="field__label" for="e-rem">New reminder or snooze until</label>{{ when('remind_at', 'e-rem', described='e-rem-h') }}
             <span class="field__hint" id="e-rem-h">Leave it blank to keep the one there is. {% if task.reminder %}Reminder now: {{ words.reminder }}.{% else %}No active reminder now.{% endif %}</span></div>
           <div class="field"><label class="field__label" for="e-rep">Repeats</label>
             <select id="e-rep" name="repeat">{% for value, label in row.repeat_options %}<option value="{{ value }}"{% if value == row.repeat_choice %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>

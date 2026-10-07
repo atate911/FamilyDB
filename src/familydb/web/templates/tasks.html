@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, avatar, page_head, todo with context %}
+{% from "_ui.html" import icon, avatar, page_head, todo, when with context %}
 {% block title %}{{ 'To do' if grownup else 'My to-dos' }} · {{ site_title }}{% endblock %}
 {# One person to choose, as a pill: their colour and their letter, then their name. `value` is what the form sends. #}
 {% macro who_choice(value, one, checked=false, label=none) %}
@@ -45,9 +45,9 @@
               <summary>When, a reminder, repeats <span class="val">No date</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
               <div class="disclose__body adder__opts">
                 <p class="field__hint span-all">Times use {{ zone }}. A deadline or preferred window doesn’t set a reminder or book your calendar.</p>
-                <div class="field"><label class="field__label" for="q-due">Deadline <span class="opt">(optional)</span></label><input id="q-due" type="datetime-local" name="due_at" /></div>
+                <div class="field"><label class="field__label" for="q-due">Deadline <span class="opt">(optional)</span></label>{{ when('due_at', 'q-due') }}</div>
                 <div class="field"><label class="field__label" for="q-win">Preferred window <span class="opt">(optional)</span></label><input id="q-win" type="text" name="preferred_window" maxlength="4000" placeholder="Some Saturday morning" /></div>
-                <div class="field"><label class="field__label" for="q-rem">Remind me at <span class="opt">(optional)</span></label><input id="q-rem" type="datetime-local" name="remind_at" /></div>
+                <div class="field"><label class="field__label" for="q-rem">Remind me at <span class="opt">(optional)</span></label>{{ when('remind_at', 'q-rem') }}</div>
                 <div class="field"><label class="field__label" for="q-rep">Repeats</label>
                   <select id="q-rep" name="repeat" aria-describedby="q-rep-h">{% for value, label in repeat_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
                 <label class="check"><input type="checkbox" name="repeat_after_done" />Count from when it’s done</label>

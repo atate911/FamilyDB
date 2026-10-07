@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, tile, tag, avatar, page_head, date_tile, surprise with context %}
+{% from "_ui.html" import icon, tile, tag, avatar, page_head, date_tile, surprise, when with context %}
 {% block title %}{{ idea.title }} · {{ site_title }}{% endblock %}
 {# Who is doing this: asked only while the family shares a password. Somebody signed in as
    themselves is who, and the page knows it. #}
@@ -203,7 +203,7 @@
                 <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
                 <input type="hidden" name="idea_id" value="{{ idea.id }}" /><input type="hidden" name="title" value="{{ idea.title }}" />
                 <div class="field"><label class="field__label" for="start">When <span class="req">(required)</span></label>
-                  <input id="start" name="start" type="datetime-local" required value="{{ idea.happens_from if idea.happens_from and 'T' in idea.happens_from else '' }}" />
+                  {{ when('start', 'start', value=(idea.happens_from if idea.happens_from and 'T' in idea.happens_from else ''), required=true) }}
                   <label class="check"><input type="checkbox" name="all_day" value="yes" />All day</label></div>
                 <div class="field"><label class="field__label" for="location">Where <span class="opt">(optional)</span></label><input id="location" name="location" value="{{ row.where or '' }}" /></div>
                 {{ asking('plan') }}

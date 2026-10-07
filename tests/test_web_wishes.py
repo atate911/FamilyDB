@@ -362,4 +362,4 @@ def test_a_kids_idea_page_is_her_own_kind_of_page(app, family, girls) -> None:  
     page = girls["mine"].get(f"/idea/{rink.id}").text
     assert "Quick facts" in page and "At a glance" not in page
     assert "Looking it up" not in page and "Your idea" in page
-    assert "I’d like this" in page and "Edit this idea" not in page
+    assert "I\u2019d like this" in page and "Edit this idea" not in page
