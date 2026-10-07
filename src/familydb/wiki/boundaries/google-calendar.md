@@ -67,4 +67,4 @@ If the key is gone, make a new one and connect again. The events are in Google, 
 - Free time. The calendar tools report which of morning (from 08:00), afternoon (from 12:00) and evening (from 17:00, to 22:00) are free. The suggestion engine works in minutes between 08:00 and 22:00.
 - Hand-added events. They appear and count as busy. They stay events, not plans. FamilyDB can move or remove one by its id when asked, and the page's move and cancel forms work on FamilyDB's own plans.
 
-Developer docs: `src/familydb/integrations/google_calendar.py`, `src/familydb/calendar_sync.py`, `src/familydb/agenda.py`, `src/familydb/free_time.py`, `src/familydb/tools/gcal.py`; `docs/DESIGN.md`, "Integrations".
+Developer docs: src/familydb/integrations/google_calendar.py, src/familydb/calendar_sync.py, src/familydb/agenda.py, src/familydb/free_time.py, src/familydb/tools/gcal.py; docs/DESIGN.md, "Integrations".

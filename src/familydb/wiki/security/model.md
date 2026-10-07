@@ -84,4 +84,4 @@ FamilyDB needs nothing inbound: it reaches Telegram by long polling and calls th
 6. Send Telegram links to one person, privately.
 7. Keep root and SSH access tight, and learn how to [recover](/wiki/operations/recovery) before you need to.
 
-Developer docs: `docs/DESIGN.md`, "Security" and "Decisions"; `docs/AI_CALLS.md`, "What may it do?".
+Developer docs: docs/DESIGN.md, "Security" and "Decisions"; docs/AI_CALLS.md, "What may it do?".

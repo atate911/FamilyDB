@@ -103,4 +103,4 @@ Repeating is safe: each plan and each day's weekend ideas are marked once.
 | [Models and prices](/wiki/controls/status/models-and-prices) | When each source was read, what changed, and what a judgment answered |
 | [Logs](/wiki/operations/diagnostics#logs) | Skips (`digest skipped: ...`), the catch-up result and settings moves; a quiet run of the forget-locations job or the settings watch is not logged |
 
-Developer docs: `src/familydb/jobs/scheduler.py`, `src/familydb/jobs/`, `src/familydb/alerts.py`, `src/familydb/model_watch.py`, `src/familydb/judgement.py`; `docs/DESIGN.md`, "Enrichment: filling in the details" and "Tasks, reminders and free-form capture".
+Developer docs: src/familydb/jobs/scheduler.py, src/familydb/jobs/, src/familydb/alerts.py, src/familydb/model_watch.py, src/familydb/judgement.py; docs/DESIGN.md, "Enrichment: filling in the details" and "Tasks, reminders and free-form capture".

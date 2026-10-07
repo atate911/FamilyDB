@@ -78,7 +78,7 @@ Each row names the setting and the card it is on.
 | Get somebody back in who cannot sign in | [Recovery](/wiki/operations/recovery) |
 | Get Telegram answering again | [Telegram is silent](/wiki/operations/troubleshooting#telegram-is-silent-or-its-buttons-do-nothing) |
 | Fix calendar problems | [Calendar problems](/wiki/operations/troubleshooting#calendar-problems) |
-| Find out why a reminder did not arrive | [Reminders and weekend ideas do not arrive](/wiki/operations/troubleshooting#reminders-or-the-weekend-digest-do-not-arrive) |
+| Find out why a reminder did not arrive | [Reminders and weekend ideas do not arrive](/wiki/operations/troubleshooting#reminders-or-weekend-ideas-do-not-arrive) |
 | Open a page that will not load | [The page will not open](/wiki/operations/troubleshooting#the-page-will-not-open) |
 | See what needs an admin's attention | [Needs a look](/wiki/controls/status#needs-a-look) |
 

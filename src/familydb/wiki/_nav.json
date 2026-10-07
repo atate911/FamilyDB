@@ -8,39 +8,28 @@
     },
     {
       "slug": "overview",
-      "title": "The big picture",
+      "title": "About FamilyDB",
       "audience": "grownups",
       "depth": "overview",
       "children": [
         {
           "slug": "overview/what-it-is",
-          "title": "What it is and isn't",
+          "title": "What it is and is not",
           "audience": "grownups",
           "depth": "overview",
           "see_also": [
-            "model",
-            "controls",
-            "security"
+            "security/what-leaves-the-house",
+            "model/family-and-roles"
           ]
         },
         {
           "slug": "overview/how-its-built",
           "title": "How it is built",
-          "audience": "grownups",
-          "depth": "overview",
-          "see_also": [
-            "overview/layers-and-flow",
-            "overview/building-blocks"
-          ]
-        },
-        {
-          "slug": "overview/layers-and-flow",
-          "title": "Layers and the path of a message",
           "audience": "admin",
-          "depth": "overview",
+          "depth": "deep",
           "see_also": [
             "overview/building-blocks",
-            "behavior"
+            "security/model"
           ]
         },
         {
@@ -49,210 +38,16 @@
           "audience": "admin",
           "depth": "overview",
           "see_also": [
-            "overview/how-its-built",
             "operations/host"
           ]
         }
       ]
     },
     {
-      "slug": "model",
-      "title": "The pieces",
-      "audience": "grownups",
-      "depth": "overview",
-      "see_also": [
-        "behavior",
-        "reference/glossary"
-      ],
-      "children": [
-        {
-          "slug": "model/family-and-roles",
-          "title": "The family and roles",
-          "audience": "grownups",
-          "depth": "overview",
-          "see_also": [
-            "controls/family",
-            "security/passwords-and-sessions"
-          ]
-        },
-        {
-          "slug": "model/memory",
-          "title": "Memory",
-          "audience": "grownups",
-          "depth": "overview",
-          "see_also": [
-            "controls/memory"
-          ]
-        },
-        {
-          "slug": "model/wishes",
-          "title": "Wishes",
-          "audience": "grownups",
-          "depth": "overview",
-          "see_also": [
-            "controls/wish-lists"
-          ]
-        },
-        {
-          "slug": "model/vera",
-          "title": "Vera",
-          "audience": "grownups",
-          "depth": "overview",
-          "see_also": [
-            "controls/settings/personality"
-          ]
-        },
-        {
-          "slug": "model/ideas-and-places",
-          "title": "Ideas and places",
-          "audience": "grownups",
-          "depth": "overview",
-          "see_also": [
-            "controls/ideas"
-          ]
-        },
-        {
-          "slug": "model/plans-and-calendar",
-          "title": "Plans and the calendar",
-          "audience": "grownups",
-          "depth": "overview",
-          "see_also": [
-            "controls/plans-and-tasks"
-          ]
-        },
-        {
-          "slug": "model/tasks-and-reminders",
-          "title": "Things to do and reminders",
-          "audience": "grownups",
-          "depth": "overview",
-          "see_also": [
-            "controls/plans-and-tasks"
-          ]
-        },
-        {
-          "slug": "model/state-and-database",
-          "title": "State and the database",
-          "audience": "admin",
-          "depth": "deep",
-          "see_also": [
-            "operations/backup-and-restore"
-          ]
-        }
-      ]
-    },
-    {
-      "slug": "behavior",
-      "title": "What it does on its own",
-      "audience": "admin",
-      "depth": "overview",
-      "see_also": [
-        "model",
-        "operations"
-      ],
-      "children": [
-        {
-          "slug": "behavior/jobs",
-          "title": "The scheduled jobs",
-          "audience": "admin",
-          "depth": "deep",
-          "see_also": [
-            "controls/settings/messages",
-            "controls/settings/lookups"
-          ]
-        },
-        {
-          "slug": "behavior/suggestions",
-          "title": "How suggestions are made",
-          "audience": "admin",
-          "depth": "deep",
-          "see_also": [
-            "model/ideas-and-places",
-            "behavior/jobs"
-          ]
-        },
-        {
-          "slug": "behavior/lifecycles",
-          "title": "Lifecycles: how things change over time",
-          "audience": "admin",
-          "depth": "deep",
-          "see_also": [
-            "model",
-            "behavior/telegram-loop"
-          ]
-        },
-        {
-          "slug": "behavior/telegram-loop",
-          "title": "Telegram: the message loop",
-          "audience": "admin",
-          "depth": "deep",
-          "see_also": [
-            "controls/telegram",
-            "boundaries"
-          ]
-        }
-      ]
-    },
-    {
-      "slug": "boundaries",
-      "title": "What it touches",
-      "audience": "admin",
-      "depth": "overview",
-      "see_also": [
-        "security",
-        "operations"
-      ],
-      "children": [
-        {
-          "slug": "boundaries/model-companies",
-          "title": "Model companies",
-          "audience": "admin",
-          "depth": "deep",
-          "see_also": [
-            "controls/settings/ai-model",
-            "security/data-and-privacy"
-          ]
-        },
-        {
-          "slug": "boundaries/telegram",
-          "title": "Telegram",
-          "audience": "admin",
-          "depth": "deep",
-          "see_also": [
-            "controls/telegram",
-            "behavior/telegram-loop"
-          ]
-        },
-        {
-          "slug": "boundaries/google-calendar",
-          "title": "Google Calendar",
-          "audience": "admin",
-          "depth": "deep",
-          "see_also": [
-            "controls/settings/connections",
-            "model/plans-and-calendar"
-          ]
-        },
-        {
-          "slug": "boundaries/weather-and-maps",
-          "title": "Weather, maps and price lists",
-          "audience": "admin",
-          "depth": "deep",
-          "see_also": [
-            "controls/settings/connections",
-            "controls/status/models-and-prices"
-          ]
-        }
-      ]
-    },
-    {
       "slug": "controls",
-      "title": "How you control it",
+      "title": "Using FamilyDB",
       "audience": "grownups",
       "depth": "overview",
-      "see_also": [
-        "operations",
-        "security"
-      ],
       "children": [
         {
           "slug": "controls/home-and-chat",
@@ -262,6 +57,28 @@
           "see_also": [
             "controls/telegram",
             "controls/memory"
+          ]
+        },
+        {
+          "slug": "controls/ideas",
+          "title": "Ideas",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "model/ideas-and-places",
+            "controls/plans-and-tasks",
+            "controls/settings/lookups"
+          ]
+        },
+        {
+          "slug": "controls/plans-and-tasks",
+          "title": "Plans and To do",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "model/plans-and-calendar",
+            "model/tasks-and-reminders",
+            "controls/ideas"
           ]
         },
         {
@@ -275,148 +92,13 @@
           ]
         },
         {
-          "slug": "controls/family",
-          "title": "Family",
-          "audience": "admin",
-          "depth": "howto",
-          "see_also": [
-            "security",
-            "operations/recovery",
-            "controls/telegram"
-          ]
-        },
-        {
-          "slug": "controls/ideas",
-          "title": "Ideas",
-          "audience": "grownups",
-          "depth": "howto",
-          "see_also": [
-            "controls/plans-and-tasks",
-            "controls/settings/lookups"
-          ]
-        },
-        {
-          "slug": "controls/plans-and-tasks",
-          "title": "Plans and To do",
-          "audience": "grownups",
-          "depth": "howto",
-          "see_also": [
-            "controls/ideas",
-            "controls/telegram"
-          ]
-        },
-        {
-          "slug": "controls/status",
-          "title": "Status",
-          "audience": "grownups",
-          "depth": "howto",
-          "see_also": [
-            "controls/settings",
-            "operations"
-          ],
-          "children": [
-            {
-              "slug": "controls/status/models-and-prices",
-              "title": "Models and prices",
-              "audience": "admin",
-              "depth": "howto"
-            },
-            {
-              "slug": "controls/status/activity",
-              "title": "Recent activity",
-              "audience": "admin",
-              "depth": "howto"
-            }
-          ]
-        },
-        {
           "slug": "controls/memory",
           "title": "What Vera knows",
           "audience": "grownups",
           "depth": "howto",
           "see_also": [
-            "controls/settings/personality",
+            "model/memory",
             "controls/home-and-chat"
-          ]
-        },
-        {
-          "slug": "controls/setup",
-          "title": "Setup",
-          "audience": "admin",
-          "depth": "howto",
-          "see_also": [
-            "operations/install",
-            "controls/settings/connections"
-          ]
-        },
-        {
-          "slug": "controls/look-and-password",
-          "title": "Look and Your password",
-          "audience": "grownups",
-          "depth": "howto",
-          "see_also": [
-            "operations/recovery",
-            "security"
-          ]
-        },
-        {
-          "slug": "controls/settings",
-          "title": "Settings",
-          "audience": "admin",
-          "depth": "howto",
-          "see_also": [
-            "operations",
-            "security"
-          ],
-          "children": [
-            {
-              "slug": "controls/settings/general",
-              "title": "General",
-              "audience": "admin",
-              "depth": "howto"
-            },
-            {
-              "slug": "controls/settings/ai-model",
-              "title": "AI model",
-              "audience": "admin",
-              "depth": "howto"
-            },
-            {
-              "slug": "controls/settings/spending",
-              "title": "Spending",
-              "audience": "admin",
-              "depth": "howto"
-            },
-            {
-              "slug": "controls/settings/messages",
-              "title": "Messages",
-              "audience": "admin",
-              "depth": "howto"
-            },
-            {
-              "slug": "controls/settings/lookups",
-              "title": "Lookups",
-              "audience": "admin",
-              "depth": "howto"
-            },
-            {
-              "slug": "controls/settings/personality",
-              "title": "Personality and family",
-              "audience": "admin",
-              "depth": "howto"
-            },
-            {
-              "slug": "controls/settings/connections",
-              "title": "Connections",
-              "audience": "admin",
-              "depth": "howto"
-            },
-            {
-              "slug": "controls/settings/sign-in",
-              "title": "Sign-in and security",
-              "audience": "admin",
-              "depth": "howto"
-            }
           ]
         },
         {
@@ -425,31 +107,168 @@
           "audience": "grownups",
           "depth": "howto",
           "see_also": [
-            "controls/settings/connections",
-            "controls/command-line"
+            "controls/family"
           ]
         },
         {
-          "slug": "controls/command-line",
-          "title": "The command line",
+          "slug": "controls/look-and-password",
+          "title": "Look and your password",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "operations/recovery",
+            "security/passwords-and-sessions"
+          ]
+        },
+        {
+          "slug": "controls/status",
+          "title": "Status",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "operations/troubleshooting",
+            "operations/diagnostics"
+          ],
+          "children": [
+            {
+              "slug": "controls/status/models-and-prices",
+              "title": "Models and prices",
+              "audience": "grownups",
+              "depth": "howto",
+              "see_also": [
+                "controls/settings/ai-model",
+                "operations/cost"
+              ]
+            },
+            {
+              "slug": "controls/status/activity",
+              "title": "Recent activity",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "operations/troubleshooting",
+                "behavior/message-to-reply"
+              ]
+            }
+          ]
+        },
+        {
+          "slug": "controls/family",
+          "title": "Family",
           "audience": "admin",
           "depth": "howto",
           "see_also": [
-            "operations",
-            "operations/recovery"
+            "operations/recovery",
+            "controls/telegram"
+          ]
+        },
+        {
+          "slug": "controls/setup",
+          "title": "Setup",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "controls/settings/connections"
+          ]
+        },
+        {
+          "slug": "controls/settings",
+          "title": "Settings",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations/configuration",
+            "security/model"
+          ],
+          "children": [
+            {
+              "slug": "controls/settings/general",
+              "title": "General",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "model/location",
+                "operations/https-and-firewall"
+              ]
+            },
+            {
+              "slug": "controls/settings/ai-model",
+              "title": "AI model",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "boundaries/model-companies",
+                "controls/status/models-and-prices"
+              ]
+            },
+            {
+              "slug": "controls/settings/spending",
+              "title": "Spending",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "model/wishes",
+                "model/family-and-roles"
+              ]
+            },
+            {
+              "slug": "controls/settings/messages",
+              "title": "Messages",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "behavior/jobs",
+                "operations/troubleshooting"
+              ]
+            },
+            {
+              "slug": "controls/settings/lookups",
+              "title": "Lookups",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "behavior/jobs",
+                "controls/ideas"
+              ]
+            },
+            {
+              "slug": "controls/settings/personality",
+              "title": "Personality and family",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "model/vera",
+                "controls/memory"
+              ]
+            },
+            {
+              "slug": "controls/settings/connections",
+              "title": "Connections",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "boundaries/telegram",
+                "boundaries/google-calendar"
+              ]
+            },
+            {
+              "slug": "controls/settings/sign-in",
+              "title": "Sign-in and security",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "controls/family"
+              ]
+            }
           ]
         }
       ]
     },
     {
       "slug": "operations",
-      "title": "Running it over time",
+      "title": "Running the server",
       "audience": "admin",
       "depth": "overview",
-      "see_also": [
-        "controls",
-        "boundaries"
-      ],
       "children": [
         {
           "slug": "operations/install",
@@ -457,9 +276,19 @@
           "audience": "admin",
           "depth": "howto",
           "see_also": [
-            "operations/backup-and-restore",
-            "controls",
-            "boundaries"
+            "controls/setup",
+            "operations/https-and-firewall",
+            "operations/host"
+          ]
+        },
+        {
+          "slug": "operations/command-line",
+          "title": "The command line",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations/diagnostics",
+            "operations/host"
           ]
         },
         {
@@ -488,7 +317,7 @@
           "audience": "admin",
           "depth": "howto",
           "see_also": [
-            "security",
+            "security/passwords-and-sessions",
             "operations/backup-and-restore"
           ]
         },
@@ -503,12 +332,21 @@
           ]
         },
         {
+          "slug": "operations/https-and-firewall",
+          "title": "HTTPS and the firewall",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations/install",
+            "operations/troubleshooting"
+          ]
+        },
+        {
           "slug": "operations/configuration",
-          "title": "Configuration (.env)",
+          "title": "The .env file",
           "audience": "admin",
           "depth": "deep",
           "see_also": [
-            "controls/settings",
             "operations/diagnostics"
           ]
         },
@@ -519,7 +357,8 @@
           "depth": "howto",
           "see_also": [
             "operations/troubleshooting",
-            "controls/status"
+            "controls/status",
+            "operations/command-line"
           ]
         },
         {
@@ -529,7 +368,8 @@
           "depth": "howto",
           "see_also": [
             "operations/diagnostics",
-            "operations/recovery"
+            "operations/recovery",
+            "operations/https-and-firewall"
           ]
         },
         {
@@ -547,21 +387,26 @@
     {
       "slug": "security",
       "title": "Security and trust",
-      "audience": "admin",
+      "audience": "grownups",
       "depth": "overview",
-      "see_also": [
-        "controls",
-        "boundaries"
-      ],
       "children": [
+        {
+          "slug": "security/what-leaves-the-house",
+          "title": "What leaves the house",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "boundaries/model-companies",
+            "model/location"
+          ]
+        },
         {
           "slug": "security/model",
           "title": "Trust and threat model",
           "audience": "admin",
           "depth": "deep",
           "see_also": [
-            "security/passwords-and-sessions",
-            "boundaries"
+            "security/passwords-and-sessions"
           ]
         },
         {
@@ -570,18 +415,201 @@
           "audience": "admin",
           "depth": "deep",
           "see_also": [
-            "operations/recovery",
-            "controls/settings/sign-in"
+            "controls/look-and-password"
           ]
         },
         {
           "slug": "security/data-and-privacy",
-          "title": "Data and privacy",
+          "title": "What is stored and for how long",
           "audience": "admin",
           "depth": "deep",
           "see_also": [
-            "boundaries",
             "operations/backup-and-restore"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "model",
+      "title": "The pieces",
+      "audience": "grownups",
+      "depth": "overview",
+      "children": [
+        {
+          "slug": "model/family-and-roles",
+          "title": "The family and roles",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "security/passwords-and-sessions"
+          ]
+        },
+        {
+          "slug": "model/ideas-and-places",
+          "title": "Ideas and places",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "model/plans-and-calendar"
+          ]
+        },
+        {
+          "slug": "model/plans-and-calendar",
+          "title": "Plans and the calendar",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "model/tasks-and-reminders",
+            "boundaries/google-calendar"
+          ]
+        },
+        {
+          "slug": "model/tasks-and-reminders",
+          "title": "Things to do and reminders",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "behavior/jobs"
+          ]
+        },
+        {
+          "slug": "model/wishes",
+          "title": "Wish-list rules",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "model/ideas-and-places"
+          ]
+        },
+        {
+          "slug": "model/memory",
+          "title": "How memory works",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "security/what-leaves-the-house"
+          ]
+        },
+        {
+          "slug": "model/vera",
+          "title": "Vera",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "model/memory"
+          ]
+        },
+        {
+          "slug": "model/location",
+          "title": "Shared location",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "controls/settings/general",
+            "security/what-leaves-the-house"
+          ]
+        },
+        {
+          "slug": "model/state-and-database",
+          "title": "State and the database",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "security/data-and-privacy"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "behavior",
+      "title": "What it does on its own",
+      "audience": "grownups",
+      "depth": "overview",
+      "children": [
+        {
+          "slug": "behavior/jobs",
+          "title": "The scheduled jobs",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "controls/settings/messages",
+            "controls/settings/lookups",
+            "behavior/message-to-reply"
+          ]
+        },
+        {
+          "slug": "behavior/suggestions",
+          "title": "How suggestions are made",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "model/ideas-and-places",
+            "behavior/jobs",
+            "boundaries/weather-and-maps"
+          ]
+        },
+        {
+          "slug": "behavior/message-to-reply",
+          "title": "From message to reply",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "operations/troubleshooting"
+          ]
+        },
+        {
+          "slug": "behavior/telegram-loop",
+          "title": "Telegram: the message loop",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "behavior/message-to-reply"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "boundaries",
+      "title": "Outside services",
+      "audience": "admin",
+      "depth": "overview",
+      "children": [
+        {
+          "slug": "boundaries/model-companies",
+          "title": "Model companies",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "security/what-leaves-the-house",
+            "controls/status/models-and-prices"
+          ]
+        },
+        {
+          "slug": "boundaries/telegram",
+          "title": "Telegram as a service",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "operations/troubleshooting"
+          ]
+        },
+        {
+          "slug": "boundaries/google-calendar",
+          "title": "Google Calendar",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "model/plans-and-calendar"
+          ]
+        },
+        {
+          "slug": "boundaries/weather-and-maps",
+          "title": "Weather, maps and price lists",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "controls/settings/general",
+            "controls/status/models-and-prices"
           ]
         }
       ]
@@ -593,16 +621,43 @@
       "depth": "overview",
       "children": [
         {
+          "slug": "reference/tasks",
+          "title": "How do I...?",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "reference/known-limits",
+            "reference/glossary"
+          ]
+        },
+        {
           "slug": "reference/glossary",
           "title": "Glossary",
           "audience": "grownups",
-          "depth": "overview"
+          "depth": "overview",
+          "see_also": [
+            "reference/tasks"
+          ]
+        },
+        {
+          "slug": "reference/known-limits",
+          "title": "Known limits",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "operations/troubleshooting",
+            "reference/tasks"
+          ]
         },
         {
           "slug": "reference/dev-docs",
-          "title": "Map to the developer docs",
+          "title": "Developer docs",
           "audience": "admin",
-          "depth": "overview"
+          "depth": "overview",
+          "see_also": [
+            "overview/how-its-built",
+            "overview/building-blocks"
+          ]
         }
       ]
     }

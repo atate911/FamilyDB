@@ -84,4 +84,4 @@ To change anything, use the page, or `familydb tool` ([The command line](/wiki/o
 - When somebody is taken off for good, FamilyDB removes what was theirs alone and blanks their name wherever else it is stored. A test checks this against the database layout, so a new table cannot forget.
 - Keep the file owner-only, and restore only a backup no newer than the code it is restored onto.
 
-Developer docs: `src/familydb/store/db.py`, `src/familydb/store/migrations/`, `src/familydb/store/members.py`, `src/familydb/privacy.py`; `docs/DESIGN.md`, "Data model".
+Developer docs: src/familydb/store/db.py, src/familydb/store/migrations/, src/familydb/store/members.py, src/familydb/privacy.py; docs/DESIGN.md, "Data model".

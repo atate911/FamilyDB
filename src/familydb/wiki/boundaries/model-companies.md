@@ -68,4 +68,4 @@ Each day at 05:17 FamilyDB asks every company with a key which models the key ma
 
 Adding a company is developer work, described in the developer docs.
 
-Developer docs: `src/familydb/agent/providers/`, `src/familydb/agent/gateway.py`, `src/familydb/agent/loop.py`, `src/familydb/model_watch.py`, `src/familydb/alerts.py`; `docs/AI_CALLS.md`; `docs/DESIGN.md`, "Decisions"; `CLAUDE.md`, "Layout".
+Developer docs: src/familydb/agent/providers/, src/familydb/agent/gateway.py, src/familydb/agent/loop.py, src/familydb/model_watch.py, src/familydb/alerts.py; docs/AI_CALLS.md; docs/DESIGN.md, "Decisions"; CLAUDE.md, "Layout".

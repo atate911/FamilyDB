@@ -80,4 +80,4 @@ The timer keeps its schedule in memory, so about 60 seconds after a start a catc
 
 [Status](/wiki/controls/status) has a row for the assistant and one for Telegram; if you can read Status, the web page is up. A healthy start logs `familydb <version> starting`, `serving the web page at ...` and `telegram: polling as @<name>`; [Logs](/wiki/operations/diagnostics#logs) says how to read the log.
 
-Developer docs: `src/familydb/cli.py`, `src/familydb/app.py`, `src/familydb/jobs/scheduler.py`, `src/familydb/channels/telegram.py`, `src/familydb/channels/web.py`, `src/familydb/web/server.py`, `src/familydb/store/db.py`, `src/familydb/delivery.py`; `docs/DESIGN.md`, "Architecture" and "Deployment on a home server or a VPS"; `docs/AI_CALLS.md`, "The one idea".
+Developer docs: src/familydb/cli.py, src/familydb/app.py, src/familydb/jobs/scheduler.py, src/familydb/channels/telegram.py, src/familydb/channels/web.py, src/familydb/web/server.py, src/familydb/store/db.py, src/familydb/delivery.py; docs/DESIGN.md, "Architecture" and "Deployment on a home server or a VPS"; docs/AI_CALLS.md, "The one idea".

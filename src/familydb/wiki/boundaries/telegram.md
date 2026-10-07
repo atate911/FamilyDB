@@ -50,4 +50,4 @@ The change log records that the token changed, never the value. Telegram's own r
 
 Who may talk to the bot is the family list: a Telegram id on it. A message from anyone else gets a short line with their id and a record that they knocked, never the words ([Who may message the bot](/wiki/model/family-and-roles#who-may-message-the-bot)). A link an admin makes for one person works for whoever holds it, so send it to that person alone.
 
-Developer docs: `src/familydb/channels/telegram.py`, `src/familydb/routing.py`, `src/familydb/pipeline.py`, `src/familydb/delivery.py`, `src/familydb/app.py`; `docs/DESIGN.md`, "Integrations" and "Decisions".
+Developer docs: src/familydb/channels/telegram.py, src/familydb/routing.py, src/familydb/pipeline.py, src/familydb/delivery.py, src/familydb/app.py; docs/DESIGN.md, "Integrations" and "Decisions".

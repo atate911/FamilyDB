@@ -86,6 +86,10 @@ These show things and send nothing. On a database that has never been opened, or
 | `familydb google events [--days N]` | The next 7 days (or N) on the family calendar, as a connection test |
 | `familydb debug validate-tools` | Asks the API to validate the tool definitions. It needs an Anthropic or Gemini key and fails on OpenAI |
 
+## Status commands
+
+`maintain.sh status` prints the version, whether the service is running (on Docker, the container list), the database path and size, free disk, the newest backup with its date, and whether a nightly backup is scheduled. It warns when there is no database or no backup, and it does not judge health. `maintain.sh check` runs the doctor and prints every finding with its fix. `familydb db status` prints the schema version, row counts and the last few model calls, and upgrades an older database first. For the doctor on a running Docker install, use the `exec` form under [How to run it](#how-to-run-it).
+
 ## Change something now
 
 These act on the real data. None of them asks a model.

@@ -64,4 +64,4 @@ With Telegram disconnected, the retry job skips Telegram messages without counti
 | A reminder, due during downtime | The next reminders job sends it, marked late. A repeating one resumes at its next time after now, with no flood |
 | A reminder or a wish for the parents, queued but not sent | The retry job sends it. A reminder waiting for a conversation is in memory only, so it is simply sent |
 
-Developer docs: `src/familydb/pipeline.py`, `src/familydb/delivery.py`, `src/familydb/channels/web.py`, `src/familydb/web/edits.py`; `docs/DESIGN.md`, "Message pipeline"; `docs/AI_CALLS.md`, "The one idea".
+Developer docs: src/familydb/pipeline.py, src/familydb/delivery.py, src/familydb/channels/web.py, src/familydb/web/edits.py; docs/DESIGN.md, "Message pipeline"; docs/AI_CALLS.md, "The one idea".

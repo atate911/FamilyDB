@@ -43,7 +43,7 @@ Who the assistant talks to and who signs in. An admin changes it on the Family p
 A made-up password an admin gives a person, shown once. The person can reach only the page where they choose their own until they have. See [Passwords](/wiki/controls/family#passwords).
 
 ### Shared password
-The one password the family uses until an admin has their own; the installer prints it, and `.env` keeps it as `WEB_PASSWORD`. The first admin's own password ends it for good, unless you restore an older backup. See [The shared password](/wiki/security/passwords-and-sessions#the-shared-password).
+The one password the family uses until an admin has their own; the installer prints it, and `.env` keeps it as `WEB_PASSWORD`. Once any admin has an own password it ends for good, unless you restore an older backup. See [The shared password](/wiki/security/passwords-and-sessions#the-shared-password).
 
 ### Vera
 The default name of the assistant. Vera is the persona: the name, the character and the wording of everything said unasked, which the family can rename and rewrite. See [Vera](/wiki/model/vera).

@@ -41,4 +41,4 @@ A kid's message goes to the model company like anybody's. The assistant is told 
 
 A present is left out of the idea list the assistant carries for everyone, but a present with a place or link is still sent to the lookup company with who it is for. See [Presents](/wiki/model/ideas-and-places#presents).
 
-Developer docs: `docs/DESIGN.md`, "Decisions"; `docs/AI_CALLS.md`, "What does it see?".
+Developer docs: docs/DESIGN.md, "Decisions"; docs/AI_CALLS.md, "What does it see?".

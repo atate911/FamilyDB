@@ -85,4 +85,4 @@ A second cookie, `familydb_device`, marks a browser that has signed in before. I
 
 Behind the refusals above sit three details. Passwords are hashed with scrypt, using a random salt for each one. A name that matches nobody is checked against a decoy hash, so a refusal takes as long as a wrong password. Past 4,096 tracked addresses, every one not currently locked out is forgotten, and if more than 4,096 are locked, all are.
 
-Developer docs: `docs/DESIGN.md`, "Security".
+Developer docs: docs/DESIGN.md, "Security".

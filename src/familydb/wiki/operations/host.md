@@ -88,7 +88,7 @@ That covers your distribution's security updates, not Caddy's own repository, wh
 
 After a reboot the service comes back by itself: the installer enables it at boot, and Docker's `unless-stopped` does the same once Docker is up. `maintain.sh status` and the doctor both say whether it is enabled at boot. On every start FamilyDB applies any pending migrations, then:
 
-- Scheduled jobs: They live in memory, so 60 seconds after start a catch-up runs the follow-ups, the plan check and the weekend ideas job (the last only if today is its day and its hour has passed), and the daily model check if a day has gone by. A repeat does nothing new.
+- Scheduled jobs: They live in memory, so 60 seconds after start a catch-up runs what a restart would have missed. [After a restart](/wiki/behavior/jobs#after-a-restart) lists it.
 - Reminders: One that fell due while FamilyDB was down goes out once it is back, worded as late.
 - A message in the middle of a turn: Its [lease](/wiki/reference/glossary#lease) lapses and the retry job answers it, and sends any reply that was stored but not delivered. [When a message cannot be answered](/wiki/controls/settings/messages#when-a-message-cannot-be-answered) has the numbers.
 

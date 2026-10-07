@@ -43,7 +43,7 @@ The card shows the models for the company in use, least expensive first, with th
 
 ### Better and best models
 
-Folded away on the card, one box for each company and level (`openai_better_model`, `gemini_best_model` and so on). Empty uses the ones this version knows; a judgment (below) may suggest newer ones.
+Folded away on the card, one box for each company and level (`anthropic_better_model`, `anthropic_best_model`, `openai_better_model`, `openai_best_model`, `gemini_better_model`, `gemini_best_model`). Empty uses the ones this version knows; a judgment (below) may suggest newer ones.
 
 ## A second company
 

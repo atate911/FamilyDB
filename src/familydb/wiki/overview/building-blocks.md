@@ -36,4 +36,4 @@ FamilyDB is built from ordinary, widely used parts, and none of them needs atten
 - Caddy. It comes from your system's packages or Caddy's own repository and is updated with the rest of the operating system. A FamilyDB upgrade does not fetch a newer Caddy image on Docker. [The server](/wiki/operations/host) says what to keep current.
 - Model companies. A company can change what it offers or charges without any library changing. [Models and prices](/wiki/controls/status/models-and-prices) shows what the daily check found.
 
-Developer docs: `pyproject.toml`, `uv.lock`, `Dockerfile`, `src/familydb/web/wiki.py`; `docs/DESIGN.md`, "Decisions"; `CLAUDE.md`, "Commands".
+Developer docs: pyproject.toml, uv.lock, Dockerfile, src/familydb/web/wiki.py; docs/DESIGN.md, "Decisions"; CLAUDE.md, "Commands".

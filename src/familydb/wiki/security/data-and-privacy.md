@@ -49,4 +49,4 @@ There is no setting, job or command that removes messages one at a time or by ag
 
 Things outside the server stay: that `--purge` backup, which nothing prunes, Telegram's copy of every chat, the events written to your Google calendar, whatever each model company keeps, and the keys, which work until you revoke them.
 
-Developer docs: `docs/DESIGN.md`, "Decisions" and "Security"; `docs/AI_CALLS.md`.
+Developer docs: docs/DESIGN.md, "Decisions" and "Security"; docs/AI_CALLS.md.

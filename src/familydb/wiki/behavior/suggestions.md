@@ -82,4 +82,4 @@ At most eight ideas are checked in detail. A reply gets at most 12 offered and 6
 
 To see what the model got for one real question, an admin opens that message under [Recent activity](/wiki/controls/status/activity), where the `suggest` call shows what it was given and what it answered.
 
-Developer docs: `src/familydb/suggest/`, `src/familydb/tools/suggest.py`, `src/familydb/commands.py`; `docs/DESIGN.md`, "Suggestion engine: answering "what should we do?"".
+Developer docs: src/familydb/suggest/, src/familydb/tools/suggest.py, src/familydb/commands.py; docs/DESIGN.md, "Suggestion engine: answering "what should we do?"".

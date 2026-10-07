@@ -67,4 +67,4 @@ A reply for Telegram waits stored while the channel has no sender, and goes on t
 | A send | 30 seconds for a job's part, 120 seconds for an answer to an update |
 | The bot's name | Telegram rate-limits renames, and FamilyDB waits as asked |
 
-Developer docs: `src/familydb/channels/telegram.py`, `src/familydb/channels/markup.py`, `src/familydb/delivery.py`, `src/familydb/routing.py`; `docs/DESIGN.md`, "Message pipeline" and "Decisions".
+Developer docs: src/familydb/channels/telegram.py, src/familydb/channels/markup.py, src/familydb/delivery.py, src/familydb/routing.py; docs/DESIGN.md, "Message pipeline" and "Decisions".

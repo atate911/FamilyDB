@@ -53,4 +53,4 @@ Once a day, at 05:17, the daily model check reads LiteLLM's list (a JSON file on
 
 [Models and prices](/wiki/controls/status/models-and-prices#what-the-daily-check-does) says how a price is chosen when the lists disagree and what an admin is told.
 
-Developer docs: `src/familydb/integrations/open_meteo.py`, `src/familydb/integrations/geocode.py`, `src/familydb/integrations/price_lists.py`, `src/familydb/whereabouts.py`, `src/familydb/suggest/origin.py`; `docs/DESIGN.md`, "Integrations".
+Developer docs: src/familydb/integrations/open_meteo.py, src/familydb/integrations/geocode.py, src/familydb/integrations/price_lists.py, src/familydb/whereabouts.py, src/familydb/suggest/origin.py; docs/DESIGN.md, "Integrations".
