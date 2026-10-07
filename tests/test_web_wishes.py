@@ -346,3 +346,20 @@ def test_a_kid_sees_what_she_ticked_lately_and_can_undo_it(app, family, girls) -
     with closing(app.connect()) as conn:
         assert tasks.get(conn, swim).status == "open"
     assert "Done lately" not in kid.get("/tasks").text
+
+
+def test_a_kids_idea_page_is_her_own_kind_of_page(app, family, girls) -> None:  # noqa: F811
+    from familydb.store import ideas as idea_store
+
+    with closing(app.connect()) as conn, db.transaction(conn):
+        rink = idea_store.insert(
+            conn,
+            title="Roller rink",
+            kind="outing",
+            suggested_by=family["girls"].id,
+            now="2026-09-20T00:00:00Z",
+        )
+    page = girls["mine"].get(f"/idea/{rink.id}").text
+    assert "Quick facts" in page and "At a glance" not in page
+    assert "Looking it up" not in page and "Your idea" in page
+    assert "I’d like this" in page and "Edit this idea" not in page

@@ -109,8 +109,8 @@
           <label class="check"><input type="checkbox" name="needs_booking" value="yes" {{ 'checked' if editing and idea.needs_booking }} />Needs booking</label>
         </div>
       </details>
-      <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}{{ 'Save changes' if editing else 'Add it' }}</button>
-        <a class="linkbtn" href="{{ url_for('web.idea', idea_id=idea.id) if editing else url_for('web.ideas') }}">Cancel</a></div>
+      <div class="actions actions--sticky"><button class="btn btn--primary" type="submit">{{ icon('check') }}{{ 'Save changes' if editing else 'Add it' }}</button>
+        <a class="linkbtn" href="{{ url_for('web.idea', idea_id=idea.id) if editing else url_for('web.ideas') }}">Back without saving</a></div>
     </form>
     <aside class="aside-stack" aria-label="About {{ 'changing' if editing else 'adding' }} an idea">
       <section class="card" aria-labelledby="h-ie-n">

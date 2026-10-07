@@ -52,6 +52,7 @@ TICKED = "Done: {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
 REOPENED = "Back on your list: {title}."
+CANCELLED_TASK = "Canceled: {title}."
 LOOKING = "Looking {what} up now: within a few minutes."
 NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
@@ -191,8 +192,9 @@ def _back(target: str, **values: Any) -> Response:
     return redirect(url_for(target, **values))
 
 
-def _say(message: str) -> None:
-    flash(message, NOTICE)
+def _say(message: str, undo: str | None = None) -> None:
+    """Say what a form did; `undo`, a POST address on this site, puts an Undo beside it."""
+    flash({"text": message, "undo": undo} if undo else message, NOTICE)
 
 
 def _kept_note(idea_id: int) -> str:
@@ -494,7 +496,11 @@ def finish_task(task_id: int) -> Response:
     else:
         result, complaint = run("update_task", {"task_id": task_id, "status": "done"})
         said = TICKED if auth.visitor().may("browse") else TICKED_PLAIN
-        _say(complaint or said.format(id=task_id, title=result["task"]["title"]))
+        if complaint:
+            _say(complaint)
+        else:
+            undo = url_for("edits.reopen_task", task_id=task_id)
+            _say(said.format(id=task_id, title=result["task"]["title"]), undo=undo)
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
 
 
@@ -508,6 +514,22 @@ def reopen_task(task_id: int) -> Response:
         result, complaint = run("update_task", {"task_id": task_id, "status": "open"})
         _say(complaint or REOPENED.format(title=result["task"]["title"]))
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/task/<int(max=9223372036854775807):task_id>/cancel")
+@once
+def cancel_task(task_id: int) -> Response:
+    """Cancel a to-do from its own page, with an Undo that opens it again."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.edit_task", task_id=task_id)
+    result, complaint = run("update_task", {"task_id": task_id, "status": "cancelled"})
+    if complaint:
+        _say(complaint)
+        return _back("web.edit_task", task_id=task_id)
+    title = result["task"]["title"]
+    _say(CANCELLED_TASK.format(title=title), undo=url_for("edits.reopen_task", task_id=task_id))
+    return _back("web.tasks")
 
 
 @bp.post("/memory/new")

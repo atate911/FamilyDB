@@ -70,7 +70,7 @@
   <div class="banner banner--ok flash" role="status" tabindex="-1">
     <span class="banner__ic">{{ icon('check') }}</span>
     <p class="banner__text">{{ message }}</p>
-    {% if undo_url %}<form method="post" action="{{ undo_url }}"><button class="btn btn--quiet btn--sm" type="submit">Undo</button></form>{% endif %}
+    {% if undo_url %}<form method="post" action="{{ undo_url }}"><input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><button class="btn btn--quiet btn--sm" type="submit">Undo</button></form>{% endif %}
   </div>
 {%- endmacro %}
 

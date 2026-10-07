@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from familydb.app import App
-from familydb.store import db, ideas, outcomes, plans
+from familydb.store import db, ideas, outcomes, plans, tasks
 from familydb.web import create_app
 from tests import fakes
 
@@ -390,3 +390,44 @@ def test_a_done_to_do_can_be_put_back_from_the_done_list(page, conn) -> None:
     page.post("/task/1/reopen", data={"csrf": _token(page, "/tasks"), "once": "o11"})
     assert 'id="t-1"' in page.get("/tasks").text  # open again (this also shows the flash)
     assert 'id="t-1"' not in page.get("/tasks?status=done").text
+
+
+def test_a_tick_and_a_cancel_each_say_so_with_an_undo(page, conn) -> None:
+    page.post("/tasks/new", data={"csrf": _token(page, "/tasks"), "once": "u1", "title": "Mow"})
+    ticked = page.post(
+        "/task/1/done",
+        data={"csrf": _token(page, "/tasks"), "once": "u2", "revision": "1"},
+        follow_redirects=True,
+    ).text
+    assert "Done: Mow." in ticked and 'action="/task/1/reopen"' in ticked and ">Undo<" in ticked
+    undo = re.search(
+        r'action="/task/1/reopen"><input type="hidden" name="csrf" value="([^"]+)"', ticked
+    )
+    page.post("/task/1/reopen", data={"csrf": undo.group(1), "once": "u3"})
+    assert tasks.get(conn, 1).status == "open"
+    edit = page.get("/task/1/edit").text
+    assert "Mark done" in edit and "Cancel this to-do" in edit and "actions--sticky" in edit
+    cancelled = page.post(
+        "/task/1/cancel", data={"csrf": _token(page, "/tasks"), "once": "u4"}, follow_redirects=True
+    ).text
+    assert tasks.get(conn, 1).status == "cancelled" and "Canceled: Mow." in cancelled
+    assert "Open it again" in page.get("/task/1/edit").text
+
+
+def test_an_idea_with_a_plan_ahead_leads_with_it_and_is_rated_with_faces(page, conn) -> None:
+    page.post("/ideas/new", data=_idea_form(page))
+    plain = page.get("/idea/1").text
+    assert 'href="#h-plan"' not in plain and "Plan it another time" not in plain
+    assert (
+        "Out of ten" not in plain and 'name="went" value="loved"' in plain and "Add more" in plain
+    )
+    with db.transaction(conn):
+        plans.insert(
+            conn, title="Ramen", start="2026-09-26T18:00-07:00", end=None, all_day=False, idea_id=1
+        )
+    ahead = page.get("/idea/1").text
+    assert 'href="#h-plan"' in ahead and "Plan it another time" in ahead
+    rated = page.post(
+        "/idea/1/outcome", data={"csrf": _token(page, "/idea/1"), "once": "o1", "went": "loved"}
+    )
+    assert rated.status_code == 302

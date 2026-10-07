@@ -50,7 +50,6 @@ SETTINGS = ("either", "indoor", "outdoor")
 WEATHERS = ("any", "dry", "warm", "snow")
 SEASONS = ("spring", "summer", "autumn", "winter")
 COSTS = ((0, "free"), (1, "cheap"), (2, "moderate"), (3, "pricey"), (4, "expensive"))
-RATINGS = tuple(range(10, 0, -1))
 RESTAURANT_KIND = "restaurant"
 FILTERS = ("q", "kind", "status", "who")
 HOME_AHEAD_DAYS = 60
@@ -468,7 +467,6 @@ def idea(idea_id: int) -> str:
         original_message=message_store.as_said(original.text) if original else None,
         original_by=views.original_by(original, family, settings.tzinfo) if original else None,
         today=today.isoformat(),
-        ratings=RATINGS,
         can_schedule=True,  # FamilyDB keeps its own plans, and copies them to Google when it can
         on_google=calendar_available(settings),
         can_look_up=enrichment_available(settings) and record.status != "dropped",
@@ -481,7 +479,17 @@ def idea(idea_id: int) -> str:
         place=views.place_panel(place, now, settings.place_stale_days, today),
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
         plans=[views.plan_row(p, today) for p in reversed(plans)],
+        plan_state=_plan_state(plans, today),
+        mine=bool(visitor.member and record.suggested_by == visitor.member.id),
     )
+
+
+def _plan_state(plans: list[Any], today: date) -> str:
+    """Where an idea's plans stand: "ahead" (one to come), "past" (only done ones) or "none"."""
+    live = [plan for plan in plans if plan.status != "cancelled"]
+    if any((plan.end or plan.start)[:10] >= today.isoformat() for plan in live):
+        return "ahead"
+    return "past" if live else "none"
 
 
 def _idea_form(record: Any = None) -> str:

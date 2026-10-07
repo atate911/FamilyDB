@@ -36,11 +36,18 @@
           {%- if row.on %}{{ tag('when', row.on, 'cal') }}{% endif -%}
           {%- if row.away %}{{ tag('off', row.away, 'car') }}{% endif -%}
         </div>
-        <p class="small muted mt-2">{% if idea.suggested_by_name %}Suggested by {{ idea.suggested_by_name }} · {% endif %}added {{ row.added_words }}</p>
+        <p class="small muted mt-2">{% if mine %}Your idea · {% elif idea.suggested_by_name %}Suggested by {{ idea.suggested_by_name }} · {% endif %}added {{ row.added_words }}</p>
+        {% if not visitor().may('change') %}
+          <div class="head-actions mt-3">
+            <a class="btn btn--quiet" href="{{ url_for('chat.show', ask='I’d like to do ' ~ idea.title ~ '.', _anchor='latest') }}">{{ icon('heart') }}I’d like this</a>
+            {% if plan_state == 'past' %}<a class="btn btn--quiet" href="{{ url_for('chat.show', ask='How ' ~ idea.title ~ ' went: ', _anchor='latest') }}">{{ icon('smile') }}Tell {{ assistant }} how it was</a>{% endif %}
+          </div>
+        {% endif %}
       </div>
     </div>
     {% if visitor().may('change') %}
       <div class="head-actions">
+        {% if plan_state == 'ahead' %}<a class="btn btn--primary" href="#h-plan">{{ icon('cal') }}See the plan</a>{% endif %}
         <a class="btn btn--quiet" href="{{ url_for('web.edit_idea', idea_id=idea.id) }}">{{ icon('edit', size='sm') }}Edit this idea</a>
         <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
           <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
@@ -73,7 +80,7 @@
                   {%- if plan.location %}<span>{{ icon('pin') }}{{ plan.location }}</span>{% endif -%}
                   {{ for_people(row) }}
                 </div>
-                <div class="next__acts"><a class="btn btn--quiet btn--sm" href="{{ url_for('web.plans', _anchor='d-' ~ plan.start_value[:10]) }}">See it in Plans</a></div>
+                <div class="next__acts"><a class="btn btn--quiet btn--sm" href="{{ url_for('web.plans', _anchor='d-' ~ plan.start_value[:10]) }}">See it in Plans</a>{% if not visitor().may('change') %} <span class="small muted">Moving it? Ask a parent.</span>{% endif %}</div>
               </div>
             </div>
           {% endfor %}
@@ -126,17 +133,24 @@
             <summary><h2 id="h-went">{{ icon('smile') }}Record how it went</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
             <form class="fold__body form form--tight" novalidate method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
               <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
-              <div class="form__row">
-                <div class="field"><label class="field__label" for="happened_on">When</label><input id="happened_on" name="happened_on" type="date" value="{{ today }}" max="{{ today }}" /></div>
-                <div class="field"><label class="field__label" for="rating">Out of ten</label>
-                  <select id="rating" name="rating"><option value="">No score</option>{% for score in ratings %}<option value="{{ score }}">{{ score }}</option>{% endfor %}</select></div>
-              </div>
+              <fieldset class="choices">
+                <legend class="field__label">How was it?</legend>
+                <label class="choice"><input type="radio" name="went" value="loved" /><span>{{ icon('smile') }}Loved it</span></label>
+                <label class="choice"><input type="radio" name="went" value="ok" /><span>{{ icon('meh') }}OK</span></label>
+                <label class="choice"><input type="radio" name="went" value="not-great" /><span>{{ icon('frown') }}Not great</span></label>
+              </fieldset>
+              <details class="fieldfold">
+                <summary>Add more <span class="val">when, again, notes</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+                <div class="fieldfold__body">
+              <div class="field"><label class="field__label" for="happened_on">When</label><input id="happened_on" name="happened_on" type="date" value="{{ today }}" max="{{ today }}" /></div>
               <div class="form__row">
                 <div class="field"><label class="field__label" for="would_repeat">Again?</label>
                   <select id="would_repeat" name="would_repeat"><option value="">Not saying</option><option value="yes">Would go again</option><option value="no">Would not</option></select></div>
                 {{ asking('outcome') }}
               </div>
               <div class="field"><label class="field__label" for="notes">Notes <span class="opt">(optional)</span></label><textarea id="notes" name="notes" rows="2" data-dictate></textarea></div>
+                </div>
+              </details>
               <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}Record it</button><span class="small muted">Saving it marks the idea done.</span></div>
             </form>
           </details>
@@ -146,12 +160,12 @@
 
     <aside class="aside-stack" aria-label="About this idea">
       <section class="card" aria-labelledby="h-facts">
-        <h2 id="h-facts" class="card__head">At a glance</h2>
+        <h2 id="h-facts" class="card__head">{{ 'At a glance' if visitor().may('browse') else 'Quick facts' }}</h2>
         <dl class="kv">
           <dt>For</dt><dd>{{ for_people(row) }}</dd>
           {% if row.where and not place %}<dt>Where</dt><dd>{{ row.where }}</dd>{% endif %}
           {% if row.on %}<dt>On</dt><dd>{{ row.on | figs }}</dd>{% endif %}
-          <dt>Indoor or out</dt><dd>{{ setting }}</dd>
+          <dt>Indoor or out</dt><dd>{{ setting | capitalize }}</dd>
           {% if weather %}<dt>Weather</dt><dd>{{ weather }}</dd>{% endif %}
           {% if idea.seasons %}<dt>Seasons</dt><dd>{{ idea.seasons | map('replace', 'autumn', 'fall') | join(', ') }}</dd>{% endif %}
           {% if row.duration %}<dt>How long</dt><dd>{{ row.duration }}</dd>{% endif %}
@@ -163,6 +177,7 @@
         </dl>
       </section>
 
+      {% if visitor().may('browse') %}
       <section class="card" aria-labelledby="h-look">
         <h2 id="h-look" class="card__head">{{ icon('search') }}Looking it up</h2>
         {# Why a lookup failed is the workings: for the grown-ups, never a kid (roles.py). #}
@@ -178,11 +193,12 @@
         {% endif %}
         {% if looked_up %}<p class="small muted mt-2"><a href="{{ url_for('activity.show', key='t' ~ looked_up) }}">How it was looked up</a></p>{% endif %}
       </section>
+      {% endif %}
 
       {% if visitor().may('change') %}
         <section class="card" aria-labelledby="h-planit">
             <details class="fold">
-              <summary><h2 id="h-planit">{{ icon('cal') }}{{ 'Plan it again' if plans else 'Plan it' }}</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+              <summary><h2 id="h-planit">{{ icon('cal') }}{{ {'ahead': 'Plan it another time', 'past': 'Plan it again'}.get(plan_state, 'Plan it') }}</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
               <form class="fold__body form form--tight" method="post" action="{{ url_for('edits.add_plan') }}" novalidate>
                 <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
                 <input type="hidden" name="idea_id" value="{{ idea.id }}" /><input type="hidden" name="title" value="{{ idea.title }}" />

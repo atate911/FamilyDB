@@ -129,7 +129,7 @@
       <main class="main" id="main">
         <div class="wrap">
           {# What the last form said; the settings page keeps its own under another name. #}
-          {% for said in get_flashed_messages(category_filter=['edit']) %}{{ flash(said) }}{% endfor %}
+          {% for said in get_flashed_messages(category_filter=['edit']) %}{% if said is mapping %}{{ flash(said.text, said.undo) }}{% else %}{{ flash(said) }}{% endif %}{% endfor %}
           {% block content %}{% endblock %}
         </div>
         <footer class="foot">
