@@ -9,7 +9,7 @@ The Family page is where an admin says who the bot talks to and who signs in to 
 - **Add somebody**, and **What each role does**.
 - A note, while the family still shares one password, that this page cannot tell who is who.
 
-Open a person for their own page: **About**, **Signing in**, **Linking their Telegram** and, folded away, **Take off the list for good**.
+Open a person for their own page: **About**, **Signing in**, **Linking their Telegram** and, folded away, **Take off the list for good** (not on your own page).
 
 ## Roles
 
@@ -33,8 +33,8 @@ The full table is in [Security and trust](/wiki/security#who-may-do-what), and t
 | "There is already somebody called …" | A name belongs to one person, whatever its case |
 | "… is on the list but switched off. Switch them back on instead of adding them again." | The switched-off person keeps the name |
 | "That Telegram id is already …'s." | One Telegram, one person, switched-off people included |
-| "A Telegram id is a number." | The id is digits only |
-| "… was changed since you opened this." | Another admin saved first; make your change again |
+| "A Telegram id is a number." | The id must be a number |
+| "… was changed since you opened this." | Somebody changed this person since you opened the page (a link just used counts); make your change again |
 | "The bot is answering … right now." | Nobody is changed mid-answer; try again in a moment |
 | "A birthday is a date, such as 2017-03-14." or "not a day that has been" | The date is malformed, in the future or before 1900 |
 
@@ -44,11 +44,13 @@ Clearing a person's Telegram id removes the link.
 
 | Way | How it works |
 |---|---|
-| An id | Type the number into the Telegram id box. A stranger who writes to the bot is told their id |
+| An id | Type the number into the Telegram id box (a leading minus is fine, as group ids use). A stranger who writes to the bot is told their id |
 | A knock | Under **Waiting to be let in**, the stranger's Telegram name, id, where they wrote from and when are listed, newest first (the last 20, forgotten after a month). Fill in the name, pick a role (Parent unless changed) and choose **Let them in**. Only who and when are kept, never what they said |
 | A link | On the person's page choose **Make a link for <name>**. They open it in a private chat on their phone and press Start. It works once, for 24 hours; a new link replaces the last; only a hash of its code is kept |
 
-A link needs the Telegram bot connected, and a person who is switched on. A used or old link answers "That link no longer works"; a link opened from a Telegram that is already somebody else's changes nothing and says whose it is.
+A link needs the Telegram bot connected, a person who is switched on, and a private chat with the bot. The link is shown once, like the password. To somebody not on the list, a used or old link answers "That link no longer works"; somebody already on the list gets the normal greeting, and a link opened from a Telegram that is already somebody else's changes nothing and says whose it is.
+
+**Using a link currently clears the person's birthday and male/female.** Set them again on their page afterwards. The setup's "That's me" button does not.
 
 **A link works for whoever opens it first, and that person is taken for the one it was made for.** Send it to them alone.
 
@@ -57,12 +59,19 @@ A link needs the Telegram bot connected, and a person who is switched on. A used
 Each person signs in with their name and a password of their own. See [Recovery](/wiki/operations/recovery) for lockouts and forgotten passwords.
 
 1. Open the person and choose **Make a starting password**.
-2. Copy the password shown. It is 16 characters, shown once, and kept for ten minutes at most; make another if it is lost.
+2. Copy the password shown. It is 16 characters and the page shows it once: reload, wait over ten minutes or restart the server and it is gone. The password itself keeps working until they choose their own, and you can make another.
 3. Send it to them. They sign in, are taken to **Your password**, and can reach nothing else until they choose their own (at least 12 characters). The starting one then stops working.
 
 A new starting password signs the person out everywhere, so it is also the answer to a lost phone. **Take their password away** signs them out and stops them signing in.
 
-Refusals: you cannot make a starting password for yourself (use Your password), for a switched-off person, or while the page is on the [shared password](/wiki/reference/glossary#shared-password), when nobody is on record as making it; nor take away a password somebody does not have. The shared password ends when an admin chooses their own on Your password; after that every other person needs a starting password from here.
+You are refused:
+
+- a starting password, or taking a password away, for yourself (use Your password);
+- either one while the family still shares one [password](/wiki/reference/glossary#shared-password), since the page does not know who you are ("Choose your own password first, as an admin");
+- a starting password for a person who is switched off;
+- taking away a password somebody does not have, or the only admin who can sign in.
+
+The shared password ends when an admin chooses their own on Your password; after that every other person needs a starting password from here.
 
 ## Switch off, or take off for good
 
@@ -75,7 +84,7 @@ Refusals: you cannot make a starting password for yourself (use Your password), 
 
 **Taking somebody off for good cannot be undone.** Their name, password, Telegram link and any pending link, where they last were, what the bot remembers about them, and a kid's wish lists are deleted. Open things to do and reminders in their own chat are cancelled, plans made there stop following up there, and anything queued for it is not sent.
 
-What they said and did stays with no name on it: messages, ideas they suggested, plans they made, outcomes they recorded, things to do they added or owned, their changes in the settings log, and a parent's answers on other kids' wishes.
+What they said and did stays with no name on it: messages, ideas they suggested, plans they made, outcomes they recorded, suggestions they asked for, memories they told the bot, other things to do they added or owned, their changes in the settings log, and a parent's answers on other kids' wishes.
 
 ## Rules that keep an admin who can sign in
 
