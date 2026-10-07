@@ -352,7 +352,7 @@ def test_the_chat_speaks_as_whoever_is_signed_in(app, sam, family, conn) -> None
     assert made  # replaced straight away
     alex = _as(app, "Alex", ALEXS, api=fakes.FakeMessagesAPI(*replies))
     page = alex.get("/chat").text
-    assert "Writing as <b>Alex</b>" in page and 'name="who"' not in page
+    assert 'placeholder="Message Vera as Alex"' in page and 'name="who"' not in page
     form = {**_tokens(alex, "/chat"), "text": "what should we do?", "who": "Sam"}
     assert alex.post("/chat", data=form).status_code == 302
     assert alex.chat.wait(10)
@@ -907,3 +907,9 @@ def test_a_to_do_for_a_present_is_kept_from_whoever_the_present_is(app, sam, ale
         assert "Order the watch" not in alex.get(path).text, path
     assert alex.get("/task/1/edit").status_code == 404
     assert sam.get("/task/1/edit").status_code == 200
+
+
+def test_a_parents_status_says_who_can_change_it(sam, alex) -> None:
+    said = "Sam can change the settings, the daily limit and the AI model."
+    assert said in alex.get("/status").text
+    assert said not in sam.get("/status").text

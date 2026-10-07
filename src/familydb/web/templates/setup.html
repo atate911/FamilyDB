@@ -17,6 +17,7 @@
         <span class="setup-row__n" aria-hidden="true">{% if one.done %}{{ icon('check') }}{% else %}{{ loop.index }}{% endif %}</span>
         <span class="setup-row__what"><b>{{ one.title }}</b><span>{{ one.detail }}</span></span>
         {% if one.done %}{{ tag('ok', 'Done') }}
+        {%- elif one.skipped %}{{ tag('off', 'Not for us', 'offc') }}
         {%- elif one.need == 'needed' %}{{ tag('look', 'Needed', 'alert') }}
         {%- elif one.need == 'recommended' %}{{ tag('better', 'Recommended') }}
         {%- else %}{{ tag('off', 'Optional', 'offc') }}{% endif %}

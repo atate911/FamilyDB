@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, avatar, page_head, todo with context %}
+{% from "_ui.html" import icon, drawing, avatar, page_head, todo, when with context %}
 {% block title %}{{ 'To do' if grownup else 'My to-dos' }} · {{ site_title }}{% endblock %}
 {# One person to choose, as a pill: their colour and their letter, then their name. `value` is what the form sends. #}
 {% macro who_choice(value, one, checked=false, label=none) %}
@@ -12,7 +12,7 @@
     {% if rows %}
       <ul class="todos mt-4">{% for row in rows %}{{ todo(row, 'tasks', mine=true) }}{% endfor %}</ul>
     {% else %}
-      <p class="empty mt-4">{{ icon('todo') }}<span>Nothing to do right now.</span></p>
+      <p class="empty empty--drawn mt-4">{{ drawing('todos') }}<span>Nothing to do right now.</span></p>
     {% endif %}
     {% if lately %}
       <h2 class="group-h" id="lately">{{ icon('check') }}Done lately · {{ lately | length }}</h2>
@@ -33,21 +33,21 @@
           <button class="btn btn--primary adder__btn" type="submit">{{ icon('plus') }}Add</button>
         </div>
         <details class="adder__more">
-          <summary>Who, when, reminder <span class="val">{{ me or 'Everyone' }} · no deadline · no reminder</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+          <summary>Who, when, reminder <span class="val">{{ me or 'Everyone' }} · no date · no reminder</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
           <div class="adder__more-body">
             <div class="field"><label class="field__label" for="q-notes">Notes <span class="opt">(optional)</span></label><textarea id="q-notes" name="notes" rows="2" maxlength="4000" data-dictate></textarea></div>
             <fieldset class="choices" id="q-who">
-              <legend>Who’s it for?</legend>
+              <legend>Who’s doing it?</legend>
               {% for one in people %}{{ who_choice(one.name, one, checked=(one.name == me)) }}{% endfor %}
-              {% if not me %}{{ who_choice('', {'slot': 0, 'initial': '', 'name': 'Everyone'}, checked=true) }}{% endif %}
+              {{ who_choice('Everyone', {'slot': 0, 'initial': '', 'name': 'Everyone'}, checked=not me) }}
             </fieldset>
             <details class="disclose">
-              <summary>When, a reminder, repeats <span class="val">No deadline</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+              <summary>When, a reminder, repeats <span class="val">No date</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
               <div class="disclose__body adder__opts">
                 <p class="field__hint span-all">Times use {{ zone }}. A deadline or preferred window doesn’t set a reminder or book your calendar.</p>
-                <div class="field"><label class="field__label" for="q-due">Deadline <span class="opt">(optional)</span></label><input id="q-due" type="datetime-local" name="due_at" /></div>
+                <div class="field"><label class="field__label" for="q-due">Deadline <span class="opt">(optional)</span></label>{{ when('due_at', 'q-due') }}</div>
                 <div class="field"><label class="field__label" for="q-win">Preferred window <span class="opt">(optional)</span></label><input id="q-win" type="text" name="preferred_window" maxlength="4000" placeholder="Some Saturday morning" /></div>
-                <div class="field"><label class="field__label" for="q-rem">Remind me at <span class="opt">(optional)</span></label><input id="q-rem" type="datetime-local" name="remind_at" /></div>
+                <div class="field"><label class="field__label" for="q-rem">Remind me at <span class="opt">(optional)</span></label>{{ when('remind_at', 'q-rem') }}</div>
                 <div class="field"><label class="field__label" for="q-rep">Repeats</label>
                   <select id="q-rep" name="repeat" aria-describedby="q-rep-h">{% for value, label in repeat_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
                 <label class="check"><input type="checkbox" name="repeat_after_done" />Count from when it’s done</label>

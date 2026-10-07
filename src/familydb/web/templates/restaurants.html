@@ -14,7 +14,7 @@
     <ul class="places mt-3">
       {% for card in cards %}
         <li><article class="place">
-          <p class="place__kind"><span class="kind">{{ icon('utensils', size='sm') }}Restaurant</span>{% if card.cost %}<span class="tag tag--off">{{ card.cost }}</span>{% endif %}</p>
+          <p class="place__kind"><span class="kind">{{ icon('utensils', size='sm') }}Restaurant</span>{% if card.cost %}<span class="chip">{{ card.cost }}</span>{% endif %}</p>
           <h2 class="place__title"><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></h2>
           {% if card.today %}<p class="place__today">{{ icon('clock') }}{{ card.today }}</p>{% endif %}
           {% if card.summary %}<p class="place__sum">{{ card.summary }}</p>{% endif %}
@@ -35,7 +35,7 @@
             {%- if card.booking_url %}<a href="{{ card.booking_url }}" rel="noopener noreferrer">{{ icon('bell', size='sm') }}Book a table</a>{% endif -%}
             {%- if card.map_url %}<a href="{{ card.map_url }}" rel="noopener noreferrer">{{ icon('pin', size='sm') }}Map</a>{% endif -%}
           </p>
-          {% if card.tags %}<div class="tags">{% for one in card.tags %}<span class="tag tag--off">{{ one }}</span>{% endfor %}</div>{% endif %}
+          {% if card.tags %}<div class="tags">{% for one in card.tags %}<span class="chip">{{ one }}</span>{% endfor %}</div>{% endif %}
         </article></li>
       {% endfor %}
     </ul>

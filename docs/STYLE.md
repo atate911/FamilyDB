@@ -153,10 +153,12 @@ set one apart. The people are Kitchen Table's eight until a look gives its own.
 one place; every look names them, most as nothing. `--fx-page` is a light on the page itself,
 behind everything. `--fx-scan` is the color of faint scanlines on the panel and on Vera's glass.
 `--fx-glow` (0 to 1) is how much Vera's things glow beyond their plain look, and how bright the
-small motions are, never how long. `--fx-title` and `--fx-title-adjust` are a face for the page
-titles and the wordmark, set at the heading face's cap height. Scanlines are always under the
+small motions are, never how long. `--fx-title` is a face for the page titles and the wordmark,
+and `--fx-title-grid` its pixel grid in px (0 for an outline face): a pixel face is set at whole
+multiples of it, untracked, so its pixels land on the screen's. Scanlines are always under the
 words, never a film over them; glow is a shadow outside a thing's edge; and the contrast floors
-are measured with each effect on at its strongest. In forced colors and on paper they are off.
+are measured with the scanlines laid over their ground. In forced colors, on paper and when more
+contrast is asked for (`prefers-contrast: more`) the page's light and the scanlines are off.
 They are CSS only: no images, no scripts, and the one face is self-hosted.
 
 **Phosphor, Afterglow and Kitchen Table.** Phosphor is the design language FamilyDB was first
@@ -169,11 +171,16 @@ same in every look.
 **Afterglow** is the one look that uses the effects. It is one fixed look, with no day and no
 night version: charcoal glass with a breath of green, a darker panel, faint scanlines on the
 panel and on Vera's box, and she is the one thing that glows: her screen gets a second halo and a fully lit
-rim, her Send and her lines a soft light. The family's links are a soft mint and their button a
-pale plate, never the phosphor. Page titles and the wordmark are set in VT323, a phosphor
-terminal's pixel face, as tall as Fraunces' capitals; everything read stays Atkinson, card titles
-stay Fraunces, and money and dates keep Fraunces Figures: the pixel face is for a few big words
-that stand alone, never for words read in quantity. It wears Kitchen Table's people.
+rim, her Send and her lines a soft light. Green is hers alone: the family's links and the
+current place are a warm off-white (`#EADCC2`), their main button is dark glass with a warm-white
+edge (`--primary-edge`, the button's own fill in every other look), cards are panes of glass,
+today's tile and the meter a quiet warm grey, the setup card amber-edged glass, and each person
+is tinted glass (`--p1-fill` to `--p8-fill`, a person's own color in every other look). A chosen
+segment is a card ringed in ink in every look, never a solid fill, so nothing of the family's is
+brighter than Vera. Page titles and the wordmark are set in VT323, a phosphor terminal's pixel
+face, on whole pixels (50, 37.5 and 25 px); everything read stays Atkinson, card titles stay
+Fraunces, and money and dates keep Fraunces Figures: the pixel face is for a few big words that
+stand alone, never for words read in quantity. This is the design's stage 17 choice.
 
 **The choice follows the person.** Each person chooses their own look, and its day and night,
 and it comes with them to every phone and computer they sign in on: it is kept with them
@@ -309,7 +316,10 @@ slashed zero is a help to reading. `.code` keeps model names, keys and codes in 
 
 Times are 12-hour with no leading zero ("9 am", "1:30 pm"; the family chose it, and it
 keeps the slashed zero out of a time), through `dates.clock_time` on the page and in Telegram.
-What is stored and what the model is sent stay 24-hour. A number is held to its unit by a
+What is stored and what the model is sent stay 24-hour. A form asks for a day and a time
+apart: the browser's date box, and a list of the day's quarter hours worded the same way
+(`when` in `_ui.html`, `views.TIME_CHOICES`), because a browser's own time box follows the
+device, not the family; the two are joined in `edits._when`. A number is held to its unit by a
 no-break space ("18 min"). Paragraphs stop at about 62
 characters.
 
@@ -453,6 +463,12 @@ builds one by hand. Person classes are slots (`.p0` to `.p8`), never names.
 - **Faces** (`.faces`): "How did it go?", three labeled faces, for grown-ups.
 - **Empty state** (`.empty`): what will appear and how to start it. **Locked** (`.locked`): "Ask
   a parent".
+- **Drawings** (`drawing()` in `_ui.html`, `#d-*` in `icons.svg`): the family's moments in the
+  icons' round line, never a face, never her, never on glass, and at most one on a screen (a test
+  counts). Five: an empty Next up, To do or Ideas (`d-plans`, `d-todos`, `d-ideas`; on Home only
+  the first empty card), a kid's first empty list (`d-wish`) and her "Yes!" (`d-yes`), in her own
+  colour and only on her own page. Coloured by tokens, so every look carries them: the line
+  `--ink-3`, the fill `--paper-2`, one accent `--p-fill`.
 - **Key/value** (`.kv`), **data table** (`table.data`, scrolling sideways inside its box, never
   the page), **meter** (an SVG bar, its figure always written beside it).
 - The parts of a list page, of Settings and of setting up are under "Page by page"; the glass
@@ -483,12 +499,11 @@ to a page at most, never as a card style:
   form on paper.
 - **A first empty day**: "FamilyDB is set up and awake. Welcome, Sam. This is your family's
   table.", then the empty cards on paper.
-- **The grown-ups page**: the mark alone at 64 pixels, glowing; the words stay on paper. A parent
-  who isn't an admin and opens Settings, setup or the family list gets the same page, saying "For
-  an admin" and who that is, never a bare refusal.
-- **Not found**: "404 · nothing on the radar" in the mono, then "Not found", "There's nothing at
-  that address." and Back to the start.
-- **Not part of your role**: "403 · signed in Maya · role kid", then the refusal's own words.
+- **The refusal page** (`refused.html`), one for a page somebody's role doesn't reach (403) and
+  one that isn't there (404): the mark, "Signed in as Maya", the heading and words in the family's
+  language (who to ask, from `views.REFUSALS` and `admin_only`; "Nothing here" for a 404), and two
+  ways on: Home, then the menu for a grown-up or "Ask Vera" for a kid. A present's page kept from
+  somebody is a 404 word for word, so nothing on it says a page was there; a test holds that.
 - **A first sign-in**: "first sign-in · Maya", over "Choose your own password".
 - **A tool's own words** on an admin's history of one message (`.pane--code`): machine text, so
   on glass, in the mono.
@@ -523,7 +538,7 @@ with when it plays):
 
 - **Her screen types**, once on Home as the page opens, and on a loop only while she is writing
   back (see "Her screen"). It is the one thing that loops, and it means she is working.
-- **Afterglow.** The flash that says what you just did (a save, a tick, an answer, with its Undo)
+- **A flash's light** (`--flash-fade`). The flash that says what you just did (a save, a tick, an answer, with its Undo)
   lights at once as the page comes back and fades over a second, falling fast and then lingering,
   as a tube's glow did.
 - **Landing.** Where a link lands (a card, a day on the calendar, a plan) lights and fades over
@@ -680,7 +695,9 @@ rim is 4.6:1 against the page, its box's edge 4.4:1.
   in once on Home, a flash and a landing place glow and fade, the cursor rests. Only her typing
   screen, the typing dots and the writing-back dot loop, and only while a reply is on its way.
   Under `prefers-reduced-motion` nothing moves at all: the motions are written only for people
-  who have not asked for less (`prefers-reduced-motion: no-preference`).
+  who have not asked for less (`prefers-reduced-motion: no-preference`), or switched off by
+  the same selector in the `reduce` block (the chevrons, the dots); a test reads the stylesheet
+  for anything else that moves.
 - **Forced colors.** Whatever is shown by a background alone (the current place, segments,
   choices, the looks, tags, the pill, ticks, today) gets a real border.
 - **Reflow.** Nothing scrolls sideways at 320 pixels or at 200 % zoom.

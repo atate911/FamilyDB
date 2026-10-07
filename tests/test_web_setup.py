@@ -366,3 +366,45 @@ def test_nothing_on_a_setup_page_writes(settings, clock, conn) -> None:
         assert client.get(f"/setup{name}").status_code == 200
     assert client.get("/setup/done").status_code == 200
     assert conn.total_changes == before
+
+
+def test_a_step_that_is_not_for_us_leaves_every_count(settings, clock, conn, family) -> None:
+    """ "Not for us" on an optional step: the step stays reachable but nothing counts it as left,
+    and "Bring it back" undoes it."""
+    app = App(settings.model_copy(update={"web_password": INSTALLERS}), clock)
+    client = create_app(app).test_client()
+    client.post("/login", data={"password": INSTALLERS})
+    page = client.get("/setup/calendar").text
+    assert "Not for us" in page and "Later" in page
+    back = _post(client, "calendar", "/settings", setup_skip_calendar="true")
+    assert back.headers["Location"] == "/setup/calendar"
+    assert 'href="/setup/calendar"' not in client.get("/").text
+    assert "Not for us" in client.get("/setup").text
+    assert "Google Calendar" not in client.get("/setup/done").text.split("Left for later")[-1]
+    assert "Bring it back" in client.get("/setup/calendar").text
+    _post(client, "calendar", "/settings", setup_skip_calendar="false")
+    assert 'href="/setup/calendar"' in client.get("/").text
+
+
+def test_home_counts_only_the_steps_it_needs_or_recommends(settings, clock, conn, family) -> None:
+    app = App(settings.model_copy(update={"web_password": INSTALLERS}), clock)
+    client = create_app(app).test_client()
+    client.post("/login", data={"password": INSTALLERS})
+    with db.transaction(conn):
+        settings_store.set_many(
+            conn, {"home_area": "Vancouver, Washington", "home_lat": 45.6, "home_lon": -122.6}
+        )
+    text = " ".join(client.get("/").text.split())
+    # The shared password is still in use (recommended), Telegram and Calendar are optional.
+    assert "1 step left" in text and 'href="/setup/calendar"' in text
+
+
+def test_the_family_step_makes_sign_ins_and_the_end_names_who_has_none(fresh, conn) -> None:
+    _post(fresh, "you", "/family", name="Sam", role="admin")
+    _post(fresh, "family", "/family", name="Maya", role="kid")
+    done = " ".join(fresh.get("/setup/done").text.split())
+    assert "Maya has no sign-in yet." in done
+    page = fresh.get("/setup/family").text
+    assert "no sign-in yet" in page
+    # Under the shared password nobody is on record as making one, so no button is offered.
+    assert "Make a sign-in" not in page

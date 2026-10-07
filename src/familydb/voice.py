@@ -52,6 +52,13 @@ EVENTS: dict[str, Event] = {
         ("title", "who", "task"),
         {"title": "bins out", "who": " (Sam)", "task": 12},
     ),
+    "reminder_kept": Event(
+        "A reminder for a present's to-do, where someone reads who may not see the present",
+        "{who_first}a reminder is waiting on your To do. It is about a present, so it is not "
+        "said here.",
+        ("who_first",),
+        {"who_first": "Sam, "},
+    ),
     "reminder_late": Event(
         "A reminder sent late, after the bot was off",
         "Reminder: {title}{who}  -  task #{task}. This was due {due}; I was offline then. "

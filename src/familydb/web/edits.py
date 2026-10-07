@@ -33,8 +33,8 @@ bp = Blueprint("edits", __name__)
 
 # The flash category, apart from the settings page's.
 NOTICE = "edit"
-SAVED_IDEA = "Saved #{id} {title}."
-CHANGED_IDEA = "Changed #{id} {title}."
+SAVED_IDEA = "Saved #{id} “{title}”."
+CHANGED_IDEA = "Changed #{id} “{title}”."
 DUPLICATE = "There is already an idea called that: #{id}. Nothing was added."
 STALE_IDEA = (
     "#{id} was changed since you opened it, so nothing was saved. Here it is as it is now; "
@@ -52,6 +52,7 @@ TICKED = "Done: {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
 REOPENED = "Back on your list: {title}."
+CANCELLED_TASK = "Canceled: {title}."
 LOOKING = "Looking {what} up now: within a few minutes."
 NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
@@ -137,6 +138,16 @@ def _text(form: MultiDict[str, str], key: str) -> str:
     return form.get(key, "").strip()
 
 
+def _when(form: MultiDict[str, str], key: str) -> str:
+    """A day and a time the form sent apart (`key`_day, `key`_time, a time from the family's
+    list), joined as "YYYY-MM-DDTHH:MM"; a day alone stays a day. A form that sends `key` whole
+    (an older page, a script) is taken as it is."""
+    if whole := _text(form, key):
+        return whole
+    day, at = _text(form, f"{key}_day"), _text(form, f"{key}_time")
+    return f"{day}T{at}" if day and at else day
+
+
 def _list(form: MultiDict[str, str], key: str) -> list[str]:
     """A comma-separated box as a list."""
     return [part.strip() for part in form.get(key, "").split(",") if part.strip()]
@@ -191,8 +202,9 @@ def _back(target: str, **values: Any) -> Response:
     return redirect(url_for(target, **values))
 
 
-def _say(message: str) -> None:
-    flash(message, NOTICE)
+def _say(message: str, undo: str | None = None) -> None:
+    """Say what a form did; `undo`, a POST address on this site, puts an Undo beside it."""
+    flash({"text": message, "undo": undo} if undo else message, NOTICE)
 
 
 def _kept_note(idea_id: int) -> str:
@@ -348,7 +360,7 @@ def add_plan() -> Response:
     idea_id = _text(form, "idea_id")
     back = ("web.idea", {"idea_id": int(idea_id)}) if idea_id else ("web.plans", {})
     all_day = bool(form.get("all_day"))
-    start = _text(form, "start")
+    start = _when(form, "start")
     values: dict[str, Any] = {
         "title": _text(form, "title"),
         # An all-day plan keeps only the date.
@@ -376,7 +388,7 @@ def move_plan(plan_id: int) -> Response:
         _say(complaint)
         return _back("web.plans")
     all_day = bool(request.form.get("all_day"))
-    start = _text(request.form, "start")
+    start = _when(request.form, "start")
     result, complaint = run(
         "update_event",
         {"plan_id": plan_id, "start": start[:10] if all_day else start, "all_day": all_day},
@@ -404,9 +416,9 @@ def task_fields() -> dict[str, Any]:
         "title": _text(request.form, "title"),
         "notes": _text(request.form, "notes"),
         "owner": _text(request.form, "owner") or None,
-        "due_at": _text(request.form, "due_at") or None,
+        "due_at": _when(request.form, "due_at") or None,
         "preferred_window": _text(request.form, "preferred_window"),
-        "remind_at": _text(request.form, "remind_at") or None,
+        "remind_at": _when(request.form, "remind_at") or None,
     }
 
 
@@ -494,7 +506,11 @@ def finish_task(task_id: int) -> Response:
     else:
         result, complaint = run("update_task", {"task_id": task_id, "status": "done"})
         said = TICKED if auth.visitor().may("browse") else TICKED_PLAIN
-        _say(complaint or said.format(id=task_id, title=result["task"]["title"]))
+        if complaint:
+            _say(complaint)
+        else:
+            undo = url_for("edits.reopen_task", task_id=task_id)
+            _say(said.format(id=task_id, title=result["task"]["title"]), undo=undo)
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
 
 
@@ -508,6 +524,22 @@ def reopen_task(task_id: int) -> Response:
         result, complaint = run("update_task", {"task_id": task_id, "status": "open"})
         _say(complaint or REOPENED.format(title=result["task"]["title"]))
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/task/<int(max=9223372036854775807):task_id>/cancel")
+@once
+def cancel_task(task_id: int) -> Response:
+    """Cancel a to-do from its own page, with an Undo that opens it again."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.edit_task", task_id=task_id)
+    result, complaint = run("update_task", {"task_id": task_id, "status": "cancelled"})
+    if complaint:
+        _say(complaint)
+        return _back("web.edit_task", task_id=task_id)
+    title = result["task"]["title"]
+    _say(CANCELLED_TASK.format(title=title), undo=url_for("edits.reopen_task", task_id=task_id))
+    return _back("web.tasks")
 
 
 @bp.post("/memory/new")

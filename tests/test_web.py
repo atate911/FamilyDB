@@ -1176,3 +1176,32 @@ def test_a_place_s_phone_number_is_a_link_a_phone_can_dial() -> None:
     assert views.phone_href("(503) 555-0142") == "tel:5035550142"
     assert views.phone_href("+1 503 555 0142") == "tel:+15035550142"
     assert views.phone_href("ask at the door") is None and views.phone_href(None) is None
+
+
+def test_ideas_come_24_to_a_page_and_can_be_put_in_order(settings, clock, conn, family) -> None:
+    from familydb.store import db as db_store
+    from familydb.store import ideas as idea_store
+
+    with db_store.transaction(conn):
+        for number in range(30):
+            idea_store.insert(conn, title=f"Idea {number:02d}", kind="outing", now=NOW_ISO)
+    client = _signed_in(settings, clock)
+    first = client.get("/ideas").text
+    assert "30 ideas, page 1 of 2" in first and 'rel="next"' in first and 'rel="prev"' not in first
+    second = client.get("/ideas?page=2").text
+    assert second.count('class="idea') >= 6 and 'rel="prev"' in second
+    by_name = client.get("/ideas?sort=az").text
+    assert by_name.index("Idea 00") < by_name.index("Idea 01")
+    assert 'value="az" selected' in by_name and "page=2" in by_name and "sort=az" in by_name
+
+
+def test_two_letters_where_two_people_start_the_same_way() -> None:
+    from familydb.web import views
+
+    family = ["Sam", "Sara", "Alex", "Maya Lee", "Mark"]
+    assert views.initial_for("Alex", family) == "A"
+    assert views.initial_for("Sam", family) == "Sa" or views.initial_for("Sam", family) == "Sm"
+    assert views.initial_for("Sam", family) != views.initial_for("Sara", family)
+    assert views.initial_for("Maya Lee", family) == "ML"
+    assert views.initial_for("Mark", family) == "Mk"  # "Ma" is how Maya starts too
+    assert views.person_of("Alex", {"alex": 2, "sam": 1})["initial"] == "A"

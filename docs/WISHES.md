@@ -164,7 +164,8 @@ buttons and, where scripts run, by dragging (`static/wishes.js`).
 
 ## Settings
 
-On the Spending page: `daily_spend_limit`, each kid's number of messages a day (`kid_daily_messages`)
-and her share of the dollars (`kid_daily_spend`); and a group for the wish lists: `wish_daily_count`,
+On the Spending page: `daily_spend_limit`. On the Kids page: each kid's number of messages a day
+(`kid_daily_messages`) and her share of the dollars (`kid_daily_spend`); and a group for the wish
+lists: `wish_daily_count`,
 `occasion_list_size`, `parent_asks_per_week` and `wording_daily_after`. The cap on moves in a day
 (`wish_service.WISH_MOVES_PER_DAY`, 300) stays in code: it only stops excess.

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, avatar, page_head %}
+{% from "_ui.html" import icon, avatar, page_head, when with context %}
 {% block title %}Edit a to-do · {{ site_title }}{% endblock %}
 {% block content %}
   {{ page_head('Edit a to-do', task.title ~ ' · added' ~ (' by ' ~ made_by if made_by else '') ~ ' on ' ~ added, crumb=('To do', url_for('web.tasks'))) }}
@@ -15,10 +15,10 @@
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>Who’s it for?</legend>
-        <div class="choices" role="radiogroup" aria-label="Who’s it for">
-          {# A to-do for nobody in particular keeps being so: an empty choice leaves who it is for as it is. #}
-          {% if not owner %}<label class="choice choice--person"><input type="radio" name="owner" value="" checked /><span>{{ avatar(0, '', 'sm') }}Everyone</span></label>{% endif %}
+        <legend>Who’s doing it?</legend>
+        <div class="choices" role="radiogroup" aria-label="Who’s doing it">
+          {# Everyone is a to-do for nobody in particular, always offered, so one can be handed back to the family. #}
+          <label class="choice choice--person"><input type="radio" name="owner" value="Everyone"{% if not owner %} checked{% endif %} /><span>{{ avatar(0, '', 'sm') }}Everyone</span></label>
           {% for one in people %}<label class="choice choice--person"><input type="radio" name="owner" value="{{ one.name }}"{% if owner and one.name == owner.name %} checked{% endif %} /><span>{{ avatar(one.slot, one.initial, 'sm') }}{{ one.name }}</span></label>{% endfor %}
         </div>
       </fieldset>
@@ -26,13 +26,13 @@
       <fieldset class="fieldset">
         <legend>When, a reminder, repeats</legend>
         <div class="form__row">
-          <div class="field"><label class="field__label" for="e-due">Deadline</label><input id="e-due" type="datetime-local" name="due_at" value="{{ row.due_input }}" aria-describedby="e-due-h" />
-            <span class="field__hint{{ ' late' if words.late }}" id="e-due-h">{% if words.late %}{{ words.late }}. Pick a new one, or empty it for no deadline.{% else %}Times use {{ zone }}. Empty it for no deadline.{% endif %}</span></div>
+          <div class="field"><label class="field__label" for="e-due">Deadline</label>{{ when('due_at', 'e-due', value=row.due_input, described='e-due-h') }}
+            <span class="field__hint{{ ' late' if words.late }}" id="e-due-h">{% if words.late %}{{ words.late }}. Pick a new one, or empty it for no date.{% else %}Times use {{ zone }}. Empty it for no date.{% endif %}</span></div>
           <div class="field"><label class="field__label" for="e-win">Preferred window</label><input id="e-win" type="text" name="preferred_window" maxlength="4000" placeholder="Some Saturday morning" value="{{ task.preferred_window }}" aria-describedby="e-win-h" />
             <span class="field__hint" id="e-win-h">{{ assistant }} brings it up on that day.</span></div>
         </div>
         <div class="form__row">
-          <div class="field"><label class="field__label" for="e-rem">New reminder or snooze until</label><input id="e-rem" type="datetime-local" name="remind_at" aria-describedby="e-rem-h" />
+          <div class="field"><label class="field__label" for="e-rem">New reminder or snooze until</label>{{ when('remind_at', 'e-rem', described='e-rem-h') }}
             <span class="field__hint" id="e-rem-h">Leave it blank to keep the one there is. {% if task.reminder %}Reminder now: {{ words.reminder }}.{% else %}No active reminder now.{% endif %}</span></div>
           <div class="field"><label class="field__label" for="e-rep">Repeats</label>
             <select id="e-rep" name="repeat">{% for value, label in row.repeat_options %}<option value="{{ value }}"{% if value == row.repeat_choice %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
@@ -49,13 +49,35 @@
         <p class="field__hint">Completing or canceling stops pending reminders; completing one that repeats records it and keeps it coming round. Reopening doesn’t restore them.</p>
       </fieldset>
 
-      <div class="actions">
+      <div class="actions actions--sticky">
         <button class="btn btn--primary" type="submit">{{ icon('check') }}Save changes</button>
-        <a class="linkbtn" href="{{ url_for('web.tasks') }}">Cancel</a>
+        <a class="linkbtn" href="{{ url_for('web.tasks') }}">Back without saving</a>
       </div>
     </form>
 
     <aside class="aside-stack" aria-label="About this to-do">
+      <section class="card" aria-labelledby="h-now">
+        <h2 id="h-now" class="card__head">{{ 'Done with it?' if task.status == 'open' else 'Open it again?' }}</h2>
+        <div class="actions actions--bare">
+          {% if task.status == 'open' %}
+            <form method="post" action="{{ url_for('edits.finish_task', task_id=task.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="back" value="tasks" />
+              <button class="btn btn--quiet" type="submit">{{ icon('check') }}Mark done</button>
+            </form>
+            <form method="post" action="{{ url_for('edits.cancel_task', task_id=task.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <button class="textbtn textbtn--danger" type="submit">Cancel this to-do</button>
+            </form>
+          {% else %}
+            <form method="post" action="{{ url_for('edits.reopen_task', task_id=task.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <input type="hidden" name="back" value="tasks" />
+              <button class="btn btn--quiet" type="submit">{{ icon('undo') }}Open it again</button>
+            </form>
+          {% endif %}
+        </div>
+      </section>
       <section class="card" aria-labelledby="h-know2">
         <h2 id="h-know2" class="card__head">Good to know</h2>
         <ul class="tips">

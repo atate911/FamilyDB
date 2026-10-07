@@ -241,5 +241,22 @@ def test_the_move_form_shows_where_the_plan_is_now(planning, conn) -> None:
         data={**_form(planning, "/plans"), "title": "Dinner", "start": "2026-09-26T18:30"},
     )
     assert plans.get(conn, 1).start == "2026-09-26T18:30-07:00"
-    # A datetime-local box given the offset as well shows nothing; it wants the wall time.
-    assert 'value="2026-09-26T18:30"' in planning.get("/plans").text
+    # The day and time boxes are given the wall time, not the offset.
+    shown = planning.get("/plans").text
+    assert 'value="2026-09-26"' in shown and '<option value="18:30" selected>' in shown
+
+
+def test_a_day_and_a_time_sent_apart_are_joined(planning, conn) -> None:
+    """The page sends a plan's day and its time from the 12-hour list as two fields."""
+    planning.post(
+        "/plans/new",
+        data={
+            **_form(planning, "/plans"),
+            "title": "Dinner",
+            "start_day": "2026-09-26",
+            "start_time": "18:30",
+        },
+    )
+    assert plans.get(conn, 1).start == "2026-09-26T18:30-07:00"
+    shown = planning.get("/plans").text
+    assert "6:30\u00a0pm" in shown

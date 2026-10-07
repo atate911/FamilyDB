@@ -14,6 +14,7 @@ from typing import Any
 
 from familydb import personas, presents
 from familydb.app import App
+from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
@@ -48,6 +49,8 @@ class Frame:
     decide: int = 0
     rate: int = 0
     check: int = 0
+    # Where "1 to decide" lands: the first wish waiting on a parent.
+    decide_at: str = ""
 
     @property
     def look_at(self) -> int:
@@ -83,16 +86,19 @@ def frame(app: App) -> Frame:
     try:
         with closing(app.connect()) as conn:
             late = _late(conn, visitor, tz, today)
-            decide = _to_decide(conn, visitor, today)
+            decide, decide_at = _to_decide(conn, visitor, today)
             rate = _to_rate(conn, visitor, today)
             check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
             pill = _pill(app, conn, visitor) if visitor.may("browse") else None
+            if me.name:
+                names = [one.display_name for one in member_store.list_all(conn) if one.active]
+                me = Me(me.name, views.initial_for(me.name, names), me.slot, me.role)
     except sqlite3.OperationalError:
         # A database not yet migrated: the frame is drawn without counts, so a page that says
         # "not found" or "not yours" never fails itself.
         log.warning("the menu's counts could not be read", exc_info=True)
         return Frame(me)
-    return Frame(me, pill, late, decide, rate, check)
+    return Frame(me, pill, late, decide, rate, check, decide_at)
 
 
 def _late(conn: sqlite3.Connection, visitor: auth.Visitor, tz: Any, today: Any) -> int:
@@ -107,14 +113,15 @@ def _late(conn: sqlite3.Connection, visitor: auth.Visitor, tz: Any, today: Any) 
     )
 
 
-def _to_decide(conn: sqlite3.Connection, visitor: auth.Visitor, today: Any) -> int:
-    """Wishes waiting on a parent's answer, as Home counts them."""
+def _to_decide(conn: sqlite3.Connection, visitor: auth.Visitor, today: Any) -> tuple[int, str]:
+    """Wishes waiting on a parent's answer, as Home counts them, and the first one's anchor."""
     if not visitor.may("decide"):
-        return 0
+        return 0, ""
     from familydb.web import routes  # not at the top: routes draws pages that use this frame
 
     glance = routes.wish_glance(conn, today)
-    return len(glance["waiting"]) if glance and glance.get("parent") else 0
+    waiting = glance["waiting"] if glance and glance.get("parent") else []
+    return len(waiting), (f"wish-{waiting[0]['id']}" if waiting else "")
 
 
 def _to_rate(conn: sqlite3.Connection, visitor: auth.Visitor, today: Any) -> int:

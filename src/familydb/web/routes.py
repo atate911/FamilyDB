@@ -41,13 +41,15 @@ from familydb.web.chat import WHO_KEY
 bp = Blueprint("web", __name__)
 
 LIST_LIMIT = 200
+# Ideas shown to a page, and the orders the list can be put in.
+IDEAS_PAGE = 24
+SORTS = {"new": "Newest first", "near": "Nearest first", "az": "A to Z"}
 MAX_ID = 2**63 - 1  # beyond this SQLite raises rather than simply finding nothing
 STATUSES = ("idea", "planned", "done", "dropped")
 SETTINGS = ("either", "indoor", "outdoor")
 WEATHERS = ("any", "dry", "warm", "snow")
 SEASONS = ("spring", "summer", "autumn", "winter")
 COSTS = ((0, "free"), (1, "cheap"), (2, "moderate"), (3, "pricey"), (4, "expensive"))
-RATINGS = tuple(range(10, 0, -1))
 RESTAURANT_KIND = "restaurant"
 FILTERS = ("q", "kind", "status", "who")
 HOME_AHEAD_DAYS = 60
@@ -124,7 +126,14 @@ def more() -> str:
 def status() -> str:
     app = _app()
     with closing(app.connect()) as conn:
-        return render_template("status.html", **status_page.status(app, conn))
+        admins = [
+            one.display_name
+            for one in member_store.list_all(conn)
+            if one.role == "admin" and one.active
+        ]
+        # A grown-up who isn't an admin reads the page as information: who can act on it.
+        who_can = "" if auth.visitor().manages else views.who_can_change(admins)
+        return render_template("status.html", who_can=who_can, **status_page.status(app, conn))
 
 
 @bp.get("/")
@@ -158,6 +167,8 @@ def home() -> Response | str:
         todo = presents.visible_tasks(
             conn, task_store.list_all(conn, status="open", owner_id=_own_only()), visitor.member
         )
+        me = visitor.member.id if visitor.member else None
+        todo = views.todo_order(todo, app.settings.tzinfo, today, me)
         talk = chat.glance(app, conn) if talks else None
         wished = wish_glance(conn, today)
         slots = views.slot_map(people)
@@ -175,6 +186,7 @@ def home() -> Response | str:
         late,
         plans_href=url_for("web.plans_month" if browsing else "web.plans"),
         todo_href=url_for("web.tasks"),
+        list_href=url_for("web.wishes"),
         kid=not browsing,
         others=_others(coming, visitor.member),
         yes=yes,
@@ -309,7 +321,7 @@ def _kids_card(wished: dict[str, Any] | None, people: list[member_store.Member])
             {
                 **kid,
                 "slot": person.slot or 0 if person else 0,
-                "initial": kid["name"][:1].upper(),
+                "initial": views.initial_for(kid["name"], [p.display_name for p in people]),
                 "waiting": waiting,
                 "pronoun": pronoun,
                 "top": [row["title"] for row in kid["lists"][0]["rows"][: wished["top"]]],
@@ -339,6 +351,9 @@ def ideas() -> str:
     kind = request.args.get("kind", "").strip()
     status = request.args.get("status", "").strip()
     who = request.args.get("who", "").strip()
+    sort = request.args.get("sort", "new") if request.args.get("sort") in SORTS else "new"
+    number = request.args.get("page", "1")
+    page = int(number) if number.isdigit() and 0 < int(number) < 1000 else 1
     with closing(app.connect()) as conn:
         kept = presents.kept_ids(conn, visitor.member)
         found = idea_store.search(
@@ -364,9 +379,21 @@ def ideas() -> str:
             if idea.place_id
         }
     filtered = bool(query or kind or status or who)
+    if sort == "near":  # ideas with a drive time first, nearest first; the rest as they were
+        found = sorted(
+            found, key=lambda idea: (idea.id not in away, getattr(away.get(idea.id), "minutes", 0))
+        )
+    elif sort == "az":
+        found = sorted(found, key=lambda idea: idea.title.casefold())
+    pages = max(1, -(-len(found) // IDEAS_PAGE))
+    page = min(page, pages)
+    shown = found[(page - 1) * IDEAS_PAGE : page * IDEAS_PAGE]
     rows = [
-        _idea_card(idea, settings, away.get(idea.id), slots, hidden.get(idea.id)) for idea in found
+        _idea_card(idea, settings, away.get(idea.id), slots, hidden.get(idea.id)) for idea in shown
     ]
+    here = {k: v for k, v in (("q", query), ("kind", kind), ("status", status), ("who", who)) if v}
+    if sort != "new":
+        here["sort"] = sort
     placed = [(idea, away[idea.id]) for idea in found if away.get(idea.id)]
     live = [idea for idea in listed if idea.status != "dropped"]
     return render_template(
@@ -386,6 +413,14 @@ def ideas() -> str:
         filter_words=views.filter_words(kind, who, status),
         filtered=filtered,
         limit=LIST_LIMIT,
+        found_count=len(found),
+        sort=sort,
+        sorts=SORTS,
+        page_size=IDEAS_PAGE,
+        page=page,
+        pages=pages,
+        earlier=url_for("web.ideas", **here, page=page - 1) if page > 1 else None,
+        later=url_for("web.ideas", **here, page=page + 1) if page < pages else None,
     )
 
 
@@ -439,7 +474,6 @@ def idea(idea_id: int) -> str:
         original_message=message_store.as_said(original.text) if original else None,
         original_by=views.original_by(original, family, settings.tzinfo) if original else None,
         today=today.isoformat(),
-        ratings=RATINGS,
         can_schedule=True,  # FamilyDB keeps its own plans, and copies them to Google when it can
         on_google=calendar_available(settings),
         can_look_up=enrichment_available(settings) and record.status != "dropped",
@@ -452,7 +486,17 @@ def idea(idea_id: int) -> str:
         place=views.place_panel(place, now, settings.place_stale_days, today),
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
         plans=[views.plan_row(p, today) for p in reversed(plans)],
+        plan_state=_plan_state(plans, today),
+        mine=bool(visitor.member and record.suggested_by == visitor.member.id),
     )
+
+
+def _plan_state(plans: list[Any], today: date) -> str:
+    """Where an idea's plans stand: "ahead" (one to come), "past" (only done ones) or "none"."""
+    live = [plan for plan in plans if plan.status != "cancelled"]
+    if any((plan.end or plan.start)[:10] >= today.isoformat() for plan in live):
+        return "ahead"
+    return "past" if live else "none"
 
 
 def _idea_form(record: Any = None) -> str:
@@ -696,6 +740,9 @@ def tasks() -> str:
             ),
             visitor.member,
         )
+        if status == "open":
+            me = visitor.member.id if visitor.member else None
+            rows = views.todo_order(rows, app.settings.tzinfo, app.clock.today(), me)
         open_count = (
             len(rows) if status == "open" and not request.args.get("q") else _open_count(conn)
         )
@@ -842,7 +889,9 @@ def _lists(conn: Any, kid: member_store.Member, today: date) -> dict[str, Any]:
         "id": kid.id,
         "name": kid.display_name,
         "slot": kid.slot or 0,
-        "initial": kid.display_name[:1].upper(),
+        "initial": views.initial_for(
+            kid.display_name, [m.display_name for m in member_store.list_all(conn)]
+        ),
         "lists": lists,
         "answered": answered,
         "turned": turned,
@@ -910,6 +959,7 @@ def wishes() -> str:
         kids=shown,
         names=names,
         parents_text=views.names_text([{"name": name} for name in parents]),
+        parents_or=views.join_or(parents) or "a parent",
         parent=visitor.may("decide"),
         one=bool(wanted) or not visitor.may("decide"),
         choices=[(value or "everyday", name) for value, name, _ in views.WISH_LISTS],

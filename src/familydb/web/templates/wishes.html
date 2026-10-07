@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, avatar, vera_screen, page_head with context %}
+{% from "_ui.html" import icon, drawing, avatar, vera_screen, page_head with context %}
 {% block title %}{{ "The kids’ lists" if parent else 'My list' }} · {{ site_title }}{% endblock %}
 {% block head %}
   <script src="{{ url_for('static', filename='wishes.js') }}" defer></script>
@@ -71,10 +71,13 @@
   {% if kid.answered %}
     <section class="card" aria-labelledby="h-ans-{{ kid.id }}">
       <h3 class="card__head" id="h-ans-{{ kid.id }}">{{ icon('bell') }}Answers</h3>
+      {# Her first Yes! is drawn, on her own page only: the one drawing on it (docs/STYLE.md). #}
+      {% set yes = (kid.answered | selectattr('status', 'equalto', 'granted') | list | first) if not parent else none %}
       <ul class="wanswers">
         {% for row in kid.answered %}
-          <li class="wans wans--{{ row.status }}">
-            {% if row.status == 'granted' %}{{ icon('sparkle', size='sm') }}{% else %}{{ icon('heart', size='sm') }}{% endif %}
+          <li class="wans wans--{{ row.status }}{{ ' wans--drawn' if yes and row is sameas yes }}">
+            {% if yes and row is sameas yes %}{{ drawing('yes', 'p' ~ kid.slot) }}
+            {%- elif row.status == 'granted' %}{{ icon('sparkle', size='sm') }}{% else %}{{ icon('heart', size='sm') }}{% endif %}
             <span><b>{{ 'Yes!' if row.status == 'granted' else 'Not this time.' }}</b> {{ row.title }}{% if row.note %}: <q>{{ row.note }}</q>{% endif %}
               <span class="small muted">{% if names.get(row.answered_by) %}{{ names[row.answered_by] }}{% endif %}{% if row.again %}{{ ' · ' if names.get(row.answered_by) }}Ask again after {{ row.again }}.{% endif %}</span></span>
           </li>
@@ -93,11 +96,14 @@
       <p class="small muted">{{ assistant }} {{ 'turned these away.' if parent else 'couldn’t put these on your list. What to do next is beside each.' }}</p>
       <ul class="wturned">
         {% for row in kid.turned %}
-          <li>
+          <li id="wish-{{ row.id }}">
             <div><b>{{ row.title }}</b> <span class="tags">
               <span class="tag tag--off">{{ icon('offc') }}{{ (row.concern | capitalize) if parent else row.concern_kid }}</span>
               {%- if row.review == 'asked' %}<span class="tag tag--pending">Asked a parent</span>{% endif -%}
             </span></div>
+            {% if not parent and row.review not in ('offered', 'asked') %}
+              <p class="small">Ask {{ parents_or }} about it.</p>
+            {% endif %}
             {% if not parent and row.review == 'offered' %}
               <form method="post" action="{{ url_for('edits.ask_parent', wish_id=row.id) }}">{{ hidden(kid) }}
                 <button class="btn btn--quiet btn--sm" type="submit">{{ icon('send', size='sm') }}Ask a parent</button></form>
@@ -116,6 +122,9 @@
 
 {% macro the_lists(kid, top) %}
   <div class="wlists{{ ' wlists--top' if top }}">
+    {# Her first empty list is drawn, unless a Yes! already is; never on a parent's page. #}
+    {% set has_yes = kid.answered | selectattr('status', 'equalto', 'granted') | list %}
+    {% set empty_first = none if parent or has_yes else (kid.lists | rejectattr('rows') | list | first) %}
     {% for list in kid.lists %}
       <section class="wlist{{ '' if top else ' wlist--full' }}" aria-labelledby="wl-{{ kid.id }}-{{ list.value }}">
         <div class="wlist__head">
@@ -127,7 +136,7 @@
         {% else %}
           <ol class="wishes" data-list="{{ list.value }}">
             {% for row in list.rows %}{{ wish_line(kid, row, list, list.rows | length) }}
-            {% else %}<li class="wish wish--empty">{{ icon('gift') }}<span>{{ list.lede }} Nothing on it yet.</span></li>{% endfor %}
+            {% else %}<li class="wish wish--empty">{% if empty_first and list is sameas empty_first %}{{ drawing('wish', 'p' ~ kid.slot) }}{% else %}{{ icon('gift') }}{% endif %}<span>{{ list.lede }} Nothing on it yet.</span></li>{% endfor %}
           </ol>
         {% endif %}
       </section>

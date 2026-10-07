@@ -94,6 +94,11 @@ older than what is installed. It gets a date when it is released.
   number can be tapped to call; an old browser that cannot do day-and-night colours
   gets plain ones. A ticked-off to-do has an Undo, and a kid's To do keeps this week's
   under "Done lately".
+- **Afterglow, as the design finished it.** Green is Vera's alone: the family's links and
+  buttons are warm white on dark glass, cards are panes of glass, each of you is tinted glass,
+  and the pixel titles sit on whole pixels so they are crisp. Asking your device for more
+  contrast turns its scanlines off. Every look's chosen tab is now a ringed card rather than a
+  solid fill.
 
 ## v0.2.0 — second alpha (2026-10-05)
 

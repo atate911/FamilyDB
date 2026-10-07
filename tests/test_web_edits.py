@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from familydb.app import App
-from familydb.store import db, ideas, outcomes, plans
+from familydb.store import db, ideas, outcomes, plans, tasks
 from familydb.web import create_app
 from tests import fakes
 
@@ -76,7 +76,7 @@ def test_an_idea_can_be_added_from_the_page(page, conn) -> None:
     assert saved.tags == ["cheap", "food"]  # the store lowercases and sorts them
     assert saved.cost_level == 2 and saved.duration_min == 60 and saved.needs_booking
     assert saved.suggested_by_name == "Alex"  # the form said who, and the tool recorded it
-    assert "Saved #1 Ramen place." in _said(page.get("/idea/1"))
+    assert "Saved #1 “Ramen place”." in _said(page.get("/idea/1"))
 
 
 def test_an_idea_with_no_title_is_refused_and_nothing_is_written(page, conn) -> None:
@@ -131,9 +131,9 @@ def test_the_days_a_thing_is_on_are_set_shown_and_cleared_from_the_page(planning
     assert (saved.happens_from, saved.happens_until) == ("2026-10-17T18:30", "2026-10-18")
     shown = planning.get("/idea/1").text
     assert "Sat 17 Oct, 6:30\u00a0pm to Sun 18 Oct 2026" in shown
-    assert 'value="2026-10-17T18:30"' in shown  # the plan form starts at its start
+    assert 'value="2026-10-17"' in shown and '<option value="18:30" selected>' in shown
     form = planning.get("/idea/1/edit").text
-    assert 'value="2026-10-17"' in form and 'value="18:30"' in form
+    assert 'value="2026-10-17"' in form and '<option value="18:30" selected>' in form
     # Emptied boxes clear them, as an emptied text box does.
     planning.post(
         "/idea/1/edit",
@@ -390,3 +390,44 @@ def test_a_done_to_do_can_be_put_back_from_the_done_list(page, conn) -> None:
     page.post("/task/1/reopen", data={"csrf": _token(page, "/tasks"), "once": "o11"})
     assert 'id="t-1"' in page.get("/tasks").text  # open again (this also shows the flash)
     assert 'id="t-1"' not in page.get("/tasks?status=done").text
+
+
+def test_a_tick_and_a_cancel_each_say_so_with_an_undo(page, conn) -> None:
+    page.post("/tasks/new", data={"csrf": _token(page, "/tasks"), "once": "u1", "title": "Mow"})
+    ticked = page.post(
+        "/task/1/done",
+        data={"csrf": _token(page, "/tasks"), "once": "u2", "revision": "1"},
+        follow_redirects=True,
+    ).text
+    assert "Done: Mow." in ticked and 'action="/task/1/reopen"' in ticked and ">Undo<" in ticked
+    undo = re.search(
+        r'action="/task/1/reopen"><input type="hidden" name="csrf" value="([^"]+)"', ticked
+    )
+    page.post("/task/1/reopen", data={"csrf": undo.group(1), "once": "u3"})
+    assert tasks.get(conn, 1).status == "open"
+    edit = page.get("/task/1/edit").text
+    assert "Mark done" in edit and "Cancel this to-do" in edit and "actions--sticky" in edit
+    cancelled = page.post(
+        "/task/1/cancel", data={"csrf": _token(page, "/tasks"), "once": "u4"}, follow_redirects=True
+    ).text
+    assert tasks.get(conn, 1).status == "cancelled" and "Canceled: Mow." in cancelled
+    assert "Open it again" in page.get("/task/1/edit").text
+
+
+def test_an_idea_with_a_plan_ahead_leads_with_it_and_is_rated_with_faces(page, conn) -> None:
+    page.post("/ideas/new", data=_idea_form(page))
+    plain = page.get("/idea/1").text
+    assert 'href="#h-plan"' not in plain and "Plan it another time" not in plain
+    assert (
+        "Out of ten" not in plain and 'name="went" value="loved"' in plain and "Add more" in plain
+    )
+    with db.transaction(conn):
+        plans.insert(
+            conn, title="Ramen", start="2026-09-26T18:00-07:00", end=None, all_day=False, idea_id=1
+        )
+    ahead = page.get("/idea/1").text
+    assert 'href="#h-plan"' in ahead and "Plan it another time" in ahead
+    rated = page.post(
+        "/idea/1/outcome", data={"csrf": _token(page, "/idea/1"), "once": "o1", "went": "loved"}
+    )
+    assert rated.status_code == 302

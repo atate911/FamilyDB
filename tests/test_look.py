@@ -157,8 +157,8 @@ def test_every_look_is_written_down_once_in_the_stylesheets() -> None:
     assert themes.index("\n[data-theme] {") < themes.index('\n[data-theme="')
     # The page reads these two with a fallback: a value for every look would change a page that
     # does without.
-    assert not shared & {"--here-icon", "--here-pill"}
-    ignored = {"--sect"} | shared  # --sect: the quiet themes' one extra
+    assert "--here-icon" not in shared
+    ignored = shared
     first = tokens(next(iter(blocks.values()))) - ignored
     for key, body in blocks.items():
         assert tokens(body) - ignored == first, f"{key}: {(tokens(body) - ignored) ^ first}"
@@ -363,7 +363,7 @@ def test_a_look_may_only_add_effects_of_the_allowed_kinds() -> None:
     themes = (STATIC / "themes.css").read_text("utf-8")
     shared = _shared(themes)
     blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
-    names = ("--fx-page", "--fx-scan", "--fx-glow", "--fx-title", "--fx-title-adjust")
+    names = ("--fx-page", "--fx-scan", "--fx-glow", "--fx-title", "--fx-title-grid")
     assert set(names) <= set(shared)  # every look has all five, plain unless it says otherwise
     faces = {"VT323", "Fraunces", "Georgia", "serif"}
     for key, body in blocks.items():
@@ -371,7 +371,7 @@ def test_a_look_may_only_add_effects_of_the_allowed_kinds() -> None:
             **{n: shared[n] for n in names},
             **{n: v for n, v in _declared(body).items() if n in names},
         }
-        page, scan, glow, title, adjust = (got[n] for n in names)
+        page, scan, glow, title, grid = (got[n] for n in names)
         assert page == "none" or all(
             float(a) <= 0.1 for a in re.findall(r"rgb\([^)/]*/ ?([\d.]+)\)", page)
         ), key
@@ -383,4 +383,147 @@ def test_a_look_may_only_add_effects_of_the_allowed_kinds() -> None:
         assert 0 <= float(glow) <= 1, key
         assert title.endswith("var(--font-head)"), key
         assert set(re.findall(r'"([^"]+)"', title)) <= faces, key
-        assert adjust == "none" or re.fullmatch(r"cap-height [\d.]+", adjust), key
+        assert re.fullmatch(r"\d+(?:\.\d+)?", grid) and 0 <= float(grid) <= 50, (
+            key
+        )  # px; 0 an outline face
+
+
+def _look_tokens(key: str) -> dict[str, str]:
+    themes = (STATIC / "themes.css").read_text("utf-8")
+    blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
+    return {**_shared(themes), **_declared(blocks[key])}
+
+
+def test_afterglow_is_one_fixed_look_whose_band_is_the_one_the_browser_is_told() -> None:
+    tokens = _look_tokens("afterglow")
+    look = looks.BY_KEY["afterglow"]
+    assert not look.has_day and look.band == ("#060A08", "#060A08")
+    assert tokens["--band"].upper() == "#060A08"
+    themes = (STATIC / "themes.css").read_text("utf-8")
+    block = re.search(r'\[data-theme="afterglow"\] \{(.*?)\n\}', themes, re.S).group(1)
+    assert "light-dark(" not in block and "color-scheme: dark" in block
+
+
+def test_in_afterglow_green_is_veras_alone() -> None:
+    """Stage 17's choice: the family's links, current place, main button and its edge, and today's
+    tile are warm off-white or warm grey, so the one green thing on a page is Vera's."""
+    tokens = _look_tokens("afterglow")
+
+    def greenish(name: str) -> bool:
+        colour = _colour(tokens, tokens[name], 1)
+        assert colour, name
+        r, g, b = (int(colour[i : i + 2], 16) for i in (1, 3, 5))
+        return g - max(r, b) > 12
+
+    family = ("--link", "--here-icon", "--lit", "--primary", "--primary-edge", "--today")
+    family += ("--chosen",)
+    assert [name for name in family if greenish(name)] == []
+    assert greenish("--vera")
+
+
+def test_the_floors_hold_with_the_scanlines_laid_over_their_ground() -> None:
+    """A look's scanlines are drawn under the words; laid over the band and Vera's glass at their
+    strength, the words there still hold 4.5:1 (HANDOFF section 8.9, looks-check D)."""
+    short = []
+    for key in (one.key for one in looks.LOOKS):
+        tokens = _look_tokens(key)
+        scan = re.fullmatch(r"rgb\((\d+) (\d+) (\d+) / ?([\d.]+)\)", tokens["--fx-scan"])
+        if not scan:
+            continue
+        line = "#" + "".join(f"{int(scan[i]):02X}" for i in (1, 2, 3))
+        for which in (0, 1)[0 if looks.BY_KEY[key].has_day else 1 :]:
+            for words, ground in (
+                ("on-band", "band"),
+                ("on-band-2", "band"),
+                ("ask-ink", "ask-bg"),
+            ):
+                a, b = (_colour(tokens, tokens[f"--{n}"], which) for n in (words, ground))
+                if not (a and b):
+                    continue
+                laid = _mixed(line, b, float(scan[4]))
+                if _contrast(a, laid) < 4.5 - 0.005:
+                    short.append(f"{key} {words} on scanlined {ground}: {_contrast(a, laid):.2f}")
+    assert not short, "\n".join(short)
+
+
+def test_the_people_and_the_main_buttons_edge_hold_their_floors_in_every_look() -> None:
+    """Each person's letter on their fill, in Kitchen Table and in any look that draws its own
+    people (Afterglow's tinted glass); and, where a look draws the main button's edge apart from its
+    fill (Afterglow's dark glass button), that edge on a card, as anything you press is held."""
+    themes = (STATIC / "themes.css").read_text("utf-8")
+    blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
+    short = []
+    for one in looks.LOOKS:
+        tokens, own = _look_tokens(one.key), _declared(blocks[one.key])
+        pairs = [("words on a chosen chip", "on-chosen", "chosen", 4.5)]
+        if "--chosen-edge" in own:
+            pairs.append(("a chosen chip's edge on a card", "chosen-edge", "card", 3.0))
+        if "--primary-edge" in own:
+            pairs.append(("the main button's edge on a card", "primary-edge", "card", 3.0))
+        if one.key == "kitchen" or "--p1-fill" in own:
+            pairs += [(f"p{i}'s letter", f"p{i}-on", f"p{i}-fill", 4.5) for i in range(1, 9)]
+            pairs.append(("Everyone's mark", "everyone-on", "everyone-fill", 4.5))
+        for which in (0, 1)[0 if one.has_day else 1 :]:
+            for what, words, ground, floor in pairs:
+                a, b = (_colour(tokens, tokens[f"--{n}"], which) for n in (words, ground))
+                assert a and b, f"{one.key}: {what}"
+                if _contrast(a, b) < floor - 0.005:
+                    short.append(f"{one.key} {which} {what}: {_contrast(a, b):.2f} < {floor}")
+    assert any("--primary-edge" in _declared(body) for body in blocks.values())
+    assert not short, "\n".join(short)
+
+
+def _rules(css: str) -> list[tuple[tuple[str, ...], str, str]]:
+    """Each rule's at-rules around it, its selector and its body, from a stylesheet."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    found, stack, start = [], [], 0
+    for at, char in enumerate(css):
+        if char == "{":
+            stack.append(css[start:at].strip())
+            start = at + 1
+        elif char == "}":
+            prelude = stack.pop()
+            if not prelude.startswith("@") and not re.fullmatch(r"(from|to|[\d.%, ]+)", prelude):
+                found.append((tuple(stack), prelude, css[start:at]))
+            start = at + 1
+        elif char == ";" and not stack:
+            start = at + 1
+    return found
+
+
+def test_whatever_moves_is_still_when_the_device_asks_for_less_motion() -> None:
+    """docs/STYLE.md, "Accessibility": an animation or transition outside a
+    `prefers-reduced-motion: no-preference` block is switched off in the `reduce` block, by the
+    same selector, so no look or page moves for somebody who asked their device for less."""
+    css = (STATIC / "style.css").read_text(encoding="utf-8")
+    rules = _rules(css)
+    still: dict[str, set[str]] = {}
+    for media, selector, body in rules:
+        if any("prefers-reduced-motion: reduce" in at for at in media):
+            for part in selector.split(","):
+                for prop in ("animation", "transition"):
+                    if re.search(rf"(^|;)\s*{prop}\s*:\s*none", body):
+                        still.setdefault(part.strip(), set()).add(prop)
+    moving = []
+    for media, selector, body in rules:
+        if any("prefers-reduced-motion" in at for at in media) or "@keyframes" in " ".join(media):
+            continue
+        for prop in ("animation", "transition"):
+            if re.search(rf"(^|;)\s*{prop}(-name)?\s*:\s*(?!none)", body):
+                moving += [
+                    (part.strip(), prop)
+                    for part in selector.split(",")
+                    if prop not in still.get(part.strip(), set())
+                ]
+    assert moving == []
+
+
+def test_the_look_in_use_comes_first_and_is_marked_as_what_was_chosen(page) -> None:
+    """The stylesheet keeps "Use this look" hidden until a radio differs from what it was."""
+    page.post("/look", data={"csrf": _token(page), "theme": "fjord", "mode": "auto"})
+    text = page.get("/look").text
+    first = re.search(r'name="theme" value="([^"]+)"', text)
+    assert first is not None and first.group(1) == "fjord"
+    assert 'value="fjord" checked data-was' in text and 'value="auto" checked data-was' in text
+    css = (STATIC / "style.css").read_text(encoding="utf-8")
+    assert ".look-form:not(:has([data-was]:not(:checked))) .look-save" in css

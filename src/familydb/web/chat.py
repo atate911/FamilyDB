@@ -72,6 +72,8 @@ LOST = "That message was not answered. Send it again if it still matters."
 # For somebody who does not see how the bot works (a kid, roles.py `browse`).
 RETRYING_PLAIN = "{name} will answer that soon. The answer will show here when it arrives."
 PROMPT = "Message {name}"
+# On the chat's own box, for somebody signed in as themselves: who is writing, said in the box.
+PROMPT_AS = "Message {name} as {me}"
 LOCKED = "You can write again once {name} has answered."
 HOME_PROMPT = "Ask, save an idea, set a reminder…"
 KID_HOME_PROMPT = "Something you\u2019d like, a question, something fun to do…"
@@ -163,12 +165,15 @@ def waiting_on(
 def box(family: list[str], *, locked: bool = False, prompt: str = PROMPT) -> dict[str, Any]:
     """What the box needs wherever it is drawn."""
     name = personas.active(_app().settings).name
+    me = auth.visitor().name
+    if prompt == PROMPT and me:
+        prompt = PROMPT_AS
     return {
         "family": family,
         "who": _who(family),
         "send_where": bool(session.get(WHERE_KEY)),
         "locked": locked,
-        "placeholder": (LOCKED if locked else prompt).format(name=name),
+        "placeholder": (LOCKED if locked else prompt).format(name=name, me=me),
     }
 
 
@@ -422,7 +427,7 @@ def _conversations(
             {
                 "name": kid.display_name,
                 "slot": views.slot_of(kid.display_name, slots),
-                "initial": kid.display_name[:1].upper(),
+                "initial": views.initial_for(kid.display_name, [m.display_name for m in family]),
                 "href": url_for("chat.show", **{"with": kid.id}, _anchor=LATEST),
                 "current": chat_id == mine,
                 "snippet": said,

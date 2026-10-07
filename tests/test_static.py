@@ -58,8 +58,10 @@ def test_the_stylesheet_has_no_colour_of_its_own_outside_the_fixed_layer() -> No
 def test_the_sprite_has_what_the_scripts_ask_for() -> None:
     sprite = (STATIC / "icons.svg").read_text("utf-8")
     have = set(re.findall(r'<symbol id="i-([a-z0-9]+)"', sprite))
+    drawings = set(re.findall(r'<symbol id="d-([a-z0-9]+)"', sprite))
     assert "mic" in have  # dictate.js draws it
-    assert len(have) == len(re.findall(r"<symbol ", sprite))  # no name twice
+    assert drawings == {"plans", "todos", "ideas", "wish", "yes"}  # docs/STYLE.md, "Drawings"
+    assert len(have) + len(drawings) == len(re.findall(r"<symbol ", sprite))  # no name twice
 
 
 def test_no_page_has_an_inline_script_or_style() -> None:

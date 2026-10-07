@@ -19,6 +19,13 @@
     <p class="lede">It still needs {% for one in later if one.need == 'needed' %}{{ one.title|lower }}{{ ', ' if not loop.last }}{% endfor %} before it can answer anyone.</p>
   {% endif %}
 
+  {% if unsigned %}
+    <section class="card mt-6" aria-labelledby="h-unsigned">
+      <h2 class="card__head" id="h-unsigned">Still to sign in</h2>
+      <p>{{ unsigned }} {{ 'have' if unsigned_many else 'has' }} no sign-in yet. Make {{ 'each' if unsigned_many else 'them' }} a starting password on the <a href="{{ url_for('setup.step', name='family') }}">family step</a>, and hand it over.</p>
+    </section>
+  {% endif %}
+
   {% if later %}
     <section class="card mt-6" aria-labelledby="h-later">
       <h2 class="card__head" id="h-later">Left for later</h2>

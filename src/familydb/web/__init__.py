@@ -44,7 +44,7 @@ from familydb.web.keys import session_secret
 
 log = logging.getLogger(__name__)
 
-MAX_BODY_BYTES = 64 * 1024  # nothing here takes an upload
+MAX_BODY_BYTES = 64 * 1024  # the one upload is a Google key file, about 2 KB
 CONTENT_SECURITY_POLICY = (
     "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
@@ -188,6 +188,9 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["money"] = views.money_text
     web.jinja_env.filters["figs"] = views.figs
     web.jinja_env.globals["reminders_said"] = views.REMINDERS_SAID
+    web.jinja_env.globals["plan_status_words"] = views.PLAN_STATUS_WORDS
+    web.jinja_env.globals["time_choices"] = views.TIME_CHOICES
+    web.jinja_env.filters["spoken_clock"] = views.clock_time
 
     def every_page() -> dict[str, Any]:
         her = personas.active(app.settings)
@@ -267,4 +270,5 @@ def _look() -> dict[str, Any]:
 
 
 def _not_found(_error: Any) -> tuple[str, int]:
-    return render_template("404.html"), 404
+    title, why = views.NOT_FOUND
+    return render_template("refused.html", title=title, why=why), 404

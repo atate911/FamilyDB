@@ -1,5 +1,5 @@
 {% from "_ui.html" import icon, avatar with context %}
-<p class="lede">Add the people {{ site_title }} should know. Everyone who will message it needs to be on the list. Children can be added too, so plans can include them, even if they never message it.</p>
+<p class="lede">Add the people {{ site_title }} should know, and give each who will use this page a sign-in. Everyone who will message it needs to be on the list. Children can be added too, so plans can include them, even if they never message it.</p>
 
 <section class="card setup-card" aria-labelledby="h-onlist">
   <h2 class="sr" id="h-onlist">On the list</h2>
@@ -11,7 +11,19 @@
           <span class="meta"><span class="role role--{{ person.role }}">{{ person.role | capitalize }}</span>
             <span>{% if person.channel_user_id %}on Telegram
               {%- elif person.role == 'kid' %}included in plans
-              {%- else %}the Chat page only, until they message the bot on Telegram{% endif %}</span></span></span>
+              {%- else %}the Chat page only, until they message the bot on Telegram{% endif %}</span>
+            <span>{% set login = logins.get(person.id) %}
+              {%- if login and not login.temporary %}signs in as {{ 'you' if visitor().member and visitor().member.id == person.id else 'themselves' }}
+              {%- elif login %}has a starting password, not used yet
+              {%- else %}no sign-in yet{% endif %}</span></span>
+          {% if not logins.get(person.id) and visitor().member and visitor().member.id != person.id %}
+            {# Their page shows the password, once: hand it to them. #}
+            <form class="mt-2" method="post" action="{{ url_for('family.sign_in_for', member_id=person.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              <input type="hidden" name="once" value="{{ once_token() }}" />
+              <button class="btn btn--quiet btn--sm" type="submit">{{ icon('key', size='sm') }}Make a sign-in<span class="sr"> for {{ person.display_name }}</span></button>
+            </form>
+          {% endif %}</span>
         <span></span>
       </li>
     {% else %}
@@ -63,5 +75,5 @@
   <dl class="roles roles--after">
     {% for role in roles %}<dt><span class="role role--{{ role }}">{{ role | capitalize }}</span></dt><dd>{{ role_words[role] }}</dd>{% endfor %}
   </dl>
-  <p class="small muted mt-4">To let somebody use this page as well, open them on the <a href="{{ url_for('family.show') }}">Family page</a> and make them a starting password. They choose their own the first time they sign in.</p>
+  <p class="small muted mt-4">A sign-in is a starting password, shown once on their page for you to hand over. They choose their own the first time they sign in.</p>
 </section>

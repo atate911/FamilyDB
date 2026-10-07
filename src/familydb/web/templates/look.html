@@ -6,27 +6,19 @@
 
   <form class="look-form" method="post" action="{{ url_for('look.save') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-    <fieldset class="card look-modes">
-      <legend class="sgroup__h">{{ icon('sun') }}Day and night</legend>
-      <div class="look-mode-row">
-        {% for key, words in mode_words.items() %}
-          <label class="look-mode"><input type="radio" name="mode" value="{{ key }}"{% if key == mode %} checked{% endif %} /><span><b>{{ words[0] }}</b><span class="small muted">{{ words[1] }}</span></span></label>
-        {% endfor %}
-      </div>
-      <p class="field__hint mt-3">Phosphor and Afterglow are green screens, so they have no day: they are always night, whatever is chosen here.</p>
-    </fieldset>
 
     <fieldset class="looks">
       <legend class="sr">The looks</legend>
       <ul class="look-grid">
-        {% for one in looks %}
+        {# The look in use first, then the rest as listed. #}
+        {% for one in (looks | selectattr('key', 'equalto', wearing.key) | list) + (looks | rejectattr('key', 'equalto', wearing.key) | list) %}
           <li>
             <label class="look-choice">
               <span class="look-head">
-                <input type="radio" name="theme" value="{{ one.key }}"{% if one.key == wearing.key %} checked{% endif %} />
+                <input type="radio" name="theme" value="{{ one.key }}"{% if one.key == wearing.key %} checked data-was{% endif %} />
                 <span class="look-name">{{ one.name }}{% if one.key == wearing.key %}<span class="tag tag--ok">{{ icon('check') }}In use</span>{% endif %}{% if one.key == default %}<span class="tag tag--off">The default</span>{% endif %}</span>
               </span>
-              <span class="look-blurb">{{ one.blurb }}</span>
+              <span class="look-blurb">{{ one.blurb.replace('{name}', assistant) }}</span>
               <span class="look-samples" aria-hidden="true">
                 {% if one.has_day %}{{ sample(one.key, 'light', 'Day') }}{{ sample(one.key, 'dark', 'Night') }}
                 {% else %}{{ sample(one.key, none, 'Night only') }}{% endif %}
@@ -36,7 +28,21 @@
         {% endfor %}
       </ul>
     </fieldset>
-    <div class="save-bar"><p class="small">{{ 'Yours alone, on every device you use.' if follows else 'Kept in this browser.' }}</p><button class="btn btn--primary" type="submit">{{ icon('palette') }}Use this look</button></div>
+    {# Folded: most people never change it. The summary says what is chosen now. #}
+    <details class="card disclose look-modes">
+      <summary><span class="look-modes__h">{{ icon('sun') }}Day and night</span><span class="small muted">{{ mode_words[mode][0] }}</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <fieldset class="disclose__body">
+        <legend class="sr">Day and night</legend>
+        <div class="look-mode-row">
+          {% for key, words in mode_words.items() %}
+            <label class="look-mode"><input type="radio" name="mode" value="{{ key }}"{% if key == mode %} checked data-was{% endif %} /><span><b>{{ words[0] }}</b><span class="small muted">{{ words[1] }}</span></span></label>
+          {% endfor %}
+        </div>
+        <p class="field__hint mt-3">Phosphor and Afterglow are green screens, so they have no day: they are always night, whatever is chosen here.</p>
+      </fieldset>
+    </details>
+    {# Hidden by style.css until a choice differs from what is worn; shown always where :has is not. #}
+    <div class="save-bar look-save"><p class="small">{{ 'Yours alone, on every device you use.' if follows else 'Kept in this browser.' }}</p><button class="btn btn--primary" type="submit">{{ icon('palette') }}Use this look</button></div>
   </form>
 {% endblock %}
 

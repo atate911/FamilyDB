@@ -87,6 +87,9 @@ BEHAVIOUR = (
     "web_session_days",
     "google_calendar_id",
     "log_level",
+    "setup_skip_telegram",
+    "setup_skip_family",
+    "setup_skip_calendar",
 )
 SECRETS = ("anthropic_api_key", "openai_api_key", "gemini_api_key", "telegram_bot_token")
 # Who the assistant and the family are (/settings/personality); long texts show as "rewritten"

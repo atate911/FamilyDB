@@ -6,6 +6,11 @@
     <use href="{{ url_for('static', filename='icons.svg') }}#i-{{ name }}"></use></svg>
 {%- endmacro %}
 
+{# One of the family's drawings (docs/STYLE.md, "Drawings"): an empty list's first moment, at most one on a screen. #}
+{% macro drawing(name, cls='') -%}
+  <svg class="drawing{{ ' ' ~ cls if cls }}" focusable="false" aria-hidden="true"><use href="{{ url_for('static', filename='icons.svg') }}#d-{{ name }}"></use></svg>
+{%- endmacro %}
+
 {# FamilyDB's own mark, a monitor with a smile; the colours are the brand's, set in the stylesheet. `size` is '' or 'xs'. #}
 {% macro brand_mark(size='', cls='') -%}
   <svg class="{{ cls if cls else 'mark-fdb' ~ (' mark-fdb--' ~ size if size) }}" viewBox="0 0 32 32" aria-hidden="true"><rect class="mf__bg" width="32" height="32" rx="8"/><g class="mf__fg" transform="translate(4 4)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="13.5" rx="3.5"/><path d="M12 16.5V21M8.5 21h7M9 8.25v1.25M15 8.25v1.25M9 12.25c1.7 1.35 4.3 1.35 6 0"/></g></svg>
@@ -65,12 +70,25 @@
   </div>
 {%- endmacro %}
 
+{# A day and a time, the time from a list in the family's clock ("6:30 pm") rather than the browser's own box. `name` is what the server joins back ("start" from start_day and start_time); `value` is "YYYY-MM-DDTHH:MM" or a day. A time not on the list (set in the chat) is kept as one of its own. #}
+{% macro when(name, id, value='', required=false, described=none, time_label='Time') -%}
+  {% set day = value[:10] if value else '' %}{% set at = value[11:16] if value and 'T' in value else '' %}
+  <span class="when">
+    <input id="{{ id }}" type="date" name="{{ name }}_day" value="{{ day }}"{% if required %} required{% endif %}{% if described %} aria-describedby="{{ described }}"{% endif %} />
+    <select name="{{ name }}_time" aria-label="{{ time_label }}">
+      <option value="">{{ time_label }}</option>
+      {% if at and at not in (time_choices | map('first') | list) %}<option value="{{ at }}" selected>{{ at | spoken_clock }}</option>{% endif %}
+      {% for value_at, words in time_choices %}<option value="{{ value_at }}"{% if value_at == at %} selected{% endif %}>{{ words }}</option>{% endfor %}
+    </select>
+  </span>
+{%- endmacro %}
+
 {# What the last form said, with a way to take it back when there is one. #}
 {% macro flash(message, undo_url=none) -%}
   <div class="banner banner--ok flash" role="status" tabindex="-1">
     <span class="banner__ic">{{ icon('check') }}</span>
     <p class="banner__text">{{ message }}</p>
-    {% if undo_url %}<form method="post" action="{{ undo_url }}"><button class="btn btn--quiet btn--sm" type="submit">Undo</button></form>{% endif %}
+    {% if undo_url %}<form method="post" action="{{ undo_url }}"><input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><button class="btn btn--quiet btn--sm" type="submit">Undo</button></form>{% endif %}
   </div>
 {%- endmacro %}
 
@@ -126,7 +144,7 @@
     <span></span>
     {%- endif %}
     <div>
-      <div class="todo__title">{{ row.title }}</div>
+      <div class="todo__title">{% if edit %}<a href="{{ url_for('web.edit_task', task_id=row.id) }}">{{ row.title }}</a>{% else %}{{ row.title }}{% endif %}</div>
       <div class="meta">
         {%- if not mine %}{{ person(row.person) }}{% endif -%}
         <span>{{ icon('clock') }}{{ row.when | figs }}</span>
@@ -222,7 +240,7 @@
         <span>{{ row.when | figs }}</span>
         {%- if row.relative in ('today', 'tomorrow', 'now') %}<span class="tag tag--when">{{ icon('cal') }}{{ row.relative | capitalize }}</span>
         {%- elif row.relative %}<span class="rel">{{ row.relative }}</span>{% endif -%}
-        {%- if row.status != 'confirmed' %}<span class="tag tag--off">{{ icon('offc') }}{{ 'canceled' if row.status == 'cancelled' else row.status }}</span>{% endif -%}
+        {%- if row.status != 'confirmed' %}<span class="tag tag--off">{{ icon('offc') }}{{ plan_status_words.get(row.status, row.status) }}</span>{% endif -%}
         {%- if row.from_google %}<span class="tag tag--off">added in Google</span>{% endif -%}
         {%- if row.location %}<span>{{ icon('pin') }}{{ row.location }}</span>{% endif -%}
         {%- if row.away %}<span>{{ icon('car') }}{{ row.away }}</span>{% endif -%}
@@ -233,10 +251,10 @@
         <div class="plan__acts">
           <details class="mini-fold">
             <summary>Move it</summary>
-            <form class="mini-fold__body" method="post" action="{{ url_for('edits.move_plan', plan_id=row.id) }}">
+            <form class="mini-fold__body" method="post" action="{{ url_for('edits.move_plan', plan_id=row.id) }}" novalidate>
               <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
               <div class="field"><label class="field__label" for="start-{{ row.id }}">New time</label>
-                <input id="start-{{ row.id }}" name="start" type="datetime-local" required value="{{ row.start_value }}" /></div>
+                {{ when('start', 'start-' ~ row.id, value=row.start_value, required=true) }}</div>
               <label class="check"><input type="checkbox" name="all_day" value="yes"{{ ' checked' if row.all_day }} />All day</label>
               <div class="actions"><button class="btn btn--primary btn--sm" type="submit">Move it</button></div>
             </form>

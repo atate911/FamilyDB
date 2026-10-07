@@ -8,7 +8,7 @@ import difflib
 import json
 import math
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from functools import lru_cache
@@ -73,7 +73,7 @@ ROLE_WORDS = {
     "wishes.",
     "kid": "is in the plans; with a password, reads the ideas and plans, talks to the bot and "
     "keeps her own wish lists, sees only her own things to do, within the number of messages a "
-    "day set under Spending.",
+    "day set under Kids in Settings.",
 }
 GENDER_WORDS = {"female": "Female", "male": "Male"}
 # By the permission needed; {name} is the persona in force.
@@ -100,6 +100,11 @@ REFUSALS = {
     ),
 }
 
+NOT_FOUND = (
+    "Nothing here",
+    "There\u2019s no page at that address. The link may be an old one, or what it showed is gone.",
+)
+
 
 def admin_only(admins: list[str], *, grown_up: bool) -> tuple[str, str, str]:
     """What is said where somebody who is not an admin opens Settings, setup or the family list:
@@ -123,6 +128,12 @@ def admin_only(admins: list[str], *, grown_up: bool) -> tuple[str, str, str]:
         f"here you need to do: ask {asking} if something here needs to change.",
         line,
     )
+
+
+def who_can_change(admins: list[str]) -> str:
+    """What a parent who isn't an admin is told on Status: who changes what it shows."""
+    who = presents.join_names(admins) if admins else "An admin"
+    return f"{who} can change the settings, the daily limit and the AI model."
 
 
 def join_or(names: list[str]) -> str:
@@ -381,6 +392,21 @@ def is_late(task: Task, tz: ZoneInfo, today: date) -> bool:
     return moment.date() < today
 
 
+def todo_order(found: Sequence[Task], tz: ZoneInfo, today: date, me: int | None) -> list[Task]:
+    """The one order To do and Home list open to-dos in: what is late first, then the viewer's own,
+    then by when each is due (none last), then as they were made."""
+    return sorted(
+        found,
+        key=lambda task: (
+            not is_late(task, tz, today),
+            me is None or task.owner_id != me,
+            task.due_at is None,
+            task.due_at or "",
+            task.id,
+        ),
+    )
+
+
 def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
     due = None
     late = is_late(task, tz, today)
@@ -429,6 +455,17 @@ REMINDERS_SAID = (
 )
 
 
+# A plan's status as the page says it: "maybe", never the calendar's "tentative".
+PLAN_STATUS_WORDS = {"tentative": "Maybe", "cancelled": "Canceled", "confirmed": "On"}
+
+
+# The times a form offers, every quarter hour, worded as the family reads them ("6:30 pm"): the
+# browser's own time box would show its own clock, often 24-hour.
+TIME_CHOICES = tuple(
+    (f"{h:02d}:{m:02d}", clock_time(f"{h:02d}:{m:02d}")) for h in range(24) for m in (0, 15, 30, 45)
+)
+
+
 def money_text(dollars: float) -> str:
     """ "$0.00", "$2.00"; under ten cents "4¢", which a dollar figure would round to nothing."""
     if 0 < dollars < 0.1:
@@ -459,11 +496,28 @@ def slot_of(name: str | None, slots: dict[str, int]) -> int:
     return slots.get((name or "").casefold(), 0)
 
 
+def initial_for(name: str, names: Iterable[str]) -> str:
+    """The letter beside a person: their first, or two when somebody else in the family starts the
+    same way ("Sa" for Sam beside Sara), so colour is never all that tells them apart."""
+    name = name.strip()
+    first = name[:1].upper()
+    others = [o.strip() for o in names if o.strip().casefold() != name.casefold()]
+    if not any(o[:1].upper() == first for o in others):
+        return first
+    words = name.split()
+    if len(words) > 1:  # "Sam Lee": S and L
+        return (words[0][:1] + words[-1][:1]).upper()
+    pair = name[:2].capitalize()
+    if not any(o[:2].casefold() == pair.casefold() for o in others):
+        return pair
+    return (name[:1] + name[-1:]).capitalize()
+
+
 def person_of(name: str | None, slots: dict[str, int]) -> dict[str, Any]:
     """A name and the colour and letter that go beside it; Everyone is the house, with no letter."""
     if not name or name == EVERYONE:
         return {"name": EVERYONE, "slot": 0, "initial": ""}
-    return {"name": name, "slot": slot_of(name, slots), "initial": name[:1].upper()}
+    return {"name": name, "slot": slot_of(name, slots), "initial": initial_for(name, slots)}
 
 
 def people_for(idea: Idea | None, slots: dict[str, int]) -> list[dict[str, Any]]:
@@ -576,6 +630,7 @@ def home_line(
     *,
     plans_href: str,
     todo_href: str,
+    list_href: str = "",
     kid: bool = False,
     others: str = "",
     yes: tuple[str, str] | None = None,
@@ -599,7 +654,7 @@ def home_line(
             who, wish = yes
             say(", and " if plan else "")
             say(f"{who} said yes to ")
-            say(wish, todo_href)
+            say(wish, list_href or todo_href)  # her list, where the wish is
             say("!")
         elif plan:
             say(".")
@@ -620,22 +675,8 @@ def home_line(
     return parts
 
 
-# Ways to start, under the box on Home and in an empty chat; never asked of a model.
+# The question setup offers to try first; never asked of a model.
 WEEKEND_QUESTION = "What should we do this weekend?"
-TODAY_QUESTION = "What should we do today?"
-STARTERS = ("Remind me to ", "We should try ")
-
-
-def starters(today: date, *, kid: bool = False) -> list[dict[str, str]]:
-    """The suggestions under the box: what each puts in it, and its label. None for a kid
-    (docs/STYLE.md, "A kid's screen")."""
-    if kid:
-        return []
-    question = TODAY_QUESTION if today.weekday() >= 5 else WEEKEND_QUESTION
-    return [
-        {"say": text, "label": text.rstrip() + ("…" if text.endswith(" ") else "")}
-        for text in (question, *STARTERS)
-    ]
 
 
 # "every:unit" and its words.
@@ -1305,7 +1346,7 @@ def chat_line(
         "day": local_day(message.received_at, tz),
         "clock": local_clock(message.received_at, tz),
         "slot": 0 if from_bot else slot_of(who, slots or {}),
-        "initial": "" if from_bot else who[:1].upper(),
+        "initial": "" if from_bot else initial_for(who, slots or {}),
         "trouble": trouble,
         "failed": trouble == FAILED_WORDS,
         "did": did if from_bot else [],
@@ -1326,7 +1367,7 @@ def handed_line(
         "day": local_day(stamp, tz),
         "clock": local_clock(stamp, tz),
         "slot": slot_of(who, slots or {}),
-        "initial": who[:1].upper(),
+        "initial": initial_for(who, slots or {}),
         "trouble": "waiting for an answer",
         "failed": False,
         "did": [],
@@ -1480,7 +1521,7 @@ def model_change_row(change: Any, tz: ZoneInfo) -> dict[str, str]:
 # (none for reminders, which somebody asked for), its cost, its lines (voice.EVENTS or "digest").
 AUTOMATIC = (
     ("weekend", "weekend", "Weekend ideas", "one model call a week", ("digest",)),
-    ("reminders", "", "Reminders", "free", ("reminder", "reminder_late")),
+    ("reminders", "", "Reminders", "free", ("reminder", "reminder_kept", "reminder_late")),
     ("follow_ups", "others", "How did it go?", "free", ("follow_up",)),
     (
         "checks",

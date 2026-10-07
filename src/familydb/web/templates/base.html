@@ -4,7 +4,7 @@
 <html lang="en-US" data-theme="{{ look.key }}"{% if look_mode != 'auto' %} data-mode="{{ look_mode }}"{% endif %}>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="color-scheme" content="{{ look_scheme }}" />
     {% for media, color in look_colours %}<meta name="theme-color" content="{{ color }}"{% if media %} media="{{ media }}"{% endif %} />
     {% endfor %}
@@ -93,7 +93,7 @@
               {{ nav_item('Ideas', url_for('web.ideas'), 'ideas', 'bulb') }}
               {{ nav_item('Plans', plans_url, 'plans', 'cal', count=(badge('quiet', shell.rate, 'to rate') if shell.rate else none)) }}
               {{ nav_item('To do' if grownup else 'My to-dos', url_for('web.tasks'), 'todo', 'todo', count=(badge('late', shell.late, 'late') if shell.late else none)) }}
-              {% if wishing == 'decide' %}{{ nav_item('Kids’ lists', url_for('web.wishes'), 'wishes', 'gift', count=(badge('act', shell.decide, 'to decide') if shell.decide else none)) }}
+              {% if wishing == 'decide' %}{{ nav_item('Kids’ lists', url_for('web.wishes', _anchor=shell.decide_at or none), 'wishes', 'gift', count=(badge('act', shell.decide, 'to decide') if shell.decide else none)) }}
               {% elif wishing %}{{ nav_item('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
               {% if grownup %}{{ nav_item('What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', url_for('web.memory'), 'memory', 'memory') }}{% endif %}
             </ul>
@@ -129,7 +129,7 @@
       <main class="main" id="main">
         <div class="wrap">
           {# What the last form said; the settings page keeps its own under another name. #}
-          {% for said in get_flashed_messages(category_filter=['edit']) %}{{ flash(said) }}{% endfor %}
+          {% for said in get_flashed_messages(category_filter=['edit']) %}{% if said is mapping %}{{ flash(said.text, said.undo) }}{% else %}{{ flash(said) }}{% endif %}{% endfor %}
           {% block content %}{% endblock %}
         </div>
         <footer class="foot">

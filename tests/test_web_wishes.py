@@ -145,6 +145,7 @@ def test_ask_a_parent_is_a_button_where_it_was_offered(app, family, girls) -> No
     assert "more internet time" in page and "Ask a parent" in page
     # Said to her as what to do next, not as the grown-ups' word for it.
     assert "a house rule: ask a parent" in page
+    assert "Ask Sam about it." not in page  # the button says it here
     asked = girls["mine"].post(
         f"/wish/{turned.wish.id}/ask", data=_form(girls["mine"], "/wishes"), follow_redirects=True
     )
@@ -286,6 +287,9 @@ def test_home_counts_what_waits_on_each_kid(app, family, sam, girls) -> None:  #
         for name in (family["girls"].display_name, "Chloe")
     )
     assert "1 to decide" in hers and "to decide" not in chloes  # not on whoever has that number
+    # The sidebar's count lands on the wish it counts, which the page marks.
+    assert f'href="/wishes#wish-{turned.wish.id}"' in home
+    assert f'id="wish-{turned.wish.id}"' in sam.get("/wishes").text
 
 
 def test_a_kid_never_sees_the_tools_a_turn_ran(app, family, sam, girls) -> None:  # noqa: F811
@@ -346,3 +350,51 @@ def test_a_kid_sees_what_she_ticked_lately_and_can_undo_it(app, family, girls) -
     with closing(app.connect()) as conn:
         assert tasks.get(conn, swim).status == "open"
     assert "Done lately" not in kid.get("/tasks").text
+
+
+def test_a_kids_idea_page_is_her_own_kind_of_page(app, family, girls) -> None:  # noqa: F811
+    from familydb.store import ideas as idea_store
+
+    with closing(app.connect()) as conn, db.transaction(conn):
+        rink = idea_store.insert(
+            conn,
+            title="Roller rink",
+            kind="outing",
+            suggested_by=family["girls"].id,
+            now="2026-09-20T00:00:00Z",
+        )
+    page = girls["mine"].get(f"/idea/{rink.id}").text
+    assert "Quick facts" in page and "At a glance" not in page
+    assert "Looking it up" not in page and "Your idea" in page
+    assert "I\u2019d like this" in page and "Edit this idea" not in page
+
+
+def test_a_wish_turned_away_without_a_button_says_whom_to_ask(app, family, girls) -> None:  # noqa: F811
+    from familydb import wish_service
+
+    with closing(app.connect()) as conn:
+        wish_service.turn_away(
+            conn,
+            app.settings,
+            owner=members.get(conn, family["girls"].id),
+            summary="a phone of my own",
+            concern="rule",
+            reviewable=False,
+            now=app.clock.now(),
+        )
+    page = girls["mine"].get("/wishes").text
+    assert "a phone of my own" in page and "about it." in page
+
+
+def test_at_most_one_drawing_on_a_screen_and_none_on_a_parents_list(
+    app,  # noqa: F811
+    family,
+    sam,  # noqa: F811
+    girls,
+) -> None:
+    """docs/STYLE.md, "Drawings": her empty list is drawn on her own page, once."""
+    for path in ("/", "/wishes", "/tasks", "/ideas"):
+        assert girls["mine"].get(path).text.count("#d-") <= 1, path
+        assert sam.get(path).text.count("#d-") <= 1, path
+    assert "#d-wish" in girls["mine"].get("/wishes").text
+    assert "#d-" not in sam.get("/wishes").text

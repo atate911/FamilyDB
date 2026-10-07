@@ -209,6 +209,11 @@ class Settings(BaseSettings):
     # and one reply (pipeline.receive). 0 answers each at once.
     gather_seconds: int = Field(default=4, ge=0, le=30)
     telegram_require_mention: bool = False
+    # Optional setup steps the family said are not for them ("Not for us" on /setup): left out of
+    # every count of what is left to set up (web/status.setup_progress).
+    setup_skip_telegram: bool = False
+    setup_skip_family: bool = False
+    setup_skip_calendar: bool = False
     # What is only for one person goes to their own chat with her rather than the group it began in,
     # when they have one (routing.py).
     private_when_personal: bool = True
