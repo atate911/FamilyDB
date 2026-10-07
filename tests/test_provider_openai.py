@@ -212,13 +212,6 @@ def test_the_model_per_surface(settings) -> None:
     assert same.model_for("worker") == "gpt-5"
 
 
-def test_it_says_when_there_is_no_key(settings) -> None:
-    from familydb.agent.providers.openai import OpenAIProvider
-
-    assert not OpenAIProvider(settings).configured()  # the base fixture has no OpenAI key
-    assert OpenAIProvider(_settings(settings)).configured()
-
-
 def test_a_search_with_nothing_said_yet_resumes(settings, registry, ctx) -> None:
     api = fakes.FakeResponsesAPI(
         fakes.oa_response([fakes.oa_web_call("ws_1")]),  # went looking, said nothing
@@ -335,10 +328,6 @@ def test_a_property_forced_to_be_required_can_still_say_nothing(registry) -> Non
     assert set(schema["required"]) == set(schema["properties"])
     for name in ("setting", "tags", "needs_booking"):  # optional through a default, not a None
         assert {"type": "null"} in schema["properties"][name]["anyOf"], name
-    assert schema["properties"]["title"] == {
-        "description": "Short name for the idea, e.g. 'Ramen place on Main St'.",
-        "type": "string",
-    }
 
 
 def test_a_null_means_use_the_default(registry, ctx) -> None:

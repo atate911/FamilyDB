@@ -1,18 +1,10 @@
-"""Changing an idea, an outcome, a plan, a task or what she remembers from the page.
+"""The forms that change an idea, an outcome, a plan, a task, a memory or a wish. Each is one
+call to the tool the model would call (`run`), so the same checks, transaction and unavailable
+reasons apply, and nothing here reaches a table.
 
-The page does not know how to save anything. Every form here turns into one call to a tool in
-`familydb.tools` — `add_idea`, `update_idea`, `record_outcome`, `create_event`, `update_event`,
-`delete_event`, the task tools, `remember` and the wish tools — the code the model calls when
-somebody asks for the same thing. So a title typed into a box is checked the way a title said
-in chat is checked, a duplicate is caught the same way, the transaction is the tool's own, and a
-calendar that is not connected says so instead of half-writing a plan. Nothing in this module
-reaches a table by itself.
-
-What the forms cannot do is what the tools cannot do: a number that has been set (a cost level, a
-duration) can be changed but not unset, because `update_idea` reads a missing field as "leave
-this one alone". Text boxes can be emptied, since an empty box is sent as an empty value rather
-than as a missing one.
-"""
+What the tools cannot do the forms cannot: a set number (a cost level, a duration) can be changed
+but not unset, because `update_idea` reads a missing field as "leave it alone". Text boxes can be
+emptied, since an empty box is sent as an empty value."""
 
 from __future__ import annotations
 
@@ -26,6 +18,7 @@ from typing import Any
 from flask import Blueprint, Response, current_app, flash, redirect, request, session, url_for
 from werkzeug.datastructures import MultiDict
 
+from familydb import buttons
 from familydb.app import App
 from familydb.store import members as member_store
 from familydb.tools import ToolContext
@@ -37,9 +30,15 @@ log = logging.getLogger(__name__)
 
 bp = Blueprint("edits", __name__)
 
-# Flashed under this name so the settings page's own messages and these never get mixed up.
+# The flash category, apart from the settings page's.
 NOTICE = "edit"
 SAVED_IDEA = "Saved #{id} {title}."
+# Several ideas at once, one a line (add_ideas).
+MOST_AT_ONCE = 20
+ADDED_SEVERAL = "Added {ideas}."
+ALREADY_THERE = "Already there: {ideas}."
+NOT_ADDED = "Not added: {ideas}."
+NEEDS_LINES = "Write one idea a line, and the kind they all are."
 CHANGED_IDEA = "Changed #{id} {title}."
 DUPLICATE = "There is already an idea called that: #{id}. Nothing was added."
 STALE_IDEA = (
@@ -47,30 +46,41 @@ STALE_IDEA = (
     "make your change again."
 )
 RECORDED = "Recorded. #{id} is marked done."
+# "How did it go?" on Home: three faces, kept as the same 1 to 10 rating the longer form takes.
+FACES = {"loved": 9, "ok": 6, "not-great": 3}
+RATED = "Thanks. That goes into the next suggestions."
 SCHEDULED = "On the calendar: {title}."
 MOVED = "Moved to {when}."
 CANCELLED = "Cancelled."
 TICKED = "Done: #{id} {title}."
-# The same for somebody who sees only their own (a kid): no numbers, which are the workings.
+# For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
+# Beside the notice after a change that can be taken back: the call to undo (undo.py).
+UNDO_NOTICE = "undo"
+UNDONE = "Undone: {what}."
+NOTHING_TO_UNDO = "There is nothing here to undo."
+SNOOZED = "#{id} {title} comes back at {when}."
+SNOOZED_PLAIN = "{title} comes back at {when}."
+NOT_A_SNOOZE = "Choose In an hour or Tomorrow."
 LOOKING = "Looking {what} up now: within a few minutes."
 NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
 FORGOTTEN = "Forgotten: {fact}. It will not come back from what was said before."
 NEEDS_FACT = "Say what to remember."
-# The pages a tick may send the browser back to, by the name its form gives.
-TICK_PAGES = {"home": "web.home", "tasks": "web.tasks"}
+TICK_PAGES = {"home": "web.home", "tasks": "web.tasks", "chat": "chat.show"}
 NEEDS_TITLE = "An idea needs a title."
 NEEDS_KIND = "An idea needs a kind: restaurant, outing, trip, show…"
 NOT_A_NUMBER = "{label} needs to be a number."
 NOT_A_REPEAT = "Choose how often it repeats from the list."
-# Boxes an idea form sends every time, so emptying one clears it rather than leaving it be.
+# Sent every time, so emptying one clears it.
 IDEA_TEXT = ("description", "location_name", "url")
-# Boxes only sent when filled in, because the tool reads a missing one as "leave it alone".
+# Sent only when filled in: the tool reads a missing one as "leave it alone".
 IDEA_NUMBERS = (
     ("duration_min", "The shortest time"),
     ("duration_max", "The longest time"),
     ("lead_time_days", "The booking lead time"),
+    ("min_age", "The youngest age"),
+    ("max_age", "The oldest age"),
 )
 
 
@@ -78,14 +88,17 @@ def _app() -> App:
     return current_app.config["FAMILYDB_APP"]
 
 
-def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
-    """Run one tool as whoever is signed in, or, while the family shares a password and the page
-    cannot tell, whoever the form said was asking. Returns its result, or what went wrong.
-
-    The tool owns its transaction, so a half-done change is not a thing that can happen here.
-    A tool that is not available (no calendar) hands back a reason rather than an error, and it
-    is shown as one: not being connected to Google is not a mistake anybody made.
-    """
+def run(
+    name: str,
+    values: dict[str, Any],
+    *,
+    hidden_from: list[int] | None = None,
+    undo_target: int | None = None,
+    offer_undo: bool = True,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Run one tool as whoever is signed in, or, under the shared password, whoever the form said.
+    Returns its result, or what went wrong (an unavailable tool's reason included). A change that
+    can be taken back leaves an Undo beside the notice the page shows next."""
     app = _app()
     with closing(app.connect()) as conn:
         who = auth.visitor().name or _remember(request.form.get("who", ""))
@@ -113,6 +126,9 @@ def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str |
             ),
             idea_revision=request.form.get("revision") if name == "update_idea" else None,
             task_revision=_task_revision(request.form) if name == "update_task" else None,
+            hidden_from=hidden_from,
+            source="page",
+            undo_target=undo_target,
         )
         result = app.registry.dispatch(name, values, ctx)
     payload = json.loads(result.content)
@@ -120,18 +136,19 @@ def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str |
         return None, payload.get("error", "that did not work")
     if payload.get("available") is False:
         return None, payload.get("reason", "that is not set up yet")
+    if result.undoable and offer_undo:
+        flash(str(result.call_id), UNDO_NOTICE)
     log.info("%s from the page by %s", name, auth.client_address())
     return payload, None
 
 
 def _task_revision(form: MultiDict[str, str]) -> int | None:
-    """The task revision the form was drawn at, or None when it is missing or not a number."""
+    """The task revision the form was drawn at, or None."""
     given = _text(form, "revision")
     return int(given) if given.isascii() and given.isdigit() and len(given) <= 18 else None
 
 
 def _remember(who: str) -> str:
-    """Who the form said was asking, kept for the next form and for the chat page."""
     who = who.strip()
     if who:
         session[WHO_KEY] = who
@@ -143,12 +160,11 @@ def _text(form: MultiDict[str, str], key: str) -> str:
 
 
 def _list(form: MultiDict[str, str], key: str) -> list[str]:
-    """A comma-separated box as a list, e.g. tags or who it is for."""
+    """A comma-separated box as a list."""
     return [part.strip() for part in form.get(key, "").split(",") if part.strip()]
 
 
 def _numbers(form: MultiDict[str, str]) -> tuple[dict[str, int], str | None]:
-    """The idea form's number boxes, or the first one that is not a number."""
     found: dict[str, int] = {}
     for key, label in IDEA_NUMBERS:
         given = _text(form, key)
@@ -162,7 +178,7 @@ def _numbers(form: MultiDict[str, str]) -> tuple[dict[str, int], str | None]:
 
 
 def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
-    """Everything an idea form says, in the shape `add_idea` and `update_idea` take."""
+    """An idea form in the shape `add_idea` and `update_idea` take."""
     title, kind = _text(form, "title"), _text(form, "kind").lower()
     if not title:
         return {}, NEEDS_TITLE
@@ -186,8 +202,7 @@ def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
     cost = _text(form, "cost_level")
     if cost:
         values["cost_level"] = int(cost)  # the form offers a fixed list, so this cannot fail
-    # When a thing tied to dates is on: sent every time, so emptying the boxes clears them, and
-    # checked by the tool as a date said in chat is.
+    # Sent every time, so emptying the boxes clears them.
     first, time = _text(form, "happens_from"), _text(form, "happens_time")
     values["happens_from"] = f"{first}T{time}" if first and time else first
     values["happens_until"] = _text(form, "happens_until")
@@ -202,10 +217,21 @@ def _say(message: str) -> None:
     flash(message, NOTICE)
 
 
+def _hidden_from(form: Any) -> list[int] | None:
+    """Whom the idea form's "Hidden from" boxes kept a present from. None where the form did not
+    ask (a form without the boxes) or, on a new idea, nobody was ticked: nobody chose, so the
+    present is kept from whom it is for."""
+    if not form.get("hidden_shown"):
+        return None
+    ticked = [int(one) for one in form.getlist("hidden_from") if one.isdigit()]
+    if not ticked and not form.get("revision"):
+        return None
+    return ticked
+
+
 @bp.post("/ideas/new")
 @once
 def add_idea() -> Response:
-    """Save an idea typed into the page, through the same tool chat uses."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.new_idea")
@@ -213,7 +239,7 @@ def add_idea() -> Response:
     if complaint:
         _say(complaint)
         return _back("web.new_idea")
-    result, complaint = run("add_idea", values)
+    result, complaint = run("add_idea", values, hidden_from=_hidden_from(request.form))
     if result is None:
         _say(complaint or "")
         return _back("web.new_idea")
@@ -222,6 +248,41 @@ def add_idea() -> Response:
         return _back("web.idea", idea_id=result["duplicate_of"])
     _say(SAVED_IDEA.format(id=result["id"], title=result["title"]))
     return _back("web.idea", idea_id=result["id"])
+
+
+@bp.post("/ideas/several")
+@once
+def add_ideas() -> Response:
+    """Several ideas at once, one a line and one kind for them all: `add_idea` for each, no model
+    call, and a notice of what was added and what was there already."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.new_idea")
+    kind = _text(request.form, "kind")
+    lines = [line.strip() for line in request.form.get("titles", "").splitlines()]
+    titles = list(dict.fromkeys(line for line in lines if line))[:MOST_AT_ONCE]
+    if not titles or not kind:
+        _say(NEEDS_LINES)
+        return _back("web.new_idea")
+    added: list[str] = []
+    there: list[str] = []
+    refused: list[str] = []
+    for title in titles:
+        # Each its own call, kept as such; one Undo would take back only the last, so none.
+        result, complaint = run("add_idea", {"title": title, "kind": kind}, offer_undo=False)
+        if result is None:
+            refused.append(f"{title} ({complaint})")
+        elif "duplicate_of" in result:
+            there.append(f"#{result['duplicate_of']} {title}")
+        else:
+            added.append(f"#{result['id']} {result['title']}")
+    said = [
+        words.format(ideas=", ".join(found))
+        for words, found in ((ADDED_SEVERAL, added), (ALREADY_THERE, there), (NOT_ADDED, refused))
+        if found
+    ]
+    _say(" ".join(said))
+    return _back("web.ideas")
 
 
 @bp.post("/idea/<int:idea_id>/edit")
@@ -240,7 +301,9 @@ def edit_idea(idea_id: int) -> Response:
     status = _text(request.form, "status")
     if status:
         values["status"] = status
-    result, complaint = run("update_idea", {**values, "id": idea_id})
+    result, complaint = run(
+        "update_idea", {**values, "id": idea_id}, hidden_from=_hidden_from(request.form)
+    )
     if result is None:
         _say(complaint or "")
         return _back("web.edit_idea", idea_id=idea_id)
@@ -251,7 +314,7 @@ def edit_idea(idea_id: int) -> Response:
 @bp.post("/idea/<int:idea_id>/status")
 @once
 def set_status(idea_id: int) -> Response:
-    """Drop an idea, or bring a dropped one back. One button, no form to fill in."""
+    """Drop an idea, or bring a dropped one back."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.idea", idea_id=idea_id)
@@ -266,7 +329,7 @@ def set_status(idea_id: int) -> Response:
 @bp.post("/idea/<int:idea_id>/lookup")
 @once
 def look_up(idea_id: int) -> Response:
-    """Look one idea up now, or again, rather than with the evening's lookups."""
+    """Look one idea up now rather than with the evening's lookups."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.idea", idea_id=idea_id)
@@ -278,7 +341,7 @@ def look_up(idea_id: int) -> Response:
 @bp.post("/lookups/now")
 @once
 def look_up_waiting() -> Response:
-    """Every idea waiting, looked up now rather than with the evening's lookups."""
+    """Every idea waiting, looked up now."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.status")
@@ -296,7 +359,6 @@ def look_up_waiting() -> Response:
 @bp.post("/idea/<int:idea_id>/outcome")
 @once
 def record_outcome(idea_id: int) -> Response:
-    """How it went. The tool marks the idea done and keeps its average up to date."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.idea", idea_id=idea_id)
@@ -306,18 +368,26 @@ def record_outcome(idea_id: int) -> Response:
         values["happened_on"] = happened
     if rating := _text(form, "rating"):
         values["rating"] = int(rating)  # a fixed list of scores, so this cannot fail
+    went = _text(form, "went")
+    if went in FACES:
+        values["rating"] = FACES[went]
+    if plan_id := _text(form, "plan_id"):
+        values["plan_id"] = int(plan_id) if plan_id.isdigit() else None
     repeat = _text(form, "would_repeat")
     if repeat in {"yes", "no"}:
         values["would_repeat"] = repeat == "yes"
     _, complaint = run("record_outcome", values)
-    _say(complaint or RECORDED.format(id=idea_id))
+    _say(complaint or (RATED if went in FACES else RECORDED.format(id=idea_id)))
+    if _text(form, "back") == "home":  # asked on Home: back there for the next one
+        return _back("web.home")
+    if _text(form, "back") == "plans":  # asked on the month: back to what is still to rate
+        return _back("web.plans_month", month=_text(form, "month") or None, _anchor="rate")
     return _back("web.idea", idea_id=idea_id)
 
 
 @bp.post("/plans/new")
 @once
 def add_plan() -> Response:
-    """Put something on the shared calendar. Needs Google Calendar connected, and says so."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.plans")
@@ -328,7 +398,7 @@ def add_plan() -> Response:
     start = _text(form, "start")
     values: dict[str, Any] = {
         "title": _text(form, "title"),
-        # An all-day plan keeps only the date: the box offers a time whether or not one matters.
+        # An all-day plan keeps only the date.
         "start": start[:10] if all_day else start,
         "all_day": all_day,
         "location": _text(form, "location") or None,
@@ -347,7 +417,7 @@ def add_plan() -> Response:
 @bp.post("/plan/<int:plan_id>/move")
 @once
 def move_plan(plan_id: int) -> Response:
-    """Change when a plan is. Cancelling and adding it again would lose its link and its notes."""
+    """Change when a plan is, keeping its link and notes."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.plans")
@@ -367,7 +437,6 @@ def move_plan(plan_id: int) -> Response:
 @bp.post("/plan/<int:plan_id>/cancel")
 @once
 def cancel_plan(plan_id: int) -> Response:
-    """Take a plan off the calendar. The idea goes back to being an idea."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.plans")
@@ -387,7 +456,7 @@ def task_fields() -> dict[str, Any]:
     }
 
 
-# How often, as the form sends it: "every:unit", and from when as a box of its own.
+# "every:unit", as the form sends it.
 REPEAT_CHOICE = re.compile(r"(\d{1,3}):(day|week|month|year)")
 
 
@@ -422,17 +491,19 @@ def add_task() -> Response:
         if chosen:
             values.update(repeat_fields(chosen) or {})
         result, complaint = run("add_task", values)
-        _say(complaint or f"Saved task #{result['task']['id']}. Reminders appear in Chat.")
+        _say(complaint or views.task_saved(result))
     return _back("web.tasks")
 
 
 @bp.post("/task/<int(max=9223372036854775807):task_id>/edit")
 @once
 def edit_task(task_id: int) -> Response:
+    """Save a to-do's own page. A complaint keeps you on it (with the words); a save goes back to
+    the list."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
     elif _task_revision(request.form) is None:
-        _say("Reload this task before editing.")
+        _say("Reload this to-do before changing it.")
     elif (chosen := repeat_chosen(request.form)) and repeat_fields(chosen) is None:
         _say(NOT_A_REPEAT)
     else:
@@ -443,8 +514,7 @@ def edit_task(task_id: int) -> Response:
             clear_due=not bool(values["due_at"]),
             clear_reminder=bool(request.form.get("clear_reminder")),
         )
-        # The repeat is sent only when it changed: sent again as it was, it would move the
-        # schedule to wherever a snooze had left the reminder.
+        # Sent only when changed: as it was, it would move the schedule to where a snooze left it.
         if chosen != _text(request.form, "repeat_was"):
             if chosen:
                 values.update(repeat_fields(chosen) or {})
@@ -452,18 +522,17 @@ def edit_task(task_id: int) -> Response:
                 values["stop_repeating"] = True
         result, complaint = run("update_task", values)
         _say(complaint or f"Updated task #{result['task']['id']}.")
-    return _back("web.tasks")
+        if complaint is None:
+            return _back("web.tasks")
+    return _back("web.edit_task", task_id=task_id)
 
 
 @bp.post("/task/<int(max=9223372036854775807):task_id>/done")
 @once
 def finish_task(task_id: int) -> Response:
-    """The tick beside a task: done, and nothing else about it changes.
-
-    The edit form sends every box, so an empty one clears what it held; a tick sends only the
-    status, which `update_task` reads as "leave the rest alone". The revision it was drawn at
-    goes with it, so a task somebody changed in the meantime is not ticked off unseen.
-    """
+    """The tick beside a task: sends only the status, which `update_task` reads as "leave the rest
+    alone" (the edit form sends every box, so an empty one clears). Its revision keeps a task
+    changed meanwhile from being ticked unseen."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
     elif _task_revision(request.form) is None:
@@ -475,11 +544,88 @@ def finish_task(task_id: int) -> Response:
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
 
 
+@bp.post("/task/<int(max=9223372036854775807):task_id>/snooze")
+@once
+def snooze_task(task_id: int) -> Response:
+    """In an hour or Tomorrow under a reminder in the chat, as the buttons under it on Telegram:
+    a new reminder through `update_task`, at the time a tap there would set
+    (`buttons.snoozed_until`), at the revision the reminder was drawn at."""
+    action = request.form.get("when", "")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif _task_revision(request.form) is None:
+        _say("Reload this task before snoozing it.")
+    elif action not in buttons.SNOOZES:
+        _say(NOT_A_SNOOZE)
+    else:
+        clock = _app().clock
+        moment = buttons.snoozed_until(action, clock.now())
+        values = {"task_id": task_id, "remind_at": moment.strftime("%Y-%m-%dT%H:%M")}
+        result, complaint = run("update_task", values)
+        said = SNOOZED if auth.visitor().may("browse") else SNOOZED_PLAIN
+        when = buttons.when_text(moment, clock.today())
+        _say(complaint or said.format(id=task_id, title=result["task"]["title"], when=when))
+    return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/undo")
+@once
+def undo() -> Response:
+    """Undo beside a form's notice, and under her reply in the chat: the undo tool for the one
+    change the button names (ToolContext.undo_target, never the tool's input), as whoever is
+    signed in; it says who may. Back to the page the button was on."""
+    target = request.form.get("target", "")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif not (target.isascii() and target.isdigit() and len(target) <= 18):
+        _say(NOTHING_TO_UNDO)
+    else:
+        result, complaint = run("undo", {}, undo_target=int(target))
+        _say(complaint or UNDONE.format(what=result["undone"]))
+    back = request.form.get("back", "")
+    # Only a path on this page: never somewhere else a form could be made to send a person.
+    if not back.startswith("/") or back.startswith("//") or "\\" in back:
+        back = url_for("web.home")
+    return redirect(back)
+
+
+LIST_ACTIONS = frozenset(views.LIST_SAID)
+
+
+@bp.post("/lists/change")
+@once
+def change_list() -> Response:
+    """A list's box, ticks and clearing: shopping_list, as she would call it, as whoever is signed
+    in (a kid may not, until the family decides)."""
+    action = request.form.get("action", "")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.lists_page")
+    if action not in LIST_ACTIONS:
+        return _back("web.lists_page")
+    name = _text(request.form, "name") or "shopping"
+    things = [line.strip() for line in request.form.get("items", "").splitlines() if line.strip()]
+    result, complaint = run("shopping_list", {"action": action, "items": things, "name": name})
+    if result is None:
+        _say(complaint or "")
+        return _back("web.lists_page")
+    title = views.list_title(result["list"]).lower()
+    said = []
+    if done := result.get(action):
+        said.append(views.LIST_SAID[action].format(list=title, items=", ".join(done)))
+    elif action == "clear_ticked":
+        said.append(views.LIST_SAID[action].format(list=title, items=""))
+    if already := result.get("already"):
+        said.append(views.LIST_ALREADY.format(items=", ".join(already)))
+    _say(" ".join(said))
+    return _back("web.lists_page")
+
+
 @bp.post("/memory/new")
 @once
 def add_memory() -> Response:
-    """Something the family wants remembered, typed in rather than said: through `remember`,
-    which takes back something forgotten only from a person, never from a conversation."""
+    """Something to remember, typed in: `remember` takes back a forgotten thing only from a person,
+    never from a conversation."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.memory")
@@ -506,7 +652,7 @@ def add_memory() -> Response:
 @bp.post("/memory/<int(max=9223372036854775807):memory_id>/forget")
 @once
 def forget_memory(memory_id: int) -> Response:
-    """Forget one: kept, marked, so the same thing said before is never saved again."""
+    """Forget one: kept, marked, so the same thing is never saved again."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.memory")
@@ -523,7 +669,7 @@ LISTS = {"everyday", "christmas", "birthday"}
 
 
 def _to_wishes() -> Response:
-    """Back to the lists the form came from: one kid's for a parent who was looking at hers."""
+    """Back to the lists the form came from (one kid's, for a parent looking at hers)."""
     kid = request.form.get("kid", "")
     return _back("web.wishes", **({"who": kid} if kid.isdigit() else {}))
 
@@ -536,8 +682,7 @@ def _wish_id(value: Any) -> int | None:
 @bp.post("/wishes")
 @once
 def add_wish() -> Response:
-    """A wish typed into her list, through the tool her chat with the bot uses, so the page is
-    held to the same rules: the lockouts, the daily count, the same thing twice."""
+    """A wish typed into her list, held to the tool's rules: lockouts, daily count, duplicates."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _to_wishes()
@@ -564,7 +709,7 @@ def add_wish() -> Response:
 @bp.post("/wish/<int(max=9223372036854775807):wish_id>/move")
 @once
 def move_wish(wish_id: int) -> Response:
-    """Up, down, to the top, or to another of her lists: free, and never a lockout."""
+    """Up, down, to the top, or to another list: free, never a lockout."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _to_wishes()
@@ -594,7 +739,6 @@ def withdraw_wish(wish_id: int) -> Response:
 @bp.post("/wish/<int(max=9223372036854775807):wish_id>/answer")
 @once
 def answer_wish(wish_id: int) -> Response:
-    """A parent's yes, or not this time, with a note for her if they like."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _to_wishes()
@@ -617,7 +761,6 @@ def answer_wish(wish_id: int) -> Response:
 @bp.post("/wish/<int(max=9223372036854775807):wish_id>/ask")
 @once
 def ask_parent(wish_id: int) -> Response:
-    """Her Ask a parent, where it was offered: the parents get it on their phones."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _to_wishes()

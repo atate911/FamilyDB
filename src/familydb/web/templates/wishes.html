@@ -5,9 +5,7 @@
 {% block head %}
   <script src="{{ url_for('static', filename='wishes.js') }}" defer></script>
 {% endblock %}
-{# The kids' wish lists (docs/WISHES.md). A kid sees her own three lists, in her order, and moves
-   them with the buttons (or by dragging, where scripts run); a parent sees every kid's, or one
-   kid's with ?who=, and answers. Every form is a tool call through edits.py. #}
+{# The kids' wish lists (docs/WISHES.md). A kid sees her own lists; a parent sees every kid's, or one with ?who=, and answers. Every form is a tool call through edits.py. #}
 {% macro hidden(kid) -%}
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="once" value="{{ once_token() }}" />
@@ -15,9 +13,7 @@
 {%- endmacro %}
 
 {% macro wish_card(kid, row, list, count) %}
-  {# One line to a wish: the grip to drag it by (wishes.js; hidden without it), her number and
-     the wish. Tapped, it opens (a native <details>, so it works with scripts off) to the rest:
-     notes, Top, Up and Down, another list, taking it off, and for a parent the answer. #}
+  {# One line to a wish: grip (wishes.js), her number and the wish; tapped, a native <details> opens to the rest. #}
   <li class="wish" data-wish="{{ row.id }}" data-rank="{{ row.rank }}">
     <span class="wish-grip" title="Drag to move" aria-hidden="true">{{ icon('grip') }}</span>
     <details class="wish-open">
@@ -42,7 +38,7 @@
             </form>
           {% endif %}
           {% if row.rank < count %}
-            <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}" class="move-down">
+            <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}">
               {{ hidden(kid) }}<input type="hidden" name="position" value="{{ row.rank + 1 }}" />
               <button class="quiet" type="submit" title="Down one">{{ icon('down') }}<span class="label">Down</span></button>
             </form>
@@ -102,9 +98,7 @@
       {% endif %}
 
       {% if not parent and talk %}
-        {# Where she lands: one big box for anything at all, the chat's own, posting to her
-           conversation. She says it her way and {{ assistant }} sorts it: onto her list, into an
-           idea, a reminder, or just an answer. A kid who may not talk to her gets the form below. #}
+        {# Where she lands: the chat's own box, posting to her conversation, which sorts it onto her list, an idea, a reminder or an answer. A kid who may not talk to her gets the form below. #}
         <div class="list-talk">{% include "_ask.html" %}</div>
       {% elif not parent or one %}
         <form class="panel form wish-add" id="wish-add" method="post" action="{{ url_for('edits.add_wish') }}">
@@ -142,7 +136,7 @@
       {% endif %}
 
       {% if kid.turned %}
-        <section class="panel wish-turned">
+        <section class="panel">
           <h3>{{ icon('warning') }}{{ 'Flagged' if parent else 'Not on your list' }}</h3>
           <ul class="plain">
             {% for row in kid.turned %}

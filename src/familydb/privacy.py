@@ -1,12 +1,8 @@
-"""Keep what the bot writes readable by the bot alone.
+"""Keep what the bot writes readable by the bot alone: the database (every message, any key typed on
+the settings page) and the Google and session keys.
 
-The database holds every message the family has sent and any key typed into the settings page;
-the Google key and the web session key are credentials. On a shared server none of that
-should be readable by another account, and on a single-user one it costs nothing to be sure.
-
-`private_by_default` sets the process umask, so every file the bot creates from then on (the
-database and its journal, backups, the Google key) is owner-only. `tighten` fixes any that
-already exist with the usual 0644, as an older version left them.
+`private_by_default` sets the process umask so every file the bot creates is owner-only;
+`tighten` fixes existing ones an older version left 0644.
 """
 
 from __future__ import annotations
@@ -29,7 +25,6 @@ def private_by_default() -> None:
 
 
 def sensitive_files(settings: Settings) -> list[Path]:
-    """The database with its journal files, the Google key, and the web session key."""
     database = Path(settings.familydb_path).expanduser()
     return [
         database,
@@ -40,9 +35,8 @@ def sensitive_files(settings: Settings) -> list[Path]:
 
 
 def tighten(settings: Settings) -> list[Path]:
-    """Take group and other access off each sensitive file this process owns. Returns them."""
-    # Windows uses ACLs, not POSIX owner/group bits. Keep the user's inherited ACLs;
-    # chmod there cannot provide the owner-only guarantee this routine implements.
+    # Windows uses ACLs, not POSIX bits: keep the inherited ACLs, chmod cannot give owner-only
+    # there.
     if os.name != "posix":
         return []
     changed: list[Path] = []

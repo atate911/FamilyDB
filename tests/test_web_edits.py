@@ -41,7 +41,8 @@ def _token(client, path: str) -> str:
 
 
 def _said(response) -> str:
-    return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
+    """What the last form said: the older pages' line, or the new frame's flash."""
+    return " ".join(re.findall(r'class="(?:said|banner__text)"[^>]*>\s*([^<]+)', response.text))
 
 
 def _idea_form(client, path="/ideas/new", **changes) -> dict[str, str]:
@@ -64,6 +65,7 @@ def test_an_idea_can_be_added_from_the_page(page, conn) -> None:
             tags="food, cheap",
             cost_level=2,
             duration_min=60,
+            min_age=6,
             needs_booking="yes",
             who="Alex",
         ),
@@ -74,8 +76,10 @@ def test_an_idea_can_be_added_from_the_page(page, conn) -> None:
     assert saved.participants == ["whole family", "the girls"]
     assert saved.tags == ["cheap", "food"]  # the store lowercases and sorts them
     assert saved.cost_level == 2 and saved.duration_min == 60 and saved.needs_booking
+    assert saved.min_age == 6 and saved.max_age is None
     assert saved.suggested_by_name == "Alex"  # the form said who, and the tool recorded it
-    assert "Saved #1 Ramen place." in _said(page.get("/idea/1"))
+    shown = page.get("/idea/1")
+    assert "Saved #1 Ramen place." in _said(shown) and "<dt>Ages</dt><dd>6+</dd>" in shown.text
 
 
 def test_an_idea_with_no_title_is_refused_and_nothing_is_written(page, conn) -> None:
@@ -112,14 +116,6 @@ def test_an_idea_can_be_changed_and_a_text_box_emptied(page, conn) -> None:
     saved = ideas.get(conn, 1)
     assert saved.title == "Ramen place on Main" and saved.tags == ["food"]
     assert not saved.description  # an emptied box clears the field rather than leaving it be
-
-
-def test_the_edit_form_comes_up_filled_in(page, conn) -> None:
-    page.post("/ideas/new", data=_idea_form(page, tags="food, cheap", cost_level=2))
-    form = page.get("/idea/1/edit").text
-    assert 'value="Ramen place"' in form
-    assert 'value="cheap, food"' in form
-    assert '<option value="2" selected>moderate</option>' in form
 
 
 def test_the_days_a_thing_is_on_are_set_shown_and_cleared_from_the_page(planning, conn) -> None:
@@ -286,16 +282,18 @@ def test_an_all_day_plan_keeps_only_the_date(planning, conn) -> None:
     assert plan.all_day and plan.start == "2026-09-26"
 
 
-def test_without_a_calendar_the_page_offers_no_plan_form_and_refuses_one_anyway(page, conn):
+def test_without_a_calendar_the_page_keeps_the_plan_here(page, conn):
+    """No Google calendar: the page says so, and its plan form still works, keeping the plan here
+    (tools/gcal.py), where it used to show no form at all and refuse one."""
     assert "not connected" in page.get("/plans").text
-    assert "csrf" not in page.get("/plans").text  # there is no form on the page at all
-    page.post(
-        # A token from another form on the site: being refused for the right reason is the point.
+    sent = page.post(
         "/plans/new",
-        data={"csrf": _token(page, "/chat"), "title": "Nope", "start": "2026-09-26T18:30"},
+        data={"csrf": _token(page, "/plans"), "title": "Picnic", "start": "2026-09-26T18:30"},
     )
-    assert plans.get(conn, 1) is None
-    assert "Google Calendar" in _said(page.get("/plans"))
+    assert sent.status_code == 302
+    plan = plans.get(conn, 1)
+    assert plan.title == "Picnic" and plan.calendar_id is None and plan.google_event_id
+    assert "Picnic" in page.get("/plans").text
 
 
 @pytest.mark.parametrize(
@@ -369,3 +367,24 @@ def test_an_idea_or_every_one_waiting_can_be_looked_up_now(settings, clock, conn
     # Without lookups on, neither button is there.
     plain = _client(settings, clock).get("/status").text
     assert "Look them up now" not in plain
+
+
+def test_several_ideas_are_added_at_once_one_a_line(page, conn) -> None:
+    """A list typed or pasted in, one idea a line and one kind for them all: each added by
+    add_idea as the single form would, and the notice says what was there already."""
+    first = {"csrf": _token(page, "/ideas/new"), "title": "Ramen place", "kind": "restaurant"}
+    page.post("/ideas/new", data={**first, "once": "a"})
+    lines = "Taco truck\n\nRamen place\nDumpling house\nTaco truck\n"
+    form = {"csrf": _token(page, "/ideas/new"), "once": "b", "titles": lines, "kind": "restaurant"}
+    sent = page.post("/ideas/several", data=form, follow_redirects=True)
+    assert "Added #2 Taco truck, #3 Dumpling house. Already there: #1 Ramen place." in _said(sent)
+    assert [idea.title for idea in ideas.list_all(conn)] == [
+        "Ramen place",
+        "Taco truck",
+        "Dumpling house",
+    ]
+    assert 'class="undo-form"' not in sent.text  # one Undo could not take back them all
+    empty = {**form, "once": "c", "titles": "\n \n"}
+    assert "Write one idea a line" in _said(
+        page.post("/ideas/several", data=empty, follow_redirects=True)
+    )

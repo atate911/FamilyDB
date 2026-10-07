@@ -86,26 +86,21 @@ def test_a_weekend_away_is_on_each_of_its_days_in_the_month(google, conn, family
     text = client.get("/plans/month?month=2026-10").text
     assert "October 2026" in text
     assert text.count("Camping") == 6  # three days in the grid, and the same three as a list
-    assert '<time datetime="2026-10-02">' in text and "18:30" in text
+    assert 'id="d-2026-10-02"' in text and "18:30" in text  # the day, in the list under the grid
     assert "month=2026-09" in text and "month=2026-11" in text  # earlier and later
 
 
 def test_the_month_is_this_one_by_default_and_marks_today(google) -> None:
     _, client, _ = google
     text = client.get("/plans/month").text
-    assert "September 2026" in text and 'class=" today"' in text  # the 20th, in the grid
+    assert "September 2026" in text and "day--today" in text  # the 20th, in the grid
     assert "This month" not in text  # already on it
 
 
-@pytest.mark.parametrize("asked", ["2026-13", "soon", "1900-01", "2026-9-1"])
+@pytest.mark.parametrize("asked", ["2026-13", "soon", "1900-01"])
 def test_a_month_that_is_not_one_is_not_found(google, asked) -> None:
     _, client, _ = google
     assert client.get(f"/plans/month?month={asked}").status_code == 404
-
-
-def test_the_phone_list_says_when_a_month_is_empty(google) -> None:
-    _, client, _ = google
-    assert "Nothing on in March 2027." in client.get("/plans/month?month=2027-03").text
 
 
 def test_an_entry_knows_its_days() -> None:

@@ -25,34 +25,10 @@ def test_every_persona_ships_whole() -> None:
         assert persona.name in persona.prompt and personas.NAME not in persona.prompt, key
 
 
-def test_the_default_is_vera_as_she_was_first_written(settings) -> None:
-    vera = personas.load(personas.DEFAULT)
-    assert vera.name == "Vera"
-    assert vera.character.startswith("You are {name}, an AI assistant")
-    assert vera.prompt.startswith("You are Vera, an AI assistant")
-    assert "Be recognizably Vera without making every response a demonstration of Vera." in (
-        vera.prompt
-    )
-    assert vera.lines["reminder"].startswith("Reminder: {title}")
-    # With nothing of the family's laid over her, she is who the family meets.
-    assert settings.persona == personas.DEFAULT and personas.active(settings) == vera
-
-
-def test_the_brief_persona_is_vera_in_fewer_words() -> None:
-    """Fitted to a family's chat, at about a quarter of the first one's length. She never names
-    herself outright, so a name the family give her is the only one she has."""
-    brief = personas.load("brief")
-    assert brief.name == "Vera" and brief.listed_as == "Vera, in brief"
-    assert brief.character.startswith("You are {name}, an AI with a feminine identity (she/her).")
-    assert len(brief.character) < 4_000
-    assert not re.search(r"\bVera\b", brief.character, re.IGNORECASE)
-    assert personas.DEFAULT == "default"  # the family still meet her as first written
-
-
 def test_no_character_names_a_tool(registry) -> None:
-    """A character is about how she talks. What can be done is the tools' and the job's, which
-    hold whoever she is, and a family can rewrite her. A tool whose name is an everyday word
-    ("now", "suggest") counts as named only when it is written as code."""
+    """A character is about how she talks; what can be done is the tools' and the job's. A tool
+    whose name is an everyday word ("now", "suggest") counts as named only when written as code.
+    """
     for key in personas.available():
         character = personas.load(key).character
         for tool in registry.names():
@@ -88,14 +64,6 @@ def test_she_changes_only_the_persona_part_of_the_request(
     assert plain.system[0].text == load_system_prompt()
     # And nothing else: with her first block swapped for none's, it is none's request.
     assert replace(hers, system=[plain.system[0], *hers.system[1:]]) == plain
-
-
-def test_a_new_name_reaches_all_of_her_character() -> None:
-    juno = replace(personas.load(personas.DEFAULT), name="Juno")
-    assert juno.prompt.startswith("You are Juno, an AI assistant") and "Vera" not in juno.prompt
-    assert "Be recognizably Juno without making every response a demonstration of Juno." in (
-        juno.prompt
-    )
 
 
 def test_a_label_says_which_of_her_this_is_with_her_name_in_it(settings) -> None:

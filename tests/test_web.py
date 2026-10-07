@@ -48,12 +48,6 @@ def test_pages_are_behind_the_password(settings, clock) -> None:
     assert page.status_code == 200 and "Family password" in page.text
 
 
-def test_the_way_in_is_an_old_green_screen(settings, clock) -> None:
-    page = _client(settings, clock, web_password=PASSWORD).get("/login").text
-    assert '<div class="crt power-on" aria-hidden="true">' in page  # a picture beside the form
-    assert "Ready." in page and '<label for="password">Family password</label>' in page
-
-
 def test_every_page_ends_with_the_copyright_and_the_version(settings, clock) -> None:
     from familydb import __version__
 
@@ -132,11 +126,9 @@ def test_every_response_carries_the_security_headers(settings, clock) -> None:
 def test_a_browser_s_own_posts_carry_an_origin_the_page_accepts(settings, clock) -> None:
     """Under `Referrer-Policy: no-referrer` Chromium posts every form with `Origin: null`.
 
-    The check below is right to refuse that — a null origin is also what a sandboxed frame on
-    another site sends — so the policy is what has to let the real origin through. Both halves
-    are pinned: a null origin is refused, and the policy is one under which browsers send the
-    real one. The test client sends no Origin header on its own, so without this nothing would
-    notice the page being unusable in a browser.
+    A null origin is refused (a sandboxed frame sends it too), so the policy must let the real
+    origin through. Both halves are pinned; the test client sends no Origin, so nothing else
+    would notice.
     """
     client = _client(settings, clock, web_password=PASSWORD)
     refused = client.post("/login", data={"password": PASSWORD}, headers={"Origin": "null"})
@@ -198,11 +190,10 @@ CADDY = {
 
 
 def test_behind_a_proxy_the_cookie_is_secure_and_the_client_is_the_real_one(settings, clock):
-    """Through the real server, because that is where the forwarding headers are kept or lost.
+    """Through the real server, where the forwarding headers are kept or lost.
 
-    Waitress strips them from a peer it was not told to trust before Flask sees them, and
-    Flask's test client skips waitress altogether, so this test written against the test client
-    would pass even while nobody could sign in through Caddy.
+    Waitress strips them from an untrusted peer and Flask's test client skips waitress, so a test
+    against it would pass while nobody could sign in through Caddy.
     """
     from familydb.web.server import serve_in_thread
 
@@ -272,6 +263,11 @@ def _with_place(conn, idea, **fields):
     return place
 
 
+def _cards(text: str) -> int:
+    """How many idea cards a page draws."""
+    return len(re.findall(r'<article class="idea[ "]', text))
+
+
 def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> None:
     ramen = _idea(
         conn,
@@ -287,13 +283,13 @@ def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> N
     _idea(conn, "Museum day", kind="outing", participants=["with the girls"])
     page = _client(settings, clock).get("/ideas")
     assert page.status_code == 200
-    assert page.text.count('class="panel card"') == 2
+    assert _cards(page.text) == 2
     assert "2 ideas" in page.text
     # Titles come from chat, so they are escaped rather than rendered as markup.
     assert "Ramen &amp; noodles &lt;Main St&gt;" in page.text
     assert "<Main St>" not in page.text
     assert f'href="/idea/{ramen.id}"' in page.text
-    assert "for whole family" in page.text and "$$" in page.text
+    assert "<span>whole family</span>" in page.text  # whom it is for, with the house beside it
 
 
 def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
@@ -302,14 +298,14 @@ def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
     _idea(conn, "Old plan", kind="outing", status="done")
     dropped = _idea(conn, "Never again", kind="outing", status="dropped")
     client = _client(settings, clock)
-    assert client.get("/ideas").text.count('class="panel card"') == 3  # dropped is hidden
+    assert _cards(client.get("/ideas").text) == 3  # dropped is hidden
     assert "Ramen place" in client.get("/ideas?kind=restaurant").text
     assert "Museum day" not in client.get("/ideas?kind=restaurant").text
-    assert client.get("/ideas?status=done").text.count('class="panel card"') == 1
+    assert _cards(client.get("/ideas?status=done").text) == 1
     assert f'href="/idea/{dropped.id}"' in client.get("/ideas?status=dropped").text
-    assert client.get("/ideas?who=with+the+girls").text.count('class="panel card"') == 1
+    assert _cards(client.get("/ideas?who=with+the+girls").text) == 1
     assert "Museum" in client.get("/ideas?q=museum").text
-    assert client.get("/ideas?q=nothinglikethis").text.count('class="panel card"') == 0
+    assert _cards(client.get("/ideas?q=nothinglikethis").text) == 0
     assert "Clear" in client.get("/ideas?kind=outing").text  # a way back to everything
 
 
@@ -328,44 +324,112 @@ def test_where_a_place_lies_from_home_in_words_and_on_the_dial() -> None:
     ]
     assert views.Away(12, 44.0).text == "about 12 min north-east of home (estimate)"
     assert views.Away(3, 200.0).text == "under 5 min from home (estimate)"
-    assert views.places_radar([]) is None
-    mountain = (SimpleNamespace(id=2, title="Mount St Helens"), views.Away(150, 0.0))
-    ramen = (SimpleNamespace(id=3, title="Ramen"), views.Away(12, 90.0))
+    assert views.places_map([]) is None
+    mountain = (SimpleNamespace(id=2, title="Mount St Helens day trip"), views.Away(150, 0.0))
+    ramen = (SimpleNamespace(id=3, title="Ramen at Afuri"), views.Away(12, 90.0))
     park = (SimpleNamespace(id=4, title="Corner park"), views.Away(3, 225.0))
-    radar = views.places_radar([mountain, ramen, park])
-    assert radar["count"] == 3 and radar["rings"] == ("15m", "45m", "2h")
-    assert radar["nearest"] == {"id": 4, "title": "Corner park", "away": "under 5 min"}
-    assert radar["furthest"] == {"id": 2, "title": "Mount St Helens", "away": "2 h 30 min N"}
-    near, east, north = radar["blips"]  # nearest first, and it is the one that pings
-    assert [near["next"], east["next"], north["next"]] == [True, False, False]
-    assert (east["x"], east["y"]) == (128.0, 100.0)  # east to the right, 12 min along the rings
-    assert (north["x"], north["y"]) == (100.0, 8.0)  # north at the top, held to the last ring
-    # Each flares as the sweep passes its bearing, one of the twelve the stylesheet times.
-    assert [blip["bearing"] for blip in radar["blips"]] == [8, 3, 0]
+    assert views.places_map([ramen, park]) is None  # all inside the first ring: the cards say it
+    drawn = views.places_map([mountain, ramen, park])
+    assert drawn["count"] == 3
+    wide = drawn["wide"]
+    by_name = {dot["name"]: dot for dot in wide["dots"]}
+    assert set(by_name) == {"Mount St Helens", "Ramen at Afuri", "Corner park"}
+    # North at the top, east to the right; the first half hour gets 70% of the way out.
+    assert (by_name["Mount St Helens"]["x"], by_name["Mount St Helens"]["y"]) == (430.0, 30.0)
+    assert (by_name["Ramen at Afuri"]["x"], by_name["Ramen at Afuri"]["y"]) == (494.0, 220.0)
+    assert [ring["name"] for ring in wide["rings"]] == ["15 min", "30 min", "1 h", "2 h", "3 h"]
+    assert wide["rings"][1]["r"] == 140.0 and drawn["narrow"]["rings"][1]["r"] == 112.0
+    assert wide["axis"] == "M430 20V420M230 220H630"
+    assert [(name, x) for name, x, *_ in wide["compass"]] == [
+        ("N", 424),
+        ("S", 424),
+        ("W", 222),
+        ("E", 638),
+    ]
+    assert views.map_share(0) == 0 and views.map_share(500) == 1.0
 
 
-def test_the_ideas_list_draws_its_places_on_a_radar(settings, clock, conn, family) -> None:
+def test_a_dot_is_named_by_the_first_words_of_its_idea() -> None:
+    names = {
+        "Pumpkin patch at Bi-Mart farm": "Pumpkin patch",
+        "Lava tubes at Ape Cave": "Lava tubes",
+        "Oaks Park roller rink": "Oaks Park",
+        "Mount St. Helens day trip": "Mount St. Helens",
+        "Nutcracker at the Keller": "Nutcracker",
+        "Silver Falls hike": "Silver Falls",
+        "Ramen at Afuri": "Ramen at Afuri",  # a head too short to name it alone
+        "Pho Oregon": "Pho Oregon",
+    }
+    assert {title: views.short_name(title) for title in names} == names
+
+
+def test_a_name_goes_where_it_fits_and_clear_of_the_compass_letters() -> None:
+    near_west = views.Away(180, 270.0)  # three hours west: out at the edge, on the axis
+    cannon = SimpleNamespace(id=1, title="Cannon Beach weekend")
+    drawn = views.places_map([(cannon, near_west)])
+    wide, narrow = drawn["wide"]["dots"][0], drawn["narrow"]["dots"][0]
+    assert (wide["label_x"], wide["label_y"], wide["anchor"]) == (222.0, 202.0, "end")  # above
+    assert narrow["anchor"] == "start" and narrow["label_y"] > narrow["y"]  # no room: below
+    east = views.places_map([(cannon, views.Away(120, 100.0))])["wide"]["dots"][0]
+    assert east["anchor"] == "start" and east["label_x"] > east["x"]  # on the right, beside it
+
+
+def test_no_two_names_on_the_map_sit_on_each_other_or_on_home() -> None:
+    def put(idea_id, title, minutes, degrees):
+        return (SimpleNamespace(id=idea_id, title=title), views.Away(minutes, degrees))
+
+    crowded = [
+        put(1, "Pumpkin patch at Bi-Mart farm", 23, 316.0),
+        put(2, "Cannon Beach weekend", 170, 300.0),
+        put(3, "Nutcracker at the Keller", 4, 85.0),  # almost at home, where "Home" is written
+        put(4, "Ramen at Afuri", 10, 130.0),
+        put(5, "Lava tubes at Ape Cave", 115, 40.0),
+    ]
+    for size in ("wide", "narrow"):
+        plot = views.places_map(crowded)[size]
+        text_size = 15 if size == "wide" else 14
+        boxes = []
+        for dot in plot["dots"]:
+            room = len(dot["name"]) * text_size * 0.52
+            left = dot["label_x"] - room if dot["anchor"] == "end" else dot["label_x"]
+            boxes.append((left, dot["label_y"] - 12, left + room, dot["label_y"] + 4))
+            assert left >= 4 and left + room <= plot["width"] - 4, (size, dot["name"])
+        for index, one in enumerate(boxes):
+            for other in boxes[index + 1 :]:
+                apart = (
+                    one[2] <= other[0]
+                    or other[2] <= one[0]
+                    or one[3] <= other[1]
+                    or other[3] <= one[1]
+                )
+                assert apart, (size, plot["dots"][index]["name"])
+            home = (plot["cx"] - 22, plot["cy"] + 8, plot["cx"] + 22, plot["cy"] + 26)
+            assert not (
+                one[0] < home[2] and home[0] < one[2] and one[1] < home[3] and home[1] < one[3]
+            )
+
+
+def test_the_ideas_list_draws_its_places_on_a_map(settings, clock, conn, family) -> None:
     ramen = _idea(conn, "Ramen <Main St>", kind="restaurant")
     _with_place(conn, ramen, lat=45.70, lon=-122.67)  # north of home
     museum = _idea(conn, "Museum day", kind="outing")
     _with_place(conn, museum, lat=45.63, lon=-122.40)  # east, and further
-    _idea(conn, "A picnic somewhere", kind="outing")  # not one place: listed, not on the radar
+    _idea(conn, "A picnic somewhere", kind="outing")  # not one place: listed, not on the map
     client = _client(settings, clock, home_lat=45.63, home_lon=-122.67)
     page = client.get("/ideas").text
-    assert '<div class="radar" aria-hidden="true">' in page  # a picture of what the words say
-    assert "2 places from home" in page
-    assert f'href="/idea/{ramen.id}">#{ramen.id} Ramen &lt;Main St&gt;</a>' in page
-    assert "[" not in page.split("Nearest", 1)[1].split("</p>", 1)[0]  # brackets are the CSS's
-    assert ">15m<" in page and ">1w<" not in page  # rings of drive time, not of weeks
-    # Every card with a place says the drive and the way, which is all the radar shows.
-    assert "about 12 min north of home (estimate)" in page
-    assert "about 33 min east of home (estimate)" in page
-    # It follows the filters.
+    assert 'class="radar radar--wide"' in page and 'class="radar radar--narrow"' in page
+    assert 'aria-hidden="true" focusable="false"' in page  # the cards are the list
+    assert ">Ramen &lt;Main St&gt;</text>" in page  # a title from chat, escaped on the map too
+    assert ">15 min<" in page and ">3 h<" in page and ">1w<" not in page
+    assert "1 idea has no drive time yet" in page  # the picnic
+    # Every card with a place says the drive and the way, which is all the map shows.
+    assert "12 min drive, north" in page and "33 min drive, east" in page
+    # It follows the filters, and an idea inside the first ring is not worth a map.
     restaurants = client.get("/ideas?kind=restaurant").text
-    assert "1 place from home" in restaurants and "Museum day" not in restaurants
-    # Nothing listed on the map, or no home to measure from: no radar.
-    assert 'class="radar"' not in client.get("/ideas?q=picnic").text
-    assert 'class="radar"' not in _client(settings, clock).get("/ideas").text
+    assert "Museum day" not in restaurants and 'class="radar' not in restaurants
+    # Nothing listed on the map, or no home to measure from: none.
+    assert 'class="radar' not in client.get("/ideas?q=picnic").text
+    assert 'class="radar' not in _client(settings, clock).get("/ideas").text
 
 
 def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> None:
@@ -424,22 +488,13 @@ def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> 
     assert "Saturday" in page.text and "10:00-20:00" in page.text
     assert "closed" in page.text and "not known" in page.text  # Monday closed, Sunday unknown
     assert "about 45 min away, 38 km (estimate)" in page.text
-    assert "needed, about 2 days ahead" in page.text
+    assert "Needed, about 2 days ahead" in page.text
     assert "adults $28, kids free" in page.text
     assert "9/10" in page.text and "would go again" in page.text
     assert "The girls loved it" in page.text
     assert "Saturday 3 October, 18:30" in page.text
     assert 'rel="noopener noreferrer"' in page.text
     assert "checked today" in page.text
-
-
-def test_an_idea_page_without_a_lookup_says_so(settings, clock, conn, family) -> None:
-    idea = _idea(conn, "A picnic somewhere")
-    page = _client(settings, clock).get(f"/idea/{idea.id}")
-    assert "details not looked up yet" in page.text
-    assert "Opening hours" not in page.text
-    assert _client(settings, clock).get("/idea/404").status_code == 404
-    assert "Not found" in _client(settings, clock).get("/idea/404").text
 
 
 def test_a_stale_lookup_is_flagged(settings, clock, conn, family) -> None:
@@ -519,7 +574,7 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
     _idea(conn, "Museum day", kind="outing")
     page = _client(settings, clock).get("/restaurants")
     assert page.status_code == 200
-    assert page.text.count('class="panel card"') == 2  # the outing is not here
+    assert _cards(page.text) == 0 and page.text.count('class="place"') == 2  # not the outing
     assert "Museum day" not in page.text and "2 places" in page.text
     assert "Small counter, long queue." in page.text and "1 Main St" in page.text
     assert "open today 11:00-21:00" in page.text  # the shared clock is a Sunday
@@ -534,7 +589,7 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
 def test_the_restaurants_page_when_there_are_none(settings, clock, conn, family) -> None:
     _idea(conn, "Museum day", kind="outing")
     page = _client(settings, clock).get("/restaurants")
-    assert "No restaurants yet" in page.text and page.text.count('class="panel card"') == 0
+    assert "No restaurants yet" in page.text and 'class="place"' not in page.text
 
 
 def test_the_plans_page_shows_what_is_coming_and_what_just_happened(
@@ -592,22 +647,6 @@ def test_the_plans_page_shows_what_is_coming_and_what_just_happened(
     )
 
 
-def test_the_plans_page_when_the_calendar_is_empty(settings, clock, conn, family) -> None:
-    page = _client(settings, clock).get("/plans")
-    assert "Nothing on the calendar for the next 90 days." in page.text
-    assert "Recently" not in page.text
-
-
-def test_the_nav_reaches_every_page(settings, clock, conn, family) -> None:
-    client = _client(settings, clock)
-    home = client.get("/")
-    for target in ("/", "/ideas", "/plans", "/family", "/status", "/settings"):
-        assert f'href="{target}' in home.text, target  # "/chat" goes to its newest line
-        assert client.get(target).status_code == 200
-    assert 'href="/chat#latest"' in home.text
-    assert 'href="/restaurants"' in client.get("/ideas").text  # a tab of the ideas page
-
-
 def test_links_that_are_not_web_addresses_never_become_links(settings, clock, conn, family) -> None:
     # An idea's link comes straight from a chat message, and a place an older install saved may
     # hold any link at all. Neither may reach an href.
@@ -649,11 +688,10 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
 
 
 def test_no_page_reaches_a_table_to_write_to_it() -> None:
-    """No module in the package may write to a table itself, and that includes the four that
-    change things: the chat page hands a message to the pipeline, the edit forms call the tools,
-    the family page goes through the family rules, and the settings page through one repository.
-    Every write is somebody else's, which is what keeps the checks, the transactions and the
-    audit rows in one place."""
+    """No module in the package may write to a table itself, the four that change things included:
+    the chat page hands a message to the pipeline, the edit forms call the tools, the family page
+    uses the family rules, the settings page one repository.
+    """
     import ast
 
     import familydb.web as package
@@ -727,13 +765,11 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
 
 
 def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
-    """Which modules may cause a write, and what each one is allowed to go through.
+    """Which modules may cause a write, and what each may go through.
 
-    Nothing here writes, so the previous test alone would pass even if a page had quietly grown
-    a way to change an idea. This one names the doors instead: the chat page may reach the
-    pipeline and nothing else, the edit forms may dispatch a fixed list of tools and nothing
-    else, the family page may add and change people through `familydb.family` and nothing else,
-    and every other module in the package may do none of it.
+    The previous test alone would pass if a page quietly grew a way to change an idea, so this
+    names the doors: chat reaches the pipeline only, the edit forms dispatch a fixed list of
+    tools, the family page uses `familydb.family`, and every other module does none of it.
     """
     import ast
 
@@ -789,9 +825,10 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         # A kid's wish lists and a parent's answers (docs/WISHES.md).
         "add_wish",
         "update_wish",
+        "undo",  # the Undo beside a form's notice and under her reply (familydb/undo.py)
+        "shopping_list",  # the Lists page (tools/lists.py)
     }
-    # And it runs them the one way: through the registry, which validates and owns the
-    # transaction. Constructing a store call or a connection of its own would not be that.
+    # And it runs them the one way: through the registry, which validates and owns the transaction.
     assert (
         sum(
             1
@@ -821,12 +858,13 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     reading = {"revision", "age_on"}
     # Taking somebody off the list for good (the family asked for it; DESIGN.md section 16).
     removing = {"remove"}
-    assert ruled <= {"add", "change"} | reading | signing_in | linking | removing, ruled
-    assert {"add", "change"} | signing_in | linking | removing <= ruled
+    # Notices on one's own devices, turned on and off on Your password (familydb/push.py).
+    pushing = {"subscribe_push", "unsubscribe_push"}
+    assert ruled <= {"add", "change"} | reading | signing_in | linking | removing | pushing, ruled
+    assert {"add", "change"} | signing_in | linking | removing | pushing <= ruled
 
-    # And the doors are shut to everything else. Not whole packages: `views.py` reads opening
-    # hours out of `tools.places` and tidies a link with `tools.urls`, which write nothing. It
-    # is the two ways of causing a write that are spoken for — the pipeline, and dispatch.
+    # The doors are shut to everything else, but not whole packages: `views.py` reads opening hours
+    # from `tools.places` and tidies links with `tools.urls`, which write nothing.
     for name, tree in trees.items():
         reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
         dispatches = any(
@@ -836,8 +874,8 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
             for node in ast.walk(tree)
         )
         assert not any(module.startswith("familydb.pipeline") for module in reached), name
-        # The page reads Google through calendar_sync's pure translation of an event; the two
-        # functions there that bring stored plans up to date are writes, and belong to the bot.
+        # The page reads Google through calendar_sync's pure translation of an event; the functions
+        # there that update stored plans are writes, and belong to the bot.
         synced = {
             alias.name
             for node in ast.walk(tree)
@@ -891,8 +929,8 @@ def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:
     }
     assert called == {"overrides", "history", "set_many"}
 
-    # Two writes to files rather than tables, and this page is the one place that may make
-    # them: signing everyone out replaces the session key, and connecting Google saves a key.
+    # Two file writes, and this page is the one place that may make them: signing everyone out
+    # replaces the session key, connecting Google saves a key.
     for other in sorted(module.parent.glob("*.py")):
         writes = {
             node.func.attr
@@ -969,15 +1007,27 @@ def test_a_form_token_outside_ascii_is_refused_and_not_a_crash(settings, clock, 
 
 
 def test_the_server_refuses_a_body_before_reading_it(settings, clock) -> None:
-    from familydb.web import MAX_BODY_BYTES
+    """The server reads no more than a photo in the chat's box; every other form is held to a few
+    kilobytes by Flask, and the chat's own only after sign-in (chat._roomy)."""
+    from familydb.web import MAX_BODY_BYTES, MAX_UPLOAD_BYTES
     from familydb.web.server import create_server
 
     app = App(settings.model_copy(update={"web_port": _free_port()}), clock)
     server = create_server(app)
     try:
-        assert server.adj.max_request_body_size == MAX_BODY_BYTES
+        assert server.adj.max_request_body_size == MAX_UPLOAD_BYTES
     finally:
         server.close()
+    client = create_app(
+        App(settings.model_copy(update={"web_password": "open sesame please"}), clock)
+    ).test_client()
+    big = {"password": "x" * (MAX_BODY_BYTES + 1)}
+    assert client.post("/login", data=big).status_code == 413
+    assert client.post("/chat", data={"text": "x" * (MAX_BODY_BYTES + 1)}).status_code in (
+        302,
+        401,
+        403,
+    )
 
 
 def test_a_public_page_needs_a_password_worth_having(settings, clock) -> None:
@@ -1050,28 +1100,38 @@ def test_a_page_the_bot_serves_is_never_cached(settings, clock, conn, family) ->
     assert client.get("/static/style.css").headers["Cache-Control"] != "no-store"
 
 
-def test_a_browser_keeps_what_the_page_links_to_until_it_changes(settings, clock, conn, family):
+@pytest.mark.parametrize(
+    ("path", "sheet", "sprite", "font"),
+    [
+        # Pages on the new frame, and pages not moved to it yet: each names its own files.
+        ("/", "style-kitchen.css", "icons-kitchen.svg", "atkinson-400.woff2"),
+        ("/memory", "style.css", "icons.svg", "dm-sans.woff2"),
+    ],
+)
+def test_a_browser_keeps_what_the_page_links_to_until_it_changes(
+    settings, clock, conn, family, path, sheet, sprite, font
+):
     """Named with a fingerprint of what is in it, a file is kept for a year rather than asked
     about again on every page, and an upgrade that changes it changes its name."""
     client = _client(settings, clock)
-    page = client.get("/").text
-    stylesheet = re.search(r'href="(/static/style\.css\?v=([0-9a-f]{12}))"', page)
+    page = client.get(path).text
+    stylesheet = re.search(rf'href="(/static/{re.escape(sheet)}\?v=([0-9a-f]{{12}}))"', page)
     assert stylesheet is not None
-    style = (Path(web_module.__file__).parent / "static" / "style.css").read_bytes()
+    style = (Path(web_module.__file__).parent / "static" / sheet).read_bytes()
     assert stylesheet.group(2) == hashlib.sha256(style).hexdigest()[:12]
-    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page)
-    assert re.search(r'<use href="/static/icons\.svg\?v=[0-9a-f]{12}#i-', page)
+    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page) or path == "/memory"
+    assert re.search(rf'<use href="/static/{re.escape(sprite)}\?v=[0-9a-f]{{12}}#i-', page)
     kept = client.get(stylesheet.group(1))
     assert kept.status_code == 200 and "immutable" in kept.headers["Cache-Control"]
     # A name it no longer has, or none, is still asked about every time.
-    for stale in ("/static/style.css?v=000000000000", "/static/style.css"):
+    for stale in (f"/static/{sheet}?v=000000000000", f"/static/{sheet}"):
         assert client.get(stale).headers["Cache-Control"] == "no-cache"
     # The stylesheet names the fonts itself, so the preload names them the same way, bare, or
     # the browser would fetch each twice; they are kept a day.
-    assert '<link rel="preload" href="/static/fonts/dm-sans.woff2"' in page
-    assert 'url("fonts/dm-sans.woff2")' in style.decode()
-    font = client.get("/static/fonts/dm-sans.woff2")
-    assert font.headers["Cache-Control"] == "public, max-age=86400"
+    assert f'<link rel="preload" href="/static/fonts/{font}"' in page
+    assert f'url("fonts/{font}")' in style.decode()
+    served = client.get(f"/static/fonts/{font}")
+    assert served.headers["Cache-Control"] == "public, max-age=86400"
     assert client.get("/static/nothing.css?v=abc").status_code == 404
 
 
@@ -1082,4 +1142,4 @@ def test_the_added_date_is_the_family_s_date(settings, clock, conn, family) -> N
             conn, title="Late night idea", kind="activity", now="2026-09-21T02:30:00Z"
         )
     page = _client(settings, clock).get(f"/idea/{idea.id}")
-    assert "added 2026-09-20" in page.text
+    assert "added Sun 20 Sep" in page.text

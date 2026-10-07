@@ -11,7 +11,7 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any
 
 from familydb.config import Settings
 
@@ -19,8 +19,7 @@ log = logging.getLogger(__name__)
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
-# Of the address Nominatim returns for a point, the parts a family would say: the neighbourhood,
-# then the town. Missing parts are skipped.
+# The parts of a Nominatim address a family would say: neighbourhood, then town.
 AREA_KEYS = ("neighbourhood", "suburb", "quarter", "city_district")
 TOWN_KEYS = ("city", "town", "village", "hamlet")
 OPEN_METEO_GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -28,8 +27,7 @@ USER_AGENT = "familydb/0.1 (self-hosted family planning bot)"
 
 
 def user_agent(contact: str) -> str:
-    """Who is asking, as Nominatim's usage policy wants it said: the application, and a way to
-    reach whoever runs it when the operator has given one (GEOCODER_CONTACT)."""
+    """Nominatim's policy wants the application and, when given, a contact (GEOCODER_CONTACT)."""
     contact = " ".join(contact.split())
     return f"{USER_AGENT[:-1]}; {contact})" if contact else USER_AGENT
 
@@ -44,12 +42,6 @@ class GeoPoint:
     lon: float
     label: str
     source: str  # "nominatim" or "open-meteo"
-
-
-class GeocoderAPI(Protocol):
-    def geocode(self, query: str) -> GeoPoint | None: ...
-
-    def reverse(self, lat: float, lon: float) -> str | None: ...
 
 
 def is_short_name(query: str) -> bool:
@@ -68,9 +60,7 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 def estimate_travel(
     settings: Settings, lat: float, lon: float, *, start: tuple[float, float] | None = None
 ) -> tuple[int, float] | None:
-    """(minutes, km) by road as an estimate, from home or from `start` when the family is out.
-
-    None without a starting point."""
+    """(minutes, km) by road, estimated from home or `start`; None without a starting point."""
     if start is None:
         if settings.home_lat is None or settings.home_lon is None:
             return None
@@ -81,7 +71,7 @@ def estimate_travel(
 
 
 class Geocoder:
-    """GeocoderAPI over Nominatim, falling back to Open-Meteo for short names. Never raises."""
+    """`geocode` and `reverse` over Nominatim, Open-Meteo for short names. Never raises."""
 
     def __init__(
         self,
@@ -151,9 +141,8 @@ class Geocoder:
             return None
 
     def reverse(self, lat: float, lon: float) -> str | None:
-        """What a family would call where a point is: "Pearl District, Portland". None if unknown.
-
-        Cached to about a hundred metres, so a live location moving along a street asks once."""
+        """What a family would call a point ("Pearl District, Portland"), or None. Cached to about
+        a hundred metres."""
         key = (round(lat, 3), round(lon, 3))
         if key in self._names:
             return self._names[key]

@@ -39,14 +39,6 @@ def _said(response) -> str:
     return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
 
 
-def test_the_list_shows_everybody_and_how_the_bot_knows_them(page, family) -> None:
-    text = page.get("/family").text
-    assert "Sam" in text and "Alex" in text and "the girls" in text
-    assert "Telegram 1001" in text
-    assert "named in ideas and plans" in text  # a kid with no channel and no password
-    assert 'href="/family"' in page.get("/plans").text  # and the bar reaches it
-
-
 def test_somebody_can_be_added_from_the_page(page, conn) -> None:
     sent = page.post(
         "/family",

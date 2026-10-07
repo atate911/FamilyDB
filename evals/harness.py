@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 import tempfile
 import unicodedata
 from collections.abc import Callable, Mapping
 from contextlib import closing
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +36,8 @@ WRITES = frozenset(
         "add_task",
         "update_task",
         "remember",
+        "shopping_list",
+        "undo",
     }
 )
 
@@ -43,6 +47,19 @@ class Call:
     name: str
     input: dict[str, Any]
     ok: bool
+    # What the tool answered, as the model read it: an unavailable tool answers without an
+    # error, so `ok` alone cannot tell a plan kept from one the calendar was not there for.
+    result: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class Reminder:
+    """A reminder as the case left it, its time on the family's clock (YYYY-MM-DDTHH:MM)."""
+
+    task: int
+    title: str
+    at: str
+    live: bool  # not cancelled, and its task still open
 
 
 @dataclass
@@ -55,6 +72,7 @@ class Run:
     ids: set[int] = field(default_factory=set)  # every idea, plan and task number that exists
     counts: dict[str, int] = field(default_factory=dict)
     statuses: dict[int, str] = field(default_factory=dict)  # each idea's status at the end
+    reminders: list[Reminder] = field(default_factory=list)
     cost: float = 0.0
     model_calls: int = 0
     input_tokens: int = 0  # every input token its calls sent, from the cache or not
@@ -93,21 +111,26 @@ class Case:
     chat: str | None = None  # where, by chat id; None is the sender's own, a private chat
     # Settings of the case's own, laid over settings_for's.
     settings: Mapping[str, Any] = field(default_factory=dict)
+    # What the household holds besides the usual, put there before the first message: a memory,
+    # a plan, a task. Called with the connection and the household, inside no transaction.
+    seed: Callable[[sqlite3.Connection, Household], None] | None = None
+    # False runs the case with no Google calendar connected.
+    calendar: bool = True
+    # A case for something not built yet names what it waits for. It is run and graded like any
+    # other, and reported as a gap rather than a failure until it passes.
+    waits_for: str = ""
 
 
-# Every case is also held to these: the bot never names a number that does not exist, never
-# writes something the message did not ask for (each case lists what it may write), and keeps it
-# short and plain whoever she is: one emoji at most (the spec's own rule), no "as an AI" filler,
-# and no more than two exclamation marks.
+# Every case is also held to these: no invented numbers, no write the message did not ask for
+# (each case lists what it may write), and short and plain whoever she is.
 MAX_REPLY = 900
 MAX_EMOJI = 1
 MAX_EXCLAMATIONS = 2
 FILLER = re.compile(
     r"\bas\s+(?:an\s+ai|an\s+artificial\s+intelligence|a\s+language\s+model)\b", re.IGNORECASE
 )
-# The blocks emoji are drawn from: Miscellaneous Technical (the watch, the alarm clock),
-# Miscellaneous Symbols and Dingbats (the sun, the heart, the tick), Miscellaneous Symbols and
-# Arrows (the star), and U+1F000 to U+1FAFF (faces, food, animals, flags).
+# The blocks emoji are drawn from: Misc Technical, Misc Symbols and Dingbats, Misc Symbols and
+# Arrows, and U+1F000 to U+1FAFF.
 PICTOGRAPHIC = ((0x2300, 0x23FF), (0x2600, 0x27BF), (0x2B00, 0x2BFF), (0x1F000, 0x1FAFF))
 JOINER = "\u200d"
 # The regional indicators A to Z: a country's flag is two of them.
@@ -187,41 +210,59 @@ def under_persona(base: Settings, choice: str) -> tuple[str, Settings]:
     )
 
 
-def settings_for(base: Settings, folder: Path, *, limit: float = 1.0) -> Settings:
+def settings_for(
+    base: Settings, folder: Path, *, limit: float = 1.0, web: bool = False, calendar: bool = True
+) -> Settings:
     token = folder / "google_key.json"
     token.write_text("{}")
     return base.model_copy(
         update={
             "familydb_path": folder / "eval.sqlite3",
-            "google_calendar_id": "eval@group.calendar.google.com",
+            "google_calendar_id": "eval@group.calendar.google.com" if calendar else None,
             "google_key_path": token,
             "home_lat": 45.63,
             "home_lon": -122.67,
             "home_area": "Vancouver, WA",
             "family_tz": "America/Vancouver",
-            # No web searches: they cost, and what the web says today is not what it says
-            # tomorrow, so no case looks anything up or discovers anything.
-            "web_tools_enabled": False,
-            # The bot's own limit, checked before every call: what is left of the run's budget.
+            # No web searches unless asked for (`--web`): they cost and the web changes, so a
+            # case that looks something up is not the same case from one day to the next.
+            "web_tools_enabled": web,
+            # The bot's own limit, checked before every call: what is left of the budget.
             "daily_spend_limit": limit,
             "digest_chat_id": None,
         }
     )
 
 
-def run_case(case: Case, base: Settings, *, api: Any = None, limit: float = 1.0) -> Run:
+def _result(output: str | None) -> dict[str, Any]:
+    try:
+        found = json.loads(output) if output else {}
+    except ValueError:
+        return {}
+    return found if isinstance(found, dict) else {}
+
+
+def _local(instant: str) -> str:
+    """A stored UTC instant on the household's clock, to the minute."""
+    return datetime.fromisoformat(instant).astimezone(TZ).strftime("%Y-%m-%dT%H:%M")
+
+
+def run_case(
+    case: Case, base: Settings, *, api: Any = None, limit: float = 1.0, web: bool = False
+) -> Run:
     """One case from a fresh household, spending at most `limit` (and the one call that crosses
-    it). `api` stands in for the vendor, for testing this file."""
+    it). `api` stands in for the vendor, for testing this file; `web` lets lookups search."""
     if limit <= 0:
         raise ValueError("a limit of 0 would turn the spending limit off")
     with tempfile.TemporaryDirectory(prefix="familydb-eval-") as tmp:
-        settings = settings_for(base, Path(tmp), limit=limit)
+        settings = settings_for(base, Path(tmp), limit=limit, web=web, calendar=case.calendar)
         if case.settings:
             # Validated as the settings page would, so a misspelt setting fails the run loudly
             # rather than being carried along unread.
             settings = apply_overrides(settings, dict(case.settings))
-        calendar = FakeCalendar(TZ)
-        calendar_events(calendar)
+        calendar = FakeCalendar(TZ) if case.calendar else None
+        if calendar is not None:
+            calendar_events(calendar)
         app = App(
             settings,
             FixedClock(NOW, TZ),
@@ -231,6 +272,8 @@ def run_case(case: Case, base: Settings, *, api: Any = None, limit: float = 1.0)
         with closing(app.connect()) as conn:
             db.migrate(conn)
             run = Run(house=seed(conn), persona=settings.persona)
+            if case.seed is not None:
+                case.seed(conn, run.house)
             chat = case.chat or case.sender
             for number, text in enumerate(case.says, start=1):
                 out = handle_incoming(
@@ -247,16 +290,22 @@ def run_case(case: Case, base: Settings, *, api: Any = None, limit: float = 1.0)
                                 row["tool_name"],
                                 json.loads(row["input"]) if row["input"] else {},
                                 not row["is_error"],
+                                _result(row["output"]),
                             )
                         )
             for table in ("ideas", "plans", "tasks", "wishes"):
                 run.counts[table] = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
                 run.ids |= {r[0] for r in conn.execute(f"SELECT id FROM {table}")}
             run.statuses = {r[0]: r[1] for r in conn.execute("SELECT id, status FROM ideas")}
-            # Input counts whether it was new, written to the cache or read from it. Each
-            # provider module splits what a call was sent into these three columns, taking the
-            # cached tokens out of the total where the vendor counts them inside it (OpenAI and
-            # Gemini do), so the sum counts every token sent once. A NULL column counts as 0.
+            run.reminders = [
+                Reminder(row[0], row[1], _local(row[2]), row[3] is None and row[4] == "open")
+                for row in conn.execute(
+                    "SELECT t.id, t.title, r.remind_at, r.cancelled_at, t.status "
+                    "FROM reminders r JOIN tasks t ON t.id = r.task_id ORDER BY r.id"
+                )
+            ]
+            # Input counts new, cache-written and cache-read tokens; providers split them so the
+            # sum counts every token once. A NULL column counts as 0.
             spent = conn.execute(
                 "SELECT coalesce(sum(cost_usd), 0), count(*), "
                 "coalesce(sum(input_tokens), 0) + coalesce(sum(cache_creation_input_tokens), 0) "

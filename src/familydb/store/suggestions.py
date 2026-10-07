@@ -19,7 +19,7 @@ class Suggestion(BaseModel):
     candidates: list[dict[str, Any]] = []
     web_finds: list[dict[str, Any]] = []
     reply_message_id: int | None = None
-    # What the stronger call chose (suggest/choose.py): {"picks": [...], "framing": ...}.
+    # What the stronger call chose (suggest/choosing.py): {"picks": [...], "framing": ...}.
     picks: dict[str, Any] | None = None
 
     @classmethod
@@ -90,12 +90,17 @@ def list_recent(conn: sqlite3.Connection, *, limit: int = 10) -> list[Suggestion
 
 
 def recently_suggested(conn: sqlite3.Connection, *, since: str) -> set[int]:
-    """Idea ids that got a 'good' verdict in any suggestion made at or after `since`."""
+    """Idea ids shown as 'good' in any suggestion since `since`. Every verdict is logged, shown or
+    not; one logged before that was recorded counts as shown."""
     rows = conn.execute("SELECT candidates FROM suggestions WHERE asked_at >= ?", (since,))
     ids: set[int] = set()
     for row in rows:
         for candidate in from_json(row["candidates"], []) or []:
-            if isinstance(candidate, dict) and candidate.get("verdict") == "good":
+            if (
+                isinstance(candidate, dict)
+                and candidate.get("verdict") == "good"
+                and candidate.get("shown", True)
+            ):
                 idea_id = candidate.get("idea_id")
                 if isinstance(idea_id, int):
                     ids.add(idea_id)

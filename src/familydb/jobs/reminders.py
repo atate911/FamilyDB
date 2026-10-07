@@ -1,15 +1,11 @@
-"""Turn due reminders into durable outgoing messages. No model calls.
-
-This job sends what it queues, through the voice layer: in a chat where the family is talking
-right now, a reminder waits a moment to be carried by the reply they are about to get. One that
-could not go is the retry job's, on its own interval (`run_deliveries`), rather than tried again
-here every minute. It also sends, as written, any held message no conversation carried in time.
-"""
+"""Turn due reminders into stored outgoing messages and send them through the voice layer (no
+model call): in a chat mid-conversation a reminder waits to ride the next reply. A failed send
+is the retry job's (`run_deliveries`). Also releases held messages no reply carried."""
 
 from contextlib import closing
 from datetime import datetime
 
-from familydb import buttons, routing, voice
+from familydb import buttons, plan_service, routing, voice
 from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
@@ -24,37 +20,42 @@ def run_reminders(app: App) -> int:
     queued: list[tuple[int, str, str, str, str]] = []
     with closing(app.connect()) as conn:
         with transaction(conn):
+            # A reminder tied to a plan that is over has had its day, sent or not (plan_service).
+            plan_service.finish_over(conn, today=app.clock.today().isoformat(), now=now)
             for reminder in tasks.due_reminders(conn, now):
                 task = tasks.get(conn, reminder.task_id)
                 if task is None:
                     continue
                 due_when = late_note(reminder.remind_at, now, app.clock.tz)
-                # The owner's own reminder goes to them, not to the whole group (routing.py).
-                channel, chat = routing.for_person(
-                    conn, app.settings, task.channel, task.chat_id, task.owner_id
-                )
+                # The owner's reminder goes to them; everyone's to the family (routing.py).
+                channel, chat = routing.for_task(conn, app.settings, task)
                 out = messages.insert_out(
                     conn,
                     channel=channel,
                     chat_id=chat,
                     text=reminder_for(
-                        conn, task, app.settings, channel=channel, chat_id=chat, due_when=due_when
+                        conn,
+                        task,
+                        app.settings,
+                        channel=channel,
+                        chat_id=chat,
+                        due_when=due_when,
+                        at=moment,
                     ),
                     now=now,
                     buttons=buttons.for_reminder(task.id),
                 )
                 tasks.attach_message(conn, reminder.id, out.id)
-                # A task on a schedule gets its next time round now, the first one still to come.
+                # A repeating task gets its next reminder now.
                 due = datetime.fromisoformat(reminder.remind_at)
                 schedule_next(conn, task, after=max(moment, due), zone=app.clock.tz)
                 event = "reminder_late" if due_when else "reminder"
                 queued.append((out.id, event, channel, chat, task.title))
-        # Committed first: sending marks the message delivered from a connection of its own.
+        # Committed first: sending marks delivery on its own connection.
         sent = sum(
             voice.hand_over(
                 app, conn, message_id, event=event, channel=channel, chat_id=chat, mention=title
             )
             for message_id, event, channel, chat, title in queued
         )
-    # Held messages no conversation carried in time go now, as written.
     return sent + voice.release(app)

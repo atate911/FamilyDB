@@ -13,7 +13,7 @@ from familydb.channels.base import IncomingMessage
 from familydb.pipeline import handle_incoming
 from familydb.store import calls, ideas, outcomes, suggestions
 from familydb.store.db import transaction
-from familydb.suggest import choose as choosing
+from familydb.suggest import choosing
 from familydb.suggest.types import SuggestInput
 from familydb.tools import ToolContext
 from tests import fakes

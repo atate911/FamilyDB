@@ -42,9 +42,6 @@ from familydb.tools import ToolContext, build_registry
 log = logging.getLogger(__name__)
 
 KIND = "choose"
-# Ideas checked in detail when a choice is to be made: checking costs nothing, and today's
-# favourites are the ones the cut of eight leaves unchecked (never-done ideas go first).
-CHOOSE_CHECKED = 24
 # What the prompt and the tool's schema add to the dossier, for the estimate.
 TOOL_CHARS = 3000
 

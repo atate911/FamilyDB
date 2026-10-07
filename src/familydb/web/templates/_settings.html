@@ -1,10 +1,7 @@
-{# The settings pages' small parts: `{% from "_settings.html" import box, group, form %}`.
-   A box says what it is, what it does in a line under it, what it falls back to when left
-   empty (in the box, or as the dropdown's first choice), and whether it was changed here. #}
+{# Small parts of the settings pages: box, group, form. A box says what it is, what it does, what it falls back to when empty, and whether it was changed here. #}
 {% from "_ui.html" import icon %}
 
-{# A dropdown's choices under their headings, as `(heading, [(value, words)])`, with `value`
-   chosen: the time zones, here and on setup's home step. #}
+{# A dropdown's choices under headings, as `(heading, [(value, words)])`, with `value` chosen. #}
 {% macro grouped_options(groups, value) -%}
   {% for heading, rows in groups %}
     <optgroup label="{{ heading }}">
@@ -39,10 +36,7 @@
         {% endif %}
       </select>
     {% elif entry.offers and one.another %}
-      {# The list to choose from, each with what it is, then "Another", which opens a box to
-         type any other in: a model released next week still fits. The box shows only while
-         "Another" is chosen, by the stylesheet alone; a browser that cannot tell shows it
-         always, and it is read only when "Another" is chosen. #}
+      {# The list to choose from plus "Another", whose box the stylesheet alone shows while "Another" is chosen; without :has() it always shows, and is read only when "Another" is chosen. #}
       {% set listed = entry.offers | map('first') | list %}
       {% set typed_in = entry.value and entry.value not in listed %}
       <div class="pick">
@@ -96,8 +90,7 @@
   </div>
 {%- endmacro %}
 
-{# A group of boxes under its heading. Fine-tuning is folded away, and opens by itself when one
-   of its boxes has a complaint; folded, it says how many of its boxes were changed here. #}
+{# A group of boxes under a heading. Fine-tuning is folded and opens by itself when a box has a complaint. #}
 {% macro group(entry) -%}
   {% set g = entry.group %}
   {% if g.folded %}
@@ -118,9 +111,7 @@
   {% endif %}
 {%- endmacro %}
 
-{# A page's boxes in one form with one Save, which stays in reach while the form is on screen.
-   Everything in the form is saved, and a box that was emptied goes back to its default; the
-   boxes of other pages are not in it, so they stay as they are. A `call` block goes first. #}
+{# A page's boxes in one form with one Save: a box emptied goes back to its default; other pages' boxes are not in it. A `call` block goes first. #}
 {% macro form(section, groups=[]) -%}
   <form method="post" action="{{ url_for('settings.save') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />

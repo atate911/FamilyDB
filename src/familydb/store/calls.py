@@ -28,10 +28,14 @@ def log_tool_call(
     duration_ms: int | None,
     now: str | None = None,
     turn: str | None = None,
+    member_id: int | None = None,
+    source: str | None = None,
+    undo: dict[str, Any] | None = None,
 ) -> int:
     cur = conn.execute(
         "INSERT INTO tool_calls (message_id, iteration, tool_use_id, tool_name, input, output, "
-        "is_error, duration_ms, created_at, turn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "is_error, duration_ms, created_at, turn, member_id, source, undo) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             message_id,
             iteration,
@@ -43,6 +47,9 @@ def log_tool_call(
             duration_ms,
             now or utcnow_iso(),
             turn,
+            member_id,
+            source,
+            to_json(undo) if undo is not None else None,
         ),
     )
     return int(cur.lastrowid or 0)
@@ -118,6 +125,17 @@ def spent_since(conn: sqlite3.Connection, *, since: str) -> float:
     return float(row["spent"])
 
 
+def usual_day(conn: sqlite3.Connection, *, since: str) -> float:
+    """What a day that had any model calls cost on average since a UTC timestamp, in estimated
+    dollars: the total over the days that had calls, so a quiet week does not drag it to nothing."""
+    row = conn.execute(
+        "SELECT coalesce(sum(cost_usd), 0) AS spent, "
+        "count(DISTINCT substr(created_at, 1, 10)) AS days FROM llm_calls WHERE created_at >= ?",
+        (since,),
+    ).fetchone()
+    return float(row["spent"]) / row["days"] if row["days"] else 0.0
+
+
 def spent_since_by(conn: sqlite3.Connection, *, since: str, member_id: int) -> float:
     """Estimated dollars spent since then on calls made for somebody's own messages."""
     row = conn.execute(
@@ -131,8 +149,8 @@ def spent_since_by(conn: sqlite3.Connection, *, since: str, member_id: int) -> f
 def answered_for(
     conn: sqlite3.Connection, member_id: int, *, since: str, other_than: int | None = None
 ) -> int:
-    """How many of a member's messages since a UTC timestamp went to a model. A command or a
-    tap on a button, which ask none, is not among them; `other_than` is the one being asked."""
+    """How many of a member's messages since a timestamp went to a model (commands and taps ask
+    none); `other_than` is the one being asked."""
     row = conn.execute(
         "SELECT count(DISTINCT m.id) AS n FROM messages m JOIN llm_calls c ON c.message_id = m.id "
         "WHERE m.member_id = ? AND m.direction = 'in' AND m.received_at >= ? AND m.id != ?",
@@ -179,9 +197,8 @@ ENDED_BADLY = ("refusal", "max_tokens", "error")
 def figures_between(
     conn: sqlite3.Connection, *, since: str, until: str
 ) -> dict[str, dict[str, Any]]:
-    """What each kind of call came to between two moments: calls, answers (a message or a
-    turn), dollars, tokens read (the cache included) and written back, time, calls that ended
-    badly, and the model most of them went to."""
+    """Per kind of call between two moments: calls, asks, dollars, tokens sent and back, time,
+    bad endings, and the commonest model."""
     marks = ", ".join("?" for _ in ENDED_BADLY)
     rows = conn.execute(
         "SELECT kind, count(*) AS calls, "
@@ -207,8 +224,8 @@ def figures_between(
 
 
 def activity_since(conn: sqlite3.Connection, *, since: str, limit: int) -> list[dict[str, Any]]:
-    """What the models were asked lately, newest first: one row for each message answered (its
-    calls, a lookup it started included) and one for each turn with no message (a lookup)."""
+    """What the models were asked lately, newest first: a row per message answered and per
+    message-less turn (a lookup)."""
     rows = conn.execute(
         "SELECT CASE WHEN message_id IS NOT NULL THEN 'm' || message_id ELSE 't' || turn END "
         "AS key, min(created_at) AS started, max(id) AS last_id, "
@@ -257,6 +274,83 @@ def last_lookup_turn(conn: sqlite3.Connection, idea_id: int) -> str | None:
     return row["turn"] if row else None
 
 
+def get(conn: sqlite3.Connection, call_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM tool_calls WHERE id = ?", (call_id,)).fetchone()
+
+
+def last_undoable(
+    conn: sqlite3.Connection, *, member_id: int, message_id: int, since: str
+) -> sqlite3.Row | None:
+    """This person's last change that can be taken back, made since `since` in the chat
+    `message_id` was said in, and before it (undo.py)."""
+    return conn.execute(
+        "SELECT t.* FROM tool_calls t JOIN messages m ON m.id = t.message_id "
+        "JOIN messages here ON here.id = ? "
+        "WHERE t.member_id = ? AND t.undo IS NOT NULL AND t.undone_at IS NULL "
+        "AND t.created_at >= ? AND t.message_id != here.id "
+        "AND m.channel = here.channel AND m.chat_id = here.chat_id "
+        "ORDER BY t.id DESC LIMIT 1",
+        (message_id, member_id, since),
+    ).fetchone()
+
+
+def undoable_for(
+    conn: sqlite3.Connection, message_ids: list[int], *, since: str
+) -> dict[int, sqlite3.Row]:
+    """By message, the last change its turn made that can still be taken back: the Undo under a
+    reply (the page's chat, and Telegram's button)."""
+    if not message_ids:
+        return {}
+    marks = ",".join("?" * len(message_ids))
+    rows = conn.execute(
+        f"SELECT * FROM tool_calls WHERE message_id IN ({marks}) AND undo IS NOT NULL "
+        "AND undone_at IS NULL AND created_at >= ? ORDER BY id",
+        (*message_ids, since),
+    ).fetchall()
+    return {int(row["message_id"]): row for row in rows}
+
+
+def claim_undo(conn: sqlite3.Connection, call_id: int, *, now: str) -> bool:
+    """Mark a call undone before undoing it, so two presses undo it once. Call inside a
+    transaction; False when it was undone already."""
+    return (
+        conn.execute(
+            "UPDATE tool_calls SET undone_at = ? WHERE id = ? AND undone_at IS NULL",
+            (now, call_id),
+        ).rowcount
+        == 1
+    )
+
+
+def release_undo(conn: sqlite3.Connection, call_id: int) -> None:
+    """The undo did not go through: the call can be undone again."""
+    conn.execute("UPDATE tool_calls SET undone_at = NULL WHERE id = ?", (call_id,))
+
+
+# The tools that change an idea or a task, and where in what they answer its number is.
+CHANGES_IDEA = {"add_idea": "$.id", "update_idea": "$.id", "create_event": "$.idea.id"}
+CHANGES_TASK = {"add_task": "$.task.id", "update_task": "$.task.id"}
+
+
+def last_change(
+    conn: sqlite3.Connection, *, idea_id: int | None = None, task_id: int | None = None
+) -> sqlite3.Row | None:
+    """The last call that changed this idea or task, whoever made it and from where, with the
+    name of who did (`who`): its page's "changed by Sam on the page"."""
+    tools, number = (CHANGES_IDEA, idea_id) if idea_id is not None else (CHANGES_TASK, task_id)
+    found = " OR ".join(
+        f"(t.tool_name = '{name}' AND json_extract(t.output, '{path}') = ?)"
+        for name, path in tools.items()
+    )
+    return conn.execute(
+        "SELECT t.*, m.display_name AS who FROM tool_calls t "
+        "LEFT JOIN members m ON m.id = t.member_id "
+        f"WHERE t.is_error = 0 AND json_valid(t.output) AND ({found}) "
+        "ORDER BY t.id DESC LIMIT 1",
+        (number,) * len(tools),
+    ).fetchone()
+
+
 def tool_calls_for_message(conn: sqlite3.Connection, message_id: int) -> list[dict[str, Any]]:
     rows = conn.execute(
         "SELECT * FROM tool_calls WHERE message_id = ? ORDER BY id", (message_id,)
@@ -265,7 +359,7 @@ def tool_calls_for_message(conn: sqlite3.Connection, message_id: int) -> list[di
 
 
 def usage_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
-    """Token totals per model since a timestamp, busiest first. For `familydb debug cost`."""
+    """Token totals per model since a timestamp, busiest first (`debug cost`)."""
     rows = conn.execute(
         "SELECT coalesce(served_model, model) AS model, count(*) AS calls, "
         "coalesce(sum(input_tokens), 0) AS input_tokens, "
@@ -282,11 +376,8 @@ def usage_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]
 
 
 def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
-    """Calls, tokens and estimated dollars per kind of call since a timestamp, dearest first.
-
-    A kind is what a call was for (answering the family, looking ideas up, ...), as declared in
-    `agent.gateway.KINDS`. Calls an older version recorded have none.
-    """
+    """Calls, tokens and estimated dollars per kind (`gateway.KINDS`) since a timestamp, dearest
+    first."""
     rows = conn.execute(
         "SELECT kind, count(*) AS calls, "
         "coalesce(sum(input_tokens), 0) + coalesce(sum(cache_read_input_tokens), 0) "
@@ -302,7 +393,7 @@ def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any
 
 
 def sections_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
-    """Each call's kind, the size of each part of what it sent, and the input tokens it sent."""
+    """Each call's kind, section sizes and input tokens."""
     rows = conn.execute(
         "SELECT kind, sections, coalesce(input_tokens, 0) + coalesce(cache_read_input_tokens, 0) "
         "+ coalesce(cache_creation_input_tokens, 0) AS sent "

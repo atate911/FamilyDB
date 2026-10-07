@@ -85,7 +85,7 @@ def _hours_check(
     reasons: list[str],
     travel: int | None,
 ) -> tuple[list, bool, bool]:
-    """Returns (fitting days after the hours check, hard_fail, soft)."""
+    """(fitting days after the hours check, hard_fail, soft)."""
     fits = list(item.fits_days)
     if place is None or not place.hours:
         checks.open = "unknown"
@@ -111,8 +111,7 @@ def _hours_check(
         spans = day_context.spans if day_context else []
         need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
         stretches = doable(ranges, spans, travel or 0)
-        # Without a calendar the day's free time is all of the time asked about, so the hours
-        # are still held to it: "open now" must not offer a café that closed at noon.
+        # Without a calendar the free time is all of the asked time, so hours still apply.
         if day_context is None:
             open_days.append(day)
         else:
@@ -126,7 +125,6 @@ def _hours_check(
         if hours_text is None:
             hours_text = format_ranges(ranges)
         if day == context.today and today_text is None:
-            # Asked about today: say when they could actually be there, not the posted hours.
             usable = [(a, b) for a, b in stretches if b - a >= need]
             if usable:
                 a, b = usable[0]
@@ -159,11 +157,8 @@ def _daylight_check(
     reasons: list[str],
     travel: int | None,
 ) -> bool:
-    """Whether an outdoor idea could only be done in the dark (soft); says when dark comes today.
-
-    Never a rule: something outdoor that is meant for the dark (lights, stars) is as outdoor as
-    a hike, so no daylight in the free time makes an idea possible, not ruled out.
-    """
+    """Whether an outdoor idea could only be done in the dark (soft, never ruled out: lights and
+    stars are outdoor too); says when dark comes today."""
     if item.idea.setting != "outdoor":
         return False
     need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
@@ -173,20 +168,18 @@ def _daylight_check(
         light = day_context.forecast.daylight if day_context and day_context.forecast else None
         if day_context is None or light is None:
             continue
-        # When they could be there: free, and open when the hours are known, travel allowed.
         there, margin = day_context.spans, travel or 0
         if place is not None and place.hours:
             status, ranges = open_on(place, day)
             if status == "open":
                 there, margin = doable(ranges, day_context.spans, travel or 0), 0
         if any(b - a >= need for a, b in in_daylight(there, light, margin)):
-            # Asked about today, and they could stay on after sunset: say when dark comes.
             if day == context.today and max(b - margin for _, b in there) > light[1]:
                 reasons.append(f"daylight until {clock(light[1])}")
             return False
         dark = dark or light
     if dark is None:
-        return False  # the forecast gives no sunrise or sunset: nothing to say
+        return False  # no sunrise or sunset in the forecast
     reasons.append(f"too dark then (daylight {clock(dark[0])}-{clock(dark[1])})")
     return True
 
@@ -207,14 +200,20 @@ def evaluate(
         idea = item.idea
         place = places.get(conn, idea.place_id) if idea.place_id else None
         checks = Checks(weather=item.weather)
-        reasons: list[str] = []
+        # A disappointment last time is said first, and it is possible at best.
+        reasons: list[str] = [item.caveat] if item.caveat else []
         hard_fail = False
-        soft = False
+        # What rules it out, said first: only the first three reasons are shown (compose.py).
+        out: list[str] = []
+        soft = item.caveat is not None
         fits = list(item.fits_days)
         travel = travel_minutes(place, context, settings)
 
         if context.window is not None:
+            said = len(reasons)
             fits, hard, soft_hours = _hours_check(item, place, context, checks, reasons, travel)
+            if hard:
+                out.extend(reasons[said:])
             hard_fail = hard_fail or hard
             soft = soft or soft_hours
             # Straight after the hours, so the reply's three reasons keep it.
@@ -229,6 +228,12 @@ def evaluate(
             )
             stale_ids.append(idea.id)
 
+        if constraints.max_cost_level is not None and idea.cost_level is None:
+            # Asked for cheap, and nobody knows what it costs: worth a word, not a guess.
+            soft = True
+            note = place.price_note if place is not None else None
+            reasons.append(f"price: {note}" if note else "price unknown")
+
         if idea.needs_booking:
             checks.booking_url = place.booking_url if place else None
             if idea.lead_time_days is not None and fits and context.window is not None:
@@ -236,9 +241,10 @@ def evaluate(
                 if idea.lead_time_days > days_left:
                     hard_fail = True
                     checks.booking = "too_late"
-                    reasons.append(
+                    out.append(
                         f"needs booking {idea.lead_time_days} days ahead, only {days_left} left"
                     )
+                    reasons.append(out[-1])
                 else:
                     checks.booking = "ok"
                     reasons.append("needs booking")
@@ -250,6 +256,13 @@ def evaluate(
         if place is not None and context.origin is not None and travel is None:
             soft = True
             reasons.append(f"distance from {context.origin.label} unknown")
+        held = constraints.because("max_travel_minutes")
+        somewhere = place is not None or bool(idea.location_name)
+        if held and somewhere and travel is None:
+            # A firm rule on the drive, and nobody knows how far it is: worth a word.
+            soft = True
+            limit = constraints.max_travel_minutes
+            reasons.append(f"how far is unknown; {held} allows {limit} min")
         if travel is not None:
             minutes = travel
             checks.travel_minutes = minutes
@@ -261,7 +274,8 @@ def evaluate(
                 and minutes > constraints.max_travel_minutes
             ):
                 hard_fail = True
-                reasons.append("further than asked for")
+                out.append(f"further than {held} allows" if held else "further than asked for")
+                reasons.append(out[-1])
             elif fits and context.window is not None:
                 spans = [
                     d.longest
@@ -273,12 +287,15 @@ def evaluate(
                     checks.travel_fits = need <= max(spans)
                     if not checks.travel_fits:
                         hard_fail = True
-                        reasons.append("the drive plus the visit do not fit the free time")
+                        out.append("the drive plus the visit do not fit the free time")
+                        reasons.append(out[-1])
 
         if item.weather == "ok" and (idea.setting == "outdoor" or idea.weather != "any"):
             reasons.append("weather looks fine")
 
         verdict = "ruled_out" if hard_fail else ("possible" if soft else "good")
+        if hard_fail:
+            reasons = out + [reason for reason in reasons if reason not in out]
         candidates.append(
             Candidate(
                 idea_id=idea.id,

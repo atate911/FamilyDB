@@ -1,0 +1,356 @@
+{# Kitchen Table's parts (docs/STYLE.md; the class names are the design's STANDARD.md §2). Beside `_ui.html`, which the pages not yet moved to the new frame still use; the two become one when the last page moves. Icons are the design's own sprite (static/icons-kitchen.svg): beside words they are hidden from a screen reader, alone they get a label. #}
+
+{% macro icon(name, label=none, cls='', size='') -%}
+  <svg class="icon{{ ' icon--' ~ size if size }}{{ ' ' ~ cls if cls }}" focusable="false"
+    {%- if label %} role="img" aria-label="{{ label }}"{% else %} aria-hidden="true"{% endif %}>
+    <use href="{{ url_for('static', filename='icons-kitchen.svg') }}#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# FamilyDB's own mark, a monitor with a smile; the colours are the brand's, set in the stylesheet. `size` is '' or 'xs'. #}
+{% macro brand_mark(size='') -%}
+  <svg class="mark-fdb{{ ' mark-fdb--' ~ size if size }}" viewBox="0 0 32 32" aria-hidden="true"><rect class="mf__bg" width="32" height="32" rx="8"/><g class="mf__fg" transform="translate(4 4)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="13.5" rx="3.5"/><path d="M12 16.5V21M8.5 21h7M9 8.25v1.25M15 8.25v1.25M9 12.25c1.7 1.35 4.3 1.35 6 0"/></g></svg>
+{%- endmacro %}
+
+{# The cursor blinks four times as a page opens, then stays lit. #}
+{% macro wordmark(title) -%}
+  <b class="wm">{{ title }}<span class="wm__cur" aria-hidden="true"></span></b>
+{%- endmacro %}
+
+{# A person, by their colour slot (1 to 8, from the family's data, never by name). With no letter it is Everyone, the house; somebody not on the list has a letter and no colour (slot 0). The name is always written beside it, so the letter is decoration. `size` is '', 'sm' or 'lg'. #}
+{% macro avatar(slot, initial='', size='') -%}
+  <span class="av p{{ slot or 0 }}{{ ' av--' ~ size if size }}" aria-hidden="true">
+    {%- if initial %}{{ initial }}{% else %}{{ icon('home') }}{% endif -%}
+  </span>
+{%- endmacro %}
+
+{# A count with its word, loud only for what needs somebody now. `kind`: late, act, quiet or look. #}
+{% macro badge(kind, n, word) -%}
+  <span class="badge badge--{{ kind }}">{{ n }} {{ word }}</span>
+{%- endmacro %}
+
+{# The assistant's state, said the same in the sidebar and the phone's top bar. `pill` is `status.Pill`. #}
+{% macro health_pill(pill, href) -%}
+  <a class="pill-health{{ ' pill-health--' ~ pill.state if pill.state != 'ready' }}" href="{{ href }}" aria-label="{{ pill.long }}. See status and spending"><span class="long">{{ pill.long }}</span><span class="short">{{ pill.short }}</span></a>
+{%- endmacro %}
+
+{# How a thing stands: always words, never colour alone. `state`: ok, better, look, broken, off, when, been. #}
+{% macro tag(state, words, glyph=none) -%}
+  <span class="tag tag--{{ state }}">{% if glyph %}{{ icon(glyph) }}{% endif %}{{ words }}</span>
+{%- endmacro %}
+
+{# A neutral square for a destination or a kind. `tone` is '', ok, better, look, broken or vera. #}
+{% macro tile(glyph, tone='', size='') -%}
+  <span class="tile{{ ' tile--' ~ tone if tone }}{{ ' tile--' ~ size if size }}" aria-hidden="true">{{ icon(glyph) }}</span>
+{%- endmacro %}
+
+{# A row in a list of destinations (Settings, the account menu): a lead (a tile or an avatar), a title with one line under it, an optional tag or badge, and a chevron. `lead` and `trail` are written with {% set %} blocks. #}
+{% macro srow(href, title, line=none, lead=none, trail=none) -%}
+  <li><a class="srow" href="{{ href }}">
+    {{- lead if lead -}}
+    <span class="srow__text"><b>{{ title }}</b>{% if line %}<span>{{ line }}</span>{% endif %}</span>
+    {{- trail if trail -}}
+    <span class="srow__go">{{ icon('chev') }}</span></a></li>
+{%- endmacro %}
+
+{# The top of a page: a way back, the title and the one sentence under it, and actions on the right (the `call` block). `crumb` is (words, href). #}
+{% macro page_head(title, lede=none, crumb=none, overline=none) -%}
+  {% if crumb %}<a class="crumb" href="{{ crumb[1] }}">{{ icon('chevl', size='sm') }}{{ crumb[0] }}</a>{% endif %}
+  <div class="page-head">
+    <div>
+      {% if overline %}<p class="overline">{{ overline }}</p>{% endif %}
+      <h1>{{ title }}</h1>
+      {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
+    </div>
+    {%- if caller is defined %}<div class="head-actions">{{ caller() }}</div>{% endif %}
+  </div>
+{%- endmacro %}
+
+{# What the last form said, with a way to take it back when there is one. #}
+{# A form's notice; `undo` is the change it made, when that can be taken back (edits.undo), returning to `back`. #}
+{% macro flash(message, undo=none, back='/') -%}
+  <div class="banner banner--ok flash" role="status" tabindex="-1">
+    <span class="banner__ic">{{ icon('check') }}</span>
+    <p class="banner__text">{{ message }}</p>
+    {% if undo %}{{ undo_form(undo, back) }}{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro undo_form(target, back) -%}
+  <form class="undo-form" method="post" action="{{ url_for('edits.undo') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="target" value="{{ target }}" /><input type="hidden" name="back" value="{{ back }}" />
+    <button class="btn btn--quiet btn--sm" type="submit">Undo</button>
+  </form>
+{%- endmacro %}
+
+
+{# Vera: never drawn, only her screen, a small pane of glass with lines of light and her lit prompt. `size` is '', 'lg' or 'xl'; `state` is '' (ready), 'hello' (types in once, on Home), 'busy' (typing on a loop while she writes back) or 'off' (cannot answer). The drawings are the design's. #}
+{% macro vera_screen(size='', state='') -%}
+  {% set cls = 'vs' ~ (' vs--' ~ size if size) ~ (' vs--' ~ state if state) %}
+  {% if size == 'xl' -%}
+  <svg class="{{ cls }}" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true" focusable="false"><rect class="vs__bg" width="56" height="56" rx="14"/><rect class="vs__rim" x=".5" y=".5" width="55" height="55" rx="13.5"/><g class="vs__rows"><rect class="vs__r" x="10" y="9" width="20" height="4" rx="2.0"/><rect class="vs__r" x="33" y="9" width="12" height="4" rx="2.0"/><rect class="vs__r" x="10" y="16" width="11" height="4" rx="2.0"/><rect class="vs__r" x="24" y="16" width="18" height="4" rx="2.0"/><rect class="vs__r vs__r--new" x="10" y="23" width="16" height="4" rx="2.0"/><rect class="vs__r vs__r--new" x="29" y="23" width="8" height="4" rx="2.0"/></g><polyline class="vs__p" points="10.5,32.5 16.5,38.25 10.5,44" stroke-width="3"/><rect class="vs__c" x="21" y="31" width="9.5" height="14" rx="1"/></svg>
+  {%- elif size == 'lg' -%}
+  <svg class="{{ cls }}" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true" focusable="false"><rect class="vs__bg" width="40" height="40" rx="10"/><rect class="vs__rim" x=".5" y=".5" width="39" height="39" rx="9.5"/><g class="vs__rows"><rect class="vs__r" x="7" y="7" width="15" height="3" rx="1.5"/><rect class="vs__r" x="24" y="7" width="9" height="3" rx="1.5"/><rect class="vs__r" x="7" y="12" width="8" height="3" rx="1.5"/><rect class="vs__r" x="17" y="12" width="13" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="7" y="17" width="12" height="3" rx="1.5"/></g><polyline class="vs__p" points="7.5,23.5 12,27.75 7.5,32" stroke-width="2.25"/><rect class="vs__c" x="15.5" y="22.5" width="7" height="10.5" rx="1"/></svg>
+  {%- else -%}
+  <svg class="{{ cls }}" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="vs__bg" width="32" height="32" rx="8"/><rect class="vs__rim" x=".5" y=".5" width="31" height="31" rx="7.5"/><g class="vs__rows"><rect class="vs__r" x="6" y="6" width="12" height="3" rx="1.5"/><rect class="vs__r" x="20" y="6" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="6" y="11" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="14" y="11" width="10" height="3" rx="1.5"/></g><polyline class="vs__p" points="6.5,17.5 10.5,21.25 6.5,25" stroke-width="2"/><rect class="vs__c" x="13.5" y="16.75" width="6" height="9" rx="1"/></svg>
+  {%- endif %}
+{%- endmacro %}
+
+{# A plan's date: weekday, number, month. `now` is today's (lit); `size` is '', 'sm' or 'lg'. `parts` is `views.date_chip`. #}
+{% macro date_tile(parts, now=false, size='') -%}
+  {% if parts %}
+    <span class="dt{{ ' dt--now' if now }}{{ ' dt--' ~ size if size }}" aria-hidden="true"><span class="dt__wd">{{ parts.weekday }}</span><span class="dt__d">{{ parts.day }}</span><span class="dt__m">{{ parts.month }}</span></span>
+  {% endif %}
+{%- endmacro %}
+
+{# Who: each person's colour and letter, then the names in words. One person or several; Everyone is the house, on its own. #}
+{% macro people(who, words) -%}
+  {% if who | length == 1 and not who[0].initial -%}
+    <span class="person">{{ avatar(0, '', 'sm') }}<span>{{ words }}</span></span>
+  {%- else -%}
+    <span class="person"><span class="avs">{% for one in who %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor %}</span><span>{{ words }}</span></span>
+  {%- endif %}
+{%- endmacro %}
+
+{# One person beside a word or two, in a meta line (a to-do's owner). #}
+{% macro person(one) -%}
+  <span class="person">{{ avatar(one.slot, one.initial, 'sm') }}{{ one.name }}</span>
+{%- endmacro %}
+
+{# A to-do in a list: the tick (for whoever may tick it), what, who and when, how late. `compact` is Home's short row; `mine` a kid's own, which she ticks off herself and sees without an owner (and with who set it); `edit` adds the link to the to-do's own page. `back` is where a tick returns to. A done or cancelled one has no tick, only its mark. #}
+{% macro todo(row, back, compact=false, mine=false, edit=false) -%}
+  {% set open = row.status is not defined or row.status == 'open' %}
+  <li class="todo{{ ' todo--compact' if compact }}{{ ' todo--mine' if mine }}{{ ' todo--late' if row.late and not mine }}{{ ' todo--done' if row.status == 'done' }}" id="t-{{ row.id }}">
+    {% if not open -%}
+      <span class="tick tick--done" aria-hidden="true"><span>{{ icon('check' if row.status == 'done' else 'x') }}</span></span>
+    {%- elif visitor().may('change') or visitor().may('own_tasks') -%}
+    <form method="post" action="{{ url_for('edits.finish_task', task_id=row.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="once" value="{{ once_token() }}" />
+      <input type="hidden" name="revision" value="{{ row.revision }}" />
+      <input type="hidden" name="back" value="{{ back }}" />
+      <button class="tick" type="submit" aria-label="Mark done: {{ row.title }}"><span>{{ icon('check') }}</span></button>
+    </form>
+    {%- else -%}
+    <span></span>
+    {%- endif %}
+    <div>
+      <div class="todo__title">{{ row.title }}</div>
+      <div class="meta">
+        {%- if not mine %}{{ person(row.person) }}{% endif -%}
+        <span>{{ icon('clock') }}{{ row.when }}</span>
+        {%- if row.late %}<span class="late">{{ row.late }}</span>{% endif -%}
+        {%- if row.status == 'cancelled' %}<span>Cancelled</span>{% endif -%}
+        {%- if open and not compact and not mine %}
+          {%- if row.reminder %}<span>{{ icon('bell') }}Reminder {{ row.reminder }}{% if row.reminder_state %} · {{ row.reminder_state }}{% endif %}</span>
+          {%- else %}<span>{{ icon('belloff') }}No reminder</span>{% endif -%}
+        {%- elif open and mine and row.reminder %}<span>{{ icon('bell') }}Reminder {{ row.reminder }}</span>{% endif -%}
+        {%- if row.set_by %}<span>{{ row.set_by }}</span>{% endif -%}
+      </div>
+      {% if not compact and not mine %}
+        {% if row.notes %}<p class="small">{{ row.notes }}</p>{% endif %}
+        {% if row.window %}<p class="small muted">Preferred window: {{ row.window }}
+          {%- if row.nudge and row.nudge.on %} · {{ assistant }} brings it up on {{ row.nudge.on }}{% if row.nudge.last %}, last on {{ row.nudge.last }}{% endif %}
+          {%- elif row.nudge %} · not a day or part of the day {{ assistant }} can read, so it comes up only when asked about{% endif %}</p>{% endif %}
+        {% if row.repeats %}<p class="small muted">{{ row.repeats }}</p>{% endif %}
+      {% endif %}
+    </div>
+    {% if edit -%}
+      <a class="todo__edit" href="{{ url_for('web.edit_task', task_id=row.id) }}">{{ icon('edit', size='sm') }}<span class="lbl">Edit</span><span class="sr"> {{ row.title }}</span></a>
+    {%- else -%}
+      <span></span>
+    {%- endif %}
+  </li>
+{%- endmacro %}
+
+{# A new idea as a small row: its picture, its title, and how far it is or that it has not been looked up. #}
+{% macro idea_mini(idea, extra='') -%}
+  <a class="item item--boxed{{ ' ' ~ extra if extra }}" href="{{ url_for('web.idea', idea_id=idea.id) }}">
+    {{ tile(idea.glyph) }}
+    <span><span class="item__title">{{ idea.title }}</span>
+      <span class="meta">
+        {%- if idea.pending %}<span>Not looked up yet</span>
+        {%- elif idea.away %}<span>{{ icon('car') }}{{ idea.away }}</span>
+        {%- else %}<span>{{ idea.where or ('for ' ~ idea.who) }}</span>{% endif -%}
+      </span></span>
+    <span></span>
+  </a>
+{%- endmacro %}
+
+
+{# One message in the chat. Hers is on the left beside her screen; the family's carry their own colour and letter, and `mine` (the person looking) sits on the right, so side and mark tell them apart, not colour alone. `anchor` is the id the newest line carries. #}
+{# A reminder's buttons under her message, as forms (`presses`: Done, In an hour, Tomorrow, the words Telegram shows): Done ticks the task off, the others snooze it, at the revision it was drawn at. #}
+{% macro msg(line, mine=false, anchor=none, presses=()) -%}
+  {% if line.from_bot %}
+    <div class="msg msg--vera"{% if anchor %} id="{{ anchor }}"{% endif %}>
+      {{ vera_screen() }}
+      <div class="msg__bub">
+        <div class="msg__by">{{ line.who }} <time>{{ line.clock }}</time></div>
+        <div class="msg__text">{{ line.text }}</div>
+        {% if line.did %}<div class="msg__did">Used {{ line.did | join(', ') }}</div>{% endif %}
+        {% if visitor().may('change') or visitor().may('own_tasks') %}
+          {% for task in line.tasks or [] %}
+            <div class="msg__buttons">
+              {% if line.tasks | length > 1 %}<span class="msg__for">{{ task.title }}</span>{% endif %}
+              {% for action, label in presses %}
+                <form method="post" action="{{ url_for('edits.finish_task', task_id=task.id) if action == 'done' else url_for('edits.snooze_task', task_id=task.id) }}">
+                  <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                  <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="back" value="chat" />
+                  {% if action != 'done' %}<input type="hidden" name="when" value="{{ action }}" />{% endif %}
+                  <button class="btn btn--sm btn--quiet" type="submit">{{ label }}{% if line.tasks | length > 1 %}<span class="sr">: {{ task.title }}</span>{% endif %}</button>
+                </form>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        {% endif %}
+        {% if line.undo %}<div class="msg__buttons">{{ undo_form(line.undo, url_for('chat.show', _anchor='latest')) }}</div>{% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="msg msg--person p{{ line.slot }}{{ ' msg--mine' if mine }}{{ ' msg--failed' if line.failed }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
+      {{ avatar(line.slot, line.initial) }}
+      <div class="msg__bub">
+        <div class="msg__by">{{ line.who }} <time>{{ line.clock }}</time></div>
+        <div class="msg__text">{{ line.text }}</div>
+        {% if line.failed %}<div class="msg__fail">{{ icon('alert', size='sm') }}<span>This one didn’t go through.</span></div>{% endif %}
+      </div>
+    </div>
+  {% endif %}
+{%- endmacro %}
+
+{# The thread's last line while the newest message waits: her screen (typing while she writes back), her name, and the page's own words, with a way to look again that works with no script. #}
+{% macro msg_pending(name, state, text, link) -%}
+  <div class="msg msg--vera msg--pending" role="status">
+    {{ vera_screen('', 'busy' if state == 'thinking' else '') }}
+    <div class="msg__bub">
+      <div class="msg__by">{{ name }}</div>
+      {{ text }}{% if state == 'thinking' %}<span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>{% endif %}
+      <br><a href="{{ link }}">Check for her answer</a>
+    </div>
+  </div>
+{%- endmacro %}
+
+
+{# One plan in a list: its day, what and where and when, who it is for. `acts` adds the ways to move it or take it off the calendar (only with Google connected: it really changes the family calendar). #}
+{% macro plan(row, past=false, acts=false) -%}
+  <li class="plan{{ ' plan--past' if past }}"{% if row.anchor %} id="d-{{ row.day }}"{% endif %}>
+    {{ date_tile(row.chip, row.on_today, 'sm') }}
+    <div class="plan__body">
+      <h3 class="plan__title">{% if row.idea_id and row.linked %}<a href="{{ url_for('web.idea', idea_id=row.idea_id) }}">{{ row.title }}</a>{% else %}{{ row.title }}{% endif %}</h3>
+      <div class="meta">
+        <span class="sr">{{ row.short }}, </span>
+        <span>{{ row.when }}</span>
+        {%- if row.relative in ('today', 'tomorrow', 'now') %}<span class="tag tag--when">{{ icon('cal') }}{{ row.relative | capitalize }}</span>
+        {%- elif row.relative %}<span class="rel">{{ row.relative }}</span>{% endif -%}
+        {%- if row.status != 'confirmed' %}<span class="tag tag--off">{{ icon('offc') }}{{ row.status }}</span>{% endif -%}
+        {%- if row.from_google %}<span class="tag tag--off">added in Google</span>{% endif -%}
+        {%- if row.location %}<span>{{ icon('pin') }}{{ row.location }}</span>{% endif -%}
+        {%- if row.away %}<span>{{ icon('car') }}{{ row.away }}</span>{% endif -%}
+        {{ people(row.people, row.who) }}
+      </div>
+      {% if row.notes %}<p class="small muted mt-1">{{ row.notes }}</p>{% endif %}
+      {% if acts and row.id and row.status != 'cancelled' and visitor().may('change') %}
+        <div class="plan__acts">
+          <details class="mini-fold">
+            <summary>Move it</summary>
+            <form class="mini-fold__body" method="post" action="{{ url_for('edits.move_plan', plan_id=row.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <div class="field"><label class="field__label" for="start-{{ row.id }}">New time</label>
+                <input id="start-{{ row.id }}" name="start" type="datetime-local" required value="{{ row.start_value }}" /></div>
+              <label class="check"><input type="checkbox" name="all_day" value="yes"{{ ' checked' if row.all_day }} />All day</label>
+              <div class="actions"><button class="btn btn--primary btn--sm" type="submit">Move it</button></div>
+            </form>
+          </details>
+          {# Taking a plan off the calendar really removes the Google event, and without a script there is no dialogue to ask twice, so the button asks for itself. #}
+          <details class="mini-fold mini-fold--danger">
+            <summary>Cancel it</summary>
+            <form class="mini-fold__body" method="post" action="{{ url_for('edits.cancel_plan', plan_id=row.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <p class="small">This takes it off the family calendar for everyone.</p>
+              <button class="btn btn--danger btn--sm" type="submit">Yes, cancel it</button>
+            </form>
+          </details>
+        </div>
+      {% endif %}
+    </div>
+  </li>
+{%- endmacro %}
+
+{# "How did it go?" for one plan: three faces, each a word as well as a picture. They post to the idea's own outcome form, keeping the plan, and come back to `back`. #}
+{% macro faces(row, back, month='') -%}
+  <form method="post" action="{{ url_for('edits.record_outcome', idea_id=row.idea_id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="plan_id" value="{{ row.plan_id }}" /><input type="hidden" name="happened_on" value="{{ row.day }}" />
+    <input type="hidden" name="back" value="{{ back }}" />{% if month %}<input type="hidden" name="month" value="{{ month }}" />{% endif %}
+    <span class="faces">
+      <button class="face" type="submit" name="went" value="loved">{{ icon('smile') }}<span>Loved it</span><span class="sr"> ({{ row.title }})</span></button>
+      <button class="face" type="submit" name="went" value="ok">{{ icon('meh') }}<span>OK</span><span class="sr"> ({{ row.title }})</span></button>
+      <button class="face" type="submit" name="went" value="not-great">{{ icon('frown') }}<span>Not great</span><span class="sr"> ({{ row.title }})</span></button>
+    </span>
+  </form>
+{%- endmacro %}
+
+{# The two views of the ideas: all of them, and the restaurants. `current` is 'all' or 'restaurants'; the counts are of what this person may see. #}
+{% macro idea_tabs(current, total, restaurants) -%}
+  <div class="toolbar">
+    <nav class="seg" aria-label="Which ideas">
+      <a href="{{ url_for('web.ideas') }}"{% if current == 'all' %} aria-current="page"{% endif %}>All ideas <span class="n">{{ total }}</span></a>
+      <a href="{{ url_for('web.restaurants') }}"{% if current == 'restaurants' %} aria-current="page"{% endif %}>{{ icon('utensils', size='sm') }}Restaurants <span class="n">{{ restaurants }}</span></a>
+    </nav>
+  </div>
+{%- endmacro %}
+
+{# The tag on a present, which says whom it is kept from wherever it shows. #}
+{% macro surprise(words) -%}
+  <span class="tag tag--surprise">{{ icon('eyeoff') }}Surprise<span class="tag__more"> · hidden from {{ words }}</span></span>
+{%- endmacro %}
+
+{# One idea as a card (a compact row on the phone). `kid` is the plain card a kid sees: no who, no drive, no looking-up. #}
+{% macro idea_card(row, kid=false) -%}
+  <article class="idea{{ ' idea--kid' if kid }}{{ ' idea--unknown' if row.pending and not kid }}">
+    {{ tile(row.glyph) }}<span class="idea__kind">{{ row.kind_name }}</span>
+    <h3><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></h3>
+    {% if kid %}
+      {% if row.where or row.on %}<p class="idea__for">
+        {%- if row.where %}<span>{{ icon('pin', size='sm') }}{{ row.where }}</span>{% endif -%}
+        {%- if row.on %}<span>{{ icon('cal', size='sm') }}{{ row.on }}</span>{% endif -%}
+      </p>{% endif %}
+    {% else %}
+      <p class="idea__for"><span class="kindw">{{ row.kind_name }} · </span>
+        {%- if row.people | length == 1 and not row.people[0].initial %}{{ avatar(0, '', 'sm') }}
+        {%- else %}<span class="avs">{% for one in row.people %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor %}</span>{% endif -%}
+        <span>{{ row.who }}</span>
+        {%- if row.away %}<span class="drive phone-only"> · {{ row.away }}</span>
+        {%- elif row.pending %}<span class="drive phone-only"> · Not looked up yet</span>{% endif -%}
+      </p>
+    {% endif %}
+    {% if row.hidden or row.went or (row.on and not kid) or row.status in ('planned', 'dropped') %}
+      <div class="idea__tags">
+        {%- if row.hidden %}{{ surprise(row.hidden) }}{% endif -%}
+        {%- if row.status == 'planned' %}<span class="tag tag--ok">{{ icon('cal') }}Planned</span>{% endif -%}
+        {%- if row.on and not kid %}<span class="tag tag--when">{{ icon('cal') }}{{ row.on }}</span>{% endif -%}
+        {%- if row.went %}<span class="tag tag--been">{{ row.went }}</span>{% endif -%}
+        {%- if row.status == 'dropped' %}<span class="tag tag--off">Dropped</span>{% endif -%}
+      </div>
+    {% endif %}
+    {% if not kid %}
+      <p class="idea__foot">
+        {%- if row.away %}{{ icon('car') }}<span>{{ row.away }}</span>
+        {%- elif row.pending %}{{ icon('compass') }}<span>Not looked up yet</span>
+        {%- elif row.where %}{{ icon('pin') }}<span>{{ row.where }}</span>
+        {%- else %}{{ icon('compass') }}<span>{{ row.details }}</span>{% endif -%}
+      </p>
+    {% endif %}
+  </article>
+{%- endmacro %}
+
+{# The map of how far each idea is from home, drawn twice from the same data so names stay readable: wide for a desktop, narrow for a phone. `plot` is `views.places_map(...)["wide"]` or `["narrow"]`. #}
+{% macro map_plot(plot, which) -%}
+  <svg class="radar radar--{{ which }}" viewBox="0 0 {{ plot.width }} {{ plot.height }}" aria-hidden="true" focusable="false">
+    {%- for ring in plot.rings %}<circle class="ring" cx="{{ plot.cx }}" cy="{{ plot.cy }}" r="{{ ring.r }}"/><text class="rl" x="{{ ring.x }}" y="{{ ring.y }}" text-anchor="{{ ring.anchor }}">{{ ring.name }}</text>{% endfor -%}
+    <path class="axis" d="{{ plot.axis }}"/>
+    {%- for letter, x, y, anchor in plot.compass %}<text class="cp" x="{{ x }}" y="{{ y }}" text-anchor="{{ anchor }}">{{ letter }}</text>{% endfor -%}
+    <circle class="home" cx="{{ plot.cx }}" cy="{{ plot.cy }}" r="4"/><text class="hm" x="{{ plot.cx }}" y="{{ plot.cy + 20 }}" text-anchor="middle">Home</text>
+    {%- for dot in plot.dots %}<circle class="halo" cx="{{ dot.x }}" cy="{{ dot.y }}" r="7"/><circle class="dot" cx="{{ dot.x }}" cy="{{ dot.y }}" r="3.5"/><text class="nm" x="{{ dot.label_x }}" y="{{ dot.label_y }}" text-anchor="{{ dot.anchor }}">{{ dot.name }}</text>{% endfor -%}
+  </svg>
+{%- endmacro %}

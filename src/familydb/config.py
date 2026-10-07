@@ -26,7 +26,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from familydb.errors import ConfigError
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
-# How strong a model answers, in the order each company prices them (agent/providers/catalog.py).
+# Strength in the order each company prices them (agent/providers/catalog.py).
 Level = Literal["everyday", "better", "best"]
 ProviderName = Literal["anthropic", "openai", "gemini"]
 CacheTTL = Literal["5m", "1h"]
@@ -35,11 +35,9 @@ Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 Latitude = Annotated[float, Field(ge=-90, le=90)]
 Longitude = Annotated[float, Field(ge=-180, le=180)]
 
-# An empty line in .env (`HOME_LAT=`) says "I have not set this", not "the empty string": it is
-# what `cp .env.example .env` leaves behind, and what the installer leaves when a lookup
-# fails. Every such value is dropped before validation so the default applies. These few are the
-# exceptions, where empty is an answer in itself: no separate worker provider, no separate worker
-# model (use the chat one), no home area.
+# An empty line in .env (`HOME_LAT=`) means "not set", so the default applies; what `cp .env.example
+# .env` leaves behind. These are the exceptions where empty is an answer: no worker provider, no
+# worker model, no home area.
 EMPTY_MEANS_UNSET_EXCEPT = frozenset(
     {
         "worker_provider",
@@ -66,7 +64,6 @@ log = logging.getLogger(__name__)
 
 
 def _zone_or_none(value: str | None) -> str | None:
-    """An IANA zone name if `value` is one (a leading ':' is tolerated), else None."""
     if not value:
         return None
     candidate = value.strip().lstrip(":")
@@ -78,23 +75,17 @@ def _zone_or_none(value: str | None) -> str | None:
 
 
 class PersonaRewrite(BaseModel):
-    """One persona's character as the family rewrote it on the Personality page.
-
-    It belongs to the persona it rewrote and is laid over her alone: a rewrite of one is never
-    somebody else's character.
-    """
+    """One persona's character as the family rewrote it, laid over that persona alone."""
 
     model_config = ConfigDict(frozen=True)
 
-    # Her character as the family rewrote it, with {name} where her name goes.
     text: str = Field(max_length=20_000)
-    # Her own character as it shipped when they wrote it, so the page can tell when hers has
-    # changed since. Empty when that is not known, as in a rewrite an older version saved.
+    # Her own character as shipped when they wrote it, so the page can tell when hers has changed.
+    # Empty when not known (a rewrite an older version saved).
     of: str = Field(default="", max_length=40_000)
 
 
 def _field_names(cls: type[BaseSettings]) -> dict[str, str]:
-    """Every name a field answers to, lowercased, mapped to the field name itself."""
     names: dict[str, str] = {}
     for name, field in cls.model_fields.items():
         names[name.lower()] = name
@@ -107,44 +98,38 @@ def _field_names(cls: type[BaseSettings]) -> dict[str, str]:
 
 
 class Settings(BaseSettings):
-    """Runtime configuration. Field names double as environment variable names, any case."""
-
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore", validate_by_name=True
     )
 
-    # Who answers. `worker_provider` empty means the lookup and discovery turns use `provider`.
-    # GPT-6 Luna for both by default: the cheapest capable model any of the three offers.
+    # `worker_provider` empty means lookups and discovery use `provider`. GPT-6 Luna by default: the
+    # cheapest capable model of the three.
     provider: ProviderName = "openai"
     worker_provider: ProviderName | Literal[""] = ""
     provider_fallback: bool = True
-    # How strong a model answers each situation, whichever company it is. `everyday` is the
-    # company's model named below, its cheapest unless the family chose another; `better` and
-    # `best` are its stronger ones, from agent/providers/catalog.py.
-    chat_level: Level = "everyday"  # answering the family, and answering again after a failure
-    digest_level: Level = "everyday"  # the weekend digest: once a week, so a stronger one is cheap
-    lookup_level: Level = "everyday"  # looking ideas up, and searching for what is on
-    # A company's better and best models, in place of the lineup's (catalog.py): empty uses the
-    # lineup's. A judgement call may suggest new ones as the companies release them.
+    # Model strength per situation, whichever company: `everyday` is the company's model named
+    # below, `better` and `best` its stronger ones (catalog.py).
+    chat_level: Level = "everyday"
+    digest_level: Level = "everyday"
+    lookup_level: Level = "everyday"
+    # A company's better and best models in place of the lineup's; empty uses the lineup's.
     openai_better_model: str = ""
     openai_best_model: str = ""
     anthropic_better_model: str = ""
     anthropic_best_model: str = ""
     gemini_better_model: str = ""
     gemini_best_model: str = ""
-    # Judgement calls (familydb/judgement.py): when a change needs weighing (which model should
-    # take a going one's place, what an unreadable refusal means, which new models belong at
-    # which level, what a disputed price really is), a stronger model is asked, rarely, and what
-    # it says is checked by code and shown to admins. Off until the family turns it on; at most
+    # Judgement calls (judgement.py): a stronger model is asked, rarely, when a change needs
+    # weighing; code checks the answer and admins see it. Off until the family turns it on; at most
     # `judgement_budget` US$ a month, within the daily limit.
     judgements: bool = False
     judgement_level: Level = "best"
-    # What a judgement may do by itself: `within_cost` puts in a model it chose when it costs no
-    # more than the one it takes over from (judgement.SAME_COST), told to admins with a way to
-    # put it back; anything dearer, and everything under `suggest`, waits for an admin's press.
+    # `within_cost` puts in a model that costs no more than the one it replaces
+    # (judgement.SAME_COST); anything dearer, and everything under `suggest`, waits for an admin's
+    # press.
     judgement_acts: Literal["within_cost", "suggest"] = "within_cost"
     judgement_budget: float = Field(default=1.0, ge=0, le=50)
-    # Choosing what to suggest (suggest/choose.py): for a planning question or the weekend
+    # Choosing what to suggest (suggest/choosing.py): for a planning question or the weekend
     # digest, a stronger model is given everything the household knows that bears on it and
     # chooses the picks, which the chat model then words. At most `choose_budget` US$ a month,
     # within the daily limit; 0, or off, keeps the engine's own order. Never for a kid's
@@ -156,7 +141,6 @@ class Settings(BaseSettings):
     # Each re-sends the whole dossier at the strong level, so it stays small.
     choose_max_iterations: int = Field(default=2, ge=1, le=5)
 
-    # Each company's everyday models: its cheapest, for chat and for the lookups.
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-3.1-flash-lite"
     gemini_worker_model: str = "gemini-3.1-flash-lite"
@@ -167,76 +151,63 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-haiku-4-5"
-    # Who the assistant is to the family: a persona's folder in familydb/personas, or "none". Not
-    # empty for none: an empty setting means "the default" everywhere else, and would bring her
-    # back. `personas.active` reads it, and lays `persona_name`, `persona_text`, `persona_notes`
-    # and `voice_lines` over her own.
+    # A persona's folder in familydb/personas, or "none". Not empty for none: empty means "the
+    # default" everywhere else and would bring her back. `personas.active` lays the settings below
+    # over her own.
     persona: str = "default"
-    # What the family call her, from the Personality page; empty for her own name. It is theirs
-    # whoever she is, and with no persona it is kept but not used: the bot is FamilyDB then.
+    # What the family call her; empty for her own name. Kept but unused with no persona.
     persona_name: str = Field(default="", max_length=40)
-    # Her character as the family rewrote it on the Personality page, by persona key, so each
-    # rewrite is laid over the persona it was written for; a persona with none uses her own.
-    # Unparsed from the environment, because a plain string there is a rewrite, not JSON.
+    # Her character as rewritten, by persona key, so each rewrite is laid over the persona it was
+    # written for. Unparsed from the environment, because a plain string there is a rewrite, not
+    # JSON.
     persona_text: Annotated[dict[str, PersonaRewrite], NoDecode] = Field(default_factory=dict)
-    # The family's own notes on how she talks, from the Personality page, kept after her
-    # description: not a copy of hers, so they last when hers is improved or rewritten. Theirs
-    # whoever she is, and with no persona kept but not used.
+    # The family's notes on how she talks, kept apart from her description so they last when hers is
+    # improved. Kept but unused with no persona.
     persona_notes: str = Field(default="", max_length=1_000)
-    # Who the family are, in their own words, for every chat: ages, tastes, what to avoid.
     about_family: str = Field(default="", max_length=4_000)
-    # The family's own wording for what she says unasked, by event (voice.EVENTS); a line left
-    # out uses the persona's, and then the plain one. A string is one wording, line breaks and
-    # all, as older installs stored every line.
+    # The family's wording for what she says unasked, by event (voice.EVENTS); a missing line uses
+    # the persona's, then the plain one. A string is one wording, as older installs stored every
+    # line.
     voice_lines: dict[str, str | list[str]] = Field(default_factory=dict)
-    # Applies to whoever answers, so it is not named for one of them. Accepts ANTHROPIC_EFFORT,
-    # the name older .env files use.
+    # Applies to whoever answers. Accepts ANTHROPIC_EFFORT, the name older .env files use.
     effort: Effort = Field(
         default="medium", validation_alias=AliasChoices("EFFORT", "ANTHROPIC_EFFORT")
     )
-    # Named for no vendor, because it caps the answer on any of them. Accepts
-    # ANTHROPIC_MAX_TOKENS, the name older .env files use.
+    # Caps the answer on any vendor. Accepts ANTHROPIC_MAX_TOKENS, the name older .env files use.
     max_output_tokens: int = Field(
         default=16000,
         ge=256,
         le=64_000,
         validation_alias=AliasChoices("MAX_OUTPUT_TOKENS", "ANTHROPIC_MAX_TOKENS"),
     )
-    # Dollars a day across every model call, estimated from agent/providers/prices.py and checked
-    # before each call. Days are the family's. 0 turns the limit off.
+    # Dollars a day across every model call, estimated from prices.py and checked before each call.
+    # 0 turns the limit off.
     daily_spend_limit: float = Field(default=2.0, ge=0, le=500)
-    # Each kid's own share of the day, checked before each of her messages (docs/WISHES.md).
     kid_daily_spend: float = Field(default=0.25, ge=0, le=50)
-    # The kids' wish lists (docs/WISHES.md, wish_service.py, wording.py).
     wish_daily_count: int = Field(default=5, ge=1, le=50)
     occasion_list_size: int = Field(default=25, ge=1, le=100)
     parent_asks_per_week: int = Field(default=2, ge=0, le=14)
     wording_daily_after: int = Field(default=3, ge=1, le=20)
-    # Messages each kid may have answered by a model in a day, the family's day (roles.py says who
-    # is limited). Commands and buttons, which ask no model, do not count. 0 is no limit.
+    # Messages each kid may have answered by a model in a day (roles.py says who is limited).
+    # Commands and buttons ask no model, so do not count. 0 is no limit.
     kid_daily_messages: int = Field(default=0, ge=0, le=500)
-    # Tell every admin with a Telegram id when something only an admin can fix goes wrong: a
-    # company out of credit or refusing its key, the day's limit used up, Google shutting the
-    # bot out (alerts.py). No model call.
+    # Tell every admin with a Telegram id what only an admin can fix (alerts.py). No model call.
     admin_alerts: bool = True
-    # Once a day, ask each company which models the family's key can use and read two public
-    # price lists, so new models and new prices arrive without a new release, and admins hear
-    # what changed (model_watch.py, usage_watch.py). No model call.
+    # Once a day, ask each company which models the key can use and read two public price lists
+    # (model_watch.py, usage_watch.py). No model call.
     model_watch: bool = True
     anthropic_fallbacks: bool = True
-    # An hour, because a family writes in bursts with long gaps: a five-minute cache would be
-    # cold almost every time and the whole prefix would be paid for again.
+    # An hour, because a family writes in bursts: a five-minute cache would be cold almost every
+    # time.
     anthropic_cache_ttl: CacheTTL = "1h"
     agent_max_iterations: int = Field(default=8, ge=1, le=20)
     history_limit: int = Field(default=20, ge=0, le=200)
-    # The ideas list rides in the cached prompt on every message, so it cannot grow without end.
-    # Past this many, the oldest are left out and the model is told to search for them.
+    # The ideas list rides in the cached prompt on every message, so it cannot grow without end:
+    # past this many the oldest are left out and the model is told to search for them.
     prompt_idea_limit: int = Field(default=150, ge=0, le=5000)
     history_hours: float = Field(default=6.0, ge=0, le=720)
 
-    # Storage and home
     familydb_path: Path = Path("data/familydb.sqlite3")
-    # FAMILYDB_TZ, an IANA name. When unset, the OS TZ variable is used if it names a zone.
     family_tz: str | None = Field(default=None, validation_alias="FAMILYDB_TZ")
     _tz: str = PrivateAttr(default="UTC")
     home_lat: Latitude | None = None
@@ -244,50 +215,43 @@ class Settings(BaseSettings):
     home_area: str = ""
     weather_units: Literal["metric", "imperial"] = "metric"
 
-    # Optional services
     web_tools_enabled: bool = False
     telegram_bot_token: str | None = None
-    # In groups, only answer messages that mention the bot or reply to it.
-    # Seconds to wait before answering a message on Telegram, so that several sent one after
-    # another are answered together, in one turn and one reply (pipeline.receive). 0 answers
-    # each at once.
+    # Seconds to wait before answering on Telegram so several messages sent in a row get one turn
+    # and one reply (pipeline.receive). 0 answers each at once.
     gather_seconds: int = Field(default=4, ge=0, le=30)
     telegram_require_mention: bool = False
-    # What is only for one person (their own task's reminder, a note on the idea they added, how
-    # their plan went) goes to their own chat with her rather than the group it began in, when
-    # they have one (routing.py). Anything for everyone stays in the group.
+    # What is only for one person goes to them (routing.py): their own Telegram chat with her, else
+    # their conversation on the page, rather than the group, the page or the chat it began in.
     private_when_personal: bool = True
-    # Voice notes sent on Telegram are heard by a speech model, then answered as if typed
-    # (agent/gateway.listen). Claude hears nothing, so a family on Claude alone needs an OpenAI
-    # or Gemini key for them.
+    # The family's chat, where a reminder for everyone goes when it was not asked for in a group
+    # (routing.family_chat): a Telegram chat id, or "web" for the page. Unset: the weekend ideas'.
+    family_chat_id: str | None = None
+    # Voice notes are heard by a speech model, then answered as if typed (gateway.listen). Claude
+    # hears nothing, so a family on Claude alone needs an OpenAI or Gemini key.
     voice_notes: bool = True
-    # A longer one is not heard at all: every minute of it is paid for.
     voice_max_minutes: int = Field(default=5, ge=1, le=30)
-    # Who hears them. Empty: the chat company when it can, else another that can and has a key.
     transcribe_provider: Literal["", "openai", "gemini"] = ""
-    # Photos sent on Telegram are looked at by the lookup model, which writes down what they show
-    # (agent/gateway.look), and that is answered as if typed. The picture is not kept.
+    # Photos are looked at by the lookup model, which writes down what they show (gateway.look). The
+    # picture is not kept.
     photos: bool = True
     openai_transcribe_model: str = "gpt-4o-mini-transcribe"
-    # Empty hears with Gemini's lookup model.
     gemini_transcribe_model: str = ""
-    # Failed messages are retried this often, this many times.
     retry_interval_minutes: int = Field(default=5, ge=1, le=1440)
     retry_max_attempts: int = Field(default=3, ge=0, le=20)
 
-    # Enrichment, suggestions and scheduled prompts
     enrich_interval_minutes: int = Field(default=2, ge=1, le=1440)
-    # When ideas are looked up on the web: together each evening at lookup_hour, the family's
-    # time, with one note in each chat for what was found, or each as soon as it is added. Asked
-    # for now (look_up_now), one is looked up within enrich_interval_minutes either way.
+    # When ideas are looked up on the web: together each evening at lookup_hour, or each as soon as
+    # it is added. One asked for now (look_up_now) is looked up within enrich_interval_minutes
+    # either way.
     lookups_when: LookupsWhen = "evening"
     lookup_hour: int = Field(default=21, ge=0, le=23)
     enrich_batch: int = Field(default=3, ge=1, le=20)
     place_stale_days: int = Field(default=30, ge=1, le=3650)
     worker_max_iterations: int = Field(default=12, ge=1, le=30)
-    # Looking a place up and finding events are extraction jobs, not judgement calls, so they run
-    # with less thinking. `worker_model` is Anthropic's lookup model, as `openai_worker_model` and
-    # `gemini_worker_model` are the others'; empty uses `anthropic_model`.
+    # Lookups and discovery are extraction, not judgement, so they run with less thinking.
+    # `worker_model` is Anthropic's lookup model, as `openai_worker_model` and `gemini_worker_model`
+    # are the others'; empty uses `anthropic_model`.
     worker_model: str = "claude-haiku-4-5"
     worker_effort: Effort = "low"
     travel_speed_kmh: float = Field(default=50.0, gt=0, le=200)
@@ -296,13 +260,27 @@ class Settings(BaseSettings):
     digest_day: Weekday = "thu"
     digest_hour: int = Field(default=18, ge=0, le=23)
     follow_up_hour: int = Field(default=10, ge=0, le=23)
-    # Bring up a task kept for "some Saturday morning" when one comes round free (jobs/nudges.py).
     task_nudges: bool = True
-    # Ask, the day after a plan, how it went (jobs/follow_ups.py), at follow_up_hour.
+    # The nightly tidy (jobs/tidy.py): an idea whose dates are a week past leaves the list.
+    tidy_ideas: bool = True
+    # How many days a message keeps its words (jobs/tidy.py); 0 keeps them for good, the default
+    # and the family's to change (docs/DESIGN.md section 16).
+    keep_messages_days: int = Field(default=0, ge=0, le=36500)
+    # A place nothing saved fits, looked for on the web (suggest/places.py). Spending, so the
+    # family's to turn on (docs/DESIGN.md section 16): off until they do.
+    find_places: bool = False
     follow_ups: bool = True
-    # The evening before a plan, check its weather and hours (jobs/plan_checks.py), at this hour.
     plan_checks: bool = True
     plan_check_hour: int = Field(default=19, ge=0, le=23)
+    # The morning message (jobs/morning.py): each part on by default, the family's decision.
+    morning_hour: int = Field(default=7, ge=0, le=23)
+    morning_agenda: bool = True
+    chase_missed: bool = True
+    deadline_heads_up: bool = True
+    forgotten_roundup: bool = True
+    roundup_day: Weekday = "sun"
+    # "Vera has a message" on the phones and tablets of people who use only the page (push.py).
+    web_push: bool = True
     google_calendar_id: str | None = None
     google_key_path: Path = Path("data/google_key.json")
     enrichment_notes: bool = True
@@ -322,38 +300,33 @@ class Settings(BaseSettings):
     happening_refind_days: int = Field(default=30, ge=7, le=90)
     happening_budget: float = Field(default=1.0, ge=0, le=20)
 
-    # The web page (see familydb/web/). Off unless WEB_ENABLED is set.
     web_enabled: bool = False
     web_host: str = "127.0.0.1"
     web_port: int = Field(default=8080, ge=1, le=65535)
     web_password: str | None = None
-    # The family password as chosen on the page or by `familydb password`, hashed (see
-    # web/auth.py). Once there is one, WEB_PASSWORD opens nothing: that was the installer's,
-    # printed in a terminal.
+    # The family password as chosen on the page or by `familydb password`, hashed (web/auth.py).
+    # Once there is one, WEB_PASSWORD (the installer's) opens nothing.
     web_password_hash: str | None = None
     web_secret_key: str | None = None
     web_session_days: int = Field(default=30, ge=1, le=3650)
     web_allow_no_password: bool = False
     web_trust_proxy: bool = False
     web_title: str = "FamilyDB"
-    # A mic beside every box on the page that takes words: speaking fills the box, through the
-    # browser's own speech recognition (static/dictate.js). The sound goes from the browser to
-    # its maker (Apple for Safari, Google for Chrome), never through FamilyDB, and costs nothing.
-    # What leaves the house is the family's decision (docs/DESIGN.md section 16).
+    # A mic beside every box that takes words, through the browser's own speech recognition
+    # (static/dictate.js). The sound goes from the browser to its maker, never through FamilyDB:
+    # what leaves the house is the family's decision (docs/DESIGN.md section 16).
     web_dictation: bool = True
 
-    # Console and logging
     console_member: str | None = None
     log_level: str = "INFO"
-    # How OpenStreetMap's geocoder may reach whoever runs this install, sent with each lookup as
-    # its usage policy asks (an email address or a web page). Empty, none is sent: it is the
-    # operator's to give, since it leaves the house with every lookup.
+    # Sent with each OpenStreetMap geocoder lookup as its usage policy asks (an email address or a
+    # web page). Empty, none is sent: it leaves the house with every lookup, so it is the operator's
+    # to give.
     geocoder_contact: str = ""
 
     @model_validator(mode="before")
     @classmethod
     def _blank_means_unset(cls, data: Any) -> Any:
-        """Drop empty values so the default applies, as an unanswered question should."""
         if not isinstance(data, dict):
             return data
         names = _field_names(cls)
@@ -390,7 +363,6 @@ class Settings(BaseSettings):
     @field_validator("persona")
     @classmethod
     def _known_persona(cls, value: str) -> str:
-        """A persona's folder, or "none". Accepts `vera`, the key older installs stored for her."""
         from familydb import personas
 
         key = personas.key_for(value)
@@ -402,10 +374,11 @@ class Settings(BaseSettings):
     @field_validator("persona_name", mode="before")
     @classmethod
     def _one_plain_name(cls, value: Any) -> Any:
-        """A name as it is said: on one line, with no control characters, and no braces, since
-        it goes wherever {name} is written and a {name} inside it would be filled in again."""
+        """A name on one line, with no control characters and no braces, since {name} inside it
+        would be filled in again.
+        """
         if not isinstance(value, str):
-            return value  # pydantic says what is wrong with it
+            return value
         name = value.strip()
         if any(unicodedata.category(character) in ("Cc", "Zl", "Zp") for character in name):
             raise ValueError("her name goes on one line, with no control characters in it")
@@ -416,12 +389,11 @@ class Settings(BaseSettings):
     @field_validator("persona_text", mode="before")
     @classmethod
     def _rewrites_by_persona(cls, value: Any) -> Any:
-        """Each rewrite under the persona it belongs to, from any value ever stored or set.
+        """Each rewrite under the persona it belongs to.
 
-        Accepts a string that is not a JSON object, the form older installs stored, as a rewrite
-        of the default persona: a setting that fails to load takes every stored setting with it.
-        A key is read as the persona setting reads it, so "vera" is still her; one with no folder
-        is kept and never used, so removing a folder breaks nothing.
+        A string that is not a JSON object is the default persona's rewrite, as older installs
+        stored it: a setting that fails to load takes every stored setting with it. A key with no
+        folder is kept and never used.
         """
         from familydb import personas
 
@@ -436,7 +408,7 @@ class Settings(BaseSettings):
                 return {personas.DEFAULT: {"text": value}} if value.strip() else {}
             value = parsed
         if not isinstance(value, Mapping):
-            return value  # pydantic says what is wrong with it
+            return value
         rewrites: dict[str, Any] = {}
         for key, entry in value.items():
             if isinstance(entry, PersonaRewrite):
@@ -444,7 +416,7 @@ class Settings(BaseSettings):
             elif isinstance(entry, str) or entry is None:
                 entry = {"text": entry}
             if isinstance(entry, Mapping) and not str(entry.get("text") or "").strip():
-                continue  # nothing written is no rewrite
+                continue
             rewrites[personas.key_for(str(key))] = entry
         return rewrites
 
@@ -482,7 +454,6 @@ class Settings(BaseSettings):
 
     @property
     def tz(self) -> str:
-        """The resolved IANA zone name."""
         return self._tz
 
     @property
@@ -494,8 +465,6 @@ class Settings(BaseSettings):
         return self.home_lat is not None and self.home_lat < 0
 
     def masked(self) -> dict[str, Any]:
-        """All settings as a dict, a rewrite of her as one too, with secrets replaced by a marker,
-        plus the resolved zone."""
         out: dict[str, Any] = {}
         for name, value in self.model_dump().items():
             if name in SECRET_FIELDS and value:
@@ -506,7 +475,6 @@ class Settings(BaseSettings):
 
 
 def describe(exc: ValidationError) -> str:
-    """A validation failure as a person reading a journal wants it: which setting, and why."""
     lines = []
     for error in exc.errors():
         name = ".".join(str(part) for part in error["loc"]) or "setting"
@@ -515,11 +483,8 @@ def describe(exc: ValidationError) -> str:
 
 
 def load_settings(env_file: str | Path | None = ".env", **overrides: Any) -> Settings:
-    """Build settings from the environment, an optional .env file, and explicit overrides.
-
-    A value that will not validate is a configuration problem, not a programming one, so it
-    arrives as a ConfigError naming the setting. `apply_overrides` deliberately does not do
-    this: the settings page wants pydantic's own error to put against the right box.
+    """Build settings from the environment, an optional .env file and overrides; a bad value arrives
+    as a ConfigError naming the setting.
     """
     try:
         return Settings(_env_file=env_file, **overrides)
@@ -528,12 +493,11 @@ def load_settings(env_file: str | Path | None = ".env", **overrides: Any) -> Set
 
 
 def apply_overrides(base: Settings, values: dict[str, Any]) -> Settings:
-    """`base` with these values on top, validated as if they had been in the environment.
-
-    Raises pydantic's ValidationError when a value will not do, which is what the page shows.
+    """`base` with these values on top, validated; raises pydantic's ValidationError, which the page
+    puts against the right box.
     """
     if not values:
         return base
     merged = {**base.model_dump(), **values}
-    merged.pop("tz", None)  # a property, not a field
+    merged.pop("tz", None)
     return Settings(_env_file=None, **merged)

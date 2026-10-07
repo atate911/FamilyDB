@@ -136,7 +136,7 @@ def seed(conn) -> Household:
         )
         hike = idea("The falls hike", "outing", setting="outdoor", weather="dry", duration_min=180)
         cafe = idea("Board game cafe", "activity", setting="indoor", duration_min=120)
-        # How two of them went, for the dossier a stronger call chooses from (suggest/choose.py):
+        # How two of them went, for the dossier a stronger call chooses from (suggest/choosing.py):
         # a favourite, and one that was only so-so. Both long enough ago to be offered again.
         for done, day, rating, notes in (
             (sushi, "2026-06-12", 9, "the girls loved it"),

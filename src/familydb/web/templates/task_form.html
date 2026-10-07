@@ -1,0 +1,74 @@
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, avatar, page_head %}
+{% block title %}Edit a to-do · {{ site_title }}{% endblock %}
+{% block content %}
+  {{ page_head('Edit a to-do', task.title ~ ' · added' ~ (' by ' ~ made_by if made_by else '') ~ ' on ' ~ added, crumb=('To do', url_for('web.tasks'))) }}
+  {% if row.changed %}<p class="small muted">{{ row.changed }}</p>{% endif %}
+  <div class="idea-grid">
+    <form class="card form" method="post" action="{{ url_for('edits.edit_task', task_id=task.id) }}" aria-labelledby="h-edit" novalidate>
+      <h2 class="sr" id="h-edit">Edit</h2>
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+      <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="repeat_was" value="{{ row.repeat_was }}" />
+      <fieldset class="fieldset">
+        <legend>What needs doing</legend>
+        <div class="field"><label class="field__label" for="e-title">Title <span class="req">(required)</span></label><input id="e-title" type="text" name="title" value="{{ task.title }}" maxlength="200" required data-dictate /></div>
+        <div class="field"><label class="field__label" for="e-notes">Notes <span class="opt">(optional)</span></label><textarea id="e-notes" name="notes" rows="2" maxlength="4000" data-dictate>{{ task.notes }}</textarea></div>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>Who’s it for?</legend>
+        <div class="choices" role="radiogroup" aria-label="Who’s it for">
+          {# A to-do for nobody in particular keeps being so: an empty choice leaves who it is for as it is. #}
+          {% if not owner %}<label class="choice choice--person"><input type="radio" name="owner" value="" checked /><span>{{ avatar(0, '', 'sm') }}Everyone</span></label>{% endif %}
+          {% for one in people %}<label class="choice choice--person"><input type="radio" name="owner" value="{{ one.name }}"{% if owner and one.name == owner.name %} checked{% endif %} /><span>{{ avatar(one.slot, one.initial, 'sm') }}{{ one.name }}</span></label>{% endfor %}
+        </div>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>When, a reminder, repeats</legend>
+        <div class="form__row">
+          <div class="field"><label class="field__label" for="e-due">Deadline</label><input id="e-due" type="datetime-local" name="due_at" value="{{ row.due_input }}" aria-describedby="e-due-h" />
+            <span class="field__hint{{ ' late' if words.late }}" id="e-due-h">{% if words.late %}{{ words.late }}. Pick a new one, or empty it for no deadline.{% else %}Times use {{ zone }}. Empty it for no deadline.{% endif %}</span></div>
+          <div class="field"><label class="field__label" for="e-win">Preferred window</label><input id="e-win" type="text" name="preferred_window" maxlength="4000" placeholder="Some Saturday morning" value="{{ task.preferred_window }}" aria-describedby="e-win-h" />
+            <span class="field__hint" id="e-win-h">{{ assistant }} brings it up on that day.</span></div>
+        </div>
+        <div class="form__row">
+          <div class="field"><label class="field__label" for="e-rem">New reminder or snooze until</label><input id="e-rem" type="datetime-local" name="remind_at" aria-describedby="e-rem-h" />
+            <span class="field__hint" id="e-rem-h">Leave it blank to keep the one there is. {% if task.reminder %}Reminder now: {{ words.reminder }}.{% else %}No active reminder now.{% endif %}</span></div>
+          <div class="field"><label class="field__label" for="e-rep">Repeats</label>
+            <select id="e-rep" name="repeat">{% for value, label in row.repeat_options %}<option value="{{ value }}"{% if value == row.repeat_choice %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        </div>
+        <label class="check"><input type="checkbox" name="repeat_after_done"{% if task.repeat_from == 'done' %} checked{% endif %} />Count from when it’s done</label>
+        <p class="field__hint">A repeat starts from the reminder: every week from Sunday 19:00, say. Counted from when it’s done, it comes round that long after each time it is ticked off.</p>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>Done with it?</legend>
+        <div class="field"><label class="field__label" for="e-status">Status</label>
+          <select id="e-status" name="status">{% for value in ['open', 'done', 'cancelled'] %}<option value="{{ value }}"{% if value == task.status %} selected{% endif %}>{{ value | capitalize }}</option>{% endfor %}</select></div>
+        <label class="check"><input type="checkbox" name="clear_reminder" />Cancel the pending reminder</label>
+        <p class="field__hint">Completing or cancelling stops pending reminders; completing one that repeats records it and keeps it coming round. Reopening doesn’t restore them.</p>
+      </fieldset>
+
+      <div class="actions">
+        <button class="btn btn--primary" type="submit">{{ icon('check') }}Save changes</button>
+        <a class="linkbtn" href="{{ url_for('web.tasks') }}">Cancel</a>
+      </div>
+    </form>
+
+    <aside class="aside-stack" aria-label="About this to-do">
+      <section class="card" aria-labelledby="h-know2">
+        <h2 id="h-know2" class="card__head">Good to know</h2>
+        <ul class="tips">
+          <li>Ticking it off on the list does the same as setting it to Done here.</li>
+          <li>To-dos aren’t deleted: a cancelled one moves to “Cancelled”, and can be set back to Open.</li>
+          <li>If somebody changed it while you had it open, your save is refused, so reload and try again.</li>
+        </ul>
+      </section>
+      <section class="card" aria-labelledby="h-rem2">
+        <h2 id="h-rem2" class="card__head">{{ icon('bell') }}Reminders</h2>
+        <p class="small">A reminder goes to whoever it is for: their own Telegram chat with {{ assistant }} once they have started one, otherwise the chat here. One for everyone goes to the family’s chat.</p>
+      </section>
+    </aside>
+  </div>
+{% endblock %}

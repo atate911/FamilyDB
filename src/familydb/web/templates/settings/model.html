@@ -42,12 +42,10 @@
 <form method="post" action="{{ url_for('settings.save') }}">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="section" value="model" />
-  {# How strong a model answers each situation: each level says the model it means now. #}
   {{ group(groups.levels) }}
   <section class="panel" id="models">
     <h2>{{ models.group.title }}</h2>
     <p class="muted">{{ models.group.note }}</p>
-    {# The two at work first, the chat's and the lookups', then every other one, folded. #}
     <div class="grid">
       {% for key in in_use %}{% for one in models.boxes if one.field.key == key %}{{ box(one) }}{% endfor %}{% endfor %}
     </div>
@@ -72,9 +70,7 @@
   </div>
 </form>
 
-{# Who hears a voice note, if anyone does, and whether photos are looked at, with a Save of their
-   own, still for the same reason: floating, it would sit beside the models above, which it does
-   not save. #}
+{# Who hears a voice note and whether photos are looked at, with their own Save: floating, it would sit beside the models above, which it does not save. #}
 <form method="post" action="{{ url_for('settings.save') }}">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="section" value="model" />
@@ -86,8 +82,7 @@
   </div>
 </form>
 
-{# Every key at once: for a second company's, which is not checked or chosen, and for taking a
-   key away. Folded, since the key that matters is the one above. #}
+{# Every key at once, folded: for a second company's key and for taking one away. #}
 {% set ai_keys = keys.values() | rejectattr('key', 'in', ['telegram_bot_token', 'ticketmaster_api_key']) | list %}
 {# The form inside carries the address "Change a key" leads to, so a browser opens the fold. #}
 <details class="panel fold" id="all-keys"{% if ai_keys | selectattr('problem') | list %} open{% endif %}>

@@ -1,31 +1,24 @@
 """Judgement calls: a stronger model weighs a change code has narrowed to a few options.
 
-Most of keeping up with the companies is rules (model_watch.py): a price is taken when two lists
-agree, a model gone is replaced by the nearest in price. Some of it is judgement, which a rule
-does badly: which of several models suits the family's use best, what a refusal nobody can read
-means, which new model belongs at which level, what a price the lists disagree on really is. So
-code files a question when it sees such a change (`file_*`), with the facts it knows and the
-options it allows, and this job asks them.
+model_watch.py settles what rules settle (two lists agree on a price; a gone model is replaced by
+the nearest in price). The rest needs judgement: which of several models suits the family, what
+an unreadable refusal means, which new model belongs at which level, what a disputed price really
+is. Code files a question (`file_*`) with the facts and the options it allows, and this job asks
+them. The five answers of docs/AI_CALLS.md:
 
-Five answers (docs/AI_CALLS.md):
-
-1. Asked only while `judgements` is on, for a question filed by code, within `judgement_budget`
-   a month and the day's limit, and never on a day with none. Questions wait for the evening's
-   lookups (`lookup_hour`, or at once under `lookups_when` asap) and go together in one call;
-   only a refusal is asked at once, since the bot may be failing while it waits.
-2. It sees model names, prices, what the family's calls use a model for, and a refusal's status
-   and error text: never the family's messages. Nothing volatile goes in the cached prompt.
-3. It may only hand back: `give_judgement`, choosing among the options, or `report_price` for a
-   price, read from the company's own page (the one kind with the web, and at the lookup level,
-   since it is reading, not weighing).
-4. Its choice must be one of the options, checked by the tool; a price is taken only when it
-   matches one of the lists. What follows is code's: under `judgement_acts` "within_cost" a model
-   is put in by itself only when it costs no more than `SAME_COST` times the one it takes over
-   from; anything dearer is a suggestion with a button for an admin, and every change is told to
-   admins with a way to put it back (alert "advice").
-5. A cent or three a question on the best level; recorded under its kinds, `judge` and
-   `price_check`, like every call. Whether it chose well is for admins to see on the Status page,
-   where each question, its answer and what came of it are listed.
+1. Only while `judgements` is on, for a filed question, within `judgement_budget` a month and the
+day's limit. Questions wait for the evening's lookups (`lookup_hour`, or at once under
+`lookups_when` asap) and go in one call; a refusal is asked at once, since the bot may be failing
+meanwhile. 2. It sees model names, prices, what the calls use a model for, and a refusal's status
+and error text: never the family's messages. Nothing volatile in the cached prompt. 3. It may
+only hand back `give_judgement` (a choice among the options) or `report_price`, read from the
+company's own page (the one kind with the web, at the lookup level since it is reading, not
+weighing). 4. Its choice must be one of the options, checked by the tool; a price is taken only
+when it matches a list. What follows is code's: under `judgement_acts` "within_cost" a model goes
+in by itself only when it costs no more than `SAME_COST` times the one it replaces; anything
+dearer is a suggestion with an admin's button; every change is told to admins with a way to put
+it back (alert "advice"). 5. A cent or three a question on the best level, recorded under `judge`
+and `price_check` like every call; the Status page lists each question, answer and outcome.
 """
 
 from __future__ import annotations
@@ -55,20 +48,18 @@ from familydb.tools import ToolContext
 log = logging.getLogger(__name__)
 
 KINDS = ("judge", "price_check")
-# What a model may cost to be put in by itself: the same as the one it takes over from, give or
-# take a tenth. Dearer is the family's to choose.
+# What a model may cost to be put in by itself: the same as the one it replaces, give or take a
+# tenth. Dearer is the family's to choose.
 SAME_COST = 1.10
-# An urgent question not answered in this long is no longer about now; any is forgotten after
-# the second.
+# An urgent question not answered in this long is no longer about now; any is forgotten after the
+# second.
 URGENT_FOR = timedelta(days=2)
 FORGET_AFTER = timedelta(days=60)
-# Rough upper cost of one call, so the month's budget is not overrun by the last one.
 CALL_ALLOWANCE = 0.05
-MOST_PRICE_CHECKS = 2  # a run's lookups of disputed prices; the rest wait for the next
+MOST_PRICE_CHECKS = 2
 LEVELS_ASKED = ("everyday", "better", "best")
 MOST_OPTIONS = 8
-MOST_TRIES = 2  # a question asked this often with no answer coming back is let go
-# The settings each company's level is kept in: its everyday chat model, and the two above it.
+MOST_TRIES = 2
 LEVEL_KEYS = {
     "openai": ("openai_model", "openai_better_model", "openai_best_model"),
     "anthropic": ("anthropic_model", "anthropic_better_model", "anthropic_best_model"),
@@ -95,9 +86,6 @@ def _option(seen: Seen) -> dict[str, Any]:
     return facts
 
 
-# -- filing ------------------------------------------------------------------------------------
-
-
 def _file(
     conn: sqlite3.Connection,
     kind: str,
@@ -118,7 +106,6 @@ def _file(
 def file_replacement(
     conn: sqlite3.Connection, model: Seen, options: list[Seen], uses: list[str], at: str
 ) -> None:
-    """Which of these should take the place of a model in use that is going."""
     facts = {
         "company": model.provider,
         "model": model.model,
@@ -141,7 +128,8 @@ def file_lineup(
     at: str,
 ) -> None:
     """Which of a company's models belongs at each level, now that it has new ones. At most one
-    question a month for each company."""
+    question a month per company.
+    """
     from familydb import model_watch
     from familydb.agent import providers
 
@@ -161,7 +149,6 @@ def file_lineup(
     for level in LEVELS_ASKED:
         pool = offered
         if level == "everyday" and everyday is not None and everyday.output:
-            # Every message is answered at everyday: a dearer one is never offered for it.
             pool = [m for m in offered if (m.output or 0) <= SAME_COST * everyday.output]
         pool = sorted(pool, key=lambda m: (m.output or 0, m.model))[:MOST_OPTIONS]
         options = [m.model for m in pool]
@@ -178,7 +165,6 @@ def file_lineup(
 
 
 def file_price(conn: sqlite3.Connection, model: Seen, read: dict[str, Prices], at: str) -> None:
-    """What a model in use really costs, when the lists disagree or one leapt."""
     listed = {}
     for source, found in read.items():
         entry = found.get(model.provider, {}).get(model.model)
@@ -201,8 +187,7 @@ def file_refused(
     parts: tuple[str, ...],
     now: datetime,
 ) -> None:
-    """What a refusal nobody could read most likely is: asked at once, once a day at most for
-    each company."""
+    """What an unreadable refusal most likely is: asked at once, once a day at most per company."""
     facts = {
         "company": provider,
         "model": (model or "").lower(),
@@ -212,12 +197,10 @@ def file_refused(
     _file(conn, "refused", f"{provider}:{now.date().isoformat()}", facts, utc_iso(now), urgent=True)
 
 
-# -- asking --------------------------------------------------------------------------------------
-
-
 def _evening(settings: Any, now: datetime) -> str | None:
-    """The last evening lookup hour passed, as the enrichment job reads it: questions filed
-    before it are due. None when lookups go as they come, and so do these."""
+    """The last evening lookup hour passed, as the enrichment job reads it: questions filed before
+    it are due. None when lookups go as they come.
+    """
     if settings.lookups_when == "asap":
         return None
     zone = settings.tzinfo
@@ -247,7 +230,6 @@ def _room(conn: sqlite3.Connection, settings: Any, now: datetime) -> bool:
 
 
 def run_judgements(app: Any, *, api: MessagesAPI | None = None) -> dict[str, int]:
-    """The scheduler's job: ask what is due, if anything, and do what the answers allow."""
     counts = {"asked": 0, "answered": 0}
     with closing(app.connect()) as conn:
         app.refresh(conn)
@@ -280,7 +262,6 @@ def run_judgements(app: Any, *, api: MessagesAPI | None = None) -> dict[str, int
 
 
 def _names(question: store.Judgement) -> dict[str, list[str]]:
-    """The questions one filed question asks the model, by name, each with its options."""
     facts = question.facts
     if question.kind == "replacement":
         return {f"q{question.id}": [option["model"] for option in facts["options"]]}
@@ -295,7 +276,6 @@ def _names(question: store.Judgement) -> dict[str, list[str]]:
 def _weigh(
     app: Any, conn: sqlite3.Connection, questions: list[store.Judgement], *, api: Any
 ) -> int:
-    """Every due question in one call, and each answer applied."""
     asked: dict[str, list[str]] = {}
     listed = []
     for question in questions:
@@ -307,6 +287,7 @@ def _weigh(
         settings=app.settings,
         clock=app.clock,
         about=f"weighing {len(questions)} change{'s' if len(questions) != 1 else ''}",
+        source="job",
     )
     ctx.scratch["questions"] = asked
     request = "Answer each question with give_judgement, choosing among its options:\n" + to_json(
@@ -349,6 +330,7 @@ def _check_price(app: Any, conn: sqlite3.Connection, question: store.Judgement, 
         settings=app.settings,
         clock=app.clock,
         about=f"the price of {facts['model']}",
+        source="job",
     )
     ctx.scratch["price_of"] = facts["model"]
     company = alerts.COMPANY_NAMES.get(facts["company"], facts["company"])
@@ -380,7 +362,6 @@ def _check_price(app: Any, conn: sqlite3.Connection, question: store.Judgement, 
 def _no_answer(
     app: Any, conn: sqlite3.Connection, questions: list[store.Judgement], why: str
 ) -> None:
-    """Asked, and nothing to go on came back: again next evening, and after that let go."""
     at = utc_iso(app.clock.now())
     with transaction(conn):
         for question in questions:
@@ -393,9 +374,6 @@ def _no_answer(
                     outcome=f"no answer came back ({why[:120]}); the rule's choice stands",
                     now=at,
                 )
-
-
-# -- doing what the answer allows ----------------------------------------------------------------
 
 
 def _apply(
@@ -447,8 +425,9 @@ def _within_cost(conn: sqlite3.Connection, company: str, old: str, new: str) -> 
 
 
 class Done:
-    """What code made of one answer: in words, what it changed and what waits for an admin,
-    each as the settings they would be (kept with the answer, for the Status page's buttons)."""
+    """What code made of one answer: what it changed and what waits for an admin, each as the
+    settings they would be (kept for the Status page's buttons).
+    """
 
     def __init__(self, said: str, undo: dict[str, str] | None = None, waiting=None) -> None:
         self.said = said
@@ -457,8 +436,9 @@ class Done:
 
 
 def _put_in(app: Any, conn: sqlite3.Connection, values: dict[str, str]) -> dict[str, str]:
-    """Save settings a judgement may change by itself, logged as the judgement's. Returns what
-    each was before (empty for the default), to put back."""
+    """Save settings a judgement may change by itself, logged as the judgement's. Returns each one's
+    previous value (empty for the default), to put back.
+    """
     with transaction(conn):
         before = settings_store.overrides(conn)
         changed = settings_store.set_many(conn, values, source=SOURCE)
@@ -541,7 +521,6 @@ def _refused(conn: sqlite3.Connection, facts: dict[str, Any], choice: str, now: 
 def _settle_price(
     app: Any, conn: sqlite3.Connection, question: store.Judgement, found: dict[str, Any]
 ) -> None:
-    """Take the company's own price when it matches a list, and never otherwise."""
     from familydb import model_watch
 
     facts = question.facts

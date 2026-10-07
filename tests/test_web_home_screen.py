@@ -1,7 +1,8 @@
 """The page kept on a phone's home screen: the manifest, the icons and the tags that point at them.
 
-A phone asks for the manifest and the icons without the page's cookie, so they are served before
-anybody signs in. The icons are drawn by scripts/icons.py, and these hold the files to it.
+A phone asks for these without the page's cookie, so they are served before sign-in.
+scripts/icons.py draws the icons; these hold the files to it.
+
 """
 
 import importlib.util
@@ -98,22 +99,35 @@ def test_every_page_points_a_phone_at_the_manifest_and_the_icon(
     for page in (login, ideas):
         assert '<link rel="manifest" href="/manifest.webmanifest" />' in page
         assert re.search(
-            r'<link rel="apple-touch-icon" href="/static/apple-touch-icon.png\?v=\w+" />', page
+            r'<link rel="apple-touch-icon" href="/static/(?:brand/)?apple-touch-icon\.png'
+            r'(?:\?v=\w+)?" />',
+            page,
         )
         assert '<meta name="apple-mobile-web-app-title" content="The Tates" />' in page
         assert '<meta name="apple-mobile-web-app-capable" content="yes" />' in page
 
 
 def test_the_app_s_colours_are_the_page_s(settings, clock) -> None:
+    """The home screen opens charcoal, from the icon to the manifest's splash, and Phosphor, the
+    look that is charcoal, wears the same: the manifest's colour, the browser bar's and the page's
+    own. (The page's default is Kitchen Table, held to its CSS in test_look.py; the icon and the
+    manifest follow it when the brand's own icons replace these, in the clean-up.)
+    """
     manifest = _manifest(_client(settings, clock, web_password=PASSWORD))
-    base = (STATIC.parent / "templates" / "base.html").read_text()
-    theme = re.search(r'<meta name="theme-color" content="(#[0-9a-f]{6})"', base)
-    background = re.search(r"--bg: (#[0-9a-f]{6});", (STATIC / "style.css").read_text())
-    assert theme and background
-    assert manifest["theme_color"] == manifest["background_color"] == theme[1] == background[1]
+    client = _client(settings, clock, web_password=PASSWORD)
+    client.set_cookie("fdb_look", "phosphor.auto")
+    page = client.get("/login").text
+    theme = re.search(r'<meta name="theme-color" content="(#[0-9a-f]{6})"', page)
+    block = re.search(
+        r'\[data-theme="phosphor"\] \{.*?--paper: (#[0-9a-f]{6});',
+        (STATIC / "themes.css").read_text(),
+        re.S,
+    )
+    assert theme and block
+    assert manifest["theme_color"] == manifest["background_color"] == theme[1] == block[1]
     # The icon's ground too, so opening the app is one colour from the icon to the page.
     _, _, _, pixels = _png((STATIC / "apple-touch-icon.png").read_bytes())
-    assert pixels[1:4] == bytes.fromhex(background[1][1:])
+    assert pixels[1:4] == bytes.fromhex(block[1][1:])
 
 
 def test_the_icons_are_the_ones_the_script_draws() -> None:

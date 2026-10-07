@@ -63,9 +63,9 @@ def keep_umask() -> Iterator[None]:
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
-    # Pinned to Claude because the scripted fake in tests/fakes.py speaks its API; the default
-    # provider is OpenAI and has tests of its own. On Opus, whose requests carry thinking, effort
-    # and the refusal fallback, rather than on Claude's cheapest, which carries none of them.
+    # Pinned to Claude because the scripted fake in tests/fakes.py speaks its API (the default
+    # provider, OpenAI, has tests of its own), on Opus, whose requests carry thinking, effort and
+    # the refusal fallback.
     return Settings(
         _env_file=None,
         provider="anthropic",

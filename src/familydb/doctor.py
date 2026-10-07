@@ -1,11 +1,9 @@
 """One command that answers "is this install right, and if not what is wrong?"
 
-Every check returns a line with a verdict, a sentence saying what was found, and, when something
-is wrong, the one thing to do about it. Checks are ordered the way an install goes, so the first
-failure is usually the cause of the rest.
-
-Nothing here reaches the network unless `online` is set: a first install is often done before any
-key exists, and a check that hangs on a firewall is worse than no check at all.
+Each check gives a verdict, what was found and, when wrong, the one thing to do. Ordered as an
+install goes, so the first failure is usually the cause of the rest. Nothing reaches the network
+unless `online` is set: a first install is often done before any key exists, and a check that
+hangs on a firewall is worse than none.
 """
 
 from __future__ import annotations
@@ -35,15 +33,11 @@ from familydb.store import db, members
 OK = "ok"
 WARN = "warn"
 FAIL = "fail"
-# A check that could not run, usually because an earlier one failed. Not a failure of its own.
 SKIP = "skip"
-# Not done yet, and not a fault: on a new install, what the web page's setup does next.
 TODO = "todo"
 
 MARKS = {OK: "✓", WARN: "!", FAIL: "✗", SKIP: "·", TODO: "→"}
-# What a new install has not done yet by design, because the page's setup does it.
 NEW_INSTALL_STEPS = {"family": "Add yourself", "model key": "Connect an AI model"}
-# Roughly what the install needs, plus room for the database to grow and a backup beside it.
 FREE_MB_WANTED = 500
 KEY_FIELDS = {
     "anthropic": ("anthropic_api_key", "ANTHROPIC_API_KEY"),
@@ -54,13 +48,10 @@ KEY_FIELDS = {
 
 @dataclass
 class Check:
-    """One thing that was looked at."""
-
     name: str
     verdict: str
     detail: str
     fix: str = ""
-    # Set when `--fix` could put this right by itself, and did.
     corrected: str = ""
 
     def as_dict(self) -> dict[str, Any]:
@@ -118,7 +109,6 @@ def _mode(path: Path) -> int | None:
 
 
 def _port_answers(host: str, port: int, timeout: float = 1.0) -> bool:
-    """Whether something is already listening there. A bound port is the page already serving."""
     reachable = "127.0.0.1" if host in {"", "0.0.0.0", "::"} else host
     try:
         with socket.create_connection((reachable, port), timeout=timeout):
@@ -251,7 +241,6 @@ def check_family(
         report.add("family", OK, f"{len(everyone)} member(s), {len(admins)} admin(s)")
     reachable = [m for m in everyone if m.channel and m.channel_user_id]
     if not reachable and telegram:
-        # Only Telegram needs ids: the web page knows who is writing without one.
         report.add(
             "family on a channel",
             WARN,
@@ -299,15 +288,15 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
             f"the digest on {digest_model} via {digest.name}; "
             f"lookups on {worker_model} via {worker.name}",
         )
-    except Exception as exc:  # a provider that will not build is a configuration problem
+    except Exception as exc:
         report.add("models", FAIL, f"could not build a provider: {exc}", "familydb config")
         return
 
     if not online:
         report.add("model reachable", SKIP, "not asked; pass --online to check the key")
         return
-    # The same question `debug validate-tools` asks: count the tokens of a full request. It
-    # validates the key and every tool schema without generating anything, so it is free.
+    # The same as `debug validate-tools`: counting a full request's tokens validates the key and
+    # every tool schema for free.
     from familydb.agent.providers.base import Message, TurnRequest
 
     everything = app.registry.tool_defs(app.registry.names())
@@ -378,13 +367,13 @@ def check_channels(app: App, report: Report, *, online: bool) -> None:
             report.add("telegram live", WARN, f"could not reach Telegram: {exc}")
 
 
-# What a link may answer and still be there: a page behind a sign-in says 401 or 403.
 LINK_THERE = frozenset({401, 403, 405})
 
 
 def check_links(report: Report, fetch: Any = None) -> None:
-    """Whether every page outside FamilyDB the page links to still answers (web/links.py), and
-    where one that moved to another site now is. Online only: it asks each once."""
+    """Whether every outside page the web page links to (web/links.py) still answers, and where a
+    moved one now is. Online only.
+    """
     from urllib.parse import urlparse
 
     from familydb.web.links import LINKS
@@ -507,8 +496,8 @@ def check_web(app: App, report: Report, conn: sqlite3.Connection | None = None) 
             "WEB_ENABLED=true, then restart",
         )
         return
-    # Asked as the page asks it before it serves: people with passwords of their own need no
-    # shared one. A database that cannot say is asked as if nobody had one, which asks for more.
+    # Asked as the page asks before serving: people with their own passwords need no shared one. A
+    # database that cannot say is asked as if nobody had one.
     try:
         personal = conn is not None and own_passwords(conn)
     except sqlite3.Error:
@@ -566,8 +555,38 @@ def check_web(app: App, report: Report, conn: sqlite3.Connection | None = None) 
         )
 
 
+def check_backups(app: App, report: Report, conn: sqlite3.Connection | None) -> None:
+    """When the last good backup was made (familydb/upkeep.py has the rule)."""
+    from familydb import upkeep
+    from familydb.store import backups
+
+    if conn is None:
+        return
+    try:
+        good = backups.latest(conn, good=True)
+        trouble = upkeep.backup_trouble(conn, app.clock.now())
+    except sqlite3.OperationalError:
+        report.add("backups", SKIP, "the database is not up to date yet")
+        return
+    if trouble:
+        report.add(
+            "backups",
+            WARN,
+            trouble,
+            "sudo crontab -u root -l, then scripts/maintain.sh backup (RUNBOOK section 7)",
+        )
+    elif good is None:
+        report.add(
+            "backups",
+            WARN,
+            "none recorded",
+            "sudo scripts/maintain.sh schedule-backups (RUNBOOK section 7)",
+        )
+    else:
+        report.add("backups", OK, f"the last good one {good.made_at[:16].replace('T', ' ')} UTC")
+
+
 def check_service(report: Report) -> None:
-    """Whether systemd knows about this install. Absent is fine; broken is worth saying."""
     unit = Path("/etc/systemd/system/familydb.service")
     if not unit.exists():
         report.add(
@@ -601,10 +620,8 @@ def check_service(report: Report) -> None:
 
 
 def correct(app: App, report: Report) -> None:
-    """Put right the few things that can be put right without a decision.
-
-    Deliberately narrow. Anything that needs a key, a password or a judgement is left alone:
-    a repair that guesses is worse than a warning that is honest.
+    """Put right the few things that need no decision. Deliberately narrow: anything needing a key,
+    password or judgement is left alone, since a guessing repair is worse than an honest warning.
     """
     for check in report.checks:
         if check.verdict not in (FAIL, WARN):
@@ -637,7 +654,6 @@ def correct(app: App, report: Report) -> None:
 
 
 def run(app: App, *, online: bool = False) -> Report:
-    """Look at everything, in the order an install happens. Never raises."""
     report = Report()
     check_settings(app, report)
     conn = check_database(app, report)
@@ -647,6 +663,7 @@ def run(app: App, *, online: bool = False) -> Report:
         check_channels(app, report, online=online)
         check_integrations(app, report)
         check_web(app, report, conn)
+        check_backups(app, report, conn)
         if online:
             check_links(report)
         check_service(report)
@@ -657,8 +674,9 @@ def run(app: App, *, online: bool = False) -> Report:
 
 
 def as_new_install(report: Report) -> Report:
-    """The same findings, read as the end of an install: nobody on the list and no model key are
-    the page's first setup steps, not faults. Everything else keeps its verdict."""
+    """The same findings read as the end of an install: nobody on the list and no model key are the
+    page's first setup steps, not faults.
+    """
     for check in report.checks:
         if check.verdict == FAIL and check.name in NEW_INSTALL_STEPS:
             check.verdict = TODO
@@ -667,7 +685,6 @@ def as_new_install(report: Report) -> Report:
 
 
 def verdict(report: Report) -> str:
-    """The one line somebody reads first."""
     if not report.failures and any(check.verdict == TODO for check in report.checks):
         return "It is running. The rest is set up on the web page, which walks you through it."
     if report.failures:

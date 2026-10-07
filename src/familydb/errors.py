@@ -22,13 +22,11 @@ class ConfigError(FamilyDBError):
 class AgentError(FamilyDBError):
     """The model call failed. `retryable` says whether a later attempt may succeed.
 
-    `trouble` names a failure only an admin can fix, as the provider module read it: "credit",
-    the company's account is out of credit or over its quota; "key", the company refused the
-    key; "model", the company does not have the model asked for (retired, or mistyped);
-    "refused", the company refused the request for a reason the provider module cannot name
-    (a 4xx it does not know), which may be a change on the company's side. All are worth telling
-    an admin (alerts.py); all but "refused" are worth asking the other company instead, since a
-    request refused as it was sent may fail the same way anywhere.
+    `trouble` names a failure only an admin can fix, as the provider module read it: "credit"
+    (out of credit or quota), "key" (key refused), "model" (the company lacks the model: retired
+    or mistyped), "refused" (a 4xx the module cannot name, maybe a change on the company's side).
+    All are told to admins (alerts.py); all but "refused" are worth asking the other company
+    instead, since a request refused as sent may fail the same way anywhere.
     """
 
     def __init__(

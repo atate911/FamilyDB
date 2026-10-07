@@ -8,6 +8,7 @@ from familydb.free_time import free_blocks, on_day
 from familydb.integrations.google_calendar import CalendarEvent, event_body, parse_event
 from familydb.store import ideas, messages, plans
 from familydb.tools import ToolContext, ToolRegistry
+from familydb.tools.gcal import KEPT_HERE
 from tests import fakes
 from tests.conftest import NOW_ISO, TZ, call
 
@@ -124,7 +125,42 @@ def test_calendar_tools_report_unavailable_without_a_client(
         calendar=fakes.FakeCalendar(TZ),
     )
     result, data = _call(registry, plain, "get_calendar", start="2026-09-26", end="2026-09-27")
-    assert not result.is_error and data["available"] is False  # settings say not configured
+    # Settings say no Google calendar: the plans kept here are the calendar, not the client.
+    assert not result.is_error and data["calendar"] is None and data["plans"] == KEPT_HERE
+
+
+def test_without_google_a_plan_is_kept_here_and_goes_on_it_once_connected(
+    registry, conn, settings, calendar_settings, clock, family
+) -> None:
+    """No Google calendar: a plan is still made, seen, moved and cancelled, here, holding the id
+    its event will have. Once a calendar is connected, the plans still to come go on it with that
+    id, once; and a plan on Google is not changed here alone while Google cannot be reached."""
+    here = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    _, made = _call(registry, here, "create_event", title="Symphony", start="2026-09-26T20:00")
+    plan = made["plan"]
+    assert made["calendar"] == KEPT_HERE
+    assert plan["calendar_id"] is None and plan["google_event_id"]
+    _, seen = _call(registry, here, "get_calendar", start="2026-09-26", end="2026-09-26")
+    [event] = seen["days"][0]["events"]
+    assert (event["title"], event["plan_id"]) == ("Symphony", plan["id"])
+    assert "evening" not in seen["days"][0]["free"]  # the plan takes the evening up
+    _, moved = _call(registry, here, "update_event", plan_id=plan["id"], start="2026-09-27T20:00")
+    assert moved["plan"]["start"].startswith("2026-09-27T20:00")
+    _, gone = _call(registry, here, "create_event", title="Zoo", start="2026-09-28T10:00")
+    _call(registry, here, "update_event", plan_id=gone["plan"]["id"], status="cancelled")
+
+    calendar = fakes.FakeCalendar(TZ)
+    there = _ctx(conn, calendar_settings, clock, family, calendar)
+    _call(registry, there, "search_plans", query="")  # looking puts it on Google first
+    stored = plans.get(conn, plan["id"])
+    assert stored.calendar_id == calendar_settings.google_calendar_id
+    assert [e.title for e in calendar.events.values()] == ["Symphony"]  # not the cancelled one
+    _call(registry, there, "search_plans", query="")
+    assert len(calendar.events) == 1  # once
+
+    result, data = _call(registry, here, "update_event", plan_id=plan["id"], title="Symphony!")
+    assert not result.is_error and data["available"] is False
+    assert "not connected now" in data["reason"]
 
 
 def test_create_event_links_idea_and_stores_plan(
@@ -417,7 +453,7 @@ def test_create_event_records_the_originating_chat(
     assert data["plan"]["channel"] == "telegram" and data["plan"]["chat_id"] == "-100"
 
 
-# --- calendar writes safe to repeat, and Google's own dates ------------------------------------
+# --- calendar writes safe to repeat, and Google's own dates
 
 
 def test_lost_calendar_response_reuses_persisted_identity_after_context_restart(env):
@@ -486,9 +522,9 @@ def test_the_calendar_tool_names_the_plan_behind_each_event_and_reads_google_s_d
 
 
 def test_reading_the_calendar_rewrites_nothing_that_did_not_change(env):
-    """Plans are stored to the minute with their offset, so Google's own spelling of the same
-    time, seconds included, is no change: counting it as one would rewrite every plan on every
-    read."""
+    """Plans are stored to the minute with their offset, so Google's spelling of the same time,
+    seconds included, is no change.
+    """
     _, timed = call(env, "create_event", title="Museum", start="2026-09-26T10:00")
     _, whole = call(env, "create_event", title="Camping", start="2026-10-03", end="2026-10-04")
     before = {p["plan"]["id"]: plans.get(env.conn, p["plan"]["id"]) for p in (timed, whole)}
@@ -556,7 +592,7 @@ def test_the_page_asks_google_at_most_once_a_minute_and_sees_the_bot_s_writes_at
     assert client.recent_events(start, end) == ["third"]
 
 
-# --- keeping plans in step with Google: one request, then only what changed --------------------
+# --- keeping plans in step with Google: one request, then only what changed
 
 
 def _plan_with_idea(env, title="Museum", start="2026-09-26T10:00"):
@@ -680,7 +716,7 @@ def test_google_changes_starts_again_when_the_token_is_too_old():
     assert result.full and result.token == "t9"
 
 
-# --- a form drawn again after a lost reply finds the event Google may already have made ----------
+# --- a form drawn again after a lost reply finds the event Google may already have made
 
 
 def _with_session(env, session, operation):

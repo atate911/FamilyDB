@@ -1,12 +1,11 @@
 """Task rules and atomic writes, shared by model tools and browser forms.
 
-A task can come round again: every so many days, weeks, months or years, either on a schedule
-("bins out every Sunday at 19:00", counted from its first reminder) or counted from when it was
-last done ("the dentist six months after the last visit"). Done on a repeating task records this
-time round rather than ending it; cancelling ends it. A scheduled one's next reminder is added as
-each is sent (`schedule_next`), and one counted from done gets its next when it is done. Times go
-on in the family's wall time, from the first one, so a reminder keeps its hour when the clocks
-change and one on the 31st stays on the last day of a shorter month, rather than drifting.
+A task may repeat every so many days, weeks, months or years, on a schedule counted from its
+first reminder or counted from when last done. Done on a repeating task records this time round
+rather than ending it; cancelling ends it. A scheduled task's next reminder is added as each is
+sent (`schedule_next`), one counted from done gets its next when done. Times go on in the
+family's wall time from the first one, so a reminder keeps its hour across clock changes and one
+on the 31st stays on the last day of a shorter month.
 """
 
 from __future__ import annotations
@@ -16,19 +15,17 @@ from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from typing import Any
 
-from familydb import audience, voice
+from familydb import audience, plan_service, presents, routing, voice
 from familydb.dates import utc_iso
 from familydb.errors import ToolError
-from familydb.store import ideas, members, messages, tasks, wishes
+from familydb.store import ideas, members, messages, plans, tasks, wishes
 from familydb.store.db import transaction
 from familydb.store.ideas import Idea
 from familydb.store.tasks import Task
 
-# A reminder queued later than this after its time says when it was due.
 LATE_AFTER = timedelta(minutes=10)
 UNITS = ("day", "week", "month", "year")
 FROM = ("schedule", "done")
-# Far enough for "every 18 months" or "every 52 weeks"; further is a slip of the tongue.
 MOST_EVERY = 400
 NEEDS_FIRST = "A repeating task needs the time of its first reminder."
 
@@ -72,8 +69,9 @@ def create(
     now: str,
     repeat: dict[str, Any] | None = None,
 ) -> Task:
-    """A new task. `repeat` (repeat_every, repeat_unit, repeat_from) makes it come round again,
-    counted from its first reminder, which it then needs."""
+    """A new task; `repeat` (repeat_every, repeat_unit, repeat_from) makes it come round again,
+    counted from its first reminder, which it then needs.
+    """
     with transaction(conn):
         previous = tasks.find_by_operation(conn, operation_key)
         if previous:
@@ -98,6 +96,10 @@ def create(
             now=now,
             repeat=columns,
             gift_for=values.get("gift_for"),
+            created_by_member_id=values.get("created_by_member_id"),
+            plan_id=values.get("plan_id"),
+            plan_remind=values.get("plan_remind"),
+            window_until=values.get("window_until"),
         )
         if reminder:
             tasks.add_reminder(conn, task_id, reminder)
@@ -117,9 +119,10 @@ def update(
     repeat: dict[str, Any] | None = None,
     stop_repeating: bool = False,
 ) -> Task:
-    """Change a task. `repeat` sets how it comes round again, from `reminder` if one is given,
-    else from its reminder now; `stop_repeating` makes it a one-off. A plain new `reminder` on a
-    repeating task is a snooze of this time round, and leaves its schedule where it was."""
+    """Change a task. `repeat` sets how it comes round, from `reminder` if given, else its reminder
+    now; `stop_repeating` makes it a one-off. A plain new `reminder` on a repeating task snoozes
+    this time round only.
+    """
     zone = settings.tzinfo if settings is not None else UTC
     with transaction(conn):
         current = tasks.get(conn, task_id)
@@ -139,20 +142,17 @@ def update(
                 raise ToolError(NEEDS_FIRST)
             columns = _repeat_columns(repeat, anchor=anchor)
         rule = None if stop_repeating else (columns or _rule_of(current))
-        # Done with this time round, not with the task: recorded, and it comes round again.
         round_done = values.get("status") == "done" and rule is not None
         if round_done:
             values = {**values, "status": "open"}
         resulting_status = values.get("status", current.status)
         if reminder and resulting_status != "open":
             raise ToolError("Reopen the task before setting a reminder.")
-        # Nothing changes while a reminder is being sent: the change could cancel or reword it.
         if tasks.reminder_in_flight(conn, task_id, now):
             raise ToolError("A reminder is being delivered. Try again in a moment.")
         if reminder and current.reminder and reminder == current.reminder.remind_at:
             replace_reminder = False
         if round_done and not reminder and rule is not None and rule["repeat_from"] == "done":
-            # Counted from now: the next time round replaces whatever was waiting.
             reminder = utc_iso(_after_done(rule, datetime.fromisoformat(now), zone))
             replace_reminder = True
         if replace_reminder or resulting_status != "open":
@@ -160,19 +160,19 @@ def update(
             if reminder and resulting_status == "open":
                 tasks.add_reminder(conn, task_id, reminder)
         if round_done and rule is not None and rule["repeat_from"] == "schedule":
-            # On a schedule it keeps going; one paused with nothing waiting starts again.
             _add_next(conn, task_id, rule, after=datetime.fromisoformat(now), zone=zone)
-        allowed = {"title", "notes", "owner_id", "due_at", "preferred_window", "status", "gift_for"}
+        allowed = {
+            *("title", "notes", "owner_id", "due_at", "preferred_window", "window_until"),
+            *("status", "gift_for"),
+        }
         changes = {key: value for key, value in values.items() if key in allowed}
         changes.update(columns)
         if round_done:
             changes["last_done_at"] = now
         changes["updated_at"] = now
         tasks.update(conn, task_id, changes)
-        # A queued but unsent reminder should use the current wording.
         latest = _read(conn, task_id)
         if settings is not None:
-            # One queued late keeps saying when it was due.
             due_when = None
             reminder = latest.reminder
             if reminder and reminder.message_id:
@@ -184,18 +184,25 @@ def update(
                 (queued.channel, queued.chat_id) if queued else (latest.channel, latest.chat_id)
             )
             words = reminder_for(
-                conn, latest, settings, channel=channel, chat_id=chat_id, due_when=due_when
+                conn,
+                latest,
+                settings,
+                channel=channel,
+                chat_id=chat_id,
+                due_when=due_when,
+                at=datetime.fromisoformat(now),
             )
             tasks.reword_queued(conn, task_id, words)
         return latest
 
 
 def schedule_next(conn: sqlite3.Connection, task: Task, *, after: datetime, zone: tzinfo) -> None:
-    """After one of a scheduled task's reminders is sent: the next time round, if none waits.
+    """After one of a scheduled task's reminders is sent: add the next time round, if none waits.
+    Inside the caller's transaction.
 
-    From the first one, not the last, so a snooze or a stretch with the bot off never moves the
-    schedule, and missed times are not sent in a flood: the next is the first after `after`.
-    Inside the caller's transaction."""
+    From the first reminder, not the last, so a snooze or a stretch with the bot off never moves
+    the schedule and missed times are not sent in a flood: the next is the first after `after`.
+    """
     rule = _rule_of(task)
     if rule is not None and rule["repeat_from"] == "schedule" and task.status == "open":
         _add_next(conn, task.id, rule, after=after, zone=zone)
@@ -232,8 +239,9 @@ def _repeat_columns(repeat: dict[str, Any], *, anchor: str) -> dict[str, Any]:
 
 
 def shifted(day: date, count: int, unit: str) -> date:
-    """A day moved on `count` units; a month or year from the 31st, or 29 February, lands on the
-    last day there is."""
+    """A day moved on `count` units; from the 31st or 29 February a month or year lands on the last
+    day there is.
+    """
     if unit == "day":
         return day + timedelta(days=count)
     if unit == "week":
@@ -245,8 +253,9 @@ def shifted(day: date, count: int, unit: str) -> date:
 
 
 def next_time(anchor: datetime, every: int, unit: str, after: datetime) -> datetime:
-    """The first time a schedule comes round after `after`: the first one (`anchor`, in the
-    family's time) moved on whole intervals, at its own hour on the wall."""
+    """The first time a schedule comes round after `after`: `anchor` moved on whole intervals at its
+    own wall-clock hour.
+    """
     if anchor > after:
         return anchor
     step = every if unit in ("day", "week") else every * (12 if unit == "year" else 1)
@@ -256,7 +265,7 @@ def next_time(anchor: datetime, every: int, unit: str, after: datetime) -> datet
         passed = (after.date() - anchor.date()).days // 7
     else:
         passed = (after.year - anchor.year) * 12 + after.month - anchor.month
-    rounds = max(1, passed // step)  # a short way before the answer, never past it
+    rounds = max(1, passed // step)
     while True:
         day = shifted(anchor.date(), rounds * every, unit)
         moment = datetime.combine(day, anchor.timetz().replace(tzinfo=None), tzinfo=anchor.tzinfo)
@@ -266,15 +275,12 @@ def next_time(anchor: datetime, every: int, unit: str, after: datetime) -> datet
 
 
 def _after_done(rule: dict[str, Any], done: datetime, zone: tzinfo) -> datetime:
-    """The next time round of a task counted from when it was done: that many units on from
-    the day it was done, at the hour of its first reminder."""
     first = datetime.fromisoformat(rule["repeat_anchor"]).astimezone(zone)
     day = shifted(done.astimezone(zone).date(), rule["repeat_every"], rule["repeat_unit"])
     return datetime.combine(day, first.timetz().replace(tzinfo=None), tzinfo=zone)
 
 
 def repeat_words(task: Task) -> str | None:
-    """How often a task comes round, briefly: "every week", "every 6 months after done"."""
     if not task.repeats:
         return None
     unit = (
@@ -292,7 +298,6 @@ def _read(conn: sqlite3.Connection, task_id: int) -> Task:
 
 
 def late_note(remind_at: str, queued_at: str, tz: tzinfo) -> str | None:
-    """When a reminder queued at `queued_at` was due, if that was over LATE_AFTER before."""
     due = datetime.fromisoformat(remind_at)
     if datetime.fromisoformat(queued_at) - due <= LATE_AFTER:
         return None
@@ -300,8 +305,9 @@ def late_note(remind_at: str, queued_at: str, tz: tzinfo) -> str | None:
 
 
 def birthday_wishes(conn: sqlite3.Connection, task: Task) -> list[str]:
-    """What is on the birthday wish list of the person whose birthday it is, in her order: for
-    a birthday's reminder, which goes to whoever set it, never to her (docs/WISHES.md)."""
+    """What is on the birthday person's wish list, in her order, for a birthday's reminder, which
+    goes to whoever set it, never to her (docs/WISHES.md).
+    """
     if not task.gift_for:
         return []
     person = members.find_by_name(conn, task.gift_for)
@@ -311,7 +317,6 @@ def birthday_wishes(conn: sqlite3.Connection, task: Task) -> list[str]:
 
 
 def gifts_for(conn: sqlite3.Connection, task: Task) -> list[Idea]:
-    """The gift ideas a birthday's reminder lists; none for a task that is nobody's occasion."""
     return ideas.gifts_for(conn, task.gift_for) if task.gift_for else []
 
 
@@ -322,19 +327,39 @@ def reminder_for(
     *,
     channel: str,
     chat_id: str,
+    at: datetime,
     due_when: str | None = None,
 ) -> str:
-    """The reminder as it reads in the chat it goes to (`reminder_text`), which decides whether
-    it speaks plainly and whether the gifts go with it."""
-    return reminder_text(
+    """The reminder for `task` as it goes to this chat at `at`: `reminder_text`, with who asked
+    for it and when its plan is, if it has one."""
+    gifts = gifts_for(conn, task)
+    readers = {member.id for member in audience.readers(conn, channel, chat_id)}
+    kept = presents.of_presents(conn, gifts, members.list_all(conn))
+    shown = [idea for idea in gifts if not (kept[idea.id].ids & readers)]
+    words = reminder_text(
         task,
         settings,
         due_when=due_when,
-        gifts=gifts_for(conn, task),
+        gifts=shown,
         wished=birthday_wishes(conn, task),
         plain=audience.plain(conn, channel, chat_id),
-        presents=audience.everyone_may(conn, channel, chat_id, "decide"),
+        # Somebody reading may not see them (a kid, or the one a present is hidden from): say
+        # nothing of presents at all, rather than that there are none.
+        presents=audience.everyone_may(conn, channel, chat_id, "decide")
+        and len(shown) == len(gifts),
     )
+    # Set for them by somebody else, and reaching them on their own: say who asked, so a reminder
+    # does not arrive from nowhere. In a group the "(Alex)" in it already says whose it is.
+    asker = tasks.creators(conn, [task.id]).get(task.id)
+    if task.owner and asker and asker != task.owner and not routing.is_group(channel, chat_id):
+        seed = f"{task.id}:{task.reminder.id if task.reminder else ''}"
+        words += "\n" + voice.say(settings, "reminder_from", seed=seed, asker=asker)
+    plan = plans.get(conn, task.plan_id) if task.plan_id is not None else None
+    if plan is not None and plan.status != "cancelled":
+        when = plan_service.when_words(plan, at, settings.tzinfo)
+        seed = f"{task.id}:{task.reminder.id if task.reminder else ''}"
+        words += "\n" + voice.say(settings, "reminder_plan", seed=seed, when=when)
+    return words
 
 
 def reminder_text(
@@ -347,17 +372,16 @@ def reminder_text(
     plain: bool = False,
     presents: bool = True,
 ) -> str:
-    """The reminder as sent, in the assistant's voice. `due_when` marks one sent late; a
-    birthday's (`gift_for`) goes with the gift ideas saved for them, or says there are none,
-    and with what is on their own birthday wish list, when there is anything.
+    """The reminder as sent, in the assistant's voice. `due_when` marks one sent late; a birthday's
+    (`gift_for`) lists the gift ideas and the birthday wish list, or says there are none.
 
     Where it goes decides the rest (audience.py): `plain` where a kid reads, so a late one does
-    not say the bot was off; and without `presents`, where somebody reads who may not see the
-    gifts, a birthday's goes as the reminder alone."""
+    not say the bot was off; without `presents` where somebody reads who may not see the gifts.
+    """
     who = f" ({task.owner})" if task.owner else ""
     facts = {"title": task.title, "who": who, "task": task.id}
-    # Each time it is due is its own message, by the reminder in force: a snoozed reminder may
-    # take another of her wordings, and the same one worded again (a changed title) the same.
+    # Each time it is due is its own message, by the reminder in force: a snoozed reminder may take
+    # another wording, the same one reworded (a changed title) the same.
     seed = f"{task.id}:{task.reminder.id if task.reminder else ''}"
     if due_when:
         words = voice.say(settings, "reminder_late", seed=seed, plain=plain, due=due_when, **facts)

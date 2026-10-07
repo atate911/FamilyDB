@@ -1,13 +1,9 @@
-"""The rules of the kids' wish lists, in code (docs/WISHES.md). The tools and the page both come
-here, so a wish added from the chat and one added on the page are held to the same rules.
+"""The rules of the kids' wish lists (docs/WISHES.md), shared by the tools and the page.
 
-Everyday wishes are held to the daily rules: a few a day, and a "not this time" locks the thing
-(its topic) for longer each time it comes back. A wish flagged for Christmas or a birthday is held
-to looser ones: no daily count, only a cap on how long the list may grow, and a "not this time"
-that lasts until the occasion has passed. Moving wishes, in her order or between her lists, is
-free, with only a cap against excess.
-
-Each change is one short transaction, as in task_service.py. Nothing here calls a model.
+Everyday wishes are held to the daily rules (a few a day; a "not this time" locks the topic for
+longer each time). Christmas and birthday wishes get looser ones: no daily count, a cap on list
+length, a "not this time" that lasts until the occasion passes. Moving wishes is free, with only
+a cap against excess. Each change is one short transaction; no model call.
 """
 
 from __future__ import annotations
@@ -18,7 +14,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 
-from familydb import buttons, family, roles, voice
+from familydb import audience, buttons, family, roles, voice
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import ToolError
@@ -27,13 +23,11 @@ from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.store.wishes import Concern, Occasion, Wish
 
-# Days a "not this time" locks an everyday wish, by how many times that thing has been declined:
-# two weeks the first time, then a month, three months, four, and a year each time after.
+# Days a "not this time" locks an everyday wish, by how many times it has been declined: two weeks,
+# a month, three months, four, then a year.
 LOCKOUT_DAYS = (14, 30, 90, 120, 365)
-# Moving is free; this only stops a day of excess. The family's own limits (a day's wishes, the
-# length of an occasion list, Ask a parent) are settings (config.py, the Spending page).
+# Moving is free; this only stops a day of excess. The family's limits are settings (config.py).
 WISH_MOVES_PER_DAY = 300
-# How alike two titles must be to count as one ask when no topic says so.
 SAME_TITLE = 0.9
 MAX_TITLE = 120
 MAX_NOTES = 500
@@ -50,16 +44,13 @@ Result = Literal["added", "duplicate", "locked", "too_many", "list_full"]
 
 @dataclass(frozen=True)
 class Added:
-    """What asking for a wish came to, for the tool to hand back and the page to say."""
-
     result: Result
     wish: Wish | None = None
-    locked_until: str | None = None  # when a locked thing may be asked for again
-    rung: int | None = None  # how many times it has been declined
-    asked_today: int = 0  # her everyday asks today, this one included
+    locked_until: str | None = None
+    rung: int | None = None
+    asked_today: int = 0
 
     def compact(self) -> dict[str, Any]:
-        """The few fields the model needs, and no more."""
         out: dict[str, Any] = {"result": self.result}
         if self.wish is not None:
             out["wish"] = {
@@ -75,11 +66,7 @@ class Added:
         return out
 
 
-# -- who and when ---------------------------------------------------------------------------------
-
-
 def _may_keep(by: Member, owner: Member) -> None:
-    """A kid keeps her own list; somebody who may decide keeps anybody's."""
     if roles.may(by.role, "decide"):
         return
     if by.id == owner.id and roles.may(by.role, "wish"):
@@ -97,7 +84,6 @@ def _today(settings: Settings, now: datetime) -> date:
 
 
 def _start_of(settings: Settings, day: date) -> str:
-    """Midnight at home on that day, as the log stores times."""
     return utc_iso(datetime.combine(day, time(0), tzinfo=settings.tzinfo))
 
 
@@ -115,8 +101,7 @@ def _get(conn: sqlite3.Connection, wish_id: int) -> Wish:
 
 
 def _same(wish: Wish, topic: str, title_norm: str) -> bool:
-    """Whether this wish asks for the same thing: the same topic, or nearly the same title, the
-    backstop for a topic named differently."""
+    """Same topic, or nearly the same title as a backstop for a topic named differently."""
     if topic and wish.topic == topic:
         return True
     return difflib.SequenceMatcher(None, wish.title_norm, title_norm).ratio() >= SAME_TITLE
@@ -133,7 +118,6 @@ def _clean(title: str, notes: str | None) -> tuple[str, str | None]:
 
 
 def occasion_passes(settings: Settings, occasion: Occasion, owner: Member, today: date) -> date:
-    """The day after the coming occasion: when a "not this time" for it runs out."""
     if occasion == "christmas":
         christmas = date(today.year, 12, 25)
         if christmas < today:
@@ -143,19 +127,16 @@ def occasion_passes(settings: Settings, occasion: Occasion, owner: Member, today
     return (birthday or today + timedelta(days=364)) + timedelta(days=1)
 
 
-# -- telling ------------------------------------------------------------------------------------
-
-
 def private_chat(member_id: int) -> str:
-    """A kid's own conversation on the page (web/chat.py)."""
-    return f"member:{member_id}"
+    return audience.private_chat(member_id)
 
 
 def _tell_parents(
     conn: sqlite3.Connection, settings: Settings, wish: Wish, event: str, kid: Member, now: str
 ) -> int:
-    """Store a message about a kid's ask for each parent the bot reaches on Telegram, with the
-    buttons to answer it; delivery sends them (docs/WISHES.md: only two things ever do this)."""
+    """Store a message about a kid's ask for each parent reachable on Telegram, with answer buttons;
+    delivery sends them (docs/WISHES.md: only two things ever do this).
+    """
     told = 0
     for person in members.list_all(conn):
         if not roles.may(person.role, "decide"):
@@ -176,7 +157,6 @@ def _tell_parents(
 
 
 def waiting_for_parents(conn: sqlite3.Connection) -> list[int]:
-    """Messages about a kid's ask stored for the parents and not sent yet, to send at once."""
     rows = conn.execute(
         "SELECT id FROM messages WHERE direction = 'out' AND delivered_at IS NULL "
         "AND cancelled_at IS NULL AND buttons LIKE '%\"wish_yes:%' ORDER BY id"
@@ -187,7 +167,6 @@ def waiting_for_parents(conn: sqlite3.Connection) -> list[int]:
 def _tell_kid(
     conn: sqlite3.Connection, settings: Settings, wish: Wish, kid: Member, today: date, now: str
 ) -> None:
-    """A parent's answer, in her own conversation, worded by code; only a kid is told so."""
     if roles.may(kid.role, "decide"):
         return
     note = f" {wish.answer_note}" if wish.answer_note else ""
@@ -217,9 +196,6 @@ def _tell_kid(
     )
 
 
-# -- asking ---------------------------------------------------------------------------------------
-
-
 def _lock_on(
     conn: sqlite3.Connection,
     owner: Member,
@@ -228,8 +204,9 @@ def _lock_on(
     title_norm: str,
     now_iso: str,
 ) -> Wish | None:
-    """The declined wish that still locks this ask, if one does. An everyday lock is for her
-    everyday list only: asking for the same thing for Christmas is the habit to encourage."""
+    """The declined wish that still locks this ask. An everyday lock is for her everyday list only:
+    asking again for Christmas is the habit to encourage.
+    """
     for wish in wishes.for_member(conn, owner.id):
         if (
             wish.status == "declined"
@@ -243,8 +220,9 @@ def _lock_on(
 
 
 def _asked_today(conn: sqlite3.Connection, owner: Member, today: date) -> int:
-    """Her everyday asks today: the ones she asked for, and the ones she moved onto that list
-    from Christmas or her birthday, which would otherwise be a way round the daily count."""
+    """Her everyday asks today, including those moved onto that list from an occasion, which would
+    otherwise get round the daily count.
+    """
     return wishes.day_of(conn, owner.id, today.isoformat())[0]
 
 
@@ -263,8 +241,9 @@ def add(
     message_id: int | None = None,
     now: datetime,
 ) -> Added:
-    """Put a wish on her list, or say why not: already there, locked, too many today, or a full
-    occasion list. Too many is kept as a turned-away ask, so the parents see the pattern."""
+    """Put a wish on her list, or say why not (already there, locked, too many today, full occasion
+    list). Too many is kept as a turned-away ask so the parents see the pattern.
+    """
     _may_keep(by, owner)
     title, notes = _clean(title, notes)
     topic_ = wishes.normalize_topic(topic or title) or wishes.normalize_topic(title)
@@ -319,9 +298,6 @@ def add(
     return Added("added", wish, asked_today=asked)
 
 
-# -- changing her list ----------------------------------------------------------------------------
-
-
 def move(
     conn: sqlite3.Connection,
     settings: Settings,
@@ -332,9 +308,10 @@ def move(
     occasion: Any = KEEP,
     now: datetime,
 ) -> Wish:
-    """Put an open wish at this place in its list (1 is the top), or on another of her lists (at
-    the bottom, unless a place is given too). Free, and never starts a lockout; only a day of
-    excess is refused."""
+    """Put an open wish at this place in its list (1 is the top) or on another of her lists (at the
+    bottom unless a place is given). Free, never starts a lockout; only a day of excess is
+    refused.
+    """
     day = _today(settings, now).isoformat()
     with transaction(conn):
         wish = _get(conn, wish_id)
@@ -382,7 +359,6 @@ def edit(
     category: Any = KEEP,
     now: datetime,
 ) -> Wish:
-    """Reword an open wish. Its topic stays: a new title never escapes a lockout."""
     with transaction(conn):
         wish = _get(conn, wish_id)
         _may_keep(by, _owner_of(conn, wish))
@@ -399,7 +375,6 @@ def edit(
 
 
 def withdraw(conn: sqlite3.Connection, *, by: Member, wish_id: int, now: datetime) -> Wish:
-    """Take a wish off her list: she changed her mind. Nothing is locked by it."""
     with transaction(conn):
         wish = _get(conn, wish_id)
         owner = _owner_of(conn, wish)
@@ -412,9 +387,6 @@ def withdraw(conn: sqlite3.Connection, *, by: Member, wish_id: int, now: datetim
         return changed
 
 
-# -- a parent's answer ----------------------------------------------------------------------------
-
-
 def answer(
     conn: sqlite3.Connection,
     settings: Settings,
@@ -425,8 +397,6 @@ def answer(
     note: str | None = None,
     now: datetime,
 ) -> Wish:
-    """Yes, or not this time. An everyday "not this time" locks the thing by the ladder; one for
-    an occasion lasts until the occasion has passed."""
     _may_decide(by)
     note = (note or "").strip() or None
     if note and len(note) > MAX_NOTES:
@@ -468,14 +438,11 @@ def answer(
         return changed
 
 
-# -- what the bot turns away ----------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class TurnedAway:
     wish: Wish
-    tell_parents: bool  # an inappropriate ask: the parents hear of it at once
-    may_ask_parent: bool  # the "Ask a parent" button is on offer
+    tell_parents: bool
+    may_ask_parent: bool
 
     def compact(self) -> dict[str, Any]:
         return {"ask_a_parent_offered": self.may_ask_parent, "parents_told": self.tell_parents}
@@ -492,13 +459,13 @@ def turn_away(
     message_id: int | None = None,
     now: datetime,
 ) -> TurnedAway:
-    """Keep an ask the bot turned away, so the parents see it. Ask a parent is offered only when
-    the bot judged it reasonable, never for an inappropriate ask, and a couple of times a week."""
+    """Keep an ask the bot turned away so the parents see it. Ask a parent is offered only when the
+    bot judged it reasonable, never for an inappropriate ask, and a couple of times a week.
+    """
     summary = " ".join(summary.split())[:MAX_TITLE] or "a request"
     now_iso = utc_iso(now)
     week_ago = utc_iso(now - timedelta(days=7))
     with transaction(conn):
-        # A turn tried again after a failure must not keep, or tell the parents of, it twice.
         if message_id is not None:
             row = conn.execute(
                 "SELECT id FROM wishes WHERE source_message_id = ? AND status = 'turned_away' "
@@ -537,8 +504,9 @@ def turn_away(
 def ask_parent(
     conn: sqlite3.Connection, settings: Settings, *, by: Member, wish_id: int, now: datetime
 ) -> Wish:
-    """She pressed Ask a parent: it works once, for an ask it was offered for, and the parents
-    get it on Telegram with the buttons to answer."""
+    """She pressed Ask a parent: once, for an ask it was offered for; the parents get it with
+    buttons to answer.
+    """
     now_iso = utc_iso(now)
     with transaction(conn):
         wish = _get(conn, wish_id)

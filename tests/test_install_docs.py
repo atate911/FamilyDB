@@ -1,8 +1,6 @@
-"""The install guide's first step is a block people paste into a server, so it has to stay right.
+"""The install guide's first step is a block people paste into a server: one command, valid shell,
+naming the repository the scripts install from.
 
-Nobody reading the guide can tell a broken quote from a working one, and the first sign would be
-a new family's server doing something odd. These check the block itself: that it is one command,
-that it is valid shell, and that it names the repository the scripts install from.
 """
 
 from __future__ import annotations

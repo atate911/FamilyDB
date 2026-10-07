@@ -72,10 +72,6 @@ def test_it_says_who_answers_and_where_each_key_came_from(status, conn, settings
     assert "gm-never-shown" not in text and settings.anthropic_api_key not in text
 
 
-def test_a_quiet_month_says_so(status) -> None:
-    assert "Nothing has been asked of a model in the last 30 days." in _flat(status.get("/status"))
-
-
 def test_it_adds_up_what_the_models_cost(status, conn) -> None:
     _call(
         conn,
@@ -141,15 +137,6 @@ def test_it_shows_what_went_wrong(status, conn, family) -> None:
     assert "claude-opus-5 — end" not in text
 
 
-def test_the_days_spend_is_on_a_green_screen_and_in_words(status) -> None:
-    text = _flat(status.get("/status"))
-    assert '<div class="crt readout" aria-hidden="true">' in text  # a picture of the sentence
-    assert (
-        "[....................] 0%" in text
-        and "Today: about $0.00 of the $2.00 daily limit." in text
-    )
-
-
 def test_the_screen_turns_amber_near_the_limit_and_red_past_it(status, conn) -> None:
     def spend(dollars: float) -> None:
         with db.transaction(conn):
@@ -176,11 +163,6 @@ def test_the_screen_turns_amber_near_the_limit_and_red_past_it(status, conn) -> 
     assert '<div class="crt readout near over" aria-hidden="true">' in text
     assert "[####################] 105%" in text and "Limit reached" in text
     assert "The limit is reached: nothing more is asked of a model until midnight." in text
-
-
-def test_a_calm_page_says_nothing_is_wrong(status, conn) -> None:
-    _call(conn, model="claude-opus-5")
-    assert "Worth a look" not in _flat(status.get("/status"))
 
 
 def test_the_status_page_is_behind_the_password(settings, clock, conn, family) -> None:

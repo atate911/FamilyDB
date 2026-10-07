@@ -9,17 +9,20 @@ from familydb import happening
 from familydb.availability import enrichment_available
 from familydb.dates import parse_date_range, utc_iso, weekend_window
 from familydb.errors import ToolError
-from familydb.store import ideas, outcomes, suggestions
+from familydb.store import ideas, members, memories, outcomes, plans, suggestions
 from familydb.store.db import transaction
 from familydb.store.ideas import Idea
 from familydb.suggest import listed as listing
-from familydb.suggest.compose import compose
+from familydb.suggest.compose import choose, compose
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.origin import resolve as resolve_origin
-from familydb.suggest.shortlist import SHORTLIST_MAX, shortlist
+from familydb.suggest.places import find_places
+from familydb.suggest.places import wanted as places_wanted
+from familydb.suggest.rules import fold
+from familydb.suggest.shortlist import FAVOURITE_RATING, RATING_DAYS, shortlist
 from familydb.suggest.types import (
     DAY_END,
     DAY_START,
@@ -58,7 +61,7 @@ def resolve_window(
 ) -> tuple[tuple[date, date] | None, str, DayBounds]:
     """The days asked about, how to say them, and the part of each day that counts."""
     today = now.date()
-    # Rounded up to five minutes: nobody leaves this second, and it steadies the labels.
+    # Rounded up to five minutes, which steadies the labels.
     minute = min(24 * 60, -(-(now.hour * 60 + now.minute) // 5) * 5)
     from_minute = _minute(args.from_time, "from_time")
     until_minute = _minute(args.until_time, "until_time")
@@ -75,7 +78,7 @@ def resolve_window(
         if not 1 <= hours <= MAX_NOW_HOURS:
             raise ToolError(f"hours must be 1 to {MAX_NOW_HOURS}")
         end = min(24 * 60, minute + hours * 60)
-        # Right now is right now: not held to the usual 08:00 to 22:00.
+        # Not held to the usual 08:00 to 22:00.
         frame = DayBounds(start=0, end=24 * 60, first_start=minute, last_end=end)
         return (today, today), f"now until {clock(end)}", frame
     if args.window == "today":
@@ -92,7 +95,7 @@ def resolve_window(
             raise ToolError("ask about at most two weeks at a time")
         label = "those dates"
     elif args.window == "next_weekend":
-        # The weekend after this one, which on a weekend day means the coming Saturday.
+        # On a weekend day this means the coming Saturday.
         _, this_end = weekend_window(today)
         start_day, end_day = weekend_window(this_end + timedelta(days=1))
         label = "next weekend"
@@ -105,7 +108,7 @@ def resolve_window(
         label += f" ({start_day:%a %d} to {end_day:%a %d %b})"
     if from_minute is not None or until_minute is not None:
         label += f", {clock(bounds.start)}-{clock(bounds.end)}"
-    # Asked on the day itself, the part of it that has gone is not free time.
+    # Asked on the day itself, the part gone is not free time.
     frame = replace(bounds, first_start=minute) if start_day == today else bounds
     return (start_day, end_day), label, frame
 
@@ -125,42 +128,35 @@ class Assessment:
     by_id: dict[int, Idea]
     recently: set[int]
     suggestion_id: int
+    loved: set[int]  # done and loved: "again", or rated FAVOURITE_RATING or more lately
+    shown: list[Candidate]  # the engine's own cut, when nobody chose
+    held_back: int
 
 
 def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> SuggestResult:
     """The whole engine for one question; returns the structured result the chat model composes.
-
-    `refresh_stale` queues a paid lookup for each place whose details have gone stale. Code that
-    runs the engine with no model call (commands.py, the evening check) passes False, so that it
-    never causes one either."""
+    `refresh_stale` queues a paid lookup per stale place; code running with no model call
+    (commands.py, the evening check) passes False."""
     return result_of(assess(ctx, args, refresh_stale=refresh_stale))
 
 
 def result_of(a: Assessment, chosen: Chosen | None = None) -> SuggestResult:
-    """The result the chat model is given: the best of each verdict, led by the picks when a
-    stronger call chose."""
+    """The result the chat model is given: the engine's own cut, or, when a stronger call chose
+    (suggest/choosing.py), its picks leading and never cut."""
+    shown, held_back = a.shown, a.held_back
+    picked = [p.idea_id for p in chosen.picks if p.idea_id is not None] if chosen else []
+    if picked:
+        shown, held_back = choose(
+            a.candidates, a.by_id, a.recently, prefer=a.args.prefer, loved=a.loved, picked=picked
+        )
     return compose(
-        a.context,
-        a.label,
-        a.candidates,
-        a.finds,
-        a.skipped,
-        a.by_id,
-        a.recently,
-        a.suggestion_id,
-        chosen,
+        a.context, a.label, shown, held_back, a.finds, a.skipped, a.suggestion_id, chosen
     )
 
 
-def assess(
-    ctx: ToolContext,
-    args: SuggestInput,
-    *,
-    refresh_stale: bool = True,
-    check_at_most: int = SHORTLIST_MAX,
-) -> Assessment:
-    """Every stage but the last: the window, the context, the rules, the checks, the finds and
-    the log. `check_at_most` is how many ideas are checked in detail."""
+def assess(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> Assessment:
+    """Every stage but the last: the window, the context, the rules, the checks, the engine's own
+    cut, the finds and the log."""
     window, label, bounds = resolve_window(args, ctx.clock.now())
     context = build_context(ctx, window, bounds)
     context.origin, where_note = resolve_origin(ctx, args.near, args.window)
@@ -177,16 +173,31 @@ def assess(
         setting=args.setting,
         max_travel_minutes=args.max_travel_minutes,
         max_duration_minutes=args.max_duration_minutes,
-        # Folded the same way however it was typed, so the same subject is the same search.
+        # Folded, so the same subject is the same search.
         topic=" ".join(args.topic.casefold().split())[:MAX_TOPIC],
     )
-    excluded = outcomes.do_not_repeat(ctx.conn)
-    kept, ruled_out, extras = shortlist(
+    # The family's firm rules for who is coming, held by code (suggest/rules.py).
+    people = members.list_all(ctx.conn)
+    held = memories.held(ctx.conn, today=ctx.clock.today())
+    constraints = fold(constraints, held, people, ctx.member)
+    # What the family said of what they did: "not again" leaves it out, a rating counts for a
+    # year, and "again" or a high rating is a favourite.
+    again = outcomes.latest_preferences(ctx.conn)
+    excluded = {idea_id for idea_id, yes in again.items() if not yes}
+    year_ago = ctx.clock.today() - timedelta(days=RATING_DAYS)
+    ratings = outcomes.recent_ratings(ctx.conn, since=year_ago.isoformat())
+    loved = {idea_id for idea_id, yes in again.items() if yes} | {
+        idea_id for idea_id, said in ratings.items() if said and said[0] >= FAVOURITE_RATING
+    }
+    kept, ruled_out = shortlist(
         [idea for idea in all_ideas if idea.id not in excluded],
         context,
         constraints,
         ctx.settings,
-        keep=check_at_most,
+        people=people,
+        plans=plans.latest_by_idea(ctx.conn),
+        ratings=ratings,
+        prefer=args.prefer,
     )
     ruled_out.extend(
         Candidate(
@@ -201,42 +212,64 @@ def assess(
         and (not idea_ids or idea.id in idea_ids)
     )
     evaluated, stale_ids = evaluate(ctx.conn, kept, context, constraints, ctx.settings, ctx.clock)
+    candidates = evaluated + ruled_out
+    since = utc_iso(ctx.clock.now() - timedelta(days=RECENT_SUGGESTION_DAYS))
+    recently = suggestions.recently_suggested(ctx.conn, since=since)
+    by_id = {idea.id: idea for idea in all_ideas}
+    shown, held_back = choose(candidates, by_id, recently, prefer=args.prefer, loved=loved)
     skipped = list(context.skipped)
     if unknown:
-        # A wrong number must not quietly empty the answer: say so, and widen when nothing is left.
+        # A wrong number must not quietly empty the answer: say so, widen when nothing is left.
         names = ", ".join(f"#{idea_id}" for idea_id in unknown)
         widened = "; considered every idea instead" if not idea_ids else ""
         skipped.append(f"no idea {names} on the list{widened}")
-    if stale_ids and refresh_stale and enrichment_available(ctx.settings):
+    # Looked up again only if it is shown: every idea is evaluated now, and a lookup is paid for.
+    on_show = {c.idea_id for c in shown}
+    stale_shown = [idea_id for idea_id in stale_ids if idea_id in on_show]
+    if stale_shown and refresh_stale and enrichment_available(ctx.settings):
         with transaction(ctx.conn):
-            ideas.requeue_enrichment(ctx.conn, stale_ids, now=ctx.now_iso())
+            ideas.requeue_enrichment(ctx.conn, stale_shown, now=ctx.now_iso())
         skipped.append("stale place details re-queued for a refresh")
 
     # What the family's sources already list for these days costs nothing to read; when they
     # list enough, the web is not searched again, unless the question asks for something.
     stored = listing.listed(ctx, context)
     finds, note = ([], None)
+    # A place nothing saved fits, found on the web, when the family has it on (suggest/places.py).
+    if places_wanted(context, constraints, candidates, ctx.settings):
+        finds, note = find_places(ctx, context, constraints)
+        if note:
+            skipped.append(note)
     if args.discover and (constraints.topic or len(stored) < listing.COVERED):
-        finds, note = discover(ctx, context, constraints)
-    if note:
-        skipped.append(note)
+        events, note = discover(ctx, context, constraints)
+        finds = finds + events
+        if note:
+            skipped.append(note)
     finds, more = listing.merge_finds(stored, finds)
     if more:
         skipped.append(f"{more} more listed for these days on the page {happening.NAME}")
 
-    since = utc_iso(ctx.clock.now() - timedelta(days=RECENT_SUGGESTION_DAYS))
-    recently = suggestions.recently_suggested(ctx.conn, since=since)
-    candidates = evaluated + extras + ruled_out
     suggestion_id = log_suggestion(
         ctx.conn,
         asked_by=ctx.member.id if ctx.member else None,
         window_start=window[0].isoformat() if window else None,
         window_end=window[1].isoformat() if window else None,
         candidates=candidates,
+        shown=on_show,
         finds=finds,
         now=ctx.now_iso(),
     )
-    by_id = {idea.id: idea for idea in all_ideas}
     return Assessment(
-        args, context, label, candidates, finds, skipped, by_id, recently, suggestion_id
+        args,
+        context,
+        label,
+        candidates,
+        finds,
+        skipped,
+        by_id,
+        recently,
+        suggestion_id,
+        loved,
+        shown,
+        held_back,
     )

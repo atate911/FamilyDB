@@ -1,7 +1,8 @@
 """Setting up on the page, one step at a time, from a new install to the first answer.
 
-The setup pages only read. Every form on them is one the rest of the page already has, posting to
-the module that owns the change and asking to be brought back; these tests walk that loop.
+The setup pages only read: every form is one the rest of the page already has, posting to its
+owner and asking to be brought back. These walk that loop.
+
 """
 
 from __future__ import annotations

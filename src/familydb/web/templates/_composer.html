@@ -1,0 +1,45 @@
+{% from "_kitchen.html" import icon %}
+{# The chat's box, Kitchen Table's: Home's and the chat's foot. It posts to the chat. Needs family, who, send_where, typed, locked (closed while an answer is on its way), placeholder, assistant. `readers` (who reads a kid's chat) and `left` (her messages left today) are a kid's. The hooks ask.js and dictate.js look for are kept: the form is #ask, the box is #text, the mic goes in #ask-mic, the position box is #locate and its words #where. #}
+{% set on_chat = where is defined and where == 'chat' %}
+<form class="composer" id="ask" method="post" action="{{ url_for('chat.send') }}"
+      {%- if on_chat %} enctype="multipart/form-data"{% endif %}
+      {%- if look_again %} data-refresh="{{ look_again }}"{% endif %}>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+  <input type="hidden" name="once" value="{{ once_token() }}" />
+  <input type="hidden" name="lat" value="" />
+  <input type="hidden" name="lon" value="" />
+  {% if visitor().member %}
+    {# Signed in as themselves, so there is nobody else they could be asking as. On the chat's own box it says so. #}
+    {% if on_chat and me %}<p class="composer__who">{{ avatar(me.slot, me.initial, 'sm') }}<span>Writing as <b>{{ me.name }}</b></span></p>{% endif %}
+  {% else %}
+    {# The family shares one password, so somebody says who is asking; nobody is picked for them. #}
+    <div class="composer__who">
+      <label for="who">From</label>
+      <select id="who" name="who" required>
+        {% if not who %}<option value="">Who is asking?</option>{% endif %}
+        {% for name in family %}<option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>{% endfor %}
+      </select>
+    </div>
+  {% endif %}
+  <div class="composer__row">
+    <label class="sr" for="text">Message to {{ assistant }}</label>
+    {# On the chat's own box a photo may go alone, so the words are not required there. #}
+    <textarea id="text" name="text" data-dictate="ask-mic" rows="{{ 1 if on_chat else 2 }}" {{ '' if on_chat else 'required' }} placeholder="{{ placeholder }}" enterkeyhint="send"
+              {%- if locked %} disabled{% endif %}>{{ typed or '' }}</textarea>
+    {# Where dictate.js puts the mic, beside Send; empty without it. #}
+    <span class="mic-slot" id="ask-mic"></span>
+    <button class="btn{{ ' btn--primary' if on_chat }} composer__send" type="submit" {{ 'disabled' if locked or not family }}>{{ icon('send') }}<span class="lbl">Send</span></button>
+  </div>
+  {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. #}
+  <div class="{{ 'composer__foot' if on_chat else 'composer__who' }}" id="locate" hidden>
+    <label class="check"><input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} /> {{ icon('pin', size='sm') }}Share where I am with this message</label>
+  </div>
+  {% if on_chat %}
+    {# A photo with the message, or alone: looked at like one sent on Telegram, and never kept. #}
+    <div class="composer__foot"><label class="composer__photo" for="photo">Add a photo</label>
+      <input id="photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/gif" {{ 'disabled' if locked }} /></div>
+  {% endif %}
+  {% if on_chat and left is not none %}<div class="composer__foot"><span>{{ left }} message{{ '' if left == 1 else 's' }} left today</span></div>{% endif %}
+  <p id="where" class="small muted"></p>
+</form>
+<script src="{{ url_for('static', filename='ask.js') }}" defer></script>

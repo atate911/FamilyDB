@@ -1,35 +1,19 @@
-"""Who is in the family: the rules for adding somebody and changing them.
+"""Who is in the family: the rules for adding, changing and taking off somebody, and for how each
+signs in.
 
-The family list is who the bot talks to — a Telegram id on it is somebody allowed to message
-the bot — and the web page and the console find people on it by name. So it is not a tool: the
-model must never be able to change who may talk to it. The page calls these functions, and
-so could any other front end; the rules live here rather than in a form.
+The family list is who the bot talks to, so it is not a tool: the model must never change who may
+talk to it. Rules held here, not in a form:
 
-- A name belongs to one person, whatever its case, because a name is how the page and the
-  console say who is speaking.
-- There is always an active admin: the weekend digest is asked as one, and somebody has to be
-  able to put things right.
-- A change is refused if the person changed since the form was opened, so two people editing
-  one profile do not quietly undo each other.
-- Somebody is not changed while one of their messages is being answered.
-- Taking somebody off the list gives up their unanswered messages, so the retry job does not
-  answer for them later.
-
-The same goes for who signs in to the web page, and with what. Each person may have their own
-password if their role may sign in (familydb/roles.py), which for now every role may.
-
-- The first admin to choose their own password ends the family password: from then on it opens
-  nothing, and everybody signs in as themselves.
-- An admin gives everybody else a starting password, made up here and shown once, and each
-  person chooses their own the first time they sign in with it.
-- Once people sign in as themselves there is always an admin who can, so the page never falls
-  back to a shared password nobody meant to bring back, and somebody can always put it right.
-
-Somebody's Telegram can also be linked by a link an admin makes for them (`invite`): opened on
-their phone, pressing Start links their Telegram to them (`accept_invite`), with no id to type
-and no knock to let in. The family chose that, knowing what it means: whoever opens the link
-first is taken for that person. So it works once, for a day, is made only for somebody on the
-list and switched on, and a Telegram already somebody else's is never moved by it.
+- A name belongs to one person whatever its case. - There is always an active admin (the weekend
+digest is asked as one), and once people sign in as themselves an admin who can, so the page
+never falls back to a shared password. - A change on a form drawn before somebody else saved is
+refused; nobody is changed while one of their messages is being answered; taking somebody off
+gives up their unanswered messages. - The first admin's own password ends the family password; an
+admin gives everybody else a made-up starting password, shown once, which they replace on first
+sign in. - An admin's link (`invite`) links a Telegram when opened and Start is pressed
+(`accept_invite`). The family chose that knowing whoever opens it first is taken for that person,
+so it works once, for a day, only for somebody on the list and switched on, and never moves a
+Telegram already somebody else's.
 """
 
 from __future__ import annotations
@@ -41,11 +25,12 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from familydb import passwords, roles
+from familydb import audience, passwords, roles
 from familydb.dates import age_on as age_on
 from familydb.dates import next_birthday as next_birthday
 from familydb.dates import utc_iso
 from familydb.store import invites, logins, members, messages, plans, tasks
+from familydb.store import push as push_store
 from familydb.store.db import transaction
 from familydb.store.members import Gender, Member, Role
 
@@ -66,7 +51,6 @@ class FamilyError(ValueError):
 
 
 def revision(member: Member) -> str:
-    """A short mark of a profile as it stands. The members table keeps no updated time."""
     seen = (
         f"{member.display_name}|{member.role}|{member.active}|{member.channel_user_id}"
         f"|{member.birth_date}|{member.gender}"
@@ -74,13 +58,11 @@ def revision(member: Member) -> str:
     return hashlib.sha256(seen.encode()).hexdigest()[:16]
 
 
-# A change that does not mention a birthday or a gender keeps the one stored.
 KEEP: Any = object()
 OLDEST = 1900
 
 
 def clean_birth_date(value: str | None, *, today: date) -> str | None:
-    """A birthday as a date input sends it (YYYY-MM-DD), a day that has been, or nothing."""
     value = (value or "").strip()
     if not value:
         return None
@@ -103,7 +85,6 @@ def clean_gender(value: str | None) -> Gender | None:
 
 
 def clean_name(name: str) -> str:
-    """One space between words and none around them, so "Sam " and "Sam" are one person."""
     cleaned = " ".join(name.split())
     if not cleaned or len(cleaned) > MAX_NAME:
         raise FamilyError(f"A name needs 1 to {MAX_NAME} characters.")
@@ -111,7 +92,6 @@ def clean_name(name: str) -> str:
 
 
 def clean_telegram_id(value: str | None) -> str | None:
-    """A Telegram user id, as the bot shows it to somebody it does not know yet, or nothing."""
     value = (value or "").strip()
     if not value:
         return None
@@ -140,7 +120,6 @@ def _name_taken(conn: sqlite3.Connection, name: str, *, besides: int | None = No
 def _telegram_owner(
     conn: sqlite3.Connection, telegram: str, *, besides: int | None
 ) -> Member | None:
-    """Whoever on the list, switched off or not, already has this Telegram id."""
     for person in members.list_all(conn, active_only=False):
         if (
             person.id != besides
@@ -160,7 +139,6 @@ def _telegram_taken(conn: sqlite3.Connection, telegram: str, *, besides: int | N
 def add(
     conn: sqlite3.Connection, name: str, role: str, *, telegram_id: str | None, now: str
 ) -> Member:
-    """Put somebody on the family list. Raises FamilyError with the reason when it cannot."""
     name, role_ = clean_name(name), _check_role(role)
     telegram = clean_telegram_id(telegram_id)
     try:
@@ -176,7 +154,7 @@ def add(
                 channel_user_id=telegram,
                 now=now,
             )
-    except sqlite3.IntegrityError as exc:  # somebody got there between the check and the write
+    except sqlite3.IntegrityError as exc:
         raise FamilyError("That name or Telegram id was taken a moment ago. Try again.") from exc
 
 
@@ -193,9 +171,9 @@ def change(
     birth_date: Any = KEEP,
     gender: Any = KEEP,
 ) -> Member:
-    """Change somebody, given the `revision` the form was drawn from. Raises FamilyError.
-
-    A birthday or a gender not given (`KEEP`) stays as it is; an empty one is taken away."""
+    """Change somebody given the `revision` the form was drawn from. A birthday or gender not given
+    (`KEEP`) stays; an empty one is taken away.
+    """
     name, role_ = clean_name(name), _check_role(role)
     telegram = clean_telegram_id(telegram_id)
     today = datetime.fromisoformat(now.replace("Z", "+00:00")).date()
@@ -230,7 +208,6 @@ def change(
                 raise FamilyError(
                     f"The bot is answering {current.display_name} right now. Try again in a moment."
                 )
-            # Somebody the bot knew on another channel keeps it; only Telegram is set here.
             channel, channel_user_id = current.channel, current.channel_user_id
             if telegram or current.channel == TELEGRAM:
                 channel = TELEGRAM if telegram else None
@@ -257,12 +234,11 @@ def change(
 def remove(
     conn: sqlite3.Connection, member_id: int, *, by: int | None, seen: str, now: str
 ) -> Member:
-    """Take somebody off the list for good (store/members.py `POINTING_AT` says what goes with
-    them and what stays, unnamed). Raises FamilyError.
+    """Take somebody off the list for good (store/members.py `POINTING_AT` says what goes and what
+    stays).
 
-    Never the last admin, nor the last admin who can sign in, as switching off would not be;
-    never whoever is asking, so nobody locks themselves out by a slip; never while the bot is
-    answering them, nor on a form drawn before somebody else changed them.
+    Never the last admin or last admin who can sign in, nor whoever is asking, nor while the bot
+    is answering them, nor on a stale form.
     """
     with transaction(conn):
         current = members.get(conn, member_id)
@@ -289,15 +265,18 @@ def remove(
             )
         messages.give_up_for_member(conn, member_id, now=now)
         if current.channel == TELEGRAM and current.channel_user_id:
-            # Their private chat with the bot, whose id is theirs: nothing more is said there,
-            # not a reminder, a follow-up, a check of tomorrow's plans, or anything queued.
+            # Their private chat, whose id is theirs, falls silent: no reminder, follow-up, plan
+            # check or queued message.
             private = current.channel_user_id
             tasks.cancel_in_chat(conn, TELEGRAM, private, now)
             plans.leave_chat(conn, TELEGRAM, private)
             messages.cancel_unsent(conn, TELEGRAM, private, now=now)
-        # A kid's own conversation on the page (docs/WISHES.md) falls silent the same way.
-        web_own = f"member:{member_id}"
+        web_own = audience.private_chat(member_id)
         tasks.cancel_in_chat(conn, "web", web_own, now)
+        # Their own things to do asked for on the page or in somebody's chat: with the name taken
+        # off, each would be nobody's, which reads as everyone's (routing.for_task), and their
+        # errand would go to the family's chat. A group's stays the family's, as before.
+        tasks.cancel_owned_by(conn, member_id, now)
         plans.leave_chat(conn, "web", web_own)
         messages.cancel_unsent(conn, "web", web_own, now=now)
         touched = members.erase(conn, member_id)
@@ -307,8 +286,6 @@ def remove(
 
 NOT_YOURSELF = "You cannot take yourself off the list. Another admin can."
 
-
-# -- signing in to the web page -----------------------------------------------------------------
 
 LAST_TO_SIGN_IN = (
     "{name} is the only admin who can sign in to the page. Give another admin a password first."
@@ -323,7 +300,6 @@ NO_PASSWORD_TO_TAKE = "{name} has no password to take away."
 
 
 def check_password(password: str) -> str:
-    """A password somebody chose, if it will do. Raises FamilyError with what is wrong."""
     if len(password) < passwords.MIN_LENGTH:
         raise FamilyError(PASSWORD_SHORT.format(length=len(password), least=passwords.MIN_LENGTH))
     if len(password) > passwords.MAX_LENGTH:
@@ -346,20 +322,18 @@ def _someone(conn: sqlite3.Connection, member_id: int) -> Member:
 
 
 def _last_admin_signing_in(conn: sqlite3.Connection, person: Member) -> bool:
-    """Whether this person is the one admin who can sign in, so that losing them would leave
-    nobody to look after the page, and hand it back to the password the family used to share."""
+    """Whether this is the one admin who can sign in, so losing them would hand the page back to the
+    shared password.
+    """
     signing_in = logins.admins_signing_in(conn)
     return [admin.id for admin in signing_in] == [person.id]
 
 
 def choose_password(conn: sqlite3.Connection, member_id: int, password: str, *, now: str) -> None:
-    """Somebody's own choice of password, in place of the one they signed in with.
-
-    Every other browser signed in as them is signed out by it, since each sign-in carries a mark
-    of the password it was made with. Whoever calls this has made sure it is the person
-    themselves: the page, by their signing in.
+    """Somebody's own choice of password. Every other browser signed in as them is signed out, since
+    each sign-in carries a mark of its password. The caller has made sure it is the person.
     """
-    hashed = passwords.hash_password(check_password(password))  # slow on purpose: not in the lock
+    hashed = passwords.hash_password(check_password(password))
     with transaction(conn):
         person = _someone(conn, member_id)
         _may_sign_in(person)
@@ -367,12 +341,11 @@ def choose_password(conn: sqlite3.Connection, member_id: int, password: str, *, 
 
 
 def claim(conn: sqlite3.Connection, member_id: int, password: str, *, now: str) -> Member:
-    """An admin choosing their own password while the family still shares one.
+    """An admin choosing their own password while the family still shares one: the first to do it
+    ends the shared password for everyone.
 
-    The first to do it ends the shared password for everyone. Somebody let in by that password is
-    not known to be anybody in particular, and may do everything on the page, so taking an admin
-    who has no password yet gives them nothing the shared one did not. Once an admin signs in as
-    themselves, there is nobody left to take: they give everybody else a starting password.
+    Whoever is let in by the shared password may do everything on the page, so taking an admin
+    with no password yet gives nothing it did not.
     """
     hashed = passwords.hash_password(check_password(password))
     with transaction(conn):
@@ -389,11 +362,9 @@ def claim(conn: sqlite3.Connection, member_id: int, password: str, *, now: str) 
 def give_starting_password(
     conn: sqlite3.Connection, member_id: int, *, by: int | None, now: str
 ) -> str:
-    """Make up a password for somebody to sign in with once, and return it, to be shown once.
-
-    They choose their own as soon as they sign in with it. Anywhere they were signed in, they are
-    signed out, so this is also what to do for a lost phone. `by` is the admin who asked, or None
-    for whoever ran `familydb password` on the server.
+    """Make up a password to sign in with once, returned to be shown once; they choose their own on
+    signing in. Signs them out everywhere, so it is also the answer to a lost phone. `by` is the
+    asking admin, or None for `familydb password`.
     """
     made = passwords.make_up(passwords.STARTING_LENGTH)
     hashed = passwords.hash_password(made)
@@ -404,10 +375,7 @@ def give_starting_password(
 
 
 def remove_login(conn: sqlite3.Connection, member_id: int) -> Member:
-    """Take somebody's password away: they cannot sign in, and are signed out wherever they were.
-
-    Never the last admin who can sign in, which would leave nobody to look after the page.
-    """
+    """Take somebody's password away and sign them out. Never the last admin who can sign in."""
     with transaction(conn):
         person = _someone(conn, member_id)
         if logins.get(conn, member_id) is None:
@@ -418,18 +386,17 @@ def remove_login(conn: sqlite3.Connection, member_id: int) -> Member:
     return person
 
 
-# -- linking Telegram by a link ------------------------------------------------------------------
-
-# How long a link works, and how long its code is: long and random enough that it cannot be
-# guessed, short enough for Telegram's start parameter, which takes 64 of A-Z, a-z, 0-9, _ and -.
+# Long and random enough not to be guessed, short enough for Telegram's start parameter (64 of A-Z,
+# a-z, 0-9, _ and -).
 INVITE_HOURS = 24
 INVITE_BYTES = 24
 INVITE_CODE = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-")
 
 
 class InviteRefused(FamilyError):
-    """A link that did nothing, and why: `stale` (unknown, used, past its time, or for somebody
-    switched off) or `taken` (this Telegram is already `owner`'s)."""
+    """A link that did nothing: `stale` (unknown, used, past its time, or for somebody switched off)
+    or `taken` (this Telegram is already `owner`'s).
+    """
 
     def __init__(self, why: str, owner: str | None = None) -> None:
         super().__init__(why)
@@ -438,8 +405,9 @@ class InviteRefused(FamilyError):
 
 
 def invite(conn: sqlite3.Connection, member_id: int, *, by: int | None, now: datetime) -> str:
-    """Make the code of a link that links whoever opens it to this person's Telegram, and return
-    it, to be shown once. It replaces any link made for them before."""
+    """Make the code of a link that links whoever opens it to this person's Telegram, shown once;
+    replaces any earlier one.
+    """
     code = secrets.token_urlsafe(INVITE_BYTES)
     with transaction(conn):
         person = _someone(conn, member_id)
@@ -458,23 +426,19 @@ def invite(conn: sqlite3.Connection, member_id: int, *, by: int | None, now: dat
 
 
 def is_invite_code(text: str) -> bool:
-    """Whether Telegram could have carried this as a link's start parameter."""
     return 16 <= len(text) <= 64 and set(text) <= INVITE_CODE
 
 
 def accept_invite(
     conn: sqlite3.Connection, code: str, *, telegram_id: str, now: datetime
 ) -> Member:
-    """Link this Telegram to whoever the link was made for, and use the link up.
-
-    Raises InviteRefused when it does nothing. A link opened by a Telegram already somebody
-    else's (an admin trying it on their own phone, say) is left as it was, for its person.
+    """Link this Telegram to whoever the link was made for, and use it up. Raises InviteRefused when
+    it does nothing; a Telegram already somebody else's is left as it was.
     """
     telegram = clean_telegram_id(telegram_id)
     if telegram is None or not is_invite_code(code):
         raise InviteRefused("stale")
     stamp = utc_iso(now)
-    # On their own, as a refusal below undoes whatever its transaction did.
     with transaction(conn):
         invites.forget_expired(conn, stamp)
     try:
@@ -498,7 +462,46 @@ def accept_invite(
                 channel_user_id=telegram,
             )
             invites.remove(conn, found.code_hash)
-    except sqlite3.IntegrityError as exc:  # linked to somebody else a moment ago
+    except sqlite3.IntegrityError as exc:
         raise InviteRefused("taken") from exc
     assert linked is not None
     return linked
+
+
+# -- notifications on somebody's own devices (push.py)
+
+MAX_ENDPOINT = 1000
+
+
+class PushRefused(ValueError):
+    """Why a device was not turned on: not a browser's push address, or keys that are not."""
+
+
+def subscribe_push(
+    conn: sqlite3.Connection,
+    member: Member,
+    *,
+    endpoint: str,
+    p256dh: str,
+    auth: str,
+    now: datetime,
+) -> None:
+    """Tell this person on this device (push.py): a browser's push address and the keys to
+    encrypt to it, checked. Done again for the same device, it is that device still; a device
+    somebody else turned on before is theirs now."""
+    from familydb import push
+
+    if not endpoint.startswith("https://") or len(endpoint) > MAX_ENDPOINT:
+        raise PushRefused("that is not a browser's push address")
+    if not push.valid_device(p256dh, auth):
+        raise PushRefused("those are not a browser's keys")
+    with transaction(conn):
+        push_store.subscribe(
+            conn, member.id, endpoint=endpoint, p256dh=p256dh, auth=auth, now=utc_iso(now)
+        )
+
+
+def unsubscribe_push(conn: sqlite3.Connection, member: Member, *, endpoint: str) -> bool:
+    """This device tells this person nothing now; False when it told them nothing already."""
+    with transaction(conn):
+        return push_store.unsubscribe(conn, member.id, endpoint) > 0

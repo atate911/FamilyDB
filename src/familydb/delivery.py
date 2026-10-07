@@ -1,17 +1,14 @@
 """Durable outgoing messages, and the claims that stop two workers doing one message's work.
 
-A reply is stored before it is sent and marked delivered only once the send succeeded, so a
-send that fails is tried again by the next job rather than lost. Delivery is therefore at least
-once: Telegram offers no idempotency key, so a send that succeeded but whose answer was lost
-can arrive twice. Sending again never runs the model or touches the calendar again.
+A reply is stored before it is sent and marked delivered only after the send succeeded, so
+delivery is at least once: Telegram offers no idempotency key, so a send whose answer was lost
+can arrive twice. Sending again never reruns the model or touches the calendar.
 
-A claim (`lease`) is a row-level lock with an expiry. The worker holding it renews it while it
-works; one that dies simply lets it lapse, and the next retry job can take the message over.
-
-A message kept to be answered with the ones that follow it (pipeline.receive) is held under the
-`GATHER` mark instead: the retry job leaves it alone until the mark lapses, while the turn that
-answers it may take it over (`lease` on it, or `claim_also` for the earlier ones of a burst). Every
-row taken under one claim is renewed and let go with it.
+A claim (`lease`) is a row lock with an expiry, renewed while the worker works; a worker that
+dies lets it lapse and the next retry job takes over. A message kept to be answered with the ones
+after it (pipeline.receive) is held under the `GATHER` mark instead: the retry job leaves it
+until the mark lapses, while the turn answering it may take it over (`lease`, or `claim_also` for
+a burst's earlier ones). Every row under one claim is renewed and let go with it.
 """
 
 from __future__ import annotations
@@ -40,8 +37,6 @@ Sender = Callable[[str, str], None]
 
 
 class Claim:
-    """What `lease` yields: true when the claim was won, with the token its rows are held by."""
-
     def __init__(self, token: str | None) -> None:
         self.token = token
 
@@ -51,12 +46,11 @@ class Claim:
 
 @contextmanager
 def lease(app: App, conn: sqlite3.Connection, message_id: int) -> Iterator[Claim]:
-    """Claim one message for as long as the block runs. Yields a false Claim when someone else
-    has it; a message held for gathering is taken over.
+    """Claim one message for as long as the block runs; yields a false Claim when someone else has
+    it. A message held for gathering is taken over.
 
-    Renewed on its own thread and connection while the block runs, so a long model turn does
-    not lose its claim halfway; released at the end whether the block succeeded or not, with
-    every row taken under it (`claim_also`).
+    Renewed on its own thread and connection so a long model turn keeps its claim; released at
+    the end, success or not, with every row taken under it (`claim_also`).
     """
     token = uuid.uuid4().hex
     now = utc_iso(app.clock.now())
@@ -101,8 +95,9 @@ def lease(app: App, conn: sqlite3.Connection, message_id: int) -> Iterator[Claim
 
 
 def hold_for_gathering(conn: sqlite3.Connection, message_id: int, *, until: str) -> None:
-    """Keep a stored message from the retry job while it waits to be answered with the ones
-    that follow it; the turn that answers it takes it over. Call inside a transaction."""
+    """Keep a stored message from the retry job while it waits to be answered with the ones after
+    it. Call inside a transaction.
+    """
     conn.execute(
         "UPDATE messages SET claim_token = ?, claim_until = ? WHERE id = ?",
         (GATHER, until, message_id),
@@ -112,8 +107,9 @@ def hold_for_gathering(conn: sqlite3.Connection, message_id: int, *, until: str)
 def claim_also(
     app: App, conn: sqlite3.Connection, claim: Claim, message_ids: list[int]
 ) -> list[int]:
-    """Take messages held for gathering under a claim already won, so they are renewed and let
-    go with it. Returns the ones taken: another turn may have taken the rest."""
+    """Take messages held for gathering under a claim already won. Returns the ones taken: another
+    turn may have taken the rest.
+    """
     until = utc_iso(app.clock.now() + timedelta(seconds=LEASE_SECONDS))
     taken = []
     with transaction(conn):
@@ -130,8 +126,8 @@ def claim_also(
 def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
     """Send one stored reply and mark it delivered, in that order. True when it went.
 
-    `sender` stands in for the channel's own, for a caller that is holding the conversation
-    open (the console, a Telegram update being answered).
+    `sender` stands in for the channel's own, for a caller holding the conversation open
+    (console, a Telegram update being answered).
     """
     with closing(app.connect()) as conn, lease(app, conn, message_id) as owned:
         if not owned:
@@ -142,7 +138,6 @@ def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
         send = sender or app.senders.get(row.channel)
         if send is None:
             return False
-        # Its buttons go with it where the channel can show them; anywhere else, its words do.
         with_buttons = app.button_senders.get(row.channel) if row.buttons and not sender else None
         try:
             if with_buttons is not None:
@@ -157,11 +152,18 @@ def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
                 "UPDATE messages SET delivered_at = ? WHERE id = ?",
                 (utc_iso(app.clock.now()), message_id),
             )
+        # One she sent of her own accord: the channel may tell a device too (push.py). Whatever
+        # becomes of that, the message is delivered.
+        notify = app.notifiers.get(row.channel) if row.sent_as else None
+        if notify is not None:
+            try:
+                notify(conn, row)
+            except Exception:
+                log.exception("could not tell any device of message %s", message_id)
         return True
 
 
 def run_deliveries(app: App) -> int:
-    """Try every reply that has not gone yet. Returns how many went this time."""
     with closing(app.connect()) as conn:
         ids = [
             r[0]
@@ -170,6 +172,5 @@ def run_deliveries(app: App) -> int:
                 "AND delivered_at IS NULL AND cancelled_at IS NULL ORDER BY id"
             )
         ]
-    # A message held for the conversation under way waits for it (voice.hand_over).
     now = app.clock.now()
     return sum(deliver(app, i) for i in ids if not app.held.is_held(i, now))

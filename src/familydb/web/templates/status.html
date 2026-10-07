@@ -8,7 +8,7 @@
   <ul class="plain lights">
     {% for row in rows %}
       {% set state = 'on' if row.on else ('off' if row.on is sameas false else 'part') %}
-      <li class="light-row {{ state }}">
+      <li>
         <span class="light {{ state }}" aria-hidden="true"></span>
         <div>
           <strong>{{ row.label }}</strong>
@@ -42,7 +42,6 @@
   {{ page_head('Status', 'Is it working, and what is it costing?', 'status') }}
 
   {% if attention %}
-    {# What only an admin can fix, first: each admin with a Telegram id is told as well. #}
     <section class="panel attention" id="attention">
       <h2>{{ icon('warning') }}Needs attention</h2>
       {{ lines(attention) }}
@@ -75,8 +74,7 @@
     <h2>{{ icon('coin') }}What it has cost</h2>
     {% set used = (spending.today / spending.limit * 100) if spending.limit else none %}
     <div class="spend-now">
-      {# The day's spend as a green screen shows it, with a bar of twenty cells: amber from three
-         quarters of the limit, red past it. The same is written out beside it. #}
+      {# The day's spend as a green screen shows it, a bar of twenty cells: amber from three quarters of the limit, red past it. #}
       {% call crt('readout' ~ (' near' if used is not none and used >= 75) ~ (' over' if used is not none and used >= 100)) %}
         <p class="readout-label dim caps">Spent today, about</p>
         <p class="readout-figure bright">${{ "%.2f"|format(spending.today) }}</p>
@@ -176,8 +174,7 @@
     {% endif %}
   </section>
 
-  {# The daily check of what each company offers and what it costs (familydb/model_watch.py):
-     where it read, and what it found changed. No model is asked for any of it. #}
+  {# The daily check of what each company offers and costs (familydb/model_watch.py); no model is asked. #}
   <section class="panel" id="models">
     <h2>{{ icon('list') }}Models and prices</h2>
     {% if not model_watch.on %}
@@ -208,13 +205,12 @@
       <p class="muted small">Nothing has changed in the last {{ model_watch.days }} days.</p>
     {% endif %}
     {% if model_watch.judgements %}
-      {# What a stronger model was asked to weigh, and what came of it. A change it made can be
-         put back, and one waiting for an admin put in, each through the settings form. #}
+      {# What a stronger model was asked to weigh. A change it made can be put back, one waiting for an admin put in, each through the settings form. #}
       <h3>Judgements</h3>
       <ul class="plain lights">
         {% for row in model_watch.judgements %}
           {% set state = 'on' if row.on else 'part' %}
-          <li class="light-row {{ state }}">
+          <li>
             <span class="light {{ state }}" aria-hidden="true"></span>
             <div>
               <strong>{{ row.label }}</strong>
@@ -326,6 +322,21 @@
       </ul>
     {% endif %}
   </section>
+
+  {% if whats_new %}
+    <section class="panel" id="whats-new">
+      <h2>{{ icon('sparkles') }}What’s new</h2>
+      <p class="muted">In the version running now: {{ whats_new.heading }}.</p>
+      {% if whats_new.items %}
+        <details>
+          <summary>{{ whats_new.items | length }} change{{ '' if whats_new.items | length == 1 else 's' }} since the last</summary>
+          <dl class="whats-new">
+            {% for what, said in whats_new.items %}<dt>{{ what }}</dt><dd>{{ said }}</dd>{% endfor %}
+          </dl>
+        </details>
+      {% endif %}
+    </section>
+  {% endif %}
 
   {% if troubles.calls or troubles.lookups %}
     <section class="panel trouble">

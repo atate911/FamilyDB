@@ -1,9 +1,5 @@
-"""What the status page shows (what is connected, what it has cost, what is stuck), and how far
-setting up has got (`setup_progress`), which the setup pages, Home and Settings read too.
-
-Reads only: everything here is a query and a sentence. The point is that someone can answer "is
-it working, and what is it costing us?" without opening a log.
-"""
+"""What the status page shows (what is connected, what it has cost, what is stuck) and how far
+setting up has got (`setup_progress`, read by setup, Home and Settings too). Reads only."""
 
 from __future__ import annotations
 
@@ -13,7 +9,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from familydb import alerts, happening
+from familydb import alerts, happening, upkeep, whatsnew
 from familydb import model_watch as watch
 from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
@@ -30,7 +26,8 @@ from familydb.availability import (
 from familydb.dates import utc_iso
 from familydb.integrations.google_calendar import service_account_email
 from familydb.store import alerts as alert_store
-from familydb.store import calls, ideas, members, messages
+from familydb.store import backups as backup_store
+from familydb.store import calls, ideas, members, messages, mornings
 from familydb.store import finds as find_store
 from familydb.store import judgements as judgement_store
 from familydb.store import model_watch as model_store
@@ -40,7 +37,7 @@ from familydb.web import fields, views
 from familydb.web.auth import own_passwords, password_chosen, password_in_use
 
 DAYS = 30
-CHANGES_DAYS = 30  # what the daily check of models found changed, shown this far back
+CHANGES_DAYS = 30
 TROUBLE_LIMIT = 6
 WAITING_LIMIT = 5
 LOOKUP_STATES = {
@@ -58,7 +55,7 @@ KEY_FOR = {
 
 
 def _row(label: str, on: bool | None, detail: str) -> dict[str, Any]:
-    """One line of the "what is connected" table. `on` of None means partly, or unknown."""
+    """One line of the "what is connected" table; `on` None means partly or unknown."""
     return {"label": label, "on": on, "detail": detail}
 
 
@@ -69,7 +66,6 @@ def _where(name: str, live: Any, stored: dict[str, Any]) -> str:
     return "set in the environment" if getattr(live, name) else "no key"
 
 
-# The situations a level is chosen for, by a kind of call that reads each level setting.
 SITUATIONS = (
     ("chat", "Chat messages"),
     ("digest", "The weekend digest"),
@@ -78,7 +74,7 @@ SITUATIONS = (
 
 
 def models(app: App) -> list[dict[str, Any]]:
-    """Who answers what, and on which model. The same question `debug cost` answers."""
+    """Who answers what, and on which model (as `debug cost` does)."""
     rows = []
     for kind, what in SITUATIONS:
         provider, model = gateway.answering(app.settings, kind)
@@ -135,7 +131,7 @@ def keys(app: App, stored: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def telegram_working(app: App) -> bool:
-    """A token is set and Telegram has not refused it or been out of reach, as far as is known."""
+    """A token is set and Telegram has not refused it or been out of reach, as far as known."""
     state = app.channel_states.get("telegram", "")
     return bool(app.settings.telegram_bot_token) and not state.startswith(("the token", "cannot"))
 
@@ -172,14 +168,28 @@ def services(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
         _row("Reading the web", *_lookups(app)),
         _row("Weekend digest", *_digest(app)),
         _row("This page", (personal or password_in_use(live)) or None, page),
+        _row("Backups", *_backups(app, conn)),
     ]
+
+
+def _backups(app: App, conn: sqlite3.Connection) -> tuple[bool | None, str]:
+    """When the last good backup was made, from what `familydb db backup` recorded."""
+    good = backup_store.latest(conn, good=True)
+    trouble = upkeep.backup_trouble(conn, app.clock.now())
+    if good is None and trouble is None:
+        return None, "none recorded; the installer schedules one each night (RUNBOOK section 7)"
+    if trouble:
+        return False, trouble
+    assert good is not None
+    size = f"{good.bytes / (1024 * 1024):.1f} MB"
+    when = views.local_moment(good.made_at, app.settings.tzinfo)
+    return True, f"the last good one {when}, {size}"
 
 
 def spending(
     conn: sqlite3.Connection, since: str, settings: Any = None, now: Any = None
 ) -> dict[str, Any]:
-    """Tokens and estimated dollars per model, how much of the input came from the cache, and
-    how much of today's limit is used."""
+    """Tokens and estimated dollars per model, the cache share, and today's use of the limit."""
     rows = calls.usage_since(conn, since=since)
     kinds = [
         {**row, "purpose": gateway.purpose(row["kind"])}
@@ -231,7 +241,7 @@ def last_call(conn: sqlite3.Connection, tz: Any) -> dict[str, Any] | None:
 
 
 def waiting(conn: sqlite3.Connection, tz: Any) -> dict[str, Any]:
-    """What has not been dealt with: ideas not yet looked up, messages that did not go through."""
+    """Ideas not yet looked up and messages that did not go through."""
     counts = ideas.enrichment_counts(conn)
     pending = ideas.pending_enrichment(conn, limit=WAITING_LIMIT)
     stuck = messages.recent_failures(conn, limit=WAITING_LIMIT)
@@ -257,7 +267,6 @@ def waiting(conn: sqlite3.Connection, tz: Any) -> dict[str, Any]:
 
 
 def troubles(conn: sqlite3.Connection, since: str, tz: Any) -> dict[str, Any]:
-    """The failures worth a person's attention, rather than everything in the log."""
     return {
         "calls": [
             {
@@ -284,8 +293,7 @@ ACTIVITY_SHOWN = 25
 
 
 def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
-    """What the models were asked lately, newest first, each line opening its history in full
-    (web/activity.py): a message answered, with what a lookup it started cost, or a lookup."""
+    """What the models were asked lately, newest first; each line opens `web/activity.py`."""
     tz = app.settings.tzinfo
     since = utc_iso(app.clock.now() - timedelta(days=ACTIVITY_DAYS))
     names = {person.id: person.display_name for person in members.list_all(conn, active_only=False)}
@@ -317,17 +325,15 @@ def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     return rows
 
 
-# The troubles that stop the family being answered, and the others worth an admin's look
-# (familydb/alerts.py). A price moving, a week's figures shifting, new models and a judgement's
-# answer are news, not trouble: they leave the light alone.
+# Alert kinds (familydb/alerts.py) that stop the family being answered, and others worth a look.
+# Price moves, usage shifts, new models and judgements are news and leave the light alone.
 STOPPING = frozenset({"credit", "key", "limit"})
 WORRYING = frozenset({"calendar", "model", "prices", "api", "refused", "happening"})
 
 
 def light(app: App, conn: sqlite3.Connection) -> str | None:
-    """The Status tile's light, for an admin: "bad" while the family cannot be answered, "warn"
-    while something else only an admin can fix goes on, None when all is well. One read of the
-    troubles table, as the status page makes; no model call."""
+    """The Status tile's light: "bad" while the family cannot be answered, "warn" while something
+    else only an admin can fix goes on, else None."""
     since = utc_iso(app.clock.now() - alerts.KEEP)
     kinds = {one.kind for one in alert_store.current(conn, since=since)}
     if kinds & STOPPING:
@@ -337,9 +343,51 @@ def light(app: App, conn: sqlite3.Connection) -> str | None:
     return None
 
 
+@dataclass(frozen=True)
+class Pill:
+    """How the assistant stands, said once for the sidebar, the phone's top bar and Status: one of
+    ready, busy (writing back), rest (the day's limit is spent) or down (cannot answer)."""
+
+    state: str
+    long: str
+    short: str
+
+
+def pill(app: App, conn: sqlite3.Connection, *, name: str, busy: bool = False) -> Pill:
+    """Built from what Status already reads, so the pill and the page cannot disagree. `busy` is
+    whether a reply is being written (the chat's own `standing`); asked by the caller, which knows
+    whose chat it is."""
+    live = app.settings
+    if not ready_to_answer(setup_progress(app, conn)):
+        return Pill("down", f"{name} can\u2019t answer yet", "Can\u2019t answer yet")
+    limit = live.daily_spend_limit
+    if limit and spent_today(conn, live, app.clock.now()) >= limit:
+        return Pill("rest", f"{name} is resting until midnight", "Resting")
+    if light(app, conn) == "bad":
+        return Pill("down", f"{name} can\u2019t answer right now", "Can\u2019t answer")
+    if busy:
+        return Pill("busy", f"{name} is writing back", "Writing back")
+    return Pill("ready", f"{name} is ready", "Ready")
+
+
+USUAL_DAYS = 30
+
+
+def vera_today(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """Home's small card for a grown-up: what was spent today against the limit, and what a usual
+    day costs (the last 30 days). An estimate, as everywhere (agent/providers/prices.py)."""
+    live = app.settings
+    now = app.clock.now()
+    since = utc_iso(now - timedelta(days=USUAL_DAYS))
+    return {
+        "spent": views.money_text(spent_today(conn, live, now)),
+        "limit": views.money_text(live.daily_spend_limit) if live.daily_spend_limit else None,
+        "usual": views.money_text(calls.usual_day(conn, since=since)),
+    }
+
+
 def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
-    """What only an admin can fix, while it lasts (familydb/alerts.py). New models to choose
-    from are news rather than a trouble: they are under Models and prices instead."""
+    """What only an admin can fix, while it lasts. New models are under Models and prices."""
     now = app.clock.now()
     found = [
         one
@@ -361,9 +409,8 @@ def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
 
 
 def switch_for(app: App, conn: sqlite3.Connection, subject: str) -> dict[str, Any] | None:
-    """For a model going or gone, the one to put in its place with one press: the settings
-    boxes that name it now, and what they would be set to. None when no box names it (a level's
-    model, which the daily check puts in by itself on the day) or there is nothing to offer."""
+    """For a model going or gone, the settings boxes naming it and what to set them to. None when
+    no box names it (a level's model, which the daily check swaps itself) or nothing is offered."""
     company, _, rest = subject.partition(":")
     name = rest.split(":")[0]
     live = app.settings
@@ -379,7 +426,6 @@ def switch_for(app: App, conn: sqlite3.Connection, subject: str) -> dict[str, An
 
 
 def model_watch(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
-    """How the daily check of models and prices went, and what it found changed lately."""
     tz = app.settings.tzinfo
     since = utc_iso(app.clock.now() - timedelta(days=CHANGES_DAYS))
     return {
@@ -447,7 +493,6 @@ def happening_settings(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
 
 
 def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
-    """Everything the status page shows, in one pass over a handful of small queries."""
     tz = app.settings.tzinfo
     since = utc_iso(app.clock.now() - timedelta(days=DAYS))
     stored = settings_store.overrides(conn)
@@ -469,32 +514,29 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "happening": happening_status(app, conn),
         "activity": activity(app, conn),
         "activity_days": ACTIVITY_DAYS,
+        "whats_new": whatsnew.latest(),
     }
 
 
 @dataclass(frozen=True)
 class SetupStep:
-    """One step of setting FamilyDB up, and how far it has got, read from what is configured.
-
-    Nothing records that a step was done or skipped: each is done when the thing it sets up is
-    there, so leaving half way, or doing it on the settings page instead, is never out of step.
-    """
+    """One setup step, done when what it sets up is there (nothing records progress)."""
 
     name: str
     title: str
-    short: str  # a word or two, for the row of steps along the top of each one
+    short: str  # for the row of steps along the top
     need: str  # "needed" (it cannot answer without it), "recommended" or "optional"
     minutes: int
     done: bool
-    detail: str  # what is set up, or what is missing, in a few words
-    todo: str  # the line on the home page while it is not done
+    detail: str
+    todo: str  # the home page line while not done
 
 
 SETUP_ORDER = ("you", "password", "model", "home", "telegram", "family", "calendar")
 
 
 def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
-    """Every setup step in order, each done or not. A few small reads, no network."""
+    """Every setup step in order, each done or not. No network."""
     live = app.settings
     everyone = members.list_all(conn)
     admin = next((person for person in everyone if person.role == "admin"), None)
@@ -601,15 +643,12 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
 
 
 def ready_to_answer(steps: list[SetupStep]) -> bool:
-    """Whether the steps it cannot answer without are done: somebody to answer, and a model."""
+    """Whether the steps it cannot answer without are done."""
     return all(step.done for step in steps if step.need == "needed")
 
 
 def setup_steps(app: App, conn: sqlite3.Connection) -> list[dict[str, str]]:
-    """What is left before the bot can do all it is for, most important first. Empty when done.
-
-    Each is a sentence and the setup page where it is done: nothing here needs a file.
-    """
+    """What is left to set up, most important first: a sentence and its setup page."""
     return [
         {"text": step.todo, "link": f"/setup/{step.name}"}
         for step in setup_progress(app, conn)
@@ -618,15 +657,14 @@ def setup_steps(app: App, conn: sqlite3.Connection) -> list[dict[str, str]]:
 
 
 def telegram_name(app: App) -> str | None:
-    """The bot's @name, as Telegram gave it when the channel connected, or None."""
+    """The bot's @name as Telegram gave it on connecting, or None."""
     state = app.channel_states.get("telegram", "")
     prefix = "connected as @"
     return state[len(prefix) :] if state.startswith(prefix) else None
 
 
 def telegram_reads_groups(app: App) -> bool | None:
-    """Whether the bot reads every message in a group (BotFather's privacy setting off), as
-    Telegram last said while it was connected; None when that is not known."""
+    """Whether the bot reads every group message (BotFather's privacy off); None when unknown."""
     return app.channel_facts.get("telegram", {}).get("reads_groups")
 
 
@@ -652,11 +690,13 @@ AUTOMATIC_RECENT = 20
 
 
 def automatic(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
-    """What she sends of her own accord: each kind, whether it is on, when, what it costs and how
-    often it went in the last month, and the latest few in full (messages.sent_as)."""
+    """What she sends of her own accord: each kind's state, cost and count, and the latest few."""
     settings, tz = app.settings, app.settings.tzinfo
     since = utc_iso(app.clock.now() - timedelta(days=AUTOMATIC_DAYS))
-    counts = messages.sent_on_their_own_counts(conn, since=since)
+    counts = {
+        **messages.sent_on_their_own_counts(conn, since=since),
+        **mornings.part_counts(conn, since=since),
+    }
     hour = "{:02d}:00".format
     digest_chat = dict(digest_chats(conn, tz)).get(settings.digest_chat_id, settings.digest_chat_id)
     state = {
@@ -680,6 +720,24 @@ def automatic(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "nudges": (
             settings.task_nudges,
             "when the part of the week a task was kept for comes round, and the calendar is free",
+        ),
+        "morning_agenda": (
+            settings.morning_agenda,
+            f"each morning at {hour(settings.morning_hour)}: the day's plans, reminders and "
+            "deadlines, in each chat they are for",
+        ),
+        "chase_missed": (
+            settings.chase_missed,
+            "in the morning message, once, the day after a reminder went and nobody acted on it",
+        ),
+        "deadline_heads_up": (
+            settings.deadline_heads_up,
+            "in the morning message, the day before something is due",
+        ),
+        "forgotten_roundup": (
+            settings.forgotten_roundup,
+            f"in {views.DAY_NAMES.get(settings.roundup_day, settings.roundup_day)}'s morning "
+            "message: to-dos a week old with nothing to bring them up",
         ),
         "lookups": (
             settings.enrichment_notes and enrichment_available(settings),
@@ -732,10 +790,8 @@ def automatic(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
 
 
 def digest_chats(conn: sqlite3.Connection, tz: Any, limit: int = 10) -> list[tuple[str, str]]:
-    """Chats the digest could go to, as (chat id, what it is), so nobody has to dig for an id.
-
-    A Telegram group appears once somebody on the family list has written in it.
-    """
+    """Chats the digest could go to, as (chat id, what it is). A group appears once somebody on
+    the family list has written in it."""
     offers = [("web", "the chat on this page")]
     for chat in messages.chats(conn, "telegram")[:limit]:
         chat_id = chat["chat_id"]

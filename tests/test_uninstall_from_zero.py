@@ -1,9 +1,9 @@
 """`uninstall.sh --from-zero` really runs, on a fake server, and leaves only what was there before.
 
-It deletes things all over a machine, so it runs inside a private mount namespace where /root,
-/home, /opt, /var/log and the rest are empty throwaway folders. That needs root and a kernel that
-allows it, which a laptop or CI usually does not give, so the test is skipped there. The two
-answers (yes, then the words typed out) go in through a pseudo-terminal, as a person's would.
+It deletes things all over a machine, so it runs in a private mount namespace where /root, /home,
+/opt, /var/log and the rest are throwaway folders. That needs root and a kernel that allows it,
+so it is skipped elsewhere. The two answers go in through a pseudo-terminal, as a person's would.
+
 """
 
 # ruff: noqa: E501  (the fake server is a shell script, written as a person would type it)

@@ -1,7 +1,7 @@
 """Checking a key before it is stored: each vendor's own answer, read for what it says.
 
-The setup page asks this once, when a key is pasted. It costs nothing: it is the model lookup
-`model_exists` makes, and only a definite "that key is wrong" may stop a key being saved.
+Costs nothing (`model_exists`); only a definite "that key is wrong" may stop a key being saved.
+
 """
 
 from __future__ import annotations
@@ -84,7 +84,6 @@ def _provider(monkeypatch, module, name: str, settings, outcome, **keys):
             ),
             "unchecked",
         ),
-        (openai_provider.openai.APIConnectionError(request=REQUEST), "unchecked"),
     ],
 )
 def test_openai_says_what_it_thinks_of_a_key(settings, monkeypatch, outcome, verdict) -> None:

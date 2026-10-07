@@ -16,6 +16,7 @@ from familydb.tools.urls import clean_url
 
 MAX_FINDS = 6
 MAX_FEEDS = 10
+MAX_FIELD = 200
 
 
 class Find(BaseModel):
@@ -29,6 +30,10 @@ class Find(BaseModel):
         default=None, description="HH:MM, 24-hour, when it starts, when the page says."
     )
     summary: str = Field(description="One line.")
+    # For a place (the places worker): what it is, and where and when, as the page writes them.
+    kind: str | None = Field(default=None, description="For a place: restaurant, park, ...")
+    hours: str | None = Field(default=None, description="For a place: opening hours as written.")
+    address: str | None = Field(default=None, description="For a place: its street address.")
 
 
 class ReportFindsInput(BaseModel):
@@ -40,7 +45,7 @@ class ReportFindsInput(BaseModel):
 @tool(
     name="report_finds",
     description=(
-        "Used by the discovery worker to hand back time-bound options found on the web. "
+        "Used by the discovery and places workers to hand back what they found on the web. "
         "Not for chat."
     ),
     worker_only=True,
@@ -59,16 +64,25 @@ def report_finds(ctx: ToolContext, args: ReportFindsInput) -> dict[str, Any]:
         if url.lower() in seen or len(finds) >= MAX_FINDS:
             continue
         seen.add(url.lower())
-        kept: dict[str, Any] = {
-            "title": find.title.strip(),
-            "url": url,
-            "dates": find.dates.strip() if find.dates else None,
-            "summary": find.summary.strip(),
-            "source": urlsplit(url).hostname,
-        }
-        if starts:
-            kept["starts"] = starts
-        finds.append(kept)
+        finds.append(
+            {
+                "title": find.title.strip(),
+                "url": url,
+                "dates": find.dates.strip() if find.dates else None,
+                "summary": find.summary.strip(),
+                "source": urlsplit(url).hostname,
+                **{
+                    key: value.strip()[:MAX_FIELD]
+                    for key, value in (
+                        ("kind", find.kind),
+                        ("hours", find.hours),
+                        ("address", find.address),
+                    )
+                    if value and value.strip()
+                },
+                **({"starts": starts} if starts else {}),
+            }
+        )
         recorded += 1
     return {"recorded": recorded, "rejected": rejected, "total": len(finds)}
 
@@ -164,7 +178,7 @@ MOST_WORDS = 200
     worker_only=True,
 )
 def give_picks(ctx: ToolContext, args: GivePicksInput) -> dict[str, Any]:
-    """Every check code can make of a choice (suggest/choose.py): the option exists and was not
+    """Every check code can make of a choice (suggest/choosing.py): the option exists and was not
     picked twice, a favourite was done before and a new one never was, the day is one it fits,
     the reason is short and what it cites is in the dossier. A pick that fails is refused, with
     what would do, so the call can put it right in its one more step."""
@@ -225,16 +239,12 @@ def _pick_day(pick: PickInput, option: Any, window: tuple[date, date] | None) ->
     ),
 )
 def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
-    from familydb.suggest import choose as choosing
+    from familydb.suggest import choosing
     from familydb.suggest.engine import assess, result_of
-    from familydb.suggest.shortlist import SHORTLIST_MAX
 
-    # For a planning question a stronger call chooses among more ideas checked in detail
-    # (suggest/choose.py); otherwise, and whenever it cannot, the engine's own order.
-    why_not = choosing.reason_not_to(ctx, args)
-    checked = SHORTLIST_MAX if why_not else choosing.CHOOSE_CHECKED
-    assessed = assess(ctx, args, check_at_most=checked)
-    chosen = None if why_not else choosing.choose(ctx, args, assessed)
-    # Nulls carry no information here and this result is not cached: it is sent to the model,
-    # then sent again with the reply. Leaving them out roughly halves it.
+    # For a planning question a stronger call chooses (suggest/choosing.py); otherwise, and
+    # whenever it cannot, the engine's own order.
+    assessed = assess(ctx, args)
+    chosen = None if choosing.reason_not_to(ctx, args) else choosing.choose(ctx, args, assessed)
+    # Uncached and resent with the reply: leaving nulls out roughly halves it.
     return result_of(assessed, chosen).model_dump(mode="json", exclude_none=True)

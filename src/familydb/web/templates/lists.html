@@ -1,0 +1,55 @@
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, page_head %}
+{% block title %}Lists · {{ site_title }}{% endblock %}
+{% block content %}
+  {{ page_head('Lists', 'What the family needs to get. Tell ' ~ assistant ~ ' too: “we’re out of milk” goes on the shopping list.') }}
+  {% for one in lists %}
+    {% set n = loop.index %}
+    <section class="card list-card" aria-labelledby="l-{{ n }}">
+      <h2 class="card__head" id="l-{{ n }}">{{ one.title }}</h2>
+      <ul class="list-items">
+        {% for thing in one.to_get %}
+          <li>
+            <form method="post" action="{{ url_for('edits.change_list') }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing }}" />
+              <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Got: {{ thing }}</span></button>
+            </form>
+            <span>{{ thing }}</span>
+          </li>
+        {% else %}
+          <li class="muted">Nothing on it.</li>
+        {% endfor %}
+      </ul>
+      <form class="form" method="post" action="{{ url_for('edits.change_list') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="action" value="add" /><input type="hidden" name="name" value="{{ one.name }}" />
+        <div class="field"><label class="field__label" for="add-{{ n }}">Add to it (one a line)</label>
+          <textarea id="add-{{ n }}" name="items" rows="2" maxlength="4000" required data-dictate></textarea></div>
+        <div class="actions"><button class="btn btn--sm" type="submit">{{ icon('plus') }}Add</button></div>
+      </form>
+      {% if one.ticked %}
+        <details class="list-got">
+          <summary>Got ({{ one.ticked | length }})</summary>
+          <ul class="list-items">
+            {% for thing in one.ticked %}
+              <li>
+                <form method="post" action="{{ url_for('edits.change_list') }}">
+                  <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                  <input type="hidden" name="action" value="untick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing }}" />
+                  <button class="linkbtn" type="submit">Put back</button>
+                </form>
+                <s>{{ thing }}</s>
+              </li>
+            {% endfor %}
+          </ul>
+          <form method="post" action="{{ url_for('edits.change_list') }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+            <input type="hidden" name="action" value="clear_ticked" /><input type="hidden" name="name" value="{{ one.name }}" />
+            <button class="btn btn--quiet btn--sm" type="submit">Clear what was got</button>
+          </form>
+        </details>
+      {% endif %}
+    </section>
+  {% endfor %}
+{% endblock %}

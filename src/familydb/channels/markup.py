@@ -1,15 +1,11 @@
-"""Telegram's HTML from what is sent there: the light Markdown models write, drawn as formatting.
+"""Telegram's HTML from the light Markdown models write (**bold**, *italics*, `code`,
+[links](https://…)).
 
-Models write **bold**, *italics*, `code` and [links](https://…) whatever they are asked, and
-Telegram shows plain text as it is, asterisks and all. Sent as HTML, Telegram draws them. Only
-that small set becomes tags, with headings drawn bold and a bullet as a bullet; everything else is
-escaped, so nothing a message says can become markup of its own, and a link has to be http or
-https. The words stored and shown on the page stay as they were written.
-
-Telegram refuses HTML whose tags do not nest. Crossed marks (**bold *and** italic*) would make
-such tags, so a message whose marks cross is sent with its marks as they are written, keeping
-its code and links; and should Telegram refuse one all the same, the channel sends the words as
-they are (`channels/telegram.py`), so a message is never lost to its formatting.
+Only that small set becomes tags (headings bold, a bullet a bullet); everything else is escaped
+so a message can never become markup of its own, and a link must be http or https. Telegram
+refuses tags that do not nest, so a message whose marks cross is sent with its marks as written,
+keeping code and links; if Telegram still refuses, the channel sends the plain words
+(`channels/telegram.py`). Stored and page text stay as written.
 """
 
 from __future__ import annotations
@@ -18,9 +14,9 @@ import html
 import re
 from collections.abc import Callable
 
-# Stand-ins for what is already markup, so the marks after cannot reach inside it: code, a link's
-# tags and a bare address, whose underscores are not italics. Their two characters are private
-# use: taken out of what is sent before anything else, and never part of an address.
+# Stand-ins for what is already markup (code, a link's tags, a bare address whose underscores are
+# not italics), so later marks cannot reach inside. Two private-use characters, taken out of what is
+# sent first.
 OPEN, SHUT = "\ue000", "\ue001"
 KEPT = re.compile(f"{OPEN}(\\d+){SHUT}")
 FENCE = re.compile(r"```[\w+-]*\n?(.*?)```", re.DOTALL)
@@ -40,7 +36,6 @@ MARKS = (
 
 
 def to_html(text: str, *, heading: bool = False) -> str:
-    """The words as Telegram HTML, `heading` drawing the first line bold (a command's answer)."""
     kept: list[str] = []
 
     def keep(markup: str) -> str:
@@ -66,7 +61,6 @@ def to_html(text: str, *, heading: bool = False) -> str:
         marked = mark.sub(_tagged(tag), marked)
     if heading:
         marked, text = _bold_first_line(marked), _bold_first_line(text)
-    # Checked with the links' tags back in place, which a mark may cross as well.
     drawn = restored(marked)
     return drawn if _nests(drawn) else restored(text)
 
@@ -83,7 +77,6 @@ def _tagged(tag: str) -> Callable[[re.Match[str]], str]:
 
 
 def _nests(markup: str) -> bool:
-    """Whether every tag in it closes in the order it opened, as Telegram insists."""
     opened: list[str] = []
     for closing, name in TAG.findall(markup):
         if not closing:

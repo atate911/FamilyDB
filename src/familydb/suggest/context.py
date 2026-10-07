@@ -1,18 +1,17 @@
-"""Stage: the calendar's free time and the forecast for the window.
-
-Free time is the stretches of each day between its bounds with the busy events taken out, in
-minutes, so "the next four hours" and "Saturday from 2" are answered as asked, and a question on
-Saturday afternoon does not count the morning that has gone.
-"""
+"""Stage: the calendar's free time (each day's bounds minus busy events, in minutes) and the
+forecast for the window."""
 
 from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
 
+from familydb.availability import calendar_available
 from familydb.clock import season_for
 from familydb.errors import ToolError
 from familydb.free_time import events_by_day, free_spans
+from familydb.integrations.open_meteo import DayForecast
+from familydb.saved_plans import SavedPlans
 from familydb.suggest.types import Context, DayBounds, DayContext
 from familydb.tools import ToolContext
 from familydb.tools.weather import forecast_days
@@ -23,7 +22,7 @@ log = logging.getLogger(__name__)
 def build_context(
     ctx: ToolContext, window: tuple[date, date] | None, bounds: DayBounds | None = None
 ) -> Context:
-    """Free time and forecast per day. A missing service becomes a skipped check, not an error."""
+    """Free time and forecast per day; a missing service is a skipped check, not an error."""
     today = ctx.clock.today()
     southern = ctx.settings.southern_hemisphere
     skipped: list[str] = []
@@ -40,17 +39,22 @@ def build_context(
     free_by_day: dict[str, list[tuple[int, int]]] = {}
     commitments: dict[str, list[str]] = {}
     free_known = True
-    if ctx.calendar is None:
+    calendar = ctx.calendar
+    if calendar is None and not ctx.ignore_busy and not calendar_available(ctx.settings):
+        # No Google calendar: the plans kept here are what takes time up (saved_plans.py).
+        calendar = SavedPlans(ctx.conn, tz)
+        skipped.append("no Google calendar connected: only the plans saved here count as busy")
+    if calendar is None:
         skipped.append("calendar not connected")
         free_known = False
     else:
         try:
-            for day, todays in events_by_day(ctx.calendar, start, end, tz):
+            for day, todays in events_by_day(calendar, start, end, tz):
                 free_by_day[day.isoformat()] = free_spans(todays, day, tz, *limits[day])
                 commitments[day.isoformat()] = [e.title for e in todays if e.all_day] + [
                     e.title for e in todays if not e.all_day
                 ]
-        except Exception as exc:  # a transport error must not fail the whole suggestion
+        except Exception as exc:  # must not fail the whole suggestion
             if not isinstance(exc, ToolError):
                 log.exception("calendar check failed")
             skipped.append(f"calendar check failed: {exc}")
@@ -78,7 +82,7 @@ def build_context(
                 date=day,
                 spans=free_by_day.get(day.isoformat(), _unknown(limits[day])),
                 free_known=free_known,
-                forecast=forecasts.get(day),
+                forecast=_part(forecasts.get(day), limits[day]),
                 commitments=commitments.get(day.isoformat(), []),
                 bounds=limits[day],
             )
@@ -87,6 +91,12 @@ def build_context(
     return Context((start, end), days, season_for(start, southern=southern), today, skipped)
 
 
+def _part(forecast: DayForecast | None, limits: tuple[int, int]) -> DayForecast | None:
+    """The day's weather for the hours asked about, when the forecast has them: rain at six in
+    the morning says nothing about this afternoon."""
+    return forecast.between(*limits) if forecast is not None else None
+
+
 def _unknown(limits: tuple[int, int]) -> list[tuple[int, int]]:
-    """With no calendar to ask, the whole of the time asked about is taken to be free."""
+    """With no calendar, all of the time asked about counts as free."""
     return [limits] if limits[1] > limits[0] else []

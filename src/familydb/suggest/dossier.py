@@ -1,5 +1,5 @@
 """Everything the household knows that bears on one planning question, for the stronger call that
-chooses what to suggest (suggest/choose.py).
+chooses what to suggest (suggest/choosing.py).
 
 Built by code, deterministic, and bounded: each section has a cap in characters and is cut at a
 whole line, with a note of how much was left out, except the firm memories, which always go (as
@@ -24,7 +24,7 @@ from familydb.agent.render import render_audience_line, render_idea_line
 from familydb.dates import utc_iso
 from familydb.memory import line_of
 from familydb.store import ideas, members, memories, messages, outcomes, plans, suggestions
-from familydb.suggest.compose import day_summaries, order_candidates
+from familydb.suggest.compose import LOVED, day_summaries, order_candidates
 from familydb.suggest.types import Candidate, SuggestInput, clock
 from familydb.tools import ToolContext
 
@@ -95,6 +95,7 @@ def _question(args: SuggestInput, label: str) -> list[str]:
         "most time, minutes": args.max_duration_minutes,
         "near": args.near,
         "looking for": args.topic,
+        "they asked for": "favourites" if args.prefer == "favourites" else None,
     }
     lines += [f"{name}: {value}" for name, value in framing.items() if value not in (None, "")]
     return lines
@@ -172,7 +173,9 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
     sections["about"] = about.splitlines() if about else []
     sections["days"] = _days(a)
 
-    ordered = order_candidates(a.candidates, a.by_id, a.recently)
+    ordered = order_candidates(
+        a.candidates, a.by_id, a.recently, prefer=a.args.prefer, loved=a.loved
+    )
     offered = [c for c in ordered if c.verdict != "ruled_out"]
     latest = outcomes.latest_for(conn, [c.idea_id for c in offered])
     option_lines: list[str] = []
@@ -188,7 +191,8 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
             done_before=bool(idea and idea.times_done),
         )
         cites.add(ref)
-        line = f"{ref} {candidate.verdict}: " + "; ".join(candidate.reasons)
+        reasons = ([LOVED] if candidate.idea_id in a.loved else []) + candidate.reasons
+        line = f"{ref} {candidate.verdict}: " + "; ".join(reasons)
         checked = _checks(candidate)
         if checked:
             line += f" [{checked}]"
@@ -216,7 +220,8 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
             days=(find.starts[:10],) if find.starts else (),
         )
         cites.add(ref)
-        said = " · ".join(part for part in (find.dates, find.source, find.summary) if part)
+        parts = (find.kind, find.dates, find.hours, find.address, find.source, find.summary)
+        said = " · ".join(part for part in parts if part)
         option_lines.append(f"{ref} {find.title}: {said}")
     sections["options"] = option_lines
 

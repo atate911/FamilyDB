@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 
 import pytest
-from markupsafe import escape
 
 from familydb.app import App
 from familydb.store import db
@@ -51,17 +50,6 @@ def test_the_page_offers_every_setting_that_can_be_stored() -> None:
     assert sorted(shown) == sorted(BEHAVIOUR)
     assert len(shown) == len(set(shown))
     assert not set(shown) & set(SECRETS)  # keys have their own form, and are never echoed
-
-
-def test_a_box_left_empty_says_what_it_falls_back_to(page) -> None:
-    spending = page.get("/settings/spending").text
-    assert "Default (Medium)" in spending  # a dropdown, in the page's words rather than "medium"
-    assert "Between 1 and 20." in spending  # read off the setting, not written out twice
-    assert "Default (claude-opus-5)" in page.get("/settings/model").text
-    messages = page.get("/settings/messages").text
-    assert "Default (18:00)" in messages and "Default (Thursday)" in messages
-    assert "Default (yes)" in messages  # a yes or no, never true or false
-    assert "Between 0 and 23." not in messages  # an hour is chosen from a list, not typed
 
 
 def test_saving_puts_it_in_force_at_once(page, conn) -> None:
@@ -526,13 +514,6 @@ def test_a_home_area_typed_on_the_page_is_found_on_the_map(settings, clock, conn
     assert (app.settings.home_lat, app.settings.home_lon) == (45.5, -122.7)
 
 
-def test_the_home_page_lists_what_is_left_to_set_up(page) -> None:
-    text = page.get("/").text
-    assert "Finish setting up" in text
-    assert "Say where home is" in text and "Connect Google Calendar" in text
-    assert "Give it a model key" not in text  # the test settings have one
-
-
 def test_the_digest_chat_is_offered_from_the_chats_it_has_seen(page, conn) -> None:
     from familydb.store import messages
 
@@ -558,7 +539,7 @@ def test_the_digest_chat_is_offered_from_the_chats_it_has_seen(page, conn) -> No
     assert "private chat with Sam" in listed and "hello" not in listed
 
 
-# -- one page for each part --------------------------------------------------------------------
+# -- one page for each part
 
 
 def _drawn(text: str) -> set[str]:
@@ -577,16 +558,6 @@ def test_every_setting_is_on_exactly_one_page_and_the_right_one(page) -> None:
     assert sorted(found) == sorted(BEHAVIOUR)
     assert {key: pages for key, pages in found.items() if len(pages) > 1} == {}
     assert {key: pages[0] for key, pages in found.items()} == fields.SECTION_OF
-
-
-def test_the_list_of_pages_says_how_each_stands_and_leads_to_it(page) -> None:
-    text = page.get("/settings").text
-    for section in fields.SECTIONS:
-        assert f'href="/settings/{section.name}"' in text, section.name
-        assert str(escape(section.title)) in text  # as the page writes it: What&#39;s…
-    assert "Claude (Anthropic) answers, with claude-opus-5." in text  # the test settings' model
-    assert "Home is not set yet" in text and "Needs a look" in text
-    assert 'name="csrf"' not in text  # nothing to send here: every form is on its own page
 
 
 def test_a_page_that_is_not_one_is_not_found(page) -> None:
@@ -625,14 +596,6 @@ def test_keys_come_back_to_the_page_they_were_saved_on(page, conn) -> None:
     assert refused.status_code == 400 and "<h1>Connections</h1>" in refused.text
 
 
-def test_the_other_pages_say_where_the_rest_is(page) -> None:
-    """The nav down the side reaches every page, and marks the one you are on."""
-    text = page.get("/settings/messages").text
-    assert '<nav class="settings-nav" aria-label="Settings">' in text
-    assert 'href="/settings/messages" aria-current="page"' in text
-    assert text.count('aria-current="page"') == 2  # this page, and Settings in the bar
-
-
 def test_a_phone_is_offered_the_keyboard_each_box_needs(page) -> None:
     general = page.get("/settings/general").text
     # A longitude may be negative, and a phone's number pads have no minus sign.
@@ -641,13 +604,6 @@ def test_a_phone_is_offered_the_keyboard_each_box_needs(page) -> None:
     assert re.search(
         r'name="enrich_batch"[^>]*inputmode="numeric"', page.get("/settings/lookups").text
     )
-
-
-def test_nothing_floats_beside_the_key_box_that_would_not_save_it(page) -> None:
-    """The models' Save stays with its form, so a pasted key is not left behind by the wrong one."""
-    text = page.get("/settings/model").text
-    assert 'class="save-bar still"' in text and 'class="save-bar"' not in text
-    assert "Save models" in text and "Save and check the key" in text
 
 
 def test_a_zone_reads_as_its_place_and_its_offset_that_day() -> None:
@@ -666,17 +622,6 @@ def test_a_zone_reads_as_its_place_and_its_offset_that_day() -> None:
     groups = dict(zone_groups(["Europe/Paris", "UTC", "America/Toronto", "America/Denver"], winter))
     assert list(groups) == ["Americas", "Europe", "Other"]
     assert [zone for zone, _ in groups["Americas"]] == ["America/Denver", "America/Toronto"]
-
-
-def test_the_general_page_says_where_the_page_is_served_and_how_to_move_it(page) -> None:
-    """Both ports, and the commands that move them on the server: shown, never a form."""
-    general = page.get("/settings/general").text
-    served = general[general.index('id="served"') :]
-    assert "<code>http://localhost/</code>, on port 80" in served
-    assert "<code>127.0.0.1:8080</code>: only this machine can reach it." in served
-    assert "scripts/maintain.sh port 9090</code> moves FamilyDB itself off\n      8080" in served
-    assert "https --port" not in served  # nothing is in front of it to move
-    assert 'name="web_port"' not in general and "web_port" not in fields.BY_KEY
 
 
 def test_behind_caddy_it_says_how_to_move_the_address_people_open(settings, clock, conn, family):

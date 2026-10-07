@@ -40,6 +40,17 @@
   </form>
 </section>
 
+{% set keeping = groups['keeping'] %}
+<section class="panel" id="{{ keeping.group.name }}">
+  <h2>{{ icon('hourglass') }}{{ keeping.group.title }}</h2>
+  <form method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="section" value="security" />
+    <div class="grid">{% for one in keeping.boxes %}{{ box(one) }}{% endfor %}</div>
+    <button type="submit">{{ icon('check') }}Save</button>
+  </form>
+</section>
+
 <section class="panel" id="reveal">
   <h2>{{ icon('key') }}See a key</h2>
   {% set saved = keys.values() | selectattr('set') | list %}
@@ -83,6 +94,35 @@
       <a href="{{ url_for('settings.section', name='model') }}">AI model</a> and
       <a href="{{ url_for('settings.section', name='connections') }}">Connections</a> pages.</p>
   {% endif %}
+</section>
+
+<section class="panel" id="take-away">
+  <h2>{{ icon('down') }}The family’s data, to take away</h2>
+  <p class="muted">
+    The plans as a calendar file any calendar opens, and the ideas and the things to do as
+    spreadsheets, for any grown-up:
+    <a href="{{ url_for('web.export_plans') }}">plans</a>,
+    <a href="{{ url_for('web.export_ideas') }}">ideas</a>,
+    <a href="{{ url_for('web.export_tasks') }}">things to do</a>.
+    Everything the family has kept (people, ideas, places, plans, things to do, what is
+    remembered, wish lists, lists and every message) is one file for an admin. No key, password
+    or device is ever in it.
+  </p>
+  <form method="post" action="{{ url_for('settings.export_everything') }}" class="filters">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {% if needs_password %}
+      <div class="field">
+        <label for="export-password">{{ 'Your password' if own_password else 'Family password' }}</label>
+        <input
+          id="export-password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+        />
+      </div>
+    {% endif %}
+    <div class="actions"><button class="quiet" type="submit">{{ icon('down') }}Download everything</button></div>
+  </form>
 </section>
 
 <section class="panel" id="everyone">

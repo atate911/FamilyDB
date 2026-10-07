@@ -1,21 +1,17 @@
-"""Memories: what the family has told the bot about itself (docs/MEMORY.md).
-
-Rows are never deleted. A corrected memory is marked `replaced` and points at what replaced it;
-a forgotten one keeps its words, marked `forgotten`, so the same thing said before the forgetting
-can be recognised and not saved again. Which memories a message needs is chosen elsewhere
-(`familydb/memory.py`); the rules for changing them are the `remember` tool's.
-"""
+"""Memories: what the family told the bot about itself (docs/MEMORY.md). Never deleted: a
+corrected one is `replaced` (pointing at its successor), a forgotten one keeps its words so it
+is not saved again. Selection is familydb/memory.py's; change rules are the `remember` tool's."""
 
 from __future__ import annotations
 
 import re
 import sqlite3
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from familydb.store.db import utcnow_iso
+from familydb.store.db import from_json, to_json, utcnow_iso
 
 Category = Literal["food", "activities", "places", "health", "routine", "other"]
 Status = Literal["active", "replaced", "forgotten"]
@@ -53,10 +49,15 @@ class Memory(BaseModel):
     forgotten_at: str | None = None
     forgotten_by: int | None = None
     forgotten_by_name: str | None = None
+    # What code holds suggestions to, for a firm one (suggest/rules.py): max_travel_minutes,
+    # max_cost_level, setting, avoid.
+    rule: dict[str, Any] | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Memory:
-        return cls(**dict(row))
+        data = dict(row)
+        data["rule"] = from_json(data.get("rule")) or None
+        return cls(**data)
 
 
 def normalize(fact: str) -> str:
@@ -76,12 +77,13 @@ def insert(
     source_message_id: int | None,
     said_by: int | None,
     now: str | None = None,
+    rule: dict[str, Any] | None = None,
 ) -> Memory:
     stamp = now or utcnow_iso()
     cur = conn.execute(
         "INSERT INTO memories (member_id, category, fact, fact_norm, firm, inferred, until, "
-        "source_message_id, said_by, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "source_message_id, said_by, created_at, updated_at, rule) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             member_id,
             category,
@@ -94,6 +96,7 @@ def insert(
             said_by,
             stamp,
             stamp,
+            to_json(rule) if rule else None,
         ),
     )
     memory = get(conn, int(cur.lastrowid or 0))
@@ -119,10 +122,20 @@ def matching(
 
 
 def firm_up(conn: sqlite3.Connection, memory_id: int, *, firm: bool, now: str) -> None:
-    """Said again, and outright this time: no longer a guess, and a must if it now is one."""
+    """Said again outright: no longer a guess, and a must if it now is one."""
     conn.execute(
         "UPDATE memories SET inferred = 0, firm = max(firm, ?), updated_at = ? WHERE id = ?",
         (int(firm), now, memory_id),
+    )
+
+
+def set_rule(
+    conn: sqlite3.Connection, memory_id: int, rule: dict[str, Any] | None, *, now: str
+) -> None:
+    """What code holds suggestions to, given (again) for a memory already kept."""
+    conn.execute(
+        "UPDATE memories SET rule = ?, updated_at = ? WHERE id = ?",
+        (to_json(rule) if rule else None, now, memory_id),
     )
 
 
@@ -150,6 +163,16 @@ def active(conn: sqlite3.Connection, *, today: date) -> list[Memory]:
     return [Memory.from_row(row) for row in rows]
 
 
+def held(conn: sqlite3.Connection, *, today: date) -> list[Memory]:
+    """The firm memories in force today with a rule code holds suggestions to, oldest first."""
+    rows = conn.execute(
+        f"{_SELECT} WHERE r.status = 'active' AND r.firm = 1 AND r.rule IS NOT NULL "
+        "AND (r.until IS NULL OR r.until >= ?) ORDER BY r.id",
+        (today.isoformat(),),
+    )
+    return [Memory.from_row(row) for row in rows]
+
+
 def list_all(conn: sqlite3.Connection) -> list[Memory]:
-    """Every memory there has been, newest first, for the page."""
+    """Every memory there has been, newest first."""
     return [Memory.from_row(row) for row in conn.execute(f"{_SELECT} ORDER BY r.id DESC")]

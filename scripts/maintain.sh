@@ -2,9 +2,8 @@
 # Looking after a running FamilyDB: backups, restores, upgrades, HTTPS, logs and status.
 # `scripts/maintain.sh --help` lists every command.
 #
-# Each command says what it is about to change before it changes it, and explains any failure in
-# terms of what to do next. Nothing here deletes a backup except the nightly prune that
-# schedule-backups sets up, which runs only after a new backup has been written.
+# Nothing here deletes a backup except the nightly prune schedule-backups sets up, which runs
+# only after a new backup has been written.
 set -euo pipefail
 
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
@@ -182,8 +181,7 @@ start_bot() {
   fi
 }
 
-# Sets LAST_BACKUP to the file it wrote. It cannot return the path on stdout, because it also
-# prints for a person to read, and the two would arrive mixed together.
+# Sets LAST_BACKUP to the file it wrote (stdout is for the person reading).
 LAST_BACKUP=""
 take_backup() { # take_backup DEST_DIR "why"
   local dir="$1" why="$2" dest stamp owner
@@ -225,7 +223,6 @@ take_backup() { # take_backup DEST_DIR "why"
   as_root chown "$owner" "$dest"
 }
 
-# ---------------------------------------------------------------- status ----
 cmd_status() {
   head2 "FamilyDB at ${TARGET}"
 
@@ -381,7 +378,6 @@ https_port_in_docker() {
   say_how_to_open
 }
 
-# ------------------------------------------------------------------ port ----
 cmd_port() {
   head2 "FamilyDB's own port"
   [ -n "$APP_PORT" ] || die "which port?" "Usage: ${0} port N, with N from 1025 to 65535, or random"
@@ -445,7 +441,6 @@ cmd_port() {
   fi
 }
 
-# ---------------------------------------------------------------- backup ----
 cmd_backup() {
   head2 "Taking a backup"
   take_backup "$BACKUP_DIR" "so today's state can be put back if something goes wrong"
@@ -504,7 +499,6 @@ cmd_restore() {
   [ -n "$safety" ] && say "What was there before is at ${safety}, if you need it back."
 }
 
-# --------------------------------------------------------------- upgrade ----
 cmd_upgrade() {
   head2 "Upgrading"
   [ -d "${TARGET}/.git" ] || die "${TARGET} is not a git checkout, so there is nothing to pull" \
@@ -619,7 +613,6 @@ cmd_upgrade() {
   familydb_cmd doctor || true
 }
 
-# ------------------------------------------------------------------ logs ----
 cmd_logs() {
   if [ "$DOCKER_MODE" = 1 ]; then
     as_root docker compose --project-directory "$TARGET" logs -f --tail "$LOG_LINES" bot
@@ -637,7 +630,6 @@ cmd_restart() {
   start_bot
 }
 
-# ------------------------------------------------------ scheduled backups ----
 cmd_schedule_backups() {
   head2 "Nightly backups"
   case "$KEEP_DAYS" in ''|*[!0-9]*) die "--keep-days must be a nonnegative integer" ;; esac
@@ -668,8 +660,7 @@ cmd_schedule_backups() {
   case "$BACKUP_DIR" in "${TARGET}"/*) ;; *) noting_new "$BACKUP_DIR" dir ;; esac
   as_root mkdir -p "$BACKUP_DIR"
   local existing
-  # Root having no crontab at all before this is worth knowing: then removing FamilyDB removes
-  # the crontab too, rather than leaving an empty one behind.
+  # No crontab before this: removing FamilyDB then removes the crontab, not leaves an empty one.
   as_root crontab -u root -l >/dev/null 2>&1 || ledger crontab "root"
   ledger cron-line "familydb-maintain-backup"
   existing="$(as_root crontab -u root -l 2>/dev/null | grep -v 'familydb-maintain-backup' || true)"
@@ -678,8 +669,8 @@ cmd_schedule_backups() {
     | as_root crontab -u root - \
     || die "could not write root's crontab" \
            "Check that cron is installed: sudo apt-get install cron"
-  # An install from before this schedule has a backup line and a prune line in the service
-  # account's crontab. Left there, they would keep pruning whether or not the backup worked.
+  # An older install has backup and prune lines in the service account's crontab, which would
+  # keep pruning whether or not the backup worked.
   local older
   older="$(as_root crontab -u "$SERVICE_USER" -l 2>/dev/null || true)"
   if printf '%s\n' "$older" | grep -q -e 'familydb db backup' -e 'familydb-\*\.sqlite3'; then

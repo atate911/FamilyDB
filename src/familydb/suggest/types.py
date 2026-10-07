@@ -1,4 +1,4 @@
-"""Data shapes shared by the suggestion stages, the `suggest` tool and the suggestions log."""
+"""Data shapes shared by the suggestion stages, the `suggest` tool and the log."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from familydb.integrations.open_meteo import DayForecast
 from familydb.store.ideas import Idea
 
 Verdict = Literal["good", "possible", "ruled_out"]
-# What a pick is for (suggest/choose.py): one they know and love, one new to them, one further out.
+# What a pick is for (suggest/choosing.py): one they know and love, one new to them, one
+# further out.
 Slot = Literal["favourite", "new", "wildcard"]
 CostLevel = Literal[0, 1, 2, 3, 4]
 WindowKind = Literal["now", "today", "this_weekend", "next_weekend", "dates", "someday"]
@@ -57,6 +58,9 @@ class SuggestInput(BaseModel):
         description="What kind of thing, a few words: live jazz, puppet show. Empty for anything.",
     )
     discover: bool = Field(default=True, description="Also look for time-bound events on the web.")
+    prefer: Literal["new", "favourites"] = Field(
+        default="new", description="favourites for what they loved before: 'our usual'."
+    )
     question: str = Field(description="The family's question, verbatim.")
 
 
@@ -88,6 +92,11 @@ class WebFind(BaseModel):
     source: str | None = None
     # When it starts, as code reads it ("YYYY-MM-DD" or "YYYY-MM-DDTHH:MM"), when known.
     starts: str | None = None
+    # A place found for what nothing saved fits (suggest/places.py): never checked here.
+    kind: str | None = None
+    hours: str | None = None  # as the page writes them
+    address: str | None = None
+    saved_as: int | None = None  # already on the list, as this idea
 
 
 class DaySummary(BaseModel):
@@ -135,7 +144,7 @@ class SuggestResult(BaseModel):
     skipped_checks: list[str]
     not_shown: int = 0  # further ideas ranked below the ones listed
     suggestion: dict[str, int] | None = None
-    # What a stronger call chose, in order, when one did (suggest/choose.py); None otherwise, so
+    # What a stronger call chose, in order, when one did (suggest/choosing.py); None otherwise, so
     # a result nobody chose for is what it always was.
     picks: list[Pick] | None = None
     framing: str | None = None
@@ -150,6 +159,15 @@ class Constraints:
     max_travel_minutes: int | None = None
     max_duration_minutes: int | None = None
     topic: str = ""  # what the family asked for, for discovery only
+    avoid: list[str] = field(default_factory=list)  # idea tags a firm rule leaves out
+    # The memory behind each limit a firm rule set (suggest/rules.py), by the limit's name, or
+    # "avoid:<tag>": {"max_travel_minutes": 4}.
+    held_by: dict[str, int] = field(default_factory=dict)
+
+    def because(self, name: str) -> str | None:
+        """'m4' when memory 4 set this limit, for a reason to name it."""
+        memory = self.held_by.get(name)
+        return f"m{memory}" if memory is not None else None
 
 
 # Minutes after midnight. Without a time given, a day is counted from 08:00 to 22:00.
@@ -164,11 +182,8 @@ def clock(minutes: int) -> str:
 
 @dataclass(frozen=True)
 class DayBounds:
-    """The part of each day the question is about, and where the first and last days are cut.
-
-    `first_start` is later than `start` when the window begins today and the morning has gone,
-    or when the question is about right now; `last_end` cuts the last day for "the next hours".
-    """
+    """The part of each day asked about; `first_start` cuts the first day (today, or "now") and
+    `last_end` the last ("the next hours")."""
 
     start: int = DAY_START
     end: int = DAY_END
@@ -196,13 +211,13 @@ class DayContext:
 
     @property
     def whole(self) -> bool:
-        """Nothing on in the part of the day asked about."""
+
         return self.longest >= self.bounds[1] - self.bounds[0] > 0
 
 
 @dataclass(frozen=True)
 class Origin:
-    """Where travel is estimated from when the family is not at home."""
+    """Where travel is estimated from when not at home."""
 
     lat: float
     lon: float
@@ -229,3 +244,5 @@ class Shortlisted:
     idea: Idea
     fits_days: list[date]
     weather: Literal["ok", "poor", "unknown"]
+    # Said first and making it possible at best: one disappointing visit ("rated 3/10 last time").
+    caveat: str | None = None

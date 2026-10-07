@@ -1,21 +1,13 @@
-"""Keeping up with the companies: which models each offers the family's key, what they cost, and
-what changed. Once a day (the `model_watch` job), with no model call.
+"""Keeping up with the companies once a day (the `model_watch` job), with no model call.
 
-Three things are read. Each company the family has a key for is asked which models the key can
-use (`Provider.listed_models`, free). Two public price lists, LiteLLM's and OpenRouter's, are
-read for what each model costs, whether it can use tools, and any date it goes
-(integrations/price_lists.py). A price is taken when both lists agree; when they disagree, or
-one sends a price far from the last (more than `JUMP` times it), or a price no model could cost,
-the last good one is kept and an admin is told. prices.py's built-in table is only where a new
-install starts. What was found is kept (store/model_watch.py) and put in force in every process
-(`load`, from App.refresh), so the spending limit counts at the new prices and the settings
-page offers the new models, without a new release.
-
-What changed is recorded, and told to each admin with a Telegram id (alerts.py): a model the
-family uses that the company no longer lists, or that a list says goes soon; a price of one they
-use that moved; a price list that could not be read for `SOURCE_FAILURES` checks in a row, or
-lists at odds about a model in use; and new models to choose from. The weekly look at what the
-calls themselves cost and do is usage_watch.py, run from the same job.
+Each company with a key is asked which models it may use (`Provider.listed_models`, free);
+LiteLLM's and OpenRouter's price lists give cost, tool support and end dates
+(integrations/price_lists.py). A price is taken when both lists agree; on disagreement, a jump of
+more than `JUMP` times, or an impossible price, the last good one is kept and an admin is told.
+prices.py's table is only where a new install starts. What is found is kept
+(store/model_watch.py) and put in force in every process (`load`, from App.refresh), so the limit
+counts at new prices and the page offers new models without a release. Changes that matter are
+told to admins (alerts.py); usage_watch.py runs from the same job.
 """
 
 from __future__ import annotations
@@ -53,14 +45,14 @@ SOURCE_FAILURES = 3  # checks in a row a list may fail before an admin is told
 NEW_SHOWN = 5  # new models named in one notice
 UNSEEN = timedelta(days=7)  # no list has named a model this long: no longer offered
 NEW_FOR = timedelta(days=30)  # a model first seen this lately is marked new where it is offered
-# A model to take another's place is looked for at about its price: one no more than this much
-# dearer if there is any, the nearest in price among those.
+# A replacement is looked for at about the old model's price: the nearest among those no more than
+# this much dearer, if any.
 DEARER = 1.25
-# What the family spends is theirs to decide: a model goes in another's place by itself only when
-# it costs no more than this much more. A dearer one is suggested, and waits for an admin.
+# Spending is the family's decision: a model goes in by itself only when it costs no more than this
+# much more; a dearer one is suggested and waits for an admin.
 SWAP_DEARER = 2.0
-# Words in a model's name that say it is not for chatting, or not a model of its own (an alias
-# that moves, an experiment, an open model Google also serves), whatever a list calls it.
+# Words in a name that say it is not for chatting or not a model of its own (a moving alias, an
+# experiment, an open model Google also serves).
 NOT_FOR_CHAT = (
     "audio",
     "realtime",
@@ -77,10 +69,9 @@ NOT_FOR_CHAT = (
     "-16k",
     "robotics",
 )
-# A dated snapshot of another model: claude-haiku-4-5-20251001, gpt-5-2025-08-07, gpt-4-0613.
 SNAPSHOT = re.compile(r"^(?P<family>.+?)-(?:\d{8}|\d{4}-\d{2}-\d{2}|\d{4})$")
-# A model out longer than this is not offered unless it is in this version's lineup: the lists go
-# on pricing a company's older models for as long as it sells them.
+# Older than this and not in this version's lineup is not offered: the lists keep pricing a
+# company's old models while it sells them.
 OLDEST_OFFERED = timedelta(days=365)
 
 
@@ -90,10 +81,11 @@ def check(
     lists: PriceListsAPI | None = None,
     listers: dict[str, Callable[[], list[str] | None]] | None = None,
 ) -> dict[str, int]:
-    """Read the companies' lists and the price lists, keep what was found, and tell admins what
-    changed that matters to them. Returns counts, for the log and the tests.
+    """Read the companies' lists and the price lists, keep what was found, tell admins what matters.
+    Returns counts.
 
-    `lists` and `listers` stand in for the price lists and each company's own list in tests."""
+    `lists` and `listers` stand in for the price lists and each company's list in tests.
+    """
     with closing(app.connect()) as conn:
         app.refresh(conn)
         settings = app.settings
@@ -145,7 +137,7 @@ def _read_price_lists(
         try:
             read[source] = fetch()
             ok, note = True, f"{sum(len(models) for models in read[source].values())} models"
-        except Exception as exc:  # a list that cannot be read is told of, never a crash
+        except Exception as exc:
             ok, note = False, str(exc)
             log.warning("%s could not be read: %s", SOURCES[source], exc)
         with transaction(conn):
@@ -169,8 +161,9 @@ def _read_company_lists(
     listers: dict[str, Callable[[], list[str] | None]] | None,
     at: str,
 ) -> dict[str, set[str] | None]:
-    """Each company's own list of models for the family's key; None when it has no key here or
-    could not be asked, which is never taken as "none"."""
+    """Each company's own list for the family's key; None when it has no key or could not be asked,
+    never taken as "none".
+    """
     listed: dict[str, set[str] | None] = {}
     for company in COMPANIES:
         provider = providers.build(company, settings)
@@ -192,8 +185,9 @@ def _read_company_lists(
 
 
 def models_in_use(settings: Any) -> set[tuple[str, str]]:
-    """The models the family's calls go to now: each kind of call's, its spare's, and those that
-    hear voice notes and look at photos."""
+    """The models the family's calls go to now: each kind's, its spare's, and those that hear voice
+    notes and look at photos.
+    """
     used: set[tuple[str, str]] = set()
     for kind in gateway.KINDS:
         call = gateway.spec(kind)
@@ -219,8 +213,6 @@ def _candidates(
     before: dict[tuple[str, str], Seen],
     in_use: set[tuple[str, str]],
 ) -> set[str]:
-    """Every model of this company worth keeping track of: what a price list has for chatting,
-    what is built in, what was kept before, and what the family uses."""
     names = {name for source in read.values() for name in source.get(company, {})}
     names |= set(prices.PRICES.get(company, {}))
     names |= {name for (owner, name) in before if owner == company}
@@ -258,7 +250,6 @@ def _merge(
     listed: set[str] | None,
     at: str,
 ) -> tuple[Seen, str | None]:
-    """What is known of one model now, and a doubt about its price when there is one."""
     found = {source: read[source].get(company, {}).get(name) for source in read}
     sane = {source: entry for source, entry in found.items() if _sane(entry)}
     built_in = prices.PRICES.get(company, {}).get(name) or prices.HEARING.get(company, {}).get(name)
@@ -325,7 +316,6 @@ def _jumped(
 def _differences(
     old: Seen | None, seen: Seen, today: date
 ) -> list[tuple[str, str | None, str | None]]:
-    """What changed about one model since the last check, as (what, before, after)."""
     if old is None:
         return [("new", None, _price_words(seen))] if _offerable(seen, today) else []
     found: list[tuple[str, str | None, str | None]] = []
@@ -371,8 +361,9 @@ def _tell(
     now: datetime,
     judged: dict[str, str] | None = None,
 ) -> None:
-    """Note for admins what matters to the family (alerts.py tells them): about the models in
-    use, whatever changed; about the rest, only that there are new ones to choose from."""
+    """Note for admins (alerts.py tells them): for models in use whatever changed; for the rest only
+    that there are new ones.
+    """
     today = now.date()
     for company, name in sorted(in_use):
         model = seen.get((company, name))
@@ -456,10 +447,10 @@ def _tell(
 
 
 def _offerable(seen: Seen, today: date) -> bool:
-    """Worth offering on the settings page: named by a list lately, priced, able to use tools,
-    for chatting, not listed as missing for the key, and not gone; and either in this version's
-    lineup or served now and out within the year. Only the built-in table knowing of a model is
-    not enough: that is how a retired one would go on being offered."""
+    """Worth offering on the page: named by a list lately, priced, tool-capable, for chatting, not
+    missing for the key, not gone; and in this version's lineup or served now and out within the
+    year. The built-in table alone is not enough: a retired model would go on being offered.
+    """
     if seen.output is None or seen.tools is False or seen.listed is False:
         return False
     if seen.last_seen is None or seen.last_seen[:10] < (today - UNSEEN).isoformat():
@@ -468,8 +459,8 @@ def _offerable(seen: Seen, today: date) -> bool:
         return False
     if seen.model in {model.name for model in catalog.lineup(seen.provider)}:
         return not (seen.retires_on and seen.retires_on <= today.isoformat())
-    # Served now: the company lists it for the key, or OpenRouter serves it (and so says when it
-    # came out). LiteLLM's list goes on pricing a model long after it is anything to choose.
+    # Served now: the company lists it for the key, or OpenRouter serves it. LiteLLM's list prices a
+    # model long after it is anything to choose.
     if not (seen.listed or seen.released):
         return False
     if seen.released and seen.released < (today - OLDEST_OFFERED).isoformat():
@@ -478,14 +469,13 @@ def _offerable(seen: Seen, today: date) -> bool:
 
 
 def gone(seen: Seen, today: date) -> bool:
-    """Whether asking this model now would fail: the company no longer lists it for the key, or
-    a list says its day has passed."""
     return seen.listed is False or bool(seen.retires_on and seen.retires_on <= today.isoformat())
 
 
 def swaps_for(old: Seen | None, instead: Seen) -> bool:
-    """Whether `instead` may answer in `old`'s place without anybody choosing it: when it costs
-    no more than `SWAP_DEARER` times as much, or either price is unknown to compare."""
+    """Whether `instead` may answer in `old`'s place unchosen: it costs no more than `SWAP_DEARER`
+    times as much, or a price is unknown.
+    """
     if old is None or not old.output or not instead.output:
         return True
     return instead.output <= SWAP_DEARER * old.output
@@ -498,8 +488,9 @@ def replacement(
     today: date,
     judged: dict[str, str] | None = None,
 ) -> Seen | None:
-    """The model to suggest in this one's place: the one a judgement chose (judgement.py) while
-    it is still on offer, else the nearest in price of the shortlist. None when there is none."""
+    """The model to suggest in this one's place: a judgement's choice while still on offer, else the
+    nearest in price of the shortlist.
+    """
     options = shortlist(seen, company, name, today)
     chosen = (judged or {}).get(f"{company}:{name.lower()}")
     for model in options:
@@ -511,9 +502,9 @@ def replacement(
 def shortlist(
     seen: dict[tuple[str, str], Seen], company: str, name: str, today: date, most: int = 5
 ) -> list[Seen]:
-    """The models that could take this one's place, best first by the rule: the same company's
-    on offer, not going within `RETIRING_DAYS` themselves, at about its price (no more than
-    `DEARER` times it when any is), nearest in price first."""
+    """Models that could take this one's place, nearest in price first: same company, on offer, not
+    going within `RETIRING_DAYS`, at about its price.
+    """
     old = seen.get((company, name.lower()))
     horizon = (today + timedelta(days=RETIRING_DAYS)).isoformat()
     choices = [
@@ -538,12 +529,10 @@ def shortlist(
 
 
 def replacement_for(conn: sqlite3.Connection, company: str, name: str, today: date) -> Seen | None:
-    """As `replacement`, from what the last check kept: for the status page."""
     return replacement(store.all_seen(conn), company, name, today, judged_replacements(conn))
 
 
 def judged_replacements(conn: sqlite3.Connection) -> dict[str, str]:
-    """What the judgement calls chose to take each going model's place, by company:model."""
     return {
         subject: str((answer.answer or {}).get("choice") or "")
         for subject, answer in judgement_store.choices(conn, "replacement").items()
@@ -551,7 +540,6 @@ def judged_replacements(conn: sqlite3.Connection) -> dict[str, str]:
 
 
 def uses_of(settings: Any, company: str, name: str) -> list[str]:
-    """What the family's calls use this model for, in words: for a judgement to weigh."""
     uses: list[str] = []
     provider = providers.build(company, settings)
     for kind in gateway.KINDS:
@@ -578,9 +566,10 @@ def _file_questions(
     now: datetime,
     judged: dict[str, str],
 ) -> None:
-    """File for a judgement what a rule cannot settle well (familydb/judgement.py): a model in
-    use going with more than one to take its place, new models for a company in use, a price
-    of one in use the lists disagree on. Filed once each, and only while judgements are on."""
+    """File for a judgement what a rule cannot settle well (judgement.py), once each and only while
+    judgements are on: a model in use going with several candidates, new models for a company in
+    use, a disputed price.
+    """
     from familydb import judgement
 
     if not settings.judgements:
@@ -604,9 +593,9 @@ def _file_questions(
 
 
 def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
-    """Put what the checks found in force in this process: prices first from them, the built-in
-    table for the rest; the models the settings page offers; a word on those new lately or
-    going; and, for each model gone, the one that answers in its place (`prices.swapped`)."""
+    """Put what the checks found in force in this process: prices (built-in table for the rest),
+    offered models, notes on new or going ones, and `prices.swapped` for each gone model.
+    """
     today = today or date.today()
     seen = store.all_seen(conn)
     live: dict[str, dict[str, Price]] = {}
@@ -614,7 +603,6 @@ def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
     notes: dict[tuple[str, str], str] = {}
     swaps: dict[tuple[str, str], str] = {}
     judged = judged_replacements(conn)
-    # Everything kept on the first check is as old as the first check: only what came after is new.
     first = min((model.first_seen for model in seen.values()), default="")[:10]
     lately = (today - NEW_FOR).isoformat()
     for (company, name), model in seen.items():
@@ -642,7 +630,6 @@ def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
         keep.sort(key=lambda m: (m.output or 0, m.model))
         shown[company] = tuple(m.model for m in keep)
     prices.use(live, shown, notes, swaps)
-    # What a judgement found a company no longer takes, for every process (providers/parts.py).
     for question in judgement_store.choices(conn, "refused").values():
         choice = str((question.answer or {}).get("choice") or "")
         if choice.startswith("part:") and question.facts.get("model"):
@@ -655,12 +642,10 @@ def _snapshot_of(name: str, names: set[str]) -> bool:
 
 
 def run_model_watch(app: Any) -> dict[str, int]:
-    """The scheduler's job."""
     return check(app)
 
 
 def due(conn: sqlite3.Connection, now: datetime) -> bool:
-    """Whether a day has passed since the last check, for the catch-up after a restart."""
     last = store.stamp(conn)
     if last is None:
         return True

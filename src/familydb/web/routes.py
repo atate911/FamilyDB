@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from contextlib import closing
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any
 
 from flask import (
@@ -19,13 +21,14 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, happening, personas, roles
+from familydb import agenda, export, happening, health, personas, presents, roles
 from familydb.app import App
-from familydb.availability import calendar_available, enrichment_available, happening_available
+from familydb.availability import enrichment_available, happening_available
 from familydb.dates import next_birthday
 from familydb.store import calls
 from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store
+from familydb.store import lists as list_store
 from familydb.store import members as member_store
 from familydb.store import memories as memory_store
 from familydb.store import messages as message_store
@@ -35,10 +38,11 @@ from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store import wishes as wish_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import auth, chat, views
+from familydb.web import auth, chat, shell, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
+log = logging.getLogger(__name__)
 bp = Blueprint("web", __name__)
 
 LIST_LIMIT = 200
@@ -52,7 +56,7 @@ RATINGS = tuple(range(10, 0, -1))
 RESTAURANT_KIND = "restaurant"
 FILTERS = ("q", "kind", "status", "who")
 HOME_AHEAD_DAYS = 60
-HOME_PLANS = 5
+HOME_PLANS = 4
 HOME_IDEAS = 4
 HOME_TASKS = 4
 PLANS_AHEAD_DAYS = 90
@@ -68,7 +72,7 @@ def _app() -> App:
 
 
 def _who(conn: Any) -> dict[str, Any]:
-    """What every form on a page needs to say who is doing this: the family, and who last did."""
+    """What every form needs to say who is doing this."""
     return {
         "family": [member.display_name for member in member_store.list_all(conn)],
         "who": session.get(WHO_KEY),
@@ -76,7 +80,7 @@ def _who(conn: Any) -> dict[str, Any]:
 
 
 def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
-    """The kinds and participants actually in use, so the filters offer only real options."""
+    """The kinds and participants in use, for the filters."""
     kinds = sorted({row.kind for row in rows})
     people = sorted({name for row in rows for name in row.participants})
     return kinds, people
@@ -84,18 +88,26 @@ def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
 
 @bp.get("/healthz")
 def healthz() -> Response:
-    """A plain-text liveness check for a monitor or a reverse proxy. No password needed."""
-    return Response("ok\n", mimetype="text/plain")
+    """For a monitor or proxy, open before sign-in: "ok", or 503 and what is wrong (the database
+    does not answer, or the scheduled jobs went quiet; familydb/health.py)."""
+    ok, words = health.check(_app())
+    return Response(f"{words}\n", status=200 if ok else 503, mimetype="text/plain")
+
+
+@bp.get("/sw.js")
+def service_worker() -> Response:
+    """The service worker that shows "she has a message" (push.py), served from the top so it
+    may show for every page. Open before sign-in, like the manifest: it holds nothing but code."""
+    folder = Path(current_app.static_folder or "")
+    response = Response((folder / "sw.js").read_text("utf-8"), mimetype="text/javascript")
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @bp.get("/manifest.webmanifest")
 def manifest() -> Response:
-    """What a phone needs to keep the page on its home screen as an app: its name, that it opens
-    without the browser's bars, where it starts, its colours and its icons.
-
-    No password needed: a phone asks for it without the page's cookie, as it does the icons, and
-    it says nothing the sign-in page does not.
-    """
+    """The home-screen manifest. Open before sign-in: a phone asks without the cookie, and it says
+    nothing the sign-in page does not."""
     title = _app().settings.web_title
     small, large = (
         url_for("static", filename="icon-192.png"),
@@ -104,7 +116,6 @@ def manifest() -> Response:
     icons = [
         {"src": small, "sizes": "192x192"},
         {"src": large, "sizes": "512x512"},
-        # The same picture for round masks, which leave its margin alone.
         {"src": large, "sizes": "512x512", "purpose": "maskable"},
     ]
     body = {
@@ -117,13 +128,26 @@ def manifest() -> Response:
         "background_color": CHARCOAL,
         "theme_color": CHARCOAL,
         "icons": [{**icon, "type": "image/png"} for icon in icons],
+        # Share a link or some words to it from another app (Android): they wait in the chat's
+        # box until Send, so nothing is sent by sharing.
+        "share_target": {
+            "action": "/chat",
+            "method": "GET",
+            "params": {"title": "title", "text": "text", "url": "url"},
+        },
     }
     return Response(json.dumps(body, sort_keys=True), mimetype="application/manifest+json")
 
 
+@bp.get("/more")
+def more() -> str:
+    """The phone's menu: what is not in the tab bar, and signing out. It opens from the picture at
+    the top of every page and is not a page on a wide screen, where the sidebar holds all of it."""
+    return render_template("more.html")
+
+
 @bp.get("/status")
 def status() -> str:
-    """Is it working, and what is it costing us? A handful of small queries, no model call."""
     app = _app()
     with closing(app.connect()) as conn:
         return render_template("status.html", **status_page.status(app, conn))
@@ -131,74 +155,216 @@ def status() -> str:
 
 @bp.get("/")
 def home() -> Response | str:
-    """What is on your mind: the box to tell her, and around it what is coming up, what is left
-    to do and what was added lately.
-
-    The box is the chat's own and posts to it, so what is said here lands in the conversation.
-    Everything else is read from the database and worded here: opening this page asks nothing
-    of a model. Until it can answer anyone, which takes somebody on the list and a model, an
-    admin is sent to the setup page instead: there is nothing else here worth showing yet.
-    """
+    """The box (the chat's own, posting to it) around what is coming up, to do and new. No model
+    call. An admin is sent to setup until the bot can answer anyone."""
     if any(request.args.get(key) for key in FILTERS):
-        # Home takes no search: one sent here, as an old bookmark may, goes on to the ideas list.
+        # Home takes no search; an old bookmark's goes on to the ideas list.
         return redirect(url_for("web.ideas", **request.args))
     app = _app()
+    now = app.clock.now()
     today = app.clock.today()
     tz = app.settings.tzinfo
     visitor = auth.visitor()
-    # Setting up is an admin's, so nobody else is sent to it or shown what is left of it.
     manages = visitor.manages
-    # The box and how the conversation stands are the chat's, so only for a role that may talk
-    # to her (familydb/roles.py): nobody is shown a way into a page that would refuse them.
+    # The box is the chat's, so only for a role that may chat.
     talks = visitor.may("chat")
     kid = chat.is_kid()
+    # For somebody who does not browse the household (a kid): only what is hers (docs/STYLE.md).
+    browsing = visitor.may("browse")
     with closing(app.connect()) as conn:
         progress = status_page.setup_progress(app, conn)
         if manages and not status_page.ready_to_answer(progress):
             return redirect(url_for("setup.overview"))
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
-        on = _no_gifts(conn, seen.entries)
-        everything = idea_store.list_all(conn)
-        if _gifts_hidden():
-            everything = [idea for idea in everything if not idea_store.is_gift(idea)]
+        kept = presents.kept_ids(conn, visitor.member)
+        on = _no_gifts(seen.entries, kept)
+        everything = [idea for idea in idea_store.list_all(conn) if idea.id not in kept]
         unfinished = status_page.setup_steps(app, conn) if manages else []
-        family = [member.display_name for member in member_store.list_all(conn)]
+        people = member_store.list_all(conn)
         todo = task_store.list_all(conn, status="open", owner_id=_own_only())
         talk = chat.glance(app, conn) if talks else None
         wished = wish_glance(conn, today)
-    coming = [entry for entry in on if entry.days()[-1] >= today][:HOME_PLANS]
-    newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
+        slots = views.slot_map(people)
+        coming = _plan_rows(conn, app, on, today, slots, visitor.member if not browsing else None)
+        rating = _to_rate(conn, today, slots) if visitor.may("change") else None
+        newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
+        mini = [_idea_mini(conn, app, idea) for idea in newest]
+        today_card = status_page.vera_today(app, conn) if browsing else None
+        left = chat.messages_left(app, conn, visitor.member)
+    late = sum(views.is_late(task, tz, today) for task in todo)
+    family = [member.display_name for member in people]
+    yes = _latest_yes(wished, people) if wished and not wished["parent"] else None
+    line = views.home_line(
+        coming,
+        late,
+        plans_href=url_for("web.plans_month" if browsing else "web.plans"),
+        todo_href=url_for("web.tasks"),
+        kid=not browsing,
+        others=_others(coming, visitor.member),
+        yes=yes,
+    )
     return render_template(
         "home.html",
+        hello=views.greeting(now.astimezone(tz).hour, visitor.name),
         today=views.day_text(today.isoformat()),
-        coming=[views.entry_row(entry, today) for entry in coming],
-        blips=views.radar_blips(coming, today),
+        line=line,
+        coming=coming[:HOME_PLANS],
+        more_plans=max(0, len(coming) - HOME_PLANS),
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
-        ideas=[views.idea_row(idea, tz) for idea in newest],
+        ideas=mini,
         idea_count=len(everything),
         restaurant_count=sum(1 for idea in everything if idea.kind == RESTAURANT_KIND),
-        tasks=[views.task_brief(task, tz, today) for task in todo[:HOME_TASKS]],
+        tasks=[views.todo_row(t, tz, today, slots, kid=not browsing) for t in todo[:HOME_TASKS]],
         task_count=len(todo),
+        late_count=late,
         setup=unfinished,
         talk=talk,
         wishes=wished,
+        kids=_kids_card(wished, people),
+        rating=rating,
+        vera=today_card,
+        left=left,
+        readers=views.names_text(
+            [{"name": p.display_name} for p in people if roles.may(p.role, "decide")]
+        ),
+        busy=bool(talk and talk["state"] == "thinking"),
         **chat.box(family, prompt=chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT),
-        question=True,  # the box's label is her question, and the page's heading
-        typed=chat.asked(),  # a way to start, followed with scripts off
-        starters=views.starters(today, kid=kid),
+        typed=chat.asked(),
     )
+
+
+def _plan_rows(
+    conn: Any,
+    app: App,
+    entries: list[agenda.Entry],
+    today: date,
+    slots: dict[str, int],
+    only_for: member_store.Member | None,
+    *,
+    past: bool = False,
+) -> list[dict[str, Any]]:
+    """What is on, with whom it is for and how far it is: what is coming, and what was too when
+    `past`. With `only_for` (a kid), the ones that name her, or nobody (so everybody)."""
+    rows = []
+    for entry in entries:
+        if entry.days()[-1] < today and not past:
+            continue
+        idea = idea_store.get(conn, entry.idea_id) if entry.idea_id else None
+        people = views.people_for(idea, slots)
+        if only_for is not None and not views.names_in(people, only_for):
+            continue
+        place = place_store.get(conn, idea.place_id) if idea and idea.place_id else None
+        away = views.away_from_home(place, app.settings)
+        row = views.entry_row(entry, today, people=people, away=away)
+        # A plan whose idea has since gone is still a plan, with no page to link to.
+        row["linked"] = idea is not None
+        rows.append(row)
+    seen: set[str] = set()
+    for row in rows:  # the first plan of a day is what a link to that day lands on
+        row["anchor"] = row["day"] not in seen
+        seen.add(row["day"])
+    return rows
+
+
+def _others(coming: list[dict[str, Any]], me: member_store.Member | None) -> str:
+    """For a kid's sentence: who else is on her next plan ("with Theo")."""
+    if not coming or me is None:
+        return ""
+    named = [p for p in coming[0]["people"] if p["name"].casefold() != me.display_name.casefold()]
+    return views.names_text([p for p in named if p["initial"]])
+
+
+def _unrated(conn: Any, today: date, slots: dict[str, int]) -> list[dict[str, Any]]:
+    """Every plan of the last two weeks nobody has said how it went, oldest first."""
+    waiting = plan_store.unrated(
+        conn,
+        today=today.isoformat(),
+        since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
+    )
+    found = []
+    for plan in waiting:
+        idea = idea_store.get(conn, plan.idea_id) if plan.idea_id else None
+        day = date.fromisoformat(plan.start[:10])
+        found.append(
+            {
+                "plan_id": plan.id,
+                "idea_id": plan.idea_id,
+                "title": plan.title,
+                "day": plan.start[:10],
+                "when": views.day_short(day),
+                "people": views.people_for(idea, slots),
+                "glyph": views.glyph_for(idea.kind if idea else None),
+            }
+        )
+    return found
+
+
+def _to_rate(conn: Any, today: date, slots: dict[str, int]) -> dict[str, Any] | None:
+    """The oldest plan nobody has said how it went, for Home's three faces, and how many more."""
+    waiting = _unrated(conn, today, slots)
+    return {**waiting[0], "more": len(waiting) - 1} if waiting else None
+
+
+def _idea_mini(conn: Any, app: App, idea: Any) -> dict[str, Any]:
+    """A new idea as Home's small row: its picture, its title, and how far it is or that it has
+    not been looked up."""
+    place = place_store.get(conn, idea.place_id) if idea.place_id else None
+    away = views.away_from_home(place, app.settings)
+    row = views.idea_row(idea, app.settings.tzinfo)
+    return {
+        **row,
+        "glyph": views.glyph_for(idea.kind, gift=idea_store.is_gift(idea)),
+        "away": away.words if away else None,
+    }
+
+
+def _kids_card(wished: dict[str, Any] | None, people: list[member_store.Member]) -> list[Any]:
+    """For a parent's Home: each kid with their colour, how much is on their list and what waits."""
+    if not wished or not wished["parent"]:
+        return []
+    by_id = {person.id: person for person in people}
+    cards = []
+    for kid in wished["kids"]:
+        person = by_id.get(kid["id"])
+        waiting = sum(1 for row in wished["waiting"] if row["id"] == kid["id"])
+        pronoun = {"female": "her", "male": "his"}.get(person.gender or "", "their")
+        cards.append(
+            {
+                **kid,
+                "slot": person.slot or 0 if person else 0,
+                "initial": kid["name"][:1].upper(),
+                "waiting": waiting,
+                "pronoun": pronoun,
+                "top": [row["title"] for row in kid["lists"][0]["rows"][: wished["top"]]],
+            }
+        )
+    return cards
+
+
+def _latest_yes(
+    wished: dict[str, Any], people: list[member_store.Member]
+) -> tuple[str, str] | None:
+    """A kid's latest yes: (who said it, the wish), for her sentence on Home."""
+    yeses = [row for row in wished["mine"]["answered"] if row["status"] == "granted"]
+    if not yeses:
+        return None
+    latest = max(yeses, key=lambda row: row["answered_at"] or "")
+    who = next((p.display_name for p in people if p.id == latest["answered_by"]), "A grown-up")
+    return who, latest["title"]
 
 
 @bp.get("/ideas")
 def ideas() -> str:
     app = _app()
     settings = app.settings
+    visitor = auth.visitor()
     query = request.args.get("q", "").strip()
     kind = request.args.get("kind", "").strip()
     status = request.args.get("status", "").strip()
     who = request.args.get("who", "").strip()
     with closing(app.connect()) as conn:
+        kept = presents.kept_ids(conn, visitor.member)
         found = idea_store.search(
             conn,
             text=query or None,
@@ -206,36 +372,65 @@ def ideas() -> str:
             status=status if status in STATUSES else None,
             participant=who or None,
             limit=LIST_LIMIT,
-            without_gifts=_gifts_hidden(),
+            exclude_ids=kept,
+            newest_first=not query,
         )
-        listed = idea_store.list_all(conn, include_dropped=True)
-        if _gifts_hidden():
-            listed = [idea for idea in listed if not idea_store.is_gift(idea)]
+        listed = [
+            idea for idea in idea_store.list_all(conn, include_dropped=True) if idea.id not in kept
+        ]
         kinds, people = _choices(listed)
         capture_people = member_store.list_all(conn)
-        # Where each listed idea is from home, for its card and the radar of the list.
+        slots = views.slot_map(capture_people)
+        hidden = presents.of_presents(conn, found, capture_people)
         away = {
             idea.id: views.away_from_home(place_store.get(conn, idea.place_id), settings)
             for idea in found
             if idea.place_id
         }
     filtered = bool(query or kind or status or who)
-    rows = []
-    for idea in found:
-        spot = away.get(idea.id)
-        rows.append({**views.idea_row(idea, settings.tzinfo), "away": spot.text if spot else None})
+    rows = [
+        _idea_card(idea, settings, away.get(idea.id), slots, hidden.get(idea.id)) for idea in found
+    ]
+    placed = [(idea, away[idea.id]) for idea in found if away.get(idea.id)]
+    live = [idea for idea in listed if idea.status != "dropped"]
     return render_template(
         "ideas.html",
         capture_people=capture_people,
         rows=rows,
-        on_radar=views.places_radar([(i, away[i.id]) for i in found if away.get(i.id)]),
+        total=len(live),
+        restaurant_count=sum(1 for idea in live if idea.kind == RESTAURANT_KIND),
+        on_map=views.places_map(placed),
+        off_map=len(found) - len(placed),
+        looking_up=enrichment_available(settings),
         kinds=kinds,
         people=people,
         statuses=STATUSES,
+        status_words=views.STATUS_WORDS,
         selected={"q": query, "kind": kind, "status": status, "who": who},
+        filter_words=views.filter_words(kind, who, status),
         filtered=filtered,
         limit=LIST_LIMIT,
     )
+
+
+def _idea_card(
+    idea: Any,
+    settings: Any,
+    away: Any,
+    slots: dict[str, int],
+    kept: presents.Kept | None,
+) -> dict[str, Any]:
+    """An idea as the cards draw it: its words, its picture, whom it is for, how far it is, and
+    whom it is hidden from if it is a present."""
+    people = views.people_for(idea, slots)
+    return {
+        **views.idea_row(idea, settings.tzinfo, hidden=kept.words if kept else None),
+        "glyph": views.glyph_for(idea.kind, gift=idea_store.is_gift(idea)),
+        "people": people,
+        "who": views.names_text(people),
+        "away": away.words if away else None,
+        "went": views.went_text(idea),
+    }
 
 
 @bp.get(f"/idea/<int(max={MAX_ID}):idea_id>")
@@ -244,9 +439,10 @@ def idea(idea_id: int) -> str:
     settings = app.settings
     now = app.clock.now()
     today = app.clock.today()
+    visitor = auth.visitor()
     with closing(app.connect()) as conn:
         record = idea_store.get(conn, idea_id)
-        if record is None or (_gifts_hidden() and idea_store.is_gift(record)):
+        if record is None or presents.is_kept_from(conn, record, visitor.member):
             abort(404)
         original = (
             message_store.get(conn, record.source_message_id) if record.source_message_id else None
@@ -255,45 +451,72 @@ def idea(idea_id: int) -> str:
         outcomes = outcome_store.list_for_idea(conn, idea_id)
         plans = plan_store.for_idea(conn, idea_id)
         asking = _who(conn)
-        # How it was last looked up, in full, for an admin (web/activity.py).
-        looked_up = calls.last_lookup_turn(conn, idea_id) if auth.visitor().may("manage") else None
+        looked_up = calls.last_lookup_turn(conn, idea_id) if visitor.may("manage") else None
+        changed = calls.last_change(conn, idea_id=idea_id) if visitor.may("browse") else None
+        family = member_store.list_all(conn)
+        slots = views.slot_map(family)
+        kept = presents.of_presents(conn, [record], family).get(idea_id)
+    away = views.away_from_home(place, settings)
+    card = _idea_card(record, settings, away, slots, kept)
     return render_template(
         "idea.html",
         idea=record,
         original_message=message_store.as_said(original.text) if original else None,
+        original_by=views.original_by(original, family, settings.tzinfo) if original else None,
         today=today.isoformat(),
         ratings=RATINGS,
-        can_schedule=calendar_available(settings),
         can_look_up=enrichment_available(settings) and record.status != "dropped",
         looked_up=looked_up,
         lookups=views.lookups_when(settings),
         **asking,
-        row=views.idea_row(record, settings.tzinfo),
+        row=card,
         setting=views.SETTINGS.get(record.setting, record.setting),
         weather=views.WEATHER.get(record.weather),
-        place=views.place_panel(place, now, settings.place_stale_days),
+        place=views.place_panel(place, now, settings.place_stale_days, today),
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
         plans=[views.plan_row(p, today) for p in reversed(plans)],
+        changed=views.changed_line(
+            changed, settings.tzinfo, assistant=personas.active(settings).name
+        ),
     )
 
 
 def _idea_form(record: Any = None) -> str:
-    """The boxes for adding or changing an idea. Drawing it is reading; `edits.py` saves it."""
     app = _app()
     with closing(app.connect()) as conn:
-        kinds = sorted({row.kind for row in idea_store.list_all(conn, include_dropped=True)})
-        family = [member.display_name for member in member_store.list_all(conn)]
+        everything = idea_store.list_all(conn, include_dropped=True)
+        visitor = auth.visitor()
+        if record is not None and presents.is_kept_from(conn, record, visitor.member):
+            abort(404)
+        kinds = sorted({row.kind for row in everything})
+        people = member_store.list_all(conn)
+        kept = presents.of_presents(conn, [record], people).get(record.id) if record else None
+        by = (
+            next((m.display_name for m in people if m.id == record.suggested_by), None)
+            if record
+            else None
+        )
+    family = [member.display_name for member in people]
     return render_template(
         "idea_form.html",
         idea=record,
         revision=idea_store.revision(record) if record else None,
         kinds=sorted(set(kinds) | set(KIND_SUGGESTIONS)),
         statuses=STATUSES,
+        status_words=views.STATUS_WORDS,
         settings=SETTINGS,
         weathers=WEATHERS,
         seasons=SEASONS,
         costs=COSTS,
         family=family,
+        keepable=[member for member in people if member.active],
+        kept_ids=sorted(kept.ids) if kept else [],
+        suggested_by=by,
+        added=views.day_short(
+            date.fromisoformat(views.local_day(record.created_at, app.settings.tzinfo))
+        )
+        if record
+        else None,
         who=session.get(WHO_KEY),
     )
 
@@ -312,10 +535,62 @@ def edit_idea(idea_id: int) -> str:
     return _idea_form(record)
 
 
+@bp.get("/lists")
+def lists_page() -> str:
+    """The family's lists: what is still to get, a box to add to each, a tick for each thing
+    (forms through shopping_list, edits.change_list). The shopping list is always there."""
+    with closing(_app().connect()) as conn:
+        names = list_store.names(conn)
+        shown = []
+        for name in ["shopping", *(other for other in names if other != "shopping")]:
+            ref = list_store.find(conn, name)
+            held = list_store.items(conn, ref) if ref is not None else []
+            shown.append(
+                {
+                    "name": name,
+                    "title": views.list_title(name),
+                    "to_get": [item.text for item in held if item.ticked_at is None],
+                    "ticked": [item.text for item in held if item.ticked_at is not None],
+                }
+            )
+    return render_template("lists.html", lists=shown)
+
+
+def _download(text: str, name: str, mimetype: str) -> Response:
+    log.info("%s was downloaded by %s", name, auth.client_address())
+    response = Response(text, mimetype=mimetype)
+    response.headers["Content-Disposition"] = f'attachment; filename="{name}"'
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@bp.get("/export/plans.ics")
+def export_plans() -> Response:
+    """The plans as a calendar file any calendar can open (export.py), for a grown-up."""
+    app = _app()
+    with closing(app.connect()) as conn:
+        text = export.plans_ics(conn, app.settings, app.clock.now())
+    return _download(text, "familydb-plans.ics", "text/calendar")
+
+
+@bp.get("/export/ideas.csv")
+def export_ideas() -> Response:
+    """The ideas as a spreadsheet, without a present kept from whoever asks (presents.py)."""
+    with closing(_app().connect()) as conn:
+        text = export.ideas_csv(conn, presents.kept_ids(conn, auth.visitor().member))
+    return _download(text, "familydb-ideas.csv", "text/csv")
+
+
+@bp.get("/export/tasks.csv")
+def export_tasks() -> Response:
+    """The things to do as a spreadsheet, for a grown-up, who sees everybody's."""
+    with closing(_app().connect()) as conn:
+        text = export.tasks_csv(conn)
+    return _download(text, "familydb-to-dos.csv", "text/csv")
+
+
 @bp.get("/memory")
 def memory() -> str:
-    """What the family has told her about itself, and what it asked her to forget. Reading only:
-    the forms on it are `edits.py`'s, through the `remember` tool."""
     app = _app()
     with closing(app.connect()) as conn:
         everything = memory_store.list_all(conn)
@@ -330,28 +605,38 @@ def memory() -> str:
 
 @bp.get("/restaurants")
 def restaurants() -> str:
-    """The restaurant list on its own, each card linking out to where you can read more."""
     app = _app()
     now = app.clock.now()
     today = app.clock.today()
     stale_days = app.settings.place_stale_days
     with closing(app.connect()) as conn:
-        found = idea_store.search(conn, kind=RESTAURANT_KIND, limit=LIST_LIMIT)
+        kept = presents.kept_ids(conn, auth.visitor().member)
+        found = idea_store.search(
+            conn, kind=RESTAURANT_KIND, limit=LIST_LIMIT, exclude_ids=kept, newest_first=True
+        )
+        people = member_store.list_all(conn)
+        slots = views.slot_map(people)
         cards = [
-            views.restaurant_card(
-                idea,
-                place_store.get(conn, idea.place_id) if idea.place_id else None,
-                today,
-                now,
-                stale_days,
-            )
+            {
+                **views.restaurant_card(
+                    idea,
+                    place_store.get(conn, idea.place_id) if idea.place_id else None,
+                    today,
+                    now,
+                    stale_days,
+                ),
+                "people": views.people_for(idea, slots),
+            }
             for idea in found
         ]
-    return render_template("restaurants.html", cards=cards)
+        total = len([idea for idea in idea_store.list_all(conn) if idea.id not in kept])
+    for card in cards:
+        card["who"] = views.names_text(card["people"])
+    return render_template("restaurants.html", cards=cards, total=total)
 
 
 def _month(asked: str | None, today: date) -> date:
-    """The first of the month asked for as YYYY-MM, or of this one. Anything else is a 404."""
+    """The first of the month asked for as YYYY-MM, or of this one; anything else is a 404."""
     if not asked:
         return today.replace(day=1)
     try:
@@ -363,9 +648,21 @@ def _month(asked: str | None, today: date) -> date:
     return first
 
 
+def _months(rows: list[dict[str, Any]], today: date) -> list[dict[str, Any]]:
+    """Plans under the month they begin in ("October", and the year when it is not this one)."""
+    groups: list[dict[str, Any]] = []
+    for row in rows:
+        day = date.fromisoformat(row["day"])
+        title = f"{day:%B}" + (f" {day.year}" if day.year != today.year else "")
+        if not groups or groups[-1]["title"] != title:
+            groups.append({"title": title, "rows": []})
+        groups[-1]["rows"].append(row)
+    return groups
+
+
 @bp.get("/plans")
 def plans() -> str:
-    """What is on: the next three months, then the past month, as a list."""
+    """What is coming, by month, and what was lately; for a kid, one list of what is next."""
     app = _app()
     today = app.clock.today()
     with closing(app.connect()) as conn:
@@ -375,22 +672,22 @@ def plans() -> str:
             today - timedelta(days=PLANS_BEHIND_DAYS),
             today + timedelta(days=PLANS_AHEAD_DAYS),
         )
-        on = _no_gifts(conn, seen.entries)
-        titles = {row.id: row.title for row in idea_store.list_all(conn, include_dropped=True)}
+        on = _no_gifts(seen.entries, presents.kept_ids(conn, auth.visitor().member))
+        people = member_store.list_all(conn)
+        rows = _plan_rows(conn, app, on, today, views.slot_map(people), None, past=True)
         asking = _who(conn)
-    # Something that ends today or later is still to come, or going on now.
-    upcoming = [entry for entry in on if entry.days()[-1] >= today]
-    recent = [entry for entry in on if entry.days()[-1] < today]
+    horizon = today.isoformat()
+    upcoming = [row for row in rows if row["end"] >= horizon]
+    recent = [row for row in rows if row["end"] < horizon][::-1]
     return render_template(
         "plans.html",
-        upcoming=[views.entry_row(entry, today) for entry in upcoming],
-        recent=[views.entry_row(entry, today) for entry in reversed(recent)],
-        titles=titles,
+        months=_months(upcoming, today),
+        upcoming=upcoming,
+        recent=recent,
         ahead=PLANS_AHEAD_DAYS,
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
         today=today.isoformat(),
-        can_schedule=calendar_available(app.settings),
         **asking,
     )
 
@@ -420,7 +717,7 @@ def happening_page() -> str:
 
 @bp.get("/plans/month")
 def plans_month() -> str:
-    """One month as a calendar, or as a list of its busy days on a screen too narrow for one."""
+    """One month as a calendar, with what is coming in it and what is waiting to be rated."""
     app = _app()
     today = app.clock.today()
     first = _month(request.args.get("month"), today)
@@ -429,39 +726,46 @@ def plans_month() -> str:
     weeks_last = last_day + timedelta(days=6 - last_day.weekday())
     with closing(app.connect()) as conn:
         seen = agenda.read(app, conn, weeks_first, weeks_last)
-        on = _no_gifts(conn, seen.entries)
+        on = _no_gifts(seen.entries, presents.kept_ids(conn, auth.visitor().member))
+        people = member_store.list_all(conn)
+        slots = views.slot_map(people)
+        rows = _plan_rows(conn, app, on, today, slots, None, past=True)
+        rate = _unrated(conn, today, slots) if auth.visitor().may("change") else []
     previous = (first - timedelta(days=1)).replace(day=1)
     following = last_day + timedelta(days=1)
-    weeks = views.month_weeks(on, first, today)
+    weeks = views.month_calendar(rows, first, today, {row["plan_id"] for row in rate})
+    start = max(today, first).isoformat()
+    coming = [
+        row
+        for row in rows
+        if row["end"] >= start
+        and row["day"] <= last_day.isoformat()
+        and row["end"] >= first.isoformat()
+    ]
     return render_template(
         "plans_month.html",
         month=f"{first:%B %Y}",
         weeks=weeks,
-        busy_days=[day for week in weeks for day in week if day["current"] and day["entries"]],
+        coming=coming,
+        rate=rate,
+        key_people=[views.person_of(p.display_name, slots) for p in people],
         previous=f"{previous:%Y-%m}",
         following=f"{following:%Y-%m}",
+        previous_name=f"{previous:%B %Y}",
+        following_name=f"{following:%B %Y}",
         this_month=first == today.replace(day=1),
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
     )
 
 
-def _gifts_hidden() -> bool:
-    """Whether presents are kept from this visitor: from anybody who may not decide what the kids
-    are given, so a present stays a surprise (docs/WISHES.md)."""
-    return not auth.visitor().may("decide")
-
-
-def _no_gifts(conn: Any, entries: list[agenda.Entry]) -> list[agenda.Entry]:
-    """What is on, without the plans made from a present, for a visitor presents are kept from."""
-    if not _gifts_hidden():
-        return entries
-    gifts = {i.id for i in idea_store.list_all(conn, include_dropped=True) if idea_store.is_gift(i)}
-    return [entry for entry in entries if entry.idea_id not in gifts]
+def _no_gifts(entries: list[agenda.Entry], kept: set[int]) -> list[agenda.Entry]:
+    """What is on, without plans made from a present that is hidden from the one looking."""
+    return [entry for entry in entries if entry.idea_id not in kept]
 
 
 def _own_only() -> int | None:
-    """Whose things to do this visitor sees: their own, unless they may see the household's."""
+    """Whose tasks this visitor sees: their own, unless they may browse the household's."""
     visitor = auth.visitor()
     if visitor.may("browse") or visitor.member is None:
         return None
@@ -474,11 +778,11 @@ def tasks() -> str:
     status = request.args.get("status", "open")
     if status not in {"open", "done", "cancelled", "all"}:
         abort(400)
-    # Somebody who sees only their own (a kid) gets their open ones as a plain checklist, as
-    # Home lists them: no filters, no workings (docs/STYLE.md, "A kid's screen").
+    # A kid gets a plain checklist of her own open ones (docs/STYLE.md, "A kid's screen").
     simple = not auth.visitor().may("browse")
     if simple:
         status = "open"
+    visitor = auth.visitor()
     with closing(app.connect()) as conn:
         rows = task_store.list_all(
             conn,
@@ -486,40 +790,100 @@ def tasks() -> str:
             query="" if simple else request.args.get("q", ""),
             owner_id=_own_only(),
         )
+        open_count = (
+            len(rows) if status == "open" and not request.args.get("q") else _open_count(conn)
+        )
         people = member_store.list_all(conn)
+        creators = task_store.creators(conn, [task.id for task in rows]) if simple else {}
     today = app.clock.today()
+    tz = app.settings.tzinfo
+    slots = views.slot_map(people)
+    shown = [
+        views.todo_page_row(
+            task,
+            tz,
+            today,
+            slots,
+            kid=simple,
+            nudging=app.settings.task_nudges,
+            creator=creators.get(task.id),
+            me=visitor.name,
+        )
+        for task in rows
+    ]
+    groups = _todo_groups(shown) if status == "open" and not simple else []
     return render_template(
         "tasks.html",
         simple=simple,
-        briefs=[views.task_brief(task, app.settings.tzinfo, today) for task in rows]
-        if simple
-        else [],
-        rows=[
-            views.task_row(task, app.settings.tzinfo, nudging=app.settings.task_nudges)
-            for task in rows
-        ],
+        rows=shown,
+        groups=groups,
+        open_count=open_count,
+        late_count=sum(1 for row in shown if row["late"]) if status == "open" else None,
         repeat_options=views.REPEATS,
-        people=people,
+        people=[views.person_of(p.display_name, slots) for p in people],
+        me=visitor.name,
         status=status,
         zone=app.settings.tz,
         query=request.args.get("q", ""),
     )
 
 
+def _open_count(conn: Any) -> int:
+    return len(task_store.list_all(conn, status="open", owner_id=_own_only()))
+
+
+def _todo_groups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Open to-dos in the order a person works through them: what is late, what has a day, what
+    has none."""
+    parts = (
+        ("Overdue", "late", [row for row in rows if row["late"]]),
+        ("Coming up", "", [row for row in rows if row["dated"] and not row["late"]]),
+        ("No date", "", [row for row in rows if not row["dated"]]),
+    )
+    return [{"title": title, "tone": tone, "rows": found} for title, tone, found in parts if found]
+
+
+@bp.get("/task/<int(max=9223372036854775807):task_id>/edit")
+def edit_task(task_id: int) -> str:
+    """A to-do's own page to change: all its boxes at once, with a way back to the list."""
+    app = _app()
+    with closing(app.connect()) as conn:
+        task = task_store.get(conn, task_id)
+        if task is None:
+            abort(404)
+        people = member_store.list_all(conn)
+        made_by = task_store.creators(conn, [task.id]).get(task.id)
+        changed = calls.last_change(conn, task_id=task.id)
+    tz = app.settings.tzinfo
+    slots = views.slot_map(people)
+    row = views.task_row(task, tz, app.clock.today(), nudging=app.settings.task_nudges)
+    row["changed"] = views.changed_line(changed, tz, assistant=personas.active(app.settings).name)
+    return render_template(
+        "task_form.html",
+        task=task,
+        row=row,
+        words=views.todo_row(task, tz, app.clock.today(), slots),
+        added=views.day_short(date.fromisoformat(views.local_day(task.created_at, tz))),
+        made_by=made_by,
+        people=[views.person_of(p.display_name, slots) for p in people],
+        owner=views.person_of(task.owner, slots) if task.owner else None,
+        zone=app.settings.tz,
+    )
+
+
 # -- the kids' wish lists (docs/WISHES.md) --------------------------------------------------------
 
-# Answers shown under her lists for this long, then only on the full list.
 ANSWERED_DAYS = 30
 TOP_WISHES = 3
 
 
 def _is_kid(member: member_store.Member) -> bool:
-    """Somebody who keeps a wish list and does not decide on anybody's: a kid, by roles.py."""
+    """A kid, by roles.py: keeps a wish list and decides on nobody's."""
     return roles.may(member.role, "wish") and not roles.may(member.role, "decide")
 
 
 def _lists(conn: Any, kid: member_store.Member, today: date) -> dict[str, Any]:
-    """Her three lists in her order, what was answered lately, and how far off each occasion is."""
+    """A kid's three lists in her order, what was answered lately, and the countdowns."""
     christmas = date(today.year, 12, 25)
     if christmas < today:
         christmas = date(today.year + 1, 12, 25)
@@ -568,8 +932,7 @@ def _kids(conn: Any) -> list[member_store.Member]:
 
 
 def wish_glance(conn: Any, today: date) -> dict[str, Any] | None:
-    """For Home: a kid's own lists at a glance, or for a parent, each kid's and what waits on
-    them. None for anybody else. Read from the database, asked of nobody."""
+    """For Home: a kid's own lists, or for a parent each kid's and what waits on them."""
     visitor = auth.visitor()
     if visitor.may("decide"):
         kids = [_lists(conn, kid, today) for kid in _kids(conn)]
@@ -608,7 +971,6 @@ def wishes() -> str:
         else:
             abort(404)
         family = [member.display_name for member in member_store.list_all(conn)]
-    # A kid lands on a box for anything at all, the chat's own, only if she may talk to her.
     talk = (
         {}
         if visitor.may("decide") or not visitor.may("chat")

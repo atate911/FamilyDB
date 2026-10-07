@@ -1,17 +1,10 @@
-"""The daily spending limit: estimated dollars across every model call, checked before each one.
+"""The daily spending limit: estimated dollars (`providers/prices.py`), checked before every call
+(the loop, `gateway.listen`, `gateway.look`).
 
-Every paid call is checked here first: each model call of a turn by the turn loop, which covers
-the chat, the lookups, the discovery searches and the digest, and each voice note by
-`gateway.listen`. The estimate comes from `providers/prices.py`; a model not listed there is
-counted dearer than any that is, so the limit errs towards stopping.
-
-Before a call goes out, `admit` checks the limit and sets aside the call's estimated cost as a
-hold, in one short write transaction, so two processes cannot both pass on the same dollars and
-no lock is held over the network. `settle` records the call and gives the hold back. Holds count
-against the limit, but not against the call that made them, so one call can still cross it. A
-hold older than `HOLD_MINUTES` was left by a crash and stops counting. A timed-out call whose
-vendor charges are unknown is outside the estimate.
-"""
+`admit` holds the call's estimated cost in one short write transaction, so two processes cannot
+pass on the same dollars and no lock spans the network; `settle` gives the hold back. Holds count
+against other calls, not their own, so one call can cross the limit. A hold older than
+`HOLD_MINUTES` was left by a crash and stops counting."""
 
 from __future__ import annotations
 
@@ -27,12 +20,12 @@ from familydb.store import alerts as alert_store
 from familydb.store import calls
 from familydb.store.db import transaction
 
-# Longer than any call with its retries and a fallback can take (the SDKs time out at 120s).
+# Longer than any call with its retries and a fallback (the SDKs time out at 120s).
 HOLD_MINUTES = 30
-# A rough count, used only to size a hold; the call records what the vendor reported.
+# Sizes a hold only; the call records what the vendor reported.
 CHARS_PER_TOKEN = 4
 
-# What each writing tool did, and which record in its summary names what it wrote.
+# What each writing tool did, and the summary key naming what it wrote.
 DONE = {
     "add_task": ("Saved task", "task_id"),
     "update_task": ("Updated task", "task_id"),
@@ -70,9 +63,8 @@ def completed_reply(
     *,
     plain: bool = False,
 ) -> str:
-    """Explain durable progress without spending another model call to acknowledge it. The
-    message being answered, when there is one, chooses the wording (`voice.say`); `plain` is for
-    a chat a kid reads (audience.py)."""
+    """Report completed writes with no further model call; the message chooses the wording
+    (`voice.say`), `plain` is for a kid's chat (audience.py)."""
     from familydb import voice
 
     said = voice.say(settings, "limit_partial", seed=message_id, plain=plain)
@@ -80,9 +72,7 @@ def completed_reply(
 
 
 class SpendingLimitReached(AgentError):
-    """The day's limit is used up. Not retryable: the answer is tomorrow or a higher limit.
-
-    In the chat the family is told in the voice layer's words (`voice.py`), not this message."""
+    """The day's limit is used up; not retryable. The chat says it in `voice.py`'s words."""
 
     def __init__(self, spent: float, limit: float) -> None:
         super().__init__(
@@ -110,8 +100,7 @@ def estimate(
     return prices.cost(provider, model, usage, cache_ttl=cache_ttl)[0]
 
 
-# Only to size the hold on hearing a recording; the call records what was billed. Audio at 32
-# tokens a second, Gemini's rate and more than OpenAI counts, and its words at a generous 8.
+# Sizes the hold on a recording only: audio at Gemini's 32 tokens a second, words a generous 8.
 AUDIO_TOKENS_PER_SECOND = 32
 WORDS_TOKENS_PER_SECOND = 8
 
@@ -127,8 +116,7 @@ def estimate_hearing(provider: str, model: str | None, seconds: int) -> float:
     return prices.cost(provider, model, usage)[0]
 
 
-# Only to size the hold on looking at a photo; the call records what was billed. A large picture,
-# as the vendors count one, the words asking for it, and every token the answer may use.
+# Sizes the hold on a photo only: a large picture, the ask, and every token the answer may use.
 PICTURE_TOKENS = 2500
 ASK_TOKENS = 300
 
@@ -140,10 +128,8 @@ def estimate_looking(provider: str, model: str | None) -> float:
 
 
 def admit(conn: sqlite3.Connection, settings: Settings, now: datetime, cost: float) -> int:
-    """Check the limit and hold this call's estimated cost; raise when the day is used up.
-
-    Used up, it is noted for an admin (alerts.py), under the family's date, once the check's own
-    transaction is over; let through, a note of it for today, if any, is forgotten."""
+    """Check the limit and hold this call's estimated cost; raise when the day is used up (noted
+    for an admin after the check's transaction ends; let through, today's note is cleared)."""
     today = now.astimezone(settings.tzinfo).date().isoformat()
     try:
         with transaction(conn):
@@ -161,9 +147,8 @@ def admit(conn: sqlite3.Connection, settings: Settings, now: datetime, cost: flo
 def adjust(
     conn: sqlite3.Connection, settings: Settings, now: datetime, hold_id: int, cost: float
 ) -> None:
-    """Hold what the call will now cost, before it is sent: a fallback to a dearer model must not
-    leave the cheaper model's estimate standing while others spend the difference. Checked as
-    `admit` checks, not counting this call's own hold; refused, the hold is given back."""
+    """Re-hold at the fallback's price before it is asked, so a dearer model's difference is not
+    left unheld. Checked as `admit`, not counting its own hold; refused, the hold is released."""
     with transaction(conn):
         try:
             _check(conn, settings, now, other_than=hold_id)
@@ -207,8 +192,7 @@ def spent_today(conn: sqlite3.Connection, settings: Settings, now: datetime) -> 
 def kid_used_up(
     conn: sqlite3.Connection, settings: Settings, now: datetime, member_id: int
 ) -> bool:
-    """Whether a kid's own share of the day is spent (docs/WISHES.md). Checked before each of
-    her messages, so one message may cross it; the family's limit still holds every call."""
+    """Whether a kid's own share of the day is spent (docs/WISHES.md); one message may cross it."""
     share = settings.kid_daily_spend
     spent = calls.spent_since_by(conn, since=day_start(settings, now), member_id=member_id)
     return bool(share) and spent >= share

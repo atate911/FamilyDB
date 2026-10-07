@@ -1,6 +1,5 @@
-"""What the daily check of models and prices found (familydb/model_watch.py): the models, what
-changed, and how each source answered. Three small tables, read and written together by one job,
-so one repository."""
+"""What the daily check (familydb/model_watch.py) found: models, changes, and how each source
+answered. Three small tables of one job, so one repository."""
 
 from __future__ import annotations
 
@@ -91,7 +90,7 @@ def changes_since(conn: sqlite3.Connection, *, since: str, limit: int = 50) -> l
 
 
 def source_answered(conn: sqlite3.Connection, source: str, *, ok: bool, note: str, at: str) -> int:
-    """Record how a source answered; returns how many checks in a row it has now failed."""
+    """Record how a source answered; returns its consecutive failures."""
     conn.execute(
         "INSERT INTO model_sources (source, checked_at, ok, note, failures) "
         "VALUES (?, ?, ?, ?, ?) ON CONFLICT (source) DO UPDATE SET "
@@ -109,6 +108,6 @@ def sources(conn: sqlite3.Connection) -> list[Source]:
 
 
 def stamp(conn: sqlite3.Connection) -> str | None:
-    """When the check last ran, so a process knows to load what it found."""
+    """When the check last ran, so a process knows to reload."""
     row = conn.execute("SELECT max(checked_at) AS at FROM model_sources").fetchone()
     return row["at"] if row else None

@@ -1,12 +1,9 @@
-"""A weekly look at what the calls themselves cost and do, with no model call.
+"""A daily look at what the calls themselves cost and do, with no model call.
 
-Prices moving is one reason a bill grows; a model answering differently is another: reading more
-of the conversation, writing longer answers, taking more steps to reach one, going slower, or
-ending badly more often. So each day the last week of each kind of call is set beside the four
-weeks before it, from what every call recorded (`llm_calls`), and anything that moved a long way
-is told to each admin with a Telegram id (alerts.py, "shift"), at most once in seven days for
-each kind, with the figures and, when the model behind it changed, which. A kind with too few
-calls in either stretch to mean anything is left alone.
+A bill also grows when a model reads more, writes longer, takes more steps, slows or ends badly
+more often. Each day the last week of each kind of call is set beside the four weeks before
+(`llm_calls`), and a long way moved is told to admins (alerts.py "shift"), at most once in seven
+days per kind, naming a changed model. A kind with too few calls to mean anything is left alone.
 """
 
 from __future__ import annotations
@@ -23,14 +20,13 @@ from familydb.store import calls
 
 RECENT_DAYS = 7
 BEFORE_DAYS = 28
-FEWEST = 20  # calls in the week, and in the weeks before, for a comparison to mean anything
-MORE = 1.5  # half as much again, or two thirds as much: a long way
+FEWEST = 20
+MORE = 1.5
 SLOWER = 2.0
-BAD_POINTS = 0.05  # five points more of the calls ending badly, and at least twice the share
+BAD_POINTS = 0.05
 
 
 def check(app: Any) -> int:
-    """Compare the last week with the four before it; returns how many kinds were told of."""
     with closing(app.connect()) as conn:
         now = app.clock.now()
         split = now - timedelta(days=RECENT_DAYS)
@@ -63,7 +59,6 @@ def check(app: Any) -> int:
 
 
 def shifts(now_is: dict[str, Any], was: dict[str, Any]) -> list[str]:
-    """What moved a long way between two stretches of one kind of call, in words."""
     found: list[str] = []
 
     def per(figures: dict[str, Any], what: str, by: str) -> float:

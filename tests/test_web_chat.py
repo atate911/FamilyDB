@@ -11,7 +11,7 @@ import pytest
 
 from familydb.app import App
 from familydb.channels.web import BUSY, DEFAULT_CHAT, UNKNOWN_MEMBER
-from familydb.store import messages
+from familydb.store import db, messages
 from familydb.web import create_app
 from familydb.web.chat import HELD, LOCKED
 from tests import fakes
@@ -36,6 +36,13 @@ def _token(client, path: str = "/chat") -> str:
     return found.group(1)
 
 
+def _thread(page: str) -> str:
+    """What is said in the room: the scroller, without the list of conversations beside it."""
+    found = re.search(r'<div class="scroller".*?(?=<form class="composer"|</section>)', page, re.S)
+    assert found is not None
+    return found.group(0)
+
+
 def _say(client, text: str, who: str = "Sam", **extra):
     form = {"csrf": _token(client), "text": text, "who": who, **extra}
     return client.post("/chat", data=form)
@@ -44,14 +51,6 @@ def _say(client, text: str, who: str = "Sam", **extra):
 @pytest.fixture
 def replies():
     return [fakes.message([fakes.text("Saturday looks dry. The museum?")])]
-
-
-def test_an_empty_chat_says_so(settings, clock, conn, family) -> None:
-    page = _client(settings, clock).get("/chat")
-    assert page.status_code == 200
-    assert "Nothing said here yet" in page.text
-    assert "Sam" in page.text and "the girls" in page.text  # everyone can be spoken for
-    assert 'data-say="What should we do today?"' in page.text  # ways to start, on a Sunday
 
 
 def test_a_message_goes_through_the_pipeline_and_the_answer_lands_on_the_page(
@@ -68,21 +67,14 @@ def test_a_message_goes_through_the_pipeline_and_the_answer_lands_on_the_page(
     assert "Saturday looks dry. The museum?" in page
     assert 'http-equiv="refresh"' not in page  # nothing left to wait for
 
-    assert page.index("what should we do this weekend?") < page.index("Saturday looks dry")
+    room = _thread(page)
+    assert room.index("what should we do this weekend?") < room.index("Saturday looks dry")
     assert 'id="latest"' in page
 
     thread = messages.last_for_chat(conn, DEFAULT_CHAT, limit=10)
     assert [(m.direction, m.status) for m in thread] == [("in", "processed"), ("out", "processed")]
     assert thread[0].member_id == family["sam"].id
     assert thread[0].channel == "web"
-
-
-def test_her_answers_carry_her_name(settings, clock, conn, family, replies) -> None:
-    client = _client(settings, clock, *replies)
-    _say(client, "what should we do this weekend?")
-    assert client.chat.wait(10)
-    page = client.get("/chat").text
-    assert "<strong>Vera</strong>" in page and "<strong>FamilyDB</strong>" not in page
 
 
 def test_with_no_persona_the_answers_are_the_bot_s_own(
@@ -92,7 +84,7 @@ def test_with_no_persona_the_answers_are_the_bot_s_own(
     _say(client, "what should we do this weekend?")
     assert client.chat.wait(10)
     page = client.get("/chat").text
-    assert "<strong>FamilyDB</strong>" in page and "Vera" not in page
+    assert '<div class="msg__by">FamilyDB <time>' in page and "Vera" not in page
 
 
 def test_the_tools_a_turn_ran_are_shown_under_the_answer(settings, clock, conn, family) -> None:
@@ -109,8 +101,8 @@ def test_the_tools_a_turn_ran_are_shown_under_the_answer(settings, clock, conn, 
     _say(client, "we should try the ramen place")
     assert client.chat.wait(10)
     page = client.get("/chat").text
-    assert page.index("we should try the ramen place") < page.index("used add_idea")
-    assert page.index("Saved #1.") < page.index("used add_idea")
+    assert page.index("we should try the ramen place") < page.index("Used add_idea")
+    assert page.index("Saved #1.") < page.index("Used add_idea")
     assert "waiting for an answer" not in page  # it was answered, whatever the row says
 
 
@@ -131,20 +123,22 @@ def test_the_page_says_it_is_thinking_and_asks_to_be_shown_again(
     assert asked.wait(10)
 
     page = client.get("/chat").text
-    assert 'http-equiv="refresh"' in page
+    assert 'http-equiv="refresh" content="3; url=/chat?n=1#latest"' in page
     assert "Thinking about the last message" in page
     assert "disabled" in page  # and nothing can be sent on top of it
-    # Her line waits at the foot of the thread, under the message it is about.
-    assert page.index('id="latest"') < page.index('class="said-bot pending is-thinking"')
+    # Her line waits at the foot of the thread, under the message it is about, with a plain link
+    # to look again that needs no script, and her sign typing while she writes back.
+    assert page.index('id="latest"') < page.index('class="msg msg--vera msg--pending"')
+    assert ">Check for her answer</a>" in page and "vs--busy" in page
     # The box is closed while the page keeps looking again, so nothing typed can be lost.
-    assert f'placeholder="{LOCKED.format(name="Vera")}" disabled></textarea>' in page
+    assert f'placeholder="{LOCKED.format(name="Vera")}" enterkeyhint="send" disabled>' in page
 
     refused = _say(client, "are you there?")
     assert refused.status_code == 400 and BUSY in refused.text
     # A page holding words somebody typed never looks again by itself: it would take them.
     assert ">are you there?</textarea>" in refused.text
     assert 'http-equiv="refresh"' not in refused.text and HELD in refused.text
-    assert 'placeholder="Message Vera">are you there?</textarea>' in refused.text  # open
+    assert 'placeholder="Message Vera" enterkeyhint="send">are you there?' in refused.text  # open
     release.set()
     assert client.chat.wait(10)
 
@@ -155,25 +149,24 @@ def test_her_lines_carry_her_name_whatever_they_say(settings, clock, conn, famil
     _say(client, "what should we do this weekend?")
     assert client.chat.wait(10)
     page = client.get("/chat").text
-    assert "<h1>Vera</h1>" in page and "<strong>Vera</strong>" in page
-    assert page.count('class="said-bot"') == 1 and "FamilyDB</strong>" not in page
-    assert '<span class="label">Vera</span>' in page  # the place in the bar goes by her name
+    assert "<h1>Chat with Vera</h1>" in page and '<div class="msg__by">Vera <time>' in page
+    assert page.count('class="msg msg--vera"') == 1 and "FamilyDB <time>" not in page
+    assert "<span>Chat with Vera</span>" in page  # the place in the menu goes by her name
     # She is never drawn: beside her lines is her screen, and the smiling mark is only the
-    # page's own, in the bar and at the foot (and the AI model's page in the settings menu).
-    outside_menu = re.sub(r'<details class="menu.*?</details>', "", page, flags=re.S)
-    assert 'class="avatar presence v' in page and outside_menu.count("#i-mark") == 2
-    assert '<span class="presence-glass"></span>' in page  # her screen, its glyphs the stylesheet's
+    # page's own, in the bars and at the foot.
+    assert '<svg class="vs"' in _thread(page) and "mark-fdb" not in _thread(page)
+    assert page.count('class="mark-fdb"') == 2 and page.count("mark-fdb--xs") == 1
 
     nameless = _client(settings.model_copy(update={"persona": "none"}), clock).get("/chat").text
-    assert "<strong>FamilyDB</strong>" in nameless and '<span class="label">Chat</span>' in nameless
+    assert "<h1>Chat</h1>" in nameless and "<span>Chat</span>" in nameless
 
 
 def test_a_message_just_sent_shows_before_its_turn_has_stored_it(
     settings, clock, conn, family, replies, monkeypatch
 ) -> None:
-    """The browser is back before the turn stores the message (naming where the phone is can
-    wait on the map service first): the page draws it from the channel until the log has it,
-    rather than seeming to lose it and forgetting to look again."""
+    """The browser is back before the turn stores the message (naming the phone's place can wait on
+    the map service): the page draws it from the channel until the log has it.
+    """
     from familydb.channels import web as channel
 
     held, release = threading.Event(), threading.Event()
@@ -190,10 +183,10 @@ def test_a_message_just_sent_shows_before_its_turn_has_stored_it(
     assert held.wait(10)
     assert messages.last_for_chat(conn, DEFAULT_CHAT, limit=5) == []  # not in the log yet
     page = client.get("/chat").text
-    assert "is the pool open today?" in page and "waiting for an answer" in page
-    assert 'http-equiv="refresh"' in page and "Thinking about the last message" in page
+    assert "is the pool open today?" in page and "Thinking about the last message" in page
+    assert 'http-equiv="refresh"' in page
     assert page.index('id="latest"') < page.index("is the pool open today?")
-    assert page.index("is the pool open today?") < page.index("pending is-thinking")
+    assert page.index("is the pool open today?") < page.index("msg--pending")
     release.set()
     assert client.chat.wait(10)
     page = client.get("/chat").text
@@ -325,7 +318,7 @@ def test_a_reply_the_turn_failed_to_produce_is_shown_as_trouble(settings, clock,
     page = client.get("/chat").text
     # The pipeline's own notice to the family, in her words, stored as a reply.
     assert "try again shortly" in page
-    assert "this one did not go through" in page
+    assert "This one didn\u2019t go through." in page and "msg--failed" in page
 
 
 def test_the_phone_s_position_goes_with_the_message(settings, clock, conn, family, replies) -> None:
@@ -370,3 +363,218 @@ def test_a_position_is_not_kept_unless_the_box_is_ticked(
     _say(client, "thanks", lat="45.51900", lon="-122.67900")
     assert client.chat.wait(10)
     assert locations.get(conn, family["sam"].id) is None
+
+
+# -- the room
+
+
+def test_a_page_that_waits_asks_less_and_less_often_and_then_leaves_a_link() -> None:
+    from familydb.web import chat
+
+    thinking = [chat.refresh_after("thinking", looked) for looked in range(9)]
+    assert thinking[:3] == [3, 5, 10]  # soon, then less often
+    assert thinking[-1] is None  # and then it stops
+    assert sum(seconds for seconds in thinking if seconds) <= 60  # inside a minute
+    assert chat.refresh_after("retrying", 0) == 30  # the retry job takes minutes
+    assert chat.refresh_after(None, 0) is None and chat.refresh_after("lost", 0) is None
+
+
+def test_the_look_again_link_works_without_a_script_and_asks_a_little_later_each_time(
+    settings, clock, conn, family
+) -> None:
+    client = _client(settings, clock)
+    asked, release = threading.Event(), threading.Event()
+
+    def slow(**kwargs):
+        asked.set()
+        assert release.wait(10)
+        return fakes.message([fakes.text("done")])
+
+    client.chat._api = type("Slow", (), {"create": staticmethod(slow)})()
+    _say(client, "take your time")
+    assert asked.wait(10)
+    assert 'content="5; url=/chat?n=2#latest"' in client.get("/chat?n=1").text
+    assert 'content="10; url=/chat?n=3#latest"' in client.get("/chat?n=2").text
+    tired = client.get("/chat?n=7").text  # asked enough: no refresh, but she is still working
+    assert 'http-equiv="refresh"' not in tired and "Thinking about the last message" in tired
+    assert 'href="/chat#latest">Check for her answer</a>' in tired  # a look from the start
+    release.set()
+    assert client.chat.wait(10)
+
+
+def _fill(conn, family, count: int) -> list[int]:
+    """`count` exchanges in the family chat, oldest first; the ids of the messages asked."""
+    asked = []
+    with db.transaction(conn):
+        for number in range(count):
+            at = f"2026-09-{1 + number // 20:02d}T{number % 20:02d}:00:00Z"
+            question = messages.insert_in(
+                conn,
+                channel="web",
+                channel_update_id=f"q{number}",
+                chat_id=DEFAULT_CHAT,
+                member_id=family["sam"].id,
+                text=f"question {number}",
+                now=at,
+            )
+            messages.mark_processed(conn, question.id, [], now=at)
+            messages.insert_out(
+                conn,
+                channel="web",
+                chat_id=DEFAULT_CHAT,
+                text=f"answer {number}",
+                reply_to=question.id,
+                now=at,
+            )
+            asked.append(question.id)
+    return asked
+
+
+def test_the_newest_sixty_are_shown_and_earlier_ones_are_a_link_away(
+    settings, clock, conn, family
+) -> None:
+    _fill(conn, family, 40)  # eighty messages
+    client = _client(settings, clock)
+    page = client.get("/chat").text
+    room = _thread(page)
+    assert "answer 39" in room and "question 10" in room and "question 9<" not in room
+    earlier = re.search(r'<p class="earlier"><a class="linkbtn" href="([^"]+)">Earlier', room)
+    assert earlier is not None and "Back to the newest" not in room
+    older = client.get(earlier.group(1)).text
+    assert "question 9<" in older and "question 10<" not in older and "question 39" not in older
+    assert 'class="linkbtn" href="/chat#latest">Back to the newest' in older
+    assert (
+        "Check for her answer" not in older and 'http-equiv="refresh"' not in older
+    )  # only reading
+    # Nothing older than the very first message.
+    first = _fill_ids(conn)[0]
+    assert "Earlier messages" not in _thread(client.get(f"/chat?before={first + 1}").text)
+    assert client.get("/chat?before=nonsense").status_code == 200  # an odd address is the newest
+
+
+def _fill_ids(conn) -> list[int]:
+    return [row[0] for row in conn.execute("SELECT id FROM messages ORDER BY id")]
+
+
+def test_the_day_is_said_where_it_changes_and_each_person_wears_their_colour(
+    settings, clock, conn, family
+) -> None:
+    _fill(conn, family, 3)
+    with db.transaction(conn):
+        asked = messages.insert_in(
+            conn,
+            channel="web",
+            channel_update_id="alex",
+            chat_id=DEFAULT_CHAT,
+            member_id=family["alex"].id,
+            text="and from Alex",
+            now="2026-09-20T20:00:00Z",
+        )
+        messages.mark_processed(conn, asked.id, [], now="2026-09-20T20:00:01Z")
+    room = _thread(_client(settings, clock).get("/chat").text)
+    assert room.count('<div class="day-sep">') == 2  # September 1st, and the clock's own day
+    assert '<div class="day-sep"><span>Today</span></div>' in room
+    assert "Monday 31 August" in room  # the evening before, in the family's own time
+    # Sam is the first person (colour 1) and Alex the second; she has no colour, only her screen.
+    assert 'class="msg msg--person p1"' in room and 'class="msg msg--person p2"' in room
+    assert room.count('class="msg msg--vera"') == 3
+
+
+def test_a_parent_moves_between_conversations_and_never_reads_a_kids_words_on_the_family_page(
+    settings, clock, conn, family
+) -> None:
+    kid = f"member:{family['girls'].id}"
+    with db.transaction(conn):
+        said = messages.insert_in(
+            conn,
+            channel="web",
+            channel_update_id="girls",
+            chat_id=kid,
+            member_id=family["girls"].id,
+            text="a secret wish",
+            now="2026-09-20T20:00:00Z",
+        )
+        messages.mark_processed(conn, said.id, [], now="2026-09-20T20:00:01Z")
+    client = _client(settings, clock)
+    page = client.get("/chat").text
+    nav = re.search(r'<nav class="convos".*?</nav>', page, re.S).group(0)
+    assert "Family" in nav and "the girls" in nav and "The kids\u2019 conversations" in nav
+    assert "a secret wish" not in page  # when she last wrote, not what
+    assert f'href="/chat?with={family["girls"].id}#latest"' in nav
+    hers = client.get(f"/chat?with={family['girls'].id}").text
+    assert "a secret wish" in hers and "Her own conversation, for you to read" in hers
+    assert '<form class="composer"' not in hers  # a parent only reads
+    assert 'aria-current="page"' in re.search(r'<nav class="convos".*?</nav>', hers, re.S).group(0)
+
+
+def test_the_chat_link_counts_what_she_said_since_this_browser_looked(settings, clock, family):
+    """Somebody who uses only the page had no way to know she had written: the Chat link says
+    "2 new" until the chat is opened. Kept in this browser's session, no write."""
+    client = _client(settings, clock)
+    badge = re.compile(r'class="badge badge--act">(\d+) new<')
+    assert badge.search(client.get("/").text) is None  # a new browser starts from now
+    with closing(db.connect(settings.familydb_path)) as conn, db.transaction(conn):
+        for words in ("Reminder: bins out.", "Reminder: call the plumber."):
+            messages.insert_out(
+                conn, channel="web", chat_id=DEFAULT_CHAT, text=words, now="2026-09-20T21:05:00Z"
+            )
+    assert badge.search(client.get("/").text).group(1) == "2"
+    client.get("/chat")
+    assert badge.search(client.get("/").text) is None
+
+
+def test_what_another_app_shares_waits_in_the_box(settings, clock, family):
+    """The manifest offers the page as a place to share to (Android); what comes waits in the box
+    until Send, so sharing sends nothing."""
+    client = _client(settings, clock)
+    manifest = json.loads(client.get("/manifest.webmanifest").text)
+    assert manifest["share_target"]["action"] == "/chat"
+    page = client.get(
+        "/chat",
+        query_string={
+            "title": "Kiggins",
+            "text": "Look https://kiggins.example",
+            "url": "https://kiggins.example",
+        },
+    ).text
+    box = re.search(r"<textarea[^>]*>([^<]*)</textarea>", page).group(1)
+    assert box == "Kiggins\nLook https://kiggins.example\nhttps://kiggins.example"
+    with closing(db.connect(settings.familydb_path)) as conn:
+        assert conn.execute("SELECT count(*) FROM messages").fetchone()[0] == 0
+
+
+def test_a_photo_goes_from_the_chats_box_as_one_from_telegram_would(
+    settings, clock, family, monkeypatch
+):
+    """The page could not send a photo; now the chat's box can, alone or with words, and it
+    reaches the pipeline as Telegram's do, to be looked at and never kept."""
+    import io
+
+    from familydb.channels import web as channel
+    from familydb.web.chat import MAX_PHOTO_BYTES
+
+    seen: list = []
+    monkeypatch.setattr(channel, "handle_incoming", lambda app, msg, api=None: seen.append(msg))
+    client = _client(settings, clock)
+    page = client.get("/chat").text
+    assert 'enctype="multipart/form-data"' in page and 'name="photo"' in page
+    picture = b"\x89PNG\r\n\x1a\n" + b"0" * 200_000  # far over any other form's limit
+    form = {"csrf": _token(client), "once": "p1", "who": "Sam", "text": ""}
+    sent = client.post(
+        "/chat",
+        data={**form, "photo": (io.BytesIO(picture), "beach.png", "image/png")},
+        content_type="multipart/form-data",
+    )
+    assert sent.status_code == 302
+    client.chat.wait()
+    (msg,) = seen
+    (note,) = msg.photos
+    assert (note.mime, note.size, note.fetch()) == ("image/png", len(picture), picture)
+    odd = {**form, "once": "p2", "photo": (io.BytesIO(b"%PDF-1.7"), "x.pdf", "application/pdf")}
+    refused = client.post("/chat", data=odd, content_type="multipart/form-data")
+    assert refused.status_code == 400 and "JPEG or PNG" in refused.text
+    huge = (io.BytesIO(b"0" * (MAX_PHOTO_BYTES + 1)), "big.jpg", "image/jpeg")
+    refused = client.post(
+        "/chat", data={**form, "once": "p3", "photo": huge}, content_type="multipart/form-data"
+    )
+    assert refused.status_code == 400 and "too big" in refused.text

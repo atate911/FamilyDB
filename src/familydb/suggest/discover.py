@@ -1,11 +1,6 @@
-"""Stage: time-bound things on the web, found by a discovery worker turn and cached for a while.
-
-The chat agent never searches the web itself. When discovery is on, this stage runs one worker
-turn (its own prompt, the web tools, `report_finds` as the hand-back) and keeps the finds per
-window for `DISCOVER_CACHE_SECONDS`, so a digest and the questions that follow it share one search.
-The request is built from the framing (the window, where they are, the constraints), never the
-question's wording, so "what's on this weekend" and "anything fun Saturday" share one search.
-"""
+"""Stage: time-bound things found by one discovery worker turn (`report_finds` hands back) and
+cached per window for `DISCOVER_CACHE_SECONDS`. The request is built from the framing, never the
+question's wording, so differently worded questions share one search."""
 
 from __future__ import annotations
 
@@ -13,7 +8,7 @@ import hashlib
 import json
 import logging
 from datetime import date, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from familydb.agent import providers
 from familydb.agent.worker import home_location, run_worker_turn
@@ -38,19 +33,14 @@ def cache_key(window: tuple[date, date] | None) -> str:
 
 
 def _hours(bounds: tuple[int, int]) -> str:
-    """A day's bounds to the whole hour, outward: close enough to search by, and the same for
-    questions asked a few minutes apart, so they share one search."""
+    """A day's bounds to the whole hour, outward, so questions minutes apart share one search."""
     start, end = bounds
     return f"{clock(start // 60 * 60)}-{clock(min(24 * 60, -(-end // 60) * 60))}"
 
 
 def render_discover_request(context: Context, constraints: Constraints, settings: Settings) -> str:
-    """What the worker is asked: the window and its hours, the home area, where they are, and
-    what it is for.
-
-    Built from the framing, never the question's wording: two ways of asking for the same thing
-    ask the same, and share one cached search, while a different subject asks something else.
-    """
+    """What the worker is asked (window, hours, home, where they are, topic), from the framing
+    only, so the same ask in other words shares one cached search."""
     lines = ["Find time-bound things a family could go to near home."]
     if constraints.topic:
         lines.append(f"Looking for: {constraints.topic}.")
@@ -70,8 +60,7 @@ def render_discover_request(context: Context, constraints: Constraints, settings
             lines.append("Hours: " + "; ".join(f"{d.date:%a} {h}" for d, h in each) + ".")
     lines.append(f"Home area: {settings.home_area or 'not set'}.")
     if context.origin is not None:
-        # Rounded to about a hundred metres: close enough to search by, and the same for a phone
-        # that has moved along the street, so the search is shared.
+        # About a hundred metres, so a phone moving along a street shares the search.
         origin = context.origin
         lines.append(f"They are near: {origin.label} ({origin.lat:.3f}, {origin.lon:.3f}).")
     wanted = {
@@ -80,6 +69,7 @@ def render_discover_request(context: Context, constraints: Constraints, settings
         "setting": constraints.setting,
         "max_travel_minutes": constraints.max_travel_minutes,
         "max_duration_minutes": constraints.max_duration_minutes,
+        "avoid": constraints.avoid or None,
     }
     wanted = {k: v for k, v in wanted.items() if v is not None}
     if wanted:
@@ -90,19 +80,31 @@ def render_discover_request(context: Context, constraints: Constraints, settings
 def discover(
     ctx: ToolContext, context: Context, constraints: Constraints
 ) -> tuple[list[WebFind], str | None]:
-    """Finds for the window, plus a note for `skipped_checks` when discovery did not run."""
+    """Finds for the window, plus a `skipped_checks` note when discovery did not run."""
     if not web_tools_available(ctx.settings):
         return [], NOTE_OFF
     if not providers.ready(ctx.settings, "worker", api=ctx.api):
         return [], NOTE_NO_KEY
     request = render_discover_request(context, constraints, ctx.settings)
-    key = (
-        cache_key(context.window)
-        + ":"
-        + hashlib.sha256((str(context.today) + request).encode()).hexdigest()
-    )
-    # The cache lives on the App and is shared by the chat thread and the scheduler thread; a
-    # dict is safe enough for that, the worst case being one duplicated search.
+    window = cache_key(context.window)
+    about = f"what is on, {window.replace(':', ' to ')}"
+    return search(ctx, "discover", window, request, about, failed=NOTE_FAILED)
+
+
+def search(
+    ctx: ToolContext,
+    kind: Literal["discover", "places"],
+    prefix: str,
+    request: str,
+    about: str,
+    *,
+    failed: str,
+    seconds: int = DISCOVER_CACHE_SECONDS,
+) -> tuple[list[WebFind], str | None]:
+    """One worker turn of `kind` that hands back with `report_finds`, kept in the shared cache
+    under the request (with the day) for `seconds`; a failure is a note, never cached."""
+    key = f"{prefix}:" + hashlib.sha256((str(ctx.clock.today()) + request).encode()).hexdigest()
+    # Shared by the chat and scheduler threads; a dict suffices (worst case one duplicate search).
     cache: dict[str, Any] = ctx.discover_cache if ctx.discover_cache is not None else {}
     now = ctx.clock.now()
     entry = cache.get(key)
@@ -111,8 +113,8 @@ def discover(
 
     try:
         turn = run_worker_turn(
-            kind="discover",
-            api=ctx.api,  # a stand-in when a test injects one; otherwise the settings decide
+            kind=kind,
+            api=ctx.api,
             settings=ctx.settings,
             clock=ctx.clock,
             registry=build_registry(),
@@ -120,22 +122,22 @@ def discover(
             request=request,
             message_id=ctx.message_id,
             user_location=home_location(ctx.settings),
-            about=f"what is on, {cache_key(context.window).replace(':', ' to ')}",
+            about=about,
         )
     except AgentError as exc:
-        log.warning("discovery failed for %s: %s", key, exc)
-        return [], f"{NOTE_FAILED}: {exc}"
-    except Exception as exc:  # a crash in the worker must not fail the whole suggestion
-        log.exception("discovery crashed for %s", key)
-        return [], f"{NOTE_FAILED}: {type(exc).__name__}: {exc}"
+        log.warning("%s failed for %s: %s", kind, key, exc)
+        return [], f"{failed}: {exc}"
+    except Exception as exc:  # must not fail the whole suggestion
+        log.exception("%s crashed for %s", kind, key)
+        return [], f"{failed}: {type(exc).__name__}: {exc}"
     if turn.result.status != "ok":
         reason = turn.result.error or turn.result.status
-        log.warning("discovery turn for %s ended %s: %s", key, turn.result.status, reason)
-        return [], f"{NOTE_FAILED}: {reason}"
+        log.warning("%s turn for %s ended %s: %s", kind, key, turn.result.status, reason)
+        return [], f"{failed}: {reason}"
     if not turn.handed_back("report_finds"):
-        return [], f"{NOTE_FAILED}: worker ended without reporting"
+        return [], f"{failed}: worker ended without reporting"
 
     finds: list[dict[str, Any]] = list(turn.ctx.scratch.get("finds", []))
-    cache[key] = {"expires_at": now + timedelta(seconds=DISCOVER_CACHE_SECONDS), "finds": finds}
-    log.info("discovery for %s found %d item(s)", key, len(finds))
+    cache[key] = {"expires_at": now + timedelta(seconds=seconds), "finds": finds}
+    log.info("%s for %s found %d item(s)", kind, key, len(finds))
     return [WebFind(**find) for find in finds], None

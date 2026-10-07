@@ -193,3 +193,62 @@ def test_save_place_drops_links_that_are_not_web_addresses(
     assert place["website"] is None and place["booking_url"] == "https://example.com/tickets"
     assert place["source_urls"] == ["https://example.com/about"]
     assert data["idea"]["enrichment"] == "done"
+
+
+def test_a_lookup_fills_what_the_idea_lacks_and_never_what_the_family_said(
+    registry, conn, full_settings, clock, family
+) -> None:
+    """Cost, indoors, how long, booking and ages from the page go where the idea had nothing;
+    a dated event's days only for an event, and only when still to come."""
+    with db.transaction(conn):
+        idea = ideas.insert(conn, title="Hopscotch", kind="outing", cost_level=1, now=NOW_ISO)
+        show = ideas.insert(conn, title="Puppet show", kind="show", now=NOW_ISO)
+        fair = ideas.insert(conn, title="Old fair", kind="event", now=NOW_ISO)
+    ctx = _ctx(conn, full_settings, clock, family)
+    found = {
+        "cost_level": 3,  # the family said cheap: theirs stands
+        "setting": "indoor",
+        "visit_minutes": 90,
+        "needs_booking": True,
+        "book_days_ahead": 2,
+        "min_age": 6,
+        "first_day": "2026-10-10",  # an outing is not dated by a page
+    }
+    _, data = _call(registry, ctx, "save_place", idea_id=idea.id, name="Hopscotch", **found)
+    assert data["filled"] == [
+        "duration_min",
+        "lead_time_days",
+        "min_age",
+        "needs_booking",
+        "setting",
+    ]
+    kept = ideas.get(conn, idea.id)
+    assert (kept.cost_level, kept.setting, kept.duration_min, kept.min_age) == (1, "indoor", 90, 6)
+    assert kept.needs_booking and kept.lead_time_days == 2 and kept.happens_from is None
+    dates = {"first_day": "2026-10-10", "last_day": "2026-10-11", "visit_minutes": 10_000}
+    _, data = _call(registry, ctx, "save_place", idea_id=show.id, name="Puppets", **dates)
+    assert data["filled"] == ["happens_from", "happens_until"]  # a week-long visit is no visit
+    assert (data["idea"]["happens_from"], data["idea"]["happens_until"]) == (
+        "2026-10-10",
+        "2026-10-11",
+    )
+    over = {"first_day": "2026-09-01", "last_day": "2026-09-02", "min_age": 9, "max_age": 3}
+    _, data = _call(registry, ctx, "save_place", idea_id=fair.id, name="Fair", **over)
+    assert data["filled"] == []  # over already, and ages that cannot be
+
+
+def test_asked_for_cheap_an_unknown_price_is_said(registry, conn, full_settings, clock, family):
+    from familydb.suggest.engine import run
+    from familydb.suggest.types import SuggestInput
+
+    with db.transaction(conn):
+        noted = ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
+        place = places.insert(conn, name="Zoo", price_note="adults $28, kids free", now=NOW_ISO)
+        ideas.update(conn, noted.id, {"place_id": place.id}, now=NOW_ISO)
+        ideas.insert(conn, title="Picnic", kind="outing", now=NOW_ISO)
+    ctx = _ctx(conn, full_settings, clock, family)
+    asked = SuggestInput(window="someday", max_cost_level=1, discover=False, question="cheap?")
+    said = {c.title: c for c in run(ctx, asked).candidates}
+    zoo = said["Zoo"]
+    assert zoo.verdict == "possible" and "price: adults $28, kids free" in zoo.reasons
+    assert said["Picnic"].reasons[0] == "price unknown"

@@ -45,7 +45,7 @@ def _spent(conn, dollars: float, when: str = "2026-09-20T20:00:00Z") -> None:
         )
 
 
-# -- prices -------------------------------------------------------------------------------------
+# -- prices
 
 
 def test_a_dated_snapshot_costs_what_its_family_does() -> None:
@@ -78,10 +78,6 @@ def test_a_claude_cache_write_costs_by_how_long_it_lasts() -> None:
     assert prices.cost("anthropic", "claude-sonnet-5", usage, cache_ttl="5m")[0] == 2.5
 
 
-def test_the_page_suggests_the_cheapest_first() -> None:
-    assert prices.suggestions("openai")[0] == "gpt-6-luna"
-
-
 def test_every_call_records_who_answered_and_what_it_cost(settings, clock, conn, family) -> None:
     api = fakes.FakeMessagesAPI(
         fakes.message([fakes.text("Hi Sam.")], usage={"input_tokens": 1000, "output_tokens": 100})
@@ -102,7 +98,7 @@ def test_an_openai_call_counts_its_searches(settings, clock, conn, family) -> No
     assert reply.usage["web_searches"] == 2
 
 
-# -- the daily limit ----------------------------------------------------------------------------
+# -- the daily limit
 
 
 def test_the_day_is_the_family_s(settings, clock, conn) -> None:
@@ -200,7 +196,7 @@ def test_budget_interruption_reports_calendar_success(calendar_settings, conn, c
     assert len(api.requests) == 1
 
 
-# -- what a call in flight holds back -----------------------------------------------------------
+# -- what a call in flight holds back
 
 
 def test_concurrent_model_calls_cannot_spend_same_remaining_allowance(

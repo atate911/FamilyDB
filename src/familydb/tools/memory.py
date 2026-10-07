@@ -1,21 +1,7 @@
-"""The one tool for what the family tells the bot about itself: `remember` (docs/MEMORY.md).
-
-One tool with a short list of changes, not a tool per kind of memory: its schema is part of every
-chat request, so it stays small and never varies. The model proposes; the rules here decide.
-
-- Who a memory is about is a name on the family list, or the family; anyone else is refused.
-- The same thing said again about the same person is not saved twice. Said outright after being
-  guessed, it stops being a guess.
-- A guess is never a must: an inference only leans on a decision, it never rules one out.
-- Something the family asked to forget is not saved again from a conversation, however it comes
-  back up; typed on the memory page (a person, not a model, with no message behind it) it is.
-- A correction replaces a memory rather than piling up beside it, and the old one points at the
-  new; nothing is deleted.
-
-When remembering is all a message needs, the model hands its whole reply over with the changes
-(`reply`), and the turn ends there: saying "noted" costs no further call (`ToolContext.offer_reply`,
-`agent/loop.py`). Anything else in the same step, or anything not saved, and the turn carries on.
-"""
+"""The one tool for what the family tells the bot about itself: `remember` (rules in
+docs/MEMORY.md). One tool with a list of changes, since its schema is in every chat request and
+must stay small and fixed; the model proposes, the rules here decide. When remembering is all a
+message needs, `reply` ends the turn with no further call (`ToolContext.offer_reply`)."""
 
 from __future__ import annotations
 
@@ -23,18 +9,35 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from familydb import undo as taking_back
 from familydb.dates import parse_date
 from familydb.errors import ToolError
 from familydb.store import members
 from familydb.store import memories as store
 from familydb.store.db import transaction
 from familydb.store.memories import Category
+from familydb.suggest.types import CostLevel
 from familydb.tools.registry import ToolContext, tool
 
 MAX_CHANGES = 5
 MAX_FACT = 200
 MAX_REPLY = 2000
+# A rule's limits (suggest/rules.py): the longest drive anybody would hold to, and how many tags.
+MAX_DRIVE = 600
+MAX_AVOID = 5
+MAX_TAG = 40
+NOT_HELD = "a rule is held only for a must said outright; kept as a taste"
 FAMILY = frozenset({"family", "the family", "everyone", "household", "us", "we", "all of us"})
+
+
+class Rule(BaseModel):
+    """What suggestions keep to, for a must (system.md says when). Its names say enough: every
+    word here is in every chat request."""
+
+    max_travel_minutes: int | None = None
+    max_cost_level: CostLevel | None = None
+    setting: Literal["indoor", "outdoor"] | None = None
+    avoid_tags: list[str] = []
 
 
 class Change(BaseModel):
@@ -53,6 +56,7 @@ class Change(BaseModel):
     firm: bool = Field(default=False, description="A must or a never: an allergy, a rule.")
     inferred: bool = Field(default=False, description="Not said outright; your reading.")
     until: str | None = Field(default=None, description="YYYY-MM-DD it stops, if temporary.")
+    rule: Rule | None = None
 
 
 class RememberInput(BaseModel):
@@ -67,7 +71,7 @@ class RememberInput(BaseModel):
 
 
 def _about(ctx: ToolContext, name: str) -> int | None:
-    """The member a memory is about, or None for the whole family."""
+
     if name.strip().casefold() in FAMILY or not name.strip():
         return None
     member = members.find_by_name(ctx.conn, name)
@@ -95,6 +99,28 @@ def _fact(change: Change) -> str:
     return fact
 
 
+def _rule(change: Change, firm: bool) -> dict[str, Any] | None:
+    """What suggestions are held to by code: only for a must (a guess or a taste only leans)."""
+    rule = change.rule
+    if rule is None or not firm:
+        return None
+    held: dict[str, Any] = {}
+    if rule.max_travel_minutes is not None:
+        if not 1 <= rule.max_travel_minutes <= MAX_DRIVE:
+            raise ToolError(f"max_travel_minutes must be 1 to {MAX_DRIVE}")
+        held["max_travel_minutes"] = rule.max_travel_minutes
+    if rule.max_cost_level is not None:
+        held["max_cost_level"] = rule.max_cost_level
+    if rule.setting is not None:
+        held["setting"] = rule.setting
+    tags = sorted({" ".join(tag.casefold().split()) for tag in rule.avoid_tags if tag.strip()})
+    if len(tags) > MAX_AVOID or any(len(tag) > MAX_TAG for tag in tags):
+        raise ToolError(f"avoid at most {MAX_AVOID} tags, each a word or two")
+    if tags:
+        held["avoid"] = tags
+    return held or None
+
+
 def _existing(ctx: ToolContext, memory_id: int | None, action: str) -> store.Memory:
     if memory_id is None:
         raise ToolError(f"{action} needs the m number of the memory")
@@ -105,30 +131,40 @@ def _existing(ctx: ToolContext, memory_id: int | None, action: str) -> store.Mem
 
 
 def _shown(memory: store.Memory, result: str, **more: Any) -> dict[str, Any]:
-    return {
+    held = more.pop("held", memory.rule)
+    shown = {
         "id": memory.id,
         "about": memory.about_name or "family",
         "fact": memory.fact,
         "result": result,
         **more,
     }
+    if held:
+        shown["held"] = held  # what suggestions now keep to, by code
+    return shown
 
 
 def _add(ctx: ToolContext, change: Change, *, replacing: store.Memory | None = None) -> dict:
     fact = _fact(change)
     about = _about(ctx, change.about)
     until = _until(ctx, change.until)
-    firm = change.firm and not change.inferred  # a guess never rules anything out
+    firm = change.firm and not change.inferred  # a guess is never a must
+    rule = _rule(change, firm)
+    unheld = {"rule": NOT_HELD} if change.rule is not None and rule is None else {}
     now = ctx.now_iso()
     same = store.matching(ctx.conn, about, fact, "active")
     if same is not None and (replacing is None or same.id != replacing.id):
         if (same.inferred and not change.inferred) or (firm and not same.firm):
             store.firm_up(ctx.conn, same.id, firm=firm, now=now)
+        held = same.rule
+        if rule is not None and rule != same.rule:
+            store.set_rule(ctx.conn, same.id, rule, now=now)
+            held = rule
         if replacing is not None:
             store.replace(ctx.conn, replacing.id, by=same.id, now=now)
-            return _shown(same, "replaced", was=replacing.fact)
-        return _shown(same, "already remembered")
-    typed = ctx.message_id is None  # on the page or the command line: a person, no model
+            return _shown(same, "replaced", was=replacing.fact, held=held, **unheld)
+        return _shown(same, "already remembered", held=held, **unheld)
+    typed = ctx.message_id is None  # a person on the page or command line, no model
     gone = store.matching(ctx.conn, about, fact, "forgotten")
     if gone is not None and not typed:
         when = (gone.forgotten_at or "")[:10]
@@ -150,11 +186,12 @@ def _add(ctx: ToolContext, change: Change, *, replacing: store.Memory | None = N
         source_message_id=ctx.message_id,
         said_by=ctx.member.id if ctx.member else None,
         now=now,
+        rule=rule,
     )
     if replacing is not None:
         store.replace(ctx.conn, replacing.id, by=memory.id, now=now)
-        return _shown(memory, "replaced", was=replacing.fact)
-    return _shown(memory, "saved")
+        return _shown(memory, "replaced", was=replacing.fact, **unheld)
+    return _shown(memory, "saved", **unheld)
 
 
 def _apply(ctx: ToolContext, change: Change) -> dict[str, Any]:
@@ -188,6 +225,10 @@ def remember(ctx: ToolContext, args: RememberInput) -> dict[str, Any]:
         raise ToolError(f"at most {MAX_CHANGES} changes at once")
     with transaction(ctx.conn):
         done = [_apply(ctx, change) for change in args.changes]
+    saved = [item["id"] for item in done if item["result"] == "saved"]
+    if saved and len(saved) == len(done):  # new things only: a replace or a forget stays
+        facts = "; ".join(item["fact"] for item in done)
+        taking_back.keep(ctx, "forget", f"remembered {facts}", memories=saved)
     reply = (args.reply or "").strip()[:MAX_REPLY]
     if reply and all(item["result"] != "not saved" for item in done):
         ctx.offer_reply(reply)

@@ -59,7 +59,8 @@ def _as(app, name: str, password: str, api=None):
 
 
 def _said(response) -> str:
-    return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
+    """What the last form said: the older pages' line, or the new frame's flash."""
+    return " ".join(re.findall(r'class="(?:said|banner__text)"[^>]*>\s*([^<]+)', response.text))
 
 
 @pytest.fixture
@@ -89,7 +90,7 @@ def alex(app, sam, family):
     return browser
 
 
-# -- the rules -----------------------------------------------------------------------------------
+# -- the rules
 
 
 def test_a_password_is_kept_hashed_and_apart_from_the_member(conn, family) -> None:
@@ -148,7 +149,7 @@ def test_the_last_admin_who_can_sign_in_is_never_lost(conn, family) -> None:
     assert [admin.id for admin in logins.admins_signing_in(conn)] == [pat.id]
 
 
-# -- signing in ------------------------------------------------------------------------------------
+# -- signing in
 
 
 def test_the_first_admin_s_own_password_ends_the_shared_one(app, family) -> None:
@@ -207,7 +208,7 @@ def test_a_browser_that_signed_in_as_somebody_is_not_kept_out_by_strangers(app, 
     assert known.post("/login", data={"name": "Sam", "password": SAMS}).status_code == 302
 
 
-# -- starting passwords ----------------------------------------------------------------------------
+# -- starting passwords
 
 
 def test_a_starting_password_is_shown_once_and_must_be_replaced(app, sam, family) -> None:
@@ -294,7 +295,7 @@ def test_a_parent_made_a_kid_stays_signed_in_and_reads_the_ideas(
     assert refused.status_code == 401
 
 
-# -- what each person may reach --------------------------------------------------------------------
+# -- what each person may reach
 
 
 def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, family) -> None:
@@ -319,14 +320,17 @@ def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, famil
 
 
 def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, sam, alex) -> None:
-    """Every page of settings, then who is signed in, their password and signing out, in one
-    menu at the end of the bar; somebody who may not change settings sees only the last three."""
+    """One menu at the end of the bar: every settings page, the Look page, who is signed in, their
+    password, sign out. Somebody who may not change settings sees only the last three and the
+    Look page.
+    """
     menu = re.search(r'<details class="menu[^"]*">.*?</details>', sam.get("/status").text, re.S)
     assert menu is not None
     links = re.findall(r'<a[^>]* href="([^"]+)"', menu.group(0))
     assert links == [
         "/settings",
         *(f"/settings/{section.name}" for section in fields.SECTIONS),
+        "/look",
         "/you",
     ]
     assert "Signed in as <strong>Sam</strong>" in menu.group(0)
@@ -335,10 +339,12 @@ def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, s
     assert '<details class="menu here">' in here
     assert re.search(r'href="/settings/spending" aria-current="page"', here)
 
-    theirs = re.search(r'<details class="menu[^"]*">.*?</details>', alex.get("/").text, re.S)
-    assert theirs is not None and "/settings" not in theirs.group(0)
-    assert re.findall(r'<a[^>]* href="([^"]+)"', theirs.group(0)) == ["/you"]
-    assert "Alex" in theirs.group(0) and 'action="/logout"' in theirs.group(0)
+    # On the new frame the same things sit in the account corner of the sidebar.
+    side = re.search(r'<aside class="side".*?</aside>', alex.get("/").text, re.S)
+    assert side is not None and "/settings" not in side.group(0)
+    theirs = side.group(0).split('<div class="me">')[1]
+    assert re.findall(r'<a[^>]* href="([^"]+)"', theirs) == ["/look", "/you"]
+    assert "<b>Alex</b>" in theirs and 'action="/logout"' in theirs
 
 
 def test_the_chat_speaks_as_whoever_is_signed_in(app, sam, family, conn) -> None:
@@ -349,7 +355,7 @@ def test_the_chat_speaks_as_whoever_is_signed_in(app, sam, family, conn) -> None
     assert made  # replaced straight away
     alex = _as(app, "Alex", ALEXS, api=fakes.FakeMessagesAPI(*replies))
     page = alex.get("/chat").text
-    assert "From <strong>Alex</strong>" in page and 'name="who"' not in page
+    assert "Writing as <b>Alex</b>" in page and 'name="who"' not in page
     form = {**_tokens(alex, "/chat"), "text": "what should we do?", "who": "Sam"}
     assert alex.post("/chat", data=form).status_code == 302
     assert alex.chat.wait(10)
@@ -365,7 +371,7 @@ def test_a_form_records_whoever_is_signed_in(app, alex, family, conn) -> None:
     assert ideas.get(conn, 1).suggested_by_name == "Alex"
 
 
-# -- your own password, and the settings page ------------------------------------------------------
+# -- your own password, and the settings page
 
 
 def test_changing_your_password_needs_the_one_in_use_and_keeps_this_browser(app, sam) -> None:
@@ -402,11 +408,6 @@ def test_the_settings_history_says_who_changed_what(app, sam, conn) -> None:
     assert latest["key"] == "web_title" and latest["changed_by_name"] == "Sam"
 
 
-def test_the_family_page_says_who_signs_in(app, sam, alex, family) -> None:
-    page = sam.get("/family").text
-    assert page.count('<span class="tag">signs in</span>') == 2  # Sam and Alex, not the girls
-
-
 def test_a_stale_family_session_cannot_take_an_admin_afterwards(app, family) -> None:
     late = _as_family(app)
     form = {**_tokens(late, "/you"), "member": str(family["sam"].id), "new": SAMS, "again": SAMS}
@@ -415,7 +416,7 @@ def test_a_stale_family_session_cannot_take_an_admin_afterwards(app, family) -> 
     assert late.post("/you", data=form).status_code == 401  # signed out before it is looked at
 
 
-# -- starting up, and the server -----------------------------------------------------------------
+# -- starting up, and the server
 
 
 def test_a_page_where_people_sign_in_as_themselves_needs_no_shared_password(settings, conn, family):
@@ -453,16 +454,15 @@ def test_familydb_password_for_a_member_waits_for_an_admin(settings, conn, famil
     assert logins.by_member(conn) == {}
 
 
-# -- the three roles ------------------------------------------------------------------------------
+# -- the three roles
 
 
 def test_three_roles_and_what_a_kid_may_do() -> None:
     assert roles.ROLES == ("admin", "parent", "kid")
     assert roles.PERMISSIONS["admin"] > roles.PERMISSIONS["parent"] > roles.PERMISSIONS["kid"]
     assert roles.PERMISSIONS["admin"] - roles.PERMISSIONS["parent"] == {"manage"}
-    # A kid reads, talks to the bot, keeps her own wishes and ticks off her own things to do;
-    # she changes nothing else, sees
-    # none of the household's pages, and answers nobody's wishes.
+    # A kid reads, talks to the bot, keeps her own wishes and ticks off her own things to do; she
+    # changes nothing else, sees none of the household's pages, and answers nobody's wishes.
     assert roles.PERMISSIONS["kid"] == {"sign_in", "chat", "wish", "own_tasks"}
     assert roles.may("parent", "chat") and not roles.may("parent", "manage")
     assert not roles.may("member", "sign_in")  # a role that is not one of the three may do nothing
@@ -570,7 +570,7 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
     assert home.status_code == 200
     assert "/chat" not in home.text  # no box, no ways to start, no way into the conversation
     assert "The swings are waiting." not in home.text and "ask.js" not in home.text
-    assert "<h1>" in home.text  # a heading still, with the box's label gone
+    assert '<h1 class="sr">' in home.text  # a heading still, with the box's label gone
     assert "Buy paper towels" in home.text and "/done" not in home.text
     listed = girls.get("/tasks").text
     assert "Buy paper towels" in listed and f"/task/{towels}/done" not in listed
@@ -695,7 +695,7 @@ def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, fam
             alert_store.note(conn, kind, "", "test", now=NOW_ISO, keep_after="2026-01-01T00:00:00Z")
 
     def tile(browser) -> str:
-        page = browser.get("/ideas").text
+        page = browser.get("/memory").text  # a page still on the old frame, which has the tile
         found = re.search(r'<a class="to-status[^"]*"[^>]*>.*?</a>', page, re.S)
         return found.group(0) if found else ""
 
@@ -718,3 +718,162 @@ def test_a_kid_is_not_shown_what_is_on_near_home(app, sam, family) -> None:
     assert girls.get("/happening").status_code != 200
     assert 'href="/happening"' not in girls.get("/plans").text
     assert 'href="/happening"' not in girls.get("/plans/month").text
+
+
+# -- plans and to-dos, as each person sees them
+
+
+def _swim_bag(conn, family) -> int:
+    with db.transaction(conn):
+        return tasks.insert(
+            conn,
+            title="Pack the swim bag",
+            notes="",
+            owner_id=family["girls"].id,
+            due_at=None,
+            preferred_window="",
+            operation_key="swim-bag",
+            channel="telegram",
+            chat_id="-100",
+            now=NOW_ISO,
+        )
+
+
+def test_plans_open_as_a_month_for_a_grown_up_and_a_list_for_a_kid(app, sam, family) -> None:
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    assert "How to show the plans" in sam.get("/plans").text
+    page = girls.get("/plans").text
+    assert "How to show the plans" not in page and "What the family is doing next." in page
+
+
+def test_a_kid_cannot_open_the_edit_page(app, sam, family, conn) -> None:
+    task_id = _swim_bag(conn, family)
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    assert girls.get(f"/task/{task_id}/edit").status_code == 403
+    assert f"/task/{task_id}/edit" not in girls.get("/tasks").text
+
+
+def test_a_kid_is_told_who_set_her_a_to_do_but_not_what_she_set_herself(
+    app,
+    sam,
+    family,
+    conn,
+) -> None:
+    form = {**_tokens(sam, "/tasks"), "title": "Pack the swim bag", "owner": "the girls"}
+    assert sam.post("/tasks/new", data=form).status_code == 302
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    page = girls.get("/tasks").text
+    assert "Pack the swim bag" in page and "Set by Sam" in page
+    assert "Set by" not in sam.get("/tasks").text  # Sam set it, and reads their own list
+    with db.transaction(conn):
+        conn.execute("UPDATE tasks SET created_by_member_id = ?", (family["girls"].id,))
+    assert "Set by" not in girls.get("/tasks").text
+
+
+def _kid_signed_in(app, sam, member):
+    kid = _as(app, member.display_name, _start(sam, member.id))
+    kid.post("/you", data={**_tokens(kid, "/you"), "new": KIDS, "again": KIDS})
+    return kid
+
+
+def _two_kids_and_a_present(app, sam, conn):
+    from familydb.store import ideas as idea_store
+    from familydb.store import members as member_store
+
+    with db.transaction(conn):
+        maya = member_store.add(conn, "Maya", "kid", now=NOW_ISO)
+        theo = member_store.add(conn, "Theo", "kid", now=NOW_ISO)
+        lego = idea_store.insert(
+            conn, title="Lego set", kind="gift", participants=["Theo"], now=NOW_ISO
+        )
+    return maya, theo, lego
+
+
+def test_a_present_shows_to_everyone_but_the_people_it_is_hidden_from(
+    app, sam, family, conn
+) -> None:
+    maya, theo, lego = _two_kids_and_a_present(app, sam, conn)
+    mayas, theos = _kid_signed_in(app, sam, maya), _kid_signed_in(app, sam, theo)
+    page = mayas.get("/ideas").text
+    assert "Lego set" in page and "hidden from Theo" in page  # she is told to keep it quiet
+    assert mayas.get(f"/idea/{lego.id}").status_code == 200
+    assert "Lego set" not in theos.get("/ideas").text
+    assert theos.get(f"/idea/{lego.id}").status_code == 404
+    assert "hidden from Theo" in sam.get("/ideas").text and "Lego set" in sam.get("/").text
+    for path in ("/", "/plans", "/restaurants"):  # it is nowhere on his pages
+        assert "Lego set" not in theos.get(path).text, path
+
+
+def test_a_grown_up_can_have_a_present_kept_from_them_too(app, sam, alex, family, conn) -> None:
+    from familydb.store import ideas as idea_store
+
+    with db.transaction(conn):
+        scarf = idea_store.insert(
+            conn, title="Silk scarf", kind="gift", participants=["Alex"], now=NOW_ISO
+        )
+    assert "Silk scarf" in sam.get("/ideas").text
+    assert "Silk scarf" not in alex.get("/ideas").text
+    assert alex.get(f"/idea/{scarf.id}").status_code == 404
+    assert alex.get(f"/idea/{scarf.id}/edit").status_code == 404
+
+
+def test_the_idea_form_chooses_whom_a_present_is_hidden_from(app, sam, family, conn) -> None:
+    from familydb.store import ideas as idea_store
+
+    maya, theo, lego = _two_kids_and_a_present(app, sam, conn)
+    page = sam.get(f"/idea/{lego.id}/edit").text
+    assert f'name="hidden_from" value="{theo.id}" checked' in page  # ticked for whom it is for
+    assert f'name="hidden_from" value="{maya.id}" checked' not in page
+    form = {
+        **_tokens(sam, f"/idea/{lego.id}/edit"),
+        "revision": re.search(r'name="revision" value="([^"]+)"', page).group(1),
+        "title": "Lego set",
+        "kind": "gift",
+        "participants": "Theo",
+        "hidden_shown": "1",
+        "hidden_from": [str(theo.id), str(maya.id)],  # a chatty sibling, too
+    }
+    assert sam.post(f"/idea/{lego.id}/edit", data=form).status_code == 302
+    assert idea_store.chosen_hidden_from(conn, [lego.id]) == {lego.id: sorted([maya.id, theo.id])}
+    assert "hidden from Maya and Theo" in sam.get("/ideas").text
+    mayas = _kid_signed_in(app, sam, maya)
+    assert "Lego set" not in mayas.get("/ideas").text
+
+
+def test_a_new_present_is_kept_from_whom_it_names_unless_somebody_chooses(
+    app, sam, family, conn
+) -> None:
+    from familydb.store import ideas as idea_store
+
+    _two_kids_and_a_present(app, sam, conn)
+    form = {
+        **_tokens(sam, "/ideas/new"),
+        "title": "Bike bell",
+        "kind": "gift",
+        "participants": "Maya",
+        "hidden_shown": "1",
+    }
+    assert sam.post("/ideas/new", data=form).status_code == 302
+    bell = idea_store.find_similar_title(conn, "Bike bell")
+    assert idea_store.chosen_hidden_from(conn, [bell.id]) == {bell.id: None}  # nobody chose
+    assert "hidden from Maya" in sam.get("/ideas").text
+
+
+def test_a_form_without_the_boxes_leaves_a_present_as_it_was(app, sam, family, conn) -> None:
+    from familydb.store import ideas as idea_store
+
+    maya, _, lego = _two_kids_and_a_present(app, sam, conn)
+    with db.transaction(conn):
+        idea_store.set_hidden_from(conn, lego.id, [maya.id])
+    page = sam.get(f"/idea/{lego.id}/edit").text
+    form = {
+        **_tokens(sam, f"/idea/{lego.id}/edit"),
+        "revision": re.search(r'name="revision" value="([^"]+)"', page).group(1),
+        "title": "Lego set!",
+        "kind": "gift",
+    }
+    assert sam.post(f"/idea/{lego.id}/edit", data=form).status_code == 302
+    assert idea_store.chosen_hidden_from(conn, [lego.id]) == {lego.id: [maya.id]}

@@ -1,57 +1,46 @@
-{% extends "base.html" %}
-{% from "_ui.html" import icon, kind_label, page_head %}
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, avatar, page_head, idea_tabs with context %}
 {% block title %}Restaurants · {{ site_title }}{% endblock %}
-{% block body_class %}page-restaurants{% endblock %}
 {% block content %}
-  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
-    <a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.') %}
+    {% if visitor().may('change') %}<a class="btn btn--primary" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif %}
   {% endcall %}
-  <nav class="tabs" aria-label="Which ideas">
-    <a href="{{ url_for('web.ideas') }}">{{ icon('idea') }}All ideas</a>
-    <a href="{{ url_for('web.restaurants') }}" aria-current="page">{{ icon('restaurant') }}Restaurants</a>
-  </nav>
-  <p class="muted count">
-    {{ cards | length }} place{{ '' if cards | length == 1 else 's' }} the family has talked about.
-  </p>
 
-  {% if not cards %}
-    <p class="panel muted empty">{{ icon('restaurant') }}<span>No restaurants yet. Tell the bot about one and it will appear here.</span></p>
+  {{ idea_tabs('restaurants', total, cards | length) }}
+  <p class="muted mt-3">{{ cards | length }} place{{ '' if cards | length == 1 else 's' }} the family has talked about.</p>
+
+  <h2 class="sr">Restaurants</h2>
+  {% if cards %}
+    <ul class="places mt-3">
+      {% for card in cards %}
+        <li><article class="place">
+          <p class="place__kind"><span class="kind">{{ icon('utensils', size='sm') }}Restaurant</span>{% if card.cost %}<span class="tag tag--off">{{ card.cost }}</span>{% endif %}</p>
+          <h2 class="place__title"><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></h2>
+          {% if card.today %}<p class="place__today">{{ icon('clock') }}{{ card.today }}</p>{% endif %}
+          {% if card.summary %}<p class="place__sum">{{ card.summary }}</p>{% endif %}
+          <div class="meta">
+            {%- if card.where %}<span>{{ icon('pin') }}{{ card.where }}</span>{% endif -%}
+            {%- if card.travel %}<span>{{ icon('car') }}{{ card.travel }}</span>{% endif -%}
+            <span class="person">
+              {%- if card.people | length == 1 and not card.people[0].initial %}{{ avatar(0, '', 'sm') }}
+              {%- else %}<span class="avs">{% for one in card.people %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor %}</span>{% endif -%}
+              <span>{{ card.who }}</span></span>
+            {%- if card.rating %}<span>{{ icon('star') }}{{ card.rating }}</span>{% endif -%}
+            {%- if card.pending %}<span>{{ icon('compass') }}{{ card.details }}</span>{% endif -%}
+            {%- if card.stale %}<span class="warnline">{{ icon('alert') }}Details may be out of date</span>{% endif -%}
+          </div>
+          <p class="place__links">
+            <a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ icon('bulb', size='sm') }}Everything we know</a>
+            {%- if card.website %}<a href="{{ card.website }}" rel="noopener noreferrer">{{ icon('link', size='sm') }}Their site</a>{% endif -%}
+            {%- if card.booking_url %}<a href="{{ card.booking_url }}" rel="noopener noreferrer">{{ icon('bell', size='sm') }}Book a table</a>{% endif -%}
+            {%- if card.map_url %}<a href="{{ card.map_url }}" rel="noopener noreferrer">{{ icon('pin', size='sm') }}Map</a>{% endif -%}
+          </p>
+          {% if card.tags %}<div class="tags">{% for one in card.tags %}<span class="tag tag--off">{{ one }}</span>{% endfor %}</div>{% endif %}
+        </article></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">{{ icon('utensils') }}<span>No restaurants yet. Mention a new place to {{ assistant }} in the chat and it appears here.</span></p>
   {% endif %}
-
-  <ul class="cards">
-    {% for card in cards %}
-      <li class="panel card">
-        <p class="card-kind">
-          {{ kind_label('restaurant') }}
-          {% if card.cost %}<span class="tag">{{ card.cost }}</span>{% endif %}
-        </p>
-        <h2><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></h2>
-        {% if card.today %}<p class="today-hours">{{ icon('clock') }}{{ card.today }}</p>{% endif %}
-        {% if card.summary %}<p class="summary">{{ card.summary }}</p>{% endif %}
-        <p class="muted meta">
-          {% if card.where %}<span>{{ icon('pin') }}{{ card.where }}</span>{% endif %}
-          {% if card.travel %}<span>{{ icon('day_trip') }}{{ card.travel }}</span>{% endif %}
-          <span>{{ icon('user') }}for {{ card.who }}</span>
-          {% if card.rating %}<span>{{ icon('star') }}{{ card.rating }}</span>{% endif %}
-          {% if card.pending %}<span>{{ icon('hourglass') }}{{ card.details }}</span>{% endif %}
-          {% if card.stale %}<span class="warn">{{ icon('warning') }}details may be out of date</span>{% endif %}
-        </p>
-        <p class="links">
-          <a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ icon('idea') }}Everything we know</a>
-          {% if card.website %}
-            <a href="{{ card.website }}" rel="noopener noreferrer">{{ icon('link') }}Their site</a>
-          {% endif %}
-          {% if card.booking_url %}
-            <a href="{{ card.booking_url }}" rel="noopener noreferrer">{{ icon('bell') }}Book a table</a>
-          {% endif %}
-          {% if card.map_url %}
-            <a href="{{ card.map_url }}" rel="noopener noreferrer">{{ icon('pin') }}Map</a>
-          {% endif %}
-        </p>
-        {% if card.tags %}
-          <p class="tags">{% for tag in card.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
+  {% if cards %}<p class="note mt-4">{{ icon('chat') }}Mention a new place to {{ assistant }} in the chat and it appears here.</p>{% endif %}
 {% endblock %}

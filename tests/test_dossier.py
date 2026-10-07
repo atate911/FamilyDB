@@ -110,7 +110,7 @@ def _build(conn, settings, clock, family, asked):
         weather=fakes.FakeForecast([SAT_FORECAST]),
     )
     args = SuggestInput(window="this_weekend", question="what should we do?", discover=False)
-    a = assess(ctx, args, check_at_most=24)
+    a = assess(ctx, args)
     return dossier.build(ctx, args, a), a
 
 

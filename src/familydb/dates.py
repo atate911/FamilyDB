@@ -78,8 +78,7 @@ def age_on(birth_date: str | None, today: date) -> int | None:
 
 
 def next_birthday(birth_date: str | None, today: date) -> date | None:
-    """The next birthday on or after today. Born on 29 February, it falls on 1 March in a year
-    without one."""
+    """The next birthday on or after today; from 29 February, 1 March in a year without one."""
     if not birth_date:
         return None
     born = date.fromisoformat(birth_date)

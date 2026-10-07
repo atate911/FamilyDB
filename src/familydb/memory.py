@@ -1,18 +1,12 @@
 """Which of the family's memories a message needs, chosen by code (docs/MEMORY.md).
 
-What the family has told the bot about itself is kept by the `remember` tool (store/memories.py).
-Before each chat turn, code chooses what goes with the message, in the part of the request that
-is not cached, so the cached prefix never moves when a memory does:
-
-- every firm one in force, whatever the message says: an allergy or a "never" is not dropped
-  for being off the subject, and not for the budget either;
-- then the rest, as many as fit in `BUDGET` characters, those that bear on the message first:
-  sharing a word with it, of a kind it touches on (food for a question about dinner), about
-  whoever is asking or the whole family, then the newest.
-
-No model is asked which memories matter: at family scale every one usually fits, and when they
-do not, a word in common is a fair guess at what bears on a message, and a firm one never waits
-on a guess. A guess the model made (`inferred`) is marked as one, so it only leans on it.
+Memories are kept by the `remember` tool (store/memories.py). Before each chat turn code chooses
+what goes with the message, in the uncached part of the request, so the cached prefix never moves
+when a memory does: every firm one in force (an allergy or a "never" is never dropped, not even
+for the budget), then as many of the rest as fit in `BUDGET` characters, those bearing on the
+message first (a shared word, a kind it touches on, about the asker or the whole family, then
+newest). No model is asked: at family scale everything usually fits. A guess the model made
+(`inferred`) is marked so it only leans on it.
 """
 
 from __future__ import annotations
@@ -25,7 +19,6 @@ from datetime import date
 from familydb.store import memories
 from familydb.store.memories import Memory
 
-# About 400 tokens of the family's tastes on top of their firm needs, which always go.
 BUDGET = 1600
 
 
@@ -33,14 +26,12 @@ def _words(text: str) -> frozenset[str]:
     return frozenset(text.split())
 
 
-# Words too common to say what a message is about.
 COMMON = _words(
     "about after again also and any are been but can could did does doing for from get got had "
     "has have her him his how its just like lets love maybe more much need not now our out over "
     "really she should some that the them then there they this too want was well were what "
     "when where which who why will with would you your"
 )
-# Words that say a message touches on a kind of memory, though it names nothing remembered.
 CUES: dict[str, frozenset[str]] = {
     "food": _words(
         "eat eating food dinner lunch breakfast brunch restaurant restaurants hungry snack "
@@ -62,13 +53,11 @@ CUES: dict[str, frozenset[str]] = {
 @dataclass(frozen=True)
 class Chosen:
     memories: list[Memory]
-    left_out: int  # in force, but not chosen for this message
+    left_out: int
 
 
 def words(text: str) -> set[str]:
-    """The words of a text that could say what it is about."""
     found = {word for word in re.findall(r"[a-z]{3,}", text.casefold()) if word not in COMMON}
-    # "girls" and "girl", "hikes" and "hike": the same word here.
     return found | {word[:-1] for word in found if word.endswith("s") and len(word) > 3}
 
 
@@ -80,7 +69,6 @@ def choose(
     today: date,
     budget: int = BUDGET,
 ) -> Chosen:
-    """The memories this message goes with: every firm one, then the best of the rest."""
     live = memories.active(conn, today=today)
     firm = [memory for memory in live if memory.firm]
     rest = [memory for memory in live if not memory.firm]
@@ -109,7 +97,6 @@ def choose(
 
 
 def line_of(memory: Memory) -> str:
-    """One memory as the chat model is told it; the budget is counted in these."""
     notes = []
     if memory.firm:
         notes.append("must")

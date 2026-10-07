@@ -1,15 +1,9 @@
-"""The Telegram channel: long polling, the pipeline in a worker thread, one lane per bot.
+"""The Telegram channel: long polling, the pipeline in a worker thread.
 
-Text, voice notes and photos all reach the pipeline. A voice note or a photo arrives as a way
-to fetch it, which the pipeline calls only once the sender is known to be family; the download
-itself runs on the bot's own event loop, like every send. A button under one of her messages (a
-reminder's Done) is done by code, never the pipeline (buttons.py). So are /start and a sticker,
-file or video with no words (commands.py); the words that come with one are answered as a
-message, marked as having come with something not seen.
-
-"typing…" stays up while an answer is on its way, as Telegram shows it for five seconds only. In
-a group, a stranger is answered only when they address the bot: a family group is full of people
-talking among themselves, and their knock is kept for the Family page either way.
+A voice note or photo arrives as a way to fetch it, called by the pipeline only once the sender
+is known to be family; the download runs on the bot's own event loop, like every send. Buttons,
+/start and wordless stickers/files/videos are done by code (buttons.py, commands.py). In a group
+a stranger is answered only when they address the bot, since a family group talks among itself.
 """
 
 from __future__ import annotations
@@ -63,35 +57,30 @@ log = logging.getLogger(__name__)
 
 CHANNEL = "telegram"
 GROUP_TYPES = {ChatType.GROUP, ChatType.SUPERGROUP}
-# What the bot asks Telegram for. A live location moving along arrives as edits to the message
-# that shared it, a button tapped as a callback query, being added to a group as a change to its
-# own membership, and Telegram sends a bot only the kinds of update it asks for.
+# Telegram sends a bot only the update kinds it asks for: edits (live location), callback queries
+# (buttons) and membership changes.
 UPDATES = [Update.MESSAGE, Update.EDITED_MESSAGE, Update.CALLBACK_QUERY, Update.MY_CHAT_MEMBER]
-# Out of a chat, and in one, as Telegram says of the bot's own membership.
 OUTSIDE = frozenset({ChatMemberStatus.LEFT, ChatMemberStatus.BANNED})
 INSIDE = frozenset({ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR})
-# Everything but a location answers new messages only, so an edited question is not answered
-# a second time.
+# Everything but a location answers new messages only, so an edited question is not answered twice.
 NEW = filters.UpdateType.MESSAGE
-# How long fetching a voice note may take before it is given up as not heard.
 FETCH_SECONDS = 60
-# Telegram shows "typing…" for five seconds, or until the bot sends something: it is sent again
-# this often while an answer is on its way, and for no longer than a turn could take.
+# "typing…" lasts five seconds on Telegram, so it is resent this often, for no longer than a turn
+# takes.
 TYPING_EVERY = 4.5
 TYPING_AT_MOST = 180.0
-# A photo is fetched at the largest size Telegram made of it that is no longer than this on its
-# long side: plenty for the words on a poster, while what a vendor counts for a picture grows
-# with its size. An image sent as a file is looked at when it is of a kind every vendor reads.
+# A photo is fetched at the largest size no longer than this on its long side: plenty for a poster's
+# words, while a vendor's count for a picture grows with its size.
 LONGEST = 1600
 PICTURE_KINDS = ("image/jpeg", "image/png", "image/webp")
-# An album arrives as one message per photo, a moment apart, sharing a media group id: its photos
-# are gathered for this long after the first, then handed over as one message.
+# An album arrives as one message per photo sharing a media group id: gathered for this long, then
+# handed over as one.
 ALBUM_SECONDS = 1.5
 PICTURES = filters.PHOTO | filters.Document.MimeType(PICTURE_KINDS[0])
 for _kind in PICTURE_KINDS[1:]:
     PICTURES = PICTURES | filters.Document.MimeType(_kind)
-# What a message may carry that nobody reads, in the words its caption is kept under, the first
-# found naming it: an animation carries a document too, and is a GIF.
+# What a message may carry that nobody reads, by caption wording, first match wins (an animation
+# also carries a document).
 UNREAD = (
     ("video_note", "a video"),
     ("video", "a video"),
@@ -112,7 +101,7 @@ UNREADABLE = (
     | filters.POLL
     | filters.Dice.ALL
 )
-# A file name for each kind of recording, since the speech endpoint goes by the extension.
+# The speech endpoint goes by file extension.
 EXTENSIONS = {
     "audio/ogg": "ogg",
     "audio/opus": "ogg",
@@ -130,7 +119,6 @@ EXTENSIONS = {
 
 
 def incoming_from_update(update: Any) -> IncomingMessage | None:
-    """Our channel-agnostic shape from a Telegram update, or None if it has no text."""
     message = update.effective_message
     user = update.effective_user
     chat = update.effective_chat
@@ -147,16 +135,15 @@ def incoming_from_update(update: Any) -> IncomingMessage | None:
 
 
 def unread(message: Any) -> str | None:
-    """What a message carries that cannot be read, in words ("a video"), or None."""
     if message is None:
         return None
     return next((words for field, words in UNREAD if getattr(message, field, None)), None)
 
 
 def incoming_unread(update: Any, bot_username: str | None = None) -> IncomingMessage | None:
-    """A sticker, a file or a video, as the words that came with it, less any mention of the bot
-    and marked as having come with something not seen; with no words, an empty message for code
-    to answer. None if it is none of those."""
+    """A sticker, file or video as the words that came with it, marked as something not seen; None
+    if it is none of those.
+    """
     message = update.effective_message
     user = update.effective_user
     chat = update.effective_chat
@@ -175,9 +162,9 @@ def incoming_unread(update: Any, bot_username: str | None = None) -> IncomingMes
 
 
 def picture(message: Any) -> tuple[Any, str, int | None] | None:
-    """The photo a message carries, as (what to fetch, its kind, its size in bytes): the largest
-    size Telegram made of it no longer than `LONGEST` on its long side, or an image sent as a
-    file, of a kind a model reads. None for anything else."""
+    """The photo a message carries as (what to fetch, kind, size in bytes): the largest size within
+    `LONGEST`, or an image file a model reads.
+    """
     if message is None:
         return None
     sizes = list(getattr(message, "photo", None) or [])
@@ -197,20 +184,17 @@ def _area(size: Any) -> int:
 
 
 def family_knows(app: App, channel_user_id: str) -> bool:
-    """Whether this Telegram account is somebody on the family list."""
     with closing(app.connect()) as conn:
         return members.resolve(conn, CHANNEL, channel_user_id) is not None
 
 
 def recording(message: Any) -> Any:
-    """The voice note, or the audio file, a message carries; None for anything else."""
     if message is None:
         return None
     return getattr(message, "voice", None) or getattr(message, "audio", None)
 
 
 def incoming_voice(update: Any, fetch: Any) -> IncomingMessage | None:
-    """A voice note as the pipeline takes it: how long, what kind, and how to fetch it."""
     message = update.effective_message
     user = update.effective_user
     chat = update.effective_chat
@@ -236,7 +220,6 @@ def incoming_voice(update: Any, fetch: Any) -> IncomingMessage | None:
 
 
 async def download(note: Any) -> bytes:
-    """A voice note's or a photo's bytes, from Telegram."""
     file = await note.get_file()
     return bytes(await file.download_as_bytearray())
 
@@ -253,9 +236,8 @@ class SharedLocation:
 def location_from_update(update: Any) -> SharedLocation | None:
     """A location someone shared, or None.
 
-    A live location carries how long it is shared for while it is active. An edit is live
-    however it reads: a location sent once cannot be edited, and the last edit, when sharing
-    stops, no longer carries that period.
+    An edit is live however it reads: a location sent once cannot be edited, and the last edit no
+    longer carries the live period.
     """
     message = update.effective_message
     user = update.effective_user
@@ -288,14 +270,12 @@ def record_location(app: App, shared: SharedLocation) -> OutgoingMessage | None:
 
 
 def sender_name(user: Any) -> str | None:
-    """How a stranger introduced themselves: their name and @handle, as Telegram gives them."""
     name = getattr(user, "full_name", None)
     handle = getattr(user, "username", None)
     return " ".join(part for part in (name, f"@{handle}" if handle else None) if part) or None
 
 
 def addressed_to_bot(update: Any, bot_username: str | None, bot_id: int | None) -> bool:
-    """In a group: mentioned by @username, or a reply to one of the bot's messages."""
     message = update.effective_message
     if message is None:
         return False
@@ -308,8 +288,6 @@ def addressed_to_bot(update: Any, bot_username: str | None, bot_id: int | None) 
 
 
 def strip_mention(text: str, bot_username: str | None) -> str:
-    """The words with every @mention of the bot taken out, the spaces it leaves tidied and the
-    line breaks kept."""
     if not bot_username:
         return text.strip()
     needle = f"@{bot_username}"
@@ -328,10 +306,9 @@ async def formatted(
     drawn: str | None = None,
     **extra: Any,
 ) -> Any:
-    """Send one part as Telegram HTML, its bold and links drawn (markup.py), or `drawn` when it
-    is already HTML; should Telegram refuse the formatting, as the words themselves, so nothing
-    is lost to it. `send` takes the text first: a message's reply_text or edit_message_text, or
-    send_message with the chat given."""
+    """Send one part as Telegram HTML (markup.py), or `drawn` if already HTML; if Telegram refuses
+    the formatting, send the plain words so nothing is lost.
+    """
     try:
         html_text = drawn if drawn is not None else markup.to_html(words, heading=heading)
         return await send(html_text, parse_mode=ParseMode.HTML, **extra)
@@ -343,8 +320,9 @@ async def formatted(
 
 
 async def confirm(message: Any) -> None:
-    """A group's "saved" (routing.CONFIRMED): a reaction on the message it answers, which buzzes
-    nobody. Where the group allows no reactions, the ✓ as a reply without a sound."""
+    """A group's "saved": a reaction (buzzes nobody), or where reactions are off the ✓ as a silent
+    reply.
+    """
     try:
         await message.set_reaction(routing.REACTION)
     except TelegramError as exc:
@@ -353,7 +331,6 @@ async def confirm(message: Any) -> None:
 
 
 def split_text(text: str, limit: int = int(MessageLimit.MAX_TEXT_LENGTH)) -> list[str]:
-    """Telegram caps messages; split long replies at line breaks when possible."""
     text = text.strip() or "…"
     chunks: list[str] = []
     while len(text) > limit:
@@ -369,14 +346,27 @@ def split_text(text: str, limit: int = int(MessageLimit.MAX_TEXT_LENGTH)) -> lis
 
 
 def keyboard(row: list[dict[str, str]]) -> InlineKeyboardMarkup:
-    """A message's buttons, as one row under it (buttons.py)."""
-    return InlineKeyboardMarkup(
-        [[InlineKeyboardButton(button["label"], callback_data=button["data"]) for button in row]]
-    )
+    """The buttons under a message: one row, or one per `row` key in the order they come
+    (buttons.in_row)."""
+    rows: dict[str, list[InlineKeyboardButton]] = {}
+    for button in row:
+        rows.setdefault(button.get("row", ""), []).append(
+            InlineKeyboardButton(button["label"], callback_data=button["data"])
+        )
+    return InlineKeyboardMarkup(list(rows.values()))
+
+
+def without_row(markup: Any, data: str) -> InlineKeyboardMarkup | None:
+    """What stays under a message once the row holding the button tapped goes; None for none."""
+    rows = [
+        list(row)
+        for row in getattr(markup, "inline_keyboard", None) or ()
+        if not any(getattr(button, "callback_data", None) == data for button in row)
+    ]
+    return InlineKeyboardMarkup(rows) if rows else None
 
 
 def tap_in_thread(app: App, query: Any) -> buttons.Tapped | None:
-    """Do what a tapped button says, from the pipeline's side of the thread boundary."""
     chat = getattr(query.message, "chat", None) if query.message is not None else None
     with closing(app.connect()) as conn:
         return buttons.tap(
@@ -391,7 +381,6 @@ def tap_in_thread(app: App, query: Any) -> buttons.Tapped | None:
 
 
 def send_once(token: str, chat_id: str, text: str) -> None:
-    """Send from a process that is not running the bot, such as the manual retry command."""
     from telegram import Bot
 
     async def _send() -> None:
@@ -403,8 +392,6 @@ def send_once(token: str, chat_id: str, text: str) -> None:
 
 
 class TelegramChannel:
-    """Runs python-telegram-bot's polling loop and feeds messages through the pipeline."""
-
     def __init__(self, app: App, *, token: str | None = None) -> None:
         self.app = app
         token = token or app.settings.telegram_bot_token
@@ -412,36 +399,29 @@ class TelegramChannel:
             raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
         self._loop: asyncio.AbstractEventLoop | None = None
         self.username: str | None = None
-        # An album's photos as they arrive, by media group, until they are handed over; and the
-        # tasks that will hand them over, kept so that they are not dropped half way.
+        # Album photos by media group until handed over, and the tasks that hand them over, kept so
+        # they are not dropped.
         self._albums: dict[str, list[Any]] = {}
         self._gathering: set[asyncio.Task[None]] = set()
         self.application: Application = (
             ApplicationBuilder().token(token).post_init(self._post_init).build()
         )
         self.application.add_handler(CommandHandler("start", self.on_start, filters=NEW))
-        # /today, /week, /tasks and /now: answered by code, with no model call (commands.py).
         self.application.add_handler(
             CommandHandler(sorted(commands.NAMES), self.on_command, filters=NEW)
         )
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND & NEW, self.on_message)
         )
-        # A voice note, or a recording sent as an audio file: heard, then answered as words. Only
-        # when new: an edited caption would otherwise be paid for and answered a second time.
+        # Only when new: an edited caption would otherwise be paid for and answered twice.
         self.application.add_handler(
             MessageHandler((filters.VOICE | filters.AUDIO) & NEW, self.on_voice)
         )
-        # A photo, or an image sent as a file: looked at, then answered as words. Before what
-        # cannot be read, which takes every other file.
+        # Before what cannot be read, which takes every other file.
         self.application.add_handler(MessageHandler(PICTURES & NEW, self.on_photo))
-        # A sticker, a file, a video: its words answered, or with none, her line saying so.
         self.application.add_handler(MessageHandler(UNREADABLE & NEW, self.on_unread))
-        # A shared location, and a live one as it moves (those arrive as edits).
         self.application.add_handler(MessageHandler(filters.LOCATION, self.on_location))
-        # A button under one of her messages.
         self.application.add_handler(CallbackQueryHandler(self.on_tap))
-        # Added to a group, or taken out of one.
         self.application.add_handler(
             ChatMemberHandler(self.on_membership, ChatMemberHandler.MY_CHAT_MEMBER)
         )
@@ -456,8 +436,9 @@ class TelegramChannel:
         await self.offer_commands(application.bot)
 
     async def offer_commands(self, bot: Any) -> None:
-        """Telegram's "/" menu: the commands answered by code. Set only when it differs, since
-        most starts change nothing; a failure leaves the commands working, only unlisted."""
+        """Telegram's "/" menu. Set only when it differs; a failure leaves the commands working,
+        only unlisted.
+        """
         wanted = [BotCommand(name, about) for name, about in commands.MENU]
         try:
             if list(await bot.get_my_commands()) != wanted:
@@ -466,14 +447,15 @@ class TelegramChannel:
             log.warning("telegram: the command menu could not be set", exc_info=True)
 
     async def facts(self) -> dict[str, Any]:
-        """What Telegram says of the bot now: whether it reads every message in a group, as
-        BotFather's privacy setting decides, or only those that mention it or reply to it."""
+        """Whether the bot reads every message in a group (BotFather's privacy setting) or only
+        mentions and replies.
+        """
         me = await self.application.bot.get_me()
         return {"reads_groups": bool(me.can_read_all_group_messages)}
 
     async def on_membership(self, update: Any, context: Any) -> None:
-        """Added to a group: she introduces herself there, saying how to talk to her in it, when
-        whoever added her is on the family list (commands.joined_group). No model call."""
+        """Introduce her in a group she was added to by someone on the family list. No model
+        call."""
         changed = getattr(update, "my_chat_member", None)
         if changed is None or changed.chat.type not in GROUP_TYPES:
             return
@@ -485,7 +467,7 @@ class TelegramChannel:
         await asyncio.to_thread(self.app.refresh)
         try:
             me = await context.bot.get_me()
-        except Exception as exc:  # a hello that does not go is nothing worse
+        except Exception as exc:
             log.info("telegram: could not ask Telegram about the bot to say hello (%s)", exc)
             return
         needs = self.app.settings.telegram_require_mention or not me.can_read_all_group_messages
@@ -499,32 +481,25 @@ class TelegramChannel:
             bot=me.username,
         )
         if stored is not None:
-            # Stored first, as everything she says: one that does not go now goes with the next
+            # Stored first, as everything she says, so one that does not go now goes with the next
             # delivery job.
             await asyncio.to_thread(deliver, self.app, stored)
 
     async def on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """/start: her introduction to the family, or the stranger's line and a knock, so that
-        whoever pressed Start shows on the Family and setup pages, ready to be let in."""
         msg = incoming_from_update(update)
         if msg is None:
             return
         await self._answer(update, context.bot, msg, handle=commands.start)
 
     async def on_command(self, update: Any, context: Any) -> None:
-        """/today, /week, /tasks or /now, answered by code and stored as her reply, under its
-        heading in bold."""
         msg = incoming_from_update(update)
         if msg is None:
             return
         await self._answer(update, context.bot, msg, handle=commands.answer, heading=True)
 
     async def introduce(self, name: str, about: str) -> None:
-        """Make the bot's own contact in Telegram say this name and this description.
-
-        The description is what Telegram shows in a chat with the bot before anything is sent.
-        Both are cut to Telegram's limits, and each is set only when what Telegram has differs:
-        a rename is rate-limited, and most calls change nothing.
+        """Set the bot's contact name and description in Telegram, each only when it differs: a
+        rename is rate-limited.
         """
         bot = self.application.bot
         name = name[: int(BotNameLimit.MAX_NAME_LENGTH)].rstrip()
@@ -558,13 +533,13 @@ class TelegramChannel:
     async def _after_a_pause(
         self, update: Any, bot: Any, msg: IncomingMessage, *, quiet: bool
     ) -> None:
-        """Keep a message now and answer it after `gather_seconds`, with any the same person
-        sends in this chat meanwhile (pipeline.receive and answer_gathered). This returns at
-        once, so the next update is kept while this one waits; "typing…" is up for the pause."""
+        """Keep a message now and answer it after `gather_seconds` with any the same person sends
+        meanwhile. Returns at once so the next update is kept.
+        """
         kept = await asyncio.to_thread(receive, self.app, msg)
         if kept is None:
             return
-        if isinstance(kept, OutgoingMessage):  # a stranger, answered at once as ever
+        if isinstance(kept, OutgoingMessage):
             await self._answer(update, bot, msg, handle=lambda _app, _msg: kept, quiet=quiet)
             return
         pause = self.app.settings.gather_seconds
@@ -580,7 +555,6 @@ class TelegramChannel:
         task.add_done_callback(self._gathering.discard)
 
     async def on_voice(self, update: Any, context: Any) -> None:
-        """A voice note: handed over with a way to fetch it, heard and answered like words."""
         await asyncio.to_thread(self.app.refresh)
         chat = update.effective_chat
         bot = context.bot
@@ -592,7 +566,6 @@ class TelegramChannel:
         loop = asyncio.get_running_loop()
 
         def fetch() -> bytes:
-            # Called from the pipeline's thread; the download runs on this loop.
             future = asyncio.run_coroutine_threadsafe(download(note), loop)
             return future.result(timeout=FETCH_SECONDS)
 
@@ -604,8 +577,6 @@ class TelegramChannel:
         await self._answer(update, bot, msg, quiet=in_group and not addressed)
 
     async def on_photo(self, update: Any, context: Any) -> None:
-        """A photo, or one of an album's, which are gathered and handed over together
-        (`_photos`)."""
         await asyncio.to_thread(self.app.refresh)
         group = getattr(update.effective_message, "media_group_id", None)
         if group is None:
@@ -614,8 +585,8 @@ class TelegramChannel:
         album = self._albums.setdefault(str(group), [])
         album.append(update)
         if len(album) == 1:
-            # Handed over from a task of its own, since the rest of the album arrives as
-            # updates of its own, after this one has been answered.
+            # Its own task: the rest of the album arrives as updates after this one has been
+            # answered.
             task = asyncio.get_running_loop().create_task(self._album(str(group), context.bot))
             self._gathering.add(task)
             task.add_done_callback(self._gathering.discard)
@@ -628,10 +599,9 @@ class TelegramChannel:
             log.exception("telegram: an album could not be answered")
 
     async def _photos(self, updates: list[Any], bot: Any) -> None:
-        """A photo, or an album's photos, handed over as one message with a way to fetch each,
-        looked at and answered like words. In a group only when it is sent to her, by a mention
-        in its caption or a reply: a family group shares photos among themselves all day, and
-        each one looked at is paid for."""
+        """Photos handed over as one message. In a group only when sent to her (mention in the
+        caption, or a reply): each one looked at is paid for.
+        """
         if not updates:
             return
         first = updates[0]
@@ -645,7 +615,6 @@ class TelegramChannel:
 
         def fetcher(file: Any) -> Callable[[], bytes]:
             def fetch() -> bytes:
-                # Called from the pipeline's thread; the download runs on this loop.
                 future = asyncio.run_coroutine_threadsafe(download(file), loop)
                 return future.result(timeout=FETCH_SECONDS)
 
@@ -659,7 +628,6 @@ class TelegramChannel:
                 continue
             file, kind, size = found
             notes.append(PhotoNote(mime=kind, fetch=fetcher(file), size=size))
-            # An album's caption is on one of its photos, whichever the family wrote it under.
             caption = caption or (getattr(one.effective_message, "caption", None) or "").strip()
         if not notes:
             return
@@ -675,9 +643,7 @@ class TelegramChannel:
         await self._answer(first, bot, msg)
 
     async def on_unread(self, update: Any, context: Any) -> None:
-        """A sticker, a file or a video. Its words are answered as a message would be, marked as
-        having come with something not seen. With none, code says it cannot be read, and in a
-        group only when it was sent to her: a family group shares these among themselves."""
+        """A sticker, file or video. In a group only when sent to her."""
         await asyncio.to_thread(self.app.refresh)
         chat = update.effective_chat
         bot = context.bot
@@ -693,9 +659,7 @@ class TelegramChannel:
 
     @contextlib.asynccontextmanager
     async def _typing(self, bot: Any, chat_id: Any, *, shown: bool = True) -> AsyncIterator[None]:
-        """Keep "typing…" up in this chat while the body runs: sent at once, then again every
-        `TYPING_EVERY` seconds, for `TYPING_AT_MOST` at most. A typing indicator that fails
-        never holds up the reply."""
+        """Keep "typing…" up while the body runs; a failing indicator never holds up the reply."""
 
         async def show() -> None:
             try:
@@ -732,12 +696,12 @@ class TelegramChannel:
         quiet: bool = False,
         heading: bool = False,
     ) -> None:
-        """Run the pipeline (or `handle`) on its own thread and send its reply, stored first,
-        in this chat, with "typing…" up meanwhile.
+        """Run the pipeline (or `handle`) on its own thread and send its reply, stored first, with
+        "typing…" up.
 
-        `quiet` is for a group message not addressed to her: a stranger is then not answered,
-        and not shown her typing, though the pipeline still keeps their knock. `heading` draws
-        the first line of an answer bold, for a command's."""
+        `quiet`: a group message not addressed to her gets no answer and no typing, though the
+        pipeline still keeps a stranger's knock.
+        """
         chat = update.effective_chat
         family = not quiet or await asyncio.to_thread(family_knows, self.app, msg.channel_user_id)
         async with self._typing(bot, chat.id, shown=family):
@@ -750,11 +714,10 @@ class TelegramChannel:
                 await confirm(update.effective_message)
                 return
             chunks = split_text(reply.text)
-            bold = heading and reply.status == "ok"  # a stranger's line has no heading
+            bold = heading and reply.status == "ok"
             for index, chunk in enumerate(chunks):
                 extra = {}
                 if reply.buttons and index == len(chunks) - 1:
-                    # A reminder this reply carries keeps its buttons, under the last part.
                     extra["reply_markup"] = keyboard(reply.buttons)
                 reply_text = update.effective_message.reply_text
                 await formatted(reply_text, chunk, heading=bold and index == 0, **extra)
@@ -790,10 +753,9 @@ class TelegramChannel:
         await asyncio.to_thread(deliver, self.app, reply.out_message_id, sender)
 
     async def on_tap(self, update: Any, context: Any) -> None:
-        """A button under one of her messages: done by code, said in her words (buttons.py).
-
-        Whoever tapped is told what happened; when it did something, everyone in the chat sees
-        who did what under the message, and its buttons go, having done their job."""
+        """A button tapped: done by code, said in her words (buttons.py). Everyone in the chat sees
+        who did what, and the buttons go: its own row, where a message has several.
+        """
         query = update.callback_query
         if query is None:
             return
@@ -801,42 +763,40 @@ class TelegramChannel:
         tapped = await asyncio.to_thread(tap_in_thread, self.app, query)
         try:
             await query.answer(tapped.toast if tapped else None)
-        except Exception:  # an answer that does not arrive leaves a spinner, nothing worse
+        except Exception:
             log.debug("telegram: could not answer a tap", exc_info=True)
         if tapped is None or not tapped.finished:
             return
         words = getattr(query.message, "text", None) if query.message is not None else None
+        left = without_row(getattr(query.message, "reply_markup", None), query.data or "")
         if tapped.note and words:
-            # The message keeps its own formatting, as Telegram gives it back, with the note under.
             kept = getattr(query.message, "text_html", None) or html.escape(words, quote=False)
             try:
                 await formatted(
                     query.edit_message_text,
                     f"{words}\n\n{tapped.note}",
                     drawn=f"{kept}\n\n{markup.to_html(tapped.note)}",
+                    **({"reply_markup": left} if left is not None else {}),
                 )
                 return
-            except Exception:  # too long with the note, say: the buttons still go below
+            except Exception:
                 log.info("telegram: could not add who did it to a message", exc_info=True)
         try:
-            await query.edit_message_reply_markup(reply_markup=None)
-        except Exception:  # too old to change, or changed already: what was done still stands
+            await query.edit_message_reply_markup(reply_markup=left)
+        except Exception:
             log.info("telegram: could not take the buttons off a message", exc_info=True)
 
     def send_text_threadsafe(self, chat_id: str, text: str) -> None:
-        """Deliver a message from another thread (background jobs)."""
         self._send_threadsafe(chat_id, text, None)
 
     def send_buttons_threadsafe(self, chat_id: str, text: str, row: list[dict[str, str]]) -> None:
-        """Deliver a message with its buttons from another thread; they go under the last part."""
         self._send_threadsafe(chat_id, text, row)
 
     def _send_threadsafe(self, chat_id: str, text: str, row: list[dict[str, str]] | None) -> None:
         if self._loop is None:
             raise RuntimeError("Telegram is not running")
         chunks = split_text(text)
-        # A "saved" sent later than its turn cannot be a reaction any more; in a group it goes
-        # without a sound, as one would have.
+        # A "saved" sent later than its turn cannot be a reaction; in a group it goes silently.
         quiet = routing.is_group(CHANNEL, chat_id) and routing.is_confirmation(text)
         hushed = {"disable_notification": True} if quiet else {}
         send = partial(self.application.bot.send_message, int(chat_id), **hushed)
@@ -849,13 +809,12 @@ class TelegramChannel:
 
     async def start(self) -> None:
         """Start polling inside the running event loop. Raises InvalidToken for a bad token."""
-        await self.application.initialize()  # asks Telegram who the bot is: a bad token fails here
+        await self.application.initialize()
         await self._post_init(self.application)
         await self.application.start()
         assert self.application.updater is not None
-        # bootstrap_retries=-1: a server that boots before its network is up, or a Telegram blip
-        # at the wrong moment, must not end the process. Once polling is up the updater retries
-        # forever on its own, so this covers the one gap left.
+        # bootstrap_retries=-1: a boot before the network is up, or a Telegram blip, must not end
+        # the process.
         await self.application.updater.start_polling(allowed_updates=UPDATES, bootstrap_retries=-1)
 
     async def stop(self) -> None:
@@ -871,28 +830,21 @@ class TelegramChannel:
         await self.application.shutdown()
 
     def run(self) -> None:
-        """Block until SIGINT or SIGTERM. python-telegram-bot installs the signal handlers."""
-        # bootstrap_retries=-1 for the reason `start` gives.
         self.application.run_polling(allowed_updates=UPDATES, bootstrap_retries=-1)
 
 
 class TelegramSupervisor:
-    """Keeps the Telegram channel running with whatever token the settings hold now.
+    """Keeps the channel running with the token the settings hold now: a changed token reconnects
+    within seconds, with no restart.
 
-    A token added, replaced or cleared on the settings page takes effect within a few seconds,
-    with no restart: the old connection is closed and a new one opened. A token Telegram refuses
-    is not tried again until it changes; one that fails only because Telegram cannot be reached
-    is tried again every `RETRY_SECONDS`.
-
-    The bot's own contact in Telegram says who is speaking: her name and her introduction, or
-    FamilyDB's plain ones under none (`_introduce`), and follows them when the page changes them,
-    with no trip to BotFather.
+    A token Telegram refuses waits until it changes; one that merely cannot be reached is retried
+    every `RETRY_SECONDS`. The bot's contact says who is speaking (`_introduce`), with no trip to
+    BotFather.
     """
 
     CHECK_SECONDS = 5.0
     RETRY_SECONDS = 30.0
-    # How often what Telegram says of the bot is asked again while connected: a privacy change
-    # in BotFather reaches the bot in no update.
+    # A privacy change in BotFather reaches the bot in no update, so it is asked again this often.
     FACTS_SECONDS = 300.0
 
     def __init__(
@@ -908,12 +860,11 @@ class TelegramSupervisor:
         self.state: str = "off"
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
-        # For the contact (`_introduce`): what it was last asked to say on this connection, the
-        # settings it was worked out from, and when Telegram may be asked again after a wait.
+        # For `_introduce`: what it was last asked to say, the settings that came from, and when
+        # Telegram may be asked again.
         self._introduced: tuple[str, str] | None = None
         self._seen: Settings | None = None
         self._introduce_at = 0.0
-        # When what Telegram says of the bot is next asked (`_learn`).
         self._learn_at = 0.0
 
     def start(self) -> None:
@@ -935,7 +886,7 @@ class TelegramSupervisor:
         self.state = state
         self.app.channel_states[CHANNEL] = state
         if not state.startswith("connected"):
-            self.app.channel_facts.pop(CHANNEL, None)  # true of a bot no longer connected
+            self.app.channel_facts.pop(CHANNEL, None)
 
     async def _watch(self) -> None:
         running: Any = None
@@ -965,14 +916,25 @@ class TelegramSupervisor:
             await running.stop()
         self._set("off")
 
+    def _token_refused(self, refused: bool) -> None:
+        """Noted for the Status page (alerts.py, kind telegram), or forgotten once it connects;
+        never told on Telegram, which cannot carry it."""
+        from familydb import alerts
+
+        with closing(self.app.connect()) as conn:
+            if refused:
+                alerts.note(conn, "telegram", "", "the token was refused", self.app.clock.now())
+            else:
+                alerts.working(conn, "telegram")
+
     async def _open(self, token: str) -> tuple[Any, bool]:
-        """A started channel, or None and whether Telegram refused the token outright."""
         channel = self.make_channel(self.app, token)
         try:
             await channel.start()
         except InvalidToken:
             log.error("telegram: Telegram refused the bot token; replace it on the settings page")
             self._set("the token was refused by Telegram")
+            await asyncio.to_thread(self._token_refused, True)
             await _quietly_stop(channel)
             return None, True
         except NetworkError as exc:
@@ -982,16 +944,15 @@ class TelegramSupervisor:
             return None, False
         name = getattr(channel, "username", None)
         self._set(f"connected as @{name}" if name else "connected")
-        # A new connection introduces her afresh, whatever the last one said, and asks again what
-        # Telegram says of the bot.
+        await asyncio.to_thread(self._token_refused, False)
         self._introduced = self._seen = None
         self._learn_at = 0.0
         return channel, False
 
     async def _learn(self, channel: Any) -> None:
-        """What Telegram says of the bot (`TelegramChannel.facts`), for the pages: after each
-        connect, and again every `FACTS_SECONDS`. A failure is tried again then; nothing here
-        stops or reconnects the channel."""
+        """What Telegram says of the bot (`TelegramChannel.facts`): after each connect and every
+        `FACTS_SECONDS`. Never stops the channel.
+        """
         if time.monotonic() < self._learn_at:
             return
         self._learn_at = time.monotonic() + self.FACTS_SECONDS
@@ -1001,21 +962,16 @@ class TelegramSupervisor:
             log.info("telegram: could not ask Telegram about the bot (%s)", exc)
 
     async def _introduce(self, channel: Any) -> None:
-        """Make the contact say who is speaking, after a connect or a change.
+        """Make the contact say who is speaking: her name and /start line, or FamilyDB's under none.
 
-        That is her name and her introduction (her /start line), or under none FamilyDB's, since
-        the plain bot calls itself FamilyDB everywhere else: a contact still called by her name
-        would say one thing while the bot said another. Telegram is asked after each connect,
-        and again only when the name or the introduction differs from what it was last asked to
-        say: a setting that moves nothing said asks nothing. A wait Telegram asks for is
-        waited out, across a reconnect too, and Telegram out of reach is tried again every
-        `RETRY_SECONDS`; a refusal, or any other failure, is logged and not tried again until
-        something she says changes or the channel reconnects. Nothing here stops or reconnects
-        the channel. No model call.
+        Asked after each connect, and again only when the name or introduction differs from what
+        it was last asked to say. A wait Telegram asks for is waited out, across a reconnect too;
+        Telegram out of reach is retried every `RETRY_SECONDS`; a refusal is logged and not
+        retried until something changes. No model call.
         """
         settings = self.app.settings
-        # App.refresh builds new settings whenever a stored value moves, so the same ones mean
-        # nothing she says can have changed since the last look.
+        # App.refresh builds new settings whenever a stored value moves, so the same object means
+        # nothing changed.
         if settings is self._seen or time.monotonic() < self._introduce_at:
             return
         self._seen = settings
@@ -1025,13 +981,12 @@ class TelegramSupervisor:
         try:
             await channel.introduce(*said)
         except RetryAfter as exc:
-            wait = exc.retry_after  # seconds; a timedelta from python-telegram-bot 23
+            wait = exc.retry_after
             seconds = wait.total_seconds() if isinstance(wait, timedelta) else float(wait)
             log.info("telegram: Telegram asks for %.0f seconds before her name is set", seconds)
             self._seen, self._introduce_at = None, time.monotonic() + seconds
             return
         except NetworkError as exc:
-            # BadRequest is a NetworkError too, but it is Telegram refusing, not out of reach.
             if not isinstance(exc, BadRequest):
                 log.warning("telegram: cannot reach Telegram to give the bot her name (%s)", exc)
                 self._seen, self._introduce_at = None, time.monotonic() + self.RETRY_SECONDS

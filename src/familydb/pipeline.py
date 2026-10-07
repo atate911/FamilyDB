@@ -13,10 +13,13 @@ from typing import Any
 
 from familydb import (
     audience,
+    buttons,
     family,
     memory,
     personas,
     roles,
+    routing,
+    undo,
     voice,
     whereabouts,
     wish_service,
@@ -49,26 +52,24 @@ from familydb.tools import ToolContext
 
 log = logging.getLogger(__name__)
 
-# The most a voice note may weigh: what Telegram lets a bot download.
+# Telegram's download limit for a bot.
 MAX_AUDIO_BYTES = 20 * 1024 * 1024
-# The most a photo may weigh: what every vendor here takes, Claude counting its five megabytes on
-# the base64 it is sent as, a third larger than the picture.
+# What every vendor takes: Claude counts its five megabytes on the base64, a third larger than the
+# picture.
 MAX_PHOTO_BYTES = 3_900_000
-# The most of an album looked at, each a call of its own; the rest are said to be there.
+# Each photo is a call of its own; the rest are said to be there.
 MAX_PHOTOS = 4
 
 
 class _Unseen(Exception):
-    """A photo that was not looked at, and the line that says why."""
-
     def __init__(self, error: str, event: str = "photo_unseen") -> None:
         super().__init__(error)
         self.error = error
         self.event = event
 
 
-# What the weekend digest's question is stored under, followed by the day, so the retry job can
-# tell a digest from a message somebody wrote.
+# The weekend digest's question is stored under this plus the day, so the retry job can tell it from
+# a written message.
 DIGEST_UPDATE = "digest:"
 
 
@@ -81,11 +82,7 @@ def handle_incoming(
     hearing: Any = None,
     seeing: Any = None,
 ) -> OutgoingMessage | None:
-    """Process one message. Returns None for an update already seen (a restart, a retry).
-
-    A voice note is heard first, and a photo looked at (`hearing` and `seeing` stand in for the
-    models that do those in tests).
-    """
+    """Process one message. Returns None for an update already seen (a restart, a retry)."""
     if conn is not None:
         return _handle(app, msg, api, conn, hearing, seeing)
     with closing(app.connect()) as own:
@@ -100,10 +97,8 @@ def handle_synthetic(
     api: MessagesAPI | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> OutgoingMessage | None:
-    """Process a message the bot wrote itself on a member's behalf (the weekend digest).
-
-    Same dedupe on the update id and the same storage as a real message, but the sender is given
-    and a failure stores no notice for the family: the retry job picks the message up later.
+    """Process a message the bot wrote on a member's behalf (the weekend digest): a failure stores
+    no notice, the retry job picks it up later.
     """
     if conn is None:
         with closing(app.connect()) as own:
@@ -116,13 +111,12 @@ def handle_synthetic(
     return _run(app, msg, member, inbound_id, api, conn, notify=False, kind="digest")
 
 
-# How long past its pause a message waiting to be answered with the ones after it is kept from
-# the retry job, in case the process that was to answer it stops; after that it is the retry
-# job's, and answered on its own. As long as a claim, since it may wait for a turn to finish.
+# How long past its pause a gathered message is kept from the retry job in case the answering
+# process stops; as long as a claim, since it may wait for a turn to finish.
 GATHER_HOLD_SECONDS = 300
 
-# Turns in one chat, one at a time in this process. A turn that started while another was running
-# would read the other's message as not yet answered, and might do what it asked a second time.
+# Turns in one chat run one at a time: a concurrent one would read the other's message as unanswered
+# and might repeat what it asked.
 _chat_locks: dict[tuple[str, str], threading.RLock] = {}
 _chat_locks_guard = threading.Lock()
 
@@ -138,11 +132,10 @@ def _one_at_a_time(channel: str, chat_id: str) -> Iterator[None]:
 def receive(
     app: App, msg: IncomingMessage, *, conn: sqlite3.Connection | None = None
 ) -> int | OutgoingMessage | None:
-    """Keep a message to be answered after a pause (`answer_gathered`), so that several sent one
-    after another are answered together, in one turn and one reply.
+    """Keep a message to be answered after a pause (`answer_gathered`).
 
-    The first half of `handle_incoming`: None for an update already seen, a stranger's answer at
-    once, or the stored message's id, held from the retry job meanwhile (delivery.GATHER).
+    None for an update already seen, a stranger's answer at once, or the stored message's id,
+    held from the retry job meanwhile (delivery.GATHER).
     """
     if conn is None:
         with closing(app.connect()) as own:
@@ -171,13 +164,12 @@ def answer_gathered(
     api: MessagesAPI | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> OutgoingMessage | None:
-    """Answer a kept message once its pause is over: with every earlier one from the same person
-    in the same chat still waiting, in one turn and one reply; or not at all when a newer one is
-    waiting too, since that one answers this one with its own."""
+    """Answer a kept message once its pause is over, with every earlier one from the same person in
+    this chat still waiting; not at all when a newer one is waiting, which answers this one.
+    """
     if conn is None:
         with closing(app.connect()) as own:
             return answer_gathered(app, msg, inbound_id, api=api, conn=own)
-    # After any turn already running in this chat, so that what it answered is answered.
     with _one_at_a_time(msg.channel, msg.chat_id):
         row = messages.get(conn, inbound_id)
         if row is None or row.status == "processed" or row.give_up or row.member_id is None:
@@ -212,8 +204,7 @@ def _stranger(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> Outgo
             chat_id=msg.chat_id,
             now=app.clock.now(),
         )
-    # Their message is not stored, so the update itself chooses the words: the same knock
-    # sent again reads the same, and the next one may not.
+    # Not stored, so the update itself chooses the words: the same knock sent again reads the same.
     return OutgoingMessage(
         msg.chat_id,
         voice.say(app.settings, "stranger", seed=msg.channel_update_id, id=msg.channel_user_id),
@@ -256,8 +247,8 @@ def _store_inbound(
 ) -> int | None:
     """Store the inbound message; None when the same update landed at the same moment.
 
-    A voice note is stored as a mark saying how long it was, before a byte of it is fetched:
-    its words replace the mark once they are heard. A photo likewise, until it is looked at.
+    A voice note or photo is stored as a mark first, before a byte is fetched; its words replace
+    the mark.
     """
     if msg.voice:
         text = messages.unheard(msg.voice.seconds)
@@ -305,9 +296,8 @@ def _run(
         row = messages.get(conn, inbound_id)
         if row is None or row.status == "processed" or row.give_up:
             return None
-        # The earlier messages of a burst, taken under this claim and folded into this one at
-        # once, so that however this turn ends (answered, refused, failed and retried) they go
-        # with it: a retry answers the whole burst, knowing what its first try already did.
+        # Taken under this claim and folded in at once, so however this turn ends they go with it
+        # and a retry answers the whole burst knowing what the first try did.
         taken = claim_also(app, conn, owned, gathered) if gathered else []
         if taken:
             with transaction(conn):
@@ -323,8 +313,7 @@ def _run(
             return None
         member = current_member
         if kind != "digest" and _over_daily_number(app, conn, member, inbound_id):
-            # Kept, like every message, but not answered, not heard and not retried: said so
-            # in her words, with no model call.
+            # Kept but not answered, heard or retried: said so in her words, no model call.
             with transaction(conn):
                 messages.give_up(conn, inbound_id)
             limit = app.settings.kid_daily_messages
@@ -341,11 +330,10 @@ def _run(
                 return seen
             msg = seen
         elif messages.is_unheard(row.text):
-            # Stored, and then the process stopped before it was heard. The recording is not
-            # kept, so there is nothing to answer: say so, even on a retry, since it is final.
+            # Stored, then the process stopped before it was heard. The recording is not kept, so
+            # say so, even on a retry: it is final.
             return _not_heard(app, conn, msg, inbound_id, "stopped before it was heard")
         elif messages.is_unlooked(row.text):
-            # The same for a photo: it is not kept either.
             return _not_heard(
                 app,
                 conn,
@@ -379,8 +367,9 @@ def _run(
 
 
 def _over_daily_number(app: App, conn: sqlite3.Connection, member: Member, inbound_id: int) -> bool:
-    """Whether a kid (roles.DAILY_LIMITED) has had as many messages answered today as the family
-    allows, counting only those a model answered."""
+    """Whether a kid (roles.DAILY_LIMITED) has had as many model-answered messages today as the
+    family allows.
+    """
     limit = app.settings.kid_daily_messages
     if not limit or not roles.daily_limited(member.role):
         return False
@@ -393,9 +382,8 @@ def _hear(
 ) -> IncomingMessage | OutgoingMessage:
     """A voice note's words, stored in place of its mark and handed on as the message's text.
 
-    Or the notice saying why it was not heard, worded by code: turned off, nobody with a key
-    who can hear, too long, not fetched, not heard, or the day's limit spent. The recording is
-    not kept, so a voice note that was not heard is given up rather than retried.
+    Or a notice, worded by code, saying why not (off, nobody who can hear, too long, not fetched,
+    not heard, daily limit). The recording is not kept, so it is given up, not retried.
     """
     note = msg.voice
     assert note is not None
@@ -444,14 +432,11 @@ def _hear(
 def _look(
     app: App, msg: IncomingMessage, inbound_id: int, conn: sqlite3.Connection, seeing: Any
 ) -> IncomingMessage | OutgoingMessage:
-    """What a photo shows, or each of an album's, as a model wrote it down, stored in place of
-    its mark and handed on as the message's text, with its caption after it.
+    """What a photo (or each of an album's) shows, stored in place of its mark with its caption
+    after it.
 
-    Or the notice saying why nothing was looked at, worded by code: turned off (a caption is
-    answered all the same, marked as having come with photos nobody saw), nobody with a key,
-    too large, not fetched, not looked at, or the day's limit spent. Of an album, what could be
-    seen is kept and the rest said not to be, the first `MAX_PHOTOS` looked at. The pictures are
-    not kept, so a photo that was not looked at is given up rather than retried.
+    Or a notice, worded by code, saying why not. Of an album the first `MAX_PHOTOS` are looked at
+    and the rest said not to be. The pictures are not kept, so it is given up, not retried.
     """
     notes = msg.photos
     settings = app.settings
@@ -504,7 +489,6 @@ def _look_at(
     hints: str,
     seeing: Any,
 ) -> str:
-    """What one photo shows, written down; raises _Unseen with why it was not looked at."""
     if (note.size or 0) > MAX_PHOTO_BYTES:
         raise _Unseen("too large", "photo_too_large")
     try:
@@ -530,14 +514,12 @@ def _look_at(
     words = seen.text.strip()
     if not words:
         raise _Unseen("nothing written down")
-    # Cut short: said so, rather than passed on as the whole of it.
     return words + " …" if seen.stop == "max_tokens" else words
 
 
 def _heard_as(
     conn: sqlite3.Connection, msg: IncomingMessage, inbound_id: int, text: str
 ) -> IncomingMessage:
-    """The message as it will be answered, stored in place of the mark it was kept under."""
     with transaction(conn):
         messages.set_text(conn, inbound_id, text)
     return dataclasses.replace(msg, text=text, voice=None, photos=())
@@ -554,13 +536,10 @@ def _not_heard(
     what: str = "voice note",
     **facts: Any,
 ) -> OutgoingMessage:
-    """A voice note not heard, or a photo not looked at (`what`): given up, with her notice
-    saying so, and the failure recorded as whichever it was."""
     log.warning("%s in message %s not taken in: %s", what, inbound_id, error)
     with transaction(conn):
         messages.give_up(conn, inbound_id)
-    # Seeded by the message, as every other notice here is, so a line with several wordings
-    # may read another way for another voice note, and the same way if this one is sent again.
+    # Seeded by the message like every notice here, so a resend reads the same.
     sender = members.resolve(conn, msg.channel, msg.channel_user_id)
     plain = audience.plain(conn, msg.channel, msg.chat_id, sender)
     notice = voice.say(app.settings, event, seed=inbound_id, plain=plain, **facts)
@@ -568,8 +547,9 @@ def _not_heard(
 
 
 def _hints(app: App, conn: sqlite3.Connection) -> str:
-    """Names a voice note may say, so they are written the family's way: who is in the family,
-    what she is called, where home is. The same for every voice note, and short."""
+    """Names a voice note may say, so they are written the family's way: members, her name, home.
+    Same for every note, and short.
+    """
     names = [member.display_name for member in members.list_all(conn) if member.active]
     names.append(personas.active(app.settings).name)
     hints = "Names: " + ", ".join(names) + "."
@@ -591,7 +571,6 @@ def _run_owned(
     kind: str = "chat",
     gathered: list[int] | None = None,
 ) -> OutgoingMessage:
-    """Think and persist the outcome, carrying anything held for this conversation (voice.py)."""
     taken = app.held.take((msg.channel, msg.chat_id), app.clock.now())
     try:
         return _answer(
@@ -608,7 +587,6 @@ def _run_owned(
             gathered=gathered or [],
         )
     finally:
-        # Whatever the reply did not carry goes as written: at once, not after the wait.
         app.held.let_go(taken, app.clock.now())
 
 
@@ -628,13 +606,11 @@ def _answer(
 ) -> OutgoingMessage:
     """Think and persist the outcome. With notify off (a retry, the digest) failures stay silent.
 
-    `gathered` are the earlier messages of a burst, folded into this one (`_run`): answered by
-    its reply, and retried with it."""
+    `gathered`: the earlier messages of a burst, folded into this one (`_run`).
+    """
     gathered = gathered or []
-    # A kid reads this chat: what is said here of the workings is said plainly (audience.py).
     plain = audience.plain(conn, msg.channel, msg.chat_id, member)
     if not app.can_ask("chat", api=api):
-        # A fresh install before its key is typed in: say so plainly, and do not keep retrying.
         log.warning("message %s saved, but there is no model key to answer it with", inbound_id)
         with transaction(conn):
             messages.give_up(conn, inbound_id)
@@ -648,7 +624,6 @@ def _answer(
         )
     kid = roles.may(member.role, "wish") and not roles.may(member.role, "decide")
     if kid and spending.kid_used_up(conn, app.settings, app.clock.now(), member.id):
-        # Her own share of the day is spent: said by code, with no call, and not tried again.
         log.info("message %s: %s's share of the day is used up", inbound_id, member.id)
         with transaction(conn):
             messages.give_up(conn, inbound_id)
@@ -704,8 +679,8 @@ def _answer(
         )
 
     if result.status == "failed" and result.error == "max_iterations":
-        # Given up for good, so a person who asked is told now, even on a retry; the digest
-        # asked nobody and stays quiet, as it does on every failure.
+        # Given up for good, so a person who asked is told now, even on a retry; the digest asked
+        # nobody and stays quiet.
         log.error("turn on message %s ran out of steps; not retrying it", inbound_id)
         with transaction(conn):
             messages.give_up(conn, inbound_id)
@@ -726,12 +701,11 @@ def _answer(
         )
 
     reply_text = result.text or voice.say(app.settings, "done", seed=inbound_id)
-    # What the reply was to carry and did not name goes with it in its written words.
     forgotten = [h.text for h in taken if h.mention.casefold() not in reply_text.casefold()]
     if forgotten:
         reply_text = "\n\n".join([reply_text, *forgotten])
-    # A reply that carries one message with buttons (a reminder) goes with its buttons; with
-    # several, which is which would be a guess, and their words are there to answer in.
+    # One message with buttons (a reminder) goes with them; with several, which is which would be a
+    # guess.
     carried = [
         held.buttons
         for held in (messages.get(conn, h.message_id) for h in taken)
@@ -739,8 +713,16 @@ def _answer(
     ]
     reply_buttons = carried[0] if len(carried) == 1 else None
     now = utc_iso(app.clock.now())
+    # In somebody's own Telegram chat, a reply that changed something can take it back: an Undo
+    # under it (familydb/undo.py), on its own row. A group is spared one under every "saved".
+    if msg.channel == "telegram" and not routing.is_group(msg.channel, msg.chat_id):
+        since = utc_iso(app.clock.now() - undo.WINDOW)
+        changed = calls.undoable_for(conn, [inbound_id], since=since).get(inbound_id)
+        if changed is not None:
+            carried_too = buttons.in_row(reply_buttons, "carried") if reply_buttons else []
+            reply_buttons = carried_too + buttons.for_undo(int(changed["id"]))
     with transaction(conn):
-        # Carried by this reply: marked sent with it, so the delivery job has nothing to find.
+        # Carried by this reply: marked sent with it, so the delivery job finds nothing.
         messages.mark_delivered(conn, [h.message_id for h in taken], now=now)
         outbound = messages.insert_out(
             conn,
@@ -750,7 +732,6 @@ def _answer(
             reply_to=inbound_id,
             now=now,
             buttons=reply_buttons,
-            # The weekend ideas are hers unasked, however they came to be written.
             sent_as="digest" if kind == "digest" else None,
         )
         messages.mark_processed(conn, inbound_id, result.actions, now=now)
@@ -759,7 +740,6 @@ def _answer(
                 suggestions.set_reply(conn, int(action["suggestion_id"]), outbound.id)
     app.held.done(taken)
     if any(action.get("tool") in ("turn_away", "update_wish") for action in result.actions):
-        # A kid's ask the parents are to hear of goes now, not on the retry job's next round.
         for waiting in wish_service.waiting_for_parents(conn):
             deliver(app, waiting)
     return OutgoingMessage(
@@ -780,7 +760,6 @@ def retry_message(
     api: MessagesAPI | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> OutgoingMessage | None:
-    """Reprocess a failed inbound message. Returns None when it is not eligible."""
     if conn is None:
         with closing(app.connect()) as own:
             return retry_message(app, message_id, api=api, conn=own)
@@ -790,7 +769,6 @@ def retry_message(
     if row.give_up or row.retries >= app.settings.retry_max_attempts:
         return None
     if row.channel != "console" and row.channel not in app.senders:
-        # Only a process that can deliver the answer may consume the retry.
         log.info("not retrying message %s: no sender for %s here", message_id, row.channel)
         return None
     member = members.get(conn, row.member_id) if row.member_id is not None else None
@@ -805,7 +783,6 @@ def retry_message(
         text=row.text,
     )
     log.info("retrying message %s (attempt %s)", message_id, row.retries + 1)
-    # The digest asked again is still the digest: answered at its level, and quiet if it gives up.
     digest = (row.channel_update_id or "").startswith(DIGEST_UPDATE)
     kind = "digest" if digest else "retry"
     reply = _run(app, msg, member, message_id, api, conn, notify=False, retry=True, kind=kind)
@@ -828,7 +805,7 @@ def _think(
     gathered: list[int] | None = None,
     plain: bool = False,
 ) -> TurnResult:
-    app.refresh(conn)  # a model or a limit changed on the settings page applies from here on
+    app.refresh(conn)
     settings = app.settings
     history = load_history(
         conn,
@@ -849,7 +826,6 @@ def _think(
         if origin
         else app.clock
     )
-    # Who reads the reply depends on the chat, so it goes in the turn and never in the prefix.
     audience = render_audience_line(msg.channel, msg.chat_id, members.list_all(conn))
     current = render_user_turn(member.display_name, msg.text, received_clock, audience)
     shared = whereabouts.current(conn, member.id, app.clock.now())
@@ -891,7 +867,7 @@ def _think(
         calendar=app.calendar,
         weather=app.weather,
         geocoder=app.geocoder,
-        api=api,  # a stand-in for the discovery worker inside `suggest`, when a test injects one
+        api=api,  # a stand-in for the discovery worker inside `suggest`, injected by tests
         discover_cache=app.discover_cache,
         plain=plain,
     )
@@ -909,8 +885,9 @@ def _think(
 def _kid_line(
     app: App, conn: sqlite3.Connection, member: Member, text: str, *, private: bool
 ) -> str:
-    """A kid's age, and, in a chat nobody else reads, her wish topics; and whether to nudge or
-    praise her wording (docs/WISHES.md). All of it chosen by code."""
+    """A kid's age and, where nobody else reads, her wish topics; whether to nudge her wording
+    (docs/WISHES.md). All chosen by code.
+    """
     now = app.clock.now()
     today = now.astimezone(app.settings.tzinfo).date()
     return render_kid_line(
@@ -923,7 +900,6 @@ def _kid_line(
 
 
 def _gave_up_reply(app: App, result: TurnResult, inbound_id: int, plain: bool = False) -> str:
-    """What to tell the family when a turn ran out of steps, worded by code, not by a model."""
     written = {spec.name for spec in app.registry.specs() if spec.writes}
     completed = [a for a in result.actions if a.get("ok") and a.get("tool") in written]
     if not completed:
@@ -941,7 +917,6 @@ def _fail(
     reply_text: str | None,
     actions: list[dict[str, Any]] | None = None,
 ) -> OutgoingMessage:
-    """Mark the message failed; with a reply text, also store the notice sent to the family."""
     now = utc_iso(app.clock.now())
     outbound_id = None
     with transaction(conn):

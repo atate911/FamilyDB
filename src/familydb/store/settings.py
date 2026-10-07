@@ -1,9 +1,5 @@
-"""Settings the family can change without touching a file.
-
-An override here wins over the environment, which wins over the default. Only the keys in
-`EDITABLE` can be set, so a typo or a crafted form cannot reach a setting that was never meant
-to move. Values are JSON, so a number comes back a number.
-"""
+"""Settings the family changes without a file: an override wins over the environment, which wins
+over the default. Only `EDITABLE` keys can be set, so a crafted form cannot reach any other."""
 
 from __future__ import annotations
 
@@ -12,7 +8,6 @@ from typing import Any
 
 from familydb.store.db import from_json, to_json, utcnow_iso
 
-# What the page may change. Anything not named here stays wherever it already lives.
 BEHAVIOUR = (
     "provider",
     "worker_provider",
@@ -62,6 +57,8 @@ BEHAVIOUR = (
     "follow_ups",
     "follow_up_hour",
     "task_nudges",
+    "tidy_ideas",
+    "find_places",
     "admin_alerts",
     "model_watch",
     "judgements",
@@ -79,10 +76,18 @@ BEHAVIOUR = (
     "gemini_best_model",
     "plan_checks",
     "plan_check_hour",
+    "morning_hour",
+    "morning_agenda",
+    "chase_missed",
+    "deadline_heads_up",
+    "forgotten_roundup",
+    "roundup_day",
+    "web_push",
     "retry_interval_minutes",
     "retry_max_attempts",
     "telegram_require_mention",
     "private_when_personal",
+    "family_chat_id",
     "gather_seconds",
     "voice_notes",
     "voice_max_minutes",
@@ -93,6 +98,7 @@ BEHAVIOUR = (
     "web_title",
     "web_dictation",
     "web_session_days",
+    "keep_messages_days",
     "google_calendar_id",
     "log_level",
     "event_feeds",
@@ -108,9 +114,8 @@ SECRETS = (
     "telegram_bot_token",
     "ticketmaster_api_key",
 )
-# Who the assistant is and who the family are, with a page of their own (/settings/personality).
-# The page's list of changes shows the long texts among them as "rewritten" rather than word for
-# word (web/views.py `LONG_SETTINGS`).
+# Who the assistant and the family are (/settings/personality); long texts show as "rewritten"
+# in the change list (web/views.py `LONG_SETTINGS`).
 PROFILE = (
     "persona",
     "persona_name",
@@ -119,9 +124,8 @@ PROFILE = (
     "about_family",
     "voice_lines",
 )
-# The password the family shares, hashed, set only by its own form (which asks for the password in
-# force) and by `familydb password`. Never on a form of settings. It opens the page only until an
-# admin has a password of their own (store/logins.py); from then on it opens nothing.
+# The shared family password hash: set only by its own form and `familydb password`, never a
+# settings form; it opens nothing once an admin has their own (store/logins.py).
 LOCK = ("web_password_hash",)
 EDITABLE = frozenset(BEHAVIOUR) | frozenset(SECRETS) | frozenset(PROFILE) | frozenset(LOCK)
 
@@ -133,11 +137,8 @@ def overrides(conn: sqlite3.Connection) -> dict[str, Any]:
 
 
 def stamp(conn: sqlite3.Connection) -> str:
-    """A marker that moves whenever a setting does. Cheap enough to check before every read.
-
-    Two numbers, because either can stand still while the other moves: the newest line in the
-    log, which a removed override also writes, and the newest value still stored.
-    """
+    """A marker that moves whenever a setting does: the newest log line (a removed override
+    writes one) and the newest stored value, since either can stand still."""
     row = conn.execute(
         "SELECT (SELECT max(id) FROM settings_log) AS change, "
         "(SELECT max(updated_at) FROM app_settings) AS stored"
@@ -158,11 +159,8 @@ def set_many(
     source: str = "web",
     now: str | None = None,
 ) -> list[str]:
-    """Store these settings and log what moved. Returns the keys that actually changed.
-
-    A value equal to what is already in force is not written, so the log stays meaningful. A
-    secret's value never reaches the log, only the fact that it was replaced.
-    """
+    """Store these settings and log what moved; returns the keys that changed. An unchanged value
+    is not written. A secret's value never reaches the log, only that it was replaced."""
     stamped = now or utcnow_iso()
     changed: list[str] = []
     for key, value in values.items():

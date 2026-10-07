@@ -1,9 +1,5 @@
-"""The in-process scheduler for background jobs.
-
-Each job's schedule comes from the settings, which the family can change from the web page.
-So the schedule is described once in `job_specs` and applied twice: when the scheduler is built,
-and again whenever a settings change moves one. Nothing here calls the model.
-"""
+"""The in-process scheduler. Schedules come from the settings, so `job_specs` describes them
+once and they are applied at build and whenever a setting moves one. No model call here."""
 
 from __future__ import annotations
 
@@ -20,6 +16,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
+from familydb import health
 from familydb.alerts import run_alerts
 from familydb.app import App
 from familydb.availability import digest_configured, enrichment_available, happening_available
@@ -27,31 +24,31 @@ from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.follow_ups import run_follow_ups
 from familydb.jobs.happening import run_happening
+from familydb.jobs.morning import any_on as morning_on
+from familydb.jobs.morning import run_morning
 from familydb.jobs.nudges import run_nudges
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
+from familydb.jobs.tidy import run_tidy
 from familydb.jobs.weekend_digest import run_digest
 from familydb.judgement import run_judgements
 from familydb.model_watch import run_model_watch
+from familydb.upkeep import run_upkeep
 from familydb.whereabouts import forget_old
 
 log = logging.getLogger(__name__)
 
-# The Telegram sender registers once polling starts, a moment after the scheduler; wait for it.
+# The Telegram sender registers a moment after the scheduler; wait for it.
 CATCH_UP_DELAY_SECONDS = 60
-# How often shared locations past their day are deleted. One DELETE on a tiny table.
 FORGET_INTERVAL_MINUTES = 10
-# How often to look for a settings change. One query against a small table, no model call.
 SETTINGS_INTERVAL_MINUTES = 5
-# How often to look for a task whose window has come round. One query; the calendar is asked
-# only when a nudge could go, and each chat hears one a day at most.
 NUDGE_INTERVAL_MINUTES = 15
 
 
 @dataclass(frozen=True)
 class JobSpec:
-    """One background job and when it should run, as the settings in force describe it."""
+    """One background job and when it should run."""
 
     id: str
     name: str
@@ -62,7 +59,7 @@ class JobSpec:
 
 
 def job_specs(app: App) -> list[JobSpec]:
-    """Every recurring job under the settings in force. Rebuilt whenever those change."""
+    """Every recurring job under the settings in force."""
     settings = app.settings
     zone = settings.tzinfo
     return [
@@ -113,8 +110,18 @@ def job_specs(app: App) -> list[JobSpec]:
             "plan_checks",
             "check tomorrow's plans",
             run_plan_checks,
-            CronTrigger(hour=settings.plan_check_hour, timezone=zone),
+            # From the hour until ten, so a plan made late for tomorrow is checked too; each run
+            # looks only at plans not checked yet, so a quiet evening costs one query an hour.
+            CronTrigger(hour=_until_ten(settings.plan_check_hour), timezone=zone),
             wanted=settings.plan_checks,
+            misfire_grace_time=3600,
+        ),
+        JobSpec(
+            "morning",
+            "the morning message",
+            run_morning,
+            CronTrigger(hour=settings.morning_hour, timezone=zone),
+            wanted=morning_on(settings),
             misfire_grace_time=3600,
         ),
         JobSpec(
@@ -146,20 +153,34 @@ def job_specs(app: App) -> list[JobSpec]:
             IntervalTrigger(minutes=NUDGE_INTERVAL_MINUTES),
             wanted=settings.task_nudges,
         ),
+        JobSpec(
+            "upkeep",
+            "check the backups and the disk",
+            run_upkeep,
+            IntervalTrigger(hours=1),
+        ),
+        JobSpec(
+            "tidy",
+            "take off ideas whose dates are past, and forget old messages' words",
+            run_tidy,
+            CronTrigger(hour=3, minute=30, timezone=zone),
+            wanted=settings.tidy_ideas or bool(settings.keep_messages_days),
+            misfire_grace_time=6 * 3600,
+        ),
     ]
 
 
-def same_schedule(current: BaseTrigger, wanted: BaseTrigger) -> bool:
-    """Whether a live job already runs on this schedule.
+def _until_ten(hour: int) -> str:
+    """Every hour from `hour` to 22:00, as a cron field; just `hour` from ten at night on."""
+    return str(hour) if hour >= 22 else f"{hour}-22"
 
-    By shape, not identity: two triggers built from the same settings are different objects. An
-    interval trigger also carries the moment it was built, which is not part of the schedule, so
-    only the interval itself is compared.
-    """
+
+def same_schedule(current: BaseTrigger, wanted: BaseTrigger) -> bool:
+    """Whether a live job already runs on this schedule, compared by shape: two triggers from the
+    same settings are different objects, and an interval trigger carries its build time."""
     if type(current) is not type(wanted):
         return False
-    # A cron trigger's text leaves its timezone out, so a family that moves, or corrects its
-    # timezone on the settings page, would otherwise keep its digest on the old clock.
+    # A cron trigger's text omits its timezone, so a changed timezone would keep the old clock.
     if str(getattr(current, "timezone", "")) != str(getattr(wanted, "timezone", "")):
         return False
     if isinstance(wanted, IntervalTrigger):
@@ -182,7 +203,7 @@ def _add(scheduler: BaseScheduler, app: App, spec: JobSpec) -> None:
 
 
 def sync_jobs(app: App, scheduler: BaseScheduler) -> list[str]:
-    """Bring the running jobs in line with the settings. Returns what moved, for the log."""
+    """Bring the running jobs in line with the settings; returns what moved."""
     moved: list[str] = []
     for spec in job_specs(app):
         existing = scheduler.get_job(spec.id)
@@ -201,17 +222,13 @@ def sync_jobs(app: App, scheduler: BaseScheduler) -> list[str]:
 
 
 def apply_settings(app: App, scheduler: BaseScheduler) -> list[str]:
-    """Notice a change made on the settings page and move the jobs it affects.
-
-    The refresh is not what decides: a page view or the form itself will usually have picked the
-    change up first, and asking `refresh()` again would then say "nothing moved" and leave the
-    jobs on the old schedule until a restart. Comparing the triggers is cheap, so it is done on
-    every tick and `sync_jobs` moves only what has actually changed.
-    """
+    """Move the jobs a settings change affects. Triggers are compared on every tick, not gated on
+    `refresh()`, which a page view will often already have consumed."""
     app.refresh()
     moved = sync_jobs(app, scheduler)
     if moved:
         log.info("settings changed; %s", ", ".join(moved))
+    health.ticked(app)  # the jobs are running (familydb/health.py)
     return moved
 
 
@@ -221,8 +238,7 @@ def build_scheduler(app: App) -> BackgroundScheduler:
     for spec in job_specs(app):
         if spec.wanted:
             _add(scheduler, app, spec)
-    # The cron jobs above live in memory: a bot that was off at their hour would skip them until
-    # the next day or week, so run them once shortly after start (each is idempotent).
+    # Cron jobs live in memory, so one missed while the bot was off is run once after start.
     scheduler.add_job(
         run_catch_up,
         DateTrigger(run_date=app.clock.now() + timedelta(seconds=CATCH_UP_DELAY_SECONDS)),

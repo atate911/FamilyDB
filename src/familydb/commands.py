@@ -1,29 +1,21 @@
-"""Telegram's commands, answered by code with no model call: /today, /week, /tasks, /now and
-/lookup, and /start; and a message with nothing in it to read.
+"""Telegram's commands, answered by code with no model call: /today, /week, /tasks, /now, /lookup,
+/start, and a message with nothing to read.
 
-/lookup asks for every idea waiting to be looked up to be looked up now, rather than with the
-evening's lookups: code calling `look_up_now` as the member who asked, as a button's tap does.
+What is on, what is left and what could start now are asked often and code knows the answers
+(agenda.py, the task list, the engine without the web), so they are answered for nothing, even
+when the model is down or the limit spent. A command is stored as a message marked processed, so
+no turn takes it, and the answer as her reply, stored before sent; a later turn reads both. Only
+the family may ask: anyone else gets the stranger's line and a knock.
 
-What is on, what is left to do and what could start right now are asked often, and code knows
-the answers exactly: the calendar (agenda.py), the task list, and the suggestion engine run for
-the next few hours without the web. So they are answered at once, for nothing, and still when
-the model is down or the day's limit is spent. A command is kept as a message from whoever sent
-it, marked processed as it is stored so that no turn ever picks it up, and the answer as her
-reply to it, stored before it is sent like any reply; a later turn reads both in the history.
-Only the family may ask: anyone else gets the stranger's line and a knock, as with a message.
+The heading of each answer is one of her lines (`voice.EVENTS` `cmd_*`), rewritable on the
+Personality page; the facts under it are worded here. A chat sees only the tasks asked for in it,
+as only it gets their reminders.
 
-The heading of each answer is one of her lines (`voice.EVENTS` `cmd_*`), one line so that the
-family can rewrite it on the Personality page; the facts under it are worded here. A chat sees
-only the tasks asked for in it, as only it gets their reminders.
-
-/start is her introduction to the family, and to anyone else the stranger's line with a knock,
-so that pressing Start on the bot's link shows on the Family and setup pages as any message
-would. Started from a link an admin made for somebody (familydb/family.py `invite`), it links
-the sender's Telegram to them first. A sticker, a file or a video sent with no words is
-answered with one of her lines (`cannot_read`), since there is nothing in it a model could act
-on; neither is kept. Added to a group by somebody on the family list, she introduces herself
-there (`joined_group`), saying how to talk to her in it; that is kept, like anything she says
-unasked.
+/lookup is code calling `look_up_now` as the member, as a button's tap does. /start is her
+introduction, or a stranger's line with a knock so Start shows on the Family and setup pages;
+from an admin's link (family.py `invite`) it links the sender's Telegram first. A wordless
+sticker, file or video gets `cannot_read`, kept as nothing. Added to a group by somebody on the
+family list, she introduces herself (`joined_group`); that is kept like anything unasked.
 """
 
 from __future__ import annotations
@@ -34,13 +26,14 @@ import sqlite3
 from collections.abc import Callable
 from contextlib import closing
 from datetime import date, datetime, timedelta
+from typing import Any
 
-from familydb import agenda, family, task_service, voice
-from familydb.agenda import Agenda, Entry
+from familydb import agenda, buttons, family, roles, task_service, voice
+from familydb.agenda import Agenda
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.dates import utc_iso
-from familydb.store import knocks, members, messages, tasks
+from familydb.store import knocks, lists, members, messages, tasks
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.store.tasks import Task
@@ -50,19 +43,19 @@ from familydb.tools.registry import ToolContext
 
 log = logging.getLogger(__name__)
 
-# Each command and what Telegram's menu says of it, in the order the menu lists them.
 MENU = (
     ("today", "What's on today"),
     ("week", "The next seven days"),
-    ("tasks", "Open tasks in this chat"),
+    ("tasks", "Open tasks: this chat's and yours"),
     ("now", "What could start right now"),
     ("lookup", "Look up the ideas waiting, now"),
+    ("undo", "Undo your last change here"),
+    ("list", "The shopping list"),
 )
 NAMES = frozenset(name for name, _ in MENU)
 MAX_TASKS = 12
-MAX_NOW = 5  # options offered, the good ones first, as the chat model is asked to
-MAX_NOT_NOW = 3  # ideas named as ruled out, with why
-# Where the calendar came from, when it was not Google's own.
+MAX_NOW = 5
+MAX_NOT_NOW = 3
 SOURCE_NOTES = {
     "saved": "Google Calendar isn't connected, so these are the saved plans only.",
     "unavailable": "Google Calendar didn't answer, so these are the saved plans; times may "
@@ -71,7 +64,6 @@ SOURCE_NOTES = {
 
 
 def name_of(text: str) -> str | None:
-    """The command a message is, "/today@familybot" as "today"; None for anything else."""
     words = text.split(maxsplit=1)
     if not words or not words[0].startswith("/"):
         return None
@@ -80,16 +72,15 @@ def name_of(text: str) -> str | None:
 
 
 def answer(app: App, msg: IncomingMessage) -> OutgoingMessage | None:
-    """The answer to a command, stored as her reply to it. None for one answered already."""
     with closing(app.connect()) as conn:
         return _answer(app, conn, msg)
 
 
 def start(app: App, msg: IncomingMessage) -> OutgoingMessage:
-    """/start: her introduction, or to a stranger their line, with a knock. Not kept.
+    """/start: her introduction, or to a stranger their line with a knock. Not kept.
 
-    With a link's code (t.me/<bot>?start=<code>, made on the Family page), in a private chat, it
-    first links the sender's Telegram to whoever the link was made for, and welcomes them.
+    With a link's code (made on the Family page) in a private chat, first links the sender's
+    Telegram to whoever the link was made for.
     """
     words = msg.text.split()
     private = msg.chat_id == msg.channel_user_id
@@ -101,9 +92,9 @@ def start(app: App, msg: IncomingMessage) -> OutgoingMessage:
 
 
 def _linked_by(app: App, msg: IncomingMessage, code: str) -> OutgoingMessage | None:
-    """What a link's Start says: welcome, now linked; or why the link did nothing. None for
-    somebody already on the list whose link is spent (opened a second time, say): they are
-    greeted as anybody on the list would be."""
+    """What a link's Start says: welcome, or why it did nothing. None for somebody already on the
+    list whose link is spent: greeted as anybody on the list.
+    """
     seed = msg.channel_update_id
     with closing(app.connect()) as conn:
         app.refresh(conn)
@@ -113,12 +104,11 @@ def _linked_by(app: App, msg: IncomingMessage, code: str) -> OutgoingMessage | N
             )
         except family.InviteRefused as refused:
             if refused.why == "taken":
-                owner = refused.owner or "somebody else"  # linked in the same moment
+                owner = refused.owner or "somebody else"
                 said = voice.say(app.settings, "invite_taken", seed=seed, who=owner)
                 return OutgoingMessage(msg.chat_id, said, "ok")
             if members.resolve(conn, msg.channel, msg.channel_user_id) is not None:
                 return None
-            # Knocked all the same, so they can still be let in from the Family page.
             _stranger(app, conn, msg)
             said = voice.say(app.settings, "invite_stale", seed=seed)
             return OutgoingMessage(msg.chat_id, said, "unknown_sender")
@@ -128,8 +118,7 @@ def _linked_by(app: App, msg: IncomingMessage, code: str) -> OutgoingMessage | N
 
 
 def cannot_read(app: App, msg: IncomingMessage) -> OutgoingMessage:
-    """A sticker, a file or a video with no words: her line saying so, or a stranger's. Not
-    kept, as there is nothing in it to keep."""
+    """A wordless sticker, file or video: her line saying so, or a stranger's. Not kept."""
     return _said_by_code(app, msg, "cannot_read")
 
 
@@ -142,11 +131,9 @@ def joined_group(
     mentioned: bool,
     bot: str | None,
 ) -> int | None:
-    """Her introduction to a group somebody on the family list added her to, stored to be sent.
-
-    Returns the stored message's id; None when whoever added her is not family, as she has
-    nothing to say in a stranger's group. `mentioned` says whether she has to be mentioned
-    there (the setting, or Telegram's privacy mode), which changes what she tells them.
+    """Her introduction to a group somebody on the family list added her to, stored to be sent; None
+    when whoever added her is not family. `mentioned`: she has to be mentioned there (setting or
+    Telegram's privacy mode).
     """
     with closing(app.connect()) as conn:
         app.refresh(conn)
@@ -175,7 +162,6 @@ def _said_by_code(app: App, msg: IncomingMessage, event: str) -> OutgoingMessage
 
 
 def _stranger(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> OutgoingMessage:
-    """Somebody not on the family list: a knock for the Family page, and their line."""
     with transaction(conn):
         knocks.record(
             conn,
@@ -213,27 +199,38 @@ def _answer(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> Outgoin
                 text=msg.text,
                 now=now,
             )
-            # Answered by code, never a turn: nothing for the retry job to pick up.
             messages.mark_processed(conn, asked.id, [], now=now)
     except sqlite3.IntegrityError:
         log.info("command %s/%s arrived twice at once", msg.channel, msg.channel_update_id)
         return None
-    text = ANSWERS[name](app, conn, msg, member, asked.id)
+    said = ANSWERS[name](app, conn, msg, member, asked.id)
+    # An answer may come with buttons (/list's ticks), kept with it like a reminder's.
+    text, row = said if isinstance(said, tuple) else (said, [])
     with transaction(conn):
         out = messages.insert_out(
-            conn, channel=msg.channel, chat_id=msg.chat_id, text=text, reply_to=asked.id, now=now
+            conn,
+            channel=msg.channel,
+            chat_id=msg.chat_id,
+            text=text,
+            reply_to=asked.id,
+            now=now,
+            buttons=row or None,
         )
-    return OutgoingMessage(msg.chat_id, text, "ok", in_message_id=asked.id, out_message_id=out.id)
+    return OutgoingMessage(
+        msg.chat_id, text, "ok", in_message_id=asked.id, out_message_id=out.id, buttons=row
+    )
 
 
-# -- what is on ----------------------------------------------------------------------------------
-
-
-def _today(app: App, conn: sqlite3.Connection, msg: IncomingMessage, _: Member, seed: int) -> str:
+def _today(
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
+) -> str:
     today = app.clock.today()
     seen = agenda.read(app, conn, today, today)
-    timed = [(_entry_key(entry, today), _entry_text(entry, today)) for entry in _on(seen, today)]
-    timed += _tasks_today(conn, msg, today, app)
+    timed = [
+        (agenda.entry_key(entry, today), agenda.entry_text(entry, today))
+        for entry in agenda.on(seen, today)
+    ]
+    timed += _tasks_today(conn, msg, member, today, app)
     lines = [text for _, text in sorted(timed)] or ["Nothing on."]
     said = voice.say(app.settings, "cmd_today", seed=seed, day=f"{today:%a %d %b}")
     return _with_source(_under(said, lines), seen)
@@ -246,48 +243,19 @@ def _week(app: App, conn: sqlite3.Connection, _msg: IncomingMessage, _: Member, 
     lines = []
     for offset in range(7):
         day = today + timedelta(days=offset)
-        on = sorted(_on(seen, day), key=lambda entry: _entry_key(entry, day))
-        things = "; ".join(_entry_text(entry, day) for entry in on) or "nothing on"
-        # The month where the week starts and where it turns: "Fri 25 Sep", "Sat 26", "Thu 1 Oct".
+        on = sorted(agenda.on(seen, day), key=lambda entry: agenda.entry_key(entry, day))
+        things = "; ".join(agenda.entry_text(entry, day) for entry in on) or "nothing on"
         month = f" {day:%b}" if offset == 0 or day.day == 1 else ""
         lines.append(f"{day:%a} {day.day}{month}: {things}")
     said = voice.say(app.settings, "cmd_week", seed=seed)
     return _with_source(_under(said, lines), seen)
 
 
-def _on(seen: Agenda, day: date) -> list[Entry]:
-    return [entry for entry in seen.entries if day in entry.days()]
-
-
-def _entry_key(entry: Entry, day: date) -> str:
-    """Sorts a day: all-day things first, then by the time they start that day."""
-    return "" if entry.all_day or entry.start[:10] < day.isoformat() else entry.start[11:16]
-
-
-def _entry_text(entry: Entry, day: date) -> str:
-    """One thing on a day, with its idea: "10:00-11:00 Soccer (#12)", "All day: Camping"."""
-    title = entry.title + (f" (#{entry.idea_id})" if entry.idea_id else "")
-    if entry.status == "tentative":
-        title += ", tentative"
-    if entry.all_day:
-        return f"All day: {title}"
-    started_before = entry.start[:10] < day.isoformat()
-    ends_today = entry.end is not None and entry.end[:10] == day.isoformat()
-    if started_before:
-        return (
-            f"until {entry.end[11:16]} {title}" if ends_today and entry.end else f"All day: {title}"
-        )
-    if ends_today and entry.end:
-        return f"{entry.start[11:16]}-{entry.end[11:16]} {title}"
-    return f"{entry.start[11:16]} {title}"
-
-
 def _tasks_today(
-    conn: sqlite3.Connection, msg: IncomingMessage, today: date, app: App
+    conn: sqlite3.Connection, msg: IncomingMessage, member: Member, today: date, app: App
 ) -> list[tuple[str, str]]:
-    """This chat's reminders and deadlines that fall today, as (time, words)."""
     found = []
-    for task in tasks.in_chat(conn, msg.channel, msg.chat_id):
+    for task in tasks.open_for(conn, msg.channel, msg.chat_id, member.id):
         if task.reminder is not None:
             at = _local(task.reminder.remind_at, app)
             if at.date() == today:
@@ -306,11 +274,11 @@ def _with_source(said: str, seen: Agenda) -> str:
     return f"{said}\n{note}" if note else said
 
 
-# -- what is left to do --------------------------------------------------------------------------
-
-
-def _tasks(app: App, conn: sqlite3.Connection, msg: IncomingMessage, _: Member, seed: int) -> str:
-    kept = tasks.in_chat(conn, msg.channel, msg.chat_id)
+def _tasks(
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
+) -> str:
+    # This chat's, and the asker's own wherever they were set: a task Sam set for Alex is Alex's.
+    kept = tasks.open_for(conn, msg.channel, msg.chat_id, member.id)
     lines = [_task_text(task, app) for task in kept[:MAX_TASKS]]
     if len(kept) > MAX_TASKS:
         lines.append(f"…and {len(kept) - MAX_TASKS} more on the web page's Tasks.")
@@ -318,11 +286,12 @@ def _tasks(app: App, conn: sqlite3.Connection, msg: IncomingMessage, _: Member, 
 
 
 def _task_text(task: Task, app: App) -> str:
-    """One task and what brings it up: "#12 Bins out (Sam): reminder Sun 27 Sep 19:00, every
-    week"."""
     facts = []
-    if task.reminder is not None and task.reminder.delivered_at is None:
-        facts.append(f"reminder {_local(task.reminder.remind_at, app):%a %d %b %H:%M}")
+    if task.reminder is not None:
+        at = _local(task.reminder.remind_at, app)
+        # Sent and still open: say so, so a reminder nobody acted on is not taken for none.
+        sent = task.reminder.delivered_at is not None
+        facts.append(f"reminded {at:%a %H:%M}" if sent else f"reminder {at:%a %d %b %H:%M}")
     if task.due_at:
         facts.append(f"due {_local(task.due_at, app):%a %d %b %H:%M}")
     facts.append(task_service.repeat_words(task) or "")
@@ -336,13 +305,9 @@ def _local(value: str, app: App) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(app.clock.tz)
 
 
-# -- what could start now ------------------------------------------------------------------------
-
-
 def _now(
     app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
 ) -> str:
-    """The engine's answer for the next hours, from the saved ideas: no web, no model."""
     ctx = ToolContext(
         conn=conn,
         settings=app.settings,
@@ -368,7 +333,6 @@ def _now(
     if result.travel_from != "home":
         lines.append(f"Travel from {result.travel_from}.")
     if result.skipped_checks:
-        # What was not checked, without the why a log wants: "forecast failed", not the error.
         skipped = dict.fromkeys(note.split(":", 1)[0] for note in result.skipped_checks)
         lines.append("Not checked: " + "; ".join(skipped) + ".")
     return _under(voice.say(app.settings, "cmd_now", seed=seed, window=result.window.label), lines)
@@ -392,13 +356,13 @@ def _under(heading: str, lines: list[str]) -> str:
 def _lookup(
     app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
 ) -> str:
-    """Every idea waiting, looked up on the next run rather than in the evening."""
     ctx = ToolContext(
         conn=conn,
         settings=app.settings,
         clock=app.clock,
         member=member,
         message_id=seed,
+        source="command",
     )
     result = app.registry.dispatch("look_up_now", {}, ctx)
     answered = json.loads(result.content)
@@ -411,10 +375,56 @@ def _lookup(
     return voice.say(app.settings, "lookups_asked", seed=seed, count=count)
 
 
-ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, int], str]] = {
+def _undo(
+    app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
+) -> str:
+    """/undo: the undo tool, as the member asking, in this chat (familydb/undo.py)."""
+    ctx = ToolContext(
+        conn=conn,
+        settings=app.settings,
+        clock=app.clock,
+        member=member,
+        message_id=seed,
+        calendar=app.calendar,
+        source="command",
+    )
+    result = app.registry.dispatch("undo", {}, ctx)
+    answered = json.loads(result.content)
+    if result.is_error:
+        return voice.say(app.settings, "undo_not", seed=seed, why=answered.get("error", ""))
+    return voice.say(app.settings, "undo_done", seed=seed, what=answered["undone"])
+
+
+# At most this many ticks under /list; the rest are on the page.
+MAX_LIST_BUTTONS = 12
+
+
+def _list(
+    app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
+) -> tuple[str, list[buttons.Button]]:
+    """/list: what is still to get on the shopping list, with a tick for each for whoever may
+    change things (a tap takes off its own row)."""
+    list_ref = lists.find(conn, "shopping")
+    held = (
+        [item for item in lists.items(conn, list_ref) if item.ticked_at is None] if list_ref else []
+    )
+    if not held:
+        return voice.say(app.settings, "cmd_list_empty", seed=seed), []
+    row: list[buttons.Button] = []
+    if roles.may(member.role, "change"):
+        for item in held[:MAX_LIST_BUTTONS]:
+            tick = [{"label": f"✓ {item.text[:28]}", "data": f"tick:{item.id}"}]
+            row += buttons.in_row(tick, str(item.id))
+    said = voice.say(app.settings, "cmd_list", seed=seed)
+    return _under(said, [item.text for item in held]), row
+
+
+ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, int], Any]] = {
     "today": _today,
     "week": _week,
     "tasks": _tasks,
     "now": _now,
     "lookup": _lookup,
+    "undo": _undo,
+    "list": _list,
 }

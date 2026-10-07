@@ -9,29 +9,26 @@ from typing import Any, Literal
 
 @dataclass(frozen=True)
 class VoiceNote:
-    """A recording somebody sent, not yet heard: how long it is, and how to fetch it.
-
-    `fetch` downloads it, and is only called once the sender is known to be family, so a
-    stranger's voice note costs nothing, not even the download.
+    """A recording sent, not yet heard. `fetch` is called only once the sender is known to be
+    family, so a stranger's voice note costs nothing, not even the download.
     """
 
     seconds: int
     mime: str
     fetch: Callable[[], bytes]
-    name: str = "voice.ogg"  # with an extension that says what it is
-    size: int | None = None  # in bytes, when the channel says
+    name: str = "voice.ogg"
+    size: int | None = None
 
 
 @dataclass(frozen=True)
 class PhotoNote:
-    """A photo somebody sent, not yet looked at: what kind of picture, and how to fetch it.
-
-    `fetch` downloads it, and is only called once the sender is known to be family.
+    """A photo sent, not yet looked at. `fetch` is called only once the sender is known to be
+    family.
     """
 
-    mime: str  # image/jpeg, image/png or image/webp
+    mime: str
     fetch: Callable[[], bytes]
-    size: int | None = None  # in bytes, when the channel says
+    size: int | None = None
 
 
 @dataclass(frozen=True)
@@ -43,11 +40,9 @@ class IncomingMessage:
     text: str
     # How the channel names the sender, for offering to add a stranger. Never trusted for more.
     sender_name: str | None = None
-    # A voice note, for the pipeline to hear before anything is answered. `text` is then any
-    # caption that came with it.
+    # A voice note for the pipeline to hear first; `text` is any caption.
     voice: VoiceNote | None = None
-    # A photo, or an album's photos, likewise, for the pipeline to look at first; `text` is any
-    # caption that came with them.
+    # A photo, or an album's, likewise.
     photos: tuple[PhotoNote, ...] = ()
 
 
@@ -59,5 +54,4 @@ class OutgoingMessage:
     in_message_id: int | None = None
     out_message_id: int | None = None
     actions: list[dict[str, Any]] = field(default_factory=list)
-    # The buttons the reply goes with, when it carries a message that had them (buttons.py).
     buttons: list[dict[str, str]] = field(default_factory=list)

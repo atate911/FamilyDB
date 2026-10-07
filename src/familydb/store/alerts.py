@@ -1,7 +1,5 @@
-"""What only an admin can fix, while it lasts: one row per kind of trouble and its subject.
-
-See familydb/alerts.py for what each kind is and when admins are told.
-"""
+"""What only an admin can fix, while it lasts: a row per trouble kind and subject (kinds and
+telling rules: familydb/alerts.py)."""
 
 from __future__ import annotations
 
@@ -32,10 +30,8 @@ def note(
     keep_after: str,
     once: bool = False,
 ) -> None:
-    """Record that a trouble happened (again). Rows not seen since `keep_after` are dropped.
-
-    `once` is for news rather than a trouble (a price moved, a date set): kept as it was when
-    it is there already, so it is told once and not again while it lasts."""
+    """Record that a trouble happened (again); rows not seen since `keep_after` are dropped.
+    `once` is for news (a price moved): kept as is if already there, so it is told once."""
     conn.execute("DELETE FROM alerts WHERE last_at < ?", (keep_after,))
     again = (
         "DO NOTHING"
@@ -50,14 +46,14 @@ def note(
 
 
 def clear(conn: sqlite3.Connection, kind: str, subject: str = "") -> int:
-    """It works again: forget the trouble, so the next one is told at once."""
+    """It works again: forget the trouble so the next is told at once."""
     return conn.execute(
         "DELETE FROM alerts WHERE kind = ? AND subject = ?", (kind, subject)
     ).rowcount
 
 
 def times(conn: sqlite3.Connection, kind: str, subject: str) -> int:
-    """How often a trouble has been seen while it lasts; 0 when it is not noted."""
+    """How often a trouble has been seen while it lasts; 0 when not noted."""
     row = conn.execute(
         "SELECT times FROM alerts WHERE kind = ? AND subject = ?", (kind, subject)
     ).fetchone()
@@ -73,7 +69,7 @@ def any_for(conn: sqlite3.Connection, kinds: tuple[str, ...], subject: str) -> b
 
 
 def due(conn: sqlite3.Connection, *, told_before: str) -> list[Alert]:
-    """Troubles nobody was told about, or told before `told_before` and seen again since."""
+    """Troubles untold, or told before `told_before` and seen again since."""
     rows = conn.execute(
         "SELECT * FROM alerts WHERE told_at IS NULL OR (told_at < ? AND last_at > told_at) "
         "ORDER BY first_at",
@@ -89,7 +85,7 @@ def mark_told(conn: sqlite3.Connection, kind: str, subject: str, *, now: str) ->
 
 
 def current(conn: sqlite3.Connection, *, since: str) -> list[Alert]:
-    """Every trouble seen since a moment, newest first, for the status page."""
+    """Every trouble seen since a moment, newest first."""
     rows = conn.execute(
         "SELECT * FROM alerts WHERE last_at >= ? ORDER BY last_at DESC", (since,)
     ).fetchall()

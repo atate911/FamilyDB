@@ -1,43 +1,37 @@
-"""Bring up a task kept for some Saturday morning when one comes round free. No model call.
-
-A task with a preferred window and nothing else to bring it back ("one of these Saturday mornings
-I need to get my knives sharpened") would wait until somebody asked about it. When its window
-can be read (windows.py), this job brings it up in the chat it was asked in, in her words and
-with a reminder's buttons: from an hour into that part of the day, while the calendar is free for
-the hour ahead. A task is brought up at most once a week, and a chat hears at most one a day, the
-task nudged longest ago first; a task said in the last twelve hours waits, since it was only just
-said. With nothing to bring up it reads the database and returns: the calendar is asked only
-when a nudge could go this minute.
-"""
+"""Bring up a task kept for a preferred window ("one of these Saturday mornings") when it comes
+round and the calendar is free. No model call. A readable window (windows.py) is nudged in its
+chat from an hour into that part of the day, with a reminder's buttons: a task once a week, a
+chat once a day (longest-ago first), none said in the last twelve hours. With nothing to bring up
+it reads the database and returns; the calendar is asked only when a nudge could go."""
 
 from __future__ import annotations
 
 import logging
+import sqlite3
 from contextlib import closing
 from datetime import datetime, time, timedelta
 from typing import Any
 
 from familydb import buttons, routing, voice
 from familydb.app import App
+from familydb.availability import calendar_available
 from familydb.dates import utc_iso
 from familydb.free_time import events_by_day, free_spans
+from familydb.saved_plans import SavedPlans
 from familydb.store import messages, tasks
 from familydb.store.db import transaction
 from familydb.store.tasks import Task
-from familydb.windows import read
+from familydb.windows import Window, read
 
 log = logging.getLogger(__name__)
 
-# At most once a week for each task: six days, so the same morning next week still qualifies.
+# Six days, so the same morning next week still qualifies.
 GAP = timedelta(days=6)
-# A task said this recently is not brought up; they have only just said it.
 SETTLE = timedelta(hours=12)
-# How long the calendar must be free from now for a nudge to go.
-FREE_MINUTES = 60
 
 
 def nudge_text(task: Task, settings: Any, *, when: str, today: str) -> str:
-    """The nudge as sent, in the assistant's voice: `when` is "Saturday morning"."""
+    """The nudge as sent; `when` is "Saturday morning"."""
     who = f" ({task.owner})" if task.owner else ""
     return voice.say(
         settings,
@@ -50,10 +44,12 @@ def nudge_text(task: Task, settings: Any, *, when: str, today: str) -> str:
     )
 
 
-def free_minutes(app: App, moment: datetime) -> int | None:
-    """How long the family calendar is free from this minute, within the day; None when there
-    is no calendar to ask, or it could not be asked (the nudge then goes without it)."""
+def free_minutes(app: App, moment: datetime, conn: sqlite3.Connection | None = None) -> int | None:
+    """Minutes the calendar is free from now, within the day; None when it cannot be asked (the
+    nudge then goes without it). With no Google calendar the plans kept here are the calendar."""
     calendar = app.calendar
+    if calendar is None and conn is not None and not calendar_available(app.settings):
+        calendar = SavedPlans(conn, app.clock.tz)
     if calendar is None:
         return None
     day = moment.date()
@@ -68,7 +64,7 @@ def free_minutes(app: App, moment: datetime) -> int | None:
 
 
 def run_nudges(app: App) -> int:
-    """Bring up each chat's task whose window is here, when it is free. Returns how many."""
+    """Bring up each chat's task whose window is here, when free; returns how many."""
     app.refresh()
     if not app.settings.task_nudges:
         return 0
@@ -76,33 +72,36 @@ def run_nudges(app: App) -> int:
     now = utc_iso(moment)
     midnight = datetime.combine(moment.date(), time.min, tzinfo=app.clock.tz)
     with closing(app.connect()) as conn:
-        chosen: dict[tuple[str, str], tuple[Task, str]] = {}
+        due: list[tuple[Task, Window, str]] = []
         for task in tasks.nudge_candidates(
             conn,
             said_before=utc_iso(moment - SETTLE),
             nudged_before=utc_iso(moment - GAP),
             chats_quiet_since=utc_iso(midnight),
         ):
-            window = read(task.preferred_window)
+            window = read(task.preferred_window, until=task.until, today=moment.date())
             part = window.open_at(moment) if window else None
-            # A nudge that arrived late would be no nudge: a chat nothing here can send to waits.
+            # A chat nothing can send to waits.
             if window and part and app.senders.get(task.channel) is not None:
-                when = window.now_words(moment, part)
-                chosen.setdefault((task.channel, task.chat_id), (task, when))
-        if not chosen:
+                due.append((task, window, part))
+        if not due:
             return 0
-        free = free_minutes(app, moment)
-        if free is not None and free < FREE_MINUTES:
-            return 0
+        # How long the calendar is free from now: each window says how long it needs (an hour,
+        # or two for "some free time").
+        free = free_minutes(app, moment, conn)
+        chosen: dict[tuple[str, str], tuple[Task, str]] = {}
+        for task, window, part in due:
+            if free is None or free >= window.min_free:
+                chosen.setdefault(
+                    (task.channel, task.chat_id), (task, window.now_words(moment, part))
+                )
         nudged = 0
-        for (began_in, began_chat), (task, when) in chosen.items():
-            # The owner's own task is brought up to them, not to the whole group (routing.py).
-            channel, chat_id = routing.for_person(
-                conn, app.settings, began_in, began_chat, task.owner_id
-            )
+        for task, when in chosen.values():
+            # The owner's task goes to them; everyone's to the family (routing.py).
+            channel, chat_id = routing.for_task(conn, app.settings, task)
             with transaction(conn):
-                # Asked again under the write lock: a run by hand can race the scheduler, and a
-                # tap or a reply can finish the task in between.
+                # Re-read under the write lock: a manual run can race the scheduler, and a tap
+                # or reply can finish the task meanwhile.
                 current = tasks.get(conn, task.id)
                 if current is None or current.status != "open":
                     continue
@@ -117,7 +116,6 @@ def run_nudges(app: App) -> int:
                     buttons=buttons.for_reminder(task.id),
                 )
                 tasks.mark_nudged(conn, task.id, now)
-            # Stored first, sent second: one that cannot go now is the retry job's.
             voice.hand_over(
                 app,
                 conn,

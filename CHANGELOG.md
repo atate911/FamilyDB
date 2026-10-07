@@ -1,5 +1,151 @@
 # Changelog
 
+## v0.3.0 — in progress
+
+Still being built. While this heading says "in progress", an install follows the
+default branch rather than a release tag, and an upgrade never moves to anything
+older than what is installed. It gets a date when it is released.
+
+### New since v0.2.0
+
+- **Looks.** Each browser can choose how the page looks on a new Look page, in
+  the bar's menu for anybody signed in: Phosphor, as before, or Midnight, Home
+  Computer, Ink, Enamel, Rail yellow or Fjord, each by day and by night, and
+  whether to follow the device's day and night or hold to one. The choice is
+  kept in the browser and touches nothing the family's data holds, and every
+  look is tested for readable contrast by day and by night.
+- **A new look, Kitchen Table.** FamilyDB has a new look: cream paper by day,
+  charcoal at night, deep green for what you act on, and each of you in your
+  own colour. It is what everybody sees now, except anybody who chose a look
+  before, who keeps theirs. To change yours, open Look from the menu.
+- **A new menu and a new Home**, the first pages of the new layout (the others
+  follow, one at a time). A sidebar on a computer, a tab bar on a phone, Vera's
+  state in a pill, and counts beside the pages that need somebody ("3 late",
+  "1 to decide"). Home opens with a greeting and one line on what is coming and
+  what is late, then Vera's box, what is next (with who it is for and how far
+  it is), your to-dos, what was just added, the kids' lists, and, for
+  grown-ups, "How did it go?" for a plan nobody has rated and what Vera cost
+  today. A kid's Home is simpler: her box, what is next for her, her list and
+  her own to-dos. The ways to start under the box are gone. Each of you has a
+  colour, kept with your name.
+- **A new Chat.** Each person's messages wear their own colour and letter, the
+  day is said where it changes, and Vera is her screen beside her lines. A
+  parent moves between the family's conversation and each kid's (the list
+  shows when a kid last wrote, never what), a kid is told who can read hers,
+  and "Earlier messages" goes further back. While Vera is writing back, the
+  page looks again soon, then less often, then stops and leaves a link: "Check
+  for her answer".
+- **A new To do and a new Plans.** Each to-do has its own Edit page instead of
+  a form that opens in the list, shows who it is for in their colour, and tells
+  a kid who set it ("Set by Alex"). Plans open as a month, with each plan on its
+  days in the colour of who it is for, and a list beside it; a plan that has
+  happened asks how it went right there, with three faces. A kid sees one list
+  of what is next.
+- **A new Ideas, idea page, idea form and Restaurants.** Idea cards show whom each
+  is for in their colours, how far away it is and whether it is a surprise; the map
+  of how far each idea is from home now has each idea's name beside its dot, drawn
+  to fit a phone as well as a desktop. A present is now hidden from exactly the
+  people it names (by default whoever it is for, and anyone else you tick on the
+  idea), and every page that shows it says whom: "Hidden from Theo". That includes
+  a grown-up's own present, and a present for somebody else now shows to a kid,
+  tagged, so she knows to keep it quiet. A present that names nobody is still kept
+  from the kids, and Vera still never tells a kid of one in the chat.
+- **Reminders reach the person they are for.** A reminder set on the page, or
+  set for somebody else ("remind Alex to..."), goes to that person's own
+  Telegram chat with Vera, saying who asked, or to their conversation on the
+  page until they open one. One for everyone goes to the family's chat, a new
+  setting on Connections. Taking somebody off cancels the to-dos they owned
+  outside the family group, which would otherwise have become everyone's.
+- **Plans work without Google Calendar.** They are kept here, count as busy
+  time for suggestions and nudges, and go onto Google once it is connected.
+  A plan made on the page is checked the evening before and asked about after,
+  like one made in a chat; a plan that moves is checked again for its new day;
+  and the evening check runs every hour until ten, so a plan made late for
+  tomorrow is still caught.
+- **A reminder before a plan moves with it.** "Remind me a week before the
+  concert" is tied to the concert: it moves when the concert does, by Vera or
+  in Google, goes if it is cancelled, says when the concert is, and is done
+  once it is over.
+- **Suggestions look at every idea.** Every saved idea is checked, not only the
+  first eight, and asking again brings others up. "The kids" now finds an idea
+  saved "with the girls", and an idea whose plan has passed can be suggested
+  again.
+- **To-dos do not get lost.** "Next time I have some free time" and "this
+  weekend" are understood, so Vera brings them up then; when nothing will
+  bring one up, she offers a reminder. /tasks shows a reminder already sent,
+  and Tomorrow under a reminder is never the middle of the night.
+- **A morning message.** At seven (Messages, Each morning), one message a chat
+  with what is on today, a reminder from yesterday nobody acted on, what is due
+  tomorrow, and on Sundays the to-dos nothing will bring up. An idea that ends
+  this week, with a free day before then, is mentioned once. Nothing is sent on
+  an empty day, and each part has its own switch.
+- **Notices on phones and tablets for people who use only the page.** The Chat
+  link says how many of Vera's messages are new, and each of you can turn on
+  notices for your own device under Your password: "Vera has a message", never
+  her words. On an iPhone or iPad the page must be added to the Home Screen
+  first.
+- **Undo.** "Undo that", /undo, an Undo beside the page's notice after a change,
+  and a ↩ Undo button under her reply in your own Telegram chat take back your
+  last change within a day: an idea added or changed, a to-do, a plan made or
+  moved, something remembered, a list change. What cannot be taken back (how a
+  plan went, a message already sent) is said so. An idea's page and a to-do say
+  who changed them last, and from where.
+- **Shopping lists.** "We're out of milk" goes on the shopping list, once however
+  it is written; other lists by name ("the hardware list"). /list on Telegram
+  shows it with a ✓ to tap for each thing, and a new Lists page (in the menu on
+  a phone) adds, ticks and clears. For now a kid can read the lists and is told
+  to ask a parent to add.
+- **Buttons on the page.** A reminder in the page's chat has Done and the
+  snoozes under it, as on Telegram, so a kid without Telegram can tick off her
+  own. On Telegram, a tap takes away only the row it was on.
+- **A clash is said.** A plan made or moved onto something already on the
+  calendar says what it clashes with.
+- **Getting things in.** Several ideas at once on the new-idea page, one a line;
+  a photo from the page's chat, as from Telegram; and on Android, sharing a page
+  or some words to the installed page opens the chat with them in the box.
+- **Your favourites can win.** Ask for "our usual" or something you know you'd
+  love, and what you loved comes first. A restaurant you went to is offered again
+  after three weeks, an activity after a month, a day trip after six months. One
+  disappointing visit no longer rules a place out for good: it is offered with
+  the rating said, and only two low ratings in a row in the same year leave it
+  out. "How was it?" now has Loved it, It was OK, Not again and Didn't go.
+- **Firm rules are kept.** Tell Vera "no drives over 30 minutes until my back is
+  better", or "nothing loud", and suggestions keep to it, saying why something
+  was left out, including /now and the evening backup. What she remembers shows
+  what each rule holds.
+- **Ages.** An idea can say the ages it suits ("ages 6+"), and one a kid coming
+  is too young or too old for is left out, with the reason.
+- **Lookups fill in more.** When Vera looks an idea up, what it costs, indoors or
+  out, how long a visit takes, whether to book, the ages it suits, and an
+  event's dates go on the idea, where you had not said already. Asked for
+  something cheap, an idea whose price nobody knows is said as such.
+- **Now means now.** "Now" and "today" are judged by their own hours, so rain this
+  morning does not rule out this afternoon, and the evening check looks at the
+  hours of the plan itself.
+- **What is over leaves the list.** An event a week past its last day is taken
+  off overnight (Lookups page); its page can bring it back.
+- **Places on the web, if you want them.** Asked for a kind of place nothing on
+  your list fits ("Thai food, what's open now?"), Vera can look nearby and offer
+  a few, said as found on the web. It costs a little each time, so it is off
+  until you turn it on (Lookups, "Look for a place when nothing saved fits").
+- **Your data, to take away.** Download the plans for another calendar, and the
+  ideas and to-dos as spreadsheets, from the foot of those pages; an admin can
+  download everything the family has kept, after typing their password again.
+  `familydb export` does the same on the server. Never a key or a password.
+- **How long messages are kept is yours to choose.** For good, as before, unless
+  you set a number of days under Sign-in and security: older messages then keep
+  their place in the conversation but not their words.
+- **Backups that are checked.** Each night's backup is read back to make sure it
+  could be restored, Status says when the last good one was, and admins are told
+  when none has worked for a day and a half, or the disk is nearly full. A
+  Telegram token that stopped working shows on Status.
+- **A health check that means it.** `/healthz` and the new `familydb health` say
+  whether the database answers and the scheduled jobs are running, and Docker
+  uses it to mark the bot unhealthy.
+- **What's new** at the bottom of the Status page: this list, for the version
+  running.
+
+
 ## v0.2.0 — second alpha (2026-10-05)
 
 The second alpha: everything the first did, and the kids, the persona, voice and
@@ -38,6 +184,13 @@ installed.
 
 ### What it does
 
+- **Looks the page can wear.** Besides Phosphor, the green-screen look it was
+  drawn in, each browser can choose Midnight, Home Computer, Ink, Enamel, Rail
+  yellow or Fjord on the Look page (in the bar's menu, for anybody signed in),
+  each with a day and a night, following the device or held to one. It is kept
+  in the browser, so a phone and a wall tablet can differ. Vera's green screens
+  stay green glass in all of them, and every look keeps the same contrast floors
+  by day and by night.
 - **Captures ideas from chat.** "We should try that ramen place sometime" becomes
   a stored idea, tagged with what the model can infer, through Telegram, the web
   page's chat or the console.

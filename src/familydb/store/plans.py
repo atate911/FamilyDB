@@ -41,7 +41,6 @@ class Plan(BaseModel):
     status: Literal["confirmed", "tentative", "cancelled"] = "confirmed"
     created_by: int | None = None
     followed_up_at: str | None = None
-    # When it was checked the evening before (jobs/plan_checks.py).
     checked_at: str | None = None
     channel: str | None = None
     chat_id: str | None = None
@@ -122,6 +121,26 @@ def for_idea(conn: sqlite3.Connection, idea_id: int) -> list[Plan]:
     return [Plan.from_row(row) for row in rows]
 
 
+def latest_by_idea(conn: sqlite3.Connection) -> dict[int, tuple[date, date]]:
+    """For each idea with a live plan, its latest plan's first and last day, in one query: what
+    the suggestion engine reads "already planned" by (suggest/shortlist.py)."""
+    rows = conn.execute(
+        "SELECT idea_id, substr(start, 1, 10) AS first, "
+        "substr(coalesce(end, start), 1, 10) AS last FROM plans "
+        "WHERE idea_id IS NOT NULL AND status != 'cancelled' ORDER BY start, id"
+    )
+    return {
+        int(row["idea_id"]): (date.fromisoformat(row["first"]), date.fromisoformat(row["last"]))
+        for row in rows
+    }
+
+
+def everything(conn: sqlite3.Connection) -> list[Plan]:
+    """Every plan not cancelled, earliest first: for the calendar file (export.py)."""
+    rows = conn.execute("SELECT * FROM plans WHERE status != 'cancelled' ORDER BY start, id")
+    return [Plan.from_row(row) for row in rows]
+
+
 def list_between(conn: sqlite3.Connection, start: str, end: str) -> list[Plan]:
     rows = conn.execute(
         "SELECT * FROM plans WHERE status != 'cancelled' AND start >= ? AND start < ? "
@@ -132,12 +151,9 @@ def list_between(conn: sqlite3.Connection, start: str, end: str) -> list[Plan]:
 
 
 def overlapping(conn: sqlite3.Connection, first: str, last: str) -> list[Plan]:
-    """Live plans touching the days from `first` to `last` inclusive, earliest first.
-
-    Unlike `list_between` this keeps a plan that started before `first` and is still going,
-    such as a weekend away. Dates compare as strings: a date sorts before that day's timed
-    plans, so the day after `last` is the exclusive bound on the start.
-    """
+    """Live plans touching `first` to `last` inclusive, earliest first; unlike `list_between`,
+    keeps a plan that started earlier and is still going. Dates compare as strings (a date sorts
+    before that day's timed plans), so the day after `last` bounds the start."""
     after = (date.fromisoformat(last) + timedelta(days=1)).isoformat()
     rows = conn.execute(
         "SELECT * FROM plans WHERE status != 'cancelled' AND start < ? "
@@ -173,6 +189,21 @@ def due_for_follow_up(conn: sqlite3.Connection, *, today: str, since: str) -> li
     return [Plan.from_row(row) for row in rows]
 
 
+def unrated(conn: sqlite3.Connection, *, today: str, since: str) -> list[Plan]:
+    """Confirmed plans for an idea that ended before `today`, started on or after `since`, that
+    nobody has said how they went (no outcome for the plan, or for its idea, from its day on).
+    The follow-up job asks about the same plans; this is the page's count of them."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE status = 'confirmed' AND idea_id IS NOT NULL "
+        "AND substr(coalesce(end, start), 1, 10) < ? AND substr(start, 1, 10) >= ? "
+        "AND NOT EXISTS (SELECT 1 FROM outcomes o WHERE (o.plan_id = plans.id "
+        "OR o.idea_id = plans.idea_id) AND o.happened_on >= substr(plans.start, 1, 10)) "
+        "ORDER BY start",
+        (today, since),
+    )
+    return [Plan.from_row(row) for row in rows]
+
+
 def due_for_check(conn: sqlite3.Connection, *, day: str) -> list[Plan]:
     """Live plans for an idea that start on `day`, made in a chat, and not checked yet."""
     rows = conn.execute(
@@ -185,8 +216,7 @@ def due_for_check(conn: sqlite3.Connection, *, day: str) -> list[Plan]:
 
 
 def leave_chat(conn: sqlite3.Connection, channel: str, chat_id: str) -> int:
-    """Forget which chat plans were made in, so nothing about them is said there again: the chat
-    of somebody taken off the list. The plans themselves stay."""
+    """Forget which chat plans were made in (somebody taken off the list); the plans stay."""
     return conn.execute(
         "UPDATE plans SET channel = NULL, chat_id = NULL WHERE channel = ? AND chat_id = ?",
         (channel, chat_id),
@@ -195,6 +225,36 @@ def leave_chat(conn: sqlite3.Connection, channel: str, chat_id: str) -> int:
 
 def mark_checked(conn: sqlite3.Connection, plan_id: int, *, now: str) -> None:
     conn.execute("UPDATE plans SET checked_at = ? WHERE id = ?", (now, plan_id))
+
+
+def kept_here(conn: sqlite3.Connection, *, since: str) -> list[Plan]:
+    """Live plans kept here while no Google calendar was connected, from `since` (a date) on:
+    what goes on Google once one is (calendar_sync.adopt_local)."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE calendar_id IS NULL AND status != 'cancelled' "
+        "AND coalesce(end, start) >= ? ORDER BY start",
+        (since,),
+    ).fetchall()
+    return [Plan.from_row(row) for row in rows]
+
+
+def adopted(
+    conn: sqlite3.Connection, plan_id: int, *, google_event_id: str, calendar_id: str, now: str
+) -> Plan | None:
+    """A plan kept here is on Google now, as this event of this calendar."""
+    conn.execute(
+        "UPDATE plans SET google_event_id = ?, calendar_id = ?, updated_at = ? WHERE id = ?",
+        (google_event_id, calendar_id, now, plan_id),
+    )
+    return get(conn, plan_id)
+
+
+def ask_again(conn: sqlite3.Connection, plan_id: int) -> None:
+    """Forget that a plan was checked the evening before and asked about after: it moved, and its
+    new day has both still to come (plan_service.changed)."""
+    conn.execute(
+        "UPDATE plans SET checked_at = NULL, followed_up_at = NULL WHERE id = ?", (plan_id,)
+    )
 
 
 def mark_followed_up(conn: sqlite3.Connection, plan_id: int, *, now: str | None = None) -> None:

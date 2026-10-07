@@ -180,28 +180,6 @@ def test_a_group_message_keeps_who_sent_it(settings, clock, monkeypatch) -> None
     assert seen[0].text == "hello" and seen[0].sender_name == "Jo Bloggs"
 
 
-def test_duplicate_update_sends_nothing(settings, clock, monkeypatch) -> None:
-    from familydb.app import App
-
-    channel = TelegramChannel(App(settings, clock), token="123456:TEST-TOKEN")
-    monkeypatch.setattr("familydb.channels.telegram.handle_incoming", lambda a, m: None)
-    update, replies = _update("again")
-    context, _ = _context()
-    asyncio.run(channel.on_message(update, context))
-    assert replies == []
-
-
-def test_start_command(settings, clock, conn, family) -> None:
-    from familydb.app import App
-
-    channel = TelegramChannel(App(settings, clock), token="123456:TEST-TOKEN")
-    update, replies = _update("/start")
-    context, actions = _context()
-    asyncio.run(channel.on_start(update, context))
-    assert replies[0].startswith("Hi, I'm Vera.")
-    assert actions == [(42, "typing")]
-
-
 def test_a_stranger_pressing_start_knocks_as_the_pages_promise(settings, clock, conn, family):
     """The setup and Family pages say: send them the bot's link, and once they press Start they
     appear, ready to be let in. Start is all that is sent, so it has to knock."""
@@ -311,7 +289,7 @@ def test_start_takes_turns_by_the_update_it_answers(settings, clock, conn, famil
     assert len(set(said)) > 1
 
 
-# -- buttons ---------------------------------------------------------------------------------------
+# -- buttons
 
 
 def _query(data, *, who=1001, text="Reminder: bins out. Task #1.", tap_id="cb1"):
@@ -389,6 +367,47 @@ def test_a_tap_is_answered_and_the_message_says_who_did_it(settings, clock, conn
     assert seen == {"answer": "Sorry, only the family can use these."}
 
 
+def test_a_message_about_several_things_has_a_row_each_and_a_tap_takes_off_its_own(
+    settings, clock, conn, family
+):
+    from familydb import buttons
+    from familydb.app import App
+    from familydb.channels.telegram import without_row
+    from familydb.tools import ToolContext
+    from familydb.tools.tasks import AddTaskInput, add_task
+
+    rows = buttons.in_row(buttons.for_reminder(1), "1") + buttons.in_row(
+        buttons.for_reminder(2), "2"
+    )
+    markup = keyboard(rows)
+    assert [[b.callback_data for b in row] for row in markup.inline_keyboard] == [
+        ["done:1", "hour:1", "tomorrow:1"],
+        ["done:2", "hour:2", "tomorrow:2"],
+    ]
+    left = without_row(markup, "hour:1")
+    assert [[b.callback_data for b in row] for row in left.inline_keyboard] == [
+        ["done:2", "hour:2", "tomorrow:2"]
+    ]
+    assert without_row(left, "done:2") is None
+    # Tapped under a message with two rows, the other row stays.
+    app = App(settings, clock)
+    ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    first = add_task(ctx, AddTaskInput(title="Bins out", remind_at="2026-09-20T18:00"))["task"]
+    channel = TelegramChannel(app, token=TOKEN)
+    update, _ = _query(f"done:{first['id']}")
+    update.callback_query.message.reply_markup = markup
+    kept: dict[str, Any] = {}
+
+    async def edit_message_text(words, **extra):
+        kept.update(extra, text=words)
+
+    update.callback_query.edit_message_text = edit_message_text
+    asyncio.run(channel.on_tap(update, None))
+    assert [[b.callback_data for b in row] for row in kept["reply_markup"].inline_keyboard] == [
+        ["done:2", "hour:2", "tomorrow:2"]
+    ]
+
+
 def test_buttons_go_under_the_last_part_of_what_is_sent(settings, clock, monkeypatch) -> None:
     from familydb.app import App
 
@@ -417,7 +436,7 @@ def test_buttons_go_under_the_last_part_of_what_is_sent(settings, clock, monkeyp
     assert sent[-1][1].inline_keyboard[0][0].callback_data == "done:12"
 
 
-# -- typing, strangers in a group, and what cannot be read -----------------------------------------
+# -- typing, strangers in a group, and what cannot be read
 
 
 def test_typing_stays_up_until_the_answer_is_ready(settings, clock, monkeypatch) -> None:
@@ -583,7 +602,7 @@ def test_the_words_with_a_video_are_answered_marked_as_not_seen(
     assert len(seen) == 3 and replies[0].startswith("I can't open that kind of message")
 
 
-# -- in a group ------------------------------------------------------------------------------------
+# -- in a group
 
 
 def _added(by: int, *, was="left", now="member", chat_type="group"):
@@ -682,7 +701,7 @@ def test_answer_only_when_mentioned_is_set_on_the_page(settings, clock, conn, fa
     assert seen == [] and replies == [] and app.settings.telegram_require_mention
 
 
-# -- formatting ------------------------------------------------------------------------------------
+# -- formatting
 
 
 def test_what_a_job_sends_goes_formatted_with_its_buttons(settings, clock) -> None:

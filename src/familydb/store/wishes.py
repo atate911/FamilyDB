@@ -14,7 +14,7 @@ OCCASIONS: tuple[Occasion, ...] = ("christmas", "birthday")
 Status = Literal["open", "granted", "declined", "withdrawn", "turned_away"]
 Concern = Literal["rule", "sibling", "inappropriate", "too_many"]
 Review = Literal["none", "offered", "asked"]
-# What a change may set; everything else is the service's own bookkeeping or fixed at the start.
+# What a change may set; the rest is bookkeeping or fixed at the start.
 CHANGEABLE = frozenset(
     {
         "occasion",
@@ -67,7 +67,7 @@ class Wish(BaseModel):
 
 
 def normalize_topic(topic: str) -> str:
-    """A topic as it is compared: the same folding as a title, cut to a short key."""
+    """A topic as compared: folded like a title, cut short."""
     return normalize_title(topic)[:MAX_TOPIC].strip()
 
 
@@ -119,7 +119,7 @@ def get(conn: sqlite3.Connection, wish_id: int) -> Wish | None:
 
 
 def update(conn: sqlite3.Connection, wish_id: int, changes: dict[str, Any], *, now: str) -> Wish:
-    """Set these fields and move the revision on, so a form drawn before is refused."""
+    """Set these fields and bump the revision, so a form drawn before is refused."""
     unknown = set(changes) - CHANGEABLE
     if unknown:
         raise ValueError(f"unknown wish fields: {sorted(unknown)}")
@@ -140,7 +140,7 @@ def update(conn: sqlite3.Connection, wish_id: int, changes: dict[str, Any], *, n
 
 
 def open_list(conn: sqlite3.Connection, member_id: int, occasion: Occasion | None) -> list[Wish]:
-    """One of her lists as she ordered it: the open wishes, top first."""
+    """One of her lists as ordered: open wishes, top first."""
     rows = conn.execute(
         f"{_SELECT} WHERE member_id = ? AND occasion IS ? AND status = 'open' ORDER BY rank, id",
         (member_id, occasion),
@@ -195,8 +195,8 @@ def last_wording(conn: sqlite3.Connection, member_id: int, kind: str) -> str | N
 
 
 def topics(conn: sqlite3.Connection, member_id: int, now: str) -> list[tuple[str, str | None]]:
-    """Her topics as the bot is told them: those locked on her everyday list, with when they
-    unlock, then the ones open on any list, each once."""
+    """Her topics as the bot is told them: locked ones on her everyday list (with unlock time),
+    then open ones, each once."""
     locked = conn.execute(
         "SELECT topic, max(locked_until) FROM wishes WHERE member_id = ? AND occasion IS NULL "
         "AND status = 'declined' AND locked_until > ? GROUP BY topic ORDER BY min(id)",
@@ -214,7 +214,6 @@ def topics(conn: sqlite3.Connection, member_id: int, now: str) -> list[tuple[str
 
 
 def renumber(conn: sqlite3.Connection, ordered: list[int]) -> None:
-    """Give these wishes the ranks 1, 2, 3… in this order. Only the order is theirs to change,
-    so the revision is left alone: a move never makes somebody else's form stale."""
+    """Rank these wishes 1, 2, 3... in order; the revision stays, so a move never stales a form."""
     for rank, wish_id in enumerate(ordered, start=1):
         conn.execute("UPDATE wishes SET rank = ? WHERE id = ?", (rank, wish_id))

@@ -1,24 +1,23 @@
 {% extends 'base.html' %}
 {% from "_ui.html" import icon, page_head %}
 {% block title %}What {{ assistant }} remembers · {{ site_title }}{% endblock %}
-{# What the family has told her about itself, as she is given it: a must is weighed as a rule, a
-   guess only leans. Forgetting keeps the words, marked, so they are never saved again from what
-   was said before; the forms are edits.py's, through the `remember` tool. #}
+{# What she has been told about the family: a must is weighed as a rule, a guess only leans. Forgetting keeps the words, marked, so they are never saved again; the forms are edits.py's, through `remember`. #}
 {% block content %}
 {{ page_head('What %s remembers'|format(assistant),
              'What the family has told %s about itself, weighed whenever it bears on a question. Forget something here and it does not come back from what was said before.'|format(assistant),
              'heart') }}
 
 {% for group in groups %}
-  <section class="panel memory-group">
+  <section class="panel">
     <h2>{{ icon('family' if group.family else 'user') }}{{ group.who }}</h2>
     <ul class="plain memories">
       {% for row in group.rows %}
-        <li class="memory{{ ' firm' if row.firm }}{{ ' ended' if row.ended }}">
-          <div class="memory-body">
+        <li class="memory{{ ' ended' if row.ended }}">
+          <div>
             <p class="memory-fact">
               <strong>{{ row.fact }}</strong>
               {% if row.firm %}<span class="tag warn">must</span>{% endif %}
+              {% if row.held %}<span class="tag">{{ row.held }}</span>{% endif %}
               {% if row.guess %}<span class="tag">a guess</span>{% endif %}
               {% if row.until %}<span class="tag">{{ 'ended' if row.ended else 'until' }} {{ row.until }}</span>{% endif %}
               <span class="tag">{{ row.kind }}</span>

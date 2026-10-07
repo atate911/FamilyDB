@@ -33,6 +33,22 @@
       yourself first</a>.</p>
   {% endif %}
 
+  {% if notices %}
+    {# Turned on and off by static/push.js, which says how it stands; with scripts off it says why nothing happens. #}
+    <section class="panel" id="notices" data-push data-key="{{ notices.key }}" data-csrf="{{ csrf_token() }}"
+      data-on="{{ url_for('family.push_on') }}" data-off="{{ url_for('family.push_off') }}"
+      data-is-on="{{ notices.words.is_on }}" data-is-off="{{ notices.words.is_off }}" data-unable="{{ notices.words.unable }}"
+      data-refused="{{ notices.words.refused }}" data-failed="{{ notices.words.failed }}">
+      <h2>Notifications on this device</h2>
+      <p class="muted">When {{ assistant }} writes of her own accord (a reminder, the morning message), a notice on this phone, tablet or computer says she has a message. Never her words: those stay here.</p>
+      <p data-push-state role="status">This needs the page's scripts, which are off.</p>
+      <button type="button" data-push-on hidden>Turn on for this device</button>
+      <button type="button" data-push-off hidden>Turn off on this device</button>
+      {% if notices.devices %}<p class="muted small">On for {{ notices.devices }} device{{ '' if notices.devices == 1 else 's' }} of yours.</p>{% endif %}
+    </section>
+    <script src="{{ url_for('static', filename='push.js') }}" defer></script>
+  {% endif %}
+
   <ul class="tips">
     <li>At least {{ own.least }} characters. A short sentence is easy to remember and hard to
       guess, like <em>pancakes on sunday mornings</em>.</li>
