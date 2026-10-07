@@ -29,8 +29,12 @@ def _nodes(tree):
 
 
 def _file(node) -> Path:
+    """A page is `slug.md`, or `slug/index.md` for a section."""
     slug = node["slug"]
-    return wiki.CONTENT_DIR / (f"{slug}/index.md" if node.get("children") else f"{slug}.md")
+    for found in (wiki.CONTENT_DIR / f"{slug}.md", wiki.CONTENT_DIR / slug / "index.md"):
+        if found.is_file():
+            return found
+    return wiki.CONTENT_DIR / f"{slug}.md"
 
 
 def _kid(app, sam, family):  # noqa: F811
