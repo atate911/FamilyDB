@@ -577,8 +577,8 @@ Kept on a home screen, the page opens full-screen, with the mark as its icon.
 
 - **The sidebar** (desktop): the mark and wordmark, the pill for grown-ups, then the nav, each
   place with its icon and a badge where something needs someone. An admin's ends with **Behind the
-  scenes**: Status, Settings, Family; a parent's has Status alone, since Status is for every
-  grown-up and Settings and Family are an admin's. At the foot (`.me`), who is signed in, then
+  scenes**: Status, Guide, Settings, Family; a parent's has Status and Guide, since those are for
+  every grown-up and Settings and Family are an admin's. At the foot (`.me`), who is signed in, then
   **Look** (theirs, on every device), **Your password** and Sign out, a POST button.
 - **Home.** A small greeting and the day, then the big line, what is coming and what is late,
   with links. Then the Ask card. Beside it **Next up** (the next plan with a large date tile, its
@@ -625,6 +625,14 @@ Kept on a home screen, the page opens full-screen, with the mark as its icon.
   Calendar, Looking things up, each a sentence, a tag and at most one action, worked out once
   (`health(area)`) so no two pages disagree. For an admin, recent activity, each line a link to
   that message's history: the words, the model calls as a table, each tool folded open on glass.
+- **The guide** (`/wiki`, grown-ups; a kid is refused as on Status, and the item is not in her
+  menu). The project's own pages in the page's frame: a search box on top (a plain GET form that
+  needs no script), the sections down the side (the open branch shown, the rest at their top
+  level; behind a **Sections** button on a phone, a hidden checkbox doing the work), then the
+  crumbs, two tags (who it is for, how deep), "On this page", the article (`.wiki-prose`, Markdown
+  from disk, so every element it can make is styled there) and "See also". Tables are plain,
+  never centred by Markdown, whose alignment is an inline style the policy blocks. Results are a
+  card each, with the hit marked. No model is asked.
 - **Settings** (admin). A row per page (`.slist` › `.srow`) with how it stands, "Needs a look"
   only when the page would say so. Each page (`.settings-layout`) has the crumb, every other page
   down the side above 1000 pixels, and its groups as cards (`.sgroup`). A box (`.setting`) shows
