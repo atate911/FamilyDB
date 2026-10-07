@@ -5,13 +5,18 @@ when one comes round (jobs/nudges.py) its words are read against a short list: d
 weekdays, morning, afternoon, evening. Any other word ("before Christmas", "after school", "next
 Saturday") means not read at all, so a nudge never comes at a time the family did not mean and
 the task stays as it was.
+
+Two more are read whole. Free time ("next time I have some free time", "whenever we get a
+chance") is any day the calendar has two hours free (`FREE_TIME`). "This weekend" and "sometime
+this week" end on that week's Sunday, worked out from the day they were said and kept with the
+task (`until`, `tasks.window_until`); past it, or with no day to count from, they are not read.
 """
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 WEEKDAYS = frozenset(range(5))
@@ -48,6 +53,16 @@ _PART_WORDS = {
     "nights": "evening",
 }
 _BOTH = {"weeknight": (WEEKDAYS, "evening"), "weeknights": (WEEKDAYS, "evening")}
+# Said whole, nothing else with it.
+FREE_TIME = re.compile(
+    r"(?:(?:the )?next time|whenever|when) (?:i|we) (?:have|get|find|have got|'ve got) "
+    r"(?:(?:some|a bit of|a little|any) )?(?:(?:free|spare) )?(?:time|a (?:chance|minute|moment))"
+    r"|(?:(?:the )?next time|whenever|when) (?:i'm|i am|we're|we are) free"
+    r"|(?:(?:some|a bit of|a little|any) )?(?:free|spare) time"
+    r"|(?:in|during) (?:my|our) (?:free|spare) time"
+)
+FREE_TIME_MINUTES = 120
+THIS = re.compile(r"\bthis (weekend|week)\b")
 _FILLER = frozenset(
     {"a", "an", "and", "any", "of", "one", "or", "some", "the", "these", "those"}
     | {"at", "day", "days", "during", "in", "on", "over", "sometime", "time", "week"}
@@ -59,9 +74,15 @@ _FILLER = frozenset(
 class Window:
     days: frozenset[int]
     parts: tuple[str, ...]
+    # The last day it holds ("this weekend"); None for every week.
+    until: date | None = None
+    # How long the calendar must be free for it to come up.
+    min_free: int = LEAD
 
     def open_at(self, moment: datetime) -> str | None:
         if moment.weekday() not in self.days:
+            return None
+        if self.until is not None and moment.date() > self.until:
             return None
         minute = moment.hour * 60 + moment.minute
         for part in self.parts:
@@ -74,6 +95,8 @@ class Window:
         """The window as the page and the model say it ("a Saturday morning", "a weekend day");
         `before` goes after the article ("a free evening").
         """
+        if self.min_free > LEAD:
+            return f"a day with {_hours(self.min_free)} free"
         days = self.days
         if days == EVERY_DAY:
             named = ""
@@ -89,16 +112,50 @@ class Window:
         else:
             said = "weekend day" if days == WEEKEND else named or "day"
         said = f"{before} {said}".strip()
+        if self.until is not None:  # "a free weekend day by Sun 27 Sep"
+            said += f" by {DAYS[self.until.weekday()][:3]} {self.until.day} {self.until:%b}"
         return f"{'an' if said[0].lower() in 'aeiou' else 'a'} {said}"
 
     def now_words(self, moment: datetime, part: str) -> str:
         day = DAYS[moment.weekday()]
+        if self.min_free > LEAD:
+            hour = moment.hour
+            now = "morning" if hour < 12 else "afternoon" if hour < 17 else "evening"
+            return f"{day} {now}, with {_hours(self.min_free)} free"
         return day if part == "day" else f"{day} {part}"
 
 
-def read(text: str) -> Window | None:
-    """The window in these words, or None when any word is unknown or none says when."""
-    words = re.sub(r"['\u2019]s\b", "", text.lower())
+def _hours(minutes: int) -> str:
+    return {120: "two hours", 180: "three hours"}.get(minutes, f"{minutes} minutes")
+
+
+def until(text: str, said_on: date) -> date | None:
+    """The last day "this weekend" or "this week" in a window means, said on `said_on`: that
+    week's Sunday. None when it names neither."""
+    if THIS.search(_plain(text)) is None:
+        return None
+    return said_on + timedelta(days=6 - said_on.weekday())
+
+
+def _plain(text: str) -> str:
+    folded = text.lower().replace("\u2019", "'")
+    return " ".join(re.sub(r"[^a-z' ]+", " ", folded).split())
+
+
+def read(text: str, *, until: date | None = None, today: date | None = None) -> Window | None:
+    """The window in these words, or None when any word is unknown or none says when. `until`
+    is the day "this weekend" or "this week" ends, kept from when it was said; with none, or
+    `today` past it, those are not read."""
+    plain = _plain(text)
+    if FREE_TIME.fullmatch(plain):
+        return Window(EVERY_DAY, ("day",), min_free=FREE_TIME_MINUTES)
+    this = THIS.search(plain)
+    if this is not None:
+        if until is None or (today is not None and today > until):
+            return None
+        rest = " weekend " if this.group(1) == "weekend" else " "
+        plain = plain[: this.start()] + rest + plain[this.end() :]
+    words = re.sub(r"'s\b", "", plain)
     days: set[int] = set()
     parts: set[str] = set()
     for word in re.split(r"[^a-z]+", words):
@@ -114,7 +171,7 @@ def read(text: str) -> Window | None:
             parts.add(part)
         else:
             return None
-    if re.search(r"\d", text) or (not days and not parts):
+    if re.search(r"\d", text) or (not days and not parts and this is None):
         return None
     ordered = tuple(part for part in PARTS if part in parts) or ("day",)
-    return Window(frozenset(days) or EVERY_DAY, ordered)
+    return Window(frozenset(days) or EVERY_DAY, ordered, until if this else None)

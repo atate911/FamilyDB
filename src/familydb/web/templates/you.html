@@ -35,6 +35,23 @@
         <p class="empty">{{ icon('people') }}<span>There is no admin on the family list yet, and an admin is the first to have a password of their own. <a href="{{ url_for('setup.step', name='you') }}">Add yourself first</a>.</span></p>
       </section>
     {% endif %}
+    {% if notices %}
+      {# Turned on and off by static/push.js, which says how it stands; with scripts off it says why nothing happens. #}
+      <section class="card" id="notices" aria-labelledby="h-notices" data-push data-key="{{ notices.key }}" data-csrf="{{ csrf_token() }}"
+        data-on="{{ url_for('family.push_on') }}" data-off="{{ url_for('family.push_off') }}"
+        data-is-on="{{ notices.words.is_on }}" data-is-off="{{ notices.words.is_off }}" data-unable="{{ notices.words.unable }}"
+        data-refused="{{ notices.words.refused }}" data-failed="{{ notices.words.failed }}">
+        <h2 class="card__head" id="h-notices">{{ icon('bell') }}Notifications on this device</h2>
+        <p class="mb-4">When {{ assistant }} writes of her own accord (a reminder, the morning message), a notice on this phone, tablet or computer says she has a message. Never her words: those stay here.</p>
+        <p class="note" data-push-state role="status">This needs the page’s scripts, which are off.</p>
+        <div class="actions">
+          <button class="btn btn--primary" type="button" data-push-on hidden>{{ icon('bell') }}Turn on for this device</button>
+          <button class="btn btn--quiet" type="button" data-push-off hidden>{{ icon('belloff') }}Turn off on this device</button>
+        </div>
+        {% if notices.devices %}<p class="small muted mt-3">On for {{ notices.devices }} device{{ '' if notices.devices == 1 else 's' }} of yours.</p>{% endif %}
+      </section>
+      <script src="{{ url_for('static', filename='push.js') }}" defer></script>
+    {% endif %}
     <aside class="aside-stack" aria-label="Good to know">
       <section class="card" aria-labelledby="h-tips"><h2 class="card__head" id="h-tips">Good to know</h2>
         <ul class="tips">

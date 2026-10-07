@@ -16,16 +16,21 @@ def log_suggestion(
     window_start: str | None,
     window_end: str | None,
     candidates: list[Candidate],
+    shown: set[int],
     finds: list[WebFind],
     now: str,
 ) -> int:
+    """Every verdict, and which the model was shown: only those count as suggested, so asking
+    again brings up the others (`suggestions.recently_suggested`)."""
     with transaction(conn):
         row = suggestions.insert(
             conn,
             asked_by=asked_by,
             window_start=window_start,
             window_end=window_end,
-            candidates=[c.model_dump(mode="json") for c in candidates],
+            candidates=[
+                {**c.model_dump(mode="json"), "shown": c.idea_id in shown} for c in candidates
+            ],
             web_finds=[f.model_dump(mode="json") for f in finds],
             now=now,
         )

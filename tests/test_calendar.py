@@ -8,6 +8,7 @@ from familydb.free_time import free_blocks, on_day
 from familydb.integrations.google_calendar import CalendarEvent, event_body, parse_event
 from familydb.store import ideas, messages, plans
 from familydb.tools import ToolContext, ToolRegistry
+from familydb.tools.gcal import KEPT_HERE
 from tests import fakes
 from tests.conftest import NOW_ISO, TZ, call
 
@@ -124,7 +125,42 @@ def test_calendar_tools_report_unavailable_without_a_client(
         calendar=fakes.FakeCalendar(TZ),
     )
     result, data = _call(registry, plain, "get_calendar", start="2026-09-26", end="2026-09-27")
-    assert not result.is_error and data["available"] is False  # settings say not configured
+    # Settings say no Google calendar: the plans kept here are the calendar, not the client.
+    assert not result.is_error and data["calendar"] is None and data["plans"] == KEPT_HERE
+
+
+def test_without_google_a_plan_is_kept_here_and_goes_on_it_once_connected(
+    registry, conn, settings, calendar_settings, clock, family
+) -> None:
+    """No Google calendar: a plan is still made, seen, moved and cancelled, here, holding the id
+    its event will have. Once a calendar is connected, the plans still to come go on it with that
+    id, once; and a plan on Google is not changed here alone while Google cannot be reached."""
+    here = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    _, made = _call(registry, here, "create_event", title="Symphony", start="2026-09-26T20:00")
+    plan = made["plan"]
+    assert made["calendar"] == KEPT_HERE
+    assert plan["calendar_id"] is None and plan["google_event_id"]
+    _, seen = _call(registry, here, "get_calendar", start="2026-09-26", end="2026-09-26")
+    [event] = seen["days"][0]["events"]
+    assert (event["title"], event["plan_id"]) == ("Symphony", plan["id"])
+    assert "evening" not in seen["days"][0]["free"]  # the plan takes the evening up
+    _, moved = _call(registry, here, "update_event", plan_id=plan["id"], start="2026-09-27T20:00")
+    assert moved["plan"]["start"].startswith("2026-09-27T20:00")
+    _, gone = _call(registry, here, "create_event", title="Zoo", start="2026-09-28T10:00")
+    _call(registry, here, "update_event", plan_id=gone["plan"]["id"], status="cancelled")
+
+    calendar = fakes.FakeCalendar(TZ)
+    there = _ctx(conn, calendar_settings, clock, family, calendar)
+    _call(registry, there, "search_plans", query="")  # looking puts it on Google first
+    stored = plans.get(conn, plan["id"])
+    assert stored.calendar_id == calendar_settings.google_calendar_id
+    assert [e.title for e in calendar.events.values()] == ["Symphony"]  # not the cancelled one
+    _call(registry, there, "search_plans", query="")
+    assert len(calendar.events) == 1  # once
+
+    result, data = _call(registry, here, "update_event", plan_id=plan["id"], title="Symphony!")
+    assert not result.is_error and data["available"] is False
+    assert "not connected now" in data["reason"]
 
 
 def test_create_event_links_idea_and_stores_plan(

@@ -15,10 +15,10 @@ from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from typing import Any
 
-from familydb import audience, presents, voice
+from familydb import audience, plan_service, presents, routing, voice
 from familydb.dates import clock_time, utc_iso
 from familydb.errors import ToolError
-from familydb.store import ideas, members, messages, tasks, wishes
+from familydb.store import ideas, members, messages, plans, tasks, wishes
 from familydb.store.db import transaction
 from familydb.store.ideas import Idea
 from familydb.store.tasks import Task
@@ -100,6 +100,9 @@ def create(
             gift_for=values.get("gift_for"),
             created_by_member_id=values.get("created_by_member_id"),
             idea_id=values.get("idea_id"),
+            plan_id=values.get("plan_id"),
+            plan_remind=values.get("plan_remind"),
+            window_until=values.get("window_until"),
         )
         if reminder:
             tasks.add_reminder(conn, task_id, reminder)
@@ -161,7 +164,10 @@ def update(
                 tasks.add_reminder(conn, task_id, reminder)
         if round_done and rule is not None and rule["repeat_from"] == "schedule":
             _add_next(conn, task_id, rule, after=datetime.fromisoformat(now), zone=zone)
-        allowed = {"title", "notes", "owner_id", "due_at", "preferred_window", "status", "gift_for"}
+        allowed = {
+            *("title", "notes", "owner_id", "due_at", "preferred_window", "window_until"),
+            *("status", "gift_for"),
+        }
         changes = {key: value for key, value in values.items() if key in allowed}
         changes.update(columns)
         if round_done:
@@ -181,7 +187,13 @@ def update(
                 (queued.channel, queued.chat_id) if queued else (latest.channel, latest.chat_id)
             )
             words = reminder_for(
-                conn, latest, settings, channel=channel, chat_id=chat_id, due_when=due_when
+                conn,
+                latest,
+                settings,
+                channel=channel,
+                chat_id=chat_id,
+                due_when=due_when,
+                at=datetime.fromisoformat(now),
             )
             tasks.reword_queued(conn, task_id, words)
         return latest
@@ -319,13 +331,16 @@ def reminder_for(
     *,
     channel: str,
     chat_id: str,
+    at: datetime,
     due_when: str | None = None,
 ) -> str:
+    """The reminder for `task` as it goes to this chat at `at`: `reminder_text`, with who asked
+    for it and when its plan is, if it has one."""
     gifts = gifts_for(conn, task)
     readers = {member.id for member in audience.readers(conn, channel, chat_id)}
     kept = presents.of_presents(conn, gifts, members.list_all(conn))
     shown = [idea for idea in gifts if not (kept[idea.id].ids & readers)]
-    return reminder_text(
+    words = reminder_text(
         task,
         settings,
         due_when=due_when,
@@ -337,6 +352,18 @@ def reminder_for(
         presents=audience.everyone_may(conn, channel, chat_id, "decide")
         and len(shown) == len(gifts),
     )
+    # Set for them by somebody else, and reaching them on their own: say who asked, so a reminder
+    # does not arrive from nowhere. In a group the "(Alex)" in it already says whose it is.
+    asker = tasks.creators(conn, [task.id]).get(task.id)
+    if task.owner and asker and asker != task.owner and not routing.is_group(channel, chat_id):
+        seed = f"{task.id}:{task.reminder.id if task.reminder else ''}"
+        words += "\n" + voice.say(settings, "reminder_from", seed=seed, asker=asker)
+    plan = plans.get(conn, task.plan_id) if task.plan_id is not None else None
+    if plan is not None and plan.status != "cancelled":
+        when = plan_service.when_words(plan, at, settings.tzinfo)
+        seed = f"{task.id}:{task.reminder.id if task.reminder else ''}"
+        words += "\n" + voice.say(settings, "reminder_plan", seed=seed, when=when)
+    return words
 
 
 def reminder_text(

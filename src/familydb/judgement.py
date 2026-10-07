@@ -287,6 +287,7 @@ def _weigh(
         settings=app.settings,
         clock=app.clock,
         about=f"weighing {len(questions)} change{'s' if len(questions) != 1 else ''}",
+        source="job",
     )
     ctx.scratch["questions"] = asked
     request = "Answer each question with give_judgement, choosing among its options:\n" + to_json(
@@ -329,6 +330,7 @@ def _check_price(app: Any, conn: sqlite3.Connection, question: store.Judgement, 
         settings=app.settings,
         clock=app.clock,
         about=f"the price of {facts['model']}",
+        source="job",
     )
     ctx.scratch["price_of"] = facts["model"]
     company = alerts.COMPANY_NAMES.get(facts["company"], facts["company"])

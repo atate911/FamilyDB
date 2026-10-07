@@ -24,6 +24,19 @@ WEB_SHARED = "web"
 WEB_PRIVATE = "member:"
 
 
+def private_chat(member_id: int) -> str:
+    """A kid's own conversation on the page, by its chat id."""
+    return f"{WEB_PRIVATE}{member_id}"
+
+
+def page_chat(member: Member) -> tuple[str, str]:
+    """The conversation somebody has on the page, as (channel, chat id): a kid, who may not decide
+    for the others, her own; everybody else the family's (web/chat.my_chat asks this too)."""
+    if roles.may(member.role, "decide"):
+        return "web", WEB_SHARED
+    return "web", private_chat(member.id)
+
+
 def readers(
     conn: sqlite3.Connection, channel: str, chat_id: str, sender: Member | None = None
 ) -> list[Member]:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import date
 from typing import Any, Literal
 
 from pydantic import BaseModel
@@ -32,6 +33,8 @@ class Task(BaseModel):
     owner: str | None = None
     due_at: str | None = None
     preferred_window: str = ""
+    # The last day "this weekend" in preferred_window means (windows.until), YYYY-MM-DD.
+    window_until: str | None = None
     status: Literal["open", "done", "cancelled"] = "open"
     revision: int = 1
     # Coming round again (task_service.py): all four set, or none.
@@ -45,6 +48,9 @@ class Task(BaseModel):
     # The idea it is about; a present's to-do is kept from whoever the present is (presents.py).
     idea_id: int | None = None
     nudged_at: str | None = None
+    # A reminder tied to a plan, and which (plan_service.REMIND_BEFORE): it moves with the plan.
+    plan_id: int | None = None
+    plan_remind: str | None = None
     channel: str
     chat_id: str
     created_at: str
@@ -54,6 +60,11 @@ class Task(BaseModel):
     @property
     def repeats(self) -> bool:
         return self.repeat_every is not None and self.repeat_unit is not None
+
+    @property
+    def until(self) -> date | None:
+        """The last day its window holds, when it said "this weekend" (windows.read)."""
+        return date.fromisoformat(self.window_until) if self.window_until else None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row, reminder: Reminder | None) -> Task:
@@ -90,6 +101,12 @@ def list_all(
     return [task for row in rows if (task := get(conn, row["id"])) is not None]
 
 
+def everything(conn: sqlite3.Connection) -> list[Task]:
+    """Every task, whatever became of it, oldest first: for the spreadsheet (export.py)."""
+    rows = conn.execute("SELECT id FROM tasks ORDER BY id").fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
 def in_chat(
     conn: sqlite3.Connection, channel: str, chat_id: str, *, limit: int = 100
 ) -> list[Task]:
@@ -100,6 +117,33 @@ def in_chat(
         (channel, chat_id, limit),
     ).fetchall()
     return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def linked_to(conn: sqlite3.Connection, plan_id: int) -> list[Task]:
+    """The open reminders tied to a plan (plan_service)."""
+    rows = conn.execute(
+        "SELECT id FROM tasks WHERE plan_id=? AND status='open' ORDER BY id", (plan_id,)
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def cancel(conn: sqlite3.Connection, task_id: int, now: str) -> None:
+    """Cancel one open task with its reminders. Call inside a transaction."""
+    _cancel(conn, "SELECT id FROM tasks WHERE id = ? AND status = 'open'", (task_id,), now)
+
+
+def finish_linked(conn: sqlite3.Connection, *, ended_before: str, now: str) -> int:
+    """Mark done the open reminders tied to a plan that ended before `ended_before` (a date),
+    cancelling any reminder of theirs not yet sent; returns how many. Dates compare as the
+    plans' own (`plans.due_for_follow_up`). Call inside a transaction."""
+    return _cancel(
+        conn,
+        "SELECT t.id FROM tasks t JOIN plans p ON p.id = t.plan_id WHERE t.plan_id IS NOT NULL "
+        "AND t.status = 'open' AND substr(coalesce(p.end, p.start), 1, 10) < ?",
+        (ended_before,),
+        now,
+        status="done",
+    )
 
 
 def find_by_operation(conn: sqlite3.Connection, operation_key: str) -> Task | None:
@@ -138,6 +182,9 @@ def insert(
     gift_for: str | None = None,
     created_by_member_id: int | None = None,
     idea_id: int | None = None,
+    plan_id: int | None = None,
+    plan_remind: str | None = None,
+    window_until: str | None = None,
 ) -> int:
     """A new task. `repeat` holds the four repeat_ columns, when it comes round again."""
     row = {
@@ -155,6 +202,8 @@ def insert(
         **({"gift_for": gift_for} if gift_for else {}),
         **({"created_by_member_id": created_by_member_id} if created_by_member_id else {}),
         **({"idea_id": idea_id} if idea_id else {}),
+        **({"plan_id": plan_id, "plan_remind": plan_remind} if plan_id is not None else {}),
+        **({"window_until": window_until} if window_until else {}),
     }
     cur = conn.execute(
         f"INSERT INTO tasks({','.join(row)}) VALUES ({','.join('?' * len(row))})",
@@ -211,21 +260,120 @@ def cancel_reminders(conn: sqlite3.Connection, task_id: int, now: str) -> None:
 def cancel_in_chat(conn: sqlite3.Connection, channel: str, chat_id: str, now: str) -> int:
     """Cancel every open task in one chat with its reminders (somebody taken off the list);
     returns how many. Call inside a transaction."""
-    open_ids = [
-        int(row["id"])
-        for row in conn.execute(
-            "SELECT id FROM tasks WHERE channel = ? AND chat_id = ? AND status = 'open'",
-            (channel, chat_id),
-        )
-    ]
+    return _cancel(
+        conn,
+        "SELECT id FROM tasks WHERE channel = ? AND chat_id = ? AND status = 'open'",
+        (channel, chat_id),
+        now,
+    )
+
+
+def cancel_owned_by(conn: sqlite3.Connection, member_id: int, now: str) -> int:
+    """Cancel the open tasks somebody owns that were asked for outside a group (on the page, or
+    in somebody's own chat), with their reminders. Taking them off the list would leave each
+    nobody's, which is everyone's, and send their errand to the family's chat
+    (routing.for_task). One asked for in a group stays there, the family's, as it always has.
+    Returns how many. Call inside a transaction."""
+    return _cancel(
+        conn,
+        "SELECT id FROM tasks WHERE owner_id = ? AND status = 'open' "
+        "AND NOT (channel = 'telegram' AND chat_id LIKE '-%')",
+        (member_id,),
+        now,
+    )
+
+
+def open_for(
+    conn: sqlite3.Connection, channel: str, chat_id: str, member_id: int | None, *, limit: int = 100
+) -> list[Task]:
+    """Open tasks asked for in this chat and, wherever they were asked for, this person's own:
+    what /tasks and /today list, so a task Sam set for Alex is on Alex's list too."""
+    rows = conn.execute(
+        "SELECT id FROM tasks WHERE status='open' AND ((channel=? AND chat_id=?) "
+        "OR (? IS NOT NULL AND owner_id=?)) ORDER BY due_at IS NULL, due_at, id LIMIT ?",
+        (channel, chat_id, member_id, member_id, limit),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def _cancel(
+    conn: sqlite3.Connection,
+    query: str,
+    params: tuple[Any, ...],
+    now: str,
+    *,
+    status: Literal["cancelled", "done"] = "cancelled",
+) -> int:
+    open_ids = [int(row["id"]) for row in conn.execute(query, params)]
     for task_id in open_ids:
         cancel_reminders(conn, task_id, now)
         conn.execute(
-            "UPDATE tasks SET status = 'cancelled', revision = revision + 1, updated_at = ? "
-            "WHERE id = ?",
-            (now, task_id),
+            "UPDATE tasks SET status = ?, revision = revision + 1, updated_at = ? WHERE id = ?",
+            (status, now, task_id),
         )
     return len(open_ids)
+
+
+def unchased(
+    conn: sqlite3.Connection, *, delivered_from: str, delivered_until: str
+) -> list[tuple[int, Task]]:
+    """Reminders that went between the two times and were neither done nor snoozed nor brought
+    up since, each with its task, which does not repeat and is no plan's heads-up: what the
+    morning message chases, once (`chased_at`)."""
+    rows = conn.execute(
+        "SELECT r.id AS reminder_id, r.task_id FROM reminders r "
+        "JOIN messages m ON m.id = r.message_id JOIN tasks t ON t.id = r.task_id "
+        "WHERE m.delivered_at >= ? AND m.delivered_at < ? AND r.cancelled_at IS NULL "
+        "AND r.chased_at IS NULL AND t.status = 'open' AND t.repeat_every IS NULL "
+        "AND t.plan_id IS NULL AND (t.nudged_at IS NULL OR t.nudged_at < m.delivered_at) "
+        "ORDER BY r.remind_at",
+        (delivered_from, delivered_until),
+    ).fetchall()
+    return [
+        (int(row["reminder_id"]), task)
+        for row in rows
+        if (task := get(conn, row["task_id"])) is not None
+    ]
+
+
+def mark_chased(conn: sqlite3.Connection, reminder_ids: list[int], now: str) -> None:
+    conn.executemany(
+        "UPDATE reminders SET chased_at = ? WHERE id = ?", [(now, rid) for rid in reminder_ids]
+    )
+
+
+def due_between(conn: sqlite3.Connection, start: str, end: str) -> list[Task]:
+    """Open tasks due from `start` until before `end` (UTC instants), soonest first."""
+    rows = conn.execute(
+        "SELECT id FROM tasks WHERE status = 'open' AND due_at >= ? AND due_at < ? "
+        "ORDER BY due_at, id",
+        (start, end),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def reminded_between(conn: sqlite3.Connection, start: str, end: str) -> list[Task]:
+    """Open tasks with a reminder still to go from `start` until before `end`, soonest first."""
+    rows = conn.execute(
+        "SELECT DISTINCT t.id, r.remind_at FROM tasks t JOIN reminders r ON r.task_id = t.id "
+        "WHERE t.status = 'open' AND r.cancelled_at IS NULL AND r.message_id IS NULL "
+        "AND r.remind_at >= ? AND r.remind_at < ? ORDER BY r.remind_at, t.id",
+        (start, end),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def waiting(conn: sqlite3.Connection, *, said_before: str) -> list[Task]:
+    """Open one-off tasks said before `said_before` with no reminder still to go and no plan:
+    what the weekly round-up looks at (its window is read by the caller), oldest first."""
+    rows = conn.execute(
+        "SELECT t.id FROM tasks t WHERE t.status = 'open' AND t.repeat_every IS NULL "
+        "AND t.plan_id IS NULL AND t.created_at < ? AND NOT EXISTS (SELECT 1 FROM reminders r "
+        "WHERE r.task_id = t.id AND r.cancelled_at IS NULL AND r.message_id IS NULL) "
+        "ORDER BY t.created_at, t.id",
+        (said_before,),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
 
 
 def reword_queued(conn: sqlite3.Connection, task_id: int, text: str) -> None:

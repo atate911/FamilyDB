@@ -16,19 +16,25 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
+from familydb import health
 from familydb.alerts import run_alerts
 from familydb.app import App
-from familydb.availability import digest_configured, enrichment_available
+from familydb.availability import digest_configured, enrichment_available, happening_available
 from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.follow_ups import run_follow_ups
+from familydb.jobs.happening import run_happening
+from familydb.jobs.morning import any_on as morning_on
+from familydb.jobs.morning import run_morning
 from familydb.jobs.nudges import run_nudges
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
+from familydb.jobs.tidy import run_tidy
 from familydb.jobs.weekend_digest import run_digest
 from familydb.judgement import run_judgements
 from familydb.model_watch import run_model_watch
+from familydb.upkeep import run_upkeep
 from familydb.whereabouts import forget_old
 
 log = logging.getLogger(__name__)
@@ -104,8 +110,18 @@ def job_specs(app: App) -> list[JobSpec]:
             "plan_checks",
             "check tomorrow's plans",
             run_plan_checks,
-            CronTrigger(hour=settings.plan_check_hour, timezone=zone),
+            # From the hour until ten, so a plan made late for tomorrow is checked too; each run
+            # looks only at plans not checked yet, so a quiet evening costs one query an hour.
+            CronTrigger(hour=_until_ten(settings.plan_check_hour), timezone=zone),
             wanted=settings.plan_checks,
+            misfire_grace_time=3600,
+        ),
+        JobSpec(
+            "morning",
+            "the morning message",
+            run_morning,
+            CronTrigger(hour=settings.morning_hour, timezone=zone),
+            wanted=morning_on(settings),
             misfire_grace_time=3600,
         ),
         JobSpec(
@@ -124,13 +140,39 @@ def job_specs(app: App) -> list[JobSpec]:
             wanted=settings.judgements,
         ),
         JobSpec(
+            "happening",
+            "read what is on near home",
+            run_happening,
+            IntervalTrigger(hours=1),
+            wanted=happening_available(settings),
+        ),
+        JobSpec(
             "nudges",
             "bring up tasks kept for a part of the week",
             run_nudges,
             IntervalTrigger(minutes=NUDGE_INTERVAL_MINUTES),
             wanted=settings.task_nudges,
         ),
+        JobSpec(
+            "upkeep",
+            "check the backups and the disk",
+            run_upkeep,
+            IntervalTrigger(hours=1),
+        ),
+        JobSpec(
+            "tidy",
+            "take off ideas whose dates are past, and forget old messages' words",
+            run_tidy,
+            CronTrigger(hour=3, minute=30, timezone=zone),
+            wanted=settings.tidy_ideas or bool(settings.keep_messages_days),
+            misfire_grace_time=6 * 3600,
+        ),
     ]
+
+
+def _until_ten(hour: int) -> str:
+    """Every hour from `hour` to 22:00, as a cron field; just `hour` from ten at night on."""
+    return str(hour) if hour >= 22 else f"{hour}-22"
 
 
 def same_schedule(current: BaseTrigger, wanted: BaseTrigger) -> bool:
@@ -186,6 +228,7 @@ def apply_settings(app: App, scheduler: BaseScheduler) -> list[str]:
     moved = sync_jobs(app, scheduler)
     if moved:
         log.info("settings changed; %s", ", ".join(moved))
+    health.ticked(app)  # the jobs are running (familydb/health.py)
     return moved
 
 

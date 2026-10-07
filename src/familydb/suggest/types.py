@@ -12,6 +12,9 @@ from familydb.integrations.open_meteo import DayForecast
 from familydb.store.ideas import Idea
 
 Verdict = Literal["good", "possible", "ruled_out"]
+# What a pick is for (suggest/choosing.py): one they know and love, one new to them, one
+# further out.
+Slot = Literal["favorite", "new", "wildcard"]
 CostLevel = Literal[0, 1, 2, 3, 4]
 WindowKind = Literal["now", "today", "this_weekend", "next_weekend", "dates", "someday"]
 
@@ -55,6 +58,9 @@ class SuggestInput(BaseModel):
         description="What kind of thing, a few words: live jazz, puppet show. Empty for anything.",
     )
     discover: bool = Field(default=True, description="Also look for time-bound events on the web.")
+    prefer: Literal["new", "favorites"] = Field(
+        default="new", description="favorites for what they loved before: 'our usual'."
+    )
     question: str = Field(description="The family's question, verbatim.")
 
 
@@ -84,6 +90,13 @@ class WebFind(BaseModel):
     dates: str | None = None
     summary: str = ""
     source: str | None = None
+    # When it starts, as code reads it ("YYYY-MM-DD" or "YYYY-MM-DDTHH:MM"), when known.
+    starts: str | None = None
+    # A place found for what nothing saved fits (suggest/places.py): never checked here.
+    kind: str | None = None
+    hours: str | None = None  # as the page writes them
+    address: str | None = None
+    saved_as: int | None = None  # already on the list, as this idea
 
 
 class DaySummary(BaseModel):
@@ -104,6 +117,24 @@ class Window(BaseModel):
     label: str
 
 
+class Pick(BaseModel):
+    """One of the stronger call's picks, as the chat model is given it to word."""
+
+    ref: str  # "idea:12", or "find:2" for the second web find
+    title: str
+    slot: Slot
+    reason: str
+    day: str | None = None  # YYYY-MM-DD, when it chose one
+    idea_id: int | None = None
+    url: str | None = None
+
+
+@dataclass
+class Chosen:
+    picks: list[Pick]
+    framing: str | None = None
+
+
 class SuggestResult(BaseModel):
     window: Window
     travel_from: str = "home"  # where the travel estimates start
@@ -113,6 +144,10 @@ class SuggestResult(BaseModel):
     skipped_checks: list[str]
     not_shown: int = 0  # further ideas ranked below the ones listed
     suggestion: dict[str, int] | None = None
+    # What a stronger call chose, in order, when one did (suggest/choosing.py); None otherwise, so
+    # a result nobody chose for is what it always was.
+    picks: list[Pick] | None = None
+    framing: str | None = None
 
 
 @dataclass
@@ -124,6 +159,15 @@ class Constraints:
     max_travel_minutes: int | None = None
     max_duration_minutes: int | None = None
     topic: str = ""  # what the family asked for, for discovery only
+    avoid: list[str] = field(default_factory=list)  # idea tags a firm rule leaves out
+    # The memory behind each limit a firm rule set (suggest/rules.py), by the limit's name, or
+    # "avoid:<tag>": {"max_travel_minutes": 4}.
+    held_by: dict[str, int] = field(default_factory=dict)
+
+    def because(self, name: str) -> str | None:
+        """'m4' when memory 4 set this limit, for a reason to name it."""
+        memory = self.held_by.get(name)
+        return f"m{memory}" if memory is not None else None
 
 
 # Minutes after midnight. Without a time given, a day is counted from 08:00 to 22:00.
@@ -200,3 +244,5 @@ class Shortlisted:
     idea: Idea
     fits_days: list[date]
     weather: Literal["ok", "poor", "unknown"]
+    # Said first and making it possible at best: one disappointing visit ("rated 3/10 last time").
+    caveat: str | None = None

@@ -246,7 +246,10 @@ def test_suggest_command_prints_verdicts(env: Path) -> None:
     assert result.exit_code == 0, result.output
     assert result.output.startswith("this weekend (")
     assert "possible  #1 Board game cafe: hours unknown" in result.output
-    assert "skipped: calendar not connected; weather not configured" in result.output
+    assert (
+        "skipped: no Google calendar connected: only the plans saved here count as busy; "
+        "weather not configured" in result.output
+    )
     result = runner.invoke(app, ["suggest", "--window", "2026-10-03..2026-10-04", "--json"])
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)

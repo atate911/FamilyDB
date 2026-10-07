@@ -413,7 +413,8 @@ builds one by hand. Person classes are slots (`.p0` to `.p8`), never names.
   the past day with "Continue with Vera" (`.ask__last`).
 - **Composer** (`.composer`): writing to her anywhere else, one per page: "Writing as Sam", the
   box, Send. While she answers, rests or cannot answer, it is closed, with a slim banner saying
-  why.
+  why. The chat's composer also has
+  **Add a photo**, a plain file field under the words.
 - **Health pill** (`.pill-health`, `--busy`, `--rest`, `--down`): Vera's state, for grown-ups.
 - **Buttons** (`.btn`, `--primary`, `--quiet`, `--sm`, `--danger`) and **text buttons**
   (`.textbtn`, `.linkbtn`, `.more`, "All plans ›").
@@ -449,7 +450,10 @@ builds one by hand. Person classes are slots (`.p0` to `.p8`), never names.
   (`.receipt`) in her message says what she just did ("Added to Plans · Sun 4 Oct, 1 pm · for
   Maya and Theo"). **Weekend suggestions** (`.suggest`) are a short list in one bubble, each with
   a "Plan it" form. The **privacy line** (`.privacy`) says who can read the conversation, at
-  every width.
+  every width. Under a reminder of hers, the buttons Telegram
+  shows (Done, In an hour, Tomorrow) are a row of small quiet buttons in her bubble, one row per
+  to-do, gone once it is done; under a reply whose turn changed something, a quiet Undo, gone once
+  used or a day on. A flash carries the same Undo when what it did can be taken back.
 - **Faces** (`.faces`): "How did it go?", three labeled faces, for grown-ups.
 - **Empty state** (`.empty`): what will appear and how to start it. **Locked** (`.locked`): "Ask
   a parent".
@@ -604,11 +608,24 @@ Kept on a home screen, the page opens full-screen, with the mark as its icon.
   A plan over days is one bar (`.len2` to `.len7`), split at a week's edge (`.ev--to`,
   `.ev--from`). A one-line key under it, then Coming up and "How did it go?". The list
   (`.plans-agenda` › `.plan`) is the next 90 days by month, then Recently.
+- **What is on near home** (its name is the family's, written once in `familydb/happening.py`).
+  A third tab in Plans' Month and List switch, drawn as Plans' list is: one card, a heading a
+  day, today first, and each find a plan row with no date tile (`plan--bare`), since the day is
+  its heading. Who listed each is a quiet tag, an outside link opens apart (`noopener
+  noreferrer`), and a source that could not be read is a note above the card. For grown-ups
+  only, as Status is: Ticketmaster lists shows for adults too, and a kid's Plans has no tabs.
 - **To do.** Overdue first, under a red heading; then the rest, No date last; a tick and Edit on
   each. Edit opens the to-do's own page (title, notes, who, deadline, reminder, repeats, done):
   one short form with a way back, rather than a form unfolding inside the list, which on a phone
   pushes the list away and loses your place. A to-do remembers who set it. The add form: the box, who and when, then **Add** as a full-width bar on the desktop.
   Nobody is picked; the server says so if nobody is.
+- **Lists**, for whoever may change things (in the sidebar, and first under For the family in the
+  phone's menu, for the shop): a card per list, the shopping list first, each thing with the same
+  tick as a to-do, a box to add to it (one a line), and what was got folded away under "Got",
+  struck through, with Put back beside each and one button to clear them.
+- **Taking the data away**: one quiet link at the foot of Plans, Ideas and To do for a grown-up
+  ("Download the plans for another calendar", "…the ideas as a spreadsheet"), and on the
+  Security settings page the three, with everything in one file for an admin.
 - **The kids' lists.** For grown-ups, each kid's three lists (Every day, Christmas, Birthday,
   each with its countdown) at a glance, what Vera flagged, and the answers. One kid's page ("Maya's
   list") has the add form and one line to each thing (`.wishes` › `.wish--line`), which opens to
@@ -641,6 +658,10 @@ Kept on a home screen, the page opens full-screen, with the mark as its icon.
   calendar with that account's address, allowing Make changes to events, and paste the key file
   and the calendar's id. Nobody signs in to Google for it, and it doesn't expire.
 - **You.** "How it looks for you", then your password.
+  It also holds **Notifications on this device** for somebody signed in as themselves: one
+  sentence of what a notice says (that she has a message, never her words), a line saying how it
+  stands on this device, and one button to turn it on or off. With scripts off the line says that
+  it needs them.
 - **Sign in.** The pane, then your name and your password, both typed. The family is never
   listed, and a wrong name gets the same answer as a wrong password. While the family still shares
   one password, every box asks who it is from, and nobody is picked.

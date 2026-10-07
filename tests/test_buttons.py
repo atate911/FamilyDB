@@ -10,7 +10,7 @@ from familydb.store import db, ideas, messages, outcomes, plans, tasks
 from familydb.tools import ToolContext
 from familydb.tools.registry import ToolResult
 from familydb.tools.tasks import AddTaskInput, add_task
-from tests.conftest import NOW_ISO
+from tests.conftest import NOW_ISO, TZ
 
 
 def _task(settings, clock, conn, family, title="Bins out"):
@@ -57,10 +57,11 @@ def test_what_a_reminder_and_a_follow_up_come_with() -> None:
         {"label": "In an hour", "data": "hour:12"},
         {"label": "Tomorrow", "data": "tomorrow:12"},
     ]
-    assert [b["data"] for b in buttons.for_follow_up(31)] == [
-        "again:31",
-        "not_again:31",
-        "missed:31",
+    assert [(b["label"], b["data"]) for b in buttons.for_follow_up(31)] == [
+        ("Loved it", "again:31"),
+        ("It was OK", "ok:31"),
+        ("Not again", "not_again:31"),
+        ("Didn't go", "missed:31"),
     ]
     # Telegram hands back at most 64 bytes of a button, whatever its number.
     longest = buttons.for_follow_up(10**18 - 1) + buttons.for_reminder(10**18 - 1)
@@ -101,6 +102,22 @@ def test_snoozing_moves_the_reminder(settings, clock, conn, family) -> None:
     )
 
 
+def test_tomorrow_keeps_the_hour_on_the_wall_by_day_and_is_nine_by_night() -> None:
+    """Tapped at half eleven at night, "Tomorrow" was half eleven the next night; and a day
+    added in hours moved it by one across a clock change."""
+
+    def tomorrow(*when: int):
+        return buttons.snoozed_until("tomorrow", datetime(*when, tzinfo=TZ))
+
+    assert tomorrow(2026, 9, 20, 14, 3) == datetime(2026, 9, 21, 14, 3, tzinfo=TZ)
+    assert tomorrow(2026, 9, 20, 23, 30) == datetime(2026, 9, 21, 9, 0, tzinfo=TZ)
+    assert tomorrow(2026, 9, 20, 6, 45) == datetime(2026, 9, 21, 9, 0, tzinfo=TZ)
+    # The clocks went back on 2 November 2025: still 14:00 on the wall, not 13:00.
+    across = tomorrow(2025, 11, 1, 14, 0)
+    assert across == datetime(2025, 11, 2, 14, 0, tzinfo=TZ)
+    assert across.utcoffset() - datetime(2025, 11, 1, tzinfo=TZ).utcoffset() == timedelta(hours=-1)
+
+
 def test_when_a_snooze_comes_back_reads_after_until_and_at() -> None:
     now = datetime(2026, 9, 20, 14, 3)
     today = now.date()
@@ -116,8 +133,9 @@ def test_a_follow_up_is_answered_by_tapping(settings, clock, conn, family) -> No
     tapped = _tap(app, conn, f"again:{plan.id}")
     assert tapped.note == "Noted, Sam: one to do again." and tapped.finished
     recorded = outcomes.list_for_idea(conn, idea.id)
-    assert [(o.plan_id, o.happened_on, o.would_repeat) for o in recorded] == [
-        (plan.id, "2026-09-19", True)
+    # Loved it: kept as the page's loved face is, nine out of ten, and worth doing again.
+    assert [(o.plan_id, o.happened_on, o.rating, o.would_repeat) for o in recorded] == [
+        (plan.id, "2026-09-19", 9, True)
     ]
     assert ideas.get(conn, idea.id).status == "done"
     # Said already: another answer changes nothing.
@@ -134,7 +152,14 @@ def test_not_again_and_didnt_go(settings, clock, conn, family) -> None:
     dropped = _idea(conn, "Old idea", status="dropped")
     tapped = _tap(app, conn, f"not_again:{_plan(conn, family, idea_id=dud.id).id}")
     assert tapped.note == "Noted, Sam: not one to repeat."
-    assert outcomes.list_for_idea(conn, dud.id)[0].would_repeat is False
+    said = outcomes.list_for_idea(conn, dud.id)[0]
+    assert (said.rating, said.would_repeat) == (3, False)
+    # It was OK: a six, and nothing said about doing it again.
+    fine = _idea(conn, "Bowling")
+    tapped = _tap(app, conn, f"ok:{_plan(conn, family, idea_id=fine.id).id}", tap_id="q4")
+    assert tapped.note == "Noted, Sam: it was OK."
+    said = outcomes.list_for_idea(conn, fine.id)[0]
+    assert (said.rating, said.would_repeat) == (6, None)
     # Didn't go is not an outcome: the idea goes back on the list to come up again.
     tapped = _tap(app, conn, f"missed:{_plan(conn, family, idea_id=missed.id).id}", tap_id="q2")
     assert tapped.note == "No harm done, Sam: it's back on the list."
@@ -180,7 +205,7 @@ def test_a_tap_that_does_not_go_through_says_so(settings, clock, conn, family, m
     app = App(settings, clock)
     task = _task(settings, clock, conn, family)
     monkeypatch.setattr(
-        app.registry, "dispatch", lambda *_: ToolResult('{"error": "busy"}', is_error=True)
+        app.registry, "dispatch", lambda *_, **__: ToolResult('{"error": "busy"}', is_error=True)
     )
     tapped = _tap(app, conn, f"done:{task['id']}")
     assert tapped == buttons.Tapped("That didn't go through. Could you tell me in words?")

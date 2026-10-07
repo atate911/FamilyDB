@@ -14,25 +14,49 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+from datetime import time as day_time
 from typing import Any
 
 from familydb import roles, voice
 from familydb.dates import clock_time, utc_iso
-from familydb.store import calls, ideas, members, messages, outcomes, plans, tasks, wishes
-from familydb.store.db import transaction
+from familydb.store import (
+    calls,
+    ideas,
+    lists,
+    members,
+    messages,
+    outcomes,
+    plans,
+    tasks,
+    wishes,
+)
+from familydb.store.db import from_json, transaction
 from familydb.tools.registry import ToolContext
 
 log = logging.getLogger(__name__)
 
 # (action, label) per kind of message; what each does is in `_task_job` and `_plan_job`.
 REMINDER = (("done", "✓ Done"), ("hour", "In an hour"), ("tomorrow", "Tomorrow"))
-FOLLOW_UP = (("again", "Yes, again"), ("not_again", "Not again"), ("missed", "Didn't go"))
+FOLLOW_UP = (
+    ("again", "Loved it"),
+    ("ok", "It was OK"),
+    ("not_again", "Not again"),
+    ("missed", "Didn't go"),
+)
+# How each answer to "How was it?" is kept: the rating, out of ten, and whether to do it again
+# (None: not said). The page's three faces keep the same ratings (web/edits.py FACES).
+WENT = {"again": (9, True), "ok": (6, None), "not_again": (3, False)}
 WISH = (("wish_yes", "Yes!"), ("wish_no", "Not this time"), ("wish_later", "Later"))
-LABELS = dict(REMINDER + FOLLOW_UP + WISH)
-SNOOZES = {"hour": timedelta(hours=1), "tomorrow": timedelta(days=1)}
+UNDO = (("undo", "↩ Undo"),)
+# A thing on a list, ticked as bought (/list); its label is the thing's own.
+TICK = (("tick", "✓"),)
+LABELS = dict(REMINDER + FOLLOW_UP + WISH + UNDO + TICK)
+SNOOZES = ("hour", "tomorrow")
+# "Tomorrow" is the same time of day, on the wall clock, between these; else nine.
+TOMORROW_FROM, TOMORROW_UNTIL = day_time(8, 0), day_time(20, 0)
+TOMORROW_AT = day_time(9, 0)
 MAX_NUMBER_DIGITS = 18
 
 Button = dict[str, str]
@@ -50,8 +74,21 @@ def for_wish(wish_id: int) -> list[Button]:
     return _row(WISH, wish_id)
 
 
+def for_undo(call_id: int) -> list[Button]:
+    """Under a reply that changed something: take it back (familydb/undo.py), on a row of its
+    own beside any a reminder it carries brought."""
+    return in_row(_row(UNDO, call_id), "undo")
+
+
 def _row(choices: tuple[tuple[str, str], ...], number: int) -> list[Button]:
     return [{"label": label, "data": f"{action}:{number}"} for action, label in choices]
+
+
+def in_row(row: list[Button], key: str) -> list[Button]:
+    """These buttons as one of several rows under a message, drawn one row per `key` in the order
+    they come: a tap takes off its own row and leaves the others (a message about more than one
+    thing, each with its own buttons)."""
+    return [{**button, "row": key} for button in row]
 
 
 @dataclass(frozen=True)
@@ -72,6 +109,8 @@ class _Job:
     about: str
     event: str
     facts: dict[str, Any] = field(default_factory=dict)
+    # The call an Undo names (ToolContext.undo_target).
+    target: int | None = None
 
 
 def tap(
@@ -108,6 +147,10 @@ def tap(
         planned: Any = _wish_job
     elif action in SNOOZES or action == "done":
         planned = _task_job
+    elif action == "undo":
+        planned = _undo_job
+    elif action == "tick":
+        planned = _list_job
     else:
         planned = _plan_job
     job = planned(app, conn, action, int(number))
@@ -138,22 +181,11 @@ def tap(
         calendar=app.calendar,
         weather=app.weather,
         geocoder=app.geocoder,
+        source="tap",
+        undo_target=job.target,
     )
-    started = time.monotonic()
-    result = app.registry.dispatch(job.tool, job.values, ctx)
+    result = app.registry.dispatch(job.tool, job.values, ctx, call_id=update_id)
     with transaction(conn):
-        calls.log_tool_call(
-            conn,
-            message_id=kept.id,
-            iteration=0,
-            tool_use_id=update_id,
-            tool_name=job.tool,
-            input=job.values,
-            output=result.content,
-            is_error=result.is_error,
-            duration_ms=int((time.monotonic() - started) * 1000),
-            now=now,
-        )
         messages.mark_processed(conn, kept.id, [] if result.is_error else [result.summary], now=now)
     if result.is_error:
         log.warning("tap %s on #%s did not go through: %s", action, number, result.content)
@@ -208,7 +240,7 @@ def _task_job(app: Any, conn: sqlite3.Connection, action: str, task_id: int) -> 
     if action == "done":
         return _Job("update_task", {"task_id": task.id, "status": "done"}, about, "tap_done")
     now = app.clock.now()
-    moment = now + SNOOZES[action]
+    moment = snoozed_until(action, now)
     return _Job(
         "update_task",
         {"task_id": task.id, "remind_at": moment.isoformat(timespec="minutes")},
@@ -216,6 +248,28 @@ def _task_job(app: Any, conn: sqlite3.Connection, action: str, task_id: int) -> 
         "tap_snoozed",
         {"when": when_text(moment, now.date())},
     )
+
+
+def _undo_job(app: Any, conn: sqlite3.Connection, action: str, call_id: int) -> _Job | str:
+    row = calls.get(conn, call_id)
+    if row is None or row["undo"] is None:
+        return "tap_stale"
+    if row["undone_at"] is not None:
+        return "tap_already"
+    what = (from_json(row["undo"]) or {}).get("about", "")
+    return _Job("undo", {}, f"undo {what}", "tap_undone", {"what": what}, target=call_id)
+
+
+def _list_job(app: Any, conn: sqlite3.Connection, action: str, item_id: int) -> _Job | str:
+    item = lists.item(conn, item_id)
+    name = lists.name_by_id(conn, item.list_id) if item is not None else None
+    if item is None or name is None:
+        return "tap_stale"
+    if item.ticked_at is not None:
+        return "tap_already"
+    values = {"action": "tick", "items": [item.text], "name": name}
+    about = f"{item.text} on the {name} list"
+    return _Job("shopping_list", values, about, "tap_ticked", {"item": item.text})
 
 
 def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> _Job | str:
@@ -231,12 +285,24 @@ def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> 
         if idea.status == "dropped":
             return "tap_already"
         return _Job("update_idea", {"id": idea.id, "status": "idea"}, about, "tap_missed")
-    return _Job(
-        "record_outcome",
-        {"plan_id": plan.id, "happened_on": day, "would_repeat": action == "again"},
-        about,
-        "tap_again" if action == "again" else "tap_not_again",
-    )
+    rating, again = WENT[action]
+    values: dict[str, Any] = {"plan_id": plan.id, "happened_on": day, "rating": rating}
+    if again is not None:
+        values["would_repeat"] = again
+    return _Job("record_outcome", values, about, f"tap_{action}")
+
+
+def snoozed_until(action: str, now: datetime) -> datetime:
+    """When a snoozed reminder comes back: an hour on, or tomorrow at this time of day on the
+    wall clock (so a clock change does not move it), unless that is before eight or after eight
+    in the evening, when it is nine. A tap at half eleven at night is not answered at half
+    eleven the next night."""
+    if action == "hour":
+        return now + timedelta(hours=1)
+    at = now.time().replace(second=0, microsecond=0)
+    if not TOMORROW_FROM <= at <= TOMORROW_UNTIL:
+        at = TOMORROW_AT
+    return datetime.combine(now.date() + timedelta(days=1), at, tzinfo=now.tzinfo)
 
 
 def when_text(moment: datetime, today: date) -> str:

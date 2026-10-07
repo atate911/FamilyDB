@@ -18,10 +18,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from familydb import happening
 from familydb.app import App
 from familydb.availability import (
     calendar_available,
     digest_configured,
+    happening_available,
     weather_available,
     web_is_public,
     web_tools_available,
@@ -452,6 +454,16 @@ def check_integrations(app: App, report: Report) -> None:
             "Turn on 'Look ideas up on the web' on the settings page",
         )
 
+    if happening_available(settings):
+        report.add("near home", OK, f"{happening.NAME} has something to read")
+    else:
+        report.add(
+            "near home",
+            WARN,
+            f"{happening.NAME} reads nothing, so suggestions know only what was saved",
+            "Turn on web lookups, or add a calendar or a Ticketmaster key on the settings page",
+        )
+
     if digest_configured(settings):
         report.add(
             "weekend digest",
@@ -543,6 +555,37 @@ def check_web(app: App, report: Report, conn: sqlite3.Connection | None = None) 
         )
 
 
+def check_backups(app: App, report: Report, conn: sqlite3.Connection | None) -> None:
+    """When the last good backup was made (familydb/upkeep.py has the rule)."""
+    from familydb import upkeep
+    from familydb.store import backups
+
+    if conn is None:
+        return
+    try:
+        good = backups.latest(conn, good=True)
+        trouble = upkeep.backup_trouble(conn, app.clock.now())
+    except sqlite3.OperationalError:
+        report.add("backups", SKIP, "the database is not up to date yet")
+        return
+    if trouble:
+        report.add(
+            "backups",
+            WARN,
+            trouble,
+            "sudo crontab -u root -l, then scripts/maintain.sh backup (RUNBOOK section 7)",
+        )
+    elif good is None:
+        report.add(
+            "backups",
+            WARN,
+            "none recorded",
+            "sudo scripts/maintain.sh schedule-backups (RUNBOOK section 7)",
+        )
+    else:
+        report.add("backups", OK, f"the last good one {good.made_at[:16].replace('T', ' ')} UTC")
+
+
 def check_service(report: Report) -> None:
     unit = Path("/etc/systemd/system/familydb.service")
     if not unit.exists():
@@ -620,6 +663,7 @@ def run(app: App, *, online: bool = False) -> Report:
         check_channels(app, report, online=online)
         check_integrations(app, report)
         check_web(app, report, conn)
+        check_backups(app, report, conn)
         if online:
             check_links(report)
         check_service(report)

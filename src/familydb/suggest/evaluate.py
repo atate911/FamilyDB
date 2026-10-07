@@ -200,14 +200,20 @@ def evaluate(
         idea = item.idea
         place = places.get(conn, idea.place_id) if idea.place_id else None
         checks = Checks(weather=item.weather)
-        reasons: list[str] = []
+        # A disappointment last time is said first, and it is possible at best.
+        reasons: list[str] = [item.caveat] if item.caveat else []
         hard_fail = False
-        soft = False
+        # What rules it out, said first: only the first three reasons are shown (compose.py).
+        out: list[str] = []
+        soft = item.caveat is not None
         fits = list(item.fits_days)
         travel = travel_minutes(place, context, settings)
 
         if context.window is not None:
+            said = len(reasons)
             fits, hard, soft_hours = _hours_check(item, place, context, checks, reasons, travel)
+            if hard:
+                out.extend(reasons[said:])
             hard_fail = hard_fail or hard
             soft = soft or soft_hours
             # Straight after the hours, so the reply's three reasons keep it.
@@ -222,6 +228,12 @@ def evaluate(
             )
             stale_ids.append(idea.id)
 
+        if constraints.max_cost_level is not None and idea.cost_level is None:
+            # Asked for cheap, and nobody knows what it costs: worth a word, not a guess.
+            soft = True
+            note = place.price_note if place is not None else None
+            reasons.append(f"price: {note}" if note else "price unknown")
+
         if idea.needs_booking:
             checks.booking_url = place.booking_url if place else None
             if idea.lead_time_days is not None and fits and context.window is not None:
@@ -229,9 +241,10 @@ def evaluate(
                 if idea.lead_time_days > days_left:
                     hard_fail = True
                     checks.booking = "too_late"
-                    reasons.append(
+                    out.append(
                         f"needs booking {idea.lead_time_days} days ahead, only {days_left} left"
                     )
+                    reasons.append(out[-1])
                 else:
                     checks.booking = "ok"
                     reasons.append("needs booking")
@@ -243,6 +256,13 @@ def evaluate(
         if place is not None and context.origin is not None and travel is None:
             soft = True
             reasons.append(f"distance from {context.origin.label} unknown")
+        held = constraints.because("max_travel_minutes")
+        somewhere = place is not None or bool(idea.location_name)
+        if held and somewhere and travel is None:
+            # A firm rule on the drive, and nobody knows how far it is: worth a word.
+            soft = True
+            limit = constraints.max_travel_minutes
+            reasons.append(f"how far is unknown; {held} allows {limit} min")
         if travel is not None:
             minutes = travel
             checks.travel_minutes = minutes
@@ -254,7 +274,8 @@ def evaluate(
                 and minutes > constraints.max_travel_minutes
             ):
                 hard_fail = True
-                reasons.append("further than asked for")
+                out.append(f"further than {held} allows" if held else "further than asked for")
+                reasons.append(out[-1])
             elif fits and context.window is not None:
                 spans = [
                     d.longest
@@ -266,12 +287,15 @@ def evaluate(
                     checks.travel_fits = need <= max(spans)
                     if not checks.travel_fits:
                         hard_fail = True
-                        reasons.append("the drive plus the visit do not fit the free time")
+                        out.append("the drive plus the visit do not fit the free time")
+                        reasons.append(out[-1])
 
         if item.weather == "ok" and (idea.setting == "outdoor" or idea.weather != "any"):
             reasons.append("weather looks fine")
 
         verdict = "ruled_out" if hard_fail else ("possible" if soft else "good")
+        if hard_fail:
+            reasons = out + [reason for reason in reasons if reason not in out]
         candidates.append(
             Candidate(
                 idea_id=idea.id,

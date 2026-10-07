@@ -120,7 +120,9 @@ def test_done_on_a_schedule_records_it_and_keeps_going(settings, clock, conn, fa
     clock.advance(timedelta(hours=5))
     run_reminders(app)
     done = _update(ctx, task["id"], status="done")
-    assert done["status"] == "open" and done["last_done_at"] == "2026-09-21T02:03:00Z"
+    assert (
+        done["status"] == "open" and done["last_done_at"] == "2026-09-20T19:03"
+    )  # the family's clock
     assert _local(tasks.get(conn, task["id"]).reminder.remind_at) == "Sun 2026-09-27 19:00"
     # With nothing waiting (its reminder taken off), done starts it again from the schedule.
     _update(ctx, task["id"], clear_reminder=True)

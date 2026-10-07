@@ -15,6 +15,16 @@ The suggestion engine is the pattern to copy: free time, weather, hours, travel 
 verdict come from `suggest/`, are logged to `suggestions` and reach the model as structured results;
 the model frames the question and writes the reply, and never recomputes a verdict.
 
+**Pay for judgement, not lookups, and give the judgement everything.** The family pays for a
+model to weigh what code cannot: which of a dozen things that all fit suits this family this
+week, given what they loved, what wore them out, what they said yesterday and what was picked
+for them last time. That is worth a stronger model, and only worth it when the model sees
+everything that bears on it. So for a planning question, code assembles a dossier of what the
+household knows (`suggest/dossier.py`) and one call at a stronger level chooses among the
+options code already checked (`suggest/choosing.py`), with reasons that cite the dossier; the
+everyday chat model then says it in her words. The easy lookups stay cheap, and the stronger
+model is never asked to look anything up.
+
 ## Five questions every call answers
 
 Every kind of call answers these explicitly before it is on by default. An experiment may answer
@@ -98,11 +108,15 @@ Context has three layers, and every piece of information belongs to exactly one:
 | Chat | a family message (Telegram, page, console) | chat model, chat level | persona, prompt, family, up to 150 ideas in the prefix; date, who reads a shared chat, sender, a recently shared location, the memories chosen for the message, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 23 chat tools | a reply; tool writes |
 | Digest | the weekly schedule, or catch-up after a restart; after a failure, the retry job, still as the digest | chat model, digest level | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
 | Retry | every 5 minutes, for a failed message other than the digest, 3 times at most; never after running out of steps | chat model, chat level | the chat context, plus which writes already ran | the chat tools | a reply |
-| Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place, link or location, and a gift that names no place, are skipped in code | worker model, lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
+| Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place, link or location, and a gift that names no place, are skipped in code | worker model, lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record, and the idea's empty details |
 | Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model, lookup level | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
+| Places | a `suggest` call with a topic that no idea framed for it fits (good or possible), for now, today or a window starting within two days, while `find_places` is on (off until the family turns it on) and web tools are; cached an hour by request | worker model, lookup level | `prompts/places.md`, home area and where they are, the topic, the day and its hours to the hour, the family's limits, never the question's wording | web search (4), `report_finds` | up to 6 places with their hours and address as written, each marked when already saved |
+| Scout | the hourly job for what is on near home (`jobs/happening.py`), at most once in six and a half days, while the weekly search is on, web lookups are on, home is set, and the month's `happening_budget` and the day's limit allow | worker model, lookup level | the discover prompt; home area, the next 28 days, no constraints | web search (4), `report_finds` | up to 6 dated finds, kept in `finds` |
+| Find feeds | the same job, every `happening_refind_days` days and at once when the home area changes, under the same conditions | worker model, lookup level | `prompts/find_feeds.md`; home area, the calendars already known and those that stopped answering | web search (6), `report_feeds` | up to 10 calendar addresses, each read by code before it is offered |
 | Transcribe | a voice note from somebody on the family list, before its chat turn | the hearing model: OpenAI's speech-to-text or a Gemini model; never Claude, which takes no recordings | the recording, and one line naming the family, her and home so they are spelled right | nothing | its words, which become the message |
 | Judge | a question code filed when a change needs weighing (a model in use going with several to take its place, new models for a company in use, a refusal nobody could read), only while `judgements` is on; the day's questions together with the evening's lookups, a refusal at once; within `judgement_budget` a month | the model at `judgement_level` (best by default) of the lookup company | `prompts/judge.md`; model names, prices, releases, what the family's calls use a model for, a refusal's status and error text; never the family's messages | `give_judgement` only, choosing among the options code gave | one choice per question, which code checks and acts on within `judgement_acts` |
 | Price check | a price of a model in use the two price lists disagree on, filed like a judgment and asked with it | worker model, lookup level | `prompts/price_check.md`; the model and what each list says | web search (3), `report_price` | a price from the company's own page, taken only when it matches a list |
+| Choose | a `suggest` call in a chat turn (a family message or the digest) while `choosing` is on, from a grown-up, about anything but right now, with two options or more; once a message, and within `choose_budget` a month and the day's limit | the chat company's model at `choose_level` (best by default) | `prompts/choose.md`; the dossier: the question, who asks and who reads, the family and their own words, the days, every option code checked with its verdict, rating and last note, the finds marked as outside information, a few ruled out, every memory in force, the weeks around, what was picked lately, this chat's last three days | `give_picks` only, among the options in the dossier | up to five picks with a slot and a reason, which code checks and puts first in the result the chat model words |
 | Look | a photo from somebody on the family list, before its chat turn, one call each for up to four of an album's; in a group, only one sent to the bot | the lookup model of the company that looks things up, with a lookup's effort | the picture, at most 1600 pixels on its long side and 3.9 MB (Claude counts its 5 MB on the base64), `prompts/look.md` and the same line of names | nothing | what it is and the words in it that matter, at most 120 words, which become the message |
 
 All go through one door, `agent/gateway.ask`, which runs the loop (`agent/loop.run_turn`): the
@@ -126,6 +140,39 @@ or picture is not kept. What the table does not say:
   photos are gathered for a second and a half, up to four looked at, the family asked once. It uses
   the lookup model (writing down what a picture says is extraction, not judgment) and is a call of
   its own, so the picture is sent once and what it showed stays in the conversation as words.
+
+**Finding a place** (`suggest/places.py`) answers the five questions so. *Asked at all:* only when code has found nothing saved that fits a topic the family named, for a time near enough for a place found now to still be right, and only while the family has it on; the same ask within the hour is one search. *Sees:* the framing, never the question's words: the topic, the day and its hours, where they are to about a hundred metres, the home area, and the family's limits, firm rules included (`suggest/rules.py`). *May do:* search the web, four times at most, and hand back once through `report_finds`. *Trusted:* nothing it says is checked as a saved idea is: its finds go with the web finds as found, never a verdict, with their hours and address as the page writes them, and code marks one already on the list by its name or its site. *Costs:* one worker turn at the lookup level, within the daily limit, recorded as `places`; whether it is worth its cost is not known yet, which is why it is off until the family turns it on (`docs/DESIGN.md` section 16).
+
+**Looking for what is on near home** is two calls made for the household rather than a message
+(`jobs/happening.py`), and the only scheduled calls besides the evening lookups. Their five
+answers: asked only while the family has the search on, web lookups are on, home is set and
+the job's own monthly budget (`happening_budget`, US$1 by default, counted from `llm_calls`
+under `scout` and `find_feeds`) and the day's limit both have room, the search once a week and
+the calendar lookup every few weeks, and on an idle tick never; they see the home area, the
+dates and, for the calendar lookup, the addresses already known, never a message or a memory;
+they may only hand back finds or addresses; what comes back is checked by code (a find's day
+must read as one, a calendar must read as a calendar before anyone is offered it) and the
+family decides which calendars are read; and each is one bounded worker turn, a few cents.
+Reading the calendars and Ticketmaster is code, with no model, and costs nothing.
+
+**Choosing what to suggest** is the call the family pays for on purpose (`suggest/choosing.py`,
+kind `choose`, "choosing what to suggest"). Its five answers: asked by code from inside the chat's
+`suggest`, never by a model deciding to escalate, and only while `choosing` is on, for a chat
+message or the digest from a grown-up (a kid's question, `/now`, the evening check and the
+command line never choose), about anything but right now, with at least two options, room in
+the day's limit and in `choose_budget` (US$5 a month by default) for this call's own estimate;
+a retry, or a second `suggest` in the same turn, reuses the picks already made, with no call. It
+sees the dossier and nothing else, built by code, deterministic and capped section by section
+(firm memories never cut), with never another chat's words and never a birthday; it answers on
+the chat surface, so the dossier goes only to the company the family already writes to. It may
+only hand back picks among the options, which `give_picks` checks: each is an option, a
+favorite was done before and a new one never was, a day is inside the window and one the option
+fits, every cite is in the dossier. The picks lead what the chat model is given and it says
+them in order; code has already checked every pick's hours, travel and weather. It is two calls
+at most, 6,000 output tokens, about six cents on Claude Opus; whatever goes wrong, the engine's
+own order is the answer and nobody is told, since a kid must not hear of budgets. Whether the
+picks are good is measured by `evals/` (`leads_with_pick`) and kept with each suggestion
+(`suggestions.picks`).
 
 **Judging a change** is the one call made for the install rather than the family's day
 (`familydb/judgement.py`). Asked only for a question code filed, while the family has it on, within
@@ -259,7 +306,9 @@ everything.
   does.
 - **Escalate on evidence, not guesswork.** A cheaper model may hand a task up to a stronger one when
   code can see it failed (a validation error, a hand-back that did not happen, an empty answer), not
-  because the question sounded hard.
+  because the question sounded hard. Choosing what to suggest is not an escalation: it is a
+  declared kind (`choose`) that code starts for a kind of question the family decided is worth
+  it, at the level they set, never because the chat model asked for help.
 - **Measure before switching.** A model is chosen or replaced on `evals/`: the family's own requests
   with the outcomes expected, graded by code, run against a live model for quality (`--provider` with
   `--model` or `--level` to compare) and against fakes for shape. The settings page offers the models

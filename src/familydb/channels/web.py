@@ -19,7 +19,7 @@ from uuid import uuid4
 from familydb import whereabouts
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
-from familydb.channels.base import IncomingMessage
+from familydb.channels.base import IncomingMessage, PhotoNote
 from familydb.dates import utc_iso
 from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
@@ -33,22 +33,35 @@ MAX_MESSAGE = 4000
 NOTHING_SAID = "There was nothing to send."
 TOO_LONG = f"That is longer than {MAX_MESSAGE} characters. Send it in a couple of messages."
 BUSY = "Still thinking about the last message. Give it a moment."
+# What the thread shows for a photo sent with no words, until the log holds it.
+PHOTO_SHOWN = "(a photo)"
 UNKNOWN_MEMBER = "There is nobody called {name} in the family."
 THREAD_NAME = "familydb-web-chat"
 
 
-def incoming(text: str, member_name: str, chat_id: str = DEFAULT_CHAT) -> IncomingMessage:
+def incoming(
+    text: str,
+    member_name: str,
+    chat_id: str = DEFAULT_CHAT,
+    photo: tuple[str, bytes] | None = None,
+) -> IncomingMessage:
     """Web messages name the sender as console messages do and never repeat an update id.
 
     The page names the sender (whoever is signed in, or under the shared password whoever they
-    said they were), resolved against the family list by display name.
+    said they were), resolved against the family list by display name. A photo comes with it as
+    Telegram's does, to be looked at by the pipeline and never kept.
     """
+    photos: tuple[PhotoNote, ...] = ()
+    if photo is not None:
+        mime, data = photo
+        photos = (PhotoNote(mime, lambda: data, len(data)),)
     return IncomingMessage(
         channel=CHANNEL,
         channel_update_id=uuid4().hex,
         chat_id=chat_id,
         channel_user_id=member_name,
         text=text,
+        photos=photos,
     )
 
 
@@ -108,14 +121,16 @@ class WebChat:
         member_name: str,
         chat_id: str = DEFAULT_CHAT,
         position: tuple[float, float] | None = None,
+        photo: tuple[str, bytes] | None = None,
     ) -> str | None:
-        """Start a turn. None when it started, else what to tell whoever sent it.
+        """Start a turn. None when it started, else what to tell whoever sent it. `photo` is a
+        picture sent with it (its type and bytes), any words its caption.
 
         The sender is checked here, not in the thread: the pipeline turns an unknown sender away
         silently, and a message that vanished from the page would be a mystery.
         """
         text = text.strip()
-        if not text:
+        if not text and photo is None:
             return NOTHING_SAID
         if len(text) > MAX_MESSAGE:
             return TOO_LONG
@@ -124,7 +139,7 @@ class WebChat:
                 return UNKNOWN_MEMBER.format(name=member_name)
             if messages.claimed_in_chat(conn, chat_id, now=utc_iso(self.app.clock.now())):
                 return BUSY
-        message = incoming(text, member_name, chat_id)
+        message = incoming(text, member_name, chat_id, photo)
         with self._lock:
             if self._alive(chat_id):
                 return BUSY
@@ -137,7 +152,8 @@ class WebChat:
                 daemon=True,
             )
             self._running[chat_id] = thread
-            self._handing[chat_id] = Handing(message.channel_update_id or "", member_name, text)
+            shown = text or PHOTO_SHOWN
+            self._handing[chat_id] = Handing(message.channel_update_id or "", member_name, shown)
             thread.start()
         return None
 

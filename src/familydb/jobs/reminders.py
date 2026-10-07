@@ -5,7 +5,7 @@ is the retry job's (`run_deliveries`). Also releases held messages no reply carr
 from contextlib import closing
 from datetime import datetime
 
-from familydb import buttons, routing, voice
+from familydb import buttons, plan_service, routing, voice
 from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
@@ -20,21 +20,27 @@ def run_reminders(app: App) -> int:
     queued: list[tuple[int, str, str, str, str]] = []
     with closing(app.connect()) as conn:
         with transaction(conn):
+            # A reminder tied to a plan that is over has had its day, sent or not (plan_service).
+            plan_service.finish_over(conn, today=app.clock.today().isoformat(), now=now)
             for reminder in tasks.due_reminders(conn, now):
                 task = tasks.get(conn, reminder.task_id)
                 if task is None:
                     continue
                 due_when = late_note(reminder.remind_at, now, app.clock.tz)
-                # The owner's reminder goes to them, not the group (routing.py).
-                channel, chat = routing.for_person(
-                    conn, app.settings, task.channel, task.chat_id, task.owner_id
-                )
+                # The owner's reminder goes to them; everyone's to the family (routing.py).
+                channel, chat = routing.for_task(conn, app.settings, task)
                 out = messages.insert_out(
                     conn,
                     channel=channel,
                     chat_id=chat,
                     text=reminder_for(
-                        conn, task, app.settings, channel=channel, chat_id=chat, due_when=due_when
+                        conn,
+                        task,
+                        app.settings,
+                        channel=channel,
+                        chat_id=chat,
+                        due_when=due_when,
+                        at=moment,
                     ),
                     now=now,
                     buttons=buttons.for_reminder(task.id),

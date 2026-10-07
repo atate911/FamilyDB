@@ -11,7 +11,8 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 
-COPY README.md ./
+# The changelog too: the Status page shows what is new in the version running (whatsnew.py).
+COPY README.md CHANGELOG.md ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
@@ -30,4 +31,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
 EXPOSE 8080
 
 VOLUME ["/data"]
+# Well when the database answers and the scheduled jobs are running (`familydb health`), whether
+# or not the page is served.
+HEALTHCHECK --interval=2m --timeout=30s --start-period=2m --retries=3 CMD ["familydb", "health"]
 CMD ["familydb", "run"]

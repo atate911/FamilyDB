@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import dataclasses
 import inspect
 import json
 import logging
 import sqlite3
+import time
 import typing
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ValidationError
 
@@ -18,6 +20,8 @@ from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import ToolError, ToolUnavailable
+from familydb.store import calls
+from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.tools.schema import strict_schema
 
@@ -25,6 +29,9 @@ log = logging.getLogger(__name__)
 
 
 OFFERED = "offered_reply"
+# Where the inverse of a write is left for dispatch to keep (tool_calls.undo).
+UNDO = "undo"
+Source = Literal["chat", "tap", "page", "command", "job", "worker", "cli"]
 
 
 @dataclass
@@ -56,6 +63,14 @@ class ToolContext:
     about: str | None = None
     # A kid reads the chat (audience.plain): code speaks plainly of the workings.
     plain: bool = False
+    # The time asked about counts as free, plans and all: the evening check's backup asks about a
+    # plan's own time, which the plan itself would fill (jobs/plan_checks.py).
+    ignore_busy: bool = False
+    # Where the call comes from, kept with it (tool_calls.source): the chat's model, a button
+    # tapped, a page form, a command, a job, a worker turn, the command line.
+    source: Source = "chat"
+    # The call a page's or a button's Undo names (tool_calls.id); never the tool's input.
+    undo_target: int | None = None
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())
@@ -73,6 +88,9 @@ class ToolResult:
     content: str
     is_error: bool = False
     summary: dict[str, Any] = field(default_factory=dict)
+    # The tool_calls row it was kept as (dispatch), and whether it can be taken back (undo.py).
+    call_id: int | None = None
+    undoable: bool = False
 
 
 Handler = Callable[[ToolContext, Any], Any]
@@ -179,14 +197,52 @@ class ToolRegistry:
             for name in wanted
         ]
 
-    def dispatch(self, name: str, raw_input: Any, ctx: ToolContext) -> ToolResult:
+    def dispatch(
+        self,
+        name: str,
+        raw_input: Any,
+        ctx: ToolContext,
+        *,
+        call_id: str | None = None,
+        iteration: int = 0,
+    ) -> ToolResult:
+        """Run one tool as `ctx` says, and keep the call (tool_calls), whoever made it and from
+        where: the one place every tool call is recorded, with the inverse a write left
+        (`UNDO` in `ctx.scratch`). `call_id` is the model's id for the call, or a tap's."""
+        ctx.scratch.pop(UNDO, None)
+        started = time.monotonic()
+        result = self._run(name, raw_input, ctx)
+        undo = ctx.scratch.pop(UNDO, None)
+        values = {
+            "message_id": ctx.message_id,
+            "iteration": iteration,
+            "tool_use_id": call_id,
+            "tool_name": name,
+            "input": raw_input,
+            "output": result.content,
+            "is_error": result.is_error,
+            "duration_ms": int((time.monotonic() - started) * 1000),
+            "now": ctx.now_iso(),
+            "turn": ctx.turn,
+            "member_id": ctx.member.id if ctx.member else None,
+            "source": ctx.source,
+            "undo": None if result.is_error else undo,
+        }
+        if ctx.conn.in_transaction:  # part of the caller's work, which commits it
+            row = calls.log_tool_call(ctx.conn, **values)
+        else:
+            with transaction(ctx.conn):
+                row = calls.log_tool_call(ctx.conn, **values)
+        return dataclasses.replace(result, call_id=row, undoable=values["undo"] is not None)
+
+    def _run(self, name: str, raw_input: Any, ctx: ToolContext) -> ToolResult:
         if ctx.allowed_tools is not None and name not in ctx.allowed_tools:
             return _error(name, "tool is not permitted in this turn")
         spec = self._specs.get(name)
         if spec is None:
             return _error(name, f"unknown tool {name!r}")
         # Strict mode sends null for an absent field, at any depth; dropping them applies defaults.
-        raw_input = _without_nulls(raw_input)
+        raw_input = without_nulls(raw_input)
         try:
             args = spec.input_model.model_validate(raw_input or {})
         except ValidationError as exc:
@@ -220,12 +276,14 @@ class ToolRegistry:
         return ToolResult(dump(result), False, summary)
 
 
-def _without_nulls(value: Any) -> Any:
-    """`value` without null object fields at any depth; a null list item stays."""
+def without_nulls(value: Any) -> Any:
+    """`value` without null object fields at any depth; a null list item stays. A strict schema
+    makes the model send every field, null for one it means to leave out, so a tool's input is
+    read through this (and the evals' graders read it the same way)."""
     if isinstance(value, dict):
-        return {key: _without_nulls(item) for key, item in value.items() if item is not None}
+        return {key: without_nulls(item) for key, item in value.items() if item is not None}
     if isinstance(value, list):
-        return [_without_nulls(item) for item in value]
+        return [without_nulls(item) for item in value]
     return value
 
 

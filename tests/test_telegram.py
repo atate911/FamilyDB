@@ -367,6 +367,47 @@ def test_a_tap_is_answered_and_the_message_says_who_did_it(settings, clock, conn
     assert seen == {"answer": "Sorry, only the family can use these."}
 
 
+def test_a_message_about_several_things_has_a_row_each_and_a_tap_takes_off_its_own(
+    settings, clock, conn, family
+):
+    from familydb import buttons
+    from familydb.app import App
+    from familydb.channels.telegram import without_row
+    from familydb.tools import ToolContext
+    from familydb.tools.tasks import AddTaskInput, add_task
+
+    rows = buttons.in_row(buttons.for_reminder(1), "1") + buttons.in_row(
+        buttons.for_reminder(2), "2"
+    )
+    markup = keyboard(rows)
+    assert [[b.callback_data for b in row] for row in markup.inline_keyboard] == [
+        ["done:1", "hour:1", "tomorrow:1"],
+        ["done:2", "hour:2", "tomorrow:2"],
+    ]
+    left = without_row(markup, "hour:1")
+    assert [[b.callback_data for b in row] for row in left.inline_keyboard] == [
+        ["done:2", "hour:2", "tomorrow:2"]
+    ]
+    assert without_row(left, "done:2") is None
+    # Tapped under a message with two rows, the other row stays.
+    app = App(settings, clock)
+    ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    first = add_task(ctx, AddTaskInput(title="Bins out", remind_at="2026-09-20T18:00"))["task"]
+    channel = TelegramChannel(app, token=TOKEN)
+    update, _ = _query(f"done:{first['id']}")
+    update.callback_query.message.reply_markup = markup
+    kept: dict[str, Any] = {}
+
+    async def edit_message_text(words, **extra):
+        kept.update(extra, text=words)
+
+    update.callback_query.edit_message_text = edit_message_text
+    asyncio.run(channel.on_tap(update, None))
+    assert [[b.callback_data for b in row] for row in kept["reply_markup"].inline_keyboard] == [
+        ["done:2", "hour:2", "tomorrow:2"]
+    ]
+
+
 def test_buttons_go_under_the_last_part_of_what_is_sent(settings, clock, monkeypatch) -> None:
     from familydb.app import App
 

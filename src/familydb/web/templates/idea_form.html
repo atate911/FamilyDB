@@ -102,6 +102,13 @@
             <div class="field"><label class="field__label" for="i-lead">Book this far ahead (days)</label>
               <input id="i-lead" type="text" name="lead_time_days" inputmode="numeric" value="{{ idea.lead_time_days if editing and idea.lead_time_days is not none else '' }}" /></div>
           </div>
+          <div class="form__row form__row--3">
+            <div class="field"><label class="field__label" for="i-young">Youngest age</label>
+              <input id="i-young" type="text" name="min_age" inputmode="numeric" aria-describedby="i-ages-h" value="{{ idea.min_age if editing and idea.min_age is not none else '' }}" /></div>
+            <div class="field"><label class="field__label" for="i-old">Oldest age</label>
+              <input id="i-old" type="text" name="max_age" inputmode="numeric" aria-describedby="i-ages-h" value="{{ idea.max_age if editing and idea.max_age is not none else '' }}" /></div>
+            <p class="field__hint" id="i-ages-h">Only when it says, as in “ages 6+”: suggestions leave it out for a kid it does not suit.</p>
+          </div>
           <fieldset class="fieldset fieldset--inner">
             <legend class="field__label">Only in these seasons</legend>
             <div class="choices">{% for season in seasons %}<label class="choice"><input type="checkbox" name="seasons" value="{{ season }}" {{ 'checked' if editing and season in idea.seasons }} /><span>{{ 'Fall' if season == 'autumn' else season | capitalize }}</span></label>{% endfor %}</div>
@@ -113,6 +120,18 @@
         <a class="linkbtn" href="{{ url_for('web.idea', idea_id=idea.id) if editing else url_for('web.ideas') }}">Cancel</a></div>
     </form>
     <aside class="aside-stack" aria-label="About {{ 'changing' if editing else 'adding' }} an idea">
+      {% if not editing %}
+        {# Several at once: one a line, one kind for them all, each added as the form above would (edits.add_ideas). #}
+        <form class="card form" method="post" action="{{ url_for('edits.add_ideas') }}" aria-labelledby="h-several">
+          <h2 class="card__head" id="h-several">Several at once</h2>
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          <div class="field"><label class="field__label" for="s-titles">One idea a line</label>
+            <textarea id="s-titles" name="titles" rows="5" maxlength="4000" required data-dictate></textarea></div>
+          <div class="field"><label class="field__label" for="s-kind">The kind they all are</label>
+            <input id="s-kind" type="text" name="kind" list="kinds" required placeholder="e.g. restaurant" /></div>
+          <div class="actions"><button class="btn" type="submit">{{ icon('plus') }}Add them</button></div>
+        </form>
+      {% endif %}
       <section class="card" aria-labelledby="h-ie-n">
         <h2 class="card__head" id="h-ie-n">Good to know</h2>
         <ul class="tips">

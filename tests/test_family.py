@@ -379,3 +379,39 @@ def test_nothing_more_is_said_in_the_private_chat_of_somebody_taken_off(conn, fa
     assert plans.get(conn, plan.id).chat_id is None  # no follow-up or evening check there
     assert messages.get(conn, queued.id).cancelled_at is not None
     assert tasks.get(conn, shared).status == "open"  # the family group's task stays
+
+
+def test_their_errands_set_elsewhere_go_with_them_not_to_the_family(conn, family_members):
+    """A task they owned, asked for on the page or in somebody else's chat, would be nobody's once
+    their name is off it, which is everyone's, and its reminder would go to the family's chat
+    (routing.for_task). So it is cancelled with them; one asked for in a group stays."""
+    from familydb.store import tasks
+
+    alex, sam = family_members["alex"], family_members["sam"]
+    made = {}
+    with db.transaction(conn):
+        for key, channel, chat in (
+            ("page", "web", "web"),
+            ("sams", "telegram", sam.channel_user_id),
+            ("group", "telegram", "-100"),
+        ):
+            made[key] = tasks.insert(
+                conn,
+                title=f"Alex's errand from {key}",
+                notes="",
+                owner_id=alex.id,
+                due_at=None,
+                preferred_window="",
+                operation_key=f"errand-{key}",
+                channel=channel,
+                chat_id=chat,
+                now=NOW,
+            )
+            tasks.add_reminder(conn, made[key], "2026-09-21T16:00:00Z")
+
+    family.remove(conn, alex.id, by=sam.id, seen=family.revision(alex), now=NOW)
+
+    assert tasks.get(conn, made["page"]).status == "cancelled"
+    assert tasks.get(conn, made["sams"]).status == "cancelled"
+    assert not tasks.has_pending_reminder(conn, made["page"])
+    assert tasks.get(conn, made["group"]).status == "open"

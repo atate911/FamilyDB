@@ -12,7 +12,7 @@ from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.memory import Chosen, line_of
 from familydb.routing import CONFIRMED
-from familydb.store.ideas import Idea
+from familydb.store.ideas import Idea, ages_text
 from familydb.store.members import Member
 
 
@@ -64,6 +64,8 @@ def render_idea_line(idea: Idea) -> str:
         parts.append("free" if idea.cost_level == 0 else "cost: " + "$" * idea.cost_level)
     if idea.needs_booking:
         parts.append("needs booking")
+    if ages := ages_text(idea):
+        parts.append(ages)
     parts.append(f"status: {idea.status}")
     parts.append(f"by {idea.suggested_by_name or 'unknown'} {idea.created_at[:10]}")
     if idea.times_done:
@@ -94,7 +96,7 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
         lines.append(f"About the family, in their words:\n{about}")
     lines.append(f"Home area: {settings.home_area or 'not set'}")
     lines.append(f"Timezone: {settings.tz}")
-    calendar = "connected" if calendar_available(settings) else "not connected"
+    calendar = "connected" if calendar_available(settings) else "not connected (plans kept here)"
     weather = "configured" if weather_available(settings) else "not configured"
     web = "available" if web_tools_available(settings) else "not available"
     lines.append(f"Calendar: {calendar}. Weather: {weather}. Web tools: {web}.")

@@ -122,6 +122,26 @@ def for_idea(conn: sqlite3.Connection, idea_id: int) -> list[Plan]:
     return [Plan.from_row(row) for row in rows]
 
 
+def latest_by_idea(conn: sqlite3.Connection) -> dict[int, tuple[date, date]]:
+    """For each idea with a live plan, its latest plan's first and last day, in one query: what
+    the suggestion engine reads "already planned" by (suggest/shortlist.py)."""
+    rows = conn.execute(
+        "SELECT idea_id, substr(start, 1, 10) AS first, "
+        "substr(coalesce(end, start), 1, 10) AS last FROM plans "
+        "WHERE idea_id IS NOT NULL AND status != 'cancelled' ORDER BY start, id"
+    )
+    return {
+        int(row["idea_id"]): (date.fromisoformat(row["first"]), date.fromisoformat(row["last"]))
+        for row in rows
+    }
+
+
+def everything(conn: sqlite3.Connection) -> list[Plan]:
+    """Every plan not cancelled, earliest first: for the calendar file (export.py)."""
+    rows = conn.execute("SELECT * FROM plans WHERE status != 'cancelled' ORDER BY start, id")
+    return [Plan.from_row(row) for row in rows]
+
+
 def list_between(conn: sqlite3.Connection, start: str, end: str) -> list[Plan]:
     rows = conn.execute(
         "SELECT * FROM plans WHERE status != 'cancelled' AND start >= ? AND start < ? "
@@ -206,6 +226,36 @@ def leave_chat(conn: sqlite3.Connection, channel: str, chat_id: str) -> int:
 
 def mark_checked(conn: sqlite3.Connection, plan_id: int, *, now: str) -> None:
     conn.execute("UPDATE plans SET checked_at = ? WHERE id = ?", (now, plan_id))
+
+
+def kept_here(conn: sqlite3.Connection, *, since: str) -> list[Plan]:
+    """Live plans kept here while no Google calendar was connected, from `since` (a date) on:
+    what goes on Google once one is (calendar_sync.adopt_local)."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE calendar_id IS NULL AND status != 'cancelled' "
+        "AND coalesce(end, start) >= ? ORDER BY start",
+        (since,),
+    ).fetchall()
+    return [Plan.from_row(row) for row in rows]
+
+
+def adopted(
+    conn: sqlite3.Connection, plan_id: int, *, google_event_id: str, calendar_id: str, now: str
+) -> Plan | None:
+    """A plan kept here is on Google now, as this event of this calendar."""
+    conn.execute(
+        "UPDATE plans SET google_event_id = ?, calendar_id = ?, updated_at = ? WHERE id = ?",
+        (google_event_id, calendar_id, now, plan_id),
+    )
+    return get(conn, plan_id)
+
+
+def ask_again(conn: sqlite3.Connection, plan_id: int) -> None:
+    """Forget that a plan was checked the evening before and asked about after: it moved, and its
+    new day has both still to come (plan_service.changed)."""
+    conn.execute(
+        "UPDATE plans SET checked_at = NULL, followed_up_at = NULL WHERE id = ?", (plan_id,)
+    )
 
 
 def mark_followed_up(conn: sqlite3.Connection, plan_id: int, *, now: str | None = None) -> None:
