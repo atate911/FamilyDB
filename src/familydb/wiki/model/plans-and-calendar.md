@@ -4,7 +4,7 @@ A [plan](/wiki/reference/glossary#plan) is something the family has decided to d
 
 ## What a plan is
 
-A plan has a title, a start, an optional end, an all-day mark, a place and notes, plus three links: the idea it is for (optional), its Google event, and the chat it was made in. Every new plan is stored as *confirmed*. It becomes *tentative* when Google marks the event so, and *cancelled* when it is cancelled, and a cancelled plan stays on record.
+A plan has a title, a start, an optional end, an all-day mark, a place and notes, plus three links: the idea it is for (optional), its Google event, and the chat it was made in. A new plan is stored as *confirmed*. It becomes *tentative* when Google marks the event so, or when a change sets it, and goes back to *confirmed* when Google drops the mark or a change sets it. It becomes *cancelled* when it is cancelled, and a cancelled plan stays on record.
 
 Where it lives differs. With a calendar connected, a plan has a Google event. With none, it is a *saved plan*: kept by FamilyDB alone until a calendar is connected.
 
@@ -14,10 +14,11 @@ Making a plan for an idea sets the idea to *planned*. Cancelling the plan, or de
 
 People move and delete events in Google without telling FamilyDB. So a plan is checked against its event before anything acts on it, and the event wins. The check, called the sync, runs:
 
-- when the assistant searches plans or reads the calendar, and, for the one plan, before it changes that plan;
+- when the assistant searches plans or reads the calendar;
+- for the one plan, before the assistant changes it with an edit or a move (deleting a plan skips this check and goes straight to Google);
 - before the evening-before check and before the day-after follow-up.
 
-Viewing a page does not sync. The page reads Google directly, and keeps the answer for a minute unless FamilyDB has written to the calendar since ([Plans and To do](/wiki/controls/plans-and-tasks) has the notes it shows).
+Viewing a page does not sync. The page reads Google directly, and keeps the answer for a minute unless FamilyDB has written to the calendar since. With no calendar, or when Google does not answer, it shows the saved plans, and says which ([Plans and To do](/wiki/controls/plans-and-tasks)).
 
 The sync asks Google one question for every plan: what changed since last time? Google's answer comes with a *sync token*, which FamilyDB keeps per calendar and saves only after the plans are updated, so a failure just reads the same changes again. The first time, or after Google forgets the token, the answer is the whole calendar, and a plan whose event is not in it is treated as deleted.
 
@@ -32,7 +33,7 @@ Only live plans with an event on the connected calendar are synced: not cancelle
 ## Creating, moving and cancelling
 
 - **Create.** A time in the past is refused. With no end, a timed plan lasts two hours. A date alone makes an all-day plan. Google gets the plan as an event, and the idea becomes planned.
-- **Move.** The plan is synced first. A new start keeps the length unless an end is given or all-day is switched. Google is changed, then the plan. A cancelled plan cannot be moved, and neither can one on a different calendar.
+- **Move.** The plan is checked against its own event first. A new start in the past is refused. A new start keeps the length unless an end is given or all-day is switched. Google is changed, then the plan. A cancelled plan cannot be moved, and neither can one on a different calendar.
 - **Cancel.** The event is deleted from Google (one already gone counts as done), the plan is marked cancelled, and a planned idea goes back to idea.
 
 **A retry does not make a second event.** Before FamilyDB asks Google, it writes the event's id to `calendar_creations`, keyed by the request (the message or form it came from, plus title, time and idea). A retry after a crash, a lost answer or a resent form uses the same id, and finds the event if Google made it. A request is finished when a plan holds that id. A form redrawn in the same browser session takes over the unfinished attempt. Without a calendar, asking twice for the same plan (title, time, idea) finds the one already saved.
@@ -66,6 +67,6 @@ The suggestion step and the nudges count free time in minutes of the family's ow
 
 ## With no calendar
 
-A new plan is saved in FamilyDB with a note saying nothing is on a calendar, and the page shows saved plans and says so. The assistant's calendar reading is unavailable. Free time is unknown: the suggestion step skips that check, assumes the days are free, and says so. Once a calendar is connected, the next time the assistant reads the calendar or searches plans, saved plans that have not ended are copied across, up to 20 at a time. Each gets an event id made from its number, so a retry finds the event it made. A plan on a calendar that is no longer connected cannot be moved, and one on a different calendar is refused. Connecting is on [Connections](/wiki/controls/settings/connections), and what Google sees is on [Google Calendar](/wiki/boundaries/google-calendar).
+A new plan is saved in FamilyDB with a note saying nothing is on a calendar, and the page shows saved plans and says so. The assistant's calendar reading is unavailable. Free time is unknown: the suggestion step skips that check, assumes the days are free, and says so. Once a calendar is connected, the next time the assistant reads the calendar or searches plans, saved plans that have not ended are copied across, up to 20 at a time. Changing a saved plan copies that plan first. Each gets an event id made from its number, so a retry finds the event it made. A plan on a calendar that is no longer connected cannot be moved, and one on a different calendar is refused. Connecting is on [Connections](/wiki/controls/settings/connections), and what Google sees is on [Google Calendar](/wiki/boundaries/google-calendar).
 
 Developer docs: `src/familydb/calendar_sync.py`, `agenda.py`, `free_time.py`, `dates.py`; `tools/gcal.py`; `store/plans.py`, `calendar_ops.py`, `calendar_sync_state.py`; `jobs/plan_checks.py`, `follow_ups.py`; `docs/DESIGN.md`, "Data model".

@@ -1,8 +1,10 @@
 # State and the database
 
-Everything FamilyDB keeps is in one SQLite file, and this page says what is in it, how to look at it without harming it, how it changes between versions and what an admin must not do to it. To take or restore a backup, go to [Backup and restore](/wiki/operations/backup-and-restore).
+What the family tells FamilyDB is kept in one SQLite file, and this page says what is in it, how to look at it without harming it, how it changes between versions and what an admin must not do to it. To take or restore a backup, go to [Backup and restore](/wiki/operations/backup-and-restore).
 
 On a default install the file is `data/familydb.sqlite3` in the install folder (`/opt/familydb/data/familydb.sqlite3` on a server install). The setting is `FAMILYDB_PATH`, in `.env`.
+
+Four things live outside the file: the Google service-account key (`data/google_key.json`), the login signing key (`data/web_secret`), `.env`, and the logs. A backup copies only the database, and a restore never brings those back: see [Backup and restore](/wiki/operations/backup-and-restore).
 
 ## What is in it
 
@@ -23,6 +25,8 @@ On a default install the file is `data/familydb.sqlite3` in the install folder (
 
 **Anyone who can read the file can read the model-company and Telegram keys saved on the Settings page.** They sit in `app_settings` as plain text, so they are in every backup too. FamilyDB makes the file, and its `-wal` and `-shm` files, readable by their owner only, and tightens an older one when the service starts. Keep it that way wherever you copy it. See [data and privacy](/wiki/security/data-and-privacy).
 
+**The file only grows.** Nothing prunes `messages`, `llm_calls`, `tool_calls`, `suggestions` or `settings_log`. Pruned by the app: `knocks` (30 days, at most 200), `alerts`, `judgements`, expired `telegram_invites`, stale `spend_holds`, and `member_locations`, deleted about a day after sharing.
+
 ## Looking at it safely
 
 These commands show what is stored. Run them as the account that owns the file (the install folder's `familydb` account) and see [the command line](/wiki/controls/command-line) for the exact form.
@@ -33,7 +37,7 @@ familydb ideas list
 familydb members list
 ```
 
-`db status` prints the schema version, the row counts for members, ideas, places, plans, outcomes, messages and tool calls, and the last five model calls. `ideas list` prints each idea as the model sees it, and `members list` the family. Each applies pending migrations first.
+`db status` prints the schema version, the row counts for members, ideas, places, plans, outcomes, messages and tool calls, and the last five model calls. `ideas list` prints each idea in the one-line form the model reads, but over every idea, presents included (`--all` adds dropped ones), and `members list` the family. Each applies pending migrations first.
 
 For anything else, open the file read-only so nothing can change it, if the `sqlite3` tool is installed:
 
@@ -53,19 +57,19 @@ A file that has run a migration the code does not know is newer than the code. `
 
 SQLite keeps recent writes in a write-ahead log, the `familydb.sqlite3-wal` file, with a small `-shm` file beside it, and folds them into the main file from time to time. Both belong to the running database. A copy of the main file alone can miss recent writes, which is why backups use SQLite's own online backup.
 
-FamilyDB opens each connection with the log on, foreign keys on, and a wait of up to five seconds for a write lock. Every thread (a page request, a job, Telegram) opens its own connection and does not share one. A write is a short transaction that takes the write lock when it begins, so two writers take turns instead of overwriting each other, and readers are not held up. A tool that has finished stays saved if a later step of the same turn fails.
+FamilyDB opens each connection with the log on, foreign keys on, a wait of up to five seconds for a write lock, and `synchronous=NORMAL`. That last setting means a power cut can lose the last few commits from the log, without corrupting the file. Every thread (a page request, a job, Telegram) opens its own connection and does not share one. A write is a short transaction that takes the write lock when it begins, so two writers take turns instead of overwriting each other, and readers are not held up. A tool that has finished stays saved if a later step of the same turn fails.
 
 ## Backups and restores
 
 A backup is a copy of the file, taken while the bot runs. Schedule, copying off the server and the commands are on [Backup and restore](/wiki/operations/backup-and-restore).
 
-A restore replaces the whole file, so everything told to FamilyDB since the backup is gone. Settings and keys saved on the page come back with it. The old log files are removed, and migrations the backup lacks are applied. A safety backup of what it replaces is taken before the swap.
+A restore replaces the whole file, so everything told to FamilyDB since the backup is gone. Settings and the model-company and Telegram keys saved on the page come back with it; the Google key file and `.env` do not. The old `-wal` and `-shm` files are removed, and migrations the backup lacks are applied. A safety backup of what it replaces is taken before the swap.
 
-Google keeps its own copy of the calendar, which the restore does not touch. An event made after the backup is still in Google, but no plan owns it, so it shows as added in Google. See [plans and the calendar](/wiki/model/plans-and-calendar).
+Delivery marks, follow-up and check marks and reminders from after the backup are gone, so some reminders, follow-ups or checks may be sent again (an inference from what is stored). Google keeps its own copy of the calendar, which the restore does not touch. An event made after the backup is still in Google, but no plan owns it, so it shows as added in Google. See [plans and the calendar](/wiki/model/plans-and-calendar).
 
 ## Rules for admins
 
-**Editing the database by hand can lose family data the app would have protected.** Some rules live in code, not in the file: an idea's plain title for the duplicate check, a thing to do's revision number, the checks on who may be removed, and what leaves with a person who is. A job also writes to the file every minute. To change anything, use the page, or `familydb tool` (see [the command line](/wiki/controls/command-line)), and take a backup first.
+**Editing the database by hand can lose family data the app would have protected.** Some rules live in code, not in the file: an idea's plain title for the duplicate check, a thing to do's revision number, the checks on who may be removed, and what leaves with a person who is. Jobs open a write transaction every minute and write whenever something is due. To change anything, use the page, or `familydb tool` (see [the command line](/wiki/controls/command-line)), and take a backup first.
 
 - Never copy over, move or delete the file or its `-wal` and `-shm` files while FamilyDB runs.
 - Never run a second copy of the service on the same file: it would repeat the jobs.

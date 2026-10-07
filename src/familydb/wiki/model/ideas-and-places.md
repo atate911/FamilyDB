@@ -26,7 +26,7 @@ All ideas live in one table. The *kind* is free text, so a new kind needs no cha
 | done | An outcome is recorded, even for a dropped idea |
 | dropped | Somebody drops it. It leaves lists, suggestions and lookups and keeps its outcomes and place |
 
-Cancelling a plan moves only a *planned* idea back; a done one stays done. The **Didn't go** button is the exception: it sets any idea that is not dropped back to *idea*, a done one included. **Bring it back** appears only on dropped ideas. Nothing deletes an idea. See [plans and the calendar](/wiki/model/plans-and-calendar) for the plan side.
+Cancelling a plan moves only a *planned* idea back; a done one stays done. The **Didn't go** button sets any idea that is not dropped back to *idea*, a done one included; **Bring it back** is only for dropped ones. Nothing deletes an idea. See [plans and the calendar](/wiki/model/plans-and-calendar) for the plan side.
 
 ## Duplicates
 
@@ -38,7 +38,7 @@ A place holds the facts looked up for an idea: address, coordinates, website, bo
 
 - **Hours** are kept per weekday as opening and closing times. A day recorded as closed is closed; a day with nothing recorded is unknown, and an unknown day is not guessed.
 - **Drive times** are estimates, made whenever the place has coordinates, given or looked up: straight-line distance, a road factor and an average speed, from home. With no home position there is none. The factors are on [General](/wiki/controls/settings/general).
-- **Stale** means never checked, or checked more than `place_stale_days` ago (30 by default, on [Lookups](/wiki/controls/settings/lookups)). The page marks the details as possibly out of date. A suggestion treats the idea as only "possible". When lookups are on, a suggestion the assistant makes also sets a stale idea back to pending, but only among the at most eight ideas it shortlisted, so it waits for the evening's lookups unless lookups run "asap". An idea with no place is never stale. The Telegram commands that run the suggestion step without a model, and the evening-before check, queue none.
+- **Stale** means never checked, or checked more than `place_stale_days` ago (30 by default, on [Lookups](/wiki/controls/settings/lookups)). The page marks the details as possibly out of date. A suggestion treats the idea as only "possible". When lookups are on, a suggestion the assistant makes also sets a stale idea back to pending, but only among the at most eight ideas it shortlisted, so it waits for the evening unless lookups run "asap". An idea with no place is never stale. The Telegram commands that run the suggestion step without a model, and the evening-before check, queue none.
 
 ## How an idea is filled in
 
@@ -55,7 +55,7 @@ Code decides first. A `home` or `gift` idea with no place and no link is skipped
 
 Otherwise one idea gets one [worker turn](/wiki/reference/glossary#worker-turn), apart from the chat, with its own short instructions. It may search the web at most three times, runs at most `worker_max_iterations` steps (12 by default), and its output is capped at 4,000 tokens. Its only tools are `save_place` and `skip_place`, and each must name the idea it was given or the call is refused, so a fetched page cannot talk it into writing elsewhere.
 
-- `save_place` stores the place, links it and marks the idea done. With no coordinates given, FamilyDB looks the address up and estimates the drive. Only real web addresses are kept as links. The idea's location is filled in only when it had none. Besides that, only the idea's place link and lookup state, time and note change.
+- `save_place` stores the place, links it and marks the idea done. With no coordinates given, FamilyDB looks the address up and estimates the drive. Only real web addresses are kept as links. The idea's location is filled in only when it had none. The idea's place link and lookup state, time and note change too.
 - `skip_place` marks it skipped ("not one place") or failed, with a reason of up to 500 characters.
 
 The result is read from what the worker did, not what it said. No hand-back means failed ("worker ended without saving"). A retryable error, or the day's spending limit, leaves the idea pending and stops the run. Any other error marks it failed with the reason. To try a failed one again, use **Look it up again**, or run `familydb enrich --idea <number>`. When lookups run, and the note sent afterwards, are on [Lookups](/wiki/controls/settings/lookups) and [jobs](/wiki/behavior/jobs).
@@ -70,7 +70,7 @@ Recording one marks the idea done, adds one to its times done, sets the last don
 
 An idea of kind `gift` is a present. It is hidden from every kid, always. By default it is also hidden from any grown-up named in its *For* list, matched as a whole word, ignoring capitals. A parent can choose a different list of grown-ups on the idea's edit form, even an empty one. Under the shared password nothing is hidden.
 
-A hidden present is missing from lists, counts, search, the assistant's tools and direct links, and a hidden idea number answers "no idea". A thing to do about it is hidden the same way. A present is never suggested as something to do, and never looked up unless it names a place. Hiding follows the kind: a present saved as another kind is not hidden. See [things to do and reminders](/wiki/model/tasks-and-reminders) for birthdays and [wish lists](/wiki/model/wishes).
+A hidden present is missing from lists, counts, search, the assistant's tools and direct links. A thing to do about it is hidden the same way. A present is never suggested as something to do, and never looked up unless it names a place. Hiding follows the kind: a present saved as another kind is not hidden. See [things to do and reminders](/wiki/model/tasks-and-reminders) for birthdays and [wish lists](/wiki/model/wishes).
 
 ## The ideas list in the prompt
 

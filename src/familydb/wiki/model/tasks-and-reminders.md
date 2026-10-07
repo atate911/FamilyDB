@@ -26,7 +26,7 @@ Times are given in the family time zone. A reminder must be in the future. A loc
 
 ## Who it is for
 
-A parent or admin may change any thing to do, and a kid only their own. The owner also decides where a reminder goes when the thing to do began in a Telegram group (see below).
+A parent or admin may change any thing to do, and a kid only their own. Making one is not restricted that way: a kid can make a thing to do and name another owner. The owner also decides where a reminder goes when the thing to do began in a Telegram group (see below).
 
 ## Repeats
 
@@ -37,7 +37,7 @@ A thing to do repeats every 1 to 400 days, weeks, months or years, and needs a f
 | From the schedule (the default) | At the first reminder's hour, on whole intervals from the first reminder |
 | From when it was done | One interval after the day somebody ticks it, at the first reminder's hour |
 
-On a schedule, the next reminder is added as each one is sent, as the first time still to come. A snooze does not move the schedule, and a stretch with FamilyDB off sends one late reminder, not a flood. Times follow the family's wall clock, so a reminder keeps its hour when the clocks change, and one set for the 31st lands on the last day of a shorter month without drifting.
+On a schedule, the next reminder is added when each due reminder is queued, just before it is sent, as the first time still to come. Ticking Done on a scheduled repeat also adds the next one if none is waiting. A snooze does not move the schedule, and a stretch with FamilyDB off sends one late reminder, not a flood. Times follow the family's wall clock, so a reminder keeps its hour when the clocks change, and one set for the 31st lands on the last day of a shorter month without drifting.
 
 **Done** on a repeating thing to do records this time round (its last-done time) and leaves it open, so it keeps coming. **Cancel** ends it. Setting a new reminder time alone snoozes this round only. Stopping the repeat makes it a one-off. The choices the page offers are on [Plans and To do](/wiki/controls/plans-and-tasks).
 
