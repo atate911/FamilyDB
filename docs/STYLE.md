@@ -52,6 +52,12 @@ Kitchen Table, the default, is `[data-theme="kitchen"]`, and it is also written 
 spacing, and the brand's glass and phosphor. Because the parts only ever ask for a job, a new
 look needs no change to any template, and a change to a part reaches every look at once.
 
+A browser without `light-dark()` (iOS and Safari before 17.5) would throw each pair away and draw white
+on white, so `static/themes-fallback.css` gives it plain day and night values. It is written by
+`familydb/web/fallback.py` from `themes.css` and the tokens at the top of `style.css`
+(`uv run python -m familydb.web.fallback` after changing either), and a test holds the file to
+what the script makes. A browser that can read the pairs skips it.
+
 A look is color only. It never changes the layout, the type, the sizes, the words or what a
 page holds. And two things are the same in every look, because they carry meaning rather than
 taste: **Vera's glass and phosphor**, so she is recognizably herself whatever the page looks

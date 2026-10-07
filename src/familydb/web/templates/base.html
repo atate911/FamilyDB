@@ -13,6 +13,7 @@
     <link rel="preload" href="{{ url_for('static', filename='fonts/fraunces-soft-600.woff2') }}" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='themes.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='themes-fallback.css') }}" />
     {# A mic beside each box that takes words, unless the family turned it off (web_dictation). #}
     {% if dictation %}<script src="{{ url_for('static', filename='dictate.js') }}" data-icons="{{ url_for('static', filename='icons.svg') }}" defer></script>{% endif %}
     <link rel="icon" href="{{ url_for('static', filename='brand/favicon.svg') }}" type="image/svg+xml" />
