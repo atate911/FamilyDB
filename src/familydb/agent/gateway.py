@@ -60,7 +60,9 @@ from familydb.tools import ToolContext, ToolRegistry
 
 log = logging.getLogger(__name__)
 
-Kind = Literal["chat", "digest", "retry", "enrich", "discover", "judge", "price_check"]
+Kind = Literal[
+    "chat", "digest", "retry", "enrich", "discover", "scout", "find_feeds", "judge", "price_check"
+]
 
 
 @dataclass(frozen=True)
@@ -123,6 +125,29 @@ KINDS: dict[str, CallSpec] = {
             tools=("report_finds",),
             hand_back=("report_finds",),
             web_searches=4,
+            **_WORKER,
+        ),
+        # The weekly search for what is on near home over the next four weeks (jobs/happening.py):
+        # discovery's prompt and hand-back, a kind of its own so its cost is held to the
+        # family's monthly budget for it rather than counted with the chat's.
+        CallSpec(
+            "scout",
+            "searching for what is on near home",
+            prompt="discover",
+            tools=("report_finds",),
+            hand_back=("report_finds",),
+            web_searches=4,
+            **_WORKER,
+        ),
+        # Looking for event calendars near home to offer the family (jobs/happening.py): what
+        # it hands back is only addresses, each read by code before anyone is offered it.
+        CallSpec(
+            "find_feeds",
+            "looking for event calendars near home",
+            prompt="find_feeds",
+            tools=("report_feeds",),
+            hand_back=("report_feeds",),
+            web_searches=6,
             **_WORKER,
         ),
         # Weighing a change the code has narrowed to a few options (familydb/judgement.py): a

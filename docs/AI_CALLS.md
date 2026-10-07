@@ -104,6 +104,8 @@ Context is built in three layers, and every piece of information belongs to exac
 | Retry | every 5 minutes, for a failed message other than the digest, 3 times at most; never after running out of steps | chat model, at the chat level | the chat context, plus which writes already ran | the chat tools | a reply |
 | Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place, link or location, and a gift that names no place, are skipped in code | worker model, at the lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
 | Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model, at the lookup level | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
+| Scout | the hourly job for what is on near home (`jobs/happening.py`), at most once in six and a half days, while the weekly search is on, web lookups are on, home is set, and the month's `happening_budget` and the day's limit allow | worker model, at the lookup level | the discover prompt; home area, the next 28 days, no constraints | web search (4), `report_finds` | up to 6 dated finds, kept in `finds` |
+| Find feeds | the same job, every `happening_refind_days` days and at once when the home area changes, under the same conditions | worker model, at the lookup level | `prompts/find_feeds.md`; home area, the calendars already known and those that stopped answering | web search (6), `report_feeds` | up to 10 calendar addresses, each read by code before it is offered |
 | Transcribe | a voice note from somebody on the family list, before its chat turn | the hearing model: OpenAI's speech-to-text model or a Gemini model; never Claude, which takes no recordings | the recording, and one line naming the family, her and home so they are spelled right | nothing | its words, which become the message |
 | Judge | a question code filed when a change needs weighing (a model in use going with several to take its place, new models for a company in use, a refusal nobody could read), only while `judgements` is on; the day's questions together with the evening's lookups, a refusal at once; within `judgement_budget` a month | the model at `judgement_level` (best by default) of the lookup company | `prompts/judge.md`; model names, prices, releases, what the family's calls use a model for, a refusal's status and error text; never the family's messages | `give_judgement` only, choosing among the options code gave | one choice per question, which code checks and acts on within `judgement_acts` |
 | Price check | a price of a model in use the two price lists disagree on, filed like a judgement and asked with it | worker model, at the lookup level | `prompts/price_check.md`; the model and what each list says | web search (3), `report_price` | a price from the company's own page, taken only when it matches a list |
@@ -136,6 +138,18 @@ arrive a moment apart, are gathered for a second and a half, up to four of them 
 the family asked once. The lookup model rather than the chat model, since writing down what a picture says is
 extraction, not judgement, and a call of its own rather than the picture in front of the chat
 model, so the picture is sent once and what it showed stays in the conversation as words.
+
+Looking for what is on near home is two calls made for the household rather than a message
+(`jobs/happening.py`), and the only scheduled calls besides the evening lookups. Their five
+answers: asked only while the family has the search on, web lookups are on, home is set and
+the job's own monthly budget (`happening_budget`, US$1 by default, counted from `llm_calls`
+under `scout` and `find_feeds`) and the day's limit both have room, the search once a week and
+the calendar lookup every few weeks, and on an idle tick never; they see the home area, the
+dates and, for the calendar lookup, the addresses already known, never a message or a memory;
+they may only hand back finds or addresses; what comes back is checked by code (a find's day
+must read as one, a calendar must read as a calendar before anyone is offered it) and the
+family decides which calendars are read; and each is one bounded worker turn, a few cents.
+Reading the calendars and Ticketmaster is code, with no model, and costs nothing.
 
 Judging a change is the one call made for the install rather than for the family's day
 (`familydb/judgement.py`). Its five answers: asked only for a question code filed, while the
