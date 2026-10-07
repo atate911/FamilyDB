@@ -24,9 +24,8 @@ When you can open Status, **Needs a look** lists what only an admin can fix and 
 |---|---|---|
 | The browser waits, then times out | Ports 80 and 443 are closed, nearly always by the hosting provider's own firewall | Allow incoming TCP on both in the provider's panel, then `sudo /opt/familydb/scripts/maintain.sh https`. If `curl -skI https://127.0.0.1 -H 'Host: <server address>'` answers on the server, the server is fine |
 | A 502 from Caddy | Caddy answers, but FamilyDB behind it is not serving | `sudo journalctl -u familydb -n 40 \| grep -E 'not serving\|could not serve'` names why |
-| "the web page is not serving" in the log | The page faces the network without a password it accepts: none of 12 or more characters, no shared password chosen, nobody with their own | The doctor's "web page" line says which. The bot keeps running without a page |
+| "the web page is not serving" in the log | The page faces the network without a password it accepts: none of 12 or more characters, no shared password chosen, nobody with their own | The doctor's "web page" line says which. If it says the page is off, set `WEB_ENABLED=true` in `.env` and restart. The bot keeps running without a page |
 | "could not serve the web page" and "Address already in use" | Another program, or a second copy of FamilyDB, has the port | `sudo ss -ltnp \| grep ':8080'`, stop what holds it, or `sudo /opt/familydb/scripts/maintain.sh port random` |
-| The doctor says the web page is off | `WEB_ENABLED` is false | Set `WEB_ENABLED=true` in `.env` and restart |
 | It opens on the server only | By default the page listens on this machine, and Caddy is what reaches it. On Docker the compose `ports` line starts `127.0.0.1:` | Use the HTTPS address, or an SSH tunnel if you installed with `--local-only` ([Install and first run](/wiki/operations/install#choices-you-can-make)) |
 
 ## Somebody cannot sign in
@@ -41,6 +40,8 @@ When you can open Status, **Needs a look** lists what only an admin can fix and 
 
 ## The assistant does not answer, or answers wrongly
 
+The wording is Vera's as shipped. The family can reword it on Personality, and with no persona a plainer line says the same.
+
 | You see | It usually means | Do this |
 |---|---|---|
 | No reply at all | The bot is not running, or Telegram is not connected | The doctor's "service" line; `sudo systemctl start familydb`, or on Docker `sudo docker compose --project-directory /opt/familydb up -d` |
@@ -49,10 +50,9 @@ When you can open Status, **Needs a look** lists what only an admin can fix and 
 | "Got it, but I can't get to it right now. I'll try again shortly." | The call failed in a way worth retrying: the company is busy or rate limiting, the server cannot reach it, or something unexpected broke | The message is retried every 5 minutes, 3 times at most; after that the job stops, though Status can still say "will try again". Check the log, outbound internet, DNS and the clock (`date -u`) |
 | "Got it, but I can't reach my model at the moment. Someone should look at the logs." | The company refused for a reason retrying will not fix: a wrong or revoked key, no credit, a refused request. The message was given up | Needs a look usually names it. Fix it, then ask again, or run `familydb db retry-failed --reset`, which re-arms every failed message |
 | "I've reached today's spending limit" | The day's estimate reached the limit | Raise it on [Spending](/wiki/controls/settings/spending#the-daily-limit) if the day was genuine; otherwise see [Cost](/wiki/operations/cost) |
-| "I went around in circles on that one", or "That part is saved…" | The turn used all its steps (8 by default). The second wording means something was already written | Ask more simply, or raise "Steps per message" on Spending. Check what is saved before asking again |
+| "I went around in circles on that one", or "That part is saved…" | The turn used all its steps (8 by default). The second wording means the steps or the day's limit ran out after something was already written | Ask more simply, or raise "Steps per message" on Spending. Check what is saved before asking again |
 | An answer cut short | The model hit the output limit; Status lists it under Worth a look | Raise "Longest answer, in tokens" on Spending |
-| It forgets earlier chat | History is 20 messages from the last 6 hours by default | Raise them on Spending |
-| A voice note or photo is not read | Hearing needs an OpenAI or Gemini key; the setting may be off; the recording was too long or large. It is never kept, so it is not retried | [Voice notes and photos](/wiki/controls/settings/ai-model#voice-notes-and-photos); ask for it again or typed |
+| A voice note or photo is not read | Hearing needs an OpenAI or Gemini key; the setting may be off; the recording was too long or large. It is never kept, so it is not retried | [Voice notes and photos](/wiki/controls/settings/ai-model#voice-notes-and-photos); ask the person to send it again or type it |
 
 A kid is given gentler words and is not told about money or how the bot works, so look in the log, not at what the kid was told. To see why one answer went wrong, open it under [Recent activity](/wiki/controls/status/activity).
 
@@ -100,7 +100,6 @@ Reminders, follow-ups and plan checks ask no model, so a model outage does not s
 |---|---|---|
 | The wrong hour | The time zone: a rented server is usually on UTC | [General](/wiki/controls/settings/general#where-home-is) |
 | A reminder waits a couple of minutes | Someone is chatting in that chat, so it rides the next reply | It goes after a hold of about two minutes |
-| A group's reminder arrives in a private chat | "Send what's for one person to their own chat" is on | Intended; see [Connections](/wiki/controls/settings/connections#in-a-telegram-group) |
 | The digest never comes | With no chat set the job is not scheduled (doctor: "no chat id") | Choose the chat on [Messages](/wiki/controls/settings/messages#weekend-ideas) |
 | The digest was skipped | The log says why: "digest skipped: there is no model key yet", "nothing here can send to …", "no active admin to ask as", or "digest already sent today" | Fix that. A Telegram group needs the bot in it and able to see its messages |
 
@@ -131,23 +130,16 @@ Reminders, follow-ups and plan checks ask no model, so a model outage does not s
 
 A failed install is safe to repeat: paste the same block again. Its log is `/var/log/familydb-bootstrap.log`.
 
-**A full disk.** The nightly job already prunes backups older than `--keep-days` ([Backup and restore](/wiki/operations/backup-and-restore)). Free the journal and package cache, and cap the journal with `SystemMaxUse=500M` in `/etc/systemd/journald.conf`. Docker caps each container's log at five files of 10 MB.
+**A full disk.** Trim the journal first, then the package cache; the nightly job already prunes backups older than `--keep-days` ([Backup and restore](/wiki/operations/backup-and-restore)). On Docker, `docker system prune -af` also removes every unused image on the host, not only FamilyDB's.
 
 ```bash
 df -h /
 sudo journalctl --vacuum-size=200M
 sudo apt-get clean
-sudo docker system prune -af     # Docker only: removes everything unused on the host
 ```
 
-**Out of memory.** Confirm with `sudo dmesg -T | grep -i 'killed process' | tail`, add swap, and run the installer again:
+**Out of memory.** Confirm with `sudo dmesg -T | grep -i 'killed process' | tail`, add swap, and run the installer again; what worked is kept. [The server](/wiki/operations/host#disk-and-memory) has the swap commands and what else grows.
 
-```bash
-sudo fallocate -l 1G /swapfile && sudo chmod 600 /swapfile
-sudo mkswap /swapfile && sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-```
-
-The firewall and unattended updates are in [the host guide](/wiki/operations/host), and a bad upgrade in [Upgrade and rollback](/wiki/operations/upgrade-and-rollback).
+[The server](/wiki/operations/host) covers the firewall and updates, [Diagnostics](/wiki/operations/diagnostics) each doctor check, and [Upgrade and rollback](/wiki/operations/upgrade-and-rollback) a bad upgrade.
 
 Developer docs: `RUNBOOK.md`, "Troubleshooting"; `docs/INSTALL.md`, "Troubleshooting"; `familydb/doctor.py` (the checks); `familydb/alerts.py` and `familydb/web/status.py` (`attention`, `health`); `familydb/voice.py` (`EVENTS`).
