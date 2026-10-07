@@ -321,8 +321,11 @@ def reminder_for(
     chat_id: str,
     due_when: str | None = None,
 ) -> str:
-    gifts = gifts_for(conn, task)
     readers = {member.id for member in audience.readers(conn, channel, chat_id)}
+    if kept_from_readers(conn, task, readers):
+        who = f"{task.owner}, " if task.owner else ""
+        return voice.say(settings, "reminder_kept", seed=task.id, who_first=who)
+    gifts = gifts_for(conn, task)
     kept = presents.of_presents(conn, gifts, members.list_all(conn))
     shown = [idea for idea in gifts if not (kept[idea.id].ids & readers)]
     return reminder_text(
@@ -337,6 +340,17 @@ def reminder_for(
         presents=audience.everyone_may(conn, channel, chat_id, "decide")
         and len(shown) == len(gifts),
     )
+
+
+def kept_from_readers(conn: sqlite3.Connection, task: Task, readers: set[int]) -> bool:
+    """Whether this to-do is about a present kept from somebody reading (presents.py)."""
+    if task.idea_id is None:
+        return False
+    idea = ideas.get(conn, task.idea_id)
+    if idea is None or not ideas.is_gift(idea):
+        return False
+    kept = presents.of_presents(conn, [idea], members.list_all(conn))[idea.id]
+    return bool(kept.ids & readers)
 
 
 def reminder_text(

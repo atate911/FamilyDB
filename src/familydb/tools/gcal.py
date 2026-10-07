@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
+from familydb import presents
 from familydb.availability import calendar_available
 from familydb.calendar_sync import event_changes, refresh_plan, sync_plans
 from familydb.dates import (
@@ -102,11 +103,13 @@ def search_plans(ctx: ToolContext, args: SearchPlansInput) -> dict[str, Any]:
         "ORDER BY start DESC LIMIT 50",
         ("%" + args.query.strip().lower() + "%", args.include_cancelled),
     )
+    kept = presents.kept_ids(ctx.conn, ctx.member)  # a plan made from a present goes with it
     return {
         "calendar_checked": checked,
         "plans": [
             {"plan_id": row["id"], **plans.Plan.from_row(row).model_dump(mode="json")}
             for row in rows
+            if row["idea_id"] not in kept
         ],
     }
 
@@ -249,7 +252,30 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
             event["plan_id"] = owned.get(event["google_event_id"])
         for event in day["all_day_events"]:
             event["plan_id"] = owned.get(event["id"])
+    _without_presents(ctx, days)
     return {"calendar": ctx.settings.google_calendar_id, "days": days}
+
+
+def _without_presents(ctx: ToolContext, days: list[dict[str, Any]]) -> None:
+    """Take out of the calendar the plans made from a present kept from whoever asks: the event,
+    its all-day title and the free time stay as they were (the time is still taken)."""
+    kept = presents.kept_ids(ctx.conn, ctx.member)
+    if not kept:
+        return
+    hidden = {
+        plan.id
+        for plan in (plans.get(ctx.conn, pid) for day in days for pid in _plan_ids(day))
+        if plan is not None and plan.idea_id in kept
+    }
+    for day in days:
+        titles = {e["title"] for e in day["all_day_events"] if e.get("plan_id") in hidden}
+        day["events"] = [e for e in day["events"] if e.get("plan_id") not in hidden]
+        day["all_day_events"] = [e for e in day["all_day_events"] if e.get("plan_id") not in hidden]
+        day["all_day"] = [title for title in day["all_day"] if title not in titles]
+
+
+def _plan_ids(day: dict[str, Any]) -> list[int]:
+    return [e["plan_id"] for e in (*day["events"], *day["all_day_events"]) if e.get("plan_id")]
 
 
 def _created(ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None) -> dict[str, Any]:

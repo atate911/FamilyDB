@@ -917,6 +917,7 @@ LINE_GROUPS = (
         False,
         (
             "reminder",
+            "reminder_kept",
             "reminder_late",
             "gift_ideas",
             "gift_ideas_none",

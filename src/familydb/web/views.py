@@ -1471,7 +1471,7 @@ def model_change_row(change: Any, tz: ZoneInfo) -> dict[str, str]:
 # (none for reminders, which somebody asked for), its cost, its lines (voice.EVENTS or "digest").
 AUTOMATIC = (
     ("weekend", "weekend", "Weekend ideas", "one model call a week", ("digest",)),
-    ("reminders", "", "Reminders", "free", ("reminder", "reminder_late")),
+    ("reminders", "", "Reminders", "free", ("reminder", "reminder_kept", "reminder_late")),
     ("follow_ups", "others", "How did it go?", "free", ("follow_up",)),
     (
         "checks",
