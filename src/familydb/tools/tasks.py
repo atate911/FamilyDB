@@ -135,7 +135,8 @@ def _time(ctx: ToolContext, value: str | None, *, future: bool = False) -> str |
     name="add_task",
     description=(
         "Save an obligation, optionally with a reminder. Not a calendar event. "
-        "Reminders go to its owner; reminder_destination says where."
+        "Reminders go to its owner, but one made in a group goes to the group until they have "
+        "their own chat with you; reminder_destination says where."
     ),
     writes=True,
 )
@@ -396,8 +397,11 @@ def nudges(ctx: ToolContext, task: Task) -> str | None:
     return f"on {window.words('free')}" if window else None
 
 
-# Said of a task nothing will bring up: no reminder waiting, no window read, no repeat.
-NOT_BY_ITSELF = "not by itself; offer a reminder"
+# Said of a task nothing will bring up: no reminder waiting, no window read, no repeat. In a
+# group the offer is left out: a plain save there is only ✓ (the family's decision), and an offer
+# would be read by everyone.
+NOT_BY_ITSELF = "not by itself"
+OFFER = "; offer a reminder"
 
 
 def _with_nudges(ctx: ToolContext, task: Task, result: dict[str, Any]) -> dict[str, Any]:
@@ -416,16 +420,17 @@ def _with_nudges(ctx: ToolContext, task: Task, result: dict[str, Any]) -> dict[s
 def comes_up(ctx: ToolContext, task: Task) -> str:
     """What brings up a task with no reminder waiting and no window to nudge it: the morning
     message the day before its deadline, else its weekly list of what has waited, else nothing,
-    so the model offers a reminder."""
+    so the model offers a reminder (never in a group, where a plain save is only ✓)."""
     settings = ctx.settings
+    offer = "" if routing.is_group(task.channel, task.chat_id) else OFFER
     if task.due_at and settings.deadline_heads_up:
         due = datetime.fromisoformat(task.due_at).astimezone(ctx.clock.tz).date()
         if due > ctx.clock.today():
             return BEFORE_DEADLINE
     if settings.forgotten_roundup and task.plan_id is None:
         day = DAY_NAMES.get(settings.roundup_day, settings.roundup_day)
-        return f"in {day} morning's list once a week old; offer a reminder for sooner"
-    return NOT_BY_ITSELF
+        return f"in {day} morning's list once a week old{offer and offer + ' for sooner'}"
+    return NOT_BY_ITSELF + offer
 
 
 BEFORE_DEADLINE = "the morning before it is due"

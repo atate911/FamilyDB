@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import datetime, timedelta
 
 import pytest
@@ -313,6 +314,27 @@ def test_the_model_is_told_when_a_task_will_come_up(settings, conn, family) -> N
     assert moved["nudges"] == "on a free weekday evening"
     off = _ctx(settings, conn, family, task_nudges=False)
     assert "nudges" not in add_task(off, AddTaskInput(title="Bike", preferred_window="a weekend"))
+
+
+def test_in_a_group_a_plain_save_is_not_followed_by_an_offer(settings, conn, family) -> None:
+    """In the family group a plain save is only ✓ (the family's decision): what will bring it up
+    is still said, but not that a reminder should be offered, which everyone would read."""
+    with db.transaction(conn):
+        asked = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="g9",
+            chat_id="-100",
+            member_id=family["sam"].id,
+            text="Don't let me forget to make a dentist appointment.",
+            now="2026-09-25T17:00:00Z",
+        )
+    ctx = _ctx(settings, conn, family)
+    in_group = dataclasses.replace(ctx, message_id=asked.id)
+    saved = add_task(in_group, AddTaskInput(title="Dentist appointment"))
+    assert saved["comes_up"] == "in Sunday morning's list once a week old"
+    alone = add_task(ctx, AddTaskInput(title="Dentist appointment, mine"))
+    assert alone["comes_up"].endswith("; offer a reminder for sooner")
 
 
 def test_the_tasks_page_says_when_one_comes_up(settings, conn, family) -> None:
