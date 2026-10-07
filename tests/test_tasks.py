@@ -1,6 +1,7 @@
 """Tasks and their reminders from the tools and the page, a thought saved for later, and a
 question narrowed to the ideas it names."""
 
+import json
 import re
 from datetime import timedelta
 from zoneinfo import ZoneInfo
@@ -30,9 +31,17 @@ def add(ctx, **fields):
     return add_task(ctx, AddTaskInput(title="Buy paper towels", **fields))["task"]
 
 
+def test_a_reminder_is_answered_in_the_family_s_time_never_utc(ctx):
+    """Shown its stored UTC ("…T15:00:00Z" for 8am in Vancouver), the model took that for the time
+    and set 3pm; the result says the wall time it was asked for, the form it writes in."""
+    task = add(ctx, remind_at="2026-09-26T08:00")
+    assert task["reminder"]["remind_at"] == "2026-09-26T08:00"
+    assert "Z" not in json.dumps(task)
+
+
 def test_deadlines_and_flexible_windows_do_not_schedule_reminders(ctx):
     task = add(ctx, due_at="2026-09-22T09:00", preferred_window="Some Saturday")
-    assert task["due_at"] == "2026-09-22T16:00:00Z"
+    assert task["due_at"] == "2026-09-22T09:00"  # the family's wall time, as the model writes it
     assert task["reminder"] is None
     assert task["owner"] == "Sam"
     # The tool result is the task's columns, less its idempotency key and who made it (that is for

@@ -6,6 +6,7 @@ import hashlib
 import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
@@ -151,7 +152,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
             ctx,
             previous,
             {
-                "task": record(previous),
+                "task": record(previous, ctx.clock.tz),
                 "reminder_destination": _destination(ctx, previous),
                 "timezone": ctx.clock.tz.key,
             },
@@ -195,7 +196,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         ctx,
         task,
         {
-            "task": record(task),
+            "task": record(task, ctx.clock.tz),
             "reminder_destination": _destination(ctx, task),
             "timezone": ctx.clock.tz.key,
         },
@@ -259,7 +260,7 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
         _keep_undo(
             ctx, before, task, values, reminder_changed=bool(args.remind_at or args.clear_reminder)
         )
-    return _with_nudges(ctx, task, {"task": record(task)})
+    return _with_nudges(ctx, task, {"task": record(task, ctx.clock.tz)})
 
 
 # What a change to a task can be put back to (undo.py); its repeat is not among them.
@@ -305,10 +306,27 @@ def _window_until(ctx: ToolContext, window: str) -> str | None:
 UNSAID_WHEN_EMPTY = ("plan_id", "plan_remind", "window_until")
 
 
-def record(task: Task) -> dict[str, Any]:
-    """A task as a tool answers with it."""
+# Instants a task holds, stored in UTC and answered in the family's wall time, the form the model
+# writes them in: shown "2026-09-26T15:00:00Z" for 8am, it took that for the time and set 3pm.
+TIMES = ("due_at", "last_done_at", "created_at", "updated_at")
+REMINDER_TIMES = ("remind_at", "delivered_at", "cancelled_at")
+
+
+def record(task: Task, tz: ZoneInfo) -> dict[str, Any]:
+    """A task as a tool answers with it, its times on the family's clock."""
+
+    def local(found: dict[str, Any], keys: tuple[str, ...]) -> None:
+        for key in keys:
+            if found.get(key):
+                moment = datetime.fromisoformat(found[key]).astimezone(tz)
+                found[key] = moment.strftime("%Y-%m-%dT%H:%M")
+
     empty = {key for key in UNSAID_WHEN_EMPTY if getattr(task, key) is None}
-    return task.model_dump(mode="json", exclude=empty)
+    said = task.model_dump(mode="json", exclude=empty)
+    local(said, TIMES)
+    if said.get("reminder"):
+        local(said["reminder"], REMINDER_TIMES)
+    return said
 
 
 def _may_update(ctx: ToolContext, task_id: int) -> None:
