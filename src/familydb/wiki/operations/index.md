@@ -7,13 +7,10 @@ procedures; this page is the map and the things worth knowing before you need th
 ## Installing
 
 One block of commands, in step 1 of `docs/INSTALL.md`, makes a deploy key, shows
-where to add it on GitHub, and runs `scripts/bootstrap.sh`, which runs
-`scripts/install.sh`. The installer asks at most for a domain name, writes `.env`,
-installs, migrates, puts HTTPS in front of the page with Caddy, and schedules
-nightly backups, for Docker or a virtualenv. Every failure says what to do and that
-running it again carries on. It prints a link and a password, and the page then walks
-an admin through the rest: you, your password, an AI model, home, Telegram, the
-family, the calendar.
+where to add it on GitHub, and runs the installer. It asks at most for a domain name,
+puts HTTPS in front of the page, and schedules nightly backups; the page then walks an
+admin through the rest. [Install and first run](/wiki/operations/install) says what it
+changes on the server and why, and how to check that it worked.
 
 ## Looking after the server
 
@@ -30,8 +27,8 @@ family, the calendar.
 | `https` / `port` | Move the public HTTPS port, or FamilyDB's own |
 | `password [NAME]` | A new starting password for somebody who forgot |
 
-Never upgrade with `git pull`: after an upgrade the checkout is on a detached
-commit, and it would skip the backup and the dependencies.
+Never upgrade with `git pull`. [Upgrade and rollback](/wiki/operations/upgrade-and-rollback)
+says what `upgrade` does and how to go back.
 
 ## Where things live
 
@@ -46,10 +43,10 @@ bot's user alone.
 | `.env` | The page's address and shared password, anything not set from the page | no; keep your own copy |
 | `backups/` | The nightly backups | they are the backups |
 
-The nightly backup runs at 03:15 with SQLite's online backup (safe while the bot
-runs) and keeps 14 days by default. **Keep a copy off the server**: a backup on the
-same disk is not a backup. A key saved on the Settings page lives in the database,
-so it is in every backup.
+The nightly backup runs at 03:15 and keeps 14 days by default. **Keep a copy off the
+server**: a backup on the same disk is not a backup. A key saved on the Settings page lives
+in the database, so it is in every backup. [Backup and restore](/wiki/operations/backup-and-restore)
+has the rest.
 
 ## When something is wrong
 
@@ -59,25 +56,25 @@ so it is in every backup.
 
 ### If an admin is locked out
 
-This guide cannot be read without signing in, so these steps live here for the
-admin who can still reach the server. On the server, `maintain.sh password` (or
-`familydb password`) makes a new starting password for the first admin, or for
-`NAME`, and prints it once. Signing in with it takes that person to a page where
-they choose their own. Nothing on the server needs editing: passwords are only
-stored as hashes.
+This guide cannot be read without signing in, so the one command is here for the admin who
+can still reach the server: `sudo /opt/familydb/scripts/maintain.sh password` makes a new
+starting password for the first admin (or `password NAME` for somebody else) and prints it
+once. [Recovery](/wiki/operations/recovery) has every case and what each does.
 
 ### When a secret gets out
 
-- *An API key*: revoke it in the company's console, make a new one, and enter it on the Settings page or in `.env`.
-- *The Telegram token*: `/revoke` in BotFather makes a new one and kills the old; paste it on the Settings page.
-- *Somebody's password*: they change their own on Your password, or an admin makes a new starting password (which signs them out everywhere).
-- *A lost phone*: a new starting password for that person signs them out everywhere; "Sign everyone out" on the Sign-in and security page ends every sign-in.
-- *The whole server*: the database holds everything the family said. Rotate all of the above and assume anything stored on the Settings page was read.
+Revoke it at its source, make a new one, and put the new one on the Settings page or in
+`.env`; for a person's password, make a new starting password. The table is in
+[Recovery](/wiki/operations/recovery#when-a-secret-has-been-exposed).
 
 ## In this section
 
-**Still to come:** install and first run, configuration (every `.env` key), backup
-and restore, upgrade and rollback, diagnostics, troubleshooting by symptom, the
-firewall, and removing it.
+- [Install and first run](/wiki/operations/install): the three steps, what the installer changes and why
+- [Backup and restore](/wiki/operations/backup-and-restore): the nightly backup, taking one, copying it off, putting one back
+- [Upgrade and rollback](/wiki/operations/upgrade-and-rollback): one command forward, three to go back
+- [Recovery: when somebody cannot sign in](/wiki/operations/recovery): a new starting password, lockouts, a lost phone
+
+**Still to come:** configuration (every `.env` key), diagnostics, troubleshooting by
+symptom, the firewall and host hardening, and cost.
 
 Exact procedures: `RUNBOOK.md` and `docs/INSTALL.md`.
