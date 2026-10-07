@@ -479,6 +479,7 @@ PAGES = {
     "general": _general,
     "model": _model,
     "spending": _spending,
+    "kids": lambda app, conn: {},
     "messages": _messages,
     "lookups": _lookups,
     "connections": _connections,
@@ -585,6 +586,16 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
         "spending": (
             [f"Up to ${limit:.2f} a day." if limit else "No daily limit.", spend],
             flags["spending"],
+        ),
+        "kids": (
+            [
+                f"Up to {live.kid_daily_messages} messages a day each."
+                if live.kid_daily_messages
+                else "No daily count of messages.",
+                f"{live.wish_daily_count} everyday "
+                f"wish{'' if live.wish_daily_count == 1 else 'es'} a day each.",
+            ],
+            False,
         ),
         "messages": ([weekend, f"Asks how a plan went at {hour(live.follow_up_hour)}."], False),
         "lookups": ([lookups], False),

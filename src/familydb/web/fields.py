@@ -242,6 +242,7 @@ SECTIONS: tuple[Section, ...] = (
         "model", "AI model", "sparkle", "Which company answers, with which model, and its key."
     ),
     Section("spending", "Spending", "dollar", "The daily limit, and what one message may use."),
+    Section("kids", "Kids", "gift", "What each kid may send and spend, and their wish lists."),
     Section("messages", "Messages", "bell", "What is sent without being asked, and when."),
     Section("lookups", "Lookups", "search", "Filling ideas in from the web."),
     Section(
@@ -434,6 +435,7 @@ GROUPS: tuple[Group, ...] = (
                 "Off, the prices built into this version are used, and nobody is told.",
             ),
         ),
+        folded=True,
     ),
     Group(
         "model",
@@ -473,6 +475,7 @@ GROUPS: tuple[Group, ...] = (
                 "Counted within the daily limit as well. 0 asks nothing.",
             ),
         ),
+        folded=True,
     ),
     Group(
         "model",
@@ -554,6 +557,7 @@ GROUPS: tuple[Group, ...] = (
                 company="gemini",
             ),
         ),
+        folded=True,
     ),
     Group(
         "model",
@@ -570,6 +574,7 @@ GROUPS: tuple[Group, ...] = (
                 "to the bot, by a mention in its caption or a reply.",
             ),
         ),
+        folded=True,
     ),
     Group(
         "spending",
@@ -584,6 +589,14 @@ GROUPS: tuple[Group, ...] = (
                 "a model until midnight, and whoever writes is told why. 0 means no limit. Set a "
                 "limit with the company too.",
             ),
+        ),
+    ),
+    Group(
+        "kids",
+        "kid-limits",
+        "Each kid's day",
+        "What a kid's own messages may use. Her wish list works whatever these say.",
+        (
             field(
                 "kid_daily_messages",
                 "Messages a kid may send a day",
@@ -594,14 +607,15 @@ GROUPS: tuple[Group, ...] = (
             field(
                 "kid_daily_spend",
                 "Each kid's daily share (US$)",
-                "What each kid's own messages may spend in a day, within the limit above. When "
+                "What each kid's own messages may spend in a day, within the family's daily limit "
+                "on Spending. When "
                 "it is used up she is told, kindly, to come back tomorrow; her wish list still "
                 "works. 0 means no share of her own.",
             ),
         ),
     ),
     Group(
-        "spending",
+        "kids",
         "wishes",
         "The kids' wish lists",
         "How much the kids may ask for, and how the bot guides how they ask.",

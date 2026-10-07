@@ -1,0 +1,5 @@
+{% from "_settings.html" import form with context %}
+{% from "_ui.html" import icon with context %}
+<p class="lede">Each kid on the <a href="{{ url_for('family.show') }}">family list</a> counts on her own.</p>
+{{ form('kids', groups.values()) }}
+<p class="note">{{ icon('gift') }}<span>Their lists, and what is waiting on a grown-up, are on <a href="{{ url_for('web.wishes') }}">Kids’ lists</a>.</span></p>

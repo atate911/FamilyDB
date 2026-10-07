@@ -73,7 +73,7 @@ ROLE_WORDS = {
     "wishes.",
     "kid": "is in the plans; with a password, reads the ideas and plans, talks to the bot and "
     "keeps her own wish lists, sees only her own things to do, within the number of messages a "
-    "day set under Spending.",
+    "day set under Kids in Settings.",
 }
 GENDER_WORDS = {"female": "Female", "male": "Male"}
 # By the permission needed; {name} is the persona in force.
