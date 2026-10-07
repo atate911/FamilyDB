@@ -87,7 +87,7 @@ To stop needing a token, make a deploy key and point the checkout at it once; `d
 
 ## If it goes wrong
 
-Stop FamilyDB, then roll back or finish by hand. Do not run `upgrade` again. If it stopped with an error after it checked out the new code, the new code is already in place, so a second run says `Already up to date` and does nothing. A failed upgrade also prints no rollback commands, so you find the two values yourself.
+If `upgrade` failed before it checked out the new code, as a failed fetch does, nothing changed: fix the cause and run it again. If it stopped after that, stop FamilyDB, then roll back or finish by hand, and do not run `upgrade` again: the new code is already in place, so a second run says `Already up to date` and does nothing. A failed upgrade also prints no rollback commands, so you find the two values yourself.
 
 1. Find the backup the upgrade took. The log lists every past upgrade, so take the last line:
 

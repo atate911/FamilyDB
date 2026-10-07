@@ -27,15 +27,15 @@ A retry must not make a second event. Before Google is contacted, FamilyDB recor
 
 | Situation | What the page says |
 |---|---|
-| Google answered | "From Google Calendar, including anything added there directly." |
-| No calendar connected, or its key file is missing | "Google Calendar is not connected, so these are the plans FamilyDB has saved." |
-| Google did not answer | "Google Calendar did not answer, so these are the plans as FamilyDB last saw them. Times may have moved since." |
+| Google answered | `From Google Calendar, including anything added there directly.` |
+| No calendar connected, or its key file is missing | `Google Calendar is not connected, so these are the plans FamilyDB has saved.` |
+| Google did not answer | `Google Calendar did not answer, so these are the plans as FamilyDB last saw them. Times may have moved since.` |
 
 The page, and Telegram's `/today` and `/week`, keep Google's answer for 1 minute, so an event added on a phone can take that long to appear. Anything FamilyDB writes clears it at once. No page view asks a model.
 
 ## Connecting
 
-The form tries the key and the calendar's id before keeping either: it reads the calendar, adds an all-day event called "FamilyDB connection check", and deletes it. That event may show briefly in calendar notifications. If the check fails, the page says what is wrong: the key is not a service account's, the calendar is not found (check the id and the sharing), the Calendar API is off in the key's project, or Google refused the key. Any other 403 is reported as the account seeing the calendar but not changing it, whatever the real cause.
+The form tries the key and the calendar's id before keeping either: it reads the calendar, adds an all-day event called `FamilyDB connection check`, and deletes it. That event may show briefly in calendar notifications. If the check fails, the page says what is wrong: the key is not a service account's, the calendar is not found (check the id and the sharing), the Calendar API is off in the key's project, or Google refused the key. Any other 403 is reported as the account seeing the calendar but not changing it, whatever the real cause.
 
 ## When Google says no later
 
@@ -47,7 +47,7 @@ Nothing warns you. Reads fail with `Google Calendar error 404`, the page shows t
 |---|---|
 | The calendar was made read-only | Reading works. A write fails with `Google Calendar error 403`, so a plan is not made or changed. No alert is raised |
 | The Calendar API was switched off in the key's project | Calls fail as `Google Calendar error 403`, with no alert. Setup recognizes this case, but only when you connect |
-| Google refused the key at sign-in (the key deleted, the service account disabled, or the server's clock far off), or the key file is unreadable | Reads and writes fail, Status shows "Google Calendar stopped letting the bot in", and each admin with a Telegram id is told. It clears when a Google request next works |
+| Google refused the key at sign-in (the key deleted, the service account disabled, or the server's clock far off), or the key file is unreadable | Reads and writes fail, Status shows `Google Calendar stopped letting the bot in`, and each admin with a Telegram id is told. It clears when a Google request next works |
 | The key file was deleted from the server | Status says a calendar is named but not connected. A running FamilyDB that already built its client keeps working, and after the next restart the calendar counts as not connected. New plans are saved in FamilyDB only, and plans still to come are copied to Google once it is connected again, up to 20 a run |
 
 The alert is raised for a refused or unreadable key, so check the key first; its text also mentions the sharing. A plan already on Google cannot be changed while the calendar is not connected. If you connect a different calendar id, the old plans belong to the other calendar and are refused.
