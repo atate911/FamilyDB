@@ -315,7 +315,7 @@ def _kids_card(wished: dict[str, Any] | None, people: list[member_store.Member])
             {
                 **kid,
                 "slot": person.slot or 0 if person else 0,
-                "initial": kid["name"][:1].upper(),
+                "initial": views.initial_for(kid["name"], [p.display_name for p in people]),
                 "waiting": waiting,
                 "pronoun": pronoun,
                 "top": [row["title"] for row in kid["lists"][0]["rows"][: wished["top"]]],
@@ -874,7 +874,9 @@ def _lists(conn: Any, kid: member_store.Member, today: date) -> dict[str, Any]:
         "id": kid.id,
         "name": kid.display_name,
         "slot": kid.slot or 0,
-        "initial": kid.display_name[:1].upper(),
+        "initial": views.initial_for(
+            kid.display_name, [m.display_name for m in member_store.list_all(conn)]
+        ),
         "lists": lists,
         "answered": answered,
         "turned": turned,

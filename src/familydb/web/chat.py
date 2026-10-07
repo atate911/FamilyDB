@@ -427,7 +427,7 @@ def _conversations(
             {
                 "name": kid.display_name,
                 "slot": views.slot_of(kid.display_name, slots),
-                "initial": kid.display_name[:1].upper(),
+                "initial": views.initial_for(kid.display_name, [m.display_name for m in family]),
                 "href": url_for("chat.show", **{"with": kid.id}, _anchor=LATEST),
                 "current": chat_id == mine,
                 "snippet": said,

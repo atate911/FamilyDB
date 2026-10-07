@@ -1193,3 +1193,15 @@ def test_ideas_come_24_to_a_page_and_can_be_put_in_order(settings, clock, conn, 
     by_name = client.get("/ideas?sort=az").text
     assert by_name.index("Idea 00") < by_name.index("Idea 01")
     assert 'value="az" selected' in by_name and "page=2" in by_name and "sort=az" in by_name
+
+
+def test_two_letters_where_two_people_start_the_same_way() -> None:
+    from familydb.web import views
+
+    family = ["Sam", "Sara", "Alex", "Maya Lee", "Mark"]
+    assert views.initial_for("Alex", family) == "A"
+    assert views.initial_for("Sam", family) == "Sa" or views.initial_for("Sam", family) == "Sm"
+    assert views.initial_for("Sam", family) != views.initial_for("Sara", family)
+    assert views.initial_for("Maya Lee", family) == "ML"
+    assert views.initial_for("Mark", family) == "Mk"  # "Ma" is how Maya starts too
+    assert views.person_of("Alex", {"alex": 2, "sam": 1})["initial"] == "A"

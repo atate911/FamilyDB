@@ -8,7 +8,7 @@ import difflib
 import json
 import math
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from functools import lru_cache
@@ -478,11 +478,28 @@ def slot_of(name: str | None, slots: dict[str, int]) -> int:
     return slots.get((name or "").casefold(), 0)
 
 
+def initial_for(name: str, names: Iterable[str]) -> str:
+    """The letter beside a person: their first, or two when somebody else in the family starts the
+    same way ("Sa" for Sam beside Sara), so colour is never all that tells them apart."""
+    name = name.strip()
+    first = name[:1].upper()
+    others = [o.strip() for o in names if o.strip().casefold() != name.casefold()]
+    if not any(o[:1].upper() == first for o in others):
+        return first
+    words = name.split()
+    if len(words) > 1:  # "Sam Lee": S and L
+        return (words[0][:1] + words[-1][:1]).upper()
+    pair = name[:2].capitalize()
+    if not any(o[:2].casefold() == pair.casefold() for o in others):
+        return pair
+    return (name[:1] + name[-1:]).capitalize()
+
+
 def person_of(name: str | None, slots: dict[str, int]) -> dict[str, Any]:
     """A name and the colour and letter that go beside it; Everyone is the house, with no letter."""
     if not name or name == EVERYONE:
         return {"name": EVERYONE, "slot": 0, "initial": ""}
-    return {"name": name, "slot": slot_of(name, slots), "initial": name[:1].upper()}
+    return {"name": name, "slot": slot_of(name, slots), "initial": initial_for(name, slots)}
 
 
 def people_for(idea: Idea | None, slots: dict[str, int]) -> list[dict[str, Any]]:
@@ -1311,7 +1328,7 @@ def chat_line(
         "day": local_day(message.received_at, tz),
         "clock": local_clock(message.received_at, tz),
         "slot": 0 if from_bot else slot_of(who, slots or {}),
-        "initial": "" if from_bot else who[:1].upper(),
+        "initial": "" if from_bot else initial_for(who, slots or {}),
         "trouble": trouble,
         "failed": trouble == FAILED_WORDS,
         "did": did if from_bot else [],
@@ -1332,7 +1349,7 @@ def handed_line(
         "day": local_day(stamp, tz),
         "clock": local_clock(stamp, tz),
         "slot": slot_of(who, slots or {}),
-        "initial": who[:1].upper(),
+        "initial": initial_for(who, slots or {}),
         "trouble": "waiting for an answer",
         "failed": False,
         "did": [],

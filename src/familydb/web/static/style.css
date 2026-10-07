@@ -112,7 +112,6 @@ p, li, dd, .lede { text-wrap: pretty; }
 .skip:focus { top: var(--s3); }
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .measure { max-width: var(--measure); }
-.mt-2 { margin-top: var(--s2); } .mt-3 { margin-top: var(--s3); } .mt-4 { margin-top: var(--s4); } .mt-5 { margin-top: var(--s5); } .mt-6 { margin-top: var(--s6); }
 @media (min-width: 821px) { .phone-only { display: none !important; } }
 
 .icon { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
@@ -186,7 +185,7 @@ p, li, dd, .lede { text-wrap: pretty; }
    every look but Afterglow, where the family's buttons are dark glass with a warm-white edge) */
 .btn--primary { background: var(--primary); border-color: var(--primary-edge); color: var(--on-primary); }
 .btn--primary:hover { background: var(--primary-hover); border-color: var(--primary-edge); color: var(--on-primary); }
-.btn--quiet { border-color: var(--line-2); background: var(--card); }
+.btn--quiet { border-color: var(--edge); background: var(--card); }
 .btn--sm { min-height: 40px; padding: 0 var(--s4); font-size: var(--t-meta); }
 .btn[disabled], .btn[aria-disabled="true"] { opacity: 1; background: var(--paper-2); border-color: var(--line-2); color: var(--ink-3); cursor: not-allowed; }
 .linkbtn { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); font-weight: 700; font-size: var(--t-meta); }
@@ -210,6 +209,8 @@ p, li, dd, .lede { text-wrap: pretty; }
 .tag--better { background: transparent; color: var(--ink-2); border-color: var(--line-2); }        /* Could be better, Not connected */
 .tag--better::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--amber); flex: none; }
 .tag--broken { background: var(--red-soft); color: var(--red); border-color: var(--red-line); } /* Not working */
+/* a chip says what a thing is (a cuisine, a price, a tag): an outline, quieter than a tag, which says how it stands */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: transparent; color: var(--ink-2); font-size: var(--t-sm); line-height: 1.15; white-space: nowrap; }
 .tag--off { background: var(--paper-2); color: var(--ink-2); border-color: var(--paper-2); }          /* Off, Optional, No backup, Thinking about it */
 .tag--when { background: var(--card); color: var(--ink); border-color: var(--ink-3); }               /* Tomorrow, Planned (with the calendar icon) */
 .tag--been { background: transparent; color: var(--ink-2); border-color: var(--line-2); }           /* Went Thu 1 Oct, Not this time */
@@ -407,7 +408,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 .searchbox input { padding-left: 44px; }
 
 /* disclosure (<details>) used for filters and form options */
-.disclose { border: 1.5px solid var(--line-2); border-radius: var(--r-md); background: var(--card); }
+.disclose { border: 1.5px solid var(--edge); border-radius: var(--r-md); background: var(--card); }
 .disclose > summary { list-style: none; display: flex; align-items: center; gap: var(--s2); min-height: 46px; padding: 0 var(--s4); cursor: pointer; font-weight: 700; font-size: var(--t-meta); color: var(--ink); }
 .disclose > summary::-webkit-details-marker { display: none; }
 .disclose > summary .val { font-weight: 400; color: var(--ink-2); }
@@ -439,7 +440,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 
 /* 5.15 Faces ("How did it go?") with words */
 .faces { display: flex; gap: var(--s2); flex-wrap: wrap; margin: 0; }
-.face { display: grid; justify-items: center; gap: 2px; min-width: 64px; padding: var(--s2) var(--s2) 6px; border-radius: var(--r-md); border: 1.5px solid var(--line-2); background: var(--card); font: inherit; font-size: var(--t-sm); font-weight: 700; color: var(--ink-2); cursor: pointer; }
+.face { display: grid; justify-items: center; gap: 2px; min-width: 64px; padding: var(--s2) var(--s2) 6px; border-radius: var(--r-md); border: 1.5px solid var(--edge); background: var(--card); font: inherit; font-size: var(--t-sm); font-weight: 700; color: var(--ink-2); cursor: pointer; }
 .face .icon { width: 26px; height: 26px; color: var(--ink); }
 .face:hover { border-color: var(--ink); color: var(--ink); }
 
@@ -495,7 +496,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 
 /* avatar glyphs take the slot's letter colour wherever they sit */
 .av > .icon { color: var(--p-on, var(--everyone-on)); width: 60%; height: 60%; stroke-width: 2.2; }
-h2.card__head, h3.card__head { font-size: var(--t-h3); display: flex; align-items: center; justify-content: flex-start; gap: var(--s3); }
+h2.card__head { font-size: var(--t-h2); }
+h3.card__head { font-size: var(--t-h3); }
+h2.card__head, h3.card__head { display: flex; align-items: center; justify-content: flex-start; gap: var(--s3); }
 
 .techie { padding: 0; }
 .techie > summary { min-height: 64px; padding: 0 var(--s6); }
@@ -674,7 +677,6 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .pane__mark--solo { margin: 0 auto var(--s4); }
 .pane .wm { font-size: 1.125rem; }
 .mark-fdb--sm { width: 24px; height: 24px; flex: none; }
-.mb-4 { margin-bottom: var(--s4); }
 
 /* Her voice: Vera's small machine lines in the mono */
 .mono { font-family: var(--font-mono); font-size: .9em; letter-spacing: 0; }
@@ -703,7 +705,6 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .radar--narrow .nm { font-size: 14px; }
 
 /* 5.29 Stage 8: the everyday pages (plans list, restaurants, memory, passwords, family, history) */
-.mt-1 { margin-top: var(--s1); }
 .av--xl { width: 56px; height: 56px; font-size: 1.375rem; }
 /* a page with a main column and a side column of cards (lists with their add form beside them) */
 .list-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--s5); align-items: start; }
@@ -753,7 +754,7 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .rel { color: var(--ink-3); }
 .plan__acts { display: grid; justify-items: start; gap: var(--s2); margin-top: var(--s2); }
 /* a small fold whose summary is a quiet button: Move it, Cancel it */
-.mini-fold > summary { list-style: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--s4); border-radius: var(--r-pill); border: 1.5px solid var(--line-2); background: var(--card); font-weight: 700; font-size: var(--t-meta); cursor: pointer; }
+.mini-fold > summary { list-style: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--s4); border-radius: var(--r-pill); border: 1.5px solid var(--edge); background: var(--card); font-weight: 700; font-size: var(--t-meta); cursor: pointer; }
 .mini-fold > summary::-webkit-details-marker { display: none; }
 .mini-fold[open] { justify-self: stretch; }
 .mini-fold[open] > summary { background: var(--paper-2); }
@@ -864,7 +865,6 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .wturned .tags { display: inline-flex; flex-wrap: wrap; gap: 6px; vertical-align: middle; }
 .card--flag { border-color: var(--amber-line); }
 
-.mb-6 { margin-bottom: var(--s6); }
 .wkid__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); align-items: start; }
 .wish__acts .btn--sm, .wish__move select { min-height: var(--target); }
 .wish__acts > form:last-child { margin-left: auto; }
@@ -889,7 +889,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .rate-line p b { display: block; font-size: var(--t-md); }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s4); counter-reset: step; }
 .steps li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s3); }
-.steps li::before { counter-increment: step; content: counter(step); width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--amber); color: var(--amber); display: grid; place-items: center; font-family: var(--font-num); font-weight: 600; font-size: var(--t-meta); }
+.steps li::before { counter-increment: step; content: counter(step); width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--amber); color: var(--amber); display: grid; place-items: center; font-family: var(--font-num); font-weight: 600; font-size: var(--t-meta); }
 .steps b { display: block; line-height: 1.3; }
 .steps p { font-size: var(--t-meta); color: var(--ink-2); }
 .card--setup { background: var(--amber-soft); border-color: var(--amber-line); }
@@ -1418,7 +1418,7 @@ textarea.script { min-height: 16em; line-height: 1.55; }
 .setup-progress ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--s1); max-width: 760px; }
 .setup-progress a { display: grid; justify-items: center; gap: 4px; min-height: var(--target); padding: var(--s2) 2px; border-radius: var(--r-md); color: var(--ink-2); text-decoration: none; font-size: var(--t-sm); font-weight: 700; text-align: center; line-height: 1.2; }
 .setup-progress a:hover { background: var(--paper-2); color: var(--ink); }
-.sp__n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--edge); background: var(--card); color: var(--ink-2); font-family: var(--font-num); font-weight: 600; font-size: var(--t-meta); }
+.sp__n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--edge); background: var(--card); color: var(--ink-2); font-family: var(--font-num); font-weight: 600; font-size: var(--t-meta); }
 .setup-progress .done .sp__n { background: var(--ok); border-color: var(--ok); color: var(--on-vera); }
 .setup-progress a[aria-current] { color: var(--ink); }
 .setup-progress a[aria-current] .sp__n { background: var(--ink); border-color: var(--ink); color: var(--paper); }
@@ -1432,7 +1432,7 @@ textarea.script { min-height: 16em; line-height: 1.55; }
 .setup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); max-width: 760px; }
 .setup-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: var(--s2) var(--s4); align-items: center; padding: var(--s4) var(--s5); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--card); color: var(--ink); text-decoration: none; box-shadow: var(--shadow); }
 .setup-row:hover { border-color: var(--edge); color: var(--ink); }
-.setup-row__n { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--edge); font-family: var(--font-num); font-weight: 600; }
+.setup-row__n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--edge); font-family: var(--font-num); font-weight: 600; }
 .setup-row--done .setup-row__n { background: var(--ok); border-color: var(--ok); color: var(--on-vera); }
 .setup-row__what { min-width: 0; }
 .setup-row__what b { display: block; font-size: 1.125rem; line-height: 1.25; }
@@ -1710,3 +1710,9 @@ li:target { border-radius: var(--r-md); }
 .share-cell { display: inline-flex; align-items: center; gap: var(--s2); }
 .tables { display: grid; gap: var(--s5); margin-top: var(--s4); }
 .inline-action { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+
+/* ---------- Utilities, last, so a spacing class on an element always wins ---------- */
+.mt-2 { margin-top: var(--s2); } .mt-3 { margin-top: var(--s3); } .mt-4 { margin-top: var(--s4); } .mt-5 { margin-top: var(--s5); } .mt-6 { margin-top: var(--s6); }
+.mb-4 { margin-bottom: var(--s4); }
+.mt-1 { margin-top: var(--s1); }
+.mb-6 { margin-bottom: var(--s6); }

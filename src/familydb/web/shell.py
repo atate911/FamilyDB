@@ -14,6 +14,7 @@ from typing import Any
 
 from familydb import personas, presents
 from familydb.app import App
+from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
@@ -87,6 +88,9 @@ def frame(app: App) -> Frame:
             rate = _to_rate(conn, visitor, today)
             check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
             pill = _pill(app, conn, visitor) if visitor.may("browse") else None
+            if me.name:
+                names = [one.display_name for one in member_store.list_all(conn) if one.active]
+                me = Me(me.name, views.initial_for(me.name, names), me.slot, me.role)
     except sqlite3.OperationalError:
         # A database not yet migrated: the frame is drawn without counts, so a page that says
         # "not found" or "not yours" never fails itself.
