@@ -1282,6 +1282,15 @@ def sign_out_everyone() -> Response | tuple[str, int]:
     return redirect(url_for("auth.login"))
 
 
+def _key_given() -> str:
+    """The key file as pasted, or as chosen with the file box when nothing was pasted."""
+    pasted = request.form.get("key", "")
+    chosen = request.files.get("key_file")
+    if pasted.strip() or chosen is None:
+        return pasted
+    return chosen.read().decode("utf-8", errors="replace")
+
+
 @bp.post("/settings/google/connect")
 def google_connect() -> Response | tuple[str, int]:
     """Keep the service account key and calendar id only if the calendar can be read and changed."""
@@ -1291,7 +1300,7 @@ def google_connect() -> Response | tuple[str, int]:
         return _google_answer(back, error=complaint)
     calendar_id = request.form.get("calendar_id", "").strip()
     try:
-        info = google.service_account_key(request.form.get("key", ""))
+        info = google.service_account_key(_key_given())
         google.check_access(info, calendar_id)
     except google.GoogleSetupError as exc:
         return _google_answer(back, error=str(exc))

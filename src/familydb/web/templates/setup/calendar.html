@@ -1,4 +1,5 @@
-<p class="lede">When the family settles on a plan, {{ site_title }} can put it on your shared Google Calendar, and it checks the calendar before suggesting anything. Google makes this the longest step: about ten minutes, once. Skip it if you do not use Google Calendar; plans are still kept here.</p>
+<p class="lede">When the family settles on a plan, {{ site_title }} can put it on your shared Google Calendar, and it checks the calendar before suggesting anything. Google makes this the longest step: about ten minutes, once.</p>
+<p class="lede"><b>Plans stay in {{ site_title }} whatever you choose.</b> Without a calendar they are kept here and shown on Plans; if Google Calendar isn’t for you, say so below.</p>
 
 {% if google.connected and google.calendar %}
   <p class="small">Connected, using <code class="cmd-inline">{{ google.calendar }}</code>.{% if google.email %} Shared with <code class="cmd-inline">{{ google.email }}</code>.{% endif %} To use a different calendar or key, go through it again below.</p>
@@ -11,7 +12,7 @@
     <li><div><p><a href="{{ links.google_project }}" target="_blank" rel="noopener noreferrer">Make a project</a>: name it {{ site_title }} and press <em>Create</em>. Wait for it to finish, and check that it is the project chosen at the top of the page.</p></div></li>
     <li><div><p><a href="{{ links.google_calendar_api }}" target="_blank" rel="noopener noreferrer">Turn on the Google Calendar API</a>: press <em>Enable</em>.</p></div></li>
     <li><div><p><a href="{{ links.google_service_accounts }}" target="_blank" rel="noopener noreferrer">Make the service account</a>: <em>Create service account</em>, name it {{ site_title }}, press <em>Create and continue</em>, then <em>Done</em>: it needs no role.</p></div></li>
-    <li><div><p>Open the account you just made, then <em>Keys</em>, <em>Add key</em>, <em>Create new key</em>, <b>JSON</b>. A file is saved. Open it and copy everything in it.</p></div></li>
+    <li><div><p>Open the account you just made, then <em>Keys</em>, <em>Add key</em>, <em>Create new key</em>, <b>JSON</b>. A file is saved, ending in <code class="cmd-inline">.json</code>: keep it for the last part.</p></div></li>
   </ol>
 </section>
 
@@ -25,7 +26,7 @@
 </section>
 
 <section class="card setup-card" aria-labelledby="h-gpaste">
-  <h2 class="card__head" id="h-gpaste">3. Paste both here</h2>
+  <h2 class="card__head" id="h-gpaste">3. Give both to {{ site_title }}</h2>
   <p class="small muted mb-4">{{ site_title }} tries them on the calendar before it keeps them, so if something is not right it says what.</p>
   {% include "_google_connect.html" %}
 </section>

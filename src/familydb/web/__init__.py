@@ -44,7 +44,7 @@ from familydb.web.keys import session_secret
 
 log = logging.getLogger(__name__)
 
-MAX_BODY_BYTES = 64 * 1024  # nothing here takes an upload
+MAX_BODY_BYTES = 64 * 1024  # the one upload is a Google key file, about 2 KB
 CONTENT_SECURITY_POLICY = (
     "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"

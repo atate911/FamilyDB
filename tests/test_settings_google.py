@@ -195,3 +195,20 @@ def test_an_unreadable_key_asks_to_connect_again(tmp_path) -> None:
     path.write_text("{ half a file")
     with pytest.raises(ToolUnavailable, match="connect the calendar again"):
         google.load_credentials(path)
+
+
+def test_the_key_file_can_be_chosen_rather_than_pasted(page, events) -> None:
+    import io
+
+    response = page.post(
+        "/settings/google/connect",
+        data={
+            "csrf": _token(page),
+            "key": "",
+            "key_file": (io.BytesIO(KEY.encode()), "familydb-key.json"),
+            "calendar_id": CALENDAR,
+        },
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 302
+    assert json.loads(page.app.settings.google_key_path.read_text())["client_email"] == EMAIL
