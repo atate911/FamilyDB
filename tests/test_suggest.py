@@ -981,3 +981,55 @@ def test_many_listed_are_cut_and_the_rest_are_counted(
     assert any("12 more listed for these days" in note for note in data["skipped_checks"])
     assert len(result.content) < 6000, "the result grew; it is paid for twice per question"
     assert "null" not in result.content
+
+
+# -- the assessment, and a result led by picks (suggest/choose.py) ------------------------------
+
+
+def test_a_result_nobody_chose_for_is_what_it_always_was(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    _idea(conn, "Cafe A", setting="indoor")
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    _, data = _suggest(registry, ctx)
+    assert "picks" not in data and "framing" not in data
+
+
+def test_picked_ideas_lead_and_are_never_cut(registry, conn, full_settings, thursday_clock, family):
+    from familydb.suggest.compose import MAX_WITH_PICKS
+    from familydb.suggest.engine import assess, result_of
+    from familydb.suggest.types import Chosen, Pick
+
+    made = [_idea(conn, f"Idea {n}", setting="indoor") for n in range(20)]
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    a = assess(ctx, SuggestInput(window="this_weekend", question="?", discover=False))
+    last = made[-1]
+    chosen = Chosen(
+        [
+            Pick(
+                ref=f"idea:{last.id}",
+                title=last.title,
+                slot="new",
+                reason="Never tried.",
+                idea_id=last.id,
+            )
+        ],
+        framing="An easy weekend.",
+    )
+    result = result_of(a, chosen)
+    offered = [c for c in result.candidates if c.verdict != "ruled_out"]
+    assert offered[0].idea_id == last.id and len(offered) == MAX_WITH_PICKS
+    assert result.picks[0].ref == f"idea:{last.id}" and result.framing == "An easy weekend."
+    assert result.not_shown == 20 - MAX_WITH_PICKS
+
+
+def test_more_ideas_can_be_checked_in_detail(registry, conn, full_settings, thursday_clock, family):
+    from familydb.suggest.engine import assess
+
+    for n in range(30):
+        _idea(conn, f"Idea {n}", setting="indoor")
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    question = SuggestInput(window="this_weekend", question="?", discover=False)
+    unchecked = lambda a: sum("not checked in detail" in c.reasons for c in a.candidates)  # noqa: E731
+    assert unchecked(assess(ctx, question)) == 22
+    assert unchecked(assess(ctx, question, check_at_most=24)) == 6

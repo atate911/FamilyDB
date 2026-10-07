@@ -6,6 +6,7 @@ from familydb.integrations.open_meteo import DayForecast
 from familydb.store.ideas import Idea
 from familydb.suggest.types import (
     Candidate,
+    Chosen,
     Context,
     DaySummary,
     SuggestResult,
@@ -20,6 +21,8 @@ VERDICT_ORDER = {"good": 0, "possible": 1, "ruled_out": 2}
 # that is tokens the model pays for twice and never uses, so it is counted rather than listed.
 MAX_OFFERED = 12
 MAX_RULED_OUT = 6
+# With picks to lead (suggest/choose.py), the rest are fewer: the picks are the answer.
+MAX_WITH_PICKS = 6
 
 
 def _forecast_text(forecast: DayForecast | None) -> str | None:
@@ -82,6 +85,7 @@ def compose(
     by_id: dict[int, Idea],
     recently: set[int],
     suggestion_id: int | None,
+    chosen: Chosen | None = None,
 ) -> SuggestResult:
     ordered = [
         c.model_copy(update={"reasons": c.reasons[:MAX_REASONS]})
@@ -89,8 +93,18 @@ def compose(
     ]
     offered = [c for c in ordered if c.verdict != "ruled_out"]
     rejected = [c for c in ordered if c.verdict == "ruled_out"]
-    shown = offered[:MAX_OFFERED] + rejected[:MAX_RULED_OUT]
-    held_back = (len(offered) - len(offered[:MAX_OFFERED])) + (
+    if chosen and chosen.picks:
+        # The picked ideas lead, in the order chosen, and are never cut; then a few others.
+        picked = [p.idea_id for p in chosen.picks if p.idea_id is not None]
+        first = sorted(
+            (c for c in offered if c.idea_id in picked), key=lambda c: picked.index(c.idea_id)
+        )
+        rest = [c for c in offered if c.idea_id not in picked]
+        offered_shown = first + rest[: max(0, MAX_WITH_PICKS - len(first))]
+    else:
+        offered_shown = offered[:MAX_OFFERED]
+    shown = offered_shown + rejected[:MAX_RULED_OUT]
+    held_back = (len(offered) - len(offered_shown)) + (
         len(rejected) - len(rejected[:MAX_RULED_OUT])
     )
     start, end = context.window if context.window else (None, None)
@@ -107,4 +121,6 @@ def compose(
         skipped_checks=skipped,
         travel_from=context.origin.detail if context.origin else "home",
         suggestion={"id": suggestion_id} if suggestion_id is not None else None,
+        picks=chosen.picks if chosen and chosen.picks else None,
+        framing=chosen.framing if chosen and chosen.picks else None,
     )

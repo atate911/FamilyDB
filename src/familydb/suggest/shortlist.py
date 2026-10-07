@@ -199,9 +199,17 @@ def _duration_fit(idea: Idea, days: list[date], context: Context) -> tuple[list[
 
 
 def shortlist(
-    all_ideas: list[Idea], context: Context, constraints: Constraints, settings: Settings
+    all_ideas: list[Idea],
+    context: Context,
+    constraints: Constraints,
+    settings: Settings,
+    *,
+    keep: int = SHORTLIST_MAX,
 ) -> tuple[list[Shortlisted], list[Candidate], list[Candidate]]:
-    """(kept for evaluation, ruled out with reasons, extras beyond the cap as 'possible')."""
+    """(kept for evaluation, ruled out with reasons, extras beyond `keep` as 'possible').
+
+    Checking costs nothing (the places cache and arithmetic); the cap keeps what the chat model
+    is sent short. A stronger call choosing among them is given more (suggest/choose.py)."""
     kept: list[Shortlisted] = []
     ruled_out: list[Candidate] = []
 
@@ -255,6 +263,6 @@ def shortlist(
             reasons=["not checked in detail"],
             fits_days=[d.isoformat() for d in s.fits_days],
         )
-        for s in kept[SHORTLIST_MAX:]
+        for s in kept[keep:]
     ]
-    return kept[:SHORTLIST_MAX], ruled_out, extras
+    return kept[:keep], ruled_out, extras

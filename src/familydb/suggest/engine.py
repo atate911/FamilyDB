@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta
 
 from familydb import happening
@@ -11,6 +11,7 @@ from familydb.dates import parse_date_range, utc_iso, weekend_window
 from familydb.errors import ToolError
 from familydb.store import ideas, outcomes, suggestions
 from familydb.store.db import transaction
+from familydb.store.ideas import Idea
 from familydb.suggest import listed as listing
 from familydb.suggest.compose import compose
 from familydb.suggest.context import build_context
@@ -18,15 +19,18 @@ from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.origin import resolve as resolve_origin
-from familydb.suggest.shortlist import shortlist
+from familydb.suggest.shortlist import SHORTLIST_MAX, shortlist
 from familydb.suggest.types import (
     DAY_END,
     DAY_START,
     Candidate,
+    Chosen,
     Constraints,
+    Context,
     DayBounds,
     SuggestInput,
     SuggestResult,
+    WebFind,
     clock,
 )
 from familydb.tools import ToolContext
@@ -106,12 +110,57 @@ def resolve_window(
     return (start_day, end_day), label, frame
 
 
+@dataclass
+class Assessment:
+    """Everything the engine found for one question, before it is cut down for the chat model:
+    every candidate with its verdict, the finds, the notes, and the suggestion's log row. A
+    stronger call choosing among them reads it whole (suggest/dossier.py)."""
+
+    args: SuggestInput
+    context: Context
+    label: str
+    candidates: list[Candidate]
+    finds: list[WebFind]
+    skipped: list[str]
+    by_id: dict[int, Idea]
+    recently: set[int]
+    suggestion_id: int
+
+
 def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> SuggestResult:
     """The whole engine for one question; returns the structured result the chat model composes.
 
     `refresh_stale` queues a paid lookup for each place whose details have gone stale. Code that
     runs the engine with no model call (commands.py, the evening check) passes False, so that it
     never causes one either."""
+    return result_of(assess(ctx, args, refresh_stale=refresh_stale))
+
+
+def result_of(a: Assessment, chosen: Chosen | None = None) -> SuggestResult:
+    """The result the chat model is given: the best of each verdict, led by the picks when a
+    stronger call chose."""
+    return compose(
+        a.context,
+        a.label,
+        a.candidates,
+        a.finds,
+        a.skipped,
+        a.by_id,
+        a.recently,
+        a.suggestion_id,
+        chosen,
+    )
+
+
+def assess(
+    ctx: ToolContext,
+    args: SuggestInput,
+    *,
+    refresh_stale: bool = True,
+    check_at_most: int = SHORTLIST_MAX,
+) -> Assessment:
+    """Every stage but the last: the window, the context, the rules, the checks, the finds and
+    the log. `check_at_most` is how many ideas are checked in detail."""
     window, label, bounds = resolve_window(args, ctx.clock.now())
     context = build_context(ctx, window, bounds)
     context.origin, where_note = resolve_origin(ctx, args.near, args.window)
@@ -133,7 +182,11 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
     )
     excluded = outcomes.do_not_repeat(ctx.conn)
     kept, ruled_out, extras = shortlist(
-        [idea for idea in all_ideas if idea.id not in excluded], context, constraints, ctx.settings
+        [idea for idea in all_ideas if idea.id not in excluded],
+        context,
+        constraints,
+        ctx.settings,
+        keep=check_at_most,
     )
     ruled_out.extend(
         Candidate(
@@ -184,4 +237,6 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         now=ctx.now_iso(),
     )
     by_id = {idea.id: idea for idea in all_ideas}
-    return compose(context, label, candidates, finds, skipped, by_id, recently, suggestion_id)
+    return Assessment(
+        args, context, label, candidates, finds, skipped, by_id, recently, suggestion_id
+    )
