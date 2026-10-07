@@ -40,15 +40,7 @@ itself listens only on the machine, so the proxy is the only way in.
 
 ## What leaves the house
 
-Everything else stays in one file on the family's machine. These are the things
-that do not, each a decision the family made:
-
-- **What the family writes to the bot** goes to the model company that answers, because that is how it is answered. The chat model is never given the web; lookups are separate worker turns.
-- **A voice note's recording** goes to the vendor's speech model, is written down once, and is not kept. Only the words are stored.
-- **A photo** is described by the lookup model, and only what it shows, in words, is kept.
-- **A shared location** goes to the chat model and the discovery worker as a place name and coordinates, only while a phone has shared one (it is used for three hours, and deleted after a day at most), so nobody has to type where they are. "Send where I am" is off until someone ticks it.
-- **Dictation** on the page uses the browser's own speech recognition: the sound goes from the browser to its maker (Apple for Safari, Google for Chrome) and never through FamilyDB. It can be turned off on the General page.
-- **Telegram** carries every chat on that channel, as it would any bot's.
+Everything else stays in one file on the family's machine; what does not is what the family writes, a voice note or photo, a shared location and a few lookups, each a decision the family made, and a spare model company can receive the same content when the first cannot answer. [Data and privacy](/wiki/security/data-and-privacy) is the one list of what leaves, to whom, when, and whether you can turn it off.
 
 ## In this section
 
