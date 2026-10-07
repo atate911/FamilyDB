@@ -10,7 +10,8 @@ A supervisor thread inside `familydb run` re-reads the settings every 5 seconds 
 
 | State (Status and Connections) | Means | What the supervisor does |
 |---|---|---|
-| connected as @name | Polling | Checks the token setting every 5 seconds |
+| off | No token is set | Connects within seconds of one being saved |
+| connected as @name (just "connected" if the bot has no username) | Polling | Checks the token setting every 5 seconds |
 | the token was refused by Telegram | The token is wrong or revoked | Waits until the token changes |
 | cannot reach Telegram; trying again | The connection failed | Tries again every 30 seconds |
 
@@ -58,7 +59,7 @@ A reply that only says something was saved is a 👌 reaction on the message, wh
 
 A reply is stored before it is sent and marked delivered only after the send succeeds, so delivery is at least once. A send Telegram accepted whose answer was lost can arrive twice, and so can the earlier parts of a long reply whose later part failed. Neither runs the model or touches the calendar again.
 
-While Telegram is not connected, replies for it stay stored and go on the next delivery run after it connects. The retry job (every 5 minutes by default) tries every unsent reply each time it runs, and does not count attempts.
+A reply for Telegram waits stored while the channel has no sender, and goes on the first delivery run after it connects. The retry job (every 5 minutes by default) tries each unsent reply each time it runs, and does not count attempts. It skips replies held in memory for a conversation, and replies another worker has claimed.
 
 ## When Telegram or the token fails
 
