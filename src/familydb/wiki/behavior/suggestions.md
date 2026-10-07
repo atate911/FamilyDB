@@ -18,7 +18,7 @@ The chat model turns the message into one `suggest` call (window, part of the da
 | Compose | code | Orders the verdicts and trims them to what a reply can use |
 | Log | code | Stores every verdict and reason |
 
-Time is counted in minutes. Each day runs from 08:00 to 22:00 unless the question names a part of the day. "Now" starts at this minute and covers the next four hours by default; the part of today that has gone is not free. A weekend is Saturday and Sunday, or what is left of them, and a range of dates spans at most two weeks.
+Time is counted in minutes. Each day runs from 08:00 to 22:00 unless the question names a part of the day. "Now" starts at this minute and covers 1 to 12 hours, four by default; the part of today that has gone is not free. A weekend is Saturday and Sunday, or what is left of them; a range of dates spans at most 15 days.
 
 ## What is checked for each idea
 
@@ -27,10 +27,10 @@ Time is counted in minutes. Each day runs from 08:00 to 22:00 unless the questio
 | Already planned, done in the last 60 days, rated under 5 out of 10, or marked "would not repeat" | Ruled out |
 | Who is coming, the season, and the cost, indoor or outdoor and duration limits asked for | Ruled out |
 | An idea tied to dates: over, or on days outside the window | Ruled out |
-| Forecast: an outdoor or dry-weather idea on a day with a 50% or higher chance of rain (or a rain or snow code), a warm one under 18 °C (64 °F), a snow one without snow | Ruled out when no day fits |
+| Forecast: an outdoor or dry-weather idea on a day with a 50% or higher chance of rain (rain and snow codes count only when no chance is given), a warm one under 18 °C (64 °F), a snow one without snow | Ruled out when no day fits |
 | Free time: the idea's length against the longest free stretch; an unknown length needs an hour, a day trip or anything of eight hours or more needs a whole free day, a trip needs the whole window | Ruled out |
-| Opening hours saved by a lookup: open that day, long enough inside a free stretch, with travel at both ends | Closed is ruled out; unknown is possible |
-| Details older than the stale limit (`place_stale_days`, 30 days) or never checked | Possible; a chat question also queues a refresh |
+| Opening hours saved by a lookup: open that day, long enough inside a free stretch, with travel at both ends | Closed is ruled out; unknown, or an idea with no place, is possible ("hours unknown") |
+| A saved place's details older than the stale limit (`place_stale_days`, 30 days) or never checked | Possible; a chat question also queues a refresh |
 | Booking: the lead time against the days left | Too late is ruled out; an unknown lead time is possible |
 | Travel: a straight-line estimate times the road factor at the average speed, from home or where they are | Over the limit asked, or the round trip plus the visit longer than the free time, is ruled out |
 | Daylight for an outdoor idea, from sunrise and sunset | Possible, never ruled out, since lights and stars are outdoors too |
@@ -39,17 +39,19 @@ Free time comes from the connected calendar: an all-day busy event takes the who
 
 ## The verdicts
 
-- **Good:** nothing failed and nothing is unknown.
-- **Possible:** nothing failed, but something could not be checked or only partly fits: hours unknown, details stale, booking unknown, open for part of the free time, or too dark. An idea beyond the first eight (never-done first, then longest since done) is possible, "not checked in detail".
+- **Good:** nothing failed and none of the causes of possible applies.
+- **Possible:** nothing failed, but something could not be checked or only partly fits: hours unknown or not listed, details stale, booking unknown, open for part of the free time, distance from where they are unknown, or too dark. An idea beyond the first eight (never-done first, then longest since done) is possible, "not checked in detail".
 - **Ruled out:** a check failed, and the reason says which.
 
 A reply carries at most three reasons each, in the order good, possible, ruled out. Within a group, ideas suggested as good in the last two weeks come last; then never-done ideas first, and a higher rating before a lower.
 
-The log is the `suggestions` table: every idea's verdict and reasons, any web finds, who asked, the window and, for a chat answer, its reply. No page lists it. Every run adds a row, `/now` and the command line included.
+The log is the `suggestions` table: every idea's verdict and reasons, any web finds, who asked, the window and, for a chat answer, its reply. No page lists it. Every run adds a row, including `/now`, the command line and each evening-before backup, and the good verdicts in any of them push those ideas to the back of real answers for 14 days.
+
+The `someday` window is thin: with no dates there is no weather, free-time, hours, daylight or travel-fit check, only status, who, season, dates and the limits asked for.
 
 ## What a check that cannot be made does
 
-A missing service does not fail the answer: the engine notes it, and the model is told to say so plainly. A place with no saved hours is possible, with "hours unknown" in its reason.
+A missing service does not fail the answer: the engine notes it, and the model is told to say so plainly. A missing calendar, forecast or home position does not lower a verdict by itself.
 
 | Missing | What happens | The note |
 |---|---|---|
@@ -93,6 +95,6 @@ sudo docker compose --project-directory /opt/familydb run --rm -T bot familydb s
 
 `--window` takes `now`, `today`, `this-weekend`, `next-weekend`, `someday` or `START..END` as dates; `--as <name>` asks as that person; `--discover` adds the web search, which costs money and needs lookups on. Without `--json` it prints each day's free time and forecast, then a line per idea. The JSON adds each candidate's checks, the finds, the skipped checks and the log row's id.
 
-To see what the model got for one real question, an admin opens that message under [Recent activity](/wiki/controls/status/activity), where the `suggest` call shows what it was given and what it answered. A test run adds a log row, so its good ideas come last in real answers for two weeks.
+To see what the model got for one real question, an admin opens that message under [Recent activity](/wiki/controls/status/activity), where the `suggest` call shows what it was given and what it answered. A test run adds a log row, so its good ideas come last in real answers for 14 days.
 
 Developer docs: `familydb/suggest/` (one module per stage, `engine.run`), `familydb/tools/suggest.py`, `familydb/commands.py` (`_now`), and `docs/DESIGN.md`, "Suggestion engine: answering what should we do".
