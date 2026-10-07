@@ -12,13 +12,12 @@ company.
 
 | Setting | Default | What it does |
 |---|---|---|
-| Daily spending limit, US$ (`daily_spend_limit`) | 2.00 | Estimated across every model call. Once it is reached, nothing more is asked of a model until midnight in the family's time zone, and admins are told on Telegram. 0 means no limit. Between 0 and 500 |
-| Messages a kid may send a day (`kid_daily_messages`) | 0 | For each kid on the family list, counting only messages a model answered: `/today` and the buttons under a reminder cost nothing and are not counted. Past it, the bot says so and answers again tomorrow. 0 means no limit. Between 0 and 500 |
-| Each kid's daily share, US$ (`kid_daily_spend`) | 0.25 | What each kid's own messages may spend in a day, within the limit above. One message may cross it. When it is used up the kid is told, kindly, to come back tomorrow; their wish list still works. 0 means no share of their own. Between 0 and 50 |
+| Daily spending limit, US$ (`daily_spend_limit`) | 2.00 | Estimated across every model call. Once it is reached, nothing more is asked of a model until midnight in the family's time zone. Whoever writes is told (an adult is told to raise the limit on this page; a kid is only told to come back tomorrow, never about money). Voice notes, photos and the evening lookups wait too, and admins with a Telegram id are told if "Tell admins on Telegram" is on. 0 means no limit. Between 0 and 500 |
+| Messages a kid may send a day (`kid_daily_messages`) | 0 | For each kid on the family list, counting only messages a model answered: `/today` and the buttons under a reminder cost nothing and are not counted. Past it, the kid is told the number ("That's 20 messages today, which is all for today") and to ask again tomorrow or ask a grown-up. 0 means no limit. Between 0 and 500 |
+| Each kid's daily share, US$ (`kid_daily_spend`) | 0.25 | What each kid's own messages may spend in a day. It counts toward the daily limit, which still applies. It is checked before each message is answered, so one message may cross it. When it is used up the kid is told, kindly, to come back tomorrow, without a word about money; their wish list still works on the page. 0 means no share of their own. Between 0 and 50 |
 
 **A kid has two limits, and the second is on by default.** The message count is off until you set
-it, but the dollar share is 25 cents a day from the start. A kid is told only to try again
-tomorrow, never why.
+it, but the dollar share is 25 cents a day from the start.
 
 ## The kids' wish lists
 

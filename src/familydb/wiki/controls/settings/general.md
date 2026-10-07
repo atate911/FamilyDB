@@ -8,14 +8,15 @@ what "tonight" and "this weekend" mean.
 
 | Setting | Default | What it does |
 |---|---|---|
-| Home town or area (`home_area`) | empty | A town and a state or country, as you would say it. When it changes it is looked up on the map and the page says what it found. A town is enough; no street address |
+| Home town or area (`home_area`) | empty | A town and a state or country, as you would say it. When it changes it is looked up on the map and the page says what it found. If the town is not found, or is emptied, the previous position is kept. A town is enough; no street address |
 | Time zone (`family_tz`) | set by the installer from the server | What "tonight" and "this weekend" mean, and when the messages that go out on their own are sent. Choose the nearest city in the same zone |
 | Units (`weather_units`) | metric | Metric or imperial, for the forecast and for distances |
 
 **Check the time zone.** The installer sets it from the server, and a rented server is usually
 on UTC, so unless you changed it, reminders, the weekend digest and the evening-before check
 will come at the wrong hour. The setup asks for it again; look here if times seem off. (If it were
-never set at all, FamilyDB would use the server's own `TZ`, else UTC.)
+never set at all, FamilyDB would use the server's own `TZ`, else UTC.) Once it is saved on the page, and the
+setup does this, it overrides `.env`; empty the box to go back.
 
 ### Exact position and travel times
 
@@ -42,7 +43,7 @@ is an estimate, not a route. Without a home position there is no forecast.
 
 | Setting | Default | What it does |
 |---|---|---|
-| Log detail (`log_level`) | INFO | How much the server writes to its log: DEBUG, INFO, WARNING or ERROR. DEBUG also logs every web request and is loud: use it to chase a problem, then put it back |
+| Log detail (`log_level`) | INFO | How much the server writes to its log: DEBUG, INFO, WARNING or ERROR. DEBUG also logs the program's own network traffic, to Telegram and the AI companies, and is loud: use it to chase a problem, then put it back |
 
 ## Where this page is served, and a name for it
 

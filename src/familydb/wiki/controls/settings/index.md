@@ -21,17 +21,17 @@ restart. Only admins can open it. A parent who follows a link to it is told it i
 A setting has up to three values, and the most specific one wins:
 
 1. **The built-in default.**
-2. **The server's `.env` file**, which the installer wrote and which is how the machine was set up. In `.env` a setting is its key in capitals (`DAILY_SPEND_LIMIT`), with three exceptions: the time zone is `FAMILYDB_TZ`, and the thinking and answer-size settings also answer to `ANTHROPIC_EFFORT` and `ANTHROPIC_MAX_TOKENS`.
+2. **The server's `.env` file**, which the installer wrote and which is how the machine was set up. Edit it and restart FamilyDB to apply a change; a real environment variable beats the file. In `.env` a setting is its key in capitals (`DAILY_SPEND_LIMIT`), with three exceptions: the time zone is `FAMILYDB_TZ`, and the thinking and answer-size settings also answer to `ANTHROPIC_EFFORT` and `ANTHROPIC_MAX_TOKENS`.
 3. **What was saved on these pages**, which sits on top.
 
 Emptying a box, or choosing the first choice of a list ("Default (…)"), removes the saved
 value, so the setting falls back to `.env`, or to the default. A box set on the page shows a
-"changed" mark. `familydb config` on the server prints every setting and where each value
-came from, with secrets masked.
+"changed" mark. `familydb config` on the server prints every setting, with secrets masked, and marks the ones saved on
+the page or set in `.env` to something other than the default.
 
-Changes are picked up at once by the page and by messages. Scheduled jobs follow within
-five minutes, since the scheduler looks for changes at that interval. A new Telegram token
-reaches the bot within a few seconds.
+Changes saved on the page are used by the next message or page view. Schedules (hours, days, jobs
+turned on or off, the time zone) follow within five minutes, since the scheduler looks for changes at
+that interval. A new Telegram token reaches the bot within a few seconds.
 
 ## What is not here
 
@@ -43,8 +43,8 @@ can move the page or open it wider. Keys and tokens can be saved here but are wr
 ## What has changed
 
 The last page of Settings lists every change made on any of these pages, newest first, with
-what it was, what it became, when, who changed it and from where (the page, or the command
-line). A key or a password is never shown, only that it was replaced, and a long text only
+what it was, what it became, when, who changed it and from where (the page, the command
+line, or a stronger model's judgement). A key or a password is never shown, only that it was replaced, and a long text only
 that it was rewritten. Use it to answer "who changed that, and when?". It is kept in the
 database, so it is in the [backups](/wiki/operations/backup-and-restore).
 
