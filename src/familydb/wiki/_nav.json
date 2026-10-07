@@ -124,6 +124,26 @@
               "depth": "howto"
             }
           ]
+        },
+        {
+          "slug": "controls/telegram",
+          "title": "Telegram: commands and buttons",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "controls/settings/connections",
+            "controls/command-line"
+          ]
+        },
+        {
+          "slug": "controls/command-line",
+          "title": "The command line",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations",
+            "operations/recovery"
+          ]
         }
       ]
     },
