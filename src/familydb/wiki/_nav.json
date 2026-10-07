@@ -312,6 +312,46 @@
             "operations/install",
             "operations/backup-and-restore"
           ]
+        },
+        {
+          "slug": "operations/configuration",
+          "title": "Configuration (.env)",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "controls/settings",
+            "operations/diagnostics"
+          ]
+        },
+        {
+          "slug": "operations/diagnostics",
+          "title": "Diagnostics",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations/troubleshooting",
+            "controls/status"
+          ]
+        },
+        {
+          "slug": "operations/troubleshooting",
+          "title": "Troubleshooting",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations/diagnostics",
+            "operations/recovery"
+          ]
+        },
+        {
+          "slug": "operations/cost",
+          "title": "Cost",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "controls/settings/spending",
+            "controls/settings/ai-model"
+          ]
         }
       ]
     },
@@ -323,6 +363,28 @@
       "see_also": [
         "controls",
         "boundaries"
+      ],
+      "children": [
+        {
+          "slug": "security/model",
+          "title": "Trust and threat model",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "security/passwords-and-sessions",
+            "boundaries"
+          ]
+        },
+        {
+          "slug": "security/passwords-and-sessions",
+          "title": "Passwords and sessions",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "operations/recovery",
+            "controls/settings/sign-in"
+          ]
+        }
       ]
     },
     {
