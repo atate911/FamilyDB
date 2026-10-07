@@ -18,6 +18,7 @@ from familydb.app import App
 from familydb.clock import FixedClock
 from familydb.config import Settings
 from familydb.integrations.geocode import Geocoder
+from familydb.integrations.ical import IcalFeeds
 from familydb.integrations.open_meteo import OpenMeteo
 from familydb.integrations.price_lists import PriceLists
 from familydb.store import db, members
@@ -151,6 +152,7 @@ def no_network(monkeypatch: pytest.MonkeyPatch, request) -> None:
     monkeypatch.setattr(Geocoder, "_fetch", staticmethod(_boom))
     monkeypatch.setattr(OpenMeteo, "_fetch", staticmethod(_boom))
     monkeypatch.setattr(PriceLists, "_fetch", staticmethod(_boom))
+    monkeypatch.setattr(IcalFeeds, "_fetch", staticmethod(_boom))
 
 
 @pytest.fixture
