@@ -66,6 +66,7 @@
   --tile-md: 40px; --tile-lg: 56px;
   --target: 44px;
   --topbar-h: 56px; --tabbar-h: 68px;
+  --topbar-total: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
   --tabbar-total: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
 }
 
@@ -94,6 +95,9 @@ a:hover { color: var(--ink); }
 .num, .dt__d, .money, .figure dd, .day__n, .rank__n, .meter__scale { font-family: var(--font-num); font-variant-numeric: lining-nums tabular-nums; }
 /* money and clock times in running text: the same figures as the big money, so every zero is open */
 .fig { font-family: "Fraunces Text Figures", var(--font-text); font-variant-numeric: lining-nums; margin-inline: -0.03em; }
+/* headings break evenly, running text avoids a lone last word */
+h1, h2, h3, .lede { text-wrap: balance; }
+p, li, dd, .lede { text-wrap: pretty; }
 .muted { color: var(--ink-3); }
 .small { font-size: var(--t-meta); }
 .nowrap { white-space: nowrap; }
@@ -1140,7 +1144,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .side { display: none; }
   .desk-only { display: none !important; }
   .app { min-height: 0; }
-  .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--topbar-h); padding: 0 var(--s4); background: var(--band); border-bottom: 1px solid var(--band-line); }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); position: sticky; top: 0; z-index: 19; min-height: var(--topbar-total); padding: env(safe-area-inset-top, 0px) max(var(--s4), env(safe-area-inset-right, 0px)) 0 max(var(--s4), env(safe-area-inset-left, 0px)); background: var(--band); border-bottom: 1px solid var(--band-line); }
   .topbar .brand { padding: 0; }
   .topbar .brand svg { width: 30px; height: 30px; }
   .topbar .brand .wm { font-size: 1.25rem; }
@@ -1157,7 +1161,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .topbar .acct .dot { position: absolute; top: 4px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); border: 2px solid var(--band); }
   body { padding-bottom: var(--tabbar-total); }
   /* the fixed tab bar never hides the focused control */
-  html { scroll-padding-bottom: calc(var(--tabbar-total) + 16px); scroll-padding-top: 16px; }
+  html { scroll-padding-bottom: calc(var(--tabbar-total) + 16px); scroll-padding-top: calc(var(--topbar-total) + 16px); }
   .pill-health .long { display: none; }
   .pill-health .short { display: inline; }
   .btn--sm { min-height: var(--target); }
@@ -1321,7 +1325,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .page-chat .foot { margin-left: var(--s4); margin-right: var(--s4); padding-bottom: var(--s4); }
   .convos__h { display: none; }
   .page-chat .page-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
-  .chat { display: flex; flex-direction: column; gap: 0; height: calc(100vh - var(--topbar-h) - var(--tabbar-total)); height: calc(100dvh - var(--topbar-h) - var(--tabbar-total)); min-height: 0; }
+  .chat { display: flex; flex-direction: column; gap: 0; height: calc(100vh - var(--topbar-total) - var(--tabbar-total)); height: calc(100dvh - var(--topbar-total) - var(--tabbar-total)); min-height: 0; }
   .convos { display: flex; gap: var(--s2); overflow-x: auto; padding: var(--s3) var(--s4) var(--s2); scrollbar-width: none; flex: none; }
   .convo { flex: none; padding: 4px var(--s4) 4px 4px; border-radius: var(--r-pill); background: var(--card); border-color: var(--line-2); grid-template-columns: auto auto; gap: var(--s2); }
   .convo small { display: none; }

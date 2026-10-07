@@ -1168,3 +1168,11 @@ def test_on_the_phone_home_the_setup_strip_waits_under_the_plans(settings, clock
     page = _signed_in(settings, clock).get("/").text  # a model is not set up, so setup has steps
     assert "Setup:" in page
     assert page.index('aria-labelledby="h-next"') < page.index("Setup:")
+
+
+def test_a_place_s_phone_number_is_a_link_a_phone_can_dial() -> None:
+    from familydb.web import views
+
+    assert views.phone_href("(503) 555-0142") == "tel:5035550142"
+    assert views.phone_href("+1 503 555 0142") == "tel:+15035550142"
+    assert views.phone_href("ask at the door") is None and views.phone_href(None) is None

@@ -88,7 +88,7 @@
             <dt>What it is</dt><dd>{{ place.name }}{% if place.summary %}: {{ place.summary }}{% endif %}</dd>
             {% if place.address %}<dt>Address</dt><dd>{{ place.address }}{% if place.map_url %} · <a href="{{ place.map_url }}" rel="noopener noreferrer">Map</a>{% endif %}</dd>{% endif %}
             {% if place.travel %}<dt>Getting there</dt><dd>{{ place.travel }}</dd>{% endif %}
-            {% if place.phone %}<dt>Phone</dt><dd>{{ place.phone }}</dd>{% endif %}
+            {% if place.phone %}<dt>Phone</dt><dd>{% if place.phone_href %}<a href="{{ place.phone_href }}">{{ place.phone }}</a>{% else %}{{ place.phone }}{% endif %}</dd>{% endif %}
             {% if place.website %}<dt>Website</dt><dd><a href="{{ place.website }}" rel="noopener noreferrer">{{ place.website }}</a></dd>{% endif %}
             {% if place.booking_url %}<dt>Booking</dt><dd><a href="{{ place.booking_url }}" rel="noopener noreferrer">{{ place.booking_url }}</a></dd>{% endif %}
             {% if place.price_note %}<dt>Prices</dt><dd>{{ place.price_note }}</dd>{% endif %}

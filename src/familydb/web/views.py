@@ -748,6 +748,12 @@ def freshness_text(place: Place | None, now: datetime, stale_days: int) -> str |
     return f"{when}, may be out of date" if is_stale(place, now, stale_days) else when
 
 
+def phone_href(phone: str | None) -> str | None:
+    """A tel: link for a number a place has, or None where it is not one a phone could dial."""
+    digits = re.sub(r"[^\d+]", "", phone or "")
+    return f"tel:{digits}" if len(digits.lstrip("+")) >= 7 else None
+
+
 def hours_today(place: Place | None, today: date) -> str | None:
     """ "open today 11:30 am to 9 pm", "closed today", or None where the hours are not known."""
     state, ranges = open_on(place, today)
@@ -766,6 +772,7 @@ def place_panel(
         "summary": place.summary,
         "address": place.address,
         "phone": place.phone,
+        "phone_href": phone_href(place.phone),
         "website": clean_url(place.website),
         "booking_url": clean_url(place.booking_url),
         "price_note": place.price_note,
