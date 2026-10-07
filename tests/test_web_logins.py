@@ -709,3 +709,12 @@ def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, fam
     assert "lit" not in tile(alex) and "Status</span>" in tile(alex)
     with closing(app.connect()) as conn:
         assert status_page.light(app, conn) == "bad"
+
+
+def test_a_kid_is_not_shown_what_is_on_near_home(app, sam, family) -> None:
+    """Ticketmaster lists shows for grown-ups too: the page is the household's, as Status is."""
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    assert girls.get("/happening").status_code != 200
+    assert 'href="/happening"' not in girls.get("/plans").text
+    assert 'href="/happening"' not in girls.get("/plans/month").text

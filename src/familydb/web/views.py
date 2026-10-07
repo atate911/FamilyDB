@@ -909,6 +909,50 @@ def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
     return {"label": label, "detail": detail, "on": False}
 
 
+def find_row(find: Any, today: date) -> dict[str, Any]:
+    """One thing near home as its page lists it."""
+    first = date.fromisoformat(find.starts_at[:10])
+    last = date.fromisoformat(find.ends_at[:10]) if find.ends_at else first
+    if "T" in find.starts_at:
+        when = find.starts_at[11:16]
+    elif last > first:
+        when = f"until {last:%a} {last.day} {last:%b}" if first <= today else "all day"
+    else:
+        when = "all day"
+    who = (
+        happening.host(find.url)
+        if find.kind == happening.WEB and find.url
+        else happening.source_name(find.source)
+    )
+    summary = find.summary or ""
+    return {
+        "when": when,
+        "title": find.title,
+        "url": find.url if find.url and find.url.startswith(("https://", "http://")) else None,
+        "where": find.venue or find.address,
+        "price": find.price_note,
+        "summary": summary if len(summary) <= 160 else summary[:159].rstrip() + "…",
+        "who": who,
+    }
+
+
+def happening_days(found: Sequence[Any], today: date) -> list[dict[str, Any]]:
+    """What is on near home, by the day it starts, soonest first; what began before today and is
+    still on goes under today."""
+    days: dict[date, list[dict[str, Any]]] = {}
+    for find in found:
+        day = max(date.fromisoformat(find.starts_at[:10]), today)
+        days.setdefault(day, []).append(find_row(find, today))
+    return [
+        {
+            "label": "Today" if day == today else f"{day:%A} {day.day} {day:%B}",
+            "today": day == today,
+            "rows": sorted(rows, key=lambda row: (row["when"][0].isdigit(), row["when"])),
+        }
+        for day, rows in sorted(days.items())
+    ]
+
+
 def find_source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
     """A place read for what is on near home, as a light: when, and how it went."""
     label = happening.source_name(source.source)

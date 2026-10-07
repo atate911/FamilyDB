@@ -19,11 +19,12 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, personas, roles
+from familydb import agenda, happening, personas, roles
 from familydb.app import App
-from familydb.availability import calendar_available, enrichment_available
+from familydb.availability import calendar_available, enrichment_available, happening_available
 from familydb.dates import next_birthday
 from familydb.store import calls
+from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store import memories as memory_store
@@ -55,6 +56,8 @@ HOME_PLANS = 5
 HOME_IDEAS = 4
 HOME_TASKS = 4
 PLANS_AHEAD_DAYS = 90
+# The most things near home one page lists: four weeks of a busy city's calendars.
+HAPPENING_MOST = 300
 PLANS_BEHIND_DAYS = 30
 # The page's charcoal: `--bg` in style.css and the theme colour in base.html.
 CHARCOAL = "#0b0e0d"
@@ -389,6 +392,29 @@ def plans() -> str:
         today=today.isoformat(),
         can_schedule=calendar_available(app.settings),
         **asking,
+    )
+
+
+@bp.get("/happening")
+def happening_page() -> str:
+    """What is on near home in the weeks ahead, as the family's sources list it, by day."""
+    app = _app()
+    today = app.clock.today()
+    with closing(app.connect()) as conn:
+        found = find_store.upcoming(
+            conn,
+            start=today,
+            end=today + timedelta(days=happening.HORIZON_DAYS),
+            limit=HAPPENING_MOST,
+        )
+        troubled = [one for one in find_store.sources(conn) if not one.ok]
+    return render_template(
+        "happening.html",
+        name=happening.NAME,
+        days=views.happening_days(found, today),
+        ahead=happening.HORIZON_DAYS,
+        reading=happening_available(app.settings),
+        trouble=[views.find_source_row(one, app.settings.tzinfo) for one in troubled],
     )
 
 

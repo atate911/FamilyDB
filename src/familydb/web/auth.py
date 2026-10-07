@@ -120,6 +120,8 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "web.edit_idea": "change",
     "web.memory": "browse",
     "web.status": "browse",
+    # What is on near home: grown-ups' (Ticketmaster lists shows for adults too), like Plans' tabs.
+    "web.happening_page": "browse",
     "web.wishes": "wish",
     "edits.add_wish": "wish",
     "edits.move_wish": "wish",

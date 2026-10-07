@@ -65,6 +65,7 @@
   <nav class="tabs" aria-label="How to show the plans">
     <a href="{{ url_for('web.plans') }}" aria-current="page">{{ icon('list') }}List</a>
     <a href="{{ url_for('web.plans_month') }}">{{ icon('grid') }}Month</a>
+    <a href="{{ url_for('web.happening_page') }}">{{ icon('event') }}{{ happening_name }}</a>
   </nav>
   <p class="muted source source-{{ source }}">{{ source_note }}</p>
   {% endif %}

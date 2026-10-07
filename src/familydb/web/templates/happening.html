@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
+{% block title %}{{ name }} · {{ site_title }}{% endblock %}
+{% block content %}
+  {{ page_head(name, 'What is on near home in the next ' ~ ahead ~ ' days, as the calendars, Ticketmaster and the weekly search list it.', 'event') }}
+  <nav class="tabs" aria-label="How to show the plans">
+    <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+    <a href="{{ url_for('web.plans_month') }}">{{ icon('grid') }}Month</a>
+    <a href="{{ url_for('web.happening_page') }}" aria-current="page">{{ icon('event') }}{{ name }}</a>
+  </nav>
+  {% if trouble %}
+    <p class="muted small">{{ icon('warning') }}{% for row in trouble %}{{ row.label }}: {{ row.detail }}{% if not loop.last %} {% endif %}{% endfor %}</p>
+  {% endif %}
+  {% if days %}
+    {% for day in days %}
+      <section class="panel happening-day">
+        <h2>{{ day.label }}</h2>
+        <ul class="plain agenda happening-list">
+          {% for row in day.rows %}
+            <li>
+              <div class="agenda-body">
+                <div class="what">
+                  {% if row.url %}<a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">{{ row.title }}</a>{% else %}{{ row.title }}{% endif %}
+                </div>
+                <div class="when">
+                  <span>{{ row.when }}</span>
+                  {% if row.price %}<span>{{ row.price }}</span>{% endif %}
+                  <span class="tag">listed by {{ row.who }}</span>
+                </div>
+                {% if row.where %}<div class="where">{{ icon('pin') }}{{ row.where }}</div>{% endif %}
+                {% if row.summary %}<div class="note">{{ row.summary }}</div>{% endif %}
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+    <p class="muted small">Not on your list: ask {{ assistant if has_persona else 'in the chat' }} to save one, or to put it on the calendar.</p>
+  {% elif reading %}
+    <section class="panel"><p class="muted">Nothing listed for the next {{ ahead }} days yet. The calendars and Ticketmaster are read once a day.</p></section>
+  {% else %}
+    <section class="panel"><p class="muted">Nothing near home is read yet.
+      {% if visitor().may('manage') %}Add a calendar, a Ticketmaster key or the weekly search
+        <a href="{{ url_for('settings.section', name='happening') }}">in the settings</a>.{% endif %}</p></section>
+  {% endif %}
+{% endblock %}

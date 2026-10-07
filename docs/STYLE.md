@@ -412,6 +412,12 @@ looked at (see "Two layers").
   went) in a column beside the title; the place's details below.
 - **Plans.** A list of dates, and a month with today in amber and plans as cyan slips; on a phone
   the month is the busy days as a list.
+- **What is on near home** (its name is the family's, written once in `familydb/happening.py`).
+  A third tab beside Plans' List and Month, in Plans' cyan: a panel a day, today first, a line
+  each in the agenda's own type, with no day chip since the day is the panel's heading. Who
+  listed each is a tag, an outside link opens apart (`noopener noreferrer`), and a source that
+  could not be read is one muted line above. For grown-ups only, as Status is: Ticketmaster
+  lists shows for adults too, and a kid's Plans has no tabs.
 - **Settings.** A card to each part, saying how it stands and marking in amber what needs a
   look; each part is a short page of its own, the others listed down the side where there is room
   (on a phone the way back is Settings, above the title), with one Save in a bar that stays in
