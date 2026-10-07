@@ -33,6 +33,45 @@
       "see_also": [
         "behavior",
         "reference/glossary"
+      ],
+      "children": [
+        {
+          "slug": "model/family-and-roles",
+          "title": "The family and roles",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "controls/family",
+            "security/passwords-and-sessions"
+          ]
+        },
+        {
+          "slug": "model/memory",
+          "title": "Memory",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "controls/memory"
+          ]
+        },
+        {
+          "slug": "model/wishes",
+          "title": "Wishes",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "controls/wish-lists"
+          ]
+        },
+        {
+          "slug": "model/vera",
+          "title": "Vera",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "controls/settings/personality"
+          ]
+        }
       ]
     },
     {
