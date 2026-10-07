@@ -15,6 +15,9 @@ EXPECTED_TABLES = {
     "llm_calls",
     "ideas_fts",
     "schema_version",
+    "finds",
+    "find_sources",
+    "feed_proposals",
 }
 
 
@@ -124,9 +127,11 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP TABLE wish_days")
         conn.execute("DROP TABLE calendar_sync_state")
         conn.execute("DROP INDEX plans_google_event_idx")
+        for table in ("finds", "find_sources", "feed_proposals"):
+            conn.execute(f"DROP TABLE {table}")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
-        assert db.migrate(conn) == list(range(8, 39))
+        assert db.migrate(conn) == list(range(8, 40))
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 
@@ -290,7 +295,7 @@ def test_calendar_attempts_keep_their_meaning_in_one_table(tmp_path, monkeypatch
             "('session-lost', 'evt-lost');"
             "INSERT INTO calendar_links (operation_key, adopted_key) VALUES ('redrawn', 'done');"
         )
-        assert db.migrate(conn)[-1] == 38
+        assert 38 in db.migrate(conn)
         assert calendar_ops.get(conn, "done") == "evt-done"
         assert calendar_ops.get(conn, "redrawn") == "evt-done"  # the form that took it over
         assert calendar_ops.unfinished(conn, "session-lost") == "evt-lost"

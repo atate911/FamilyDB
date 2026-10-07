@@ -677,6 +677,8 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
         "member_store",
         "memories",
         "memory_store",
+        "finds",
+        "find_store",
     }
     writes = {
         "insert",
