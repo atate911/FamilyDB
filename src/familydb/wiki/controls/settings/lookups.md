@@ -12,13 +12,15 @@ nothing is looked up until there is one. Which company and which model do it is 
 
 | Setting | Default | What it does |
 |---|---|---|
-| Look ideas up on the web (`web_tools_enabled`) | on, after an install | Without it, no idea is filled in and nothing new is discovered. The program's own default is off; the installer turns it on, so a new install has it on |
-| Days before details look old (`place_stale_days`) | 30 | After this, an idea's hours and prices are marked as worth checking again. Between 1 and 3650 |
+| Look ideas up on the web (`web_tools_enabled`) | on, after an install | Without it, the lookup job is not run, no idea is filled in and nothing new is discovered, and `/lookup` says lookups are switched off. The program's own default is off; the installer turns it on, so a new install has it on. With no key for the company that does it, ideas wait and are looked up once a key is added |
+| Days before details look old (`place_stale_days`) | 30 | After this, an idea's hours and prices are marked as worth checking again, and looked up again the next time the idea is suggested (within the spending limit) |
 
 ## When
 
-Filling an idea in rarely changes what you do next, so by default it waits for the evening and every
-idea waiting is looked up together, with one note in each chat for what was found. Asked for now, by
+Filling an idea in rarely changes what you do next, so by default it waits for the evening, when the
+ideas waiting are looked up together (up to 40 in one run, the rest at the next checks), with one note in
+each chat for what was found. An idea edited after that hour waits for the next evening, and everything
+waits until tomorrow when the day's spending limit is used up. Asked for now, by
 asking the assistant, by the button on the Status page or an idea's page, or by `/lookup` on Telegram,
 one is looked up within a few minutes.
 
