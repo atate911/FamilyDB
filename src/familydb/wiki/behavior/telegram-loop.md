@@ -1,26 +1,24 @@
-# The Telegram loop
+# Telegram: the message loop
 
-This page explains how the bot talks to Telegram: it asks Telegram for new updates, hands each to the same pipeline the page's chat uses, and sends the answers back. The commands and buttons are on [Telegram: commands and buttons](/wiki/controls/telegram), and the settings are on [Connections](/wiki/controls/settings/connections).
+FamilyDB asks Telegram for new updates, hands each to the same pipeline the web chat uses, and sends the answers back. This page is the mechanics. [Telegram: commands and buttons](/wiki/controls/telegram) covers what the family types and taps, [Telegram as a service](/wiki/boundaries/telegram) covers the service and what to do when it fails, and [Connections](/wiki/controls/settings/connections#telegram) covers setting it up.
 
 ## How it connects
 
-The bot uses long polling: it opens the connection to Telegram and asks for updates, and nothing connects in. You need no domain, open port or webhook for it. Telegram sends only four kinds of update: messages, edited messages (read only for a live location), button taps, and changes to the bot's place in a chat.
+FamilyDB uses long polling: it opens the connection to Telegram and asks for updates, and nothing connects in. You need no domain, open port or webhook for it. Telegram sends only four kinds of update: messages, edited messages (read only for a live location), button taps, and changes to the bot's place in a chat.
 
-A supervisor thread inside `familydb run` re-reads the settings every 5 seconds and follows the token. `familydb web` alone never connects. A new token reconnects within seconds, with no restart, and removing it disconnects.
+A supervisor thread inside `familydb run` re-reads the settings every 5 seconds and follows the token. `familydb web` alone never connects. A new token reconnects within seconds, and removing it disconnects. Status and Connections show one of four states:
 
-| State (Status and Connections) | Means | What the supervisor does |
-|---|---|---|
-| off | No token is set | Connects within seconds of one being saved |
-| connected as @name (just "connected" if the bot has no username) | Polling | Checks the token setting every 5 seconds |
-| the token was refused by Telegram | The token is wrong or revoked | Waits until the token changes |
-| cannot reach Telegram; trying again | The connection failed | Tries again every 30 seconds |
+- **off:** no token is set.
+- **connected as @name** (just connected if the bot has no username): polling.
+- **the token was refused by Telegram:** the supervisor waits until the token changes.
+- **cannot reach Telegram; trying again:** the supervisor tries again every 30 seconds.
 
 ## What it does when it connects
 
 1. It registers itself as the sender for replies, with and without buttons. Until then nothing can be sent, and replies wait.
-2. It asks Telegram who it is and logs "telegram: polling as @name".
-3. It sets the command menu (the five commands) when it differs from Telegram's. If that fails, the log warns "the command menu could not be set", and the commands still work, only unlisted.
-4. It sets the bot's name to the persona's name (FamilyDB's with no persona) and its description to the `/start` line, each only when it differs, cut to Telegram's length limits. It checks again when either changes. If Telegram asks for a wait, it waits that long, and if Telegram refuses, it logs a warning and stops until the name or line changes or the bot reconnects. No model is asked.
+2. It asks Telegram who it is and logs `telegram: polling as @name`.
+3. It sets the command menu (the five commands) when it differs from Telegram's. If that fails, the log warns `the command menu could not be set`, and the commands still work, only unlisted.
+4. It sets the bot's name to the persona's name (FamilyDB's with no persona) and its description to the `/start` line, each only when it differs, cut to Telegram's length limits. If Telegram asks for a wait, it waits that long. If Telegram refuses, it logs a warning and stops until the name or line changes or the bot reconnects. No model is asked.
 5. It asks Telegram every 5 minutes whether the bot can read every message in a group, because a change in BotFather reaches the bot in no update. The Connections card shows the answer.
 
 ## The updates it handles
@@ -29,59 +27,50 @@ A supervisor thread inside `familydb run` re-reads the settings every 5 seconds 
 
 | What arrives | What happens | In a group |
 |---|---|---|
-| Text | Answered by the pipeline, after the gather pause | Ignored only when "answer only when mentioned" is on and it is not addressed |
+| Text | Answered by the pipeline, after the gather pause | Ignored only when **Answer only when mentioned** is on and it is not addressed |
 | A command | Answered by code, no model | `/today@BotName` works |
 | `/start` | The introduction, or links a phone to a family member | |
-| A voice note or audio file | Heard, then answered ([Lifecycles](/wiki/behavior/lifecycles#a-voice-note)) | Same rule as text |
-| A photo, or a JPEG, PNG or WebP file, or an album | Looked at ([Lifecycles](/wiki/behavior/lifecycles#a-photo)) | Only when addressed, whatever the setting |
-| A sticker, GIF, video, video note, other file, contact, poll or dice | With no words, "I can't open that kind of message". With a caption, the caption is answered, marked "(with a sticker, not seen)" | One with no words only when addressed. One with a caption follows the text rule |
-| A shared location, live or not | Kept for use for 3 hours and deleted within a day. The first share is acknowledged, and later updates of a live location are kept silently | |
+| A voice note or audio file | Heard, then answered ([Voice notes and photos](/wiki/behavior/message-to-reply#voice-notes-and-photos)) | Same rule as text |
+| A photo, or a JPEG, PNG or WebP file, or an album | Looked at | Only when addressed, whatever the setting |
+| A sticker, GIF, video, video note, other file, contact, poll or dice | With no words, a reply that it cannot open that kind of message. With a caption, the caption is answered, marked as with something not seen | One with no words only when addressed. One with a caption follows the text rule |
+| A shared location, live or not | Kept for use ([Shared location](/wiki/model/location)). The first share is acknowledged, and later updates of a live location are kept silently | |
 | A button tap | Done by code, no model | |
 | The bot added to a group | An introduction, only when someone on the family list added it | |
+
+A voice note follows the text rule, so with **Answer only when mentioned** off, every voice note in a group is heard, and each one heard is paid for. A photo is looked at only when addressed, whatever the setting, because each one looked at is paid for.
 
 Someone not on the family list is recorded as a knock and gets one line, but in a group a message not addressed to the bot gets no reply.
 
 ## The gather pause
 
-Text on Telegram is kept the moment it arrives and answered after `gather_seconds` (4 by default, 0 to 30), so several messages in a row get one reply. The message is held from the retry job for the pause plus 5 minutes, which is why a stopped process loses nothing. While the bot waits and works, "typing…" is resent every 4.5 seconds, for at most 3 minutes. Voice notes, photos, commands, taps and the page's chat are not paused. The steps are in [Lifecycles](/wiki/behavior/lifecycles#a-message-from-arrival-to-reply).
+Text on Telegram is kept the moment it arrives and answered after `gather_seconds` (4 by default, 0 to 30), so several messages in a row get one reply. The retry job leaves the message alone for the pause plus 5 minutes, which is why a stopped process loses nothing. While FamilyDB waits and works, "typing…" is resent every 4.5 seconds, for at most 3 minutes. Voice notes, photos, commands, taps and the web chat are not paused. The steps are in [From message to reply](/wiki/behavior/message-to-reply#a-message-from-arrival-to-reply).
 
 ## Quiet replies in groups
 
-A reply that only says something was saved is a 👌 reaction on the message, which buzzes nobody. Where Telegram refuses reactions, it is a ✓ reply sent without a sound. A ✓ sent later, by the delivery job, goes the same way, without a sound. Everything else is sent with a notification. A reminder or note for one person goes to that person's own chat once they have written to the bot there, when "send what's for one person to their own chat" is on ([Telegram: where each message goes](/wiki/controls/telegram#where-each-message-goes)).
+A reply that only says something was saved is a 👌 reaction on the message, which buzzes nobody. Where Telegram refuses reactions, it is a ✓ reply sent without a sound, and a ✓ sent later by a delivery run goes the same way. Everything else is sent with a notification. A reminder or note for one person goes to that person's own chat once they have written to the bot there, when **Send what's for one person to their own chat** is on ([Telegram: where each message goes](/wiki/controls/telegram#where-each-message-goes)).
 
 ## Sending
 
-- **Formatting.** Models write light Markdown. Code turns bold, italics, strikethrough, inline code, code blocks and links (http and https only) into Telegram's HTML, headings into bold and bullets into •. Everything else is escaped, so a message can never become markup of its own. If marks cross, the message goes with its marks as written. If Telegram still refuses ("parse entities"), the plain words go, and the log says "the formatting was refused". Stored text and the page's text stay as written.
+- **Formatting.** Models write light Markdown. Code turns bold, italics, strikethrough, inline code, code blocks and links (http and https only) into Telegram's HTML, headings into bold and bullets into •. Everything else is escaped, so a message can never become markup of its own. If marks cross, the message goes with its marks as written. If Telegram still refuses, the plain words go, and the log says `the formatting was refused`. Stored text and the page's text stay as written.
 - **Length.** A part is at most 4,096 characters, split at a line break where possible, else a space. Buttons go under the last part. A command's answer has its first line in bold.
-- **Where it lands.** The answer to a person's update replies to their message. A reminder, a digest or a note from a job is a new message to the chat. A job's part waits at most 30 seconds, and an answer to an update 120 seconds.
+- **Where it lands.** The answer to a person's update replies to their message. A reminder, weekend ideas or a note from a job is a new message to the chat.
+- **Time-outs.** FamilyDB waits 30 seconds for Telegram to take a part sent by a job and 120 seconds for the answer to an update. A send that times out counts as failed, and the stored reply goes out on a later delivery run.
 
 ## Delivery
 
-A reply is stored before it is sent and marked delivered only after the send succeeds, so delivery is at least once. A send Telegram accepted whose answer was lost can arrive twice, and so can the earlier parts of a long reply whose later part failed. Neither runs the model or touches the calendar again.
+A reply is stored before it is sent and marked delivered only after the send succeeds. Telegram cannot tell FamilyDB whether a send arrived, so a reply is sometimes sent twice, and so are the earlier parts of a long reply whose later part failed. Neither runs the model or touches the calendar again.
 
-A reply for Telegram waits stored while the channel has no sender, and goes on the first delivery run after it connects. The retry job (every 5 minutes by default) tries each unsent reply each time it runs, and does not count attempts. It skips replies held in memory for a conversation, and replies another worker has claimed.
+A reply for Telegram waits stored while the channel has no sender, and goes on the first delivery run after it connects. The retry job tries each unsent reply each time it runs, and does not count attempts. It skips replies another worker has claimed and a reminder still waiting for a conversation.
 
-## When Telegram or the token fails
-
-| What happened | Where you see it | What the family sees |
-|---|---|---|
-| The token is refused | Status and Connections: "the token was refused by Telegram". Log: "telegram: Telegram refused the bot token; replace it on the settings page" | Nothing arrives on Telegram, and the page's chat still works |
-| Telegram cannot be reached | "cannot reach Telegram; trying again". Log: "telegram: cannot reach Telegram (...); trying again shortly" | Nothing arrives until it connects |
-| A send fails | Log: "delivery pending for message N" | The reply arrives on a later delivery run |
-| The formatting is refused | Log warning "the formatting was refused, so it went as plain words" | The reply arrives without formatting |
-| A reaction is refused | Log: "no reaction here (...), so the ✓ goes quietly" | A silent ✓ |
-| A tap cannot be marked on its message | Log: "could not add who did it to a message", or "could not take the buttons off a message" | The tap still ran, and the buttons stay |
-
-Telegram trouble is not among what admins are told on Telegram. It shows in the Telegram row on [Status](/wiki/controls/status) and on Connections. Fixes are in [Troubleshooting](/wiki/operations/troubleshooting).
-
-## Limits that matter
+## Limits
 
 | Limit | Value |
 |---|---|
 | A voice note | `voice_max_minutes` (5 by default, 1 to 30) and 20 MB, Telegram's download limit for a bot |
-| A photo | 3.9 MB each, the first four of an album, collected for 1.5 seconds |
+| A photo | 3.9 MB each, the first 4 of an album, collected for 1.5 seconds |
 | Gather pause | `gather_seconds`, 4 by default |
-| Retry and delivery job | Every 5 minutes by default; a message is retried 3 times (see [Jobs](/wiki/behavior/jobs)) |
-| The bot's name | Telegram rate-limits renames, and the bot waits as asked |
+| Retry job | Every 5 minutes by default; a message is retried 3 times ([Jobs](/wiki/behavior/jobs)) |
+| A send | 30 seconds for a job's part, 120 seconds for an answer to an update |
+| The bot's name | Telegram rate-limits renames, and FamilyDB waits as asked |
 
-Developer docs: `src/familydb/channels/telegram.py` (`TelegramChannel`, `TelegramSupervisor`), `channels/markup.py`, `delivery.py`, `routing.py`, and `docs/DESIGN.md` ("Message pipeline", "Group vs DM").
+Developer docs: `src/familydb/channels/telegram.py`, `src/familydb/channels/markup.py`, `src/familydb/delivery.py`, `src/familydb/routing.py`; `docs/DESIGN.md`, "Message pipeline" and "Decisions".

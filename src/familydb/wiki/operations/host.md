@@ -1,119 +1,76 @@
 # The server
 
-This page says what FamilyDB puts on its server and how to look after it. [Install and first run](/wiki/operations/install) has the table of what the installer changes; this page adds who owns what, how the service behaves, what must be open, and what grows.
+This page says what the install put on the server, how the service behaves, what grows, and how to take FamilyDB off again. For the page's HTTPS, ports and firewall, see [HTTPS and the firewall](/wiki/operations/https-and-firewall). For logs, see [Diagnostics](/wiki/operations/diagnostics#logs).
 
-## What is in /opt/familydb
+## Everything the install put on the server
 
-| Path | Owner and mode | What it is |
+The installer records each change outside `/opt/familydb` in `/var/lib/familydb-install` as it makes it, so `uninstall.sh --from-zero` can undo exactly that. [Install and first run](/wiki/operations/install#what-the-installer-changes-and-why) gives the summary.
+
+| Item | Owner | What it is, and why |
 |---|---|---|
-| `src/`, `scripts/`, `deploy/`, `.git` | root; others cannot write | The code. Bootstrap, and each virtualenv upgrade, run `chmod -R go-w`, so the bot runs its code but cannot change it |
-| `.venv/` | root, readable by `familydb` | The Python environment, built by `uv`; it can be rebuilt. uv's cache and any Python it fetched are in `.cache/` and `.local/` beside it, but upgrades do not set those paths, so later downloads may land in root's own cache |
-| `.env` | `familydb`, `600` | The page's address, the first password, and any key you put there. Declining to keep it when you re-run `install.sh` saves the old one as `.env.<timestamp>.bak`, root-owned, `600` |
-| `data/` | `familydb`, `700` | The database, `google_key.json` and `web_secret` |
-| `backups/` | folder owned by `familydb` (its mode is not set), files `600` | The nightly and safety backups |
-| `caddy/` | Docker's `tls` profile only | Caddy's certificate and private key |
+| `/opt/familydb` code: `src/`, `scripts/`, `deploy/`, `.git` | root; others cannot write | The program. FamilyDB runs it but cannot change it, so a mistake in it cannot rewrite its own code |
+| `/opt/familydb/.venv/` | root, readable by `familydb` | The Python environment, built by `uv` and rebuilt by each upgrade. uv's cache and Python sit in `.cache/` and `.local/` beside it |
+| `/opt/familydb/.env` | `familydb`, mode 600 | The page's address, the shared password and any key you put there. If you decline to keep it when you rerun `install.sh`, the old one is saved as `.env.<timestamp>.bak`, root-owned, mode 600 |
+| `/opt/familydb/data/` | `familydb`, mode 700 | The database, `google_key.json` and `web_secret`: everything the family tells it |
+| `/opt/familydb/backups/` | folder owned by `familydb`; files mode 600 | The nightly and safety backups. [Backup and restore](/wiki/operations/backup-and-restore#what-is-in-a-backup-and-what-is-not) says what a backup holds |
+| `/opt/familydb/caddy/` | Docker with a domain only | Caddy's certificate and private key, kept apart from `data/` so the bot's container cannot read the key |
+| The `familydb` account | system account | No password and no login, home `/opt/familydb`. FamilyDB runs as it, so a mistake cannot reach the rest of the machine |
+| `/etc/systemd/system/familydb.service`, and its link in `multi-user.target.wants` | root | The service, so FamilyDB starts at boot and restarts if it stops. Virtualenv installs only |
+| `/etc/caddy/Caddyfile` | root | One site block that passes the page to FamilyDB. Not written with `--local-only` |
+| `/var/lib/caddy/.local/share/caddy` | `caddy` account | Caddy's certificates, outside the install |
+| Root's crontab | root | One line, tagged `familydb-maintain-backup`: the nightly backup at 03:15 |
+| `/root/familydb_deploy` and `.pub` | root, mode 600 | The deploy key, so upgrades can fetch the code. Deleting it on GitHub ends the server's access |
+| `/var/lib/familydb-install` | root only | The record of each change, a copy of any file the installer replaced, and GitHub's host key |
+| `/var/log/familydb-bootstrap.log`, `-install.log`, `-maintain.log`, `-uninstall.log` | root, mode 600 | A transcript of each run, the files to send if you need someone to look. Nothing rotates them |
+| `/var/backups/familydb` | root | Created only by `uninstall.sh --purge`, which leaves one last backup there |
+| Packages and tools | root | `git`, `curl`, `ca-certificates` and `tzdata` if missing, `uv` in `/usr/local/bin`, and `cron`, Caddy or Docker when you need them. For a public address with no domain, a Caddy older than 2.10 is replaced from Caddy's own apt repository |
+| A `ufw` rule for ports 80 and 443 | root | Only on a virtualenv install, if `ufw` is already on and you did not pass `--local-only` |
 
-On Docker, `data/` belongs to uid 1000 (the container's `familydb`) and `.env` stays with whoever ran the installer. [Backup and restore](/wiki/operations/backup-and-restore) says what a backup holds.
+On Docker, `data/` belongs to uid 1000 (the container's `familydb`), `.env` stays with whoever ran the installer, and the image is `familydb:local`.
 
 ## The service
 
-A virtualenv install runs one systemd unit, `/etc/systemd/system/familydb.service`, a copy of `deploy/familydb.service`. It runs `/opt/familydb/.venv/bin/familydb run` as `familydb`, with `.env` as its environment file; that one process serves the page, polls Telegram and runs every scheduled job.
+A virtualenv install runs one [systemd](/wiki/reference/glossary#systemd) unit, a copy of `deploy/familydb.service`. It runs `/opt/familydb/.venv/bin/familydb run` as `familydb` with `.env` as its environment file. That one process serves the page, polls Telegram and runs every scheduled job.
 
 ```bash
 sudo systemctl status familydb
-sudo /opt/familydb/scripts/maintain.sh status      # also shows the version, memory and last backup
+sudo /opt/familydb/scripts/maintain.sh status
 sudo /opt/familydb/scripts/maintain.sh restart
 ```
 
 | Setting | What it does |
 |---|---|
-| `Restart=on-failure`, `RestartSec=5` | Restarts it five seconds after it fails. A stop you asked for stays stopped |
-| `TimeoutStopSec=150` | Waits up to 150 seconds for a clean stop before killing it; a lookup mid-call can be slow to notice, and nothing is lost if it is killed |
-| `ProtectSystem=strict`, `ReadWritePaths=/opt/familydb/data` | The file system is read-only to it except `data/` and its private `/tmp`. `FAMILYDB_PATH` must stay in `data/` |
-| `UMask=0077`, `ProtectHome=true` | Its files are owner-only, and `/home` is hidden (`read-only` for a checkout there) |
-| `NoNewPrivileges`, empty `CapabilityBoundingSet` and `AmbientCapabilities` | It gains nothing and has no capabilities, so `WEB_PORT` must be 1025 or above |
-| `PrivateTmp`, `PrivateDevices` (a minimal `/dev`), `ProtectClock`, `ProtectHostname`, `ProtectKernel*`, `ProtectControlGroups`, `RestrictAddressFamilies` (Unix and IP sockets only), `RestrictNamespaces`, `RestrictRealtime`, `RestrictSUIDSGID`, `LockPersonality`, `SystemCallArchitectures=native`, `SystemCallFilter=@system-service` | What a bot has no need for, closed off |
+| `Restart=on-failure`, `RestartSec=5` | Restarts FamilyDB 5 seconds after it fails. A stop you asked for stays stopped |
+| `TimeoutStopSec=150` | Waits up to 150 seconds for a clean stop before killing it. A model call in progress can be slow to notice, and nothing is lost if it is killed |
+| Hardening (`ProtectSystem=strict`, no capabilities, `UMask=0077`) | The file system is read-only to FamilyDB except `data/`, so `FAMILYDB_PATH` must stay in `data/`. `WEB_PORT` must be 1025 or above. `ProtectHome=true` hides `/home`, so the installer uses `read-only` for a checkout there |
 
-Upgrades never rewrite the unit, so a hardening change in a later release reaches you only if you copy `deploy/familydb.service` over it again. After any edit, run `sudo systemctl daemon-reload` and restart.
+An upgrade does not rewrite the unit; see [Known limits](/wiki/reference/known-limits#an-upgrade-does-not-rewrite-the-service-file). After any edit to it, run `sudo systemctl daemon-reload` and restart.
 
 ## Docker instead
 
-`--mode docker` runs the `bot` container, plus `caddy` when a domain is set, from `docker-compose.yml`. There is no systemd unit and none of the options above.
+`--mode docker` runs the `bot` container, plus `caddy` when a domain is set, from `docker-compose.yml`. There is no systemd unit.
 
-- **`bot`:** image `familydb:local`, built from the `Dockerfile` (Python 3.12, uid 1000); `./data` as `/data`; port `127.0.0.1:8080:8080`, this machine only.
-- **`caddy`:** `caddy:2-alpine`, only with the `tls` profile (the installer writes `COMPOSE_PROFILES=tls` in `.env` when you give a domain); `./caddy` as `/data`; ports `80:80` and `443:443`, where the host side of 443 is `WEB_PUBLIC_PORT`.
+- **`bot`:** image `familydb:local`, built from the `Dockerfile` (uid 1000); `./data` is mounted as `/data`; the port is `127.0.0.1:8080:8080`, this machine only.
+- **`caddy`:** `caddy:2-alpine`, only with the `tls` profile (the installer writes `COMPOSE_PROFILES=tls` in `.env` when you give a domain); `./caddy` is mounted as `/data`; ports `80:80` and `443:443`, where the host side of 443 is `WEB_PUBLIC_PORT`.
 
-Both restart `unless-stopped`. `WEB_PORT` in `.env` moves the bot's port. Caddy's data sits apart from `data/` on purpose, so the bot's container cannot read the certificate key. The compose file sets no stop timeout, so Docker's default applies, not 150 seconds. `maintain.sh` takes the same commands (including `logs` and `restart`), except that `https` only moves the port of a page already on HTTPS.
-
-## HTTPS: Caddy
-
-On a virtualenv install the installer puts Caddy on the machine and writes `/etc/caddy/Caddyfile`; `maintain.sh https` writes it again. The file is one site block, `reverse_proxy 127.0.0.1:<WEB_PORT>`: Caddy holds the certificate and passes the page on to the bot, which listens on the loopback only (`WEB_HOST=127.0.0.1`). Caddy replaces any `X-Forwarded-For` a visitor sends with the real address, which the sign-in lockout counts, and `WEB_TRUST_PROXY=true` makes the page believe one proxy hop. A Caddyfile that serves something else is left alone, and the installer prints the lines to add.
-
-| The page is at | Certificate |
-|---|---|
-| A domain | Caddy gets a public one once the name points at the server and ports 80 and 443 are open |
-| A public IPv4 address | A short-lived (six-day) Let's Encrypt certificate that Caddy renews. It needs Caddy 2.10 or newer, which the installer takes from Caddy's own apt repository when the system's is older. It waits 90 seconds for the certificate |
-| A private address, no certificate within 90 seconds, or a Caddy still older than 2.10 | One Caddy signs itself (`tls internal`); each browser warns once |
-
-Run `sudo /opt/familydb/scripts/maintain.sh https` again after opening a provider's firewall to try for a real certificate. Caddy keeps its certificates in `/var/lib/caddy/.local/share/caddy`, outside the install. On Docker, an address alone gets no HTTPS: the page stays on the machine until you set `WEB_DOMAIN`.
-
-The page is on 443 unless `WEB_PUBLIC_PORT` says otherwise. `maintain.sh https --port random` (or a number from 1024 to 65535, or `443` to go back) moves it; `random` picks from 20000 to 29999. On a virtualenv install Caddy then serves HTTPS on that port alone, sends no redirect from 80, and listens on 80 only while a certificate authority checks the machine. Docker's Caddy still redirects 80 to 443, which then answers nothing. `maintain.sh port N|random` moves FamilyDB's own port behind Caddy; the General settings page shows both ports and cannot change them.
-
-### nginx instead
-
-If nginx is already on the server, install with `--local-only` so the installer leaves 80 and 443 to it. Then:
-
-1. Copy `deploy/nginx-familydb.conf` into `/etc/nginx/sites-available/`, put your domain in, and link it into `sites-enabled`.
-2. Run `certbot --nginx -d <domain>`, then `nginx -t` and reload nginx.
-3. In `.env`, set `WEB_HOST=127.0.0.1`, `WEB_TRUST_PROXY=true` and a `WEB_PASSWORD` of 12 or more characters.
-
-The file passes `Host` as `$http_host`, because `$host` drops the port the sign-in's Origin check keeps. Do not run `maintain.sh https` on such a server: it installs Caddy and writes its own Caddyfile.
-
-## The firewall
-
-The bot polls Telegram rather than waiting for it, so the only inbound traffic is the page.
-
-| Port | Open? | Why |
-|---|---|---|
-| SSH (22) | Yes | Your way in, not FamilyDB's |
-| 80/tcp | Yes | Caddy's certificate check, and its redirect to HTTPS |
-| 443/tcp, or your `WEB_PUBLIC_PORT` | Yes | The page |
-| `WEB_PORT` (8080) | Keep it closed | The bot listens on the loopback, so only Caddy reaches it |
-
-On a virtualenv install the installer opens `80,443/tcp` (or `80,<port>/tcp`) only if `ufw` is already on, and `maintain.sh https --port` closes the old port only if the installer opened it. On Docker the installer opens nothing in `ufw`: Docker publishes Caddy's ports itself, and `ufw` rules normally do not apply to them. What the compose file publishes is what is reachable, which is why the bot's port stays on `127.0.0.1`; keep it there. A provider's own firewall is separate and yours to open.
-
-**Turning on `ufw` without allowing SSH first locks you out of the server;** the only way back is the provider's console.
-
-```bash
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow OpenSSH
-sudo ufw allow 80,443/tcp          # or 80,<port>/tcp if the page is on another port
-sudo ufw enable
-```
-
-## Logs
-
-The bot writes to standard error and keeps no log file: under systemd that is the journal, on Docker the container's log.
-
-```bash
-sudo /opt/familydb/scripts/maintain.sh logs 100    # the last 100 lines, then follows; Ctrl-C stops
-```
-
-FamilyDB sets no limit on the journal. Cap it with `SystemMaxUse=500M` in `/etc/systemd/journald.conf` and restart `systemd-journald`; `sudo journalctl --vacuum-size=200M` trims it now. Docker keeps five files of 10 MB for each container. The installer's scripts keep owner-only transcripts in `/var/log/familydb-*.log`, which nothing rotates.
-
-A Telegram bot token travels in the request address, so the bot replaces it with `bot<token>` in each log message. Exception text attached to a message is not filtered, and nothing else is scrubbed. The level is **Log detail** on the [General settings](/wiki/controls/settings/general) page (`LOG_LEVEL`); the default is Info. Debug logs every HTTP request, so turn it back down after chasing a problem.
+Both restart `unless-stopped`. `WEB_PORT` in `.env` moves the bot's port. The compose file sets no stop timeout, so Docker's default applies, not 150 seconds. `maintain.sh` takes the same commands, except that `https` only moves the port of a page already on HTTPS.
 
 ## Disk and memory
 
-The install takes about 600 MB. `bootstrap.sh` refuses to start with under 900 MB free; `install.sh` alone warns under 600 MB. The doctor warns below 500 MB free where the database lives, and a backup needs room for the database plus 50 MB. What grows is the database (no job prunes messages or the records of model and tool calls), `backups/` (about two weeks of full copies by default), and the journal, Docker's logs and its images (`docker system df` shows them).
+[Install and first run](/wiki/operations/install#what-you-need) has the minimums and who checks them. What grows afterward is the database (no job prunes messages or the records of model and tool calls), `backups/` (about two weeks of full copies by default), and the journal, Docker's logs and its images (`docker system df` shows them).
 
-On "no space left on device", trim the journal first, then run `sudo apt-get clean`, then remove old backups (`maintain.sh schedule-backups --keep-days N` sets how long they live).
-
-The bot needs about 200 MB (the installer's estimate); building the install needs more, so it warns on under 900 MB. A step that ends with only `Killed` ran out of memory: confirm with `sudo dmesg -T | grep -i 'killed process'`, add swap, and run the install again.
+On `no space left on device`, trim the journal first, then run `sudo apt-get clean`, then remove old backups. `maintain.sh schedule-backups --keep-days N` sets how long backups live.
 
 ```bash
-sudo fallocate -l 1G /swapfile && sudo chmod 600 /swapfile
+sudo journalctl --vacuum-size=200M
+sudo apt-get clean
+```
+
+A step that ends with only `Killed` ran out of memory. Confirm with `sudo dmesg -T | grep -i 'killed process'`, add swap, and run the install again. If `fallocate` fails on your file system, the `dd` form works everywhere:
+
+```bash
+sudo fallocate -l 1G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=1024
+sudo chmod 600 /swapfile
 sudo mkswap /swapfile && sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
@@ -127,24 +84,26 @@ sudo apt update && sudo apt install -y unattended-upgrades
 sudo dpkg-reconfigure --priority=low unattended-upgrades
 ```
 
-That covers your distribution's security updates, not Caddy's own repository, which the installer adds when the system's Caddy is older than 2.10. Run `sudo apt update && sudo apt upgrade` now and then. On Docker, an upgrade does not fetch a newer `caddy:2-alpine`.
+That covers your distribution's security updates, not Caddy's own repository, which the installer adds only for a page at a public address with no domain when the system's Caddy is older than 2.10. Run `sudo apt update && sudo apt upgrade` now and then. On Docker, an upgrade does not fetch a newer `caddy:2-alpine`.
 
-After a reboot the service comes back by itself: the installer enables it at boot, and Docker's `unless-stopped` does the same for the containers once Docker is up. `maintain.sh status` and the doctor both say whether it is enabled at boot. On every start the bot applies any pending migrations, then:
+After a reboot the service comes back by itself: the installer enables it at boot, and Docker's `unless-stopped` does the same once Docker is up. `maintain.sh status` and the doctor both say whether it is enabled at boot. On every start FamilyDB applies any pending migrations, then:
 
-- **Scheduled jobs.** They live in memory, so about a minute after start a catch-up runs the follow-ups, the plan check and the weekend digest (the digest only if today is its day and its hour has passed), and the daily model check if a day has gone by. A repeat does nothing new; the digest, for one, logs "digest already sent today".
-- **Reminders.** One that fell due while the bot was down goes out once it is back, worded as late.
-- **A message in the middle of a turn.** Its [lease](/wiki/reference/glossary#lease) lapses after five minutes, and the retry job (every five minutes by default) answers it and sends any reply that was stored but not delivered.
+- **Scheduled jobs.** They live in memory, so 60 seconds after start a catch-up runs the follow-ups, the plan check and the weekend ideas job (the last only if today is its day and its hour has passed), and the daily model check if a day has gone by. A repeat does nothing new.
+- **Reminders.** One that fell due while FamilyDB was down goes out once it is back, worded as late.
+- **A message in the middle of a turn.** Its [lease](/wiki/reference/glossary#lease) lapses and the retry job answers it, and sends any reply that was stored but not delivered. [When a message cannot be answered](/wiki/controls/settings/messages#when-a-message-cannot-be-answered) has the numbers.
 
-## What the installer recorded
+## Taking it off again
 
-Each change the installer makes outside `/opt/familydb` is written as it happens to `/var/lib/familydb-install` (root-only), with a copy of any file it replaced and GitHub's host key. That record lets `uninstall.sh --from-zero` undo exactly what the installer did. Only a run as root writes it, and not a dry run. [Install and first run](/wiki/operations/install#taking-it-off-again) has the three levels of uninstall.
+> **`--purge` and `--from-zero` delete the database.** Run `maintain.sh backup` and copy the file off the server first; see [Backup and restore](/wiki/operations/backup-and-restore#keep-a-copy-off-the-server).
 
-## Security posture of the host
+| Command | Removes | Keeps |
+|---|---|---|
+| `uninstall.sh` | The service, the nightly backup line, and the rebuildable virtualenv (on Docker, the containers and image) | The code, `.env`, `data/`, `caddy/` and the backups, so reinstalling picks up where it left off |
+| `uninstall.sh --purge` | All of FamilyDB: the database, the `familydb` account and the backups in `/opt/familydb/backups` | One last backup, written to `/var/backups/familydb` (or `--backup-to DIR`) |
+| `uninstall.sh --from-zero` | All of that, and what the install did around it | Nothing, unless you give `--backup-to DIR` |
 
-- **A dedicated account.** `familydb` is a system account with `/opt/familydb` as its home, `/usr/sbin/nologin` as its shell and no password.
-- **Owner-only files.** Every `familydb` command sets umask `077`, and `familydb run` removes group and other access from the files it owns among the database, its write-ahead files, `google_key.json` and `web_secret`.
-- **The session key.** `data/web_secret` is created `600` the first time the page starts. **Whoever has it together with the database or `.env` can forge a sign-in.** [Passwords and sessions](/wiki/security/passwords-and-sessions) covers rotating it and `WEB_SECRET_KEY`.
-- **The deploy key.** Bootstrap keeps it where you put it (`/root/familydb_deploy`), makes it `600` and records its path in the checkout's git configuration so upgrades can fetch. It is a read-only key on GitHub; deleting it there ends the server's access to the code. A `GITHUB_TOKEN` is used for the clone only and not written down.
-- **Root.** Whoever can run `maintain.sh password` on the server can get into the page, so keep SSH access tight. [Recovery](/wiki/operations/recovery) explains why.
+Run it as `sudo /opt/familydb/scripts/uninstall.sh <option>`.
 
-Developer docs: `deploy/familydb.service`, `deploy/Caddyfile`, `deploy/nginx-familydb.conf`, `docker-compose.yml`, `scripts/lib/https.sh`, `src/familydb/privacy.py`, `src/familydb/web/keys.py`, `src/familydb/jobs/catch_up.py`; `RUNBOOK.md`, "Virtualenv and systemd" and "Looking after the server"; and `docs/INSTALL.md`, "Looking after the server itself".
+`--from-zero` puts the server back as it was before FamilyDB, for trying the install again from the beginning. It undoes what the installer recorded, plus leftovers an older or by-hand install could leave: Caddy only when it serves nothing but FamilyDB, `uv`, the deploy key and copies of the code. `--purge` and `--from-zero` ask twice: a yes-or-no after listing by name everything they will remove (Enter means no), then you type `remove everything`. `--dry-run` shows the list and removes nothing. `--force` skips both questions and deletes at once, so it is for scripts.
+
+Things outside the server are yours to remove: the deploy key on GitHub, the Telegram bot (`/deletebot` in BotFather), the Google service account, the DNS record and the API keys at each company, which work until revoked.

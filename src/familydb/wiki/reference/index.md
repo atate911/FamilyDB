@@ -1,12 +1,10 @@
 # Reference
 
-Places to look things up rather than read through.
+Look things up here.
 
-- [Glossary](/wiki/reference/glossary): the words this guide uses, in plain language
-- [Map to the developer docs](/wiki/reference/dev-docs): which document in `docs/` goes deeper on each part of this guide
-
-**Still to come:** a "How do I…?" index that jumps straight to the page that
-answers a common question, a settings reference, an index of Telegram commands and
-buttons, and a page of every `.env` key.
-
-*See also: [Start here](/wiki).*
+| Page | What it holds |
+|---|---|
+| [How do I...?](/wiki/reference/tasks) | A router from a task you want to do to the page that answers it |
+| [Glossary](/wiki/reference/glossary) | The words this guide uses, in plain language |
+| [Known limits](/wiki/reference/known-limits) | What FamilyDB does today that you might not expect, with workarounds |
+| [Developer docs](/wiki/reference/dev-docs) | Which document in `docs/` goes deeper on each part of this guide |

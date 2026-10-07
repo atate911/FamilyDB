@@ -1,10 +1,10 @@
 # Recent activity
 
-Recent activity on [Status](/wiki/controls/status) lists what the models were asked lately, and each line opens that message's or lookup's whole history: every model call and tool call, what each cost, and what a lookup found. It is the place to see why one answer went wrong. **Only admins see it**, because it holds the words of every chat, including a kid's.
+Recent activity on [Status](/wiki/controls/status) lists what the models were asked lately, and each line opens that message's or lookup's whole history: every model call and tool call, what each cost, and what a lookup found. Use it to see why one answer went wrong. **Only admins see it**, because it holds the words of every chat, including a kid's.
 
 ## The list
 
-It shows the 25 most recent items from the last 7 days, newest first. An item is a message that was answered, the weekend ideas, or a lookup. Each line shows who asked and the start of what they said (or what was looked up), when, what the calls were for, how many calls, how many tokens, how many web searches, and the estimated cost. Costs are estimates, as on the rest of Status.
+It shows the 25 most recent items from the last 7 days, newest first. An item is a message that was answered, the weekend ideas, or a lookup. Each line shows who asked and the start of what they said (or what was looked up), when, what the calls were for, how many calls, how many tokens, how many web searches, and the estimated cost.
 
 ## One item's history
 
@@ -19,11 +19,9 @@ A key that matches nothing shows a not-found page.
 
 ## What to look for
 
-| You see | It usually means |
+| You see | It means |
 |---|---|
 | Several model calls for one message | The assistant used tools, one call for each step. |
 | A call ending in `max_tokens` | The answer hit the output limit. Raise "Longest answer (tokens)" on [Spending](/wiki/controls/settings/spending#what-one-message-may-use). |
 | A call ending in `refusal` | The model declined to answer. |
 | A tool tagged Failed | The tool refused or errored; its answer says why. |
-
-Developer docs: `familydb/web/activity.py` (module note), and `familydb/web/status.py` (`activity`).

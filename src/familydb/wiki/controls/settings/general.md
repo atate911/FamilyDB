@@ -1,55 +1,47 @@
-# General settings
+# General
 
-Where home is, the family's clock and units, and how the page itself looks and is named.
-Home and the time zone matter most: they decide the forecast, how far away things are, and
-what "tonight" and "this weekend" mean.
+The General card sets where home is, the family's clock and units, and how the web page is named. Home and the time zone matter most: they decide the forecast, how far away things are, and what "tonight" and "this weekend" mean.
 
 ## Where home is
 
-| Setting | Default | What it does |
-|---|---|---|
-| Home town or area (`home_area`) | empty | A town and a state or country, as you would say it. When it changes it is looked up on the map and the page says what it found. If the town is not found, or is emptied, the previous position is kept. A town is enough; no street address |
-| Time zone (`family_tz`) | set by the installer from the server | What "tonight" and "this weekend" mean, and when the messages that go out on their own are sent. Choose the nearest city in the same zone |
-| Units (`weather_units`) | metric | Metric or imperial, for the forecast and for distances |
+| Label (`key`) | Default | What it does | Range last |
+|---|---|---|---|
+| Home town or area (`home_area`) | empty | Where home is, as you would say it. When it changes FamilyDB looks it up on the map and the card says what it found; if the town is not found, or the box is emptied, the previous position is kept. | A town and a state or country; no street address |
+| Time zone (`family_tz`) | the server's, set by the installer | Decides what "tonight" and "this weekend" mean, and when the messages that go out on their own are sent. | The nearest city in the same zone |
+| Units (`weather_units`) | metric | The units for the forecast and for distances. | metric or imperial |
 
-**Check the time zone.** The installer sets it from the server, and a rented server is usually
-on UTC, so unless you changed it, reminders, the weekend digest and the evening-before check
-will come at the wrong hour. The setup asks for it again; look here if times seem off. (If it were
-never set at all, FamilyDB would use the server's own `TZ`, else UTC.) Once it is saved on the page, and the
-setup does this, it overrides `.env`; empty the box to go back.
+**Check the time zone first.** The installer copies the server's zone, so a server set to UTC gives the family UTC, and reminders, weekend ideas and the evening-before check arrive at the wrong hour. Setup asks for the zone again; look here if times seem off. With none saved anywhere, FamilyDB uses the server's own `TZ`, else UTC. A zone saved on this card (Setup saves it too) overrides `.env`; empty the box to go back.
 
 ### Exact position and travel times
 
-Folded away on the page, under "Exact position and travel times".
+Folded away on the card, under "Exact position and travel times".
 
-| Setting | Default | What it does |
-|---|---|---|
-| Latitude (`home_lat`) | found from the town | Negative south of the equator, between -90 and 90. Type it only to be more exact |
-| Longitude (`home_lon`) | found from the town | Negative west of Greenwich, between -180 and 180 |
-| Average driving speed (`travel_speed_kmh`) | 50 km/h | Across town and highway together, more than 0 and up to 200 |
-| Road detour factor (`road_factor`) | 1.3 | How much longer the road is than a straight line, between 1 and 3 |
+| Label (`key`) | Default | What it does | Range last |
+|---|---|---|---|
+| Latitude (`home_lat`) | found from the town | Type it only to be more exact. Negative is south of the equator. | -90 to 90 |
+| Longitude (`home_lon`) | found from the town | Negative is west of Greenwich. | -180 to 180 |
+| Average driving speed (`travel_speed_kmh`) | 50 km/h | Across town and highway together. | More than 0, up to 200 |
+| Road detour factor (`road_factor`) | 1.3 | How much longer the road is than a straight line. | 1 to 3 |
 
-How long a journey takes is guessed from the position, the speed and the detour factor. It
-is an estimate, not a route. Without a home position there is no forecast.
+FamilyDB guesses how long a journey takes from the position, the speed and the detour factor. It is an estimate, not a route. Without a home position there is no forecast.
 
 ## This page
 
-| Setting | Default | What it does |
-|---|---|---|
-| Name of this page (`web_title`) | FamilyDB | Shown in the bar, on the sign-in page and in the browser's tab. A family name works well |
-| A mic to speak instead of typing (`web_dictation`) | on | Puts a mic beside each box that takes words. The browser writes down what is said: Safari sends the sound to Apple and Chrome to Google, as a phone keyboard's mic does. It never passes through FamilyDB, it costs nothing, and it is not a message until the form's button is pressed. Firefox has no mic |
+| Label (`key`) | Default | What it does | Range last |
+|---|---|---|---|
+| Name of this page (`web_title`) | FamilyDB | Shown in the bar, on the sign-in page and in the browser's tab. A family name works well. | Any text |
+| A mic to speak instead of typing (`web_dictation`) | on | Puts a mic beside each box that takes words, in a browser that has speech recognition. Off removes it. | on or off |
+
+The mic uses the browser's own speech recognition: Safari sends the sound to Apple and Chrome to Google, as a phone keyboard's mic does, and Firefox has no mic. The sound never passes through FamilyDB, costs nothing, and is not a message until you press the form's button. Where the mic appears is on [Home and Chat](/wiki/controls/home-and-chat#the-mic).
 
 ## The server's log
 
-| Setting | Default | What it does |
-|---|---|---|
-| Log detail (`log_level`) | INFO | How much the server writes to its log: DEBUG, INFO, WARNING or ERROR. DEBUG also logs the program's own network traffic, to Telegram and the AI companies, and is loud: use it to chase a problem, then put it back |
+| Label (`key`) | Default | What it does | Range last |
+|---|---|---|---|
+| Log detail (`log_level`) | INFO | How much the server writes to its log. DEBUG also logs the program's own network traffic, to Telegram and the model companies, and is loud: use it to chase a problem, then put it back. | DEBUG, INFO, WARNING or ERROR |
+
+Reading the log is on [Diagnostics](/wiki/operations/diagnostics#logs).
 
 ## Where this page is served, and a name for it
 
-Two read-only cards at the bottom of the page show how the page is reached (the address you
-opened it at, the port FamilyDB listens on, whether Caddy passes it on) and the steps to give
-it a domain name. Nothing on them is saved; they fill the commands in for you. The commands run
-on the server: `maintain.sh https <name>` for a domain, `https --port random` or `port N` for
-ports. [Install and first run](/wiki/operations/install#choices-you-can-make) covers the
-choices, and `docs/INSTALL.md`, "A domain name instead of the address", has the full steps.
+Two read-only cards at the bottom of General show how the web page is reached (the address you opened it at, the port FamilyDB listens on, whether Caddy passes it on) and the steps to give it a domain name. Nothing on them is saved; they fill the commands in for you, and the commands run on the server. The choices and the commands are on [HTTPS and the firewall](/wiki/operations/https-and-firewall).
