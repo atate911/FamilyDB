@@ -84,7 +84,7 @@ seen by someone else:
 | An AI company's key | Revoke it in the company's console, make a new one, and enter it on the Settings page (immediate), or in `.env` and restart |
 | The Telegram token | `/revoke` in BotFather makes a new one and kills the old; paste it on the Settings page, which picks it up within seconds |
 | A person's password | A new starting password, as above |
-| The session signing key (`data/web_secret`, or `WEB_SECRET_KEY`) | Whoever has it can forge a sign-in. Use "Sign everyone out", or change `WEB_SECRET_KEY` and restart |
+| The session signing key (`data/web_secret`, or `WEB_SECRET_KEY`) | Whoever has it together with the database or `.env` can forge a sign-in. Use "Sign everyone out", or change `WEB_SECRET_KEY` and restart |
 | The Google calendar key | Make a new key for the service account and connect the calendar again |
 | The whole server | The database holds everything the family said. Rotate every one of the above and assume anything stored on the Settings page was read |
 

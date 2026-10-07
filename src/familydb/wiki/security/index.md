@@ -37,7 +37,7 @@ nothing.
 ## What is guarded
 
 - **The family list is not a tool.** The model can never change who may message the bot or who signs in; that goes through the Family page and one rules module.
-- **Every form is a tool call.** The page has no write path of its own, every form carries a CSRF token and an Origin check, and a form whose repeat would do harm carries a once-only token.
+- **Writes go through four doors, pinned by tests.** Idea, plan, task, memory and wish forms run the same tool the model would; the Family page goes through `familydb/family.py`; Settings through the `store.settings` whitelist; chat through the pipeline. Every form carries a CSRF token and an Origin check.
 - **A key is write-only.** Stored, never drawn into a form, never written to the change log, and shown only after the password the person signed in with is typed again.
 - **Nothing the family typed or a fetched page said is trusted.** Templates escape everything, links saved from chat are filtered to http and https, and fetched pages are information, never instructions. A lookup may only write to its own idea.
 - **The page's scripts come only from the page itself**, with no inline script or style, and it cannot be framed.
@@ -54,7 +54,8 @@ keeps, made by the same checked code, and an idea is dropped rather than deleted
 
 ## In this section
 
-**Still to come:** the trust and threat model in full, passwords and sessions, data
-and privacy (what is stored, for how long, and what leaves), and hardening the host.
+- [The trust and threat model](/wiki/security/model): what a sign-in guards, what protects the page, what hostile text can do, and a checklist for a public install.
+- [Passwords and sessions](/wiki/security/passwords-and-sessions): how sign-in, sessions and lockouts work.
+- [Data and privacy](/wiki/security/data-and-privacy): what is stored, for how long, and what leaves the house.
 
 Deeper detail: `docs/DESIGN.md` sections 13 and 16. What to do when a secret gets out is under [Running it over time](/wiki/operations#when-a-secret-gets-out).

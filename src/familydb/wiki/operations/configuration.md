@@ -65,7 +65,7 @@ The installer copies `.env.example` to `.env` with mode 600, so every uncommente
   
 ## Who can read it
 
-**Anyone who can read `.env` can sign in with `WEB_PASSWORD`, forge logins with `WEB_SECRET_KEY` and spend on any key kept there.** `familydb doctor` warns when group or others can read it, and `--fix` sets mode 600. [The server](/wiki/operations/host#security-posture-of-the-host) covers the other files.
+**Anyone who can read `.env` can sign in with `WEB_PASSWORD`, forge logins with `WEB_SECRET_KEY` (together with the database) and spend on any key kept there.** `familydb doctor` warns when group or others can read it, and `--fix` sets mode 600. [The server](/wiki/operations/host#security-posture-of-the-host) covers the other files.
 
 ## When a value is wrong
 

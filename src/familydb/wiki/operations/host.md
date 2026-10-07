@@ -143,7 +143,7 @@ Each change the installer makes outside `/opt/familydb` is written as it happens
 
 - **A dedicated account.** `familydb` is a system account with `/opt/familydb` as its home, `/usr/sbin/nologin` as its shell and no password.
 - **Owner-only files.** Every `familydb` command sets umask `077`, and `familydb run` removes group and other access from the files it owns among the database, its write-ahead files, `google_key.json` and `web_secret`.
-- **The session key.** `data/web_secret` is created `600` the first time the page starts. **Anyone who can read it can forge a sign-in.** [Passwords and sessions](/wiki/security/passwords-and-sessions) covers rotating it and `WEB_SECRET_KEY`.
+- **The session key.** `data/web_secret` is created `600` the first time the page starts. **Whoever has it together with the database or `.env` can forge a sign-in.** [Passwords and sessions](/wiki/security/passwords-and-sessions) covers rotating it and `WEB_SECRET_KEY`.
 - **The deploy key.** Bootstrap keeps it where you put it (`/root/familydb_deploy`), makes it `600` and records its path in the checkout's git configuration so upgrades can fetch. It is a read-only key on GitHub; deleting it there ends the server's access to the code. A `GITHUB_TOKEN` is used for the clone only and not written down.
 - **Root.** Whoever can run `maintain.sh password` on the server can get into the page, so keep SSH access tight. [Recovery](/wiki/operations/recovery) explains why.
 
