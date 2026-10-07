@@ -126,7 +126,14 @@ def more() -> str:
 def status() -> str:
     app = _app()
     with closing(app.connect()) as conn:
-        return render_template("status.html", **status_page.status(app, conn))
+        admins = [
+            one.display_name
+            for one in member_store.list_all(conn)
+            if one.role == "admin" and one.active
+        ]
+        # A grown-up who isn't an admin reads the page as information: who can act on it.
+        who_can = "" if auth.visitor().manages else views.who_can_change(admins)
+        return render_template("status.html", who_can=who_can, **status_page.status(app, conn))
 
 
 @bp.get("/")

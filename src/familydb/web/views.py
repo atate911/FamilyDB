@@ -130,6 +130,12 @@ def admin_only(admins: list[str], *, grown_up: bool) -> tuple[str, str, str]:
     )
 
 
+def who_can_change(admins: list[str]) -> str:
+    """What a parent who isn't an admin is told on Status: who changes what it shows."""
+    who = presents.join_names(admins) if admins else "An admin"
+    return f"{who} can change the settings, the daily limit and the AI model."
+
+
 def join_or(names: list[str]) -> str:
     """ "Sam", "Sam or Alex", "Sam, Alex or Jo"."""
     if len(names) < 2:
