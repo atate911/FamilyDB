@@ -225,8 +225,16 @@ def _pick_day(pick: PickInput, option: Any, window: tuple[date, date] | None) ->
     ),
 )
 def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
-    from familydb.suggest.engine import run
+    from familydb.suggest import choose as choosing
+    from familydb.suggest.engine import assess, result_of
+    from familydb.suggest.shortlist import SHORTLIST_MAX
 
+    # For a planning question a stronger call chooses among more ideas checked in detail
+    # (suggest/choose.py); otherwise, and whenever it cannot, the engine's own order.
+    why_not = choosing.reason_not_to(ctx, args)
+    checked = SHORTLIST_MAX if why_not else choosing.CHOOSE_CHECKED
+    assessed = assess(ctx, args, check_at_most=checked)
+    chosen = None if why_not else choosing.choose(ctx, args, assessed)
     # Nulls carry no information here and this result is not cached: it is sent to the model,
     # then sent again with the reply. Leaving them out roughly halves it.
-    return run(ctx, args).model_dump(mode="json", exclude_none=True)
+    return result_of(assessed, chosen).model_dump(mode="json", exclude_none=True)
