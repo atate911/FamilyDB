@@ -129,7 +129,7 @@ FamilyDB, and it costs nothing. An admin turns it off under [General](/wiki/cont
 
 ## What an admin needs to know
 
-- If a message goes unanswered, start at [Status](/wiki/controls/status), where you can open each turn's calls.
+- If a message goes unanswered, start at [Status](/wiki/controls/status), which says what is wrong; an admin can open each turn's calls under [Recent activity](/wiki/controls/status/activity).
 - Reminders appear in the chat while FamilyDB is running, and in Telegram when it is connected. They are not phone notifications.
 - The assistant's name and wording are on [Personality](/wiki/controls/settings/personality).
 

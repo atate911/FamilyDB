@@ -124,6 +124,20 @@
           "see_also": [
             "controls/settings",
             "operations"
+          ],
+          "children": [
+            {
+              "slug": "controls/status/models-and-prices",
+              "title": "Models and prices",
+              "audience": "admin",
+              "depth": "howto"
+            },
+            {
+              "slug": "controls/status/activity",
+              "title": "Recent activity",
+              "audience": "admin",
+              "depth": "howto"
+            }
           ]
         },
         {
