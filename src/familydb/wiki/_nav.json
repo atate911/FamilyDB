@@ -66,6 +66,77 @@
       ],
       "children": [
         {
+          "slug": "controls/home-and-chat",
+          "title": "Home and Chat",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "controls/telegram",
+            "controls/memory"
+          ]
+        },
+        {
+          "slug": "controls/wish-lists",
+          "title": "Wish lists",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "controls/family",
+            "controls/settings/spending"
+          ]
+        },
+        {
+          "slug": "controls/family",
+          "title": "Family",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "security",
+            "operations/recovery",
+            "controls/telegram"
+          ]
+        },
+        {
+          "slug": "controls/ideas",
+          "title": "Ideas",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "controls/plans-and-tasks",
+            "controls/settings/lookups"
+          ]
+        },
+        {
+          "slug": "controls/plans-and-tasks",
+          "title": "Plans and To do",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "controls/ideas",
+            "controls/telegram"
+          ]
+        },
+        {
+          "slug": "controls/status",
+          "title": "Status",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "controls/settings",
+            "operations"
+          ]
+        },
+        {
+          "slug": "controls/memory",
+          "title": "What Vera knows",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "controls/settings/personality",
+            "controls/home-and-chat"
+          ]
+        },
+        {
           "slug": "controls/settings",
           "title": "Settings",
           "audience": "admin",
