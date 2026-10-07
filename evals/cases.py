@@ -19,6 +19,7 @@ from familydb.routing import is_confirmation
 from familydb.store import db, members, memories
 from familydb.suggest.engine import resolve_window
 from familydb.suggest.types import SuggestInput
+from familydb.tools.registry import without_nulls
 
 # -- checks
 
@@ -213,7 +214,8 @@ def covers(day: date) -> Callable[[Call], bool]:
 
     def holds(call: Call) -> bool:
         try:
-            days, _, _ = resolve_window(SuggestInput.model_validate(call.input), NOW)
+            asked = SuggestInput.model_validate(without_nulls(call.input))  # as dispatch reads it
+            days, _, _ = resolve_window(asked, NOW)
         except (ValueError, ToolError):  # pydantic's ValidationError is a ValueError
             return False
         return days is not None and days[0] <= day <= days[1]

@@ -242,7 +242,7 @@ class ToolRegistry:
         if spec is None:
             return _error(name, f"unknown tool {name!r}")
         # Strict mode sends null for an absent field, at any depth; dropping them applies defaults.
-        raw_input = _without_nulls(raw_input)
+        raw_input = without_nulls(raw_input)
         try:
             args = spec.input_model.model_validate(raw_input or {})
         except ValidationError as exc:
@@ -276,12 +276,14 @@ class ToolRegistry:
         return ToolResult(dump(result), False, summary)
 
 
-def _without_nulls(value: Any) -> Any:
-    """`value` without null object fields at any depth; a null list item stays."""
+def without_nulls(value: Any) -> Any:
+    """`value` without null object fields at any depth; a null list item stays. A strict schema
+    makes the model send every field, null for one it means to leave out, so a tool's input is
+    read through this (and the evals' graders read it the same way)."""
     if isinstance(value, dict):
-        return {key: _without_nulls(item) for key, item in value.items() if item is not None}
+        return {key: without_nulls(item) for key, item in value.items() if item is not None}
     if isinstance(value, list):
-        return [_without_nulls(item) for item in value]
+        return [without_nulls(item) for item in value]
     return value
 
 

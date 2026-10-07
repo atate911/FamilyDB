@@ -242,6 +242,11 @@ MISSED_TOMORROW = "suggest was called, but not for a window taking in tomorrow"
     [
         ({"window": "this_weekend"}, []),
         ({"window": "dates", "start": "2026-09-26", "end": "2026-09-27"}, []),
+        # A strict schema sends every field, null for one left out: read as dispatch reads it.
+        (
+            {"window": "dates", "start": "2026-09-26", "end": "2026-09-26", "prefer": None},
+            [],
+        ),
         ({"window": "today"}, [MISSED_TOMORROW]),
         ({"window": "next_weekend"}, [MISSED_TOMORROW]),
     ],
