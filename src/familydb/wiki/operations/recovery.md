@@ -63,7 +63,7 @@ Getting back in is not the same as recovering from exposure. If somebody else ma
 | A person's password | Make a new starting password, as above |
 | The session signing key (`data/web_secret`, or `WEB_SECRET_KEY`) | Whoever has it together with the database or `.env` can forge a sign-in. Use **Sign everyone out**, or change `WEB_SECRET_KEY` and restart |
 | The Google Calendar key | Make a new key for the service account and connect the calendar again |
-| The whole server | The database holds everything the family said. Rotate every secret above and assume anything stored on the Settings page was read |
+| The whole server | The database keeps everything the family said. Rotate every secret above and assume anything stored on the Settings page was read |
 
 A key saved on the Settings page is in every backup, so a leaked backup is a leaked key.
 

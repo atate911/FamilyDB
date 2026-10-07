@@ -59,7 +59,7 @@ A session lasts `web_session_days`, 30 unless changed, and each visit starts the
 | One address | 5 wrong passwords | Refuses that address for 15 minutes, even with the right password. The count clears on a right one and otherwise does not fade |
 | The whole site | 50 wrong passwords in 15 minutes | Refuses every address until 15 minutes after the first of them, except known browsers |
 
-A known browser is a browser that has signed in before (it carries a second cookie, below). It is still held by the per-address limit. Showing a key and signing everyone out share one count per address, and changing a password (your own, or the shared one) shares another, so a slip there never locks anybody out of signing in. All of them add to the site-wide count and obey it.
+A known browser is a browser that has signed in before (it carries a second cookie, below). It is still subject to the per-address limit. Showing a key and signing everyone out share one count per address, and changing a password (your own, or the shared one) shares another, so a slip there never locks anybody out of signing in. All of them add to the site-wide count and obey it.
 
 The counts are in memory in one process, so a restart clears them. The address is the connection's, which is correct behind a proxy only with `WEB_TRUST_PROXY` on. With it off, every visitor looks like one address and five wrong guesses lock the family out. With it on and the page bound to every interface outside Docker, a visitor can name any address, so the limit can be dodged. Wrong guesses are written to the service log as warnings with the address. [Recovery](/wiki/operations/recovery#too-many-tries) says how to wait one out.
 
@@ -71,7 +71,7 @@ A forger needs the key together with a stored password hash, which anyone with t
 
 ## How it works
 
-After a good sign-in, the browser holds a signed cookie named `session`. It is signed, not encrypted: the person can read what is in it but cannot change it. It holds the form token, the time of sign-in, any messages waiting to be shown and, for a person, their member id and a mark of their password. A session opened with the shared password holds a `signed_in` flag and the shared password's mark instead.
+After a good sign-in, the browser keeps a signed cookie named `session`. It is signed, not encrypted: the person can read what is in it but cannot change it. It holds the form token, the time of sign-in, any messages waiting to be shown and, for a person, their member id and a mark of their password. A session opened with the shared password holds a `signed_in` flag and the shared password's mark instead.
 
 A mark is an HMAC (a keyed fingerprint) of the member id and the stored hash, cut to 16 hex characters. On every request the page reloads the person from the database and checks the mark, so nothing about sessions is stored on the server. A new password changes the mark, which is how it signs the old sessions out.
 

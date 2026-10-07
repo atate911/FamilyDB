@@ -41,9 +41,9 @@ Where a person is comes from the place they name or from [Shared location](/wiki
 
 ## The verdicts
 
-- **Good:** nothing failed and none of the causes of possible applies.
-- **Possible:** nothing failed, but something could not be checked or only partly fits: hours unknown or not listed, details stale, booking unknown, open for part of the free time, distance from where they are unknown, or too dark. An idea beyond the first eight (never-done first, then longest since done) is possible, "not checked in detail".
-- **Ruled out:** a check failed, and the reason says which.
+- Good: nothing failed and none of the causes of possible applies.
+- Possible: nothing failed, but something could not be checked or only partly fits: hours unknown or not listed, details stale, booking unknown, open for part of the free time, distance from where they are unknown, or too dark. An idea beyond the first eight (never-done first, then longest since done) is possible, "not checked in detail".
+- Ruled out: a check failed, and the reason says which.
 
 A reply carries at most 3 reasons each, in the order good, possible, ruled out. Within a group, ideas suggested as good in the last 2 weeks come last; then never-done ideas first, and a higher rating before a lower.
 

@@ -1,6 +1,6 @@
 # Telegram: the message loop
 
-FamilyDB asks Telegram for new updates, hands each to the same pipeline the web chat uses, and sends the answers back. This page is the mechanics. [Telegram: commands and buttons](/wiki/controls/telegram) covers what the family types and taps, [Telegram as a service](/wiki/boundaries/telegram) covers the service and what to do when it fails, and [Connections](/wiki/controls/settings/connections#telegram) covers setting it up.
+FamilyDB asks Telegram for new updates, hands each to the same pipeline the web chat uses, and sends the answers back. [Telegram: commands and buttons](/wiki/controls/telegram) covers what the family types and taps, [Telegram as a service](/wiki/boundaries/telegram) covers the service and what to do when it fails, and [Connections](/wiki/controls/settings/connections#telegram) covers setting it up.
 
 ## How it connects
 
@@ -34,7 +34,7 @@ A supervisor thread inside `familydb run` re-reads the settings every 5 seconds 
 
 A voice note follows the text rule, so with **Answer only when mentioned** off, every voice note in a group is heard, and each one heard is paid for. A photo is looked at only when addressed, whatever the setting, because each one looked at is paid for.
 
-Someone not on the family list is recorded as a knock and gets one line, but in a group a message not addressed to the bot gets no reply.
+Someone not on the family list is recorded as a [knock](/wiki/reference/glossary#knock) and gets one line, but in a group a message not addressed to the bot gets no reply.
 
 ## The gather pause
 
@@ -46,10 +46,10 @@ A reply that only says something was saved is a 👌 reaction on the message, wh
 
 ## Sending
 
-- **Formatting.** Models write light Markdown. Code turns bold, italics, strikethrough, inline code, code blocks and links (http and https only) into Telegram's HTML, headings into bold and bullets into •. Everything else is escaped, so a message can never become markup of its own. If Telegram refuses the result, the plain words go ([If Telegram changes or is down](/wiki/boundaries/telegram#if-telegram-changes-or-is-down)). Stored text and the page's text stay as written.
-- **Length.** A part is at most 4,096 characters, split at a line break where possible, else a space. Buttons go under the last part. A command's answer has its first line in bold.
-- **Where it lands.** The answer to a person's update replies to their message. A reminder, weekend ideas or a note from a job is a new message to the chat.
-- **Time-outs.** FamilyDB waits 30 seconds for Telegram to take a part sent by a job and 120 seconds for the answer to an update. A send that times out counts as failed, and the stored reply goes out on a later delivery run.
+- Formatting. Models write light Markdown. Code turns bold, italics, strikethrough, inline code, code blocks and links (http and https only) into Telegram's HTML, headings into bold and bullets into •. Everything else is escaped, so a message can never become markup of its own. If Telegram refuses the result, the plain words go ([If Telegram changes or is down](/wiki/boundaries/telegram#if-telegram-changes-or-is-down)). Stored text and the page's text stay as written.
+- Length. A part is at most 4,096 characters, split at a line break where possible, else a space. Buttons go under the last part. A command's answer has its first line in bold.
+- Where it lands. The answer to a person's update replies to their message. A reminder, weekend ideas or a note from a job is a new message to the chat.
+- Time-outs. FamilyDB waits 30 seconds for Telegram to take a part sent by a job and 120 seconds for the answer to an update. A send that times out counts as failed, and the stored reply goes out on a later delivery run.
 
 ## Delivery
 

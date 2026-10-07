@@ -1,6 +1,6 @@
 # Model companies
 
-FamilyDB reaches Anthropic (Claude), OpenAI and Google (Gemini) through one small interface, so you can change which model company does a job without changing anything else. This page says which company does which job, how the second company steps in, and what happens when a company says no. The settings are on [AI model](/wiki/controls/settings/ai-model) and the cost is on [Cost](/wiki/operations/cost).
+FamilyDB reaches Anthropic (Claude), OpenAI and Google (Gemini) through one small interface, so you can change which model company does a job without changing anything else. The settings are on [AI model](/wiki/controls/settings/ai-model) and the cost is on [Cost](/wiki/operations/cost).
 
 ## One interface, three modules
 

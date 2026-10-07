@@ -31,9 +31,9 @@ FamilyDB is built from ordinary, widely used parts, and none of them needs atten
 
 ## What you look after
 
-- **Upgrades.** `maintain.sh upgrade` installs the locked package versions (`uv sync --frozen --no-dev` on a virtualenv install, an image rebuild on Docker) and applies new migrations before it restarts FamilyDB. You do not run `pip` or edit `pyproject.toml`. [Upgrade and rollback](/wiki/operations/upgrade-and-rollback) has the steps.
-- **Python.** Tests run on 3.11 and 3.12, and the Docker image runs 3.12. If the system's Python is older than 3.11, uv fetches a suitable one.
-- **Caddy.** It comes from your system's packages or Caddy's own repository and is updated with the rest of the operating system. A FamilyDB upgrade does not fetch a newer Caddy image on Docker. [The server](/wiki/operations/host) says what to keep current.
-- **Model companies.** A company can change what it offers or charges without any library changing. [Models and prices](/wiki/controls/status/models-and-prices) shows what the daily check found.
+- Upgrades. `maintain.sh upgrade` installs the locked package versions (`uv sync --frozen --no-dev` on a virtualenv install, an image rebuild on Docker) and applies new migrations before it restarts FamilyDB. You do not run `pip` or edit `pyproject.toml`. [Upgrade and rollback](/wiki/operations/upgrade-and-rollback) has the steps.
+- Python. Tests run on 3.11 and 3.12, and the Docker image runs 3.12. If the system's Python is older than 3.11, uv fetches a suitable one.
+- Caddy. It comes from your system's packages or Caddy's own repository and is updated with the rest of the operating system. A FamilyDB upgrade does not fetch a newer Caddy image on Docker. [The server](/wiki/operations/host) says what to keep current.
+- Model companies. A company can change what it offers or charges without any library changing. [Models and prices](/wiki/controls/status/models-and-prices) shows what the daily check found.
 
 Developer docs: `pyproject.toml`, `uv.lock`, `Dockerfile`, `src/familydb/web/wiki.py`; `docs/DESIGN.md`, "Decisions"; `CLAUDE.md`, "Commands".

@@ -34,7 +34,7 @@ It needs an admin with a Telegram id and a Telegram connection in this process. 
 
 ### Retry job
 
-It first sends stored replies that never went, then retries each failed or unanswered message that has retries left, a sender in this process and no lease held. A message that has used its retries stays on Status under **Messages that did not go through**. The steps are in [From message to reply](/wiki/behavior/message-to-reply).
+It first sends stored replies that never went, then retries each failed or unanswered message that has retries left, a sender in this process and no [lease](/wiki/reference/glossary#lease) held. A message that has used its retries stays on Status under **Messages that did not go through**. The steps are in [From message to reply](/wiki/behavior/message-to-reply).
 
 ### Lookups job
 
@@ -74,14 +74,14 @@ The forget-locations job deletes a shared position after 24 hours; the assistant
 
 Every job reads the database and the settings first and returns when there is nothing to do. Only the retry, lookups, weekend ideas and judgments jobs can reach a model, and so can catch-up when it sends the weekend ideas. A job returns before a call when:
 
-- **Retry job:** no failed message is waiting, or each has used its retries.
-- **Lookups job:** web tools are off, no key serves lookups, no idea is due, or the day's [spending limit](/wiki/reference/glossary#spending-limit) is used up.
-- **Weekend ideas job:** no chat is set, there is no key, nothing here can send to that chat, there is no admin, or today's weekend ideas already went (the log says why: `digest skipped: ...`).
-- **Judgments job:** the setting is off, no question is due, there is no key, `judgement_budget` is 0, or the month's budget or the day's limit has no room.
+- Retry job: no failed message is waiting, or each has used its retries.
+- Lookups job: web tools are off, no key serves lookups, no idea is due, or the day's [spending limit](/wiki/reference/glossary#spending-limit) is used up.
+- Weekend ideas job: no chat is set, there is no key, nothing here can send to that chat, there is no admin, or today's weekend ideas already went (the log says why: `digest skipped: ...`).
+- Judgments job: the setting is off, no question is due, there is no key, `judgement_budget` is 0, or the month's budget or the day's limit has no room.
 
 ## After a restart
 
-The weekend ideas, follow-ups, evening-before and models-and-prices schedules live in memory. One whose time passes while the service is down is not run when it returns: that is what catch-up is for. While the service is running, a run delayed by more than an hour (6 hours for the models and prices check) is dropped. Interval jobs carry on, and missed runs merge into one.
+The weekend ideas, follow-ups, evening-before and models-and-prices schedules live in memory. One whose time passes while the service is down is not run when it returns: that is what [catch-up](/wiki/reference/glossary#catch-up) is for. While the service is running, a run delayed by more than an hour (6 hours for the models and prices check) is dropped. Interval jobs carry on, and missed runs merge into one.
 
 Catch-up covers the gap 60 seconds after the service starts. It:
 

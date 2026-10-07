@@ -26,7 +26,7 @@ In short: every page needs a sign-in, every form proves it came from the page, a
 - The `Referrer-Policy` is `same-origin`. A stricter policy makes browsers post `Origin: null`, which the check refuses, and nobody could sign in.
 - Templates escape output by default, and a link from chat or a fetched page is kept only if it is `http` or `https`.
 - A strict content security policy lets scripts, styles and fonts load only from the page itself, images from it or `data:`, and forms post only back to it. Nothing can frame the page, and there is no inline script. Pages are `no-store`, and HSTS goes out over HTTPS.
-- Writes go through four doors, pinned by tests. Idea, plan, task, memory and wish forms run the same tool the model would; Family, Settings and chat each have one door of their own. No page module touches a table.
+- Writes go through four doors, pinned by tests. Idea, plan, thing to do, memory and wish forms run the same tool the model would; Family, Settings and chat each have one door of their own. No page module touches a table.
 - A settings form can write only the names on a whitelist. How the page is served (bind address, proxy trust, signing key, database path) is in `.env`, out of every form's reach.
 - Keys are write-only. They are stored, never drawn into a form and never put in the change log. When the page has a password, a key is shown only after you retype the one you signed in with. With no password on the page, anyone who reaches it can show a key.
 - The family list is not a tool, so no model turn can change who may message the assistant or who signs in.
@@ -42,7 +42,7 @@ The chat model never gets the web tools. Its tool list is the same on every turn
 - add or change ideas, record outcomes, and remember facts that go into later prompts;
 - create, move or delete calendar events and plans;
 - add or change things to do, including one owned by another family member, whose reminder is then sent to them;
-- keep wishes (held to the role checks above), ask for lookups now, or run a suggestion that may search the web, which costs money within the daily limit.
+- keep wishes (limited by the role checks above), ask for lookups now, or run a suggestion that may search the web, which costs money within the daily limit.
 
 No chat tool changes or reveals the settings, the family list, passwords, keys, the spending limit or which model answers.
 

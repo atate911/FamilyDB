@@ -1,6 +1,6 @@
 # Weather, maps and price lists
 
-FamilyDB asks three free public services for what it cannot know itself: Open-Meteo for the forecast, OpenStreetMap's Nominatim (with Open-Meteo's geocoder as a spare) for where a place is, and two price lists for what models cost. None needs a key. This page says what each is used for, what is sent to it and what happens when one is down. [What leaves the house](/wiki/security/what-leaves-the-house) is the short version.
+FamilyDB asks three free public services for what it cannot know itself: Open-Meteo for the forecast, OpenStreetMap's Nominatim (with Open-Meteo's geocoder as a spare) for where a place is, and two price lists for what models cost. None needs a key. Each section says what the service is used for, what is sent to it and what happens when it is down. [What leaves the house](/wiki/security/what-leaves-the-house) is the short version.
 
 ## The forecast
 

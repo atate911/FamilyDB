@@ -1,6 +1,6 @@
 # Telegram as a service
 
-Telegram carries the family's chats with FamilyDB. This page covers the service: what a Telegram bot can and cannot do, what leaves the house through it, and what happens when it is down. Telegram is optional, because the web chat works without it. [Telegram: the message loop](/wiki/behavior/telegram-loop) covers how a message is handled once it arrives, [Telegram: commands and buttons](/wiki/controls/telegram) covers what the family types and taps, and [Connections](/wiki/controls/settings/connections#telegram) covers setting it up.
+Telegram carries the family's chats with FamilyDB. The service has limits a bot cannot get around, sees everything said in the chat, and can be down. Telegram is optional, because the web chat works without it. [Telegram: the message loop](/wiki/behavior/telegram-loop) covers how a message is handled once it arrives, [Telegram: commands and buttons](/wiki/controls/telegram) covers what the family types and taps, and [Connections](/wiki/controls/settings/connections#telegram) covers setting it up.
 
 ## How the bot is reached
 
