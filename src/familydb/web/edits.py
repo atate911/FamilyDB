@@ -45,6 +45,7 @@ RECORDED = "Recorded. #{id} is marked done."
 FACES = {"loved": 9, "ok": 6, "not-great": 3}
 RATED = "Thanks. That goes into the next suggestions."
 SCHEDULED = "On the calendar: {title}."
+PLANNED_HERE = "Added to the plans: {title}. Google Calendar isn't connected, so it is not on it."
 MOVED = "Moved to {when}."
 CANCELLED = "Canceled."
 TICKED = "Done: #{id} {title}."
@@ -361,7 +362,8 @@ def add_plan() -> Response:
     if result is None:
         _say(complaint or "")
     else:
-        _say(SCHEDULED.format(title=result["plan"]["title"]))
+        words = SCHEDULED if result.get("event") else PLANNED_HERE
+        _say(words.format(title=result["plan"]["title"]))
     return _back(back[0], **back[1])
 
 

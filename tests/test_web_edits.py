@@ -279,16 +279,22 @@ def test_an_all_day_plan_keeps_only_the_date(planning, conn) -> None:
     assert plan.all_day and plan.start == "2026-09-26"
 
 
-def test_without_a_calendar_the_page_offers_no_plan_form_and_refuses_one_anyway(page, conn):
-    assert "not connected" in page.get("/plans").text
-    assert "csrf" not in page.get("/plans").text  # there is no form on the page at all
+def test_without_a_calendar_plans_are_kept_here_by_hand(page, conn):
+    """No Google Calendar: the plan forms are there and FamilyDB keeps the plan, saying so."""
+    text = page.get("/plans").text
+    assert "Add something to the plans" in text and "Add it to the plans" in text
+    assert "isn\u2019t connected, so plans are kept here only" in text
     page.post(
-        # A token from another form on the site: being refused for the right reason is the point.
         "/plans/new",
-        data={"csrf": _token(page, "/chat"), "title": "Nope", "start": "2026-09-26T18:30"},
+        data={"csrf": _token(page, "/plans"), "title": "Picnic", "start": "2026-09-26T13:00"},
     )
-    assert plans.get(conn, 1) is None
-    assert "Google Calendar" in _said(page.get("/plans"))
+    plan = plans.get(conn, 1)
+    assert plan.title == "Picnic" and plan.google_event_id is None and plan.calendar_id is None
+    assert "Added to the plans: Picnic" in _said(page.get("/plans"))
+    page.post("/plan/1/move", data={"csrf": _token(page, "/plans"), "start": "2026-09-27T15:00"})
+    assert plans.get(conn, 1).start.startswith("2026-09-27T15:00")
+    page.post("/plan/1/cancel", data={"csrf": _token(page, "/plans")})
+    assert plans.get(conn, 1).status == "cancelled"
 
 
 @pytest.mark.parametrize(

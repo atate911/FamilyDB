@@ -181,7 +181,6 @@
 
       {% if visitor().may('change') %}
         <section class="card" aria-labelledby="h-planit">
-          {% if can_schedule %}
             <details class="fold">
               <summary><h2 id="h-planit">{{ icon('cal') }}{{ 'Plan it again' if plans else 'Plan it' }}</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
               <form class="fold__body form form--tight" method="post" action="{{ url_for('edits.add_plan') }}">
@@ -192,13 +191,9 @@
                   <label class="check"><input type="checkbox" name="all_day" value="yes" />All day</label></div>
                 <div class="field"><label class="field__label" for="location">Where <span class="opt">(optional)</span></label><input id="location" name="location" value="{{ row.where or '' }}" /></div>
                 {{ asking('plan') }}
-                <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('cal') }}Put it on the calendar</button></div>
+                <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('cal') }}{{ 'Put it on the calendar' if on_google else 'Add it to the plans' }}</button></div>
               </form>
             </details>
-          {% else %}
-            <h2 id="h-planit" class="card__head">{{ icon('cal') }}{{ 'Plan it again' if plans else 'Plan it' }}</h2>
-            <p class="small">Google Calendar isn’t connected, so nothing here can be scheduled. Ask {{ assistant }} in the chat{% if visitor().may('browse') %}, or <a href="{{ url_for('web.status') }}">see the status page</a>{% endif %}.</p>
-          {% endif %}
         </section>
       {% endif %}
     </aside>

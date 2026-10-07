@@ -438,7 +438,8 @@ def idea(idea_id: int) -> str:
         original_by=views.original_by(original, family, settings.tzinfo) if original else None,
         today=today.isoformat(),
         ratings=RATINGS,
-        can_schedule=calendar_available(settings),
+        can_schedule=True,  # FamilyDB keeps its own plans, and copies them to Google when it can
+        on_google=calendar_available(settings),
         can_look_up=enrichment_available(settings) and record.status != "dropped",
         looked_up=looked_up,
         lookups=views.lookups_when(settings),
@@ -608,7 +609,8 @@ def plans() -> str:
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
         today=today.isoformat(),
-        can_schedule=calendar_available(app.settings),
+        can_schedule=True,
+        on_google=calendar_available(app.settings),
         **asking,
     )
 
