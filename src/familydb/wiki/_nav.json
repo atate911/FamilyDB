@@ -302,6 +302,16 @@
             "security",
             "operations/backup-and-restore"
           ]
+        },
+        {
+          "slug": "operations/host",
+          "title": "The server",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations/install",
+            "operations/backup-and-restore"
+          ]
         }
       ]
     },
