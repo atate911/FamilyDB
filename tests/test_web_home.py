@@ -253,10 +253,10 @@ def test_what_is_left_to_do_is_on_home_and_ticks_off_there(settings, clock, conn
     assert tasks.get(conn, towels).status == "open"  # changed since it was drawn: not ticked
 
     done = client.post(f"/task/{towels}/done", data=fields, follow_redirects=True)
-    assert "Done: #1 Buy paper towels." in done.text
+    assert "Done: Buy paper towels." in done.text
     assert tasks.get(conn, towels).status == "done"
     assert tasks.get(conn, towels).title == "Buy paper towels"  # nothing else about it changed
-    assert "Buy paper towels" not in done.text.split("Done: #1 Buy paper towels.")[1]
+    assert "Buy paper towels" not in done.text.split("Done: Buy paper towels.")[1]
     assert "All 1 to-do" in done.text
 
 
@@ -393,7 +393,7 @@ def test_a_kid_sees_only_what_is_hers_and_nothing_of_how_it_works(app, conn, fam
     home = kid.get("/").text
     assert "Good afternoon, the girls" in home
     assert "Feed the fish" in home and "Call the dentist" not in home  # only her own
-    assert "My things to do" in home and "Next up for you" in home
+    assert "My to-dos" in home and "Next up for you" in home
     # No money, no model, no household pages, no pill.
     for hidden in ("spent today", "Vera today", "Just added to Ideas", "pill-health"):
         assert hidden not in home, hidden

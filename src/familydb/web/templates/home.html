@@ -150,7 +150,7 @@
       {% endif %}
 
       <section class="card {{ 'o3' if grownup else 'o4' }}" aria-labelledby="h-todo">
-        <div class="card__head"><h2 id="h-todo">{{ icon('todo') }}{{ 'To do' if grownup else 'My things to do' }}{% if late_count and grownup %} {{ badge('late', late_count, 'late') }}{% endif %}</h2>
+        <div class="card__head"><h2 id="h-todo">{{ icon('todo') }}{{ 'To do' if grownup else 'My to-dos' }}{% if late_count and grownup %} {{ badge('late', late_count, 'late') }}{% endif %}</h2>
           <a class="more" href="{{ url_for('web.tasks') }}">{{ ('All ' ~ task_count ~ (' to-do' if task_count == 1 else ' to-dos')) if task_count and grownup else 'All' }}{{ icon('chev', size='sm') }}</a></div>
         {% if tasks %}
           <ul class="todos todos--compact">
@@ -159,7 +159,7 @@
         {% else %}
           <p class="empty">{{ icon('todo') }}<span>{% if grownup %}No to-dos. Tell {{ assistant }} “remind me to call the dentist on Tuesday”, or add one on To do.{% else %}Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.{% endif %}</span></p>
         {% endif %}
-        {% if grownup %}<p class="card__foot">{{ icon('bell', size='sm') }} Reminders appear in the chat while FamilyDB is running; they aren’t phone notifications. With Telegram connected, they go there too.</p>{% endif %}
+        {% if grownup %}<p class="card__foot">{{ icon('bell', size='sm') }} {{ reminders_said }}</p>{% endif %}
       </section>
 
       {% if setup %}

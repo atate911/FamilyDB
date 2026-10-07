@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_ui.html" import icon, avatar, page_head, todo with context %}
-{% block title %}{{ 'To do' if grownup else 'My things to do' }} · {{ site_title }}{% endblock %}
+{% block title %}{{ 'To do' if grownup else 'My to-dos' }} · {{ site_title }}{% endblock %}
 {# One person to choose, as a pill: their colour and their letter, then their name. `value` is what the form sends. #}
 {% macro who_choice(value, one, checked=false, label=none) %}
   <label class="choice choice--person"><input type="radio" name="owner" value="{{ value }}"{% if checked %} checked{% endif %}><span>{{ avatar(one.slot, one.initial, 'sm') }}{{ label or one.name }}</span></label>
@@ -8,7 +8,7 @@
 {% block content %}
   {# Somebody who sees only their own (a kid): what is left for her, as Home lists it, no filters or workings (docs/STYLE.md, "A kid's screen"). #}
   {% if simple %}
-    {{ page_head('My things to do', 'What’s left for you, soonest first. Tell ' ~ assistant ~ ' to add one or to remind you.') }}
+    {{ page_head('My to-dos', 'What’s left for you, soonest first. Tell ' ~ assistant ~ ' to add one or to remind you.') }}
     {% if rows %}
       <ul class="todos mt-4">{% for row in rows %}{{ todo(row, 'tasks', mine=true) }}{% endfor %}</ul>
     {% else %}
@@ -47,7 +47,7 @@
                 <div class="field"><label class="field__label" for="q-rep">Repeats</label>
                   <select id="q-rep" name="repeat" aria-describedby="q-rep-h">{% for value, label in repeat_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
                 <label class="check"><input type="checkbox" name="repeat_after_done" />Count from when it’s done</label>
-                <p class="field__hint span-all" id="q-rep-h">{{ icon('bell', size='sm') }} A repeat starts from the reminder: every week from Sunday 7 pm, say. Counted from when it’s done, it comes round that long after each time it is ticked off. Reminders appear in the chat while FamilyDB is running; they aren’t phone notifications. With Telegram connected, they go there too.</p>
+                <p class="field__hint span-all" id="q-rep-h">{{ icon('bell', size='sm') }} A repeat starts from the reminder: every week from Sunday 7 pm, say. Counted from when it’s done, it comes round that long after each time it is ticked off. {{ reminders_said }}</p>
               </div>
             </details>
           </div>

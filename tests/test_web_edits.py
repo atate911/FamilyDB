@@ -370,3 +370,11 @@ def test_an_idea_or_every_one_waiting_can_be_looked_up_now(settings, clock, conn
     # Without lookups on, neither button is there.
     plain = _client(settings, clock).get("/status").text
     assert "Look them up now" not in plain
+
+
+def test_a_to_do_flash_names_it_in_words_with_no_numbers(page, conn) -> None:
+    """The family says "to-do", never "task", and a number is how it works, not what is said."""
+    form = {"csrf": _token(page, "/tasks"), "once": "o1", "title": "Buy paper towels"}
+    saved = page.post("/tasks/new", data=form, follow_redirects=True)
+    assert "Added to your to-dos: Buy paper towels." in _said(saved)
+    assert "task" not in _said(saved).lower() and "#" not in _said(saved)

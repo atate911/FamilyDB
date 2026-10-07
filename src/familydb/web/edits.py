@@ -48,7 +48,7 @@ SCHEDULED = "On the calendar: {title}."
 PLANNED_HERE = "Added to the plans: {title}. Google Calendar isn't connected, so it is not on it."
 MOVED = "Moved to {when}."
 CANCELLED = "Canceled."
-TICKED = "Done: #{id} {title}."
+TICKED = "Done: {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
 LOOKING = "Looking {what} up now: within a few minutes."
@@ -444,7 +444,7 @@ def add_task() -> Response:
         if chosen:
             values.update(repeat_fields(chosen) or {})
         result, complaint = run("add_task", values)
-        _say(complaint or f"Saved task #{result['task']['id']}. Reminders appear in Chat.")
+        _say(complaint or f"Added to your to-dos: {result['task']['title']}.")
     return _back("web.tasks")
 
 
@@ -474,7 +474,7 @@ def edit_task(task_id: int) -> Response:
             else:
                 values["stop_repeating"] = True
         result, complaint = run("update_task", values)
-        _say(complaint or f"Updated task #{result['task']['id']}.")
+        _say(complaint or f"Saved your changes to {result['task']['title']}.")
         if complaint is None:
             return _back("web.tasks")
     return _back("web.edit_task", task_id=task_id)

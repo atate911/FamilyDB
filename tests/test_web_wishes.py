@@ -186,7 +186,7 @@ def test_a_kid_sees_the_pages_simply(app, family, girls) -> None:  # noqa: F811
     filter, count or choose between, and no workings (docs/STYLE.md, "A kid's screen")."""
     kid = girls["mine"]
     todo = kid.get("/tasks").text
-    assert "My things to do" in todo and 'role="search"' not in todo and "shown (up to" not in todo
+    assert "My to-dos" in todo and 'role="search"' not in todo and "shown (up to" not in todo
     plans = kid.get("/plans").text
     assert (
         "What the family is doing next." in plans and "plans/month" not in plans.split("<main")[-1]

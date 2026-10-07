@@ -422,6 +422,13 @@ def figs(text: Any) -> Markup:
     return Markup("").join(out)
 
 
+# The one sentence about where reminders go, said the same on every page that says it.
+REMINDERS_SAID = (
+    "Reminders appear in the chat while FamilyDB is running, and in Telegram when it is connected. "
+    "They aren\u2019t phone notifications."
+)
+
+
 def money_text(dollars: float) -> str:
     """ "$0.00", "$2.00"; under ten cents "4¢", which a dollar figure would round to nothing."""
     if 0 < dollars < 0.1:
@@ -1237,9 +1244,9 @@ def places_map(placed: list[tuple[Idea, Away]]) -> dict[str, Any] | None:
 
 AGENDA_NOTES = {
     "google": "From Google Calendar, including anything added there directly.",
-    "saved": "Google Calendar is not connected, so these are the plans the bot made.",
+    "saved": "Google Calendar is not connected, so these are the plans FamilyDB has saved.",
     "unavailable": (
-        "Google Calendar did not answer, so these are the plans as the bot last saw them. "
+        "Google Calendar did not answer, so these are the plans as FamilyDB last saw them. "
         "Times may have moved since."
     ),
 }
