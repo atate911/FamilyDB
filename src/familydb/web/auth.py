@@ -92,6 +92,8 @@ NEEDS: dict[str, roles.Permission] = {
     "family": "manage",
     # Private words from any chat.
     "activity": "manage",
+    # How it works and how to run it: not for kids (docs/DESIGN.md section 16).
+    "wiki": "browse",
 }
 # A page that needs something other than its blueprint's, asked before the blueprint is.
 NEEDS_HERE: dict[str, roles.Permission] = {

@@ -1,0 +1,11 @@
+{# The guide's sidebar: the tree `web/wiki.py` builds from `_nav.json`, each node already carrying its address. Only the branch the reader is in is opened (CSS); the rest shows its top level. #}
+{% macro nav_list(nodes, current, open) %}
+<ul class="wiki-nav">
+  {% for node in nodes %}
+    <li{% if node.slug in open %} class="is-open"{% endif %}>
+      <a href="{{ node.url }}"{% if node.slug == current %} aria-current="page"{% endif %}>{{ node.title }}</a>
+      {% if node.children %}{{ nav_list(node.children, current, open) }}{% endif %}
+    </li>
+  {% endfor %}
+</ul>
+{% endmacro %}

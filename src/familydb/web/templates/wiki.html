@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, tag %}
+{% from "_wiki_nav.html" import nav_list %}
+{% block title %}{{ page_meta.title }} · Guide · {{ site_title }}{% endblock %}
+{# The guide (web/wiki.py): the project's own pages, for parents and admins. wiki_search.html fills the same frame with results. #}
+{% block content %}
+  <div class="wiki">
+    <form class="wiki__search" role="search" method="get" action="{{ url_for('wiki.search') }}">
+      <div class="searchbox">{{ icon('search') }}<label class="sr" for="wiki-q">Search the guide</label><input id="wiki-q" type="search" name="q" value="{{ search_query }}" placeholder="Search the guide" aria-label="Search the guide" maxlength="80" required enterkeyhint="search" /></div>
+      <button class="btn btn--quiet" type="submit">Search</button>
+    </form>
+
+    <div class="wiki__layout">
+      {# The sections: a column on a wide screen, behind a button on a phone. The box is hidden but still takes the keyboard, so the button works without a script. #}
+      <input class="wiki__toggle sr" type="checkbox" id="wiki-sections" />
+      <label class="wiki__button btn btn--quiet" for="wiki-sections">{{ icon('list', size='sm') }}Sections</label>
+      <nav class="wiki__nav" aria-label="Guide sections">
+        {{ nav_list(nav_tree, current_slug, active_slugs) }}
+      </nav>
+
+      <div class="wiki__main">
+        <nav class="wiki__crumbs" aria-label="Where you are">
+          {%- for crumb in breadcrumbs -%}
+            {%- if loop.last or not crumb.url -%}<span aria-current="page">{{ crumb.title }}</span>
+            {%- else -%}<a href="{{ crumb.url }}">{{ crumb.title }}</a><span class="wiki__sep" aria-hidden="true">›</span>{%- endif -%}
+          {%- endfor -%}
+        </nav>
+        {% block wiki_content %}
+          {% if page_meta.audience_label or page_meta.depth_label %}
+            <p class="wiki__badges">
+              {% if page_meta.audience_label %}<span class="tag tag--when">{{ page_meta.audience_label }}</span>{% endif %}
+              {% if page_meta.depth_label %}<span class="tag tag--off">{{ page_meta.depth_label }}</span>{% endif %}
+            </p>
+          {% endif %}
+          {% if wiki_toc %}
+            <aside class="wiki__toc" aria-label="On this page">
+              <p class="overline">On this page</p>
+              {{ wiki_toc }}
+            </aside>
+          {% endif %}
+          <article class="wiki-prose">{{ wiki_html }}</article>
+          {% if see_also %}
+            <footer class="wiki__also">
+              <h2>See also</h2>
+              <ul>{% for one in see_also %}<li><a href="{{ one.url }}">{{ one.title }}</a></li>{% endfor %}</ul>
+            </footer>
+          {% endif %}
+        {% endblock %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

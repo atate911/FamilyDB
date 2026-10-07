@@ -36,6 +36,7 @@ from familydb.web import (
     setup,
     shell,
     views,
+    wiki,
 )
 from familydb.web import settings as settings_page
 from familydb.web import status as status_page
@@ -222,6 +223,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.register_blueprint(look.bp)
     web.register_blueprint(settings_page.bp)
     web.register_blueprint(setup.bp)
+    web.register_blueprint(wiki.bp)
     # The gate first: nobody signed out may cost even a query.
     web.before_request(auth.require_login)
     web.before_request(_picking_up_settings(app, web))

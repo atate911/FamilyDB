@@ -44,6 +44,7 @@
     'you': ['family.you'],
     'look': ['look.show'],
     'more': ['web.more'],
+    'wiki': ['wiki.home', 'wiki.page', 'wiki.search'],
   } %}
   {% set ns = namespace(section='none') %}
   {% for name, owns in SECTIONS.items() %}{% if here in owns %}{% set ns.section = name %}{% endif %}{% endfor %}
@@ -101,6 +102,7 @@
               <p class="overline nav-group">Behind the scenes</p>
               <ul class="nav">
                 {{ nav_item('Status', url_for('web.status'), 'status', 'pulse') }}
+                {{ nav_item('Guide', url_for('wiki.home'), 'wiki', 'info') }}
                 {% if managing %}
                   {{ nav_item('Settings', url_for('settings.show'), 'settings', 'sliders', count=(badge('quiet', shell.check, 'to check') if shell.check else none)) }}
                   {{ nav_item('Family', url_for('family.show'), 'family', 'people') }}

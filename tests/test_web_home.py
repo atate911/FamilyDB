@@ -147,6 +147,8 @@ def test_browsing_asks_nothing_of_a_model(settings, clock, conn, family) -> None
         "/restaurants",
         "/memory",
         "/wishes",
+        "/wiki",
+        "/wiki/_search?q=start",
     ):
         assert client.get(path).status_code == 200, path
     assert api.requests == []
