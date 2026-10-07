@@ -39,15 +39,15 @@ Everyday is the model named in your settings, the company's cheapest by default.
 |---|---|---|---|
 | Interface | Messages (beta) | Responses | `generate_content` |
 | Thinking | Adaptive thinking and an effort, except the models in `OLDER_MODELS`, Haiku 4.5 among them | A reasoning effort: all five names on GPT-6, capped at high on `gpt-5` and the o-series, none on `gpt-3`, `gpt-4` and `chatgpt-` | A thinking level (low for low effort, else high) from Gemini 3; a token budget on Gemini 1 and 2 |
-| Web search (lookups only) | `web_search` and `web_fetch`; older models get the basic versions | One hosted `web_search` | `google_search`; Gemini 1 and 2 are refused before sending, since they cannot combine it with our tools |
+| Web search (lookups only) | `web_search` and `web_fetch`; older models get basic versions | One hosted `web_search` | `google_search`; refused before sending on Gemini 1 and 2, which cannot combine it with our tools |
 | Caching | Marked on the unchanging parts; an hour by default (`anthropic_cache_ttl`, `1h` or `5m`) | Automatic on a long prefix; FamilyDB sends a `prompt_cache_key`, a hash of the unchanging text | Automatic; nothing is sent |
 | Refusal fallback | On the Claude models that have it (not Haiku or Sonnet), unless `ANTHROPIC_FALLBACKS` is false in `.env` | none | none |
 
-Effort comes from the [Spending](/wiki/controls/settings/spending#thinking) page: `effort` for chat and `worker_effort` for lookups. Each module names the older models, not the current ones, so a model released later is sent the current shape.
+Effort comes from [Spending](/wiki/controls/settings/spending#thinking): `effort` for chat and `worker_effort` for lookups. Each module names the older models, not the current ones, so a model released later is sent the current shape.
 
 ## Keys
 
-The AI model page checks a key by looking up the chat model with the company, which costs nothing. A refused key is not saved. A key whose company has no such model is saved, with a note to choose another. A company that cannot be asked leaves the key saved unchecked, and the first message shows whether it works. A model typed into "Another model" is refused only on a definite "no such model".
+The AI model page checks a key by looking up the chat model with the company, which costs nothing. A refused key is not saved. A key whose company has no such model is saved, with a note to choose another. A company that cannot be asked leaves the key saved unchecked, and the first message shows whether it works.
 
 ## When a company says no
 
@@ -61,7 +61,7 @@ Each module reads a failure into a trouble that only an admin can fix.
 | Any other 4xx except 429 | refused | "<Company> is refusing requests" on Status; the Telegram message waits until it has happened twice with no answer between |
 | Another 429, a 5xx or no connection | none | Nothing; the spare or the retry job handles it |
 
-Each row clears when the company next answers. Every admin with a Telegram id is told, and again at most every 12 hours while it lasts, unless `admin_alerts` is off. With judgements on, a refusal nobody can read is put to a stronger model at once.
+Each row clears when the company next answers. Every admin with a Telegram id is told, again at most every 12 hours while it lasts, unless `admin_alerts` is off.
 
 ### A 400 that names part of the request
 
@@ -73,7 +73,7 @@ When a 400's text names a part the request carried, FamilyDB sends it again with
 | OpenAI | The top effort levels (tried first), reasoning settings, the prompt cache key, the cap on tool calls |
 | Gemini | Switching thinking off, the thinking level, search beside our own tools |
 
-The answer is used, and admins are told once, under "A company stopped taking part of a request", that the rest works without it. A 400 naming none of these is a refused trouble.
+The answer is used, and admins are told once, under "A company stopped taking part of a request". A 400 naming none of these is a refused trouble.
 
 ## Voice and photos
 
@@ -85,6 +85,6 @@ At 05:17 each company with a key is asked which models the key may use, and Lite
 
 ## Adding a company
 
-Write one module in `src/familydb/agent/providers/` that does what `base.py` asks, and add its name to `NAMES` in `__init__.py`. Give it a lineup in `catalog.py` and prices in `prices.py`, which a test holds to what the modules send, and list its `PARTS`. Map its failures to `AgentError.trouble`. Its key and model settings go in `config.py` and on the AI model page.
+Write one module in `src/familydb/agent/providers/` that does what `base.py` asks, add its name to `NAMES` in `__init__.py`, and give it a lineup in `catalog.py` and prices in `prices.py`, which a test holds to what the modules send. List its `PARTS`, map its failures to `AgentError.trouble`, and add its key and model settings to `config.py`.
 
 Developer docs: `src/familydb/agent/providers/` (module notes, `parts.py`), `src/familydb/agent/gateway.py`, `src/familydb/agent/loop.py` (`worth_switching`), `src/familydb/model_watch.py`, `src/familydb/alerts.py`, `docs/AI_CALLS.md`, and `docs/DESIGN.md`, "Decisions" (Model vendor, Keeping up with models and prices).

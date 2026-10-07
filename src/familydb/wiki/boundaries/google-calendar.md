@@ -37,13 +37,7 @@ The page keeps Google's answer for a minute, so an event added on a phone can ta
 
 The form takes the key file and the calendar's id, and tries them before keeping either: it reads the calendar, adds an all-day event called "FamilyDB connection check", and deletes it. That event may show briefly in calendar notifications. `familydb google connect <KEY_FILE> <CALENDAR_ID>` does the same on the server, and `familydb google events` shows what the bot sees.
 
-| Google says | The page tells you |
-|---|---|
-| The key is not a service account's, or not JSON | To paste the whole file Google saved |
-| The calendar is not found | To check the id and the sharing, naming the account's address |
-| It can see the calendar but not change it | To give the address "Make changes to events" |
-| The Calendar API is off in the key's project | To turn it on and try again in a minute |
-| The key is refused | That it may have been deleted |
+The page says what is wrong: the key is not a service account's, the calendar is not found (check the id and the sharing), the account can see the calendar but not change it (give it "Make changes to events"), the Calendar API is off in the key's project, or Google refused the key, which may have been deleted.
 
 ## When Google says no later
 
@@ -70,6 +64,6 @@ If the key is gone, make a new one and connect again. Nothing is lost: the event
 - **All-day and timed.** A busy all-day event takes the whole day in the free-time check. An event marked free in Google, such as a birthday, blocks nothing. Google's all-day end is the day after, and plans store the last day.
 - **Free time.** The calendar tools report which of morning (from 08:00), afternoon (from 12:00) and evening (from 17:00, to 22:00) are free. The suggestion engine works in minutes between 08:00 and 22:00.
 - **Windows.** The calendar tool reads at most 60 days at a time.
-- **Hand-added events.** They appear and count as busy. They stay events and never become plans. The bot can move or remove one by its id when asked, and the page's move and cancel forms work on the bot's own plans.
+- **Hand-added events.** They appear and count as busy. They stay events, not plans. The bot can move or remove one by its id when asked, and the page's move and cancel forms work on the bot's own plans.
 
 Developer docs: `src/familydb/integrations/google_calendar.py`, `src/familydb/calendar_sync.py`, `src/familydb/agenda.py`, `src/familydb/free_time.py`, `src/familydb/tools/gcal.py`, `src/familydb/web/settings.py` (`google_connect`), and `docs/DESIGN.md`, "Integrations" (Google Calendar).

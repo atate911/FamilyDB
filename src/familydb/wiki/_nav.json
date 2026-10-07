@@ -101,6 +101,42 @@
           "see_also": [
             "controls/settings/personality"
           ]
+        },
+        {
+          "slug": "model/ideas-and-places",
+          "title": "Ideas and places",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "controls/ideas"
+          ]
+        },
+        {
+          "slug": "model/plans-and-calendar",
+          "title": "Plans and the calendar",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "controls/plans-and-tasks"
+          ]
+        },
+        {
+          "slug": "model/tasks-and-reminders",
+          "title": "Things to do and reminders",
+          "audience": "grownups",
+          "depth": "overview",
+          "see_also": [
+            "controls/plans-and-tasks"
+          ]
+        },
+        {
+          "slug": "model/state-and-database",
+          "title": "State and the database",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "operations/backup-and-restore"
+          ]
         }
       ]
     },
@@ -114,6 +150,26 @@
         "operations"
       ],
       "children": [
+        {
+          "slug": "behavior/jobs",
+          "title": "The scheduled jobs",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "controls/settings/messages",
+            "controls/settings/lookups"
+          ]
+        },
+        {
+          "slug": "behavior/suggestions",
+          "title": "How suggestions are made",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "model/ideas-and-places",
+            "behavior/jobs"
+          ]
+        },
         {
           "slug": "behavior/lifecycles",
           "title": "Lifecycles: how things change over time",
@@ -144,6 +200,48 @@
       "see_also": [
         "security",
         "operations"
+      ],
+      "children": [
+        {
+          "slug": "boundaries/model-companies",
+          "title": "Model companies",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "controls/settings/ai-model",
+            "security/data-and-privacy"
+          ]
+        },
+        {
+          "slug": "boundaries/telegram",
+          "title": "Telegram",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "controls/telegram",
+            "behavior/telegram-loop"
+          ]
+        },
+        {
+          "slug": "boundaries/google-calendar",
+          "title": "Google Calendar",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "controls/settings/connections",
+            "model/plans-and-calendar"
+          ]
+        },
+        {
+          "slug": "boundaries/weather-and-maps",
+          "title": "Weather, maps and price lists",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "controls/settings/connections",
+            "controls/status/models-and-prices"
+          ]
+        }
       ]
     },
     {
