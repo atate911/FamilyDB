@@ -1494,9 +1494,11 @@ textarea.script { min-height: 16em; line-height: 1.55; }
 
 /* ---------- 10. The Look page (/look): a look for this browser, anybody signed in ---------- */
 .look-form { display: grid; gap: var(--s5); }
-.look-modes { margin: 0; min-width: 0; }
-.look-modes > legend { float: left; width: 100%; margin-bottom: var(--s3); padding: 0; }
-.look-modes > legend + * { clear: both; }
+.look-modes { margin: var(--s5) 0 0; min-width: 0; }
+.look-modes__h { display: inline-flex; align-items: center; gap: var(--s2); font-family: var(--font-head); font-size: var(--t-h3); font-weight: 600; }
+.look-modes fieldset { margin: 0; border: 0; min-width: 0; }
+/* "Use this look" waits until a choice differs from what is worn. */
+.look-form:not(:has([data-was]:not(:checked))) .look-save { display: none; }
 .look-mode-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); }
 .look-mode { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s3); align-items: start; padding: var(--s3) var(--s4); border: 1.5px solid var(--line-2); border-radius: var(--r-md); background: var(--field); cursor: pointer; }
 .look-mode input, .look-head input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--vera-bg); flex: none; }

@@ -516,3 +516,14 @@ def test_whatever_moves_is_still_when_the_device_asks_for_less_motion() -> None:
                     if prop not in still.get(part.strip(), set())
                 ]
     assert moving == []
+
+
+def test_the_look_in_use_comes_first_and_is_marked_as_what_was_chosen(page) -> None:
+    """The stylesheet keeps "Use this look" hidden until a radio differs from what it was."""
+    page.post("/look", data={"csrf": _token(page), "theme": "fjord", "mode": "auto"})
+    text = page.get("/look").text
+    first = re.search(r'name="theme" value="([^"]+)"', text)
+    assert first is not None and first.group(1) == "fjord"
+    assert 'value="fjord" checked data-was' in text and 'value="auto" checked data-was' in text
+    css = (STATIC / "style.css").read_text(encoding="utf-8")
+    assert ".look-form:not(:has([data-was]:not(:checked))) .look-save" in css

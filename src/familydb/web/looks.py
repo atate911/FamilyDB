@@ -34,72 +34,65 @@ LOOKS = (
     Look(
         "kitchen",
         "Kitchen Table",
-        "The family's table: cream paper by day, charcoal at night, deep green for what "
-        "you act on, and each person in their own color.",
+        "Like the kitchen table: cream paper in the day, dark at night, and everyone in "
+        "their own color.",
         True,
         ("#EFE7D7", "#121816"),
     ),
     Look(
         "phosphor",
         "Phosphor",
-        "The page as first drawn: charcoal with a breath of green, lit the way an old "
-        "green screen was.",
+        "Green writing on a dark screen, like a very old computer.",
         False,
         ("#0b0e0d", "#0b0e0d"),
     ),
     Look(
         "afterglow",
         "Afterglow",
-        "From the Phosphor family of green screens: Kitchen Table as charcoal glass with faint "
-        "scanlines, and Vera the one thing that glows. Always night.",
+        "Dark glass with thin lines across it, like an old TV. Only {name} glows. Always night.",
         False,
         ("#060A08", "#060A08"),
     ),
     Look(
         "midnight",
         "Midnight",
-        "Made for night: a blue-black page, a darker panel, soft-white ink, each color "
-        "lit like a window.",
+        "Made for night: dark blue, soft white writing, and colors that shine like windows.",
         True,
         ("#0A0F1E", "#04060D"),
     ),
     Look(
         "homecomputer",
         "Home Computer",
-        "An early-80s family machine: a putty case, a brown-black keyboard, one orange "
-        "key for “this one”.",
+        "Like a family computer from long ago: a beige case, brown keys, and one orange key.",
         True,
         ("#231C17", "#2E251E"),
     ),
     Look(
         "ink",
         "Ink",
-        "Almost no color: a white page, black ink, a black panel. Color is left for "
-        "late, for Vera and for people.",
+        "Black and white, like a book. Color only for what is late, for {name} and for people.",
         True,
         ("#000000", "#000000"),
     ),
     Look(
         "enamel",
         "Enamel",
-        "Old enamel signs and good painted interiors: warm gray plaster, a deep petrol "
-        "panel, earthy colors.",
+        "Like old painted signs: warm gray, deep blue-green, and earthy colors.",
         True,
         ("#0D2D40", "#143344"),
     ),
     Look(
         "rail",
         "Rail yellow",
-        "Station signage: a deep rail-blue panel, a crisp light page, and one signal "
-        "yellow for what you act on next.",
+        "Like signs at a train station: deep blue, a bright page, and yellow for what to "
+        "press next.",
         True,
         ("#0B2C69", "#13336F"),
     ),
     Look(
         "fjord",
         "Fjord",
-        "A pale northern sky over deep slate water: cool and quiet, with fjord blue for "
-        "what you act on.",
+        "Cool and quiet, like a pale sky over deep water, with blue for what to press.",
         True,
         ("#252B4A", "#272E52"),
     ),
