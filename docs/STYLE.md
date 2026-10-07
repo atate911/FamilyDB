@@ -153,10 +153,12 @@ set one apart. The people are Kitchen Table's eight until a look gives its own.
 one place; every look names them, most as nothing. `--fx-page` is a light on the page itself,
 behind everything. `--fx-scan` is the color of faint scanlines on the panel and on Vera's glass.
 `--fx-glow` (0 to 1) is how much Vera's things glow beyond their plain look, and how bright the
-small motions are, never how long. `--fx-title` and `--fx-title-adjust` are a face for the page
-titles and the wordmark, set at the heading face's cap height. Scanlines are always under the
+small motions are, never how long. `--fx-title` is a face for the page titles and the wordmark,
+and `--fx-title-grid` its pixel grid in px (0 for an outline face): a pixel face is set at whole
+multiples of it, untracked, so its pixels land on the screen's. Scanlines are always under the
 words, never a film over them; glow is a shadow outside a thing's edge; and the contrast floors
-are measured with each effect on at its strongest. In forced colors and on paper they are off.
+are measured with the scanlines laid over their ground. In forced colors, on paper and when more
+contrast is asked for (`prefers-contrast: more`) the page's light and the scanlines are off.
 They are CSS only: no images, no scripts, and the one face is self-hosted.
 
 **Phosphor, Afterglow and Kitchen Table.** Phosphor is the design language FamilyDB was first
@@ -169,11 +171,16 @@ same in every look.
 **Afterglow** is the one look that uses the effects. It is one fixed look, with no day and no
 night version: charcoal glass with a breath of green, a darker panel, faint scanlines on the
 panel and on Vera's box, and she is the one thing that glows: her screen gets a second halo and a fully lit
-rim, her Send and her lines a soft light. The family's links are a soft mint and their button a
-pale plate, never the phosphor. Page titles and the wordmark are set in VT323, a phosphor
-terminal's pixel face, as tall as Fraunces' capitals; everything read stays Atkinson, card titles
-stay Fraunces, and money and dates keep Fraunces Figures: the pixel face is for a few big words
-that stand alone, never for words read in quantity. It wears Kitchen Table's people.
+rim, her Send and her lines a soft light. Green is hers alone: the family's links and the
+current place are a warm off-white (`#EADCC2`), their main button is dark glass with a warm-white
+edge (`--primary-edge`, the button's own fill in every other look), cards are panes of glass,
+today's tile and the meter a quiet warm grey, the setup card amber-edged glass, and each person
+is tinted glass (`--p1-fill` to `--p8-fill`, a person's own color in every other look). A chosen
+segment is a card ringed in ink in every look, never a solid fill, so nothing of the family's is
+brighter than Vera. Page titles and the wordmark are set in VT323, a phosphor terminal's pixel
+face, on whole pixels (50, 37.5 and 25 px); everything read stays Atkinson, card titles stay
+Fraunces, and money and dates keep Fraunces Figures: the pixel face is for a few big words that
+stand alone, never for words read in quantity. This is the design's stage 17 choice.
 
 **The choice follows the person.** Each person chooses their own look, and its day and night,
 and it comes with them to every phone and computer they sign in on: it is kept with them
@@ -523,7 +530,7 @@ with when it plays):
 
 - **Her screen types**, once on Home as the page opens, and on a loop only while she is writing
   back (see "Her screen"). It is the one thing that loops, and it means she is working.
-- **Afterglow.** The flash that says what you just did (a save, a tick, an answer, with its Undo)
+- **A flash's light** (`--flash-fade`). The flash that says what you just did (a save, a tick, an answer, with its Undo)
   lights at once as the page comes back and fades over a second, falling fast and then lingering,
   as a tube's glow did.
 - **Landing.** Where a link lands (a card, a day on the calendar, a plan) lights and fades over

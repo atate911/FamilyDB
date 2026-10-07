@@ -176,8 +176,10 @@ p, li, dd, .lede { text-wrap: pretty; }
 /* 5.2 Buttons */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 46px; padding: 0 var(--s5); border-radius: var(--r-pill); border: 1.5px solid var(--ink); background: transparent; color: var(--ink); font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; text-align: center; line-height: 1.2; max-width: 100%; }
 .btn:hover { background: var(--paper-2); color: var(--ink); }
-.btn--primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
-.btn--primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: var(--on-primary); }
+/* the family's main button: filled with the look's primary, its edge the look's --primary-edge (the same colour in
+   every look but Afterglow, where the family's buttons are dark glass with a warm-white edge) */
+.btn--primary { background: var(--primary); border-color: var(--primary-edge); color: var(--on-primary); }
+.btn--primary:hover { background: var(--primary-hover); border-color: var(--primary-edge); color: var(--on-primary); }
 .btn--quiet { border-color: var(--line-2); background: var(--card); }
 .btn--sm { min-height: 40px; padding: 0 var(--s4); font-size: var(--t-meta); }
 .btn[disabled], .btn[aria-disabled="true"] { opacity: 1; background: var(--paper-2); border-color: var(--line-2); color: var(--ink-3); cursor: not-allowed; }
@@ -215,16 +217,16 @@ p, li, dd, .lede { text-wrap: pretty; }
 .av--sm { width: var(--av-sm); height: var(--av-sm); font-size: 0.75rem; border-width: 1.5px; } /* initials are decorative: the name is always beside them */
 .av--lg { width: var(--av-lg); height: var(--av-lg); font-size: var(--t-md); }
 /* person slots: .p0 (Everyone) and .p1…p8 set the person's colour variables; components read them */
-.p0 { --p-on: var(--everyone-on); --p: var(--everyone); --p-soft: var(--everyone-soft); --p-ink: var(--everyone-ink); --p-mark: var(--everyone-mark); }
-.p1 { --p-on: var(--p1-on); --p: var(--p1); --p-soft: var(--p1-soft); --p-ink: var(--p1-ink); --p-mark: var(--p1-mark); }
-.p2 { --p-on: var(--p2-on); --p: var(--p2); --p-soft: var(--p2-soft); --p-ink: var(--p2-ink); --p-mark: var(--p2-mark); }
-.p3 { --p-on: var(--p3-on); --p: var(--p3); --p-soft: var(--p3-soft); --p-ink: var(--p3-ink); --p-mark: var(--p3-mark); }
-.p4 { --p-on: var(--p4-on); --p: var(--p4); --p-soft: var(--p4-soft); --p-ink: var(--p4-ink); --p-mark: var(--p4-mark); }
-.p5 { --p-on: var(--p5-on); --p: var(--p5); --p-soft: var(--p5-soft); --p-ink: var(--p5-ink); --p-mark: var(--p5-mark); }
-.p6 { --p-on: var(--p6-on); --p: var(--p6); --p-soft: var(--p6-soft); --p-ink: var(--p6-ink); --p-mark: var(--p6-mark); }
-.p7 { --p-on: var(--p7-on); --p: var(--p7); --p-soft: var(--p7-soft); --p-ink: var(--p7-ink); --p-mark: var(--p7-mark); }
-.p8 { --p-on: var(--p8-on); --p: var(--p8); --p-soft: var(--p8-soft); --p-ink: var(--p8-ink); --p-mark: var(--p8-mark); }
-.av { background: var(--p, var(--everyone)); }
+.p0 { --p-fill: var(--everyone-fill); --p-on: var(--everyone-on); --p: var(--everyone); --p-soft: var(--everyone-soft); --p-ink: var(--everyone-ink); --p-mark: var(--everyone-mark); }
+.p1 { --p-fill: var(--p1-fill); --p-on: var(--p1-on); --p: var(--p1); --p-soft: var(--p1-soft); --p-ink: var(--p1-ink); --p-mark: var(--p1-mark); }
+.p2 { --p-fill: var(--p2-fill); --p-on: var(--p2-on); --p: var(--p2); --p-soft: var(--p2-soft); --p-ink: var(--p2-ink); --p-mark: var(--p2-mark); }
+.p3 { --p-fill: var(--p3-fill); --p-on: var(--p3-on); --p: var(--p3); --p-soft: var(--p3-soft); --p-ink: var(--p3-ink); --p-mark: var(--p3-mark); }
+.p4 { --p-fill: var(--p4-fill); --p-on: var(--p4-on); --p: var(--p4); --p-soft: var(--p4-soft); --p-ink: var(--p4-ink); --p-mark: var(--p4-mark); }
+.p5 { --p-fill: var(--p5-fill); --p-on: var(--p5-on); --p: var(--p5); --p-soft: var(--p5-soft); --p-ink: var(--p5-ink); --p-mark: var(--p5-mark); }
+.p6 { --p-fill: var(--p6-fill); --p-on: var(--p6-on); --p: var(--p6); --p-soft: var(--p6-soft); --p-ink: var(--p6-ink); --p-mark: var(--p6-mark); }
+.p7 { --p-fill: var(--p7-fill); --p-on: var(--p7-on); --p: var(--p7); --p-soft: var(--p7-soft); --p-ink: var(--p7-ink); --p-mark: var(--p7-mark); }
+.p8 { --p-fill: var(--p8-fill); --p-on: var(--p8-on); --p: var(--p8); --p-soft: var(--p8-soft); --p-ink: var(--p8-ink); --p-mark: var(--p8-mark); }
+.av { background: var(--p-fill, var(--everyone-fill)); }
 .av .icon { width: 60%; height: 60%; stroke-width: 2.2; }
 .avs { display: inline-flex; }
 .avs .av + .av { margin-left: -8px; }
@@ -415,9 +417,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 /* segmented control: the current segment is filled ink, like every other picked control; it wraps rather than scrolls */
 .seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: var(--r-lg); background: var(--paper-2); max-width: 100%; }
 .seg a { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: var(--target); padding: 0 var(--s4); border-radius: var(--r-md); color: var(--ink-2); text-decoration: none; font-weight: 700; }
-.seg a[aria-current] { background: var(--ink); color: var(--paper); }
+/* the chosen segment is a card ringed in ink, not a solid fill: never the brightest shape on the page (in Afterglow
+   a cream fill outshone Vera) */
+.seg a[aria-current] { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
 .seg .n { font-size: var(--t-sm); padding: 1px 8px; border-radius: var(--r-pill); background: var(--paper); font-family: var(--font-num); }
-.seg a[aria-current] .n { background: var(--paper); color: var(--ink); }
+.seg a[aria-current] .n { background: var(--paper-2); color: var(--ink); }
 
 /* 5.14 Health pill (same state everywhere) */
 /* When all is well the pill is quiet: Vera's soft green, the family's type, a still dot.
@@ -987,7 +991,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .ev__top { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
 .dots { display: none; }
 /* the phone month's markers (and the key on Plans): a person's initial, the house for Everyone, a hollow ring for the past */
-.dots i { width: 14px; height: 14px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--p, var(--everyone)); color: var(--p-on, var(--everyone-on)); font: 700 9px/1 var(--font-text); font-style: normal; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--p-fill, var(--everyone-fill)); color: var(--p-on, var(--everyone-on)); font: 700 9px/1 var(--font-text); font-style: normal; }
 .dots i .icon { width: 9px; height: 9px; stroke-width: 2.6; }
 .dots i.d-past { background: transparent; border: 1.5px solid var(--edge); }
 .dots--key { display: inline-flex; gap: 2px; }
@@ -1582,7 +1586,7 @@ textarea.script { min-height: 16em; line-height: 1.55; }
 .ls-row { display: flex; gap: 4px; margin-top: 2px; }
 .ls-chip, .ls-btn { font-size: 8px; font-weight: 700; line-height: 1; padding: 3px 5px; border-radius: 999px; white-space: nowrap; }
 .ls-chip { background: var(--today); color: var(--on-today); }
-.ls-btn { background: var(--primary); color: var(--on-primary); }
+.ls-btn { background: var(--primary); color: var(--on-primary); box-shadow: inset 0 0 0 1px var(--primary-edge); }
 .ls-dots { display: flex; gap: 3px; }
 .ls-dots i { width: 8px; height: 8px; border-radius: 50%; }
 .ls-dots .d1 { background: var(--p1); } .ls-dots .d2 { background: var(--p2); } .ls-dots .d3 { background: var(--p3); }
@@ -1649,7 +1653,8 @@ textarea.script { min-height: 16em; line-height: 1.55; }
      --fx-glow          how much Vera's things glow beyond their plain look, 0 to 1; also how bright the small
                         motions are (section 12), never how long
      --fx-title         the face of the page titles and the wordmark (normally the heading face)
-     --fx-title-adjust  that face's font-size-adjust, so a pixel face stands at the heading's cap height, or none
+     --fx-title-grid    that face's pixel grid in px, 0 for an outline face: a pixel face is set at whole multiples
+                        of it, untracked, so its pixels land on the screen's (Afterglow's VT323: 12.5, so 50 / 37.5 / 25)
    Scanlines are a background, under the words, never a film over them; glow is a shadow outside a thing's edge.
    Neither changes the colour of a word or of the ground right under it beyond what the contrast check measures
    (_kit/looks-check.py composites the scanline over its ground). Off in forced colours and on paper. */
@@ -1665,9 +1670,28 @@ body { background-image: var(--fx-page); background-repeat: no-repeat; }
 
 /* The title face: page titles and the wordmark only. Atkinson stays for everything read; the Ask card's question,
    though an h1, is a sentence at 22 px, so it keeps the heading face. A face with no bold is never faked bold. */
-h1, .wm { font-family: var(--fx-title); font-size-adjust: var(--fx-title-adjust); font-synthesis-weight: none; }
-.ask__q { font-family: var(--font-head); font-size-adjust: none; }
+h1, .wm { font-family: var(--fx-title); font-synthesis-weight: none; }
+.ask__q { font-family: var(--font-head); }
+/* A pixel title face sits on its own grid: each title's size rounded up to a whole multiple of --fx-title-grid
+   (Afterglow: page titles 42 -> 50 px, 32 -> 37.5 on the phone, sign-in's 23 -> 25, the wordmark 25), and no
+   tracking, which would move each letter off its pixels. With 0, an outline face, nothing changes. The Ask card's
+   question keeps its own size (its class outranks h1). A browser without round() keeps the heading sizes. */
+:root { --title-step: calc(max(var(--fx-title-grid, 0), .01) * 1px); --title-px: min(var(--fx-title-grid, 0), 1); }
+h1 { letter-spacing: calc(-.01em * (1 - var(--title-px))); }
+.wm { letter-spacing: calc(-.02em * (1 - var(--title-px))); }
+.ask__q { letter-spacing: -.01em; }
+@supports (font-size: round(up, 1px, 1px)) {
+  h1, .empty--center h1 { font-size: round(up, var(--t-h1), var(--title-step)); }
+  h1.signin__h { font-size: round(up, var(--t-h2), var(--title-step)); }
+  .wm { font-size: round(up, 1.375rem, var(--title-step)); }
+  .pane .wm { font-size: round(up, 1.125rem, var(--title-step)); }
+  @media (max-width: 820px) { .topbar .brand .wm { font-size: round(up, 1.25rem, var(--title-step)); } }
+}
 
+/* Asking for more contrast takes the scanlines and the page's light away: words on plain ground */
+@media (prefers-contrast: more) {
+  body, .side, .topbar, .ask, .instrument__pane, .pane, .ls-band { background-image: none; }
+}
 @media (forced-colors: active) {
   body, .side, .topbar, .ask, .instrument__pane, .pane { background-image: none; }
   .vs:not(.vs--off) { filter: none; }
@@ -1684,11 +1708,11 @@ h1, .wm { font-family: var(--fx-title); font-size-adjust: var(--fx-title-adjust)
    writing back. All CSS, and all of it only for people who have not asked for less motion. A look's --fx-glow
    makes the lights a little brighter, never longer. motion.html shows each one in place.
      1. Her sign is typed: once on Home as the page opens (.vs--hello), on a loop while she writes back (.vs--busy).
-     2. Afterglow: what you just did (the flash after a save, with its Undo) lights at once and fades over a second.
+     2. A flash's light: what you just did (the flash after a save, with its Undo) lights at once and fades over a second.
      3. Landing: where a link lands (a card, a day, a plan) lights and fades.
      4. Cursors rest: the wordmark's and her sign's cursor blink for a few seconds, then stay lit.
      5. The writing-back dot breathes (section 5, the health pill), only while she is writing back. */
-:root { --afterglow: 1.2s cubic-bezier(.2, .7, .3, 1); --landed: 1.8s cubic-bezier(.2, .7, .3, 1); }
+:root { --flash-fade: 1.2s cubic-bezier(.2, .7, .3, 1); --landed: 1.8s cubic-bezier(.2, .7, .3, 1); }
 .vs__r { transform-box: fill-box; transform-origin: 0 50%; }
 li:target { border-radius: var(--r-md); }
 /* motion.html: a little stage for a sign or the wordmark at a size you can watch */
@@ -1725,8 +1749,8 @@ li:target { border-radius: var(--r-md); }
   @keyframes vs-blink { 50% { opacity: .15; } }
 
   /* 2. Afterglow: the flash lights at once, falls fast and lingers, as a tube's glow did. */
-  .flash { animation: fdb-afterglow var(--afterglow); }
-  @keyframes fdb-afterglow { from { box-shadow: 0 0 0 2px color-mix(in srgb, var(--lit) calc(45% + 35% * var(--fx-glow)), transparent), 0 0 26px -4px color-mix(in srgb, var(--lit) calc(35% + 35% * var(--fx-glow)), transparent); } }
+  .flash { animation: fdb-flash var(--flash-fade); }
+  @keyframes fdb-flash { from { box-shadow: 0 0 0 2px color-mix(in srgb, var(--lit) calc(45% + 35% * var(--fx-glow)), transparent), 0 0 26px -4px color-mix(in srgb, var(--lit) calc(35% + 35% * var(--fx-glow)), transparent); } }
 
   /* 3. Landing: the card, day or plan a link points at lights and fades as the page opens on it. */
   .card:target, li:target { animation: fdb-landed var(--landed); }

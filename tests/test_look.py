@@ -363,7 +363,7 @@ def test_a_look_may_only_add_effects_of_the_allowed_kinds() -> None:
     themes = (STATIC / "themes.css").read_text("utf-8")
     shared = _shared(themes)
     blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
-    names = ("--fx-page", "--fx-scan", "--fx-glow", "--fx-title", "--fx-title-adjust")
+    names = ("--fx-page", "--fx-scan", "--fx-glow", "--fx-title", "--fx-title-grid")
     assert set(names) <= set(shared)  # every look has all five, plain unless it says otherwise
     faces = {"VT323", "Fraunces", "Georgia", "serif"}
     for key, body in blocks.items():
@@ -371,7 +371,7 @@ def test_a_look_may_only_add_effects_of_the_allowed_kinds() -> None:
             **{n: shared[n] for n in names},
             **{n: v for n, v in _declared(body).items() if n in names},
         }
-        page, scan, glow, title, adjust = (got[n] for n in names)
+        page, scan, glow, title, grid = (got[n] for n in names)
         assert page == "none" or all(
             float(a) <= 0.1 for a in re.findall(r"rgb\([^)/]*/ ?([\d.]+)\)", page)
         ), key
@@ -383,4 +383,88 @@ def test_a_look_may_only_add_effects_of_the_allowed_kinds() -> None:
         assert 0 <= float(glow) <= 1, key
         assert title.endswith("var(--font-head)"), key
         assert set(re.findall(r'"([^"]+)"', title)) <= faces, key
-        assert adjust == "none" or re.fullmatch(r"cap-height [\d.]+", adjust), key
+        assert re.fullmatch(r"\d+(?:\.\d+)?", grid) and 0 <= float(grid) <= 50, (
+            key
+        )  # px; 0 an outline face
+
+
+def _look_tokens(key: str) -> dict[str, str]:
+    themes = (STATIC / "themes.css").read_text("utf-8")
+    blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
+    return {**_shared(themes), **_declared(blocks[key])}
+
+
+def test_afterglow_is_one_fixed_look_whose_band_is_the_one_the_browser_is_told() -> None:
+    tokens = _look_tokens("afterglow")
+    look = looks.BY_KEY["afterglow"]
+    assert not look.has_day and look.band == ("#060A08", "#060A08")
+    assert tokens["--band"].upper() == "#060A08"
+    themes = (STATIC / "themes.css").read_text("utf-8")
+    block = re.search(r'\[data-theme="afterglow"\] \{(.*?)\n\}', themes, re.S).group(1)
+    assert "light-dark(" not in block and "color-scheme: dark" in block
+
+
+def test_in_afterglow_green_is_veras_alone() -> None:
+    """Stage 17's choice: the family's links, current place, main button and its edge, and today's
+    tile are warm off-white or warm grey, so the one green thing on a page is Vera's."""
+    tokens = _look_tokens("afterglow")
+
+    def greenish(name: str) -> bool:
+        colour = _colour(tokens, tokens[name], 1)
+        assert colour, name
+        r, g, b = (int(colour[i : i + 2], 16) for i in (1, 3, 5))
+        return g - max(r, b) > 12
+
+    family = ("--link", "--here-icon", "--lit", "--primary", "--primary-edge", "--today")
+    assert [name for name in family if greenish(name)] == []
+    assert greenish("--vera")
+
+
+def test_the_floors_hold_with_the_scanlines_laid_over_their_ground() -> None:
+    """A look's scanlines are drawn under the words; laid over the band and Vera's glass at their
+    strength, the words there still hold 4.5:1 (HANDOFF section 8.9, looks-check D)."""
+    short = []
+    for key in (one.key for one in looks.LOOKS):
+        tokens = _look_tokens(key)
+        scan = re.fullmatch(r"rgb\((\d+) (\d+) (\d+) / ?([\d.]+)\)", tokens["--fx-scan"])
+        if not scan:
+            continue
+        line = "#" + "".join(f"{int(scan[i]):02X}" for i in (1, 2, 3))
+        for which in (0, 1)[0 if looks.BY_KEY[key].has_day else 1 :]:
+            for words, ground in (
+                ("on-band", "band"),
+                ("on-band-2", "band"),
+                ("ask-ink", "ask-bg"),
+            ):
+                a, b = (_colour(tokens, tokens[f"--{n}"], which) for n in (words, ground))
+                if not (a and b):
+                    continue
+                laid = _mixed(line, b, float(scan[4]))
+                if _contrast(a, laid) < 4.5 - 0.005:
+                    short.append(f"{key} {words} on scanlined {ground}: {_contrast(a, laid):.2f}")
+    assert not short, "\n".join(short)
+
+
+def test_the_people_and_the_main_buttons_edge_hold_their_floors_in_every_look() -> None:
+    """Each person's letter on their fill, in Kitchen Table and in any look that draws its own
+    people (Afterglow's tinted glass); and, where a look draws the main button's edge apart from its
+    fill (Afterglow's dark glass button), that edge on a card, as anything you press is held."""
+    themes = (STATIC / "themes.css").read_text("utf-8")
+    blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
+    short = []
+    for one in looks.LOOKS:
+        tokens, own = _look_tokens(one.key), _declared(blocks[one.key])
+        pairs = []
+        if "--primary-edge" in own:
+            pairs.append(("the main button's edge on a card", "primary-edge", "card", 3.0))
+        if one.key == "kitchen" or "--p1-fill" in own:
+            pairs += [(f"p{i}'s letter", f"p{i}-on", f"p{i}-fill", 4.5) for i in range(1, 9)]
+            pairs.append(("Everyone's mark", "everyone-on", "everyone-fill", 4.5))
+        for which in (0, 1)[0 if one.has_day else 1 :]:
+            for what, words, ground, floor in pairs:
+                a, b = (_colour(tokens, tokens[f"--{n}"], which) for n in (words, ground))
+                assert a and b, f"{one.key}: {what}"
+                if _contrast(a, b) < floor - 0.005:
+                    short.append(f"{one.key} {which} {what}: {_contrast(a, b):.2f} < {floor}")
+    assert any("--primary-edge" in _declared(body) for body in blocks.values())
+    assert not short, "\n".join(short)

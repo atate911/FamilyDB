@@ -17,7 +17,19 @@
   --fx-scan: transparent;
   --fx-glow: 0;
   --fx-title: var(--font-head);
-  --fx-title-adjust: none;
+  --fx-title-grid: 0;
+  /* the edge of the family's main button, and each person's mark as a fill: their own colour, unless a look
+     says otherwise (Afterglow: warm-white edges on dark glass, the people as tinted glass) */
+  --primary-edge: var(--primary);
+  --everyone-fill: var(--everyone);
+  --p1-fill: var(--p1);
+  --p2-fill: var(--p2);
+  --p3-fill: var(--p3);
+  --p4-fill: var(--p4);
+  --p5-fill: var(--p5);
+  --p6-fill: var(--p6);
+  --p7-fill: var(--p7);
+  --p8-fill: var(--p8);
   --band-link: var(--on-band);
   --ok-soft: color-mix(in srgb, var(--ok) 10%, var(--card));
   --ok-line: color-mix(in srgb, var(--ok) 35%, var(--card));
@@ -269,10 +281,13 @@
 /* One fixed look, whatever the device or the Look page's day and night say (as the Phosphor look
    is): charcoal glass with a breath of green, a darker glass band with faint scanlines, and Vera's
    things the one lit thing (--fx-glow: her sign's wider halo and full rim, her Send, her lines).
-   The family's links are a soft mint and their button a pale plate, never the phosphor. Page titles
-   and the wordmark are set in VT323. It has no day, so it is color-scheme: dark and the two
-   data-mode rules skip it. Phosphor is the design language; Afterglow is one look derived from it
-   (HANDOFF.md §8.8). */
+   Green is Vera's alone: the family's links and the current place are warm off-white, their main
+   button is dark glass with a warm-white edge (--primary-edge), cards are panes of glass, today's
+   tile and the meter a quiet warm grey, the setup card amber-edged glass and each person tinted
+   glass. Page titles and the wordmark are set in VT323 on whole pixels (--fx-title-grid 12.5: 50,
+   37.5 and 25 px). It has no day, so it is color-scheme: dark and the two data-mode rules skip it.
+   Phosphor is the design language; Afterglow is one look derived from it (HANDOFF.md section 8.8,
+   stage 17's choice). */
 [data-theme="afterglow"] {
   color-scheme: dark;
   /* the effects (style.css section 11) */
@@ -280,40 +295,39 @@
   --fx-scan: rgb(190 255 215 / .035);
   --fx-glow: 1;
   --fx-title: "VT323", var(--font-head);
-  --fx-title-adjust: cap-height .7;
   /* surfaces and words */
-  --paper: #0A100E;
-  --paper-2: #0F1714;
+  --paper: #070A09;
+  --paper-2: #0B0F0E;
   --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
-  --card: #131C19;
-  --field: #0C1311;
-  --line: #1E2A26;
-  --line-2: #2B3A34;
-  --edge: #6E8479;
+  --card: #0E1312;
+  --field: #0A0E0D;
+  --line: #22302B;
+  --line-2: #2E3F38;
+  --edge: #77837D;
   --ink: #E9F1E5;
   --ink-2: #C3CEC2;
   --ink-3: #9DAA9F;
   --faint-ink: var(--ink-3);
   /* the band: darker glass, the screen's own frame */
   --band: #060A08;
-  --band-hi: #111A17;
+  --band-hi: #0E1312;
   --band-line: #1A2622;
   --on-band: #E9F1E5;
   --on-band-2: #B9C6BF;
-  --here: #13221C;
+  --here: #121816;
   --on-here: #E9F1E5;
-  --here-icon: #6DFF9C;
-  --here-pill: #10241A;
-  --band-link: #8EE0B9;
+  --here-icon: #EADCC2;
+  --here-pill: #161C1A;
+  --band-link: #EADCC2;
   /* the action, focus, today */
-  --link: #8EE0B9;
-  --primary: #D3EEDD;
-  --primary-hover: #EAF7EE;
-  --on-primary: #0A100E;
+  --link: #EADCC2;
+  --primary: #1C2321;
+  --primary-hover: #252D2A;
+  --on-primary: #EADCC2;
   --focus: #E9F1E5;
-  --lit: #6DFF9C;
-  --today: #6DFF9C;
-  --on-today: #06100B;
+  --lit: #EADCC2;
+  --today: #A0957F;
+  --on-today: #0A0E0D;
   --today-rule: #6DFF9C;
   --today-wash: #0E2318;
   /* meanings */
@@ -323,7 +337,7 @@
   --error-ink: #FF8B74;
   /* Vera on the page */
   --vera: #6DFF9C;
-  --vera-bg: #4FE08A;
+  --vera-bg: #A0957F;
   --cursor: #6DFF9C;
   --ask-bg: #0B1813;
   /* the built set's part colours, as Kitchen Table's */
@@ -339,7 +353,7 @@
   --bloom: 1;
   --glow: 0 0 0 1px rgb(109 255 156 / .35), 0 8px 28px -10px rgb(109 255 156 / .6);
   --glow-hover: 0 0 0 1px rgb(109 255 156 / .5), 0 10px 34px -10px rgb(109 255 156 / .8);
-  --shadow: inset 0 1px 0 rgb(233 241 229 / .035), 0 1px 0 rgb(0 0 0 / .4);
+  --shadow: inset 0 1px 0 rgb(233 241 229 / .05), 0 1px 0 rgb(0 0 0 / .5);
   --pop: 0 8px 22px -14px rgb(0 0 0 / .9);
   --pop-up: 0 -8px 24px -16px rgb(0 0 0 / .9);
   --wash: color-mix(in srgb, var(--ink) 6%, transparent);
@@ -353,12 +367,12 @@
   /* Kitchen Table's own roles */
   --ok-soft: #10241A;
   --ok-line: #24503A;
-  --amber-soft: #261E10;
+  --amber-soft: #16130C;
   --amber-line: #5E4620;
   --red-soft: #2E1716;
   --red-line: #5C2E2B;
   --on-red: #06100B;
-  --on-vera: #06100B;
+  --on-vera: #0A0E0D;
   --vera-soft: #0E2318;
   --vera-line: #22513A;
   --ask-ink: #E9F1E5;
@@ -371,6 +385,37 @@
   --ask-rule: rgb(233 241 229 / .16);
   --ask-fill: rgb(233 241 229 / .1);
   --ask-fill-2: rgb(233 241 229 / .16);
+  /* stage 17: green is Vera's alone. The family's buttons are dark glass with a warm-white edge, cards are panes
+     of glass, and each person is tinted glass */
+  --fx-title-grid: 12.5;
+  --primary-edge: #EADCC2;
+  --p1-soft: #232C32;
+  --p2-soft: #2B2931;
+  --p3-soft: #2F292F;
+  --p4-soft: #2F2B22;
+  --p5-soft: #212F31;
+  --p6-soft: #272A33;
+  --p7-soft: #293022;
+  --p8-soft: #2C2C27;
+  --everyone-soft: #242927;
+  --p1-fill: #54657B;
+  --p1-on: #E9F1E5;
+  --p2-fill: #705E7A;
+  --p2-on: #E9F1E5;
+  --p3-fill: #7A5B71;
+  --p3-on: #E9F1E5;
+  --p4-fill: #796145;
+  --p4-on: #E9F1E5;
+  --p5-fill: #486A71;
+  --p5-on: #E9F1E5;
+  --p6-fill: #636283;
+  --p6-on: #E9F1E5;
+  --p7-fill: #5F6941;
+  --p7-on: #E9F1E5;
+  --p8-fill: #6F6254;
+  --p8-on: #E9F1E5;
+  --everyone-fill: #616560;
+  --everyone-on: #E9F1E5;
 }
 
 [data-theme="rail"] {
