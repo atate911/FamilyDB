@@ -63,6 +63,68 @@
       "see_also": [
         "operations",
         "security"
+      ],
+      "children": [
+        {
+          "slug": "controls/settings",
+          "title": "Settings",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations",
+            "security"
+          ],
+          "children": [
+            {
+              "slug": "controls/settings/general",
+              "title": "General",
+              "audience": "admin",
+              "depth": "howto"
+            },
+            {
+              "slug": "controls/settings/ai-model",
+              "title": "AI model",
+              "audience": "admin",
+              "depth": "howto"
+            },
+            {
+              "slug": "controls/settings/spending",
+              "title": "Spending",
+              "audience": "admin",
+              "depth": "howto"
+            },
+            {
+              "slug": "controls/settings/messages",
+              "title": "Messages",
+              "audience": "admin",
+              "depth": "howto"
+            },
+            {
+              "slug": "controls/settings/lookups",
+              "title": "Lookups",
+              "audience": "admin",
+              "depth": "howto"
+            },
+            {
+              "slug": "controls/settings/personality",
+              "title": "Personality and family",
+              "audience": "admin",
+              "depth": "howto"
+            },
+            {
+              "slug": "controls/settings/connections",
+              "title": "Connections",
+              "audience": "admin",
+              "depth": "howto"
+            },
+            {
+              "slug": "controls/settings/sign-in",
+              "title": "Sign-in and security",
+              "audience": "admin",
+              "depth": "howto"
+            }
+          ]
+        }
       ]
     },
     {

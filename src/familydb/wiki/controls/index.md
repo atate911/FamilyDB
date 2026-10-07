@@ -25,7 +25,7 @@ and the page asks about what they may do, never about their role by name.
 | **Setup** | A new install, one step at a time | admins |
 | **Look** and **Your password** | How the page looks for you, and your own password | everyone signed in |
 
-The Settings page is a card for each part:
+The [Settings pages](/wiki/controls/settings) are a card for each part:
 
 - **General**: where home is, the time zone, the page's title, dictation
 - **AI model**: which company answers, with which model, and its key
@@ -69,6 +69,5 @@ logs); [Running it over time](/wiki/operations) lists its commands.
 
 ## In this section
 
-**Still to come:** a page for each screen in the table, the Settings sections one by
-one with every setting and its default, Telegram's commands and buttons in full, and
-the command line.
+**Still to come:** a page for each screen in the table, Telegram's commands and buttons
+in full, and the command line.

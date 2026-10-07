@@ -246,3 +246,18 @@ def test_every_guide_page_has_the_search_box(app) -> None:  # noqa: F811
     client = _as_family(app)
     for url in ("/wiki", "/wiki/_search?q=start"):
         assert 'action="/wiki/_search"' in client.get(url).text, url
+
+
+# -- the settings reference names every setting
+
+
+def test_every_setting_is_named_on_a_settings_page() -> None:
+    """A new setting goes on its page of the guide, in the same change (CLAUDE.md)."""
+    from familydb.store.settings import BEHAVIOUR, PROFILE
+
+    text = "\n".join(
+        path.read_text("utf-8")
+        for path in (wiki.CONTENT_DIR / "controls" / "settings").glob("*.md")
+    )
+    missing = [key for key in (*BEHAVIOUR, *PROFILE) if f"`{key}`" not in text]
+    assert not missing, f"settings the guide does not name: {missing}"
