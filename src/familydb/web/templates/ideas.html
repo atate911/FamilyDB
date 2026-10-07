@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_ui.html" import icon, page_head, idea_tabs, idea_card, map_plot with context %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
+{% block body_class %}page-ideas{% endblock %}
 {% block content %}
   {# Somebody who does not browse the household (a kid) sees plain cards: no search, filters, count, map or workings (docs/STYLE.md, "A kid's screen"). #}
   {% if not grownup %}
@@ -21,7 +22,7 @@
     <form class="finder" method="get" action="{{ url_for('web.ideas') }}" role="search">
       <div class="searchbox">{{ icon('search') }}<label class="sr" for="q">Search ideas</label><input id="q" type="search" name="q" value="{{ selected.q }}" placeholder="Search ideas" /></div>
       <details class="disclose"{{ ' open' if filtered and (selected.kind or selected.who or selected.status) }}>
-        <summary>{{ icon('filter', size='sm') }}Filter <span class="val">{{ filter_words }}</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+        <summary>{{ icon('filter', size='sm') }}Narrow by kind, person or status <span class="val">{{ filter_words }}</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
         <div class="disclose__body finder__grid">
           <div class="field"><label class="field__label" for="f-kind">Kind</label>
             <select id="f-kind" name="kind"><option value="">Any kind</option>
@@ -37,29 +38,10 @@
             </select></div>
         </div>
       </details>
-      <button class="btn btn--quiet finder__go" type="submit">{{ icon('filter', size='sm') }}Filter</button>
+      <button class="btn btn--quiet finder__go" type="submit">{{ icon('search', size='sm') }}Search</button>
       {% if filtered %}<a class="linkbtn" href="{{ url_for('web.ideas') }}">Clear search and filters</a>{% endif %}
     </form>
 
-    {% if visitor().may('change') %}
-      <details class="card fold capture mt-4" id="capture">
-        <summary><h2>{{ icon('sparkle') }}Save a thought for later</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
-        <form class="fold__body form form--tight" method="post" action="{{ url_for('chat.send') }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
-          <input type="hidden" name="intent" value="save_idea" />
-          <p class="small muted">A restaurant, a food cart pod, a neighbourhood, a kids’ outing, a special occasion, or just a direction to explore. Write it the way you’d say it; {{ assistant }} organises it and says in the chat what she saved.</p>
-          <div class="field"><label class="field__label" for="capture-text">Your thought</label>
-            <textarea id="capture-text" name="text" required maxlength="3800" rows="3" data-dictate placeholder="Maybe explore the food carts in Portland with the kids on a sunny afternoon…"></textarea></div>
-          {% if not visitor().member %}
-            <div class="field"><label class="field__label" for="capture-who">From</label>
-              <select id="capture-who" name="who" required><option value="">Choose your name</option>
-                {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
-              </select></div>
-          {% endif %}
-          <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('sparkle') }}Organise in the chat</button><a class="linkbtn" href="{{ url_for('web.new_idea') }}">Or add an idea yourself</a></div>
-        </form>
-      </details>
-    {% endif %}
 
     <p class="muted mt-4">{{ rows | length }} idea{{ '' if rows | length == 1 else 's' }}{% if filtered %} match{{ 'es' if rows | length == 1 else '' }}{% endif %}{% if rows | length == limit %}, showing the first {{ limit }}{% endif %}</p>
     <h2 class="sr">{{ 'Matching ideas' if filtered else 'All ideas, newest first' }}</h2>
@@ -70,6 +52,26 @@
         {%- if filtered %}Nothing matches. <a href="{{ url_for('web.ideas') }}">Clear search and filters</a>
         {%- else %}No ideas yet. When someone says “we should try…”, {{ assistant }} saves it here.{% endif -%}
       </span></p>
+    {% endif %}
+
+    {% if visitor().may('change') %}
+      <details class="card fold capture jot mt-5" id="capture">
+        <summary><h2>{{ icon('sparkle') }}Save a thought for later</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+        <form class="fold__body form form--tight" method="post" action="{{ url_for('chat.send') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          <input type="hidden" name="intent" value="save_idea" />
+          <p class="small muted">A restaurant, a food cart pod, a neighborhood, a kids’ outing, a special occasion, or just a direction to explore. Write it the way you’d say it; {{ assistant }} organizes it and says in the chat what she saved.</p>
+          <div class="field"><label class="field__label" for="capture-text">Your thought</label>
+            <textarea id="capture-text" name="text" required maxlength="3800" rows="3" data-dictate placeholder="Maybe explore the food carts in Portland with the kids on a sunny afternoon…"></textarea></div>
+          {% if not visitor().member %}
+            <div class="field"><label class="field__label" for="capture-who">From</label>
+              <select id="capture-who" name="who" required><option value="">Choose your name</option>
+                {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
+              </select></div>
+          {% endif %}
+          <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('sparkle') }}Organize in the chat</button><a class="linkbtn" href="{{ url_for('web.new_idea') }}">Or add an idea yourself</a></div>
+        </form>
+      </details>
     {% endif %}
 
     {% if on_map %}

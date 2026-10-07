@@ -691,7 +691,7 @@ def test_the_messages_page_says_what_goes_out_unasked_and_how_often(page, conn) 
     listed = re.search(r'<section class="card sgroup" id="on-her-own".*?</section>', text, re.S)
     assert listed is not None
     shown = " ".join(listed.group(0).split())
-    assert "How did it go?" in shown and "1 sent in 30 days, the last 19 Sep, 10:00." in shown
+    assert "How did it go?" in shown and "1 sent in 30 days, the last 19 Sep, 10 am." in shown
     assert "Weekend ideas" in shown and "Nowhere chosen, so none is sent" in shown
     assert "Costs: one model call a week." in shown and 'href="#others">Change' in shown
     assert "How was Hopscotch on Saturday?" in shown and "a Telegram group" in shown

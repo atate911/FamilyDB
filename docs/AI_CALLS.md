@@ -59,7 +59,7 @@ Context has three layers, and every piece of information belongs to exactly one:
   (an enrichment turn writes only its own idea).
 - Some things are never the model's to decide, however asked: who may talk to the bot, what a
   setting is, how much may be spent, which model answers. The one exception is the family's own:
-  with `judgement_acts` at "within_cost", a judgement call's choice of model is put in by code when
+  with `judgement_acts` at "within_cost", a judgment call's choice of model is put in by code when
   it costs no more than the model it replaces, from options code drew up, and admins are told with a
   way to put it back (below).
 - Web access happens only in worker turns, with their own prompt, tool subset and search limit. The
@@ -102,7 +102,7 @@ Context has three layers, and every piece of information belongs to exactly one:
 | Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model, lookup level | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
 | Transcribe | a voice note from somebody on the family list, before its chat turn | the hearing model: OpenAI's speech-to-text or a Gemini model; never Claude, which takes no recordings | the recording, and one line naming the family, her and home so they are spelled right | nothing | its words, which become the message |
 | Judge | a question code filed when a change needs weighing (a model in use going with several to take its place, new models for a company in use, a refusal nobody could read), only while `judgements` is on; the day's questions together with the evening's lookups, a refusal at once; within `judgement_budget` a month | the model at `judgement_level` (best by default) of the lookup company | `prompts/judge.md`; model names, prices, releases, what the family's calls use a model for, a refusal's status and error text; never the family's messages | `give_judgement` only, choosing among the options code gave | one choice per question, which code checks and acts on within `judgement_acts` |
-| Price check | a price of a model in use the two price lists disagree on, filed like a judgement and asked with it | worker model, lookup level | `prompts/price_check.md`; the model and what each list says | web search (3), `report_price` | a price from the company's own page, taken only when it matches a list |
+| Price check | a price of a model in use the two price lists disagree on, filed like a judgment and asked with it | worker model, lookup level | `prompts/price_check.md`; the model and what each list says | web search (3), `report_price` | a price from the company's own page, taken only when it matches a list |
 | Look | a photo from somebody on the family list, before its chat turn, one call each for up to four of an album's; in a group, only one sent to the bot | the lookup model of the company that looks things up, with a lookup's effort | the picture, at most 1600 pixels on its long side and 3.9 MB (Claude counts its 5 MB on the base64), `prompts/look.md` and the same line of names | nothing | what it is and the words in it that matter, at most 120 words, which become the message |
 
 All go through one door, `agent/gateway.ask`, which runs the loop (`agent/loop.run_turn`): the
@@ -124,7 +124,7 @@ or picture is not kept. What the table does not say:
   about a tenth of a cent on the default model). A model that declines is recorded before the refusal
   is raised, since it was billed; a description cut short keeps a "…". An album is one message: its
   photos are gathered for a second and a half, up to four looked at, the family asked once. It uses
-  the lookup model (writing down what a picture says is extraction, not judgement) and is a call of
+  the lookup model (writing down what a picture says is extraction, not judgment) and is a call of
   its own, so the picture is sent once and what it showed stays in the conversation as words.
 
 **Judging a change** is the one call made for the install rather than the family's day
@@ -215,7 +215,7 @@ Under the gateway sits the composer (`agent/compose.py`), under that the provide
 | Composer | exactly what goes in, and (to come) turning what comes back into something usable |
 | Providers | each vendor's exact format, both ways |
 
-The composer builds every request from labelled parts: who the assistant is, the instructions, who
+The composer builds every request from labeled parts: who the assistant is, the instructions, who
 the family is, the idea list, where home is, the tool definitions, the recent conversation, the
 message with today's date, and the earlier steps of the same turn. Token efficiency is decided here,
 by choosing what goes in, not by squeezing words:

@@ -1,4 +1,4 @@
-"""A present is hidden from exactly the people it names, and the page says whom."""
+"""A present is kept from every kid and the grown-up it is for, and the page says whom."""
 
 from __future__ import annotations
 
@@ -30,56 +30,98 @@ def _people(conn):
     return members.list_all(conn)
 
 
-def test_a_present_is_kept_from_whoever_it_is_for(conn, kids) -> None:
+def test_a_present_is_kept_from_every_kid_and_says_so(conn, kids) -> None:
     lego = _present(conn, participants=["Theo"])
     both = _present(conn, "Board game", participants=["Maya", "Theo"])
     kept = presents.of_presents(conn, [lego, both], _people(conn))
-    assert kept[lego.id].words == "Theo" and kept[lego.id].label == "Hidden from Theo"
-    assert kept[both.id].words == "Maya and Theo"
-    assert kept[lego.id].ids == {kids["theo"].id}
-
-
-def test_a_grown_up_can_be_the_one_it_is_for(conn, kids) -> None:
-    scarf = _present(conn, "Scarf", participants=["Alex"])
-    assert presents.is_kept_from(conn, scarf, kids["alex"])  # new: Alex is a parent
-    assert not presents.is_kept_from(conn, scarf, kids["sam"])
-    assert not presents.is_kept_from(conn, scarf, kids["maya"])  # a kid may know, and is told
-
-
-def test_a_present_for_nobody_named_stays_kept_from_the_kids(conn, kids) -> None:
-    """As every present was before somebody could choose: saving one with no name shows nobody's
-    kids a surprise by accident."""
+    assert kept[lego.id].words == presents.KIDS and kept[lego.id].label == "Hidden from the kids"
+    assert kept[both.id].words == presents.KIDS  # a kid is never named: all of them are kept from
+    both_kids = {m.id for m in _people(conn) if m.role == "kid"}  # the fixture has a third
+    assert kept[lego.id].ids == both_kids == kept[both.id].ids
+    # Always, even for a present that is not for a kid, or names nobody.
     anything = _present(conn, "Something nice", participants=["whole family"])
-    kept = presents.of_presents(conn, [anything], _people(conn))[anything.id]
-    assert kept.words == presents.KIDS
-    assert presents.kept_ids(conn, kids["maya"]) == {anything.id}
+    assert presents.kept_ids(conn, kids["maya"]) == {lego.id, both.id, anything.id}
+    assert presents.kept_ids(conn, kids["theo"]) == {lego.id, both.id, anything.id}
+    assert presents.kept_ids(conn, kids["sam"]) == set()
+
+
+def test_a_grown_up_it_is_for_is_kept_from_too(conn, kids) -> None:
+    scarf = _present(conn, "Scarf", participants=["Alex"])
+    kept = presents.of_presents(conn, [scarf], _people(conn))[scarf.id]
+    assert kept.words == "the kids and Alex" and kept.label == "Hidden from the kids and Alex"
+    assert presents.is_kept_from(conn, scarf, kids["alex"])
+    assert presents.is_kept_from(conn, scarf, kids["maya"])
+    assert not presents.is_kept_from(conn, scarf, kids["sam"])
+
+
+def test_choosing_grown_ups_overrides_the_default_and_never_lets_a_kid_see_one(conn, kids) -> None:
+    scarf = _present(conn, "Scarf", participants=["Alex"])
+    with db.transaction(conn):
+        ideas.set_hidden_from(conn, scarf.id, [])  # a choice: kept from no grown-up
     assert presents.kept_ids(conn, kids["alex"]) == set()
-
-
-def test_choosing_overrides_the_default_even_with_nobody(conn, kids) -> None:
-    lego = _present(conn, participants=["Theo"])
+    assert presents.kept_ids(conn, kids["maya"]) == {scarf.id}  # kids by role, never by the list
+    assert presents.of_presents(conn, [scarf], _people(conn))[scarf.id].words == presents.KIDS
     with db.transaction(conn):
-        ideas.set_hidden_from(conn, lego.id, [kids["maya"].id, kids["theo"].id])
-    assert presents.kept_ids(conn, kids["maya"]) == {lego.id}
+        ideas.set_hidden_from(conn, scarf.id, [kids["sam"].id])
+    assert presents.kept_ids(conn, kids["sam"]) == {scarf.id}
     with db.transaction(conn):
-        ideas.set_hidden_from(conn, lego.id, [])  # kept from nobody: a choice, not the default
-    assert presents.kept_ids(conn, kids["theo"]) == set()
-    assert presents.of_presents(conn, [lego], _people(conn))[lego.id].words == ""
-    with db.transaction(conn):
-        ideas.set_hidden_from(conn, lego.id, None)  # back to whom it is for
-    assert presents.kept_ids(conn, kids["theo"]) == {lego.id}
+        ideas.set_hidden_from(conn, scarf.id, None)  # back to whom it is for
+    assert presents.kept_ids(conn, kids["alex"]) == {scarf.id}
 
 
 def test_choosing_exactly_the_default_keeps_following_whom_it_is_for(conn, kids) -> None:
-    lego = _present(conn, participants=["Theo"])
+    scarf = _present(conn, "Scarf", participants=["Alex"])
     with db.transaction(conn):
-        presents.choose(conn, lego, [kids["theo"].id])
-    assert ideas.chosen_hidden_from(conn, [lego.id]) == {lego.id: None}
+        presents.choose(conn, scarf, [kids["alex"].id, kids["maya"].id])  # a kid is ignored
+    assert ideas.chosen_hidden_from(conn, [scarf.id]) == {scarf.id: None}
     with db.transaction(conn):
-        presents.choose(conn, lego, [kids["theo"].id, kids["maya"].id])
-    assert ideas.chosen_hidden_from(conn, [lego.id]) == {
-        lego.id: sorted([kids["theo"].id, kids["maya"].id])
+        presents.choose(conn, scarf, [kids["alex"].id, kids["sam"].id])
+    assert ideas.chosen_hidden_from(conn, [scarf.id]) == {
+        scarf.id: sorted([kids["alex"].id, kids["sam"].id])
     }
+    with db.transaction(conn):
+        presents.choose(conn, scarf, [])
+    assert ideas.chosen_hidden_from(conn, [scarf.id]) == {scarf.id: []}
+
+
+def test_any_way_of_saying_present_is_a_present(conn, kids) -> None:
+    with db.transaction(conn):
+        for number, kind in enumerate(["Present", " gifts ", "gift idea"]):
+            ideas.insert(conn, title=f"Thing {number}", kind=kind, now=NOW_ISO)
+        moved = ideas.insert(conn, title="Plain", kind="outing", now=NOW_ISO)
+        ideas.update(conn, moved.id, {"kind": "Presents"})
+    assert {idea.kind for idea in ideas.list_all(conn)} == {"gift"}
+    assert len(presents.kept_ids(conn, kids["maya"])) == 4
+
+
+def test_a_to_do_about_a_present_is_kept_from_whoever_the_present_is(conn, kids) -> None:
+    from familydb.store import tasks
+
+    watch = _present(conn, "Alex's watch", participants=["Alex"])
+    with db.transaction(conn):
+        for title, idea_id in (("Order the watch", watch.id), ("Dentist", None)):
+            tasks.insert(
+                conn,
+                title=title,
+                notes="",
+                owner_id=kids["sam"].id,
+                due_at=None,
+                preferred_window="",
+                operation_key=title,
+                channel="console",
+                chat_id="c",
+                now=NOW_ISO,
+                idea_id=idea_id,
+            )
+    every = tasks.list_all(conn)
+
+    def seen(who):
+        return [task.title for task in presents.visible_tasks(conn, every, who)]
+
+    assert seen(kids["sam"]) == ["Order the watch", "Dentist"]
+    assert seen(kids["alex"]) == ["Dentist"]  # it is for him
+    assert seen(kids["maya"]) == ["Dentist"]
+    assert seen(None) == ["Order the watch", "Dentist"]
 
 
 def test_nothing_but_a_present_is_hidden_and_nobody_in_particular_sees_all(conn, kids) -> None:
@@ -94,7 +136,7 @@ def test_nothing_but_a_present_is_hidden_and_nobody_in_particular_sees_all(conn,
 def test_a_name_inside_another_word_is_not_a_name(conn, kids) -> None:
     other = _present(conn, "Hat", participants=["Matheo"])  # not Theo: it names nobody here
     kept = presents.of_presents(conn, [other], _people(conn))[other.id]
-    assert kept.words == presents.KIDS and "Theo" not in kept.words
+    assert kept.words == presents.KIDS and "Matheo" not in kept.words
 
 
 def test_the_words_for_a_list_of_people() -> None:

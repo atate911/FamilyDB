@@ -129,7 +129,7 @@ def test_a_late_reminder_worded_again_still_says_when_it_was_due(ctx):
     assert run_reminders(app) == 0
     update_task(ctx, UpdateTaskInput(task_id=task["id"], title="Buy kitchen roll"))
     queued = messages.get(ctx.conn, tasks.get(ctx.conn, task["id"]).reminder.message_id).text
-    assert "Buy kitchen roll" in queued and "was due Sun 20 Sep at 15:00" in queued
+    assert "Buy kitchen roll" in queued and "was due Sun 20 Sep at 3\u00a0pm" in queued
 
 
 def test_completion_cancels_queued_delivery_and_reopen_does_not_restore(ctx):

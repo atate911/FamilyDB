@@ -44,12 +44,10 @@ older than what is installed. It gets a date when it is released.
 - **A new Ideas, idea page, idea form and Restaurants.** Idea cards show whom each
   is for in their colours, how far away it is and whether it is a surprise; the map
   of how far each idea is from home now has each idea's name beside its dot, drawn
-  to fit a phone as well as a desktop. A present is now hidden from exactly the
-  people it names (by default whoever it is for, and anyone else you tick on the
-  idea), and every page that shows it says whom: "Hidden from Theo". That includes
-  a grown-up's own present, and a present for somebody else now shows to a kid,
-  tagged, so she knows to keep it quiet. A present that names nobody is still kept
-  from the kids, and Vera still never tells a kid of one in the chat.
+  to fit a phone as well as a desktop. A present is kept from every kid, always, and from the grown-up it is for (you can
+  keep it from another grown-up too on the idea), and every page that shows it says
+  whom: "Hidden from the kids and Alex". The to-dos about it are kept from the same
+  people, and Vera still never tells a kid of one in the chat.
 - **A new Kids' lists and What Vera knows.** Each kid's lists are one line to a
   wish that opens to its buttons, with a grip to drag it (where scripts run);
   a parent answers inside the line, sees what Vera turned away beside the list
@@ -84,7 +82,18 @@ older than what is installed. It gets a date when it is released.
 - **The old look's leftovers are gone.** Every page is on Kitchen Table now, so
   the old stylesheet, icon sheet, menu script and favicons are removed, and the
   home-screen icon and the page's tab icon are FamilyDB's own mark.
-
+- **After the design review.** Times are 12-hour ("9 am", "1:30 pm") and the page
+  is spelled the American way. Plans can be made, moved and canceled without Google
+  Calendar (FamilyDB keeps them, and copies them across once a calendar is connected).
+  The kids' card on Home counts what waits on the right kid, the phone's month draws a
+  dot for each person on a plan, and a kid never sees the tools Vera ran under her
+  replies (a grown-up reads what was done, in words). The chat is as high as the
+  window on a computer, can be told to stop updating itself, and clock times no longer
+  have a slashed zero. Ideas has one Search; on a phone Home puts the setup strip
+  under the plans; the top bar stays put and keeps clear of a notch; a place's phone
+  number can be tapped to call; an old browser that cannot do day-and-night colours
+  gets plain ones. A ticked-off to-do has an Undo, and a kid's To do keeps this week's
+  under "Done lately".
 
 ## v0.2.0 — second alpha (2026-10-05)
 

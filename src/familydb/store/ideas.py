@@ -29,6 +29,16 @@ KIND_SUGGESTIONS: tuple[str, ...] = (
 )
 # A present somebody would like: listed under their birthday's reminder, never offered to do.
 GIFT = "gift"
+# Other ways to say it, saved as "gift" so a present typed "present" is still kept from the kids.
+GIFT_WORDS = frozenset({GIFT, "gifts", "present", "presents", "gift idea", "gift ideas"})
+
+
+def normal_kind(kind: str) -> str:
+    """The kind as saved: any way of saying present is "gift"."""
+    kind = kind.strip()
+    return GIFT if kind.lower() in GIFT_WORDS else kind
+
+
 Setting = Literal["indoor", "outdoor", "either"]
 Weather = Literal["any", "dry", "warm", "snow"]
 Status = Literal["idea", "planned", "done", "dropped"]
@@ -164,7 +174,7 @@ def insert(
     if unknown:
         raise ValueError(f"unknown idea fields: {sorted(unknown)}")
     stamp = now or utcnow_iso()
-    data = _encode({"title": title, "kind": kind, **fields})
+    data = _encode({"title": title, "kind": normal_kind(kind), **fields})
     data["created_at"] = stamp
     data["updated_at"] = stamp
     columns = list(data)
@@ -184,6 +194,8 @@ def update(
     if unknown:
         raise ValueError(f"unknown idea fields: {sorted(unknown)}")
     data = _encode(changes)
+    if isinstance(data.get("kind"), str):
+        data["kind"] = normal_kind(data["kind"])
     data["updated_at"] = now or utcnow_iso()
     assignments = ", ".join(f"{column} = ?" for column in data)
     conn.execute(f"UPDATE ideas SET {assignments} WHERE id = ?", [*data.values(), idea_id])

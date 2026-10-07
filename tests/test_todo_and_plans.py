@@ -56,6 +56,20 @@ def test_a_day_says_what_is_on_it_and_what_is_still_to_rate() -> None:
     assert other["label"] is None and other["dots"] == []
 
 
+def test_a_day_draws_a_dot_for_each_person_and_the_house_only_for_everyone() -> None:
+    two = {**_row("2026-10-04", title="Roller rink", rid=1)}
+    two["people"] = [
+        {"name": "Maya", "slot": 3, "initial": "M"},
+        {"name": "Theo", "slot": 4, "initial": "T"},
+    ]
+    everyone = {**_row("2026-10-05", title="Picnic", rid=2)}
+    everyone["people"] = [{"name": views.EVERYONE, "slot": 0, "initial": ""}]
+    weeks = views.month_calendar([two, everyone], date(2026, 10, 1), date(2026, 10, 20))
+    days = {d["iso"]: d for w in weeks for d in w["days"]}
+    assert [dot["initial"] for dot in days["2026-10-04"]["dots"]] == ["M", "T"]
+    assert [dot["name"] for dot in days["2026-10-05"]["dots"]] == [views.EVERYONE]
+
+
 def test_a_plan_rated_from_the_month_goes_back_to_the_month(settings, clock, conn, family) -> None:
     with db.transaction(conn):
         idea = ideas.insert(conn, title="Silver Falls hike", kind="outing", now=NOW_ISO)

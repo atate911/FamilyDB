@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_ui.html" import icon, avatar, page_head, todo with context %}
-{% block title %}{{ 'To do' if grownup else 'My things to do' }} · {{ site_title }}{% endblock %}
+{% block title %}{{ 'To do' if grownup else 'My to-dos' }} · {{ site_title }}{% endblock %}
 {# One person to choose, as a pill: their colour and their letter, then their name. `value` is what the form sends. #}
 {% macro who_choice(value, one, checked=false, label=none) %}
   <label class="choice choice--person"><input type="radio" name="owner" value="{{ value }}"{% if checked %} checked{% endif %}><span>{{ avatar(one.slot, one.initial, 'sm') }}{{ label or one.name }}</span></label>
@@ -8,17 +8,20 @@
 {% block content %}
   {# Somebody who sees only their own (a kid): what is left for her, as Home lists it, no filters or workings (docs/STYLE.md, "A kid's screen"). #}
   {% if simple %}
-    {{ page_head('My things to do', 'What’s left for you, soonest first. Tell ' ~ assistant ~ ' to add one or to remind you.') }}
+    {{ page_head('My to-dos', 'What’s left for you, soonest first. Tell ' ~ assistant ~ ' to add one or to remind you.') }}
     {% if rows %}
       <ul class="todos mt-4">{% for row in rows %}{{ todo(row, 'tasks', mine=true) }}{% endfor %}</ul>
     {% else %}
       <p class="empty mt-4">{{ icon('todo') }}<span>Nothing to do right now.</span></p>
     {% endif %}
+    {% if lately %}
+      <h2 class="group-h" id="lately">{{ icon('check') }}Done lately · {{ lately | length }}</h2>
+      <ul class="todos">{% for row in lately %}{{ todo(row, 'tasks', mine=true, undo=true) }}{% endfor %}</ul>
+    {% endif %}
   {% else %}
     {% set lede = 'Errands, appointments to arrange, and things you mean to get done.' %}
     {% if status == 'open' and open_count %}{% set lede = lede ~ ' ' ~ open_count ~ ' open' ~ (', ' ~ late_count ~ ' of them late' if late_count else '') ~ '.' %}{% endif %}
     {{ page_head('To do', lede) }}
-    <p class="small muted mb-4">Times use {{ zone }}. A deadline or preferred window doesn’t set a reminder or book your calendar.</p>
 
     {% if visitor().may('change') %}
       <form class="card adder adder--todo" method="post" action="{{ url_for('edits.add_task') }}" aria-labelledby="h-add" novalidate>
@@ -41,13 +44,14 @@
             <details class="disclose">
               <summary>When, a reminder, repeats <span class="val">No deadline</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
               <div class="disclose__body adder__opts">
+                <p class="field__hint span-all">Times use {{ zone }}. A deadline or preferred window doesn’t set a reminder or book your calendar.</p>
                 <div class="field"><label class="field__label" for="q-due">Deadline <span class="opt">(optional)</span></label><input id="q-due" type="datetime-local" name="due_at" /></div>
                 <div class="field"><label class="field__label" for="q-win">Preferred window <span class="opt">(optional)</span></label><input id="q-win" type="text" name="preferred_window" maxlength="4000" placeholder="Some Saturday morning" /></div>
                 <div class="field"><label class="field__label" for="q-rem">Remind me at <span class="opt">(optional)</span></label><input id="q-rem" type="datetime-local" name="remind_at" /></div>
                 <div class="field"><label class="field__label" for="q-rep">Repeats</label>
                   <select id="q-rep" name="repeat" aria-describedby="q-rep-h">{% for value, label in repeat_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
                 <label class="check"><input type="checkbox" name="repeat_after_done" />Count from when it’s done</label>
-                <p class="field__hint span-all" id="q-rep-h">{{ icon('bell', size='sm') }} A repeat starts from the reminder: every week from Sunday 19:00, say. Counted from when it’s done, it comes round that long after each time it is ticked off. Reminders appear in the chat while FamilyDB is running; they aren’t phone notifications. With Telegram connected, they go there too.</p>
+                <p class="field__hint span-all" id="q-rep-h">{{ icon('bell', size='sm') }} A repeat starts from the reminder: every week from Sunday 7 pm, say. Counted from when it’s done, it comes round that long after each time it is ticked off. {{ reminders_said }}</p>
               </div>
             </details>
           </div>
@@ -57,7 +61,7 @@
 
     <div class="todo-bar">
       <nav class="seg" aria-label="Show">
-        {% for value, label in (('open', 'Open'), ('done', 'Done'), ('cancelled', 'Cancelled'), ('all', 'All')) %}
+        {% for value, label in (('open', 'Open'), ('done', 'Done'), ('cancelled', 'Canceled'), ('all', 'All')) %}
           <a href="{{ url_for('web.tasks', status=value, q=query or none) }}"{% if value == status %} aria-current="page"{% endif %}>{{ label }}{% if value == 'open' and open_count %} <span class="n">{{ open_count }}</span>{% endif %}</a>
         {% endfor %}
       </nav>
@@ -70,10 +74,10 @@
     {% if groups %}
       {% for group in groups %}
         <h2 class="group-h{{ ' group-h--late' if group.tone == 'late' }}"{% if loop.first %} id="list"{% endif %}>{% if group.tone == 'late' %}{{ icon('clock') }}{% endif %}{{ group.title }} · {{ group.rows | length }}</h2>
-        <ul class="todos">{% for row in group.rows %}{{ todo(row, 'tasks', edit=visitor().may('change')) }}{% endfor %}</ul>
+        <ul class="todos">{% for row in group.rows %}{{ todo(row, 'tasks', edit=visitor().may('change'), undo=true) }}{% endfor %}</ul>
       {% endfor %}
     {% elif rows %}
-      <ul class="todos mt-4">{% for row in rows %}{{ todo(row, 'tasks', edit=visitor().may('change')) }}{% endfor %}</ul>
+      <ul class="todos mt-4">{% for row in rows %}{{ todo(row, 'tasks', edit=visitor().may('change'), undo=true) }}{% endfor %}</ul>
     {% else %}
       <p class="empty mt-4">{{ icon('todo') }}<span>No to-dos match.{% if visitor().may('change') %} Add one above, or ask {{ assistant }}.{% endif %}</span></p>
     {% endif %}

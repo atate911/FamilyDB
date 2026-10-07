@@ -66,6 +66,7 @@
   --tile-md: 40px; --tile-lg: 56px;
   --target: 44px;
   --topbar-h: 56px; --tabbar-h: 68px;
+  --topbar-total: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
   --tabbar-total: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
 }
 
@@ -94,6 +95,9 @@ a:hover { color: var(--ink); }
 .num, .dt__d, .money, .figure dd, .day__n, .rank__n, .meter__scale { font-family: var(--font-num); font-variant-numeric: lining-nums tabular-nums; }
 /* money and clock times in running text: the same figures as the big money, so every zero is open */
 .fig { font-family: "Fraunces Text Figures", var(--font-text); font-variant-numeric: lining-nums; margin-inline: -0.03em; }
+/* headings break evenly, running text avoids a lone last word */
+h1, h2, h3, .lede { text-wrap: balance; }
+p, li, dd, .lede { text-wrap: pretty; }
 .muted { color: var(--ink-3); }
 .small { font-size: var(--t-meta); }
 .nowrap { white-space: nowrap; }
@@ -127,6 +131,8 @@ a:hover { color: var(--ink); }
 .nav a:hover { background: var(--card); color: var(--ink); }
 .nav a[aria-current="page"] { background: var(--here); color: var(--on-here); box-shadow: inset 3px 0 0 var(--here-icon), var(--shadow); }
 .nav a[aria-current="page"] .icon { color: var(--here-icon); }
+/* a quiet count on the current item reads in that item's own ink, not the dimmer one that was drawn for the page */
+.nav a[aria-current="page"] .badge--quiet { color: var(--on-here); }
 .nav .badge { margin-left: auto; }
 .nav-group { padding: var(--s5) var(--s3) var(--s2); }
 .me { margin-top: auto; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s3); align-items: center; padding: var(--s3); border-radius: var(--r-md); background: var(--card); border: 1px solid var(--line); }
@@ -144,7 +150,8 @@ a:hover { color: var(--ink); }
 /* the account corner of the sidebar: your password, and signing out (a form, so it's a POST) */
 .me__acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s3); margin-top: 2px; }
 .me__acts form { margin: 0; }
-.me__acts .textbtn { min-height: 32px; font-size: var(--t-sm); }
+.me__acts a { display: inline-flex; align-items: center; min-height: var(--target); }
+.me__acts .textbtn { min-height: var(--target); font-size: var(--t-sm); }
 .topbar, .tabbar { display: none; }
 
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s5); flex-wrap: wrap; margin-bottom: var(--s6); }
@@ -415,7 +422,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 /* 5.14 Health pill (same state everywhere) */
 /* When all is well the pill is quiet: Vera's soft green, the family's type, a still dot.
    The glass pill with the mono voice appears only when there is something to notice (writing back, resting, can't answer). */
-.pill-health { display: inline-flex; align-items: center; gap: var(--s2); min-height: 36px; padding: 0 var(--s3); border-radius: var(--r-pill); font-family: var(--font-text); font-size: var(--t-sm); font-weight: 700; text-decoration: none; background: var(--vera-soft); color: var(--vera); border: 1px solid var(--vera-line); align-self: flex-start; }
+.pill-health { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: 0 var(--s3); border-radius: var(--r-pill); font-family: var(--font-text); font-size: var(--t-sm); font-weight: 700; text-decoration: none; background: var(--vera-soft); color: var(--vera); border: 1px solid var(--vera-line); align-self: flex-start; }
 .pill-health:hover { color: var(--vera); border-color: var(--vera); }
 .pill-health::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .pill-health--busy, .pill-health--rest, .pill-health--down { font-family: var(--font-mono); font-weight: 400; background: var(--glass); border-color: var(--glass-line); }
@@ -687,8 +694,11 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 /* One instrument: the radar, in its own band after the idea cards (Ideas only) */
 .mapband { margin-top: var(--s7); }
 .mapband > h2 { font-size: var(--t-h2); margin-bottom: var(--s2); }
-.mapband__fold > summary { display: none; }
-.mapband__fold::details-content { content-visibility: visible; display: block; }
+/* the fold is always open on a wide screen; a browser that cannot do that (no ::details-content) keeps its summary so it still opens */
+@supports selector(::details-content) {
+  .mapband__fold > summary { display: none; }
+  .mapband__fold::details-content { content-visibility: visible; display: block; }
+}
 .mapband__cap { max-width: 72ch; margin-bottom: var(--s3); }
 .instrument__pane { background: var(--glass); border-radius: var(--r-lg); padding: var(--s3); box-shadow: inset 0 0 0 1px var(--glass-line); }
 .radar { display: block; width: 100%; max-width: 860px; height: auto; margin: 0 auto; }
@@ -995,13 +1005,16 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .adder--todo > h2, .adder--todo > input { grid-column: 1 / -1; }
 .adder--todo .choices > legend { margin-bottom: var(--s1); }
 .adder--todo { grid-template-columns: minmax(0, 1fr); }
-/* desktop: the box, then who and when, then Add as a full-width bar. The phone puts box and Add in one row. */
-.adder__row { display: contents; }
-.adder--todo .adder__btn { order: 10; grid-column: 1 / -1; justify-self: stretch; }
+/* one row to add at every width: the box, its mic if dictation is on, Add; who and when sit beneath */
+.adder__row { display: flex; gap: var(--s2); align-items: stretch; }
+.adder__row input { flex: 1; min-width: 0; }
+.adder--todo .adder__btn { flex: none; padding: 0 var(--s4); }
 .adder__more { order: 5; min-width: 0; }
-.adder__more > summary { display: none; }
-/* on the desktop the fold is always open; the summary only exists for the phone */
-.adder__more::details-content { content-visibility: visible; display: block; }
+/* on the desktop the fold is always open; the summary only exists for the phone, and for a browser without ::details-content */
+@supports selector(::details-content) {
+  .adder__more > summary { display: none; }
+  .adder__more::details-content { content-visibility: visible; display: block; }
+}
 .adder__more-body { display: grid; gap: var(--s3); }
 .adder .disclose { grid-column: 1 / -1; }
 .adder__opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); align-items: start; }
@@ -1131,7 +1144,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .side { display: none; }
   .desk-only { display: none !important; }
   .app { min-height: 0; }
-  .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--topbar-h); padding: 0 var(--s4); background: var(--band); border-bottom: 1px solid var(--band-line); }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); position: sticky; top: 0; z-index: 19; min-height: var(--topbar-total); padding: env(safe-area-inset-top, 0px) max(var(--s4), env(safe-area-inset-right, 0px)) 0 max(var(--s4), env(safe-area-inset-left, 0px)); background: var(--band); border-bottom: 1px solid var(--band-line); }
   .topbar .brand { padding: 0; }
   .topbar .brand svg { width: 30px; height: 30px; }
   .topbar .brand .wm { font-size: 1.25rem; }
@@ -1148,7 +1161,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .topbar .acct .dot { position: absolute; top: 4px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); border: 2px solid var(--band); }
   body { padding-bottom: var(--tabbar-total); }
   /* the fixed tab bar never hides the focused control */
-  html { scroll-padding-bottom: calc(var(--tabbar-total) + 16px); scroll-padding-top: 16px; }
+  html { scroll-padding-bottom: calc(var(--tabbar-total) + 16px); scroll-padding-top: calc(var(--topbar-total) + 16px); }
   .pill-health .long { display: none; }
   .pill-health .short { display: inline; }
   .btn--sm { min-height: var(--target); }
@@ -1161,7 +1174,8 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   /* Ask Vera on the phone: one row, so the next plan and anything late show on the first screen */
   .ask { padding: var(--s3) var(--s4) var(--s4); }
   .ask__head { margin-bottom: var(--s3); }
-  .ask__head p, .ask .composer__foot, .ask__last { display: none; }
+  /* a kid's line says who can read her chat and how many messages are left, so it stays */
+  .ask__head p, .ask .composer__foot:not(.composer__foot--kid), .ask__last { display: none; }
   .home-head__line { font-size: var(--t-md); }
   .ask__head h2 { font-size: var(--t-h3); }
   .ask textarea { min-height: 100px; padding: 12px 14px; font-size: var(--t-md); }
@@ -1209,9 +1223,6 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .toolbar { margin-top: var(--s4); }
 
   /* To do: one row to add a to-do at the top of the list; who, when and reminder fold beneath it */
-  .adder__row { display: flex; gap: var(--s2); align-items: stretch; }
-  .adder__row input { flex: 1; min-width: 0; }
-  .adder--todo .adder__btn { order: 0; flex: none; padding: 0 var(--s4); }
   .adder__more > summary { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s2); min-height: var(--target); padding: 6px 0; cursor: pointer; font-weight: 700; font-size: var(--t-meta); }
   .adder__more > summary::-webkit-details-marker { display: none; }
   .adder__more > summary .val { font-weight: 400; color: var(--ink-2); }
@@ -1310,11 +1321,11 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .srow__text b { font-size: var(--t-md); }
 
   /* Chat: an app-height room; the box is pinned, the thread opens at the newest */
-  .chat-page .main { padding: 0; }
-  .chat-page .foot { margin-left: var(--s4); margin-right: var(--s4); padding-bottom: var(--s4); }
+  .page-chat .main { padding: 0; }
+  .page-chat .foot { margin-left: var(--s4); margin-right: var(--s4); padding-bottom: var(--s4); }
   .convos__h { display: none; }
-  .chat-page .page-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
-  .chat { display: flex; flex-direction: column; gap: 0; height: calc(100vh - var(--topbar-h) - var(--tabbar-total)); height: calc(100dvh - var(--topbar-h) - var(--tabbar-total)); min-height: 0; }
+  .page-chat .page-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
+  .chat { display: flex; flex-direction: column; gap: 0; height: calc(100vh - var(--topbar-total) - var(--tabbar-total)); height: calc(100dvh - var(--topbar-total) - var(--tabbar-total)); min-height: 0; }
   .convos { display: flex; gap: var(--s2); overflow-x: auto; padding: var(--s3) var(--s4) var(--s2); scrollbar-width: none; flex: none; }
   .convo { flex: none; padding: 4px var(--s4) 4px 4px; border-radius: var(--r-pill); background: var(--card); border-color: var(--line-2); grid-template-columns: auto auto; gap: var(--s2); }
   .convo small { display: none; }
@@ -1347,6 +1358,14 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 @media (max-width: 820px) and (max-height: 560px) {
   .chat { height: auto; }
   .scroller { flex: none; overflow: visible; }
+}
+/* Desktop: the room is as high as the window, the thread scrolls inside it and the box stays on screen,
+   as on the phone. A short window falls back to the page scrolling. */
+@media (min-width: 821px) and (min-height: 600px) {
+  .chat { height: max(480px, calc(100dvh - 296px)); min-height: 0; }
+  .room { min-height: 0; }
+  .scroller { flex: 1 1 0; min-height: 0; overflow-y: auto; scroll-padding-top: 56px; }
+  .convos { overflow-y: auto; min-height: 0; }
 }
 .privacy--room { display: none; padding: var(--s2) var(--s4) var(--s3); font-size: var(--t-sm); }
 @media (min-width: 821px) { .chat .privacy--room { display: none; } }

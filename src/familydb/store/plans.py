@@ -20,6 +20,7 @@ EDITABLE_FIELDS = frozenset(
         "notes",
         "status",
         "google_event_id",
+        "calendar_id",
         "followed_up_at",
         "channel",
         "chat_id",

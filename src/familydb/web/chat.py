@@ -54,6 +54,8 @@ LATEST = "latest"
 NOBODY = "Say who is asking."
 NO_FAMILY = "There is nobody in the family list yet. Add someone on the Family page."
 RETRY_REFRESH_SECONDS = REFRESH_STEPS["retrying"][0]
+# `n` this far along asks no more: the page's own "Stop updating" link.
+STOP_LOOKING = len(REFRESH_STEPS["thinking"])
 # Slack on top of every attempt the settings allow, a retry interval apart.
 RETRY_SLACK_MINUTES = 5
 # What the page says in her place while the newest message waits: its words, no model call.
@@ -71,7 +73,7 @@ LOST = "That message was not answered. Send it again if it still matters."
 RETRYING_PLAIN = "{name} will answer that soon. The answer will show here when it arrives."
 PROMPT = "Message {name}"
 LOCKED = "You can write again once {name} has answered."
-HOME_PROMPT = "Plans for the weekend, an idea to keep, a reminder, the calendar…"
+HOME_PROMPT = "Ask, save an idea, set a reminder…"
 KID_HOME_PROMPT = "Something you\u2019d like, a question, something fun to do…"
 # Atop a kid's list: goes to her conversation, where it is sorted.
 KID_LIST_PROMPT = "Something you\u2019d like, a question, an idea… {name} will sort it out"
@@ -261,7 +263,8 @@ def page(
                 }
             ]
         left = messages_left(app, conn, visitor.member)
-    # The log keeps a turn's tool calls against the question; the page shows them under the answer.
+    # The log keeps a turn's tool calls against the question; the page shows them under the
+    # answer to those who browse the household. A kid never sees how it works (DESIGN.md 16).
     answered = {message.reply_to for message in thread if message.reply_to is not None}
     actions = {message.id: message.actions for message in thread}
     lines = [
@@ -269,7 +272,7 @@ def page(
             message,
             names,
             tz,
-            did=views.tools_used(actions.get(message.reply_to)),
+            did=views.tools_used(actions.get(message.reply_to)) if visitor.may("browse") else [],
             waiting=message.id not in answered,
             assistant=assistant,
             slots=slots,
@@ -315,6 +318,10 @@ def page(
                 "chat.show", n=looked + 1, **with_kid, _anchor=LATEST
             ),  # the next look, one further along
             check=url_for("chat.show", **with_kid, _anchor=LATEST),  # a look from the start
+            # Without this the page reloads itself with no way to stop it (WCAG 2.2.1).
+            stop=url_for("chat.show", n=STOP_LOOKING, **with_kid, _anchor=LATEST)
+            if refresh
+            else None,
             latest=LATEST,
             reading=reading.display_name if reading else None,
             private=kid_chat,

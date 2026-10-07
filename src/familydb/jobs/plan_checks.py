@@ -13,7 +13,7 @@ from datetime import date, timedelta
 from familydb import voice
 from familydb.app import App
 from familydb.calendar_sync import sync_plans
-from familydb.dates import utc_iso
+from familydb.dates import spoken_times, utc_iso
 from familydb.integrations.open_meteo import DayForecast
 from familydb.store import ideas, messages, places, plans
 from familydb.store.db import transaction
@@ -119,7 +119,7 @@ def _heads_up(
     hours = (
         f"listed as closed on {day:%A}s"
         if state == "closed"
-        else f"listed as open {format_ranges(ranges)} on {day:%A}s"
+        else f"listed as open {format_ranges(ranges, spoken=True)} on {day:%A}s"
     )
     said = voice.say(
         settings, "plan_closed", seed=plan.id, plan=label, place=place.name, hours=hours
@@ -192,7 +192,7 @@ def _backup(
     )
     if pick is None:
         return None
-    why = ", ".join(pick.reasons[:2])
+    why = spoken_times(", ".join(pick.reasons[:2]))
     return voice.say(
         app.settings, "plan_backup", seed=plan.id, idea=pick.idea_id, title=pick.title, why=why
     )

@@ -18,7 +18,9 @@ from typing import Any
 from flask import Blueprint, Response, current_app, flash, redirect, request, session, url_for
 from werkzeug.datastructures import MultiDict
 
+from familydb import presents
 from familydb.app import App
+from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.tools import ToolContext
 from familydb.web import auth, views
@@ -43,11 +45,13 @@ RECORDED = "Recorded. #{id} is marked done."
 FACES = {"loved": 9, "ok": 6, "not-great": 3}
 RATED = "Thanks. That goes into the next suggestions."
 SCHEDULED = "On the calendar: {title}."
+PLANNED_HERE = "Added to the plans: {title}. Google Calendar isn't connected, so it is not on it."
 MOVED = "Moved to {when}."
-CANCELLED = "Cancelled."
-TICKED = "Done: #{id} {title}."
+CANCELLED = "Canceled."
+TICKED = "Done: {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
+REOPENED = "Back on your list: {title}."
 LOOKING = "Looking {what} up now: within a few minutes."
 NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
@@ -191,6 +195,16 @@ def _say(message: str) -> None:
     flash(message, NOTICE)
 
 
+def _kept_note(idea_id: int) -> str:
+    """For a present, whom it is kept from, so saving one says who will not see it."""
+    with closing(_app().connect()) as conn:
+        idea = idea_store.get(conn, idea_id)
+        if idea is None or not idea_store.is_gift(idea):
+            return ""
+        kept = presents.of_presents(conn, [idea], member_store.list_all(conn))[idea_id]
+    return f" {kept.label}." if kept.words else ""
+
+
 def _hidden_from(form: Any) -> list[int] | None:
     """Whom the idea form's "Hidden from" boxes kept a present from. None where the form did not
     ask (a form without the boxes) or, on a new idea, nobody was ticked: nobody chose, so the
@@ -220,7 +234,7 @@ def add_idea() -> Response:
     if "duplicate_of" in result:
         _say(DUPLICATE.format(id=result["duplicate_of"]))
         return _back("web.idea", idea_id=result["duplicate_of"])
-    _say(SAVED_IDEA.format(id=result["id"], title=result["title"]))
+    _say(SAVED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(result["id"]))
     return _back("web.idea", idea_id=result["id"])
 
 
@@ -246,7 +260,7 @@ def edit_idea(idea_id: int) -> Response:
     if result is None:
         _say(complaint or "")
         return _back("web.edit_idea", idea_id=idea_id)
-    _say(CHANGED_IDEA.format(id=result["id"], title=result["title"]))
+    _say(CHANGED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(idea_id))
     return _back("web.idea", idea_id=idea_id)
 
 
@@ -349,7 +363,8 @@ def add_plan() -> Response:
     if result is None:
         _say(complaint or "")
     else:
-        _say(SCHEDULED.format(title=result["plan"]["title"]))
+        words = SCHEDULED if result.get("event") else PLANNED_HERE
+        _say(words.format(title=result["plan"]["title"]))
     return _back(back[0], **back[1])
 
 
@@ -430,7 +445,7 @@ def add_task() -> Response:
         if chosen:
             values.update(repeat_fields(chosen) or {})
         result, complaint = run("add_task", values)
-        _say(complaint or f"Saved task #{result['task']['id']}. Reminders appear in Chat.")
+        _say(complaint or f"Added to your to-dos: {result['task']['title']}.")
     return _back("web.tasks")
 
 
@@ -460,7 +475,7 @@ def edit_task(task_id: int) -> Response:
             else:
                 values["stop_repeating"] = True
         result, complaint = run("update_task", values)
-        _say(complaint or f"Updated task #{result['task']['id']}.")
+        _say(complaint or f"Saved your changes to {result['task']['title']}.")
         if complaint is None:
             return _back("web.tasks")
     return _back("web.edit_task", task_id=task_id)
@@ -480,6 +495,18 @@ def finish_task(task_id: int) -> Response:
         result, complaint = run("update_task", {"task_id": task_id, "status": "done"})
         said = TICKED if auth.visitor().may("browse") else TICKED_PLAIN
         _say(complaint or said.format(id=task_id, title=result["task"]["title"]))
+    return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/task/<int(max=9223372036854775807):task_id>/reopen")
+@once
+def reopen_task(task_id: int) -> Response:
+    """Undo a tick: the to-do is open again. Only the status is sent, as for the tick."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    else:
+        result, complaint = run("update_task", {"task_id": task_id, "status": "open"})
+        _say(complaint or REOPENED.format(title=result["task"]["title"]))
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
 
 

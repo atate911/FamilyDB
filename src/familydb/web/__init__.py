@@ -186,6 +186,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     # The new frame's pill and counts, read only by a page built on base.html.
     web.jinja_env.globals["shell_frame"] = lambda: shell.frame(app)
     web.jinja_env.globals["money"] = views.money_text
+    web.jinja_env.filters["figs"] = views.figs
+    web.jinja_env.globals["reminders_said"] = views.REMINDERS_SAID
 
     def every_page() -> dict[str, Any]:
         her = personas.active(app.settings)

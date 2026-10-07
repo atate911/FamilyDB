@@ -217,7 +217,7 @@ def test_a_tap_on_in_an_hour_turns_it_into_a_reminder(settings, conn, family) ->
         tap_id="t1",
         data=f"hour:{task.id}",
     )
-    assert "10:00 today" in f"{tapped.toast} {tapped.note}"
+    assert "10\u00a0am today" in f"{tapped.toast} {tapped.note}"
     assert tasks.get(conn, task.id).reminder is not None
 
 

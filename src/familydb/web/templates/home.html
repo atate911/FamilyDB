@@ -13,13 +13,6 @@
   </div>
   {% if not talk %}<h1 class="sr">{{ site_title }}</h1>{% endif %}
 
-  {% if setup %}
-    <div class="banner banner--warn banner--slim phone-only mt-2">
-      <span class="banner__ic">{{ icon('alert') }}</span>
-      <p class="banner__text"><b>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</b></p>
-      <a class="btn btn--quiet btn--sm" href="{{ url_for('setup.overview') }}">Continue</a>
-    </div>
-  {% endif %}
 
   <div class="home-grid mt-4">
     <div class="stack">
@@ -28,7 +21,7 @@
         <section class="ask o1" aria-labelledby="h-ask">
           <div class="ask__head">{{ vera_screen('lg', 'busy' if busy else 'hello') }}<div><p class="ask__who">{{ assistant }}</p><h1 id="h-ask" class="ask__q"><label for="text">What’s on your mind?</label></h1></div></div>
           {% include "_composer.html" %}
-          <p class="composer__foot mt-3">
+          <p class="composer__foot{{ ' composer__foot--kid' if not grownup }} mt-3">
             {%- if not grownup %}Goes to your own chat with {{ assistant }}{% if readers %}; {{ readers }} can read it{% endif %}.
               {%- if left is not none %} {{ left }} message{{ '' if left == 1 else 's' }} left today.{% endif %}
             {%- elif member %}Goes to the family chat as {{ member.display_name }}.
@@ -38,7 +31,7 @@
           {% if talk.state %}
             <p class="ask__last"><span class="ask__last-by">{{ assistant }}</span> {{ talk.note }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
           {% elif talk.line %}
-            <p class="ask__last"><span class="ask__last-by">{{ talk.line.who }}, {{ talk.line.when }}</span> {{ talk.line.text | truncate(180, true, '…') }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
+            <p class="ask__last"><span class="ask__last-by">{{ talk.line.who }}, {{ talk.line.when | figs }}</span> {{ talk.line.text | truncate(180, true, '…') }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
           {% endif %}
         </section>
       {% endif %}
@@ -52,8 +45,8 @@
               {% if first.relative %}<div class="next__tags"><span class="tag tag--when">{{ icon('cal') }}{{ first.relative | capitalize }}</span></div>{% endif %}
               <h3>{% if first.idea_id %}<a href="{{ url_for('web.idea', idea_id=first.idea_id) }}">{{ first.title }}</a>{% else %}{{ first.title }}{% endif %}</h3>
               <div class="meta">
-                <span class="sr">{{ first.when }}, </span>
-                {%- if first.time %}<span>{{ icon('clock') }}{{ first.time }}</span>{% endif -%}
+                <span class="sr">{{ first.when | figs }}, </span>
+                {%- if first.time %}<span>{{ icon('clock') }}{{ first.time | figs }}</span>{% endif -%}
                 {%- if first.away %}<span>{{ icon('car') }}{{ first.away }}</span>{% endif -%}
                 {{ people(first.people, first.who) }}
               </div>
@@ -68,8 +61,8 @@
                   <li><a class="item" href="{{ url_for('web.plans_month', _anchor='d-' ~ entry.day) if grownup else url_for('web.plans', _anchor='d-' ~ entry.day) }}">
                     {{ date_tile(entry.chip, entry.on_today, 'sm') }}
                     <span><span class="item__title">{{ entry.title }}</span>
-                      <span class="meta"><span class="sr">{{ entry.when }}, </span>
-                        {%- if entry.time %}<span>{{ entry.time }}</span>{% endif -%}
+                      <span class="meta"><span class="sr">{{ entry.when | figs }}, </span>
+                        {%- if entry.time %}<span>{{ entry.time | figs }}</span>{% endif -%}
                         {%- if entry.away and grownup %}<span>{{ entry.away }}</span>{% endif -%}
                         {{ people(entry.people, entry.who) }}</span></span>
                     {{ icon('chev', cls='muted') }}</a></li>
@@ -87,6 +80,14 @@
         {% endif %}
         {% if source != 'google' and grownup %}<p class="card__foot">{{ icon('info', size='sm') }} {{ source_note }}</p>{% endif %}
       </section>
+      {# On the phone the setup strip waits under the plans: what the family came for first. #}
+      {% if setup %}
+        <div class="banner banner--warn banner--slim phone-only o2">
+          <span class="banner__ic">{{ icon('alert') }}</span>
+          <p class="banner__text"><b>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</b></p>
+          <a class="btn btn--quiet btn--sm" href="{{ url_for('setup.overview') }}">Continue</a>
+        </div>
+      {% endif %}
 
       {% if grownup %}
         <section class="card o6" aria-labelledby="h-ideas">
@@ -149,7 +150,7 @@
       {% endif %}
 
       <section class="card {{ 'o3' if grownup else 'o4' }}" aria-labelledby="h-todo">
-        <div class="card__head"><h2 id="h-todo">{{ icon('todo') }}{{ 'To do' if grownup else 'My things to do' }}{% if late_count and grownup %} {{ badge('late', late_count, 'late') }}{% endif %}</h2>
+        <div class="card__head"><h2 id="h-todo">{{ icon('todo') }}{{ 'To do' if grownup else 'My to-dos' }}{% if late_count and grownup %} {{ badge('late', late_count, 'late') }}{% endif %}</h2>
           <a class="more" href="{{ url_for('web.tasks') }}">{{ ('All ' ~ task_count ~ (' to-do' if task_count == 1 else ' to-dos')) if task_count and grownup else 'All' }}{{ icon('chev', size='sm') }}</a></div>
         {% if tasks %}
           <ul class="todos todos--compact">
@@ -158,7 +159,7 @@
         {% else %}
           <p class="empty">{{ icon('todo') }}<span>{% if grownup %}No to-dos. Tell {{ assistant }} “remind me to call the dentist on Tuesday”, or add one on To do.{% else %}Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.{% endif %}</span></p>
         {% endif %}
-        {% if grownup %}<p class="card__foot">{{ icon('bell', size='sm') }} Reminders appear in the chat while FamilyDB is running; they aren’t phone notifications. With Telegram connected, they go there too.</p>{% endif %}
+        {% if grownup %}<p class="card__foot">{{ icon('bell', size='sm') }} {{ reminders_said }}</p>{% endif %}
       </section>
 
       {% if setup %}
@@ -180,7 +181,7 @@
             <input type="hidden" name="happened_on" value="{{ rating.day }}" />
             <input type="hidden" name="back" value="home" />
             <h2 class="card__head" id="h-rate">How did {{ rating.title }} go?</h2>
-            <p class="muted small">{{ rating.when }} · {{ assistant }} uses this for the next suggestions.</p>
+            <p class="muted small">{{ rating.when | figs }} · {{ assistant }} uses this for the next suggestions.</p>
             <span class="faces">
               <button class="face" type="submit" name="went" value="loved">{{ icon('smile') }}<span>Loved it</span><span class="sr"> ({{ rating.title }})</span></button>
               <button class="face" type="submit" name="went" value="ok">{{ icon('meh') }}<span>OK</span><span class="sr"> ({{ rating.title }})</span></button>

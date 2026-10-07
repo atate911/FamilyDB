@@ -9,12 +9,11 @@ This file is what the family decided and how it is built.
 
 ## What the family decided
 
-- **Sisters never see each other's wishes.** A present is hidden from exactly the people it names:
-  whoever it is for, unless somebody chooses others (or nobody) on the idea, and every page that
-  shows it says whom it is hidden from ("Hidden from Chloe"), so a sister who may know can keep
-  it quiet. A present that names nobody is kept from the kids, as every present once was. Vera
-  never tells a kid of a present in the chat, and a grown-up's own present is kept from them too
-  (`familydb/presents.py`).
+- **Sisters never see each other's wishes.** A present is kept from every kid, always, and from
+  the grown-up it is for; a grown-up may keep one from another grown-up too (chosen on the idea),
+  and every page and the flash on saving say whom it is hidden from ("Hidden from the kids and
+  Alex"). The to-dos about it (`tasks.idea_id`) are kept from the same people. Vera never tells a
+  kid of a present in the chat (`familydb/presents.py`).
 - **The girls use iPads, through the page.** No Telegram for them. Each has a private conversation
   with Vera that the parents can read. Everything goes through tools, so another home app can be
   connected later.
@@ -44,7 +43,7 @@ This file is what the family decided and how it is built.
   look at the lists when they choose.
 - **"We should" becomes "I want"**: Vera nudges her wording at most once a day, more often the more
   she says "we should", less as she improves, with a warm word now and then when she says "I want".
-- **The kids' screens** are the same Phosphor look, optimised for an iPad, with limited changes.
+- **The kids' screens** are the same Phosphor look, optimized for an iPad, with limited changes.
 - **Tokens**: as few as possible go to the model.
 - **Chores for money** are not part of this.
 
@@ -121,7 +120,7 @@ Every message from a kid carries one line in the current (uncached) turn, built 
 phone. Wording: nudge.` Her topics go only where nobody else reads the reply; at most twelve, locked
 first; usually under 30 tokens. The cached prefix grew by about 800 tokens (the three tools and a
 short section of `prompts/system.md`), read from the cache on every message. The evals in
-`evals/cases.py` (`wish_*`, with Mia in `evals/household.py`) hold the behaviour.
+`evals/cases.py` (`wish_*`, with Mia in `evals/household.py`) hold the behavior.
 
 ### Wording
 

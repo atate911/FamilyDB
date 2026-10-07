@@ -28,6 +28,9 @@ from familydb.store.db import to_json, transaction
 from familydb.tools.registry import ToolContext, tool
 
 NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or key configured)"
+# What a plan tool says when there is no calendar: the plan is kept by FamilyDB alone.
+FAMILYDB_ONLY = "Saved in FamilyDB only: Google Calendar is not connected, so nothing is on it."
+OTHER_CALENDAR_OFF = "this plan is on Google Calendar, which is not connected now"
 MAX_WINDOW_DAYS = 60
 DEFAULT_DURATION = timedelta(hours=2)
 # plan field -> Google event field
@@ -93,6 +96,7 @@ def search_plans(ctx: ToolContext, args: SearchPlansInput) -> dict[str, Any]:
     checked = ctx.calendar is not None
     if checked:
         sync_plans(ctx.conn, ctx.calendar, ctx.settings.google_calendar_id, ctx.now_iso())
+        copy_local_plans(ctx)
     rows = ctx.conn.execute(
         "SELECT * FROM plans WHERE lower(title) LIKE ? AND (? OR status != 'cancelled') "
         "ORDER BY start DESC LIMIT 50",
@@ -111,6 +115,43 @@ def _calendar(ctx: ToolContext) -> CalendarAPI:
     if ctx.calendar is None:
         raise ToolUnavailable(NOT_CONFIGURED)
     return ctx.calendar
+
+
+def copy_to_google(ctx: ToolContext, plan: plans.Plan) -> plans.Plan:
+    """Put a plan that FamilyDB alone kept on the calendar, now that there is one. The event has
+    an id made from the plan's number, so a retry after a lost answer finds the event it made."""
+    calendar = _calendar(ctx)
+    start, end, all_day, _, _ = _timed_or_all_day(plan.start, plan.end, plan.all_day, ctx.clock.tz)
+    event_id = hashlib.sha1(f"plan:{plan.id}".encode()).hexdigest()
+    event = calendar.get_event(event_id) or calendar.insert_event(
+        title=plan.title,
+        start=start,
+        end=end,
+        all_day=all_day,
+        location=plan.location,
+        description=plan.notes,
+        event_id=event_id,
+    )
+    with transaction(ctx.conn):
+        updated = plans.update(
+            ctx.conn,
+            plan.id,
+            {"google_event_id": event.id, "calendar_id": ctx.settings.google_calendar_id},
+            now=ctx.now_iso(),
+        )
+    return updated or plan
+
+
+def copy_local_plans(ctx: ToolContext) -> None:
+    """Copy each plan still to come that FamilyDB kept alone to the calendar, once there is one."""
+    today = ctx.clock.today().isoformat()
+    rows = ctx.conn.execute(
+        "SELECT * FROM plans WHERE google_event_id IS NULL AND status != 'cancelled' "
+        "AND substr(coalesce(end, start), 1, 10) >= ? ORDER BY start LIMIT 20",
+        (today,),
+    ).fetchall()
+    for row in rows:
+        copy_to_google(ctx, plans.Plan.from_row(row))
 
 
 def _timed_or_all_day(
@@ -196,6 +237,7 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
         raise ToolError(f"ask for at most {MAX_WINDOW_DAYS} days at a time")
     days = calendar_days(calendar, start, end, ctx.clock.tz)
     sync_plans(ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso())
+    copy_local_plans(ctx)
     owned = {
         event_id: plan.id
         for event_id, plan in plans.by_google_event(
@@ -223,21 +265,22 @@ def _created(ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None) ->
 @tool(
     name="create_event",
     description=(
-        "Put a confirmed plan on the shared family calendar and link it to an idea. Resolve the "
-        "date yourself and echo it back to the family afterwards. Returns the plan number."
+        "Put a confirmed plan on the family's plans, and on the shared family calendar when one "
+        "is connected, and link it to an idea. Resolve the date yourself and echo it back to the "
+        "family afterwards. Returns the plan number."
     ),
-    available=calendar_available,
-    unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
 def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
-    calendar = _calendar(ctx)
+    calendar = ctx.calendar
     tz = ctx.clock.tz
     if args.idea_id is not None and ideas.get(ctx.conn, args.idea_id) is None:
         raise ToolError(f"no idea #{args.idea_id}")
     start, end, all_day, stored_start, stored_end = _timed_or_all_day(
         args.start, args.end, args.all_day, tz
     )
+    if calendar is None:
+        return _create_here(ctx, args, start, all_day, stored_start, stored_end)
     # Persist identity before contacting Google, so the same request and event intent reuse it
     # after a crash or a lost response.
     scope = (
@@ -308,10 +351,49 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         return _created(ctx, plan, event)
 
 
+def _create_here(
+    ctx: ToolContext,
+    args: CreateEventInput,
+    start: datetime | date,
+    all_day: bool,
+    stored_start: str,
+    stored_end: str | None,
+) -> dict[str, Any]:
+    """A plan with no calendar to put it on: FamilyDB keeps it, and copies it to Google if one is
+    connected later. Asking twice for the same plan finds the one already made."""
+    title = args.title.strip()
+    twin = ctx.conn.execute(
+        "SELECT * FROM plans WHERE status != 'cancelled' AND lower(title) = ? AND start = ? "
+        "AND end IS ? AND idea_id IS ?",
+        (title.casefold(), stored_start, stored_end, args.idea_id),
+    ).fetchone()
+    if twin is not None:
+        return {**_created(ctx, plans.Plan.from_row(twin), None), "note": FAMILYDB_ONLY}
+    ensure_not_past(start, ctx.clock)
+    origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
+    with transaction(ctx.conn):
+        plan = plans.insert(
+            ctx.conn,
+            title=title,
+            start=stored_start,
+            end=stored_end,
+            all_day=all_day,
+            idea_id=args.idea_id,
+            location=args.location,
+            notes=args.notes,
+            created_by=ctx.member.id if ctx.member else None,
+            channel=origin.channel if origin else None,
+            chat_id=origin.chat_id if origin else None,
+            now=ctx.now_iso(),
+        )
+        if args.idea_id is not None:
+            ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
+        return {**_created(ctx, plan, None), "note": FAMILYDB_ONLY}
+
+
 def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
-    calendar = _calendar(ctx)
     if plan.google_event_id:
-        calendar.delete_event(plan.google_event_id)
+        _calendar(ctx).delete_event(plan.google_event_id)
     with transaction(ctx.conn):
         updated = plans.update(ctx.conn, plan.id, {"status": "cancelled"}, now=ctx.now_iso())
         idea = None
@@ -332,9 +414,9 @@ def _target(
     always worked on as its plan, so plan and idea stay in step."""
     if (plan_id is None) == (event_id is None):
         raise ToolError("give plan_id, or event_id for an event put on the calendar by hand")
-    calendar = _calendar(ctx)
     if plan_id is None:
         assert event_id is not None
+        calendar = _calendar(ctx)
         owned = plans.for_event(ctx.conn, event_id)
         if owned is None or owned.calendar_id != ctx.settings.google_calendar_id:
             event = calendar.get_event(event_id)
@@ -345,6 +427,10 @@ def _target(
     plan = plans.get(ctx.conn, plan_id)
     if plan is None:
         raise ToolError(f"no plan #{plan_id}")
+    if plan.google_event_id is None:  # FamilyDB's own, whether or not there is a calendar now
+        return plan, None
+    if ctx.calendar is None:
+        raise ToolError(OTHER_CALENDAR_OFF)
     if plan.calendar_id != ctx.settings.google_calendar_id:
         raise ToolError("this plan belongs to a different calendar")
     return plan, None
@@ -363,17 +449,18 @@ def _remove_event(ctx: ToolContext, event: CalendarEvent) -> dict[str, Any]:
         "the start keeps the plan's length. An event put on the calendar by hand is changed by "
         "its event_id."
     ),
-    available=calendar_available,
-    unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
 def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
-    calendar = _calendar(ctx)
+    calendar = ctx.calendar
     plan, event = _target(ctx, args.plan_id, args.event_id)
-    if plan is not None:
+    if plan is not None and calendar is not None:
+        if plan.google_event_id is None and plan.status != "cancelled":
+            plan = copy_to_google(ctx, plan)  # it was kept here before there was a calendar
         plan = refresh_plan(
             ctx.conn, calendar, plan, ctx.settings.google_calendar_id, ctx.now_iso()
         )
+    if plan is not None:
         if plan.status == "cancelled":
             raise ToolError(f"plan #{plan.id} is cancelled; create a new event instead")
         if args.status == "cancelled":
@@ -418,17 +505,18 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
     if not changes:
         raise ToolError("nothing to change")
     if plan is None:
-        assert event is not None
+        assert event is not None and calendar is not None
         moved = calendar.patch_event(event.id, **patch)
         return {"plan": None, "event": moved.to_public(), "was": event.to_public()}
     patched = None
-    if patch and plan.google_event_id:
+    if patch and plan.google_event_id and calendar is not None:
         patched = calendar.patch_event(plan.google_event_id, **patch)
     with transaction(ctx.conn):
         updated = plans.update(ctx.conn, plan.id, changes, now=ctx.now_iso())
     return {
         "plan": updated.model_dump(mode="json") if updated else None,
         "event": patched.to_public() if patched else None,
+        **({"note": FAMILYDB_ONLY} if calendar is None else {}),
     }
 
 
@@ -438,8 +526,6 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
         "Take something off the calendar entirely: a plan by plan_id, or an event put there by "
         "hand by its event_id. Prefer cancelling a plan via update_event."
     ),
-    available=calendar_available,
-    unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
 def delete_event(ctx: ToolContext, args: DeleteEventInput) -> dict[str, Any]:

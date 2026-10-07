@@ -21,7 +21,7 @@ from familydb.availability import (
     weather_available,
     web_is_public,
 )
-from familydb.dates import utc_iso
+from familydb.dates import hour_words, utc_iso
 from familydb.integrations.google_calendar import service_account_email
 from familydb.store import alerts as alert_store
 from familydb.store import calls, ideas, members, messages
@@ -893,7 +893,7 @@ def automatic(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
     settings, tz = app.settings, app.settings.tzinfo
     since = utc_iso(app.clock.now() - timedelta(days=AUTOMATIC_DAYS))
     counts = messages.sent_on_their_own_counts(conn, since=since)
-    hour = "{:02d}:00".format
+    hour = hour_words
     digest_chat = dict(digest_chats(conn, tz)).get(settings.digest_chat_id, settings.digest_chat_id)
     state = {
         "weekend": (

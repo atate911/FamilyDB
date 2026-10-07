@@ -22,7 +22,7 @@ from flask import (
 from familydb import agenda, personas, presents, roles
 from familydb.app import App
 from familydb.availability import calendar_available, enrichment_available
-from familydb.dates import next_birthday
+from familydb.dates import next_birthday, utc_iso
 from familydb.store import calls
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
@@ -51,6 +51,8 @@ RATINGS = tuple(range(10, 0, -1))
 RESTAURANT_KIND = "restaurant"
 FILTERS = ("q", "kind", "status", "who")
 HOME_AHEAD_DAYS = 60
+# A kid's To do page keeps what she ticked off this long, with a way to undo it.
+DONE_LATELY_DAYS = 7
 HOME_PLANS = 4
 HOME_IDEAS = 4
 HOME_TASKS = 4
@@ -153,7 +155,9 @@ def home() -> Response | str:
         everything = [idea for idea in idea_store.list_all(conn) if idea.id not in kept]
         unfinished = status_page.setup_steps(app, conn) if manages else []
         people = member_store.list_all(conn)
-        todo = task_store.list_all(conn, status="open", owner_id=_own_only())
+        todo = presents.visible_tasks(
+            conn, task_store.list_all(conn, status="open", owner_id=_own_only()), visitor.member
+        )
         talk = chat.glance(app, conn) if talks else None
         wished = wish_glance(conn, today)
         slots = views.slot_map(people)
@@ -299,7 +303,7 @@ def _kids_card(wished: dict[str, Any] | None, people: list[member_store.Member])
     cards = []
     for kid in wished["kids"]:
         person = by_id.get(kid["id"])
-        waiting = sum(1 for row in wished["waiting"] if row["id"] == kid["id"])
+        waiting = sum(1 for row in wished["waiting"] if row["kid_id"] == kid["id"])
         pronoun = {"female": "her", "male": "his"}.get(person.gender or "", "their")
         cards.append(
             {
@@ -436,7 +440,8 @@ def idea(idea_id: int) -> str:
         original_by=views.original_by(original, family, settings.tzinfo) if original else None,
         today=today.isoformat(),
         ratings=RATINGS,
-        can_schedule=calendar_available(settings),
+        can_schedule=True,  # FamilyDB keeps its own plans, and copies them to Google when it can
+        on_google=calendar_available(settings),
         can_look_up=enrichment_available(settings) and record.status != "dropped",
         looked_up=looked_up,
         lookups=views.lookups_when(settings),
@@ -478,7 +483,9 @@ def _idea_form(record: Any = None) -> str:
         seasons=SEASONS,
         costs=COSTS,
         family=family,
-        keepable=[member for member in people if member.active],
+        keepable=[
+            member for member in people if member.active and roles.may(member.role, "decide")
+        ],
         kept_ids=sorted(kept.ids) if kept else [],
         suggested_by=by,
         added=views.day_short(
@@ -604,7 +611,8 @@ def plans() -> str:
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
         today=today.isoformat(),
-        can_schedule=calendar_available(app.settings),
+        can_schedule=True,
+        on_google=calendar_available(app.settings),
         **asking,
     )
 
@@ -678,17 +686,30 @@ def tasks() -> str:
         status = "open"
     visitor = auth.visitor()
     with closing(app.connect()) as conn:
-        rows = task_store.list_all(
+        rows = presents.visible_tasks(
             conn,
-            status=status,
-            query="" if simple else request.args.get("q", ""),
-            owner_id=_own_only(),
+            task_store.list_all(
+                conn,
+                status=status,
+                query="" if simple else request.args.get("q", ""),
+                owner_id=_own_only(),
+            ),
+            visitor.member,
         )
         open_count = (
             len(rows) if status == "open" and not request.args.get("q") else _open_count(conn)
         )
         people = member_store.list_all(conn)
         creators = task_store.creators(conn, [task.id for task in rows]) if simple else {}
+        done_lately = (
+            presents.visible_tasks(
+                conn,
+                task_store.list_all(conn, status="done", owner_id=_own_only()),
+                visitor.member,
+            )
+            if simple
+            else []
+        )
     today = app.clock.today()
     tz = app.settings.tzinfo
     slots = views.slot_map(people)
@@ -706,10 +727,17 @@ def tasks() -> str:
         for task in rows
     ]
     groups = _todo_groups(shown) if status == "open" and not simple else []
+    since = utc_iso(app.clock.now() - timedelta(days=DONE_LATELY_DAYS))
+    lately = [
+        views.todo_page_row(task, tz, today, slots, kid=True, me=visitor.name)
+        for task in done_lately
+        if task.updated_at >= since
+    ]
     return render_template(
         "tasks.html",
         simple=simple,
         rows=shown,
+        lately=lately,
         groups=groups,
         open_count=open_count,
         late_count=sum(1 for row in shown if row["late"]) if status == "open" else None,
@@ -723,7 +751,8 @@ def tasks() -> str:
 
 
 def _open_count(conn: Any) -> int:
-    return len(task_store.list_all(conn, status="open", owner_id=_own_only()))
+    found = task_store.list_all(conn, status="open", owner_id=_own_only())
+    return len(presents.visible_tasks(conn, found, auth.visitor().member))
 
 
 def _todo_groups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -743,7 +772,7 @@ def edit_task(task_id: int) -> str:
     app = _app()
     with closing(app.connect()) as conn:
         task = task_store.get(conn, task_id)
-        if task is None:
+        if task is None or not presents.visible_tasks(conn, [task], auth.visitor().member):
             abort(404)
         people = member_store.list_all(conn)
         made_by = task_store.creators(conn, [task.id]).get(task.id)
@@ -833,7 +862,7 @@ def wish_glance(conn: Any, today: date) -> dict[str, Any] | None:
         if not kids:
             return None
         waiting = [
-            {"kid": kid["name"], "id": kid["id"], **row}
+            {**row, "kid": kid["name"], "kid_id": kid["id"]}
             for kid in kids
             for row in kid["turned"]
             if row["review"] == "asked" or row["concern"] == views.CONCERN_WORDS["inappropriate"]

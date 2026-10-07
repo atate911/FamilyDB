@@ -7,6 +7,7 @@ import calendar as months
 import difflib
 import json
 import math
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -16,10 +17,13 @@ from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
+from markupsafe import Markup, escape
+
 from familydb import alerts, presents, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, prices
 from familydb.config import Settings
+from familydb.dates import clock_time, hour_words
 from familydb.integrations.geocode import estimate_travel
 from familydb.memory import words
 from familydb.store.ideas import Idea
@@ -155,7 +159,11 @@ def on_text(idea: Idea) -> str | None:
     first, last = idea.first_day, idea.last_day
     if first is None:
         return None
-    time = f", {idea.happens_from[11:16]}" if idea.happens_from and "T" in idea.happens_from else ""
+    time = (
+        f", {clock_time(idea.happens_from)}"
+        if idea.happens_from and "T" in idea.happens_from
+        else ""
+    )
     if last is None:
         return f"from {first:%a} {first.day} {first:%b %Y}{time}"
     if last == first:
@@ -379,7 +387,7 @@ def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
     if task.due_at:
         moment = datetime.fromisoformat(task.due_at.replace("Z", "+00:00")).astimezone(tz)
         day = relative_text(moment.date().isoformat(), today)
-        due = f"was due {day}" if late else f"due {day}, {moment:%H:%M}"
+        due = f"was due {day}" if late else f"due {day}, {clock_time(moment)}"
     return {
         "id": task.id,
         "title": task.title,
@@ -396,6 +404,29 @@ def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
 
 NUMBER_WORDS = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
 EVERYONE = "Everyone"
+
+
+_CLOCK = re.compile(r"\d{1,2}(?::\d{2})?\u00a0[ap]m")
+
+
+def figs(text: Any) -> Markup:
+    """Clock times in running text ("6:30 pm") in Fraunces' figures, so no zero is slashed (Atkinson
+    Hyperlegible's is). Everything else in the text is escaped as it always is."""
+    text = str(text)
+    out, last = [], 0
+    for found in _CLOCK.finditer(text):
+        out += [escape(text[last : found.start()]), Markup('<span class="fig">'), escape(found[0])]
+        out += [Markup("</span>")]
+        last = found.end()
+    out.append(escape(text[last:]))
+    return Markup("").join(out)
+
+
+# The one sentence about where reminders go, said the same on every page that says it.
+REMINDERS_SAID = (
+    "Reminders appear in the chat while FamilyDB is running, and in Telegram when it is connected. "
+    "They aren\u2019t phone notifications."
+)
 
 
 def money_text(dollars: float) -> str:
@@ -483,7 +514,7 @@ def todo_row(
         due = moment.date()
         when = day_short(due)
         if (moment.hour, moment.minute) != (0, 0):
-            when += f", {moment:%H:%M}"
+            when += f", {clock_time(moment)}"
         late = late_words(due, today, kid=kid)
         if kid and late is None and (ahead := relative_text(due.isoformat(), today)):
             when += f", {ahead}"
@@ -685,7 +716,7 @@ def hours_rows(place: Place | None) -> list[dict[str, str]]:
         elif not ranges:
             text = "closed"
         else:
-            text = format_ranges(ranges) or "closed"
+            text = format_ranges(ranges, spoken=True) or "closed"
         rows.append({"day": DAY_NAMES[key], "hours": text})
     return rows
 
@@ -717,11 +748,17 @@ def freshness_text(place: Place | None, now: datetime, stale_days: int) -> str |
     return f"{when}, may be out of date" if is_stale(place, now, stale_days) else when
 
 
+def phone_href(phone: str | None) -> str | None:
+    """A tel: link for a number a place has, or None where it is not one a phone could dial."""
+    digits = re.sub(r"[^\d+]", "", phone or "")
+    return f"tel:{digits}" if len(digits.lstrip("+")) >= 7 else None
+
+
 def hours_today(place: Place | None, today: date) -> str | None:
-    """ "open today 11:30 to 21:00", "closed today", or None where the hours are not known."""
+    """ "open today 11:30 am to 9 pm", "closed today", or None where the hours are not known."""
     state, ranges = open_on(place, today)
     words = TODAY_HOURS[state]
-    return words.format(ranges=format_ranges(ranges) or "").strip() if words else None
+    return words.format(ranges=format_ranges(ranges, spoken=True) or "").strip() if words else None
 
 
 def place_panel(
@@ -735,6 +772,7 @@ def place_panel(
         "summary": place.summary,
         "address": place.address,
         "phone": place.phone,
+        "phone_href": phone_href(place.phone),
         "website": clean_url(place.website),
         "booking_url": clean_url(place.booking_url),
         "price_note": place.price_note,
@@ -784,7 +822,7 @@ def day_text(value: str) -> str:
         moment = datetime.fromisoformat(stamp)
     except ValueError:
         return stamp
-    return f"{moment:%A} {moment.day} {moment:%B}, {moment:%H:%M}"
+    return f"{moment:%A} {moment.day} {moment:%B}, {clock_time(moment)}"
 
 
 def date_chip(value: str) -> dict[str, Any] | None:
@@ -854,7 +892,7 @@ def entry_row(
         "idea_id": entry.idea_id,
         "title": entry.title,
         "when": when,
-        "time": None if entry.all_day else entry.start[11:16],
+        "time": None if entry.all_day else clock_time(entry.start),
         "relative": "now" if days[0] < today <= days[-1] else relative_text(entry.start, today),
         "chip": date_chip(entry.start),
         "on_today": days[0] <= today <= days[-1],
@@ -960,13 +998,12 @@ def month_calendar(
                     "current": day.month == first.month,
                     "today": day == today,
                     "weekend": day.weekday() >= 5,
+                    # One dot for each person a plan is for, so two people never read as the house.
                     "dots": [
-                        {
-                            **(r["people"][0] if len(r["people"]) == 1 else people_dot()),
-                            "past": day < today,
-                        }
-                        for r in today_rows[:3]
-                    ],
+                        {**person, "past": day < today}
+                        for r in today_rows
+                        for person in (r["people"] or [people_dot()])
+                    ][:3],
                     "label": _spoken(day, today_rows, unrated) if today_rows else None,
                     # The first plan that day still to be rated, so the day links to its faces.
                     "rate": next((r["id"] for r in today_rows if r["id"] in unrated), None),
@@ -987,7 +1024,7 @@ def month_calendar(
 
 
 def people_dot() -> dict[str, Any]:
-    """The marker for a plan that is for several people or everyone: the house."""
+    """The marker for a plan that is for everyone: the house."""
     return {"name": EVERYONE, "slot": 0, "initial": ""}
 
 
@@ -1214,9 +1251,9 @@ def places_map(placed: list[tuple[Idea, Away]]) -> dict[str, Any] | None:
 
 AGENDA_NOTES = {
     "google": "From Google Calendar, including anything added there directly.",
-    "saved": "Google Calendar is not connected, so these are the plans the bot made.",
+    "saved": "Google Calendar is not connected, so these are the plans FamilyDB has saved.",
     "unavailable": (
-        "Google Calendar did not answer, so these are the plans as the bot last saw them. "
+        "Google Calendar did not answer, so these are the plans as FamilyDB last saw them. "
         "Times may have moved since."
     ),
 }
@@ -1296,13 +1333,33 @@ def handed_line(
     }
 
 
+# What a turn did, in words, for each tool that changes something; the ones that only look
+# something up are not said. A tool name is how it works, which is for the logs, not the page.
+DID_WORDS = {
+    "add_idea": "Saved an idea",
+    "update_idea": "Changed an idea",
+    "add_task": "Added a to-do",
+    "update_task": "Changed a to-do",
+    "create_event": "Added a plan",
+    "update_event": "Changed a plan",
+    "delete_event": "Canceled a plan",
+    "remember": "Remembered something",
+    "record_outcome": "Recorded how it went",
+    "look_up_now": "Asked for a lookup",
+    "add_wish": "Added a wish",
+    "update_wish": "Changed a wish",
+    "turn_away": "Turned down a request",
+}
+
+
 def tools_used(actions: Any) -> list[str]:
-    """The tools a turn ran, in order, named once each, failures included."""
+    """What a turn changed, in order, said once each, from the tools it ran (failures included)."""
     seen: list[str] = []
     for action in actions or []:
         name = action.get("tool") if isinstance(action, dict) else None
-        if name and name not in seen:
-            seen.append(name)
+        words = DID_WORDS.get(name or "")
+        if words and words not in seen:
+            seen.append(words)
     return seen
 
 
@@ -1319,7 +1376,7 @@ ALERT_TITLES = {
     "shift": "What the calls cost or do moved",
     "api": "A company stopped taking part of a request",
     "refused": "{company} is refusing requests",
-    "advice": "A judgement on the models",
+    "advice": "A judgment on the models",
 }
 SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused", "advice"})
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
@@ -1518,7 +1575,7 @@ def found_by_lookup(tool: dict[str, Any]) -> dict[str, Any] | None:
 def lookups_when(settings: Any) -> str:
     if settings.lookups_when == "asap":
         return "as soon as each is added"
-    return f"together at {settings.lookup_hour:02d}:00 each evening"
+    return f"together at {hour_words(settings.lookup_hour)} each evening"
 
 
 def local_clock(value: str, tz: ZoneInfo) -> str:
@@ -1529,7 +1586,7 @@ def local_clock(value: str, tz: ZoneInfo) -> str:
         return ""
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=UTC)
-    return f"{moment.astimezone(tz):%H:%M}"
+    return clock_time(moment.astimezone(tz))
 
 
 def day_heading(day: str, today: date) -> str:
@@ -1563,7 +1620,7 @@ def local_moment(value: str, tz: ZoneInfo) -> str:
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=UTC)
     here = moment.astimezone(tz)
-    return f"{here.day} {here:%b}, {here:%H:%M}"
+    return f"{here.day} {here:%b}, {clock_time(here)}"
 
 
 def setting_text(value: str | None) -> str:

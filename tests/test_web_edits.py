@@ -130,7 +130,7 @@ def test_the_days_a_thing_is_on_are_set_shown_and_cleared_from_the_page(planning
     saved = ideas.get(conn, 1)
     assert (saved.happens_from, saved.happens_until) == ("2026-10-17T18:30", "2026-10-18")
     shown = planning.get("/idea/1").text
-    assert "Sat 17 Oct, 18:30 to Sun 18 Oct 2026" in shown
+    assert "Sat 17 Oct, 6:30\u00a0pm to Sun 18 Oct 2026" in shown
     assert 'value="2026-10-17T18:30"' in shown  # the plan form starts at its start
     form = planning.get("/idea/1/edit").text
     assert 'value="2026-10-17"' in form and 'value="18:30"' in form
@@ -279,16 +279,22 @@ def test_an_all_day_plan_keeps_only_the_date(planning, conn) -> None:
     assert plan.all_day and plan.start == "2026-09-26"
 
 
-def test_without_a_calendar_the_page_offers_no_plan_form_and_refuses_one_anyway(page, conn):
-    assert "not connected" in page.get("/plans").text
-    assert "csrf" not in page.get("/plans").text  # there is no form on the page at all
+def test_without_a_calendar_plans_are_kept_here_by_hand(page, conn):
+    """No Google Calendar: the plan forms are there and FamilyDB keeps the plan, saying so."""
+    text = page.get("/plans").text
+    assert "Add something to the plans" in text and "Add it to the plans" in text
+    assert "isn\u2019t connected, so plans are kept here only" in text
     page.post(
-        # A token from another form on the site: being refused for the right reason is the point.
         "/plans/new",
-        data={"csrf": _token(page, "/chat"), "title": "Nope", "start": "2026-09-26T18:30"},
+        data={"csrf": _token(page, "/plans"), "title": "Picnic", "start": "2026-09-26T13:00"},
     )
-    assert plans.get(conn, 1) is None
-    assert "Google Calendar" in _said(page.get("/plans"))
+    plan = plans.get(conn, 1)
+    assert plan.title == "Picnic" and plan.google_event_id is None and plan.calendar_id is None
+    assert "Added to the plans: Picnic" in _said(page.get("/plans"))
+    page.post("/plan/1/move", data={"csrf": _token(page, "/plans"), "start": "2026-09-27T15:00"})
+    assert plans.get(conn, 1).start.startswith("2026-09-27T15:00")
+    page.post("/plan/1/cancel", data={"csrf": _token(page, "/plans")})
+    assert plans.get(conn, 1).status == "cancelled"
 
 
 @pytest.mark.parametrize(
@@ -347,7 +353,7 @@ def test_an_idea_or_every_one_waiting_can_be_looked_up_now(settings, clock, conn
         first = ideas.insert(conn, title="Hopscotch", kind="outing")
         second = ideas.insert(conn, title="Ramen", kind="restaurant")
     page = looking.get(f"/idea/{first.id}").text
-    assert "Looked up together at 21:00 each evening." in page and "Look it up now" in page
+    assert "Looked up together at 9\u00a0pm each evening." in page and "Look it up now" in page
     sent = looking.post(f"/idea/{first.id}/lookup", data={"csrf": _token(looking, "/")})
     assert sent.headers["Location"] == f"/idea/{first.id}"
     after = looking.get(f"/idea/{first.id}").text
@@ -355,10 +361,32 @@ def test_an_idea_or_every_one_waiting_can_be_looked_up_now(settings, clock, conn
     assert "Asked for now: within a few minutes." in after and "Look it up now" not in after
 
     status = looking.get("/status").text
-    assert "Ideas are looked up together at 21:00 each evening." in status
+    assert (
+        'Ideas are looked up together at <span class="fig">9\u00a0pm</span> each evening.' in status
+    )
     looking.post("/lookups/now", data={"csrf": _token(looking, "/status")})
     assert "Looking 2 ideas up now" in _said(looking.get("/status"))
     assert ideas.get(conn, second.id).lookup_wanted_at is not None
     # Without lookups on, neither button is there.
     plain = _client(settings, clock).get("/status").text
     assert "Look them up now" not in plain
+
+
+def test_a_to_do_flash_names_it_in_words_with_no_numbers(page, conn) -> None:
+    """The family says "to-do", never "task", and a number is how it works, not what is said."""
+    form = {"csrf": _token(page, "/tasks"), "once": "o1", "title": "Buy paper towels"}
+    saved = page.post("/tasks/new", data=form, follow_redirects=True)
+    assert "Added to your to-dos: Buy paper towels." in _said(saved)
+    assert "task" not in _said(saved).lower() and "#" not in _said(saved)
+
+
+def test_a_done_to_do_can_be_put_back_from_the_done_list(page, conn) -> None:
+    page.post(
+        "/tasks/new", data={"csrf": _token(page, "/tasks"), "once": "o9", "title": "Pay the bill"}
+    )
+    page.post("/task/1/done", data={"csrf": _token(page, "/tasks"), "once": "o10", "revision": "1"})
+    done = page.get("/tasks?status=done").text
+    assert 'action="/task/1/reopen"' in done and ">Undo<" in done.replace("\n", "")
+    page.post("/task/1/reopen", data={"csrf": _token(page, "/tasks"), "once": "o11"})
+    assert 'id="t-1"' in page.get("/tasks").text  # open again (this also shows the flash)
+    assert 'id="t-1"' not in page.get("/tasks?status=done").text

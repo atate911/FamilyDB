@@ -61,7 +61,7 @@
           {% else %}
             <p class="empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
           {% endfor %}
-          {% if pending %}{{ msg_pending(assistant, state, pending, check) }}{% endif %}
+          {% if pending %}{{ msg_pending(assistant, state, pending, check, stop) }}{% endif %}
           {% if newest %}<p class="earlier"><a class="linkbtn" href="{{ newest }}">Back to the newest</a></p>{% endif %}
         </div>
       </div>

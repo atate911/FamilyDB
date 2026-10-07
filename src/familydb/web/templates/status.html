@@ -132,7 +132,7 @@
         </div>
         <p class="small muted mt-3">{{ "{:,}".format(spending.calls) }} call{{ "" if spending.calls == 1 else "s" }} in {{ days }} days; {{ spending.cache_share }}% of what was sent came back from the cache, at a tenth of the price.
           {% if spending.estimated %}Some calls were to a model without a listed price and are counted high.{% endif %}
-          {% if last %}The last call was {{ last.when }}.{% endif %}</p>
+          {% if last %}The last call was {{ last.when | figs }}.{% endif %}</p>
       {% else %}
         <p class="muted">Nothing has been asked of a model in the last {{ days }} days.</p>
       {% endif %}
@@ -149,7 +149,7 @@
               <li><a class="item item--divided" href="{{ url_for('activity.show', key=row.key) }}">
                 {{ tile('search' if row.what.startswith('Looking') else 'chat') }}
                 <span><span class="item__title">{{ row.title }}</span>
-                  <span class="meta"><span>{{ row.when }}</span><span>{{ row.what }}</span><span>{{ row.calls }} call{{ '' if row.calls == 1 else 's' }}</span><span>{{ "{:,}".format(row.tokens) }} tokens</span>{% if row.searches %}<span>{{ row.searches }} search{{ '' if row.searches == 1 else 'es' }}</span>{% endif %}<span>about <span class="fig">${{ "%.3f"|format(row.cost) }}</span></span></span></span>
+                  <span class="meta"><span>{{ row.when | figs }}</span><span>{{ row.what }}</span><span>{{ row.calls }} call{{ '' if row.calls == 1 else 's' }}</span><span>{{ "{:,}".format(row.tokens) }} tokens</span>{% if row.searches %}<span>{{ row.searches }} search{{ '' if row.searches == 1 else 'es' }}</span>{% endif %}<span>about <span class="fig">${{ "%.3f"|format(row.cost) }}</span></span></span></span>
                 {{ icon('chev') }}</a></li>
             {% endfor %}
           </ul>
@@ -167,7 +167,7 @@
         <p class="muted">No ideas yet.</p>
       {% endif %}
       {% if waiting.pending_total %}
-        <p class="mt-2">Ideas are looked up {{ waiting.when }}.</p>
+        <p class="mt-2">Ideas are looked up {{ waiting.when | figs }}.</p>
         {% if waiting.can_look_up and visitor().may('change') %}
           <form method="post" action="{{ url_for('edits.look_up_waiting') }}" class="mt-3">
             <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
@@ -192,7 +192,7 @@
         <ul class="plain">
           {% for row in waiting.messages %}
             <li>{{ row.text }}
-              <div class="small muted">{{ row.when }} · {{ row.error }} · {% if row.given_up %}given up on{% else %}{{ row.tries }} tr{{ "y" if row.tries == 1 else "ies" }}, will try again{% endif %}</div></li>
+              <div class="small muted">{{ row.when | figs }} · {{ row.error }} · {% if row.given_up %}given up on{% else %}{{ row.tries }} tr{{ "y" if row.tries == 1 else "ies" }}, will try again{% endif %}</div></li>
           {% endfor %}
         </ul>
       {% else %}
@@ -206,7 +206,7 @@
         {% if troubles.calls %}
           <h3>Calls that ended oddly</h3>
           <ul class="plain">
-            {% for row in troubles.calls %}<li>{{ row.model }} — {{ row.stop }}<div class="small muted">{{ row.when }}</div></li>{% endfor %}
+            {% for row in troubles.calls %}<li>{{ row.model }} — {{ row.stop }}<div class="small muted">{{ row.when | figs }}</div></li>{% endfor %}
           </ul>
         {% endif %}
         {% if troubles.lookups %}
@@ -214,7 +214,7 @@
           <ul class="items">
             {% for row in troubles.lookups %}
               <li><a class="item item--divided" href="{{ url_for('web.idea', idea_id=row.id) }}">{{ tile('search', 'look') }}
-                <span><span class="item__title">#{{ row.id }} {{ row.title }}</span><span class="meta"><span>{{ row.note }}{% if row.when %} · {{ row.when }}{% endif %}</span></span></span>{{ icon('chev') }}</a></li>
+                <span><span class="item__title">#{{ row.id }} {{ row.title }}</span><span class="meta"><span>{{ row.note }}{% if row.when %} · {{ row.when | figs }}{% endif %}</span></span></span>{{ icon('chev') }}</a></li>
             {% endfor %}
           </ul>
         {% endif %}
@@ -241,7 +241,7 @@
             <thead><tr><th scope="col">When</th><th scope="col">Company</th><th scope="col">Model</th><th scope="col">What</th></tr></thead>
             <tbody>
               {% for change in model_watch.changes %}
-                <tr><td>{{ change.when }}</td><td>{{ change.company }}</td><td><span class="code">{{ change.model }}</span></td><td>{{ change.what }}</td></tr>
+                <tr><td>{{ change.when | figs }}</td><td>{{ change.company }}</td><td><span class="code">{{ change.model }}</span></td><td>{{ change.what }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -252,7 +252,7 @@
       {% endif %}
       {% if model_watch.judgements %}
         {# What a stronger model was asked to weigh. A change it made can be put back, one waiting for an admin put in, each through the settings form. #}
-        <h3 class="mt-4">Judgements</h3>
+        <h3 class="mt-4">Judgments</h3>
         <ul class="items">
           {% for row in model_watch.judgements %}
             <li class="item item--divided item--health">
@@ -274,7 +274,7 @@
           {% endfor %}
         </ul>
       {% elif model_watch.judging %}
-        <p class="small muted mt-3">Judgements are on: nothing has needed one lately.</p>
+        <p class="small muted mt-3">Judgments are on: nothing has needed one lately.</p>
       {% endif %}
     </section>
 
@@ -321,7 +321,7 @@
           </div>
         {% endif %}
         {% if last %}
-          <p class="small muted">Last call {{ last.when }}: {{ last.model }} ({{ last.provider }}), ended “{{ last.stop }}”, took {{ last.seconds }}s.</p>
+          <p class="small muted">Last call {{ last.when | figs }}: {{ last.model }} ({{ last.provider }}), ended “{{ last.stop }}”, took {{ last.seconds }}s.</p>
         {% endif %}
       </div>
     </details>

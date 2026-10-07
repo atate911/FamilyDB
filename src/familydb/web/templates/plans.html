@@ -30,9 +30,8 @@
         {% if visitor().may('change') %}
           <section class="card" id="add" aria-labelledby="h-add-plan">
             <details class="fold"{{ ' open' if not upcoming }}>
-              <summary><h2 id="h-add-plan">{{ icon('plus') }}Put something on the calendar</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+              <summary><h2 id="h-add-plan">{{ icon('plus') }}{{ 'Put something on the calendar' if on_google else 'Add something to the plans' }}</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
               <div class="fold__body">
-                {% if can_schedule %}
                   <form class="form" method="post" action="{{ url_for('edits.add_plan') }}" novalidate>
                     <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
                     <div class="field"><label class="field__label" for="title">What <span class="req">(required)</span></label>
@@ -47,13 +46,9 @@
                           {% for name in family %}<option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>{% endfor %}</select></div>
                     {% endif %}
                     <div class="field"><label class="field__label" for="notes">Notes <span class="opt">(optional)</span></label><textarea id="notes" name="notes" rows="2" data-dictate></textarea></div>
-                    <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('cal') }}Put it on the calendar</button></div>
+                    <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('cal') }}{{ 'Put it on the calendar' if on_google else 'Add it to the plans' }}</button></div>
                   </form>
-                  <p class="small muted mt-3">To plan an idea already on the list, open it and use the form there: the plan is then linked to the idea.</p>
-                {% else %}
-                  <p>Google Calendar isn’t connected, so nothing can be added here yet. {{ assistant }} can still put plans on the family’s own list when you ask in the chat.</p>
-                  <div class="actions">{% if managing %}<a class="btn btn--quiet btn--sm" href="{{ url_for('settings.section', name='connections') }}">Connect Google Calendar</a>{% endif %}<a class="linkbtn" href="{{ url_for('web.status') }}">See the status page</a></div>
-                {% endif %}
+                  <p class="small muted mt-3">To plan an idea already on the list, open it and use the form there: the plan is then linked to the idea.{% if not on_google %} Google Calendar isn’t connected, so plans are kept here only{% if managing %}; <a href="{{ url_for('settings.section', name='connections') }}">connect it</a> and they are copied across{% endif %}.{% endif %}</p>
               </div>
             </details>
           </section>

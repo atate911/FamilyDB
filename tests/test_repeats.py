@@ -215,7 +215,7 @@ def test_a_tap_on_done_says_when_it_comes_round_next(settings, clock, conn, fami
         tap_id="q1",
         data=f"done:{task['id']}",
     )
-    assert tapped.note == "Ticked off ✓ (Sam). It comes round again at 19:00 on Sun 27 Sep."
+    assert tapped.note == "Ticked off ✓ (Sam). It comes round again at 7\u00a0pm on Sun 27 Sep."
 
 
 # -- the tasks page

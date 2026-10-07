@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from familydb import roles
 from familydb.availability import enrichment_available
-from familydb.dates import parse_date
+from familydb.dates import clock_time, parse_date
 from familydb.errors import ToolError
 from familydb.integrations.geocode import estimate_travel
 from familydb.store import ideas, places
@@ -101,9 +101,13 @@ def open_on(place: Place | None, day: date) -> tuple[str, list[dict[str, str]]]:
     return ("open" if ranges else "closed"), ranges
 
 
-def format_ranges(ranges: list[dict[str, str]]) -> str | None:
+def format_ranges(ranges: list[dict[str, str]], *, spoken: bool = False) -> str | None:
+    """The hours as stored ("11:30-21:00", for the model) or, `spoken`, as the family reads them
+    ("11:30 am to 9 pm")."""
     if not ranges:
         return None
+    if spoken:
+        return ", ".join(f"{clock_time(r['open'])} to {clock_time(r['close'])}" for r in ranges)
     return ", ".join(f"{r['open']}-{r['close']}" for r in ranges)
 
 

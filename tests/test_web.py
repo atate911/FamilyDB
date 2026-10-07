@@ -485,14 +485,14 @@ def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> 
     page = _client(settings, clock).get(f"/idea/{idea.id}")
     assert page.status_code == 200
     assert "1030 NW 12th Ave" in page.text and "openstreetmap.org" in page.text
-    assert "Saturday" in page.text and "10:00-20:00" in page.text
+    assert "Saturday" in page.text and "10\u00a0am to 8\u00a0pm" in page.text
     assert "closed" in page.text and "not known" in page.text  # Monday closed, Sunday unknown
     assert "about 45 min away, 38 km (estimate)" in page.text
     assert "Needed, about 2 days ahead" in page.text
     assert "adults $28, kids free" in page.text
     assert "9/10" in page.text and "would go again" in page.text
     assert "The girls loved it" in page.text
-    assert "Saturday 3 October, 18:30" in page.text
+    assert 'Saturday 3 October, <span class="fig">6:30\u00a0pm</span>' in page.text
     assert 'rel="noopener noreferrer"' in page.text
     assert "checked today" in page.text
 
@@ -542,7 +542,7 @@ def test_view_helpers_word_things_for_people() -> None:
 
     today = date(2026, 9, 20)
     assert views.day_text("2026-09-26") == "Saturday 26 September"
-    assert views.day_text("2026-09-26T18:30-07:00") == "Saturday 26 September, 18:30"
+    assert views.day_text("2026-09-26T18:30-07:00") == "Saturday 26 September, 6:30\u00a0pm"
     assert views.day_text("not a date") == "not a date"
     assert views.relative_text("2026-09-20", today) == "today"
     assert views.relative_text("2026-09-21", today) == "tomorrow"
@@ -577,7 +577,7 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
     assert _cards(page.text) == 0 and page.text.count('class="place"') == 2  # not the outing
     assert "Museum day" not in page.text and "2 places" in page.text
     assert "Small counter, long queue." in page.text and "1 Main St" in page.text
-    assert "open today 11:00-21:00" in page.text  # the shared clock is a Sunday
+    assert "open today 11\u00a0am to 9\u00a0pm" in page.text  # the shared clock is a Sunday
     assert "about 12 min away" in page.text and "$$" in page.text
     assert 'href="https://example.com/ramen" rel="noopener noreferrer"' in page.text
     assert 'href="https://example.com/book" rel="noopener noreferrer"' in page.text
@@ -638,7 +638,10 @@ def test_the_plans_page_shows_what_is_coming_and_what_just_happened(
         plans.update(conn, gone.id, {"status": "cancelled"}, now=NOW_ISO)
     page = _client(settings, clock).get("/plans")
     assert page.status_code == 200
-    assert "Saturday 3 October, 18:30" in page.text and "in 13 days" in page.text
+    assert (
+        'Saturday 3 October, <span class="fig">6:30\u00a0pm</span>' in page.text
+        and "in 13 days" in page.text
+    )
     assert f'href="/idea/{idea.id}"' in page.text and "Portland" in page.text
     assert "Farmers market" in page.text and "Saturday 12 September" in page.text
     assert "Cancelled dinner" not in page.text  # cancelled plans are not shown
@@ -1145,3 +1148,31 @@ def test_the_look_page_writes_only_a_look_and_only_through_the_rules() -> None:
     assert called == {"choose_look"}
     reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
     assert not any(name.startswith("familydb.store") for name in reached)
+
+
+def test_ideas_has_one_search_and_the_quick_note_comes_after_the_list(
+    settings, clock, conn, family
+) -> None:
+    from familydb.store import db as db_store
+    from familydb.store import ideas as idea_store
+
+    with db_store.transaction(conn):
+        idea_store.insert(conn, title="Ramen place", kind="restaurant", now=NOW_ISO)
+    page = _signed_in(settings, clock).get("/ideas").text
+    assert page.count(">Filter<") == 0 and ">Search</button>" in page  # one Search, not two Filters
+    assert "Narrow by kind, person or status" in page
+    assert page.index("Ramen place") < page.index("Save a thought for later")
+
+
+def test_on_the_phone_home_the_setup_strip_waits_under_the_plans(settings, clock, family) -> None:
+    page = _signed_in(settings, clock).get("/").text  # a model is not set up, so setup has steps
+    assert "Setup:" in page
+    assert page.index('aria-labelledby="h-next"') < page.index("Setup:")
+
+
+def test_a_place_s_phone_number_is_a_link_a_phone_can_dial() -> None:
+    from familydb.web import views
+
+    assert views.phone_href("(503) 555-0142") == "tel:5035550142"
+    assert views.phone_href("+1 503 555 0142") == "tel:+15035550142"
+    assert views.phone_href("ask at the door") is None and views.phone_href(None) is None

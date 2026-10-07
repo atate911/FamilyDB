@@ -95,5 +95,5 @@ docs/             DESIGN, INSTALL (a server from zero), AI_CALLS (how each model
 uv run pytest -q                                   # unit tests, no network
 uv run ruff check . && uv run ruff format --check .
 FAMILYDB_LIVE=1 uv run pytest -m live              # two real turns; checks prompt-cache hits
-uv run python -m evals --repeat 3                  # behaviour on a real model, a few cents
+uv run python -m evals --repeat 3                  # behavior on a real model, a few cents
 ```

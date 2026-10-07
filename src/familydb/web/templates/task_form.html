@@ -38,15 +38,15 @@
             <select id="e-rep" name="repeat">{% for value, label in row.repeat_options %}<option value="{{ value }}"{% if value == row.repeat_choice %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
         </div>
         <label class="check"><input type="checkbox" name="repeat_after_done"{% if task.repeat_from == 'done' %} checked{% endif %} />Count from when it’s done</label>
-        <p class="field__hint">A repeat starts from the reminder: every week from Sunday 19:00, say. Counted from when it’s done, it comes round that long after each time it is ticked off.</p>
+        <p class="field__hint">A repeat starts from the reminder: every week from Sunday 7 pm, say. Counted from when it’s done, it comes round that long after each time it is ticked off.</p>
       </fieldset>
 
       <fieldset class="fieldset">
         <legend>Done with it?</legend>
         <div class="field"><label class="field__label" for="e-status">Status</label>
-          <select id="e-status" name="status">{% for value in ['open', 'done', 'cancelled'] %}<option value="{{ value }}"{% if value == task.status %} selected{% endif %}>{{ value | capitalize }}</option>{% endfor %}</select></div>
+          <select id="e-status" name="status">{% for value in ['open', 'done', 'cancelled'] %}<option value="{{ value }}"{% if value == task.status %} selected{% endif %}>{{ 'Canceled' if value == 'cancelled' else value | capitalize }}</option>{% endfor %}</select></div>
         <label class="check"><input type="checkbox" name="clear_reminder" />Cancel the pending reminder</label>
-        <p class="field__hint">Completing or cancelling stops pending reminders; completing one that repeats records it and keeps it coming round. Reopening doesn’t restore them.</p>
+        <p class="field__hint">Completing or canceling stops pending reminders; completing one that repeats records it and keeps it coming round. Reopening doesn’t restore them.</p>
       </fieldset>
 
       <div class="actions">
@@ -60,13 +60,13 @@
         <h2 id="h-know2" class="card__head">Good to know</h2>
         <ul class="tips">
           <li>Ticking it off on the list does the same as setting it to Done here.</li>
-          <li>To-dos aren’t deleted: a cancelled one moves to “Cancelled”, and can be set back to Open.</li>
+          <li>To-dos aren’t deleted: a canceled one moves to “Canceled”, and can be set back to Open.</li>
           <li>If somebody changed it while you had it open, your save is refused, so reload and try again.</li>
         </ul>
       </section>
       <section class="card" aria-labelledby="h-rem2">
         <h2 id="h-rem2" class="card__head">{{ icon('bell') }}Reminders</h2>
-        <p class="small">Reminders appear in the chat while FamilyDB is running. They aren’t phone notifications. Telegram reminders come back to the chat where they were asked for.</p>
+        <p class="small">{{ reminders_said }} A Telegram reminder comes back to the chat it was asked for in.</p>
       </section>
     </aside>
   </div>

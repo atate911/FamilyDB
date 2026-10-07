@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import roles, task_service, windows
+from familydb import presents, roles, task_service, windows
 from familydb.dates import parse_datetime, utc_iso
 from familydb.errors import ToolError
 from familydb.store import members, messages, tasks
@@ -40,6 +40,9 @@ class AddTaskInput(BaseModel):
     repeat_from: Literal["schedule", "done"] = "schedule"
     gift_for: str | None = Field(
         default=None, description="Whose birthday or anniversary: its reminder lists their gifts."
+    )
+    idea_id: int | None = Field(
+        default=None, description="The idea this is about, e.g. the present it is to get."
     )
 
 
@@ -244,6 +247,7 @@ def list_tasks(ctx: ToolContext, args: ListTasksInput) -> dict[str, Any]:
         query=args.query,
         owner_id=_owner(ctx, args.owner) if args.owner else None,
     )
+    found = presents.visible_tasks(ctx.conn, found, ctx.member)
     return {
         "tasks": [_brief(ctx, task) for task in found[:LISTED]],
         "not_shown": max(0, len(found) - LISTED),
