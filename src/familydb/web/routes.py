@@ -41,6 +41,9 @@ from familydb.web.chat import WHO_KEY
 bp = Blueprint("web", __name__)
 
 LIST_LIMIT = 200
+# Ideas shown to a page, and the orders the list can be put in.
+IDEAS_PAGE = 24
+SORTS = {"new": "Newest first", "near": "Nearest first", "az": "A to Z"}
 MAX_ID = 2**63 - 1  # beyond this SQLite raises rather than simply finding nothing
 STATUSES = ("idea", "planned", "done", "dropped")
 SETTINGS = ("either", "indoor", "outdoor")
@@ -158,6 +161,8 @@ def home() -> Response | str:
         todo = presents.visible_tasks(
             conn, task_store.list_all(conn, status="open", owner_id=_own_only()), visitor.member
         )
+        me = visitor.member.id if visitor.member else None
+        todo = views.todo_order(todo, app.settings.tzinfo, today, me)
         talk = chat.glance(app, conn) if talks else None
         wished = wish_glance(conn, today)
         slots = views.slot_map(people)
@@ -340,6 +345,9 @@ def ideas() -> str:
     kind = request.args.get("kind", "").strip()
     status = request.args.get("status", "").strip()
     who = request.args.get("who", "").strip()
+    sort = request.args.get("sort", "new") if request.args.get("sort") in SORTS else "new"
+    number = request.args.get("page", "1")
+    page = int(number) if number.isdigit() and 0 < int(number) < 1000 else 1
     with closing(app.connect()) as conn:
         kept = presents.kept_ids(conn, visitor.member)
         found = idea_store.search(
@@ -365,9 +373,21 @@ def ideas() -> str:
             if idea.place_id
         }
     filtered = bool(query or kind or status or who)
+    if sort == "near":  # ideas with a drive time first, nearest first; the rest as they were
+        found = sorted(
+            found, key=lambda idea: (idea.id not in away, getattr(away.get(idea.id), "minutes", 0))
+        )
+    elif sort == "az":
+        found = sorted(found, key=lambda idea: idea.title.casefold())
+    pages = max(1, -(-len(found) // IDEAS_PAGE))
+    page = min(page, pages)
+    shown = found[(page - 1) * IDEAS_PAGE : page * IDEAS_PAGE]
     rows = [
-        _idea_card(idea, settings, away.get(idea.id), slots, hidden.get(idea.id)) for idea in found
+        _idea_card(idea, settings, away.get(idea.id), slots, hidden.get(idea.id)) for idea in shown
     ]
+    here = {k: v for k, v in (("q", query), ("kind", kind), ("status", status), ("who", who)) if v}
+    if sort != "new":
+        here["sort"] = sort
     placed = [(idea, away[idea.id]) for idea in found if away.get(idea.id)]
     live = [idea for idea in listed if idea.status != "dropped"]
     return render_template(
@@ -387,6 +407,14 @@ def ideas() -> str:
         filter_words=views.filter_words(kind, who, status),
         filtered=filtered,
         limit=LIST_LIMIT,
+        found_count=len(found),
+        sort=sort,
+        sorts=SORTS,
+        page_size=IDEAS_PAGE,
+        page=page,
+        pages=pages,
+        earlier=url_for("web.ideas", **here, page=page - 1) if page > 1 else None,
+        later=url_for("web.ideas", **here, page=page + 1) if page < pages else None,
     )
 
 
@@ -697,6 +725,9 @@ def tasks() -> str:
             ),
             visitor.member,
         )
+        if status == "open":
+            me = visitor.member.id if visitor.member else None
+            rows = views.todo_order(rows, app.settings.tzinfo, app.clock.today(), me)
         open_count = (
             len(rows) if status == "open" and not request.args.get("q") else _open_count(conn)
         )

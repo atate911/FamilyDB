@@ -293,6 +293,8 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
 .todo { display: grid; grid-template-columns: var(--target) minmax(0, 1fr) auto; gap: var(--s2) var(--s3); align-items: center; padding: var(--s3) var(--s4) var(--s3) var(--s2); background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: var(--r-md); }
 .todo--late { border-left-color: var(--red); }
 .todo__title { font-weight: 700; font-size: 1.125rem; line-height: 1.25; }
+.todo__title a { color: inherit; text-decoration: none; }
+.todo__title a:hover { text-decoration: underline; text-decoration-color: var(--link); }
 .todo--compact .todo__title { font-size: var(--t-md); }
 .todo .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .todo__edit { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); padding: 0 var(--s2); font-weight: 700; font-size: var(--t-meta); }
@@ -872,6 +874,10 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 
 /* Home */
 .home-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: var(--s5); align-items: start; }
+/* below 1180 px the two columns are too narrow to read: one column, in the order the phone has */
+@media (max-width: 1180px) { .home-grid { grid-template-columns: minmax(0, 1fr); } }
+.pager { display: flex; justify-content: space-between; gap: var(--s3); margin-top: var(--s4); }
+.pager [rel="next"] { margin-left: auto; }
 .next { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s5); align-items: start; }
 .next h3 { font-size: 1.625rem; margin: var(--s1) 0 var(--s2); }
 .next h3 a { color: var(--ink); text-decoration: none; }

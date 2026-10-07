@@ -17,8 +17,8 @@
       <fieldset class="fieldset">
         <legend>Who’s doing it?</legend>
         <div class="choices" role="radiogroup" aria-label="Who’s doing it">
-          {# A to-do for nobody in particular keeps being so: an empty choice leaves who it is for as it is. #}
-          {% if not owner %}<label class="choice choice--person"><input type="radio" name="owner" value="" checked /><span>{{ avatar(0, '', 'sm') }}Everyone</span></label>{% endif %}
+          {# Everyone is a to-do for nobody in particular, always offered, so one can be handed back to the family. #}
+          <label class="choice choice--person"><input type="radio" name="owner" value="Everyone"{% if not owner %} checked{% endif %} /><span>{{ avatar(0, '', 'sm') }}Everyone</span></label>
           {% for one in people %}<label class="choice choice--person"><input type="radio" name="owner" value="{{ one.name }}"{% if owner and one.name == owner.name %} checked{% endif %} /><span>{{ avatar(one.slot, one.initial, 'sm') }}{{ one.name }}</span></label>{% endfor %}
         </div>
       </fieldset>

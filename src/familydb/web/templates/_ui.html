@@ -126,7 +126,7 @@
     <span></span>
     {%- endif %}
     <div>
-      <div class="todo__title">{{ row.title }}</div>
+      <div class="todo__title">{% if edit %}<a href="{{ url_for('web.edit_task', task_id=row.id) }}">{{ row.title }}</a>{% else %}{{ row.title }}{% endif %}</div>
       <div class="meta">
         {%- if not mine %}{{ person(row.person) }}{% endif -%}
         <span>{{ icon('clock') }}{{ row.when | figs }}</span>

@@ -124,3 +124,40 @@ def test_a_to_do_has_its_own_page_to_edit_with_a_way_back(settings, clock, conn,
     assert page.status_code == 200 and 'value="Bins out"' in page.text
     assert 'href="/tasks"' in page.text  # the way back
     assert client.get("/task/9999/edit").status_code == 404
+
+
+def test_open_to_dos_are_late_first_then_yours_then_by_day() -> None:
+    from datetime import date as day_of
+    from zoneinfo import ZoneInfo
+
+    from familydb.store.tasks import Task
+
+    def task(number, owner, due):
+        return Task(
+            id=number,
+            title=f"t{number}",
+            owner_id=owner,
+            due_at=due,
+            channel="web",
+            chat_id="web",
+            created_at=NOW_ISO,
+            updated_at=NOW_ISO,
+        )
+
+    found = [
+        task(1, 2, "2026-09-30T17:00:00Z"),  # someone else's, soon
+        task(2, 1, None),  # mine, no date
+        task(3, 2, "2026-09-10T17:00:00Z"),  # someone else's, late
+        task(4, 1, "2026-10-05T17:00:00Z"),  # mine, later
+        task(5, 1, "2026-09-12T17:00:00Z"),  # mine, late
+    ]
+    ordered = views.todo_order(found, ZoneInfo("America/Vancouver"), day_of(2026, 9, 20), me=1)
+    assert [t.id for t in ordered] == [5, 3, 4, 2, 1]
+
+
+def test_the_adder_always_offers_everyone_and_the_tool_takes_it(settings, clock, conn, family):
+    from familydb.tools import ToolContext, build_registry
+
+    ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    made = build_registry().dispatch("add_task", {"title": "Renew cards", "owner": "Everyone"}, ctx)
+    assert not made.is_error and tasks.get(conn, 1).owner_id is None

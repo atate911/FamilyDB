@@ -39,7 +39,7 @@
             <fieldset class="choices" id="q-who">
               <legend>Who’s doing it?</legend>
               {% for one in people %}{{ who_choice(one.name, one, checked=(one.name == me)) }}{% endfor %}
-              {% if not me %}{{ who_choice('', {'slot': 0, 'initial': '', 'name': 'Everyone'}, checked=true) }}{% endif %}
+              {{ who_choice('Everyone', {'slot': 0, 'initial': '', 'name': 'Everyone'}, checked=not me) }}
             </fieldset>
             <details class="disclose">
               <summary>When, a reminder, repeats <span class="val">No date</span>{{ icon('chev', size='sm', cls='chev') }}</summary>

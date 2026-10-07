@@ -21,7 +21,7 @@
 
     <form class="finder" method="get" action="{{ url_for('web.ideas') }}" role="search">
       <div class="searchbox">{{ icon('search') }}<label class="sr" for="q">Search ideas</label><input id="q" type="search" name="q" value="{{ selected.q }}" placeholder="Search ideas" /></div>
-      <details class="disclose"{{ ' open' if filtered and (selected.kind or selected.who or selected.status) }}>
+      <details class="disclose"{{ ' open' if (filtered and (selected.kind or selected.who or selected.status)) or sort != 'new' }}>
         <summary>{{ icon('filter', size='sm') }}Narrow by kind, person or status <span class="val">{{ filter_words }}</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
         <div class="disclose__body finder__grid">
           <div class="field"><label class="field__label" for="f-kind">Kind</label>
@@ -32,6 +32,8 @@
             <select id="f-for" name="who"><option value="">Anyone</option>
               {% for option in people %}<option value="{{ option }}" {{ 'selected' if option == selected.who }}>{{ option }}</option>{% endfor %}
             </select></div>
+          <div class="field"><label class="field__label" for="f-sort">Sort</label>
+            <select id="f-sort" name="sort">{% for value, words in sorts.items() %}<option value="{{ value }}" {{ 'selected' if value == sort }}>{{ words }}</option>{% endfor %}</select></div>
           <div class="field"><label class="field__label" for="f-status">Status</label>
             <select id="f-status" name="status"><option value="">Any but dropped</option>
               {% for option in statuses %}<option value="{{ option }}" {{ 'selected' if option == selected.status }}>{{ status_words[option] }}</option>{% endfor %}
@@ -43,10 +45,16 @@
     </form>
 
 
-    <p class="muted mt-4">{{ rows | length }} idea{{ '' if rows | length == 1 else 's' }}{% if filtered %} match{{ 'es' if rows | length == 1 else '' }}{% endif %}{% if rows | length == limit %}, showing the first {{ limit }}{% endif %}</p>
+    <p class="muted mt-4">{{ found_count }} idea{{ '' if found_count == 1 else 's' }}{% if filtered %} match{{ 'es' if found_count == 1 else '' }}{% endif %}{% if pages > 1 %}, page {{ page }} of {{ pages }}{% endif %}{% if found_count == limit %}, the first {{ limit }}{% endif %}</p>
     <h2 class="sr">{{ 'Matching ideas' if filtered else 'All ideas, newest first' }}</h2>
     {% if rows %}
       <ul class="ideas">{% for row in rows %}<li>{{ idea_card(row) }}</li>{% endfor %}</ul>
+      {% if earlier or later %}
+        <nav class="pager" aria-label="More ideas">
+          {% if earlier %}<a class="linkbtn" href="{{ earlier }}" rel="prev">{{ icon('chevl', size='sm') }}Previous {{ page_size }}</a>{% endif %}
+          {% if later %}<a class="linkbtn" href="{{ later }}" rel="next">Next {{ page_size }}{{ icon('chev', size='sm') }}</a>{% endif %}
+        </nav>
+      {% endif %}
     {% else %}
       <p class="empty">{{ icon('bulb') }}<span>
         {%- if filtered %}Nothing matches. <a href="{{ url_for('web.ideas') }}">Clear search and filters</a>

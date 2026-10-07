@@ -381,6 +381,21 @@ def is_late(task: Task, tz: ZoneInfo, today: date) -> bool:
     return moment.date() < today
 
 
+def todo_order(found: Sequence[Task], tz: ZoneInfo, today: date, me: int | None) -> list[Task]:
+    """The one order To do and Home list open to-dos in: what is late first, then the viewer's own,
+    then by when each is due (none last), then as they were made."""
+    return sorted(
+        found,
+        key=lambda task: (
+            not is_late(task, tz, today),
+            me is None or task.owner_id != me,
+            task.due_at is None,
+            task.due_at or "",
+            task.id,
+        ),
+    )
+
+
 def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
     due = None
     late = is_late(task, tz, today)

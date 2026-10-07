@@ -22,7 +22,7 @@ class AddTaskInput(BaseModel):
     title: str
     notes: str = ""
     owner: str | None = Field(
-        default=None, description="Family member name; defaults to the sender."
+        default=None, description="Family member name, or Everyone; defaults to the sender."
     )
     due_at: str | None = Field(
         default=None,
@@ -72,7 +72,13 @@ class ListTasksInput(BaseModel):
     owner: str | None = None
 
 
-def _owner(ctx: ToolContext, name: str) -> int:
+EVERYONE = "everyone"
+
+
+def _owner(ctx: ToolContext, name: str) -> int | None:
+    """The member a name means; "Everyone" is a to-do for nobody in particular."""
+    if name.strip().casefold() == EVERYONE:
+        return None
     member = members.find_by_name(ctx.conn, name)
     if member is None:
         raise ToolError(f"No active family member named {name}.")
