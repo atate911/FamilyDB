@@ -491,7 +491,7 @@ def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
                 ]
             title, why, line = views.admin_only(admins, grown_up=who.may("browse"))
             extra = {"admins_line": line}
-        return render_template("403.html", title=title, why=why, **extra), 403
+        return render_template("refused.html", title=title, why=why, **extra), 403
     return None
 
 

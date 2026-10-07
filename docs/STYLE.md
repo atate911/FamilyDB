@@ -493,12 +493,11 @@ to a page at most, never as a card style:
   form on paper.
 - **A first empty day**: "FamilyDB is set up and awake. Welcome, Sam. This is your family's
   table.", then the empty cards on paper.
-- **The grown-ups page**: the mark alone at 64 pixels, glowing; the words stay on paper. A parent
-  who isn't an admin and opens Settings, setup or the family list gets the same page, saying "For
-  an admin" and who that is, never a bare refusal.
-- **Not found**: "404 · nothing on the radar" in the mono, then "Not found", "There's nothing at
-  that address." and Back to the start.
-- **Not part of your role**: "403 · signed in Maya · role kid", then the refusal's own words.
+- **The refusal page** (`refused.html`), one for a page somebody's role doesn't reach (403) and
+  one that isn't there (404): the mark, "Signed in as Maya", the heading and words in the family's
+  language (who to ask, from `views.REFUSALS` and `admin_only`; "Nothing here" for a 404), and two
+  ways on: Home, then the menu for a grown-up or "Ask Vera" for a kid. A present's page kept from
+  somebody is a 404 word for word, so nothing on it says a page was there; a test holds that.
 - **A first sign-in**: "first sign-in · Maya", over "Choose your own password".
 - **A tool's own words** on an admin's history of one message (`.pane--code`): machine text, so
   on glass, in the mono.

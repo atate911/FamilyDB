@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, brand_mark with context %}
+{% block title %}{{ title }} · {{ site_title }}{% endblock %}
+{% block content %}
+  {# One page for a page somebody's role does not reach (403) and one that is not there (404): the
+     same pane, the same two ways on, so a present's page kept from somebody reads like any other. #}
+  <section class="pane pane--center" aria-labelledby="h-refused">
+    {{ brand_mark(cls='pane__mark pane__mark--solo') }}
+    {% if visitor().name %}<p class="pane__line">Signed in as {{ visitor().name }}</p>{% endif %}
+    <h1 id="h-refused" class="mt-3">{{ title }}</h1>
+    <p class="mt-2">{{ why }}</p>
+    {% if admins_line %}<p class="small muted mt-2">{{ admins_line }}</p>{% endif %}
+    <div class="actions">
+      <a class="btn btn--primary" href="{{ url_for('web.home') }}">{{ icon('home', size='sm') }}Go to Home</a>
+      {% if visitor().may('browse') %}
+        <a class="btn btn--quiet" href="{{ url_for('web.more') }}">{{ icon('more', size='sm') }}See the menu</a>
+      {% elif visitor().may('chat') %}
+        <a class="btn btn--quiet" href="{{ url_for('chat.show') }}">{{ icon('chat', size='sm') }}Ask {{ assistant }}</a>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

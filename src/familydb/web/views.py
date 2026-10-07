@@ -100,6 +100,11 @@ REFUSALS = {
     ),
 }
 
+NOT_FOUND = (
+    "Nothing here",
+    "There\u2019s no page at that address. The link may be an old one, or what it showed is gone.",
+)
+
 
 def admin_only(admins: list[str], *, grown_up: bool) -> tuple[str, str, str]:
     """What is said where somebody who is not an admin opens Settings, setup or the family list:

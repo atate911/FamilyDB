@@ -246,3 +246,17 @@ def test_a_present_s_reminder_in_the_family_group_does_not_name_it(
             conn, task, settings, channel="telegram", chat_id="777", due_when=None
         )
     assert ORDER_WATCH in private
+
+
+def test_a_present_kept_from_a_kid_reads_like_any_page_that_is_not_there(household) -> None:
+    """One refusal page: the present's address and one that never was say the same, and say who
+    is signed in, with two ways on."""
+    browser = household["browsers"]["maya"]
+    browser.get("/")  # the flash left from choosing her password
+    kept = browser.get(f"/idea/{household['lego'].id}")
+    never = browser.get("/idea/9999")
+    assert kept.status_code == never.status_code == 404
+    assert kept.text == never.text
+    assert "Signed in as Maya" in kept.text and "Go to Home" in kept.text
+    refused = browser.get("/settings")
+    assert refused.status_code == 403 and "Signed in as Maya" in refused.text

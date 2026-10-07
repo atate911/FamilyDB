@@ -270,4 +270,5 @@ def _look() -> dict[str, Any]:
 
 
 def _not_found(_error: Any) -> tuple[str, int]:
-    return render_template("404.html"), 404
+    title, why = views.NOT_FOUND
+    return render_template("refused.html", title=title, why=why), 404
