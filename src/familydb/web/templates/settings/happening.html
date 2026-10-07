@@ -1,0 +1,77 @@
+{% from "_settings.html" import form %}
+{% from "_ui.html" import icon %}
+{% set key = keys.ticketmaster_api_key %}
+{% if search_wanted and not web %}
+  <p class="panel notice">{{ icon('warning') }}<span>Looking on its own needs web lookups, which
+    are off: see <a href="{{ url_for('settings.section', name='lookups') }}">Lookups</a>. The
+    calendars below and Ticketmaster are read either way.</span></p>
+{% elif searching and not can_look %}
+  <p class="panel notice">{{ icon('warning') }}<span>There is no key for the company that looks
+    things up, so it does not search or look for calendars until there is one: see
+    <a href="{{ url_for('settings.section', name='model') }}">AI model</a>.</span></p>
+{% elif not home %}
+  <p class="panel notice">{{ icon('warning') }}<span>It needs to know where home is first: see
+    <a href="{{ url_for('settings.section', name='general') }}">General</a>.</span></p>
+{% endif %}
+
+{% call form('happening', groups.values()) %}
+  <section class="panel" id="found">
+    <h2>{{ icon('search') }}Calendars found near home</h2>
+    {% if proposals %}
+      <p class="muted">Tick the ones to read. Each is read once a day, which costs nothing.
+        {% if looked %}Looked {{ looked }}{% if not looked_ok %}, and that look did not finish{% endif %}.{% endif %}</p>
+      <ul class="plain">
+        {% for one in proposals %}
+          <li>
+            <input type="hidden" name="proposed" value="{{ one.url }}" />
+            <label class="check"><input type="checkbox" name="feed" value="{{ one.url }}"{% if one.ticked %} checked{% endif %} />
+              <span><strong>{{ one.title }}</strong>{% if one.new %} <span class="changed">new</span>{% endif %}
+                <span class="muted small">· {{ one.site }} · {{ one.events }} on in the next weeks</span>
+                {% if one.note %}<br /><span class="muted small">{{ one.note }}</span>{% endif %}</span>
+            </label>
+          </li>
+        {% endfor %}
+      </ul>
+    {% elif looked %}
+      <p class="muted">Looked {{ looked }}{% if looked_ok %} and found none that could be read{% else %}, and that look did not finish{% endif %}. It looks again in a while.</p>
+    {% else %}
+      <p class="muted">Nothing proposed yet. It looks for the calendars of libraries, parks,
+        venues and the city near home once it knows where home is and can look things up.</p>
+    {% endif %}
+  </section>
+{% endcall %}
+<p class="muted small">Its model calls have cost ${{ '%.2f' % spent }} this month{% if budget %}, of ${{ '%.2f' % budget }}{% endif %}.
+  How each source is doing is on the <a href="{{ url_for('web.status', _anchor='happening') }}">Status page</a>.</p>
+
+<section class="panel" id="ticketmaster">
+  <h2>{{ icon('event') }}Ticketmaster</h2>
+  <p class="state-line">
+    {% if ticketmaster %}On: shows, concerts and games near home are read once a day.
+    {% elif key.set %}A key is saved; it is read once home is set.
+    {% else %}Not set up. A free key adds shows, concerts and games near home.{% endif %}
+  </p>
+  <form method="post" action="{{ url_for('settings.save_keys') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="section" value="happening" />
+    <div class="setting{% if key.problem %} bad{% endif %}">
+      <div class="setting-head">
+        <label for="k-ticketmaster_api_key">{{ key.label }}</label>
+        <span class="key-state">{% if key.stored %}saved here{% elif key.set %}from the server's .env file{% else %}not saved yet{% endif %}</span>
+      </div>
+      <input id="k-ticketmaster_api_key" name="ticketmaster_api_key" type="password" autocomplete="off"
+             spellcheck="false" aria-describedby="ticketmaster-said"
+             placeholder="{% if key.set %}paste a new one to replace it{% else %}the Consumer Key{% endif %}" />
+      {% if key.problem %}
+        <p id="ticketmaster-said" class="error" role="alert">{{ key.problem }}</p>
+      {% else %}
+        <p class="muted hint" id="ticketmaster-said">The Consumer Key of an app made at
+          <a href="{{ links.ticketmaster_developer }}" target="_blank" rel="noopener noreferrer">Ticketmaster's developer site</a>,
+          free. Home's position, rounded to about a kilometre, goes to Ticketmaster with each read.</p>
+      {% endif %}
+      {% if key.stored %}
+        <label class="check"><input type="checkbox" name="remove_ticketmaster_api_key" value="1" />Remove it</label>
+      {% endif %}
+    </div>
+    <button class="quiet" type="submit">{{ icon('check') }}Save the key</button>
+  </form>
+</section>

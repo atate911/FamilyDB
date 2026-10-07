@@ -12,6 +12,7 @@ from functools import cache
 from typing import Any, Literal
 from zoneinfo import available_timezones
 
+from familydb import happening
 from familydb.agent.providers.prices import hearing_suggestions, suggestions
 from familydb.config import Settings
 from familydb.store.settings import BEHAVIOUR
@@ -21,6 +22,8 @@ NUMBER = {"int": "a whole number", "float": "a number"}
 NOT_A_NUMBER = "That needs to be {what}."
 TOO_LONG = "That is longer than a setting should be."
 MAX_LENGTH = 400
+# A box of lines holds several addresses, so it may be longer; the setting's own limit agrees.
+MAX_LINES_LENGTH = 2000
 COMPANIES = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google"}
 # Places, not legacy aliases and offsets, and UTC, which many a server keeps.
 ZONE_PREFIXES = ("Africa/", "America/", "Antarctica/", "Asia/", "Atlantic/", "Australia/")
@@ -49,6 +52,8 @@ class Field:
     keyboard: str = ""
     # For a list box, the words for the last choice, which opens a box to type any other.
     another: str = ""
+    # A box of several lines, one thing a line (the calendars to read), drawn as a text area.
+    lines: bool = False
 
     def word(self, value: str) -> str:
         return dict(self.words).get(value, value)
@@ -156,6 +161,7 @@ def field(
     unset: str = "",
     company: str = "",
     another: str = "",
+    lines: bool = False,
 ) -> Field:
     kind, derived = _shape(Settings.model_fields[key].annotation)
     if kind == "toggle" and not words:
@@ -173,6 +179,7 @@ def field(
         company=company,
         keyboard=_keyboard(key, kind),
         another=another or ("Another model" if suggested else ""),
+        lines=lines,
     )
 
 
@@ -241,6 +248,12 @@ SECTIONS: tuple[Section, ...] = (
     Section("spending", "Spending", "coin", "The daily limit, and what one message may use."),
     Section("messages", "Messages", "bell", "What is sent without being asked, and when."),
     Section("lookups", "Lookups", "search", "Filling ideas in, and taking off what is over."),
+    Section(
+        "happening",
+        happening.NAME,
+        "event",
+        "What is on near home: the calendars it reads, Ticketmaster, and a weekly search.",
+    ),
     Section(
         "personality",
         "Personality and family",
@@ -455,6 +468,35 @@ GROUPS: tuple[Group, ...] = (
                 "judgement_budget",
                 "Most to spend on it in a month (US$)",
                 "Counted within the daily limit as well. 0 asks nothing.",
+            ),
+        ),
+    ),
+    Group(
+        "model",
+        "choosing",
+        "Choosing the suggestions",
+        'For a question like "what should we do this weekend?" or "where should we eat '
+        'tonight?", and the weekend digest, a stronger model is given everything the family has '
+        "told her and done that bears on it (ratings and notes, what she remembers, the last weeks "
+        "and the next, this chat's last few days) and chooses the picks; she then says them in her "
+        "own words. It goes to the company that answers the chat, nowhere else. Quick questions "
+        "about right now, and the kids' questions, are answered as before, at no extra cost.",
+        (
+            field(
+                "choosing",
+                "Have a stronger model choose the suggestions",
+                "About 3 to 13 cents a planning question, depending on the company.",
+            ),
+            field(
+                "choose_level",
+                "How strong a model chooses",
+                "Best by default: this is the judgement worth paying for.",
+            ),
+            field(
+                "choose_budget",
+                "Most to spend on it in a month (US$)",
+                "Counted within the daily limit as well. Once it is spent, suggestions are made as "
+                "before until the month turns. 0 chooses nothing.",
             ),
         ),
     ),
@@ -915,6 +957,59 @@ GROUPS: tuple[Group, ...] = (
         folded=True,
     ),
     Group(
+        "happening",
+        "feeds",
+        "Calendars read by hand",
+        "Any calendar you know of, one address a line: the iCal or .ics link a library, a school "
+        "or a venue gives for subscribing. Read once a day by this server, which sends nothing of "
+        "the family with it.",
+        (
+            field(
+                "event_feeds",
+                "Calendar addresses",
+                "One a line, starting with https:// (a webcal:// link works too).",
+                unset="none",
+                lines=True,
+            ),
+        ),
+    ),
+    Group(
+        "happening",
+        "search",
+        "Looking on its own",
+        "Once a week it searches the web for what is on near home over the next four weeks, and "
+        "every so often it looks for calendars near home to offer you above. Both are model calls "
+        "with the web, a few cents each, held to the month's budget here and the daily limit. "
+        "They need web lookups on, under Lookups.",
+        (
+            field("happening_search", "Search the web for what is on"),
+            field(
+                "happening_refind_days",
+                "Days between looking for calendars",
+                "It also looks at once when the home area changes.",
+            ),
+            field(
+                "happening_budget",
+                "Most it may spend a month (US$)",
+                "0 makes no model calls for it; the calendars and Ticketmaster cost nothing.",
+            ),
+        ),
+    ),
+    Group(
+        "happening",
+        "near",
+        "How far",
+        "",
+        (
+            field(
+                "happening_radius_km",
+                "Kilometres from home",
+                "For Ticketmaster. A calendar lists what it lists; the search keeps to about two "
+                "hours away.",
+            ),
+        ),
+    ),
+    Group(
         "connections",
         "telegram-answering",
         "Answering on Telegram",
@@ -1024,7 +1119,9 @@ def parse(one: Field, given: str) -> Any:
     text = given.strip()
     if not text:
         return None
-    if len(text) > MAX_LENGTH:
+    if one.lines:
+        text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
+    if len(text) > (MAX_LINES_LENGTH if one.lines else MAX_LENGTH):
         raise ValueError(TOO_LONG)
     if one.kind == "toggle":
         return text == "true"

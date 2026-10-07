@@ -17,6 +17,7 @@
       <nav class="seg" aria-label="View">
         <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid', size='sm') }}Month</a>
         <a href="{{ url_for('web.plans') }}">{{ icon('list', size='sm') }}List</a>
+        {% if grownup %}<a href="{{ url_for('web.happening_page') }}">{{ icon('ticket', size='sm') }}{{ happening_name }}</a>{% endif %}
       </nav>
     </div>
     {% if grownup %}<p class="note plans__note">{{ icon('cal') }}{{ source_note }}</p>{% endif %}

@@ -754,6 +754,7 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .plans-agenda { list-style: none; margin: 0; padding: 0; }
 .plan { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); padding: var(--s3) 0; border-top: 1px solid var(--line); }
 .plans-agenda > .plan:first-child { border-top: 0; }
+.plan--bare { grid-template-columns: minmax(0, 1fr); }  /* no date tile: the day is the heading above it (what is on near home) */
 .plan > .dt { align-self: start; }
 .plan__title { font-family: var(--font-text); font-size: var(--t-md); font-weight: 700; line-height: 1.25; letter-spacing: 0; }
 .plan__title a { color: var(--ink); text-decoration-color: var(--line-2); }
@@ -1235,7 +1236,8 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .plans { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "cal" "list" "rate"; gap: var(--s4); }
   .cal-bar { display: grid; gap: var(--s3); }
   .cal-bar .seg { display: flex; }
-  .cal-bar .seg a { flex: 1; }
+  /* Each tab as wide as its words, sharing what is left, so a long third one (what is on near home) wraps less */
+  .cal-bar .seg a { flex: 1 1 auto; padding: 0 var(--s3); }
   .month-nav h2 { font-size: 1.375rem; padding: 0; }
   .plans__list .item__trail { display: none; }
   .cal__wh > span { padding: 6px 0; text-align: center; font-size: var(--t-xs); letter-spacing: 0; }

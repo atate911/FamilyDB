@@ -16,9 +16,10 @@ from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
-from familydb import alerts, windows
+from familydb import alerts, happening, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, prices
+from familydb.availability import happening_search_available, ticketmaster_available
 from familydb.config import Settings
 from familydb.integrations.geocode import estimate_travel
 from familydb.memory import words
@@ -1366,12 +1367,26 @@ ALERT_TITLES = {
     "api": "A company stopped taking part of a request",
     "refused": "{company} is refusing requests",
     "advice": "A judgement on the models",
+    "happening": "A place read for what is on near home could not be read",
+    "calendars": "Event calendars found near home",
     "backup": "The backups need a look",
     "disk": "The server's disk is nearly full",
     "telegram": "Telegram refused the bot's token",
 }
 SAID_IN_DETAIL = frozenset(
-    {"model", "price", "prices", "new", "shift", "api", "refused", "advice", "backup", "disk"}
+    {
+        "model",
+        "price",
+        "prices",
+        "new",
+        "shift",
+        "api",
+        "refused",
+        "advice",
+        "happening",
+        "backup",
+        "disk",
+    }
 )
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
 
@@ -1422,6 +1437,64 @@ def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
     running = f", {source.failures} checks running" if source.failures > 1 else ""
     detail = f"Could not be read {when}{running}: {source.note}."
     return {"label": label, "detail": detail, "on": False}
+
+
+def find_row(find: Any, today: date) -> dict[str, Any]:
+    """One thing near home as its page lists it."""
+    first = date.fromisoformat(find.starts_at[:10])
+    last = date.fromisoformat(find.ends_at[:10]) if find.ends_at else first
+    if "T" in find.starts_at:
+        when = find.starts_at[11:16]
+    elif last > first:
+        when = f"until {last:%a} {last.day} {last:%b}" if first <= today else "all day"
+    else:
+        when = "all day"
+    who = (
+        happening.host(find.url)
+        if find.kind == happening.WEB and find.url
+        else happening.source_name(find.source)
+    )
+    summary = find.summary or ""
+    return {
+        "when": when,
+        "title": find.title,
+        "url": find.url if find.url and find.url.startswith(("https://", "http://")) else None,
+        "where": find.venue or find.address,
+        "price": find.price_note,
+        "summary": summary if len(summary) <= 160 else summary[:159].rstrip() + "…",
+        "who": who,
+    }
+
+
+def happening_days(found: Sequence[Any], today: date) -> list[dict[str, Any]]:
+    """What is on near home, by the day it starts, soonest first; what began before today and is
+    still on goes under today."""
+    days: dict[date, list[dict[str, Any]]] = {}
+    for find in found:
+        day = max(date.fromisoformat(find.starts_at[:10]), today)
+        days.setdefault(day, []).append(find_row(find, today))
+    return [
+        {
+            "label": "Today" if day == today else f"{day:%A} {day.day} {day:%B}",
+            "today": day == today,
+            "rows": sorted(rows, key=lambda row: (row["when"][0].isdigit(), row["when"])),
+        }
+        for day, rows in sorted(days.items())
+    ]
+
+
+def find_source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
+    """A place read for what is on near home, as a light: when, and how it went."""
+    label = happening.source_name(source.source)
+    if happening.source_kind(source.source) == happening.FEED:
+        label = f"Calendar at {label}"
+    label = label[0].upper() + label[1:]
+    when = local_moment(source.checked_at, tz)
+    if source.ok:
+        return {"label": label, "detail": f"Read {when}: {source.note}.", "on": True}
+    running = f", {source.failures} days running" if source.failures > 1 else ""
+    detail = f"Could not be read {when}{running}: {source.note}."
+    return {"label": label, "detail": detail, "on": False if source.failures > 1 else None}
 
 
 JUDGEMENT_TITLES = {
@@ -1572,6 +1645,20 @@ def found_by_lookup(tool: dict[str, Any]) -> dict[str, Any] | None:
         "sources": [url for url in (clean_url(s) for s in given.get("source_urls") or []) if url],
         "saved": not tool.get("is_error"),
     }
+
+
+def happening_state(settings: Any) -> str:
+    """The settings list's line for things near home: what it reads."""
+    feeds = len(happening.feed_urls(settings))
+    parts = [f"{feeds} calendar{'' if feeds == 1 else 's'}"] if feeds else []
+    if ticketmaster_available(settings):
+        parts.append("Ticketmaster")
+    if happening_search_available(settings):
+        parts.append("a weekly search")
+    if not parts:
+        return "Nothing read yet: turn on web lookups, or add a calendar or a Ticketmaster key."
+    listed = ", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0]
+    return f"Reads {listed}."
 
 
 def lookups_when(settings: Any) -> str:

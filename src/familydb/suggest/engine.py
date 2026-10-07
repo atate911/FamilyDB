@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta
 
+from familydb import happening
 from familydb.availability import enrichment_available
 from familydb.dates import parse_date_range, utc_iso, weekend_window
 from familydb.errors import ToolError
 from familydb.store import ideas, members, memories, outcomes, plans, suggestions
 from familydb.store.db import transaction
+from familydb.store.ideas import Idea
+from familydb.suggest import listed as listing
 from familydb.suggest.compose import choose, compose
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
@@ -24,10 +27,13 @@ from familydb.suggest.types import (
     DAY_END,
     DAY_START,
     Candidate,
+    Chosen,
     Constraints,
+    Context,
     DayBounds,
     SuggestInput,
     SuggestResult,
+    WebFind,
     clock,
 )
 from familydb.tools import ToolContext
@@ -107,9 +113,50 @@ def resolve_window(
     return (start_day, end_day), label, frame
 
 
+@dataclass
+class Assessment:
+    """Everything the engine found for one question, before it is cut down for the chat model:
+    every candidate with its verdict, the finds, the notes, and the suggestion's log row. A
+    stronger call choosing among them reads it whole (suggest/dossier.py)."""
+
+    args: SuggestInput
+    context: Context
+    label: str
+    candidates: list[Candidate]
+    finds: list[WebFind]
+    skipped: list[str]
+    by_id: dict[int, Idea]
+    recently: set[int]
+    suggestion_id: int
+    loved: set[int]  # done and loved: "again", or rated FAVOURITE_RATING or more lately
+    shown: list[Candidate]  # the engine's own cut, when nobody chose
+    held_back: int
+
+
 def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> SuggestResult:
-    """The whole engine for one question. `refresh_stale` queues a paid lookup per stale place;
-    code running with no model call (commands.py, the evening check) passes False."""
+    """The whole engine for one question; returns the structured result the chat model composes.
+    `refresh_stale` queues a paid lookup per stale place; code running with no model call
+    (commands.py, the evening check) passes False."""
+    return result_of(assess(ctx, args, refresh_stale=refresh_stale))
+
+
+def result_of(a: Assessment, chosen: Chosen | None = None) -> SuggestResult:
+    """The result the chat model is given: the engine's own cut, or, when a stronger call chose
+    (suggest/choosing.py), its picks leading and never cut."""
+    shown, held_back = a.shown, a.held_back
+    picked = [p.idea_id for p in chosen.picks if p.idea_id is not None] if chosen else []
+    if picked:
+        shown, held_back = choose(
+            a.candidates, a.by_id, a.recently, prefer=a.args.prefer, loved=a.loved, picked=picked
+        )
+    return compose(
+        a.context, a.label, shown, held_back, a.finds, a.skipped, a.suggestion_id, chosen
+    )
+
+
+def assess(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> Assessment:
+    """Every stage but the last: the window, the context, the rules, the checks, the engine's own
+    cut, the finds and the log."""
     window, label, bounds = resolve_window(args, ctx.clock.now())
     context = build_context(ctx, window, bounds)
     context.origin, where_note = resolve_origin(ctx, args.near, args.window)
@@ -184,17 +231,23 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
             ideas.requeue_enrichment(ctx.conn, stale_shown, now=ctx.now_iso())
         skipped.append("stale place details re-queued for a refresh")
 
+    # What the family's sources already list for these days costs nothing to read; when they
+    # list enough, the web is not searched again, unless the question asks for something.
+    stored = listing.listed(ctx, context)
     finds, note = ([], None)
     # A place nothing saved fits, found on the web, when the family has it on (suggest/places.py).
     if places_wanted(context, constraints, candidates, ctx.settings):
         finds, note = find_places(ctx, context, constraints)
         if note:
             skipped.append(note)
-    if args.discover:
+    if args.discover and (constraints.topic or len(stored) < listing.COVERED):
         events, note = discover(ctx, context, constraints)
         finds = finds + events
         if note:
             skipped.append(note)
+    finds, more = listing.merge_finds(stored, finds)
+    if more:
+        skipped.append(f"{more} more listed for these days on the page {happening.NAME}")
 
     suggestion_id = log_suggestion(
         ctx.conn,
@@ -206,4 +259,17 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         finds=finds,
         now=ctx.now_iso(),
     )
-    return compose(context, label, shown, held_back, finds, skipped, suggestion_id)
+    return Assessment(
+        args,
+        context,
+        label,
+        candidates,
+        finds,
+        skipped,
+        by_id,
+        recently,
+        suggestion_id,
+        loved,
+        shown,
+        held_back,
+    )

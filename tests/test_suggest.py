@@ -999,6 +999,142 @@ def test_the_topic_is_folded_so_the_same_subject_is_one_search(
     assert seen == ["live jazz", "live jazz"]
 
 
+# -- what the family's sources list near home (suggest/listed.py) -------------------------------
+
+
+def _listed(conn, *shows, source="feed:https://library.example.org/events.ics", kind="feed"):
+    from familydb.integrations.events import FoundEvent
+    from familydb.store import finds
+
+    events = [
+        FoundEvent(
+            external_id=f"e{n}",
+            title=title,
+            starts=starts,
+            ends=ends,
+            all_day=not isinstance(starts, datetime),
+            venue="Main library",
+            url=f"https://library.example.org/e{n}",
+        )
+        for n, (title, starts, ends) in enumerate(shows)
+    ]
+    with db.transaction(conn):
+        finds.upsert_many(conn, source, kind, events, tz=TZ, now=NOW_ISO)
+
+
+def test_what_the_sources_list_for_the_weekend_is_offered_with_who_listed_it(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    _listed(
+        conn,
+        ("Story time", datetime(2026, 9, 26, 10, 30, tzinfo=TZ), None),
+        ("Harvest fair", SAT, SUN + timedelta(days=1)),
+        ("Next month", datetime(2026, 10, 24, 10, tzinfo=TZ), None),
+    )
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    _, data = _suggest(registry, ctx)
+    shown = {f["title"]: f for f in data["web_finds"]}
+    assert set(shown) == {"Story time", "Harvest fair"}  # not the one next month
+    story = shown["Story time"]
+    assert story["dates"] == "Sat 26 Sep 10:30" and story["starts"] == "2026-09-26T10:30"
+    assert story["source"] == "listed by library.example.org"
+    assert story["summary"] == "Main library"
+    assert shown["Harvest fair"]["dates"] == "Sat 26 to Sun 27 Sep"
+
+
+def test_tonight_lists_only_what_starts_tonight(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    _listed(
+        conn,
+        ("Morning market", datetime(2026, 9, 26, 9, tzinfo=TZ), None),
+        ("Evening concert", datetime(2026, 9, 26, 19, tzinfo=TZ), None),
+        ("Fair", SAT, None),
+    )
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    _, data = _suggest(
+        registry, ctx, window="dates", start="2026-09-26", end="2026-09-26", from_time="17:00"
+    )
+    assert {f["title"] for f in data["web_finds"]} == {"Evening concert", "Fair"}
+
+
+def test_a_well_listed_weekend_asks_the_web_nothing_unless_asked_for_something(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    _listed(
+        conn, *[(f"Show {n}", datetime(2026, 9, 26, 10 + n, tzinfo=TZ), None) for n in range(3)]
+    )
+    api = fakes.FakeMessagesAPI()
+    ctx = _web_ctx(conn, full_settings, thursday_clock, family, api, {})
+    _, data = _suggest(registry, ctx, discover=True)
+    assert len(data["web_finds"]) == 3 and api.requests == []
+
+    api.queue.extend(fakes.discover_script([FIND]))
+    _, jazz = _suggest(registry, ctx, discover=True, topic="live jazz")
+    assert len(api.requests) == 2  # searched for jazz, which the calendars may not have
+    assert jazz["web_finds"][0]["url"] == FIND["url"]  # what was asked for comes first
+    assert len(jazz["web_finds"]) == 4
+
+
+def test_many_listed_are_cut_and_the_rest_are_counted(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    from familydb.suggest.listed import MAX_LISTED
+
+    _listed(
+        conn,
+        *[(f"Show {n}", datetime(2026, 9, 26, 8 + n % 12, n, tzinfo=TZ), None) for n in range(20)],
+    )
+    for number in range(60):
+        _idea(conn, f"Idea number {number} with a realistic sort of name", setting="indoor")
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    result, data = _suggest(registry, ctx)
+    assert len(data["web_finds"]) == MAX_LISTED
+    assert any("12 more listed for these days" in note for note in data["skipped_checks"])
+    assert len(result.content) < 6000, "the result grew; it is paid for twice per question"
+    assert "null" not in result.content
+
+
+# -- the assessment, and a result led by picks (suggest/choosing.py) ------------------------------
+
+
+def test_a_result_nobody_chose_for_is_what_it_always_was(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    _idea(conn, "Cafe A", setting="indoor")
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    _, data = _suggest(registry, ctx)
+    assert "picks" not in data and "framing" not in data
+
+
+def test_picked_ideas_lead_and_are_never_cut(registry, conn, full_settings, thursday_clock, family):
+    from familydb.suggest.compose import MAX_WITH_PICKS
+    from familydb.suggest.engine import assess, result_of
+    from familydb.suggest.types import Chosen, Pick
+
+    made = [_idea(conn, f"Idea {n}", setting="indoor") for n in range(20)]
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    a = assess(ctx, SuggestInput(window="this_weekend", question="?", discover=False))
+    last = made[-1]
+    chosen = Chosen(
+        [
+            Pick(
+                ref=f"idea:{last.id}",
+                title=last.title,
+                slot="new",
+                reason="Never tried.",
+                idea_id=last.id,
+            )
+        ],
+        framing="An easy weekend.",
+    )
+    result = result_of(a, chosen)
+    offered = [c for c in result.candidates if c.verdict != "ruled_out"]
+    assert offered[0].idea_id == last.id and len(offered) == MAX_WITH_PICKS
+    assert result.picks[0].ref == f"idea:{last.id}" and result.framing == "An easy weekend."
+    assert result.not_shown == 20 - MAX_WITH_PICKS
+
+
 def _done(conn, title, kind, days_ago, **fields):
     """An idea done `days_ago` days before Thursday 24 September."""
     idea = _idea(conn, title, kind=kind, status="done", **fields)

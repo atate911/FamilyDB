@@ -44,7 +44,19 @@ from familydb.tools import ToolContext, ToolRegistry
 
 log = logging.getLogger(__name__)
 
-Kind = Literal["chat", "digest", "retry", "enrich", "discover", "places", "judge", "price_check"]
+Kind = Literal[
+    "chat",
+    "digest",
+    "retry",
+    "enrich",
+    "discover",
+    "places",
+    "scout",
+    "find_feeds",
+    "choose",
+    "judge",
+    "price_check",
+]
 
 
 @dataclass(frozen=True)
@@ -118,6 +130,45 @@ KINDS: dict[str, CallSpec] = {
             hand_back=("report_finds",),
             web_searches=4,
             **_WORKER,
+        ),
+        # The weekly search for what is on near home over the next four weeks (jobs/happening.py):
+        # discovery's prompt and hand-back, a kind of its own so its cost is held to the
+        # family's monthly budget for it rather than counted with the chat's.
+        CallSpec(
+            "scout",
+            "searching for what is on near home",
+            prompt="discover",
+            tools=("report_finds",),
+            hand_back=("report_finds",),
+            web_searches=4,
+            **_WORKER,
+        ),
+        # Looking for event calendars near home to offer the family (jobs/happening.py): what
+        # it hands back is only addresses, each read by code before anyone is offered it.
+        CallSpec(
+            "find_feeds",
+            "looking for event calendars near home",
+            prompt="find_feeds",
+            tools=("report_feeds",),
+            hand_back=("report_feeds",),
+            web_searches=6,
+            **_WORKER,
+        ),
+        # Choosing what to suggest for a planning question (suggest/choosing.py): the family's own
+        # words and memories go into it, so it answers on the chat surface, the company the
+        # family already writes to, at the level the family chose for it, with no web. Its only
+        # output is one hand-back, checked by code; at most two calls, since each re-sends the
+        # whole dossier at the strong level.
+        CallSpec(
+            "choose",
+            "choosing what to suggest",
+            surface="chat",
+            level="choose_level",
+            prompt="choose",
+            tools=("give_picks",),
+            hand_back=("give_picks",),
+            iterations="choose_max_iterations",
+            max_tokens=6000,
         ),
         # Weighs a change the code narrowed to a few options (familydb/judgement.py); no web.
         CallSpec(

@@ -9,7 +9,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from familydb import alerts, upkeep, whatsnew
+from familydb import alerts, happening, upkeep, whatsnew
 from familydb import model_watch as watch
 from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
@@ -18,6 +18,8 @@ from familydb.availability import (
     calendar_available,
     digest_configured,
     enrichment_available,
+    happening_available,
+    happening_search_available,
     weather_available,
     web_is_public,
 )
@@ -26,6 +28,7 @@ from familydb.integrations.google_calendar import service_account_email
 from familydb.store import alerts as alert_store
 from familydb.store import backups as backup_store
 from familydb.store import calls, ideas, members, messages, mornings
+from familydb.store import finds as find_store
 from familydb.store import judgements as judgement_store
 from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
@@ -115,6 +118,15 @@ def keys(app: App, stored: dict[str, Any]) -> list[dict[str, Any]]:
     if live.telegram_bot_token and state:
         telegram = f"{telegram}; {state}"
     rows.append(_row("Telegram bot token", telegram_working(app), telegram))
+    rows.append(
+        _row(
+            "Ticketmaster key",
+            bool(live.ticketmaster_api_key) or None,
+            _where("ticketmaster_api_key", live, stored)
+            if live.ticketmaster_api_key
+            else "no key, which is fine: it only adds shows and games near home",
+        )
+    )
     return rows
 
 
@@ -316,7 +328,7 @@ def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
 # Alert kinds (familydb/alerts.py) that stop the family being answered, and others worth a look.
 # Price moves, usage shifts, new models and judgements are news and leave the light alone.
 STOPPING = frozenset({"credit", "key", "limit"})
-WORRYING = frozenset({"calendar", "model", "prices", "api", "refused"})
+WORRYING = frozenset({"calendar", "model", "prices", "api", "refused", "happening"})
 
 
 def light(app: App, conn: sqlite3.Connection) -> str | None:
@@ -380,7 +392,7 @@ def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     found = [
         one
         for one in alert_store.current(conn, since=utc_iso(now - alerts.KEEP))
-        if one.kind not in ("new", "advice")
+        if one.kind not in ("new", "advice", "calendars")
     ]
     if not found:
         return []
@@ -431,6 +443,55 @@ def model_watch(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
     }
 
 
+def happening_status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """How each source of what is on near home last answered, what they list in the weeks
+    ahead, and what its model calls have cost this month against its budget."""
+    live = app.settings
+    tz = live.tzinfo
+    today = app.clock.now().astimezone(tz).date()
+    ahead = today + timedelta(days=happening.HORIZON_DAYS)
+    return {
+        "name": happening.NAME,
+        "on": happening_available(live),
+        "sources": [views.find_source_row(one, tz) for one in find_store.sources(conn)],
+        "upcoming": find_store.count_upcoming(conn, start=today, end=ahead),
+        "days": happening.HORIZON_DAYS,
+        "spent": happening.spent_this_month(conn, live, app.clock.now()),
+        "budget": live.happening_budget,
+        "searching": happening_search_available(live),
+    }
+
+
+def happening_settings(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """What the settings page for things near home shows besides its boxes: the calendars the
+    app found near home, ticked when the settings read them, the newest marked, and what its
+    model calls have cost this month."""
+    live = app.settings
+    tz = live.tzinfo
+    reading = set(happening.feed_urls(live))
+    run = find_store.source(conn, happening.proposals_source(live.home_area))
+    proposed = find_store.proposals(conn, live.home_area) if live.home_area else []
+    return {
+        "proposals": [
+            {
+                "url": one.url,
+                "title": one.title,
+                "note": one.note,
+                "site": happening.host(one.url),
+                "events": one.events,
+                "ticked": one.url in reading,
+                "new": run is not None
+                and one.found_at == run.checked_at
+                and one.url not in reading,
+            }
+            for one in proposed
+        ],
+        "looked": views.local_moment(run.checked_at, tz) if run else None,
+        "looked_ok": run.ok if run else None,
+        "spent": happening.spent_this_month(conn, live, app.clock.now()),
+    }
+
+
 def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
     tz = app.settings.tzinfo
     since = utc_iso(app.clock.now() - timedelta(days=DAYS))
@@ -450,6 +511,7 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "troubles": troubles(conn, since, tz),
         "attention": attention(app, conn),
         "model_watch": model_watch(app, conn),
+        "happening": happening_status(app, conn),
         "activity": activity(app, conn),
         "activity_days": ACTIVITY_DAYS,
         "whats_new": whatsnew.latest(),

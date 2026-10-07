@@ -1112,6 +1112,7 @@ button.tick:active::before { background: var(--accent); border-color: var(--acce
 .agenda .where { display: flex; align-items: flex-start; gap: 0.35rem; }
 .agenda .where .icon { width: 0.95rem; height: 0.95rem; margin-top: 0.2rem; color: var(--faint); }
 .agenda > li.empty { display: flex; }
+/* What is on near home: a line each, no day chip, as the day is the panel's heading. */
 .past .chip-mon, .past .chip-day { color: var(--dim); }
 .past .agenda .what, .past .agenda .what a { color: var(--ink-2); }
 

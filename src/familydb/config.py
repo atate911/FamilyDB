@@ -54,6 +54,7 @@ SECRET_FIELDS = frozenset(
         "gemini_api_key",
         "openai_api_key",
         "telegram_bot_token",
+        "ticketmaster_api_key",
         "web_password",
         "web_password_hash",
         "web_secret_key",
@@ -128,6 +129,17 @@ class Settings(BaseSettings):
     # press.
     judgement_acts: Literal["within_cost", "suggest"] = "within_cost"
     judgement_budget: float = Field(default=1.0, ge=0, le=50)
+    # Choosing what to suggest (suggest/choosing.py): for a planning question or the weekend
+    # digest, a stronger model is given everything the household knows that bears on it and
+    # chooses the picks, which the chat model then words. At most `choose_budget` US$ a month,
+    # within the daily limit; 0, or off, keeps the engine's own order. Never for a kid's
+    # question, a question about right now, or anything but a chat message.
+    choosing: bool = True
+    choose_level: Level = "best"
+    choose_budget: float = Field(default=5.0, ge=0, le=50)
+    # Model calls one choice may take: the answer, and one more if code refused a pick in it.
+    # Each re-sends the whole dossier at the strong level, so it stays small.
+    choose_max_iterations: int = Field(default=2, ge=1, le=5)
 
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-3.1-flash-lite"
@@ -273,6 +285,21 @@ class Settings(BaseSettings):
     google_key_path: Path = Path("data/google_key.json")
     enrichment_notes: bool = True
 
+    # Dated things near home, found by the app (familydb/happening.py, jobs/happening.py). The
+    # calendars it reads, one address a line: those it proposed that an admin ticked, and any
+    # pasted by hand. Read by this server once a day; nothing of the family is sent with them.
+    event_feeds: str = Field(default="", max_length=2000)
+    # Ticketmaster's events within this many kilometres of home, with its free key.
+    ticketmaster_api_key: str | None = None
+    happening_radius_km: int = Field(default=80, ge=5, le=300)
+    # A web search for what is on near home over the next four weeks, once a week, and a lookup
+    # for event calendars near home every `happening_refind_days` days. Both are model calls, held
+    # with the rest of the job's to `happening_budget` US$ a month, within the daily
+    # limit; 0 makes none.
+    happening_search: bool = True
+    happening_refind_days: int = Field(default=30, ge=7, le=90)
+    happening_budget: float = Field(default=1.0, ge=0, le=20)
+
     web_enabled: bool = False
     web_host: str = "127.0.0.1"
     web_port: int = Field(default=8080, ge=1, le=65535)
@@ -312,6 +339,26 @@ class Settings(BaseSettings):
                 and names.get(str(key).lower(), str(key).lower()) not in EMPTY_MEANS_UNSET_EXCEPT
             )
         }
+
+    @field_validator("event_feeds")
+    @classmethod
+    def _feed_lines(cls, value: str) -> str:
+        """One calendar's address a line, blank lines dropped; each a web address."""
+        from urllib.parse import urlsplit
+
+        lines = []
+        for line in value.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith("webcal://"):
+                line = "https://" + line[len("webcal://") :]
+            parts = urlsplit(line)
+            if parts.scheme not in ("http", "https") or not parts.hostname:
+                raise ValueError(f"each line is a web address starting with https://: {line}")
+            if line not in lines:
+                lines.append(line)
+        return "\n".join(lines)
 
     @field_validator("persona")
     @classmethod

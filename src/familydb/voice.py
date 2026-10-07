@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from familydb import personas
+from familydb import happening, personas
 from familydb.dates import utc_iso
 from familydb.store import messages
 
@@ -437,6 +437,26 @@ EVENTS: dict[str, Event] = {
         "The status page has it; another model, or a newer FamilyDB, may be needed.",
         ("company", "detail"),
         {"company": "OpenAI", "detail": "API error 400: Unsupported parameter"},
+    ),
+    "alert_happening": Event(
+        "Telling an admin: a place I read for what is on could not be read",
+        "I couldn't read one of the places I check for what's on near home: {detail}. It's in "
+        "the settings, on the {page} page.",
+        ("detail", "page"),
+        {
+            "detail": "library.example.org could not be read for 3 days running (HTTP 404)",
+            "page": happening.NAME,
+        },
+    ),
+    "alert_calendars": Event(
+        "Telling an admin: event calendars found near home",
+        "I found {detail} near home. Tick the ones to read in the settings, on the {page} page.",
+        ("detail", "page"),
+        {
+            "detail": "2 new event calendars: Fort Vancouver Regional Library and Vancouver "
+            "Parks and Recreation",
+            "page": happening.NAME,
+        },
     ),
     "alert_backup": Event(
         "Telling an admin: the backups stopped working",

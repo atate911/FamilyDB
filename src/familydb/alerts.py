@@ -5,8 +5,10 @@ spending limit), calendar (Google shut the bot out), model, price, prices, new a
 the daily check, model_watch.py and usage_watch.py), api (a company refused a part of a request,
 now sent without it; agent/providers/parts.py), refused (a refusal FamilyDB cannot read, told
 once it happens twice without an answer between, then a judgement is asked), advice (what a
-judgement answered and what came of it), backup and disk (the hourly upkeep, upkeep.py), and
-telegram (the bot token refused; shown on the Status page only, `NOT_ON_TELEGRAM`).
+judgement answered and what came of it), backup and disk (the hourly upkeep, upkeep.py),
+telegram (the bot token refused; shown on the Status page only, `NOT_ON_TELEGRAM`), happening (a
+source of what is on near home unread three days running; about: the source; jobs/happening.py)
+and calendars (new event calendars found near home, to tick on the settings page; told once).
 
 Each is noted where it is seen, in a short write of its own, and forgotten when that thing is
 seen to work again, so the next time is told at once. The minute job (`run_alerts`) tells every
@@ -23,7 +25,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from typing import Any
 
-from familydb import voice
+from familydb import happening, voice
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
 from familydb.store import alerts as alert_store
@@ -45,6 +47,8 @@ KINDS = (
     "api",
     "refused",
     "advice",
+    "happening",
+    "calendars",
     "backup",
     "disk",
     "telegram",
@@ -158,12 +162,16 @@ def working(conn: sqlite3.Connection, kind: str, about: str = "") -> None:
 
 def wording(settings: Any, alert: alert_store.Alert) -> str:
     company = COMPANY_NAMES.get(alert.subject, alert.subject)
+    # Only the lines about things near home name its page, so no other line's choice of wording
+    # moves (voice.say chooses by its facts).
+    page = {"page": happening.NAME} if alert.kind in ("happening", "calendars") else {}
     return voice.say(
         settings,
         f"alert_{alert.kind}",
         company=company,
         limit=f"{settings.daily_spend_limit:.2f}",
         detail=alert.detail,
+        **page,
     )
 
 

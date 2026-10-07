@@ -65,6 +65,9 @@ BEHAVIOUR = (
     "judgement_level",
     "judgement_acts",
     "judgement_budget",
+    "choosing",
+    "choose_level",
+    "choose_budget",
     "openai_better_model",
     "openai_best_model",
     "anthropic_better_model",
@@ -98,8 +101,19 @@ BEHAVIOUR = (
     "keep_messages_days",
     "google_calendar_id",
     "log_level",
+    "event_feeds",
+    "happening_radius_km",
+    "happening_search",
+    "happening_refind_days",
+    "happening_budget",
 )
-SECRETS = ("anthropic_api_key", "openai_api_key", "gemini_api_key", "telegram_bot_token")
+SECRETS = (
+    "anthropic_api_key",
+    "openai_api_key",
+    "gemini_api_key",
+    "telegram_bot_token",
+    "ticketmaster_api_key",
+)
 # Who the assistant and the family are (/settings/personality); long texts show as "rewritten"
 # in the change list (web/views.py `LONG_SETTINGS`).
 PROFILE = (

@@ -143,6 +143,7 @@ def test_browsing_asks_nothing_of_a_model(settings, clock, conn, family) -> None
         "/ideas",
         "/plans",
         "/plans/month",
+        "/happening",
         "/tasks",
         "/lists",
         "/restaurants",

@@ -18,10 +18,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from familydb import happening
 from familydb.app import App
 from familydb.availability import (
     calendar_available,
     digest_configured,
+    happening_available,
     weather_available,
     web_is_public,
     web_tools_available,
@@ -450,6 +452,16 @@ def check_integrations(app: App, report: Report) -> None:
             WARN,
             "off, so ideas are never filled in and suggestions say 'hours unknown'",
             "Turn on 'Look ideas up on the web' on the settings page",
+        )
+
+    if happening_available(settings):
+        report.add("near home", OK, f"{happening.NAME} has something to read")
+    else:
+        report.add(
+            "near home",
+            WARN,
+            f"{happening.NAME} reads nothing, so suggestions know only what was saved",
+            "Turn on web lookups, or add a calendar or a Ticketmaster key on the settings page",
         )
 
     if digest_configured(settings):

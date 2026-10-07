@@ -12,6 +12,9 @@ from familydb.integrations.open_meteo import DayForecast
 from familydb.store.ideas import Idea
 
 Verdict = Literal["good", "possible", "ruled_out"]
+# What a pick is for (suggest/choosing.py): one they know and love, one new to them, one
+# further out.
+Slot = Literal["favourite", "new", "wildcard"]
 CostLevel = Literal[0, 1, 2, 3, 4]
 WindowKind = Literal["now", "today", "this_weekend", "next_weekend", "dates", "someday"]
 
@@ -87,6 +90,8 @@ class WebFind(BaseModel):
     dates: str | None = None
     summary: str = ""
     source: str | None = None
+    # When it starts, as code reads it ("YYYY-MM-DD" or "YYYY-MM-DDTHH:MM"), when known.
+    starts: str | None = None
     # A place found for what nothing saved fits (suggest/places.py): never checked here.
     kind: str | None = None
     hours: str | None = None  # as the page writes them
@@ -112,6 +117,24 @@ class Window(BaseModel):
     label: str
 
 
+class Pick(BaseModel):
+    """One of the stronger call's picks, as the chat model is given it to word."""
+
+    ref: str  # "idea:12", or "find:2" for the second web find
+    title: str
+    slot: Slot
+    reason: str
+    day: str | None = None  # YYYY-MM-DD, when it chose one
+    idea_id: int | None = None
+    url: str | None = None
+
+
+@dataclass
+class Chosen:
+    picks: list[Pick]
+    framing: str | None = None
+
+
 class SuggestResult(BaseModel):
     window: Window
     travel_from: str = "home"  # where the travel estimates start
@@ -121,6 +144,10 @@ class SuggestResult(BaseModel):
     skipped_checks: list[str]
     not_shown: int = 0  # further ideas ranked below the ones listed
     suggestion: dict[str, int] | None = None
+    # What a stronger call chose, in order, when one did (suggest/choosing.py); None otherwise, so
+    # a result nobody chose for is what it always was.
+    picks: list[Pick] | None = None
+    framing: str | None = None
 
 
 @dataclass

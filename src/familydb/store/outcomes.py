@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterable
 
 from pydantic import BaseModel
 
@@ -117,3 +118,24 @@ def recent_ratings(conn: sqlite3.Connection, *, since: str, last: int = 2) -> di
         if len(mine) < last:
             mine.append(row["rating"])
     return kept
+
+
+def recent(conn: sqlite3.Connection, *, since: str) -> list[Outcome]:
+    """Every outcome for a day on or after `since` (YYYY-MM-DD), the latest first."""
+    rows = conn.execute(
+        "SELECT * FROM outcomes WHERE happened_on >= ? ORDER BY happened_on DESC, id DESC",
+        (since,),
+    )
+    return [Outcome.from_row(row) for row in rows]
+
+
+def latest_for(conn: sqlite3.Connection, idea_ids: Iterable[int]) -> dict[int, Outcome]:
+    """The latest outcome of each of these ideas that has one."""
+    wanted = sorted(set(idea_ids))
+    if not wanted:
+        return {}
+    marks = ", ".join("?" for _ in wanted)
+    rows = conn.execute(
+        f"SELECT * FROM outcomes WHERE idea_id IN ({marks}) ORDER BY happened_on, id", wanted
+    )
+    return {row["idea_id"]: Outcome.from_row(row) for row in rows}

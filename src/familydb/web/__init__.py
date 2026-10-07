@@ -15,7 +15,7 @@ from typing import Any
 from flask import Flask, render_template, request
 from werkzeug.security import safe_join
 
-from familydb import __version__, personas
+from familydb import __version__, happening, personas
 from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
 from familydb.channels.web import WebChat
@@ -209,6 +209,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
             "status_words": views.STATUS_LIGHTS.get(light or ""),
             "assistant": her.name,
             "has_persona": her is not personas.PLAIN,
+            # What is on near home goes by the family's name for it (familydb/happening.py).
+            "happening_name": happening.NAME,
             **_look(),
         }
 
