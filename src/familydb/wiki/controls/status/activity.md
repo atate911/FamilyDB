@@ -22,7 +22,7 @@ A key that matches nothing shows a not-found page.
 | You see | It usually means |
 |---|---|
 | Several model calls for one message | The assistant used tools, one call for each step. |
-| A call ending in `max_tokens` | The answer hit the output limit. Raise "Longest answer, in tokens" on [Spending](/wiki/controls/settings/spending#what-one-message-may-use). |
+| A call ending in `max_tokens` | The answer hit the output limit. Raise "Longest answer (tokens)" on [Spending](/wiki/controls/settings/spending#what-one-message-may-use). |
 | A call ending in `refusal` | The model declined to answer. |
 | A tool tagged Failed | The tool refused or errored; its answer says why. |
 

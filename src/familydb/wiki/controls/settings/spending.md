@@ -46,7 +46,7 @@ cut an answer short. The defaults suit a family.
 
 | Setting | Default | What it does |
 |---|---|---|
-| Longest answer, in tokens (`max_output_tokens`) | 16000 | A token is about three quarters of a word. An answer is rarely near it. Between 256 and 64000 |
+| Longest answer (tokens): `max_output_tokens` | 16000 | A token is about three quarters of a word. An answer is rarely near it. Between 256 and 64000 |
 | Steps per message (`agent_max_iterations`) | 8 | How many tools (a search, a save) it may use before it has to answer. Between 1 and 20 |
 | Steps per lookup (`worker_max_iterations`) | 12 | Between 1 and 30 |
 | Ideas sent with every message (`prompt_idea_limit`) | 150 | The newest this many; older ones are still found by searching. 0 sends them all. Between 0 and 5000 |

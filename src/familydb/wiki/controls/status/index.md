@@ -64,13 +64,13 @@ Every row has a tag in words, never colour alone, and an admin gets a button bes
 
 ## Waiting and Worth a look
 
-**Waiting** counts ideas by lookup state and says when they are looked up, by default together in the evening. Below that are the next five ideas due and **Messages that did not go through**: the five most recent messages that failed, with their text, the error, and either "will try again" or "given up on". **Parents see that text; Recent activity is admin-only.** A message stays listed until a retry answers it. Retries are set under "When a message cannot be answered" on the [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered) page.
+**Waiting** counts ideas by lookup state and says when they are looked up, by default together in the evening. Below that are the next five ideas due and **Messages that did not go through**: the five most recent messages that failed, with their text, the error, and either "given up on" or "N tries, will try again". The second shows until the give-up flag is set, even after the retries are used up, so compare the count with the limit set on Messages. **Parents see that text; Recent activity is admin-only.** A message stays listed until a retry answers it. Retries are set under "When a message cannot be answered" on the [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered) page.
 
 **Worth a look** lists the six most recent calls in the last 30 days that ended oddly, and the six most recent lookups that gave up.
 
 | Item | What it means | What to do |
 |---|---|---|
-| A call ended with **max_tokens** | The answer was cut short at the output limit. | Raise "Longest answer, in tokens" on [Spending](/wiki/controls/settings/spending#what-one-message-may-use). |
+| A call ended with **max_tokens** | The answer was cut short at the output limit. | Raise "Longest answer (tokens)" on [Spending](/wiki/controls/settings/spending#what-one-message-may-use). |
 | A call ended with **refusal** | The model declined to answer. | An admin can find that time under Recent activity and open it. |
 | A **lookup that failed** | The lookup gave up. The note says why. | Open the idea and press **Look it up again**. |
 
