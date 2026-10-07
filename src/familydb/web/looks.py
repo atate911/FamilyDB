@@ -35,7 +35,7 @@ LOOKS = (
         "kitchen",
         "Kitchen Table",
         "The family's table: cream paper by day, charcoal at night, deep green for what "
-        "you act on, and each person in their own colour.",
+        "you act on, and each person in their own color.",
         True,
         ("#EFE7D7", "#121816"),
     ),
@@ -58,7 +58,7 @@ LOOKS = (
     Look(
         "midnight",
         "Midnight",
-        "Made for night: a blue-black page, a darker panel, soft-white ink, each colour "
+        "Made for night: a blue-black page, a darker panel, soft-white ink, each color "
         "lit like a window.",
         True,
         ("#0A0F1E", "#04060D"),
@@ -74,7 +74,7 @@ LOOKS = (
     Look(
         "ink",
         "Ink",
-        "Almost no colour: a white page, black ink, a black panel. Colour is left for "
+        "Almost no color: a white page, black ink, a black panel. Color is left for "
         "late, for Vera and for people.",
         True,
         ("#000000", "#000000"),
@@ -82,8 +82,8 @@ LOOKS = (
     Look(
         "enamel",
         "Enamel",
-        "Old enamel signs and good painted interiors: warm grey plaster, a deep petrol "
-        "panel, earthy colours.",
+        "Old enamel signs and good painted interiors: warm gray plaster, a deep petrol "
+        "panel, earthy colors.",
         True,
         ("#0D2D40", "#143344"),
     ),
@@ -144,14 +144,14 @@ def value(look: Look, mode: str) -> str:
 
 
 def scheme(look: Look, mode: str) -> str:
-    """The colour scheme to tell the browser, which styles its own boxes to match."""
+    """The color scheme to tell the browser, which styles its own boxes to match."""
     if not look.has_day or mode == DARK:
         return "dark"
     return "light" if mode == LIGHT else "light dark"
 
 
 def theme_colours(look: Look, mode: str) -> list[tuple[str | None, str]]:
-    """The browser bar's colour, with the media query each goes with."""
+    """The browser bar's color, with the media query each goes with."""
     day, night = look.band
     if not look.has_day or mode == DARK:
         return [(None, night)]

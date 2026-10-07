@@ -68,7 +68,7 @@
             <div class="next">
               {% if plan.chip %}{{ date_tile(plan.chip, now=(plan.relative in ('today', 'tomorrow')), size='lg') }}{% endif %}
               <div>
-                <p class="next__when">{{ plan.when }}{% if plan.relative %} <span class="muted">· {{ plan.relative }}</span>{% endif %}{% if plan.status != 'confirmed' %} <span class="tag tag--off">{{ plan.status }}</span>{% endif %}</p>
+                <p class="next__when">{{ plan.when }}{% if plan.relative %} <span class="muted">· {{ plan.relative }}</span>{% endif %}{% if plan.status != 'confirmed' %} <span class="tag tag--off">{{ 'canceled' if plan.status == 'cancelled' else plan.status }}</span>{% endif %}</p>
                 <div class="meta">
                   {%- if plan.location %}<span>{{ icon('pin') }}{{ plan.location }}</span>{% endif -%}
                   {{ for_people(row) }}
@@ -153,7 +153,7 @@
           {% if row.on %}<dt>On</dt><dd>{{ row.on }}</dd>{% endif %}
           <dt>Indoor or out</dt><dd>{{ setting }}</dd>
           {% if weather %}<dt>Weather</dt><dd>{{ weather }}</dd>{% endif %}
-          {% if idea.seasons %}<dt>Seasons</dt><dd>{{ idea.seasons | join(', ') }}</dd>{% endif %}
+          {% if idea.seasons %}<dt>Seasons</dt><dd>{{ idea.seasons | map('replace', 'autumn', 'fall') | join(', ') }}</dd>{% endif %}
           {% if row.duration %}<dt>How long</dt><dd>{{ row.duration }}</dd>{% endif %}
           {% if row.cost %}<dt>Cost</dt><dd>{{ row.cost }}</dd>{% endif %}
           {% if idea.needs_booking %}<dt>Booking</dt><dd>Needed{% if idea.lead_time_days %}, about {{ idea.lead_time_days }} days ahead{% endif %}</dd>{% endif %}

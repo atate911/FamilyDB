@@ -357,7 +357,7 @@ EVENTS: dict[str, Event] = {
         {"company": "OpenAI", "detail": "API error 400: Unsupported parameter"},
     ),
     "alert_advice": Event(
-        "Telling an admin: what a judgement on the models said",
+        "Telling an admin: what a judgment on the models said",
         "I weighed a change in the models: {detail}. The status page has it, with a way to "
         "put it back or put it in.",
         ("detail",),

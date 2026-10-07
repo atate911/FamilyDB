@@ -1,12 +1,12 @@
 {% from "_ui.html" import icon, brand_mark, wordmark, avatar, badge, health_pill, flash %}
 <!doctype html>
 {# The look this person chose (web/looks.py, themes.css): a theme on <html>, and a mode only when day or night was asked for. #}
-<html lang="en-GB" data-theme="{{ look.key }}"{% if look_mode != 'auto' %} data-mode="{{ look_mode }}"{% endif %}>
+<html lang="en-US" data-theme="{{ look.key }}"{% if look_mode != 'auto' %} data-mode="{{ look_mode }}"{% endif %}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="{{ look_scheme }}" />
-    {% for media, colour in look_colours %}<meta name="theme-color" content="{{ colour }}"{% if media %} media="{{ media }}"{% endif %} />
+    {% for media, color in look_colours %}<meta name="theme-color" content="{{ color }}"{% if media %} media="{{ media }}"{% endif %} />
     {% endfor %}
     <title>{% block title %}{{ site_title }}{% endblock %}</title>
     <link rel="preload" href="{{ url_for('static', filename='fonts/atkinson-400.woff2') }}" as="font" type="font/woff2" crossorigin />

@@ -44,7 +44,7 @@ FACES = {"loved": 9, "ok": 6, "not-great": 3}
 RATED = "Thanks. That goes into the next suggestions."
 SCHEDULED = "On the calendar: {title}."
 MOVED = "Moved to {when}."
-CANCELLED = "Cancelled."
+CANCELLED = "Canceled."
 TICKED = "Done: #{id} {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"

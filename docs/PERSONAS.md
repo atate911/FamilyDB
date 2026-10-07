@@ -113,7 +113,7 @@ changes the cached prefix only when somebody saves it.
 4. **A full rewrite**: kept per persona with her own character as it shipped when they wrote it. The
    box describes the persona in force and saving writes to her alone, never to a persona chosen in
    the same save. When hers has changed since, the page says so above their rewrite and offers,
-   folded, a line diff of hers then against hers now, each line marked + or - as well as coloured.
+   folded, a line diff of hers then against hers now, each line marked + or - as well as colored.
    Saving a changed rewrite takes hers as it is now, ending the notice. Restoring drops that
    persona's rewrite and nobody else's.
 5. **Her lines**: wordings as above. Under each box, how the line in force reads, every wording
@@ -122,7 +122,7 @@ changes the cached prefix only when somebody saves it.
 6. **Who is listening** (not a setting): the audience line, a few tokens from facts code already has,
    which lets any persona choose its register without her character guessing.
 
-**Not built, and why.** Dials ("how much she says", "humour", "emoji"), each position one fixed
+**Not built, and why.** Dials ("how much she says", "humor", "emoji"), each position one fixed
 sentence: deterministic, cheap, testable, but the spec's own style lines ("Short replies. One emoji
 at most.") would have to move into the persona layer for a dial to loosen them, and then none would
 need a short character of its own. If families keep writing the same notes in "Anything to add",

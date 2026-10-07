@@ -1323,7 +1323,7 @@ ALERT_TITLES = {
     "shift": "What the calls cost or do moved",
     "api": "A company stopped taking part of a request",
     "refused": "{company} is refusing requests",
-    "advice": "A judgement on the models",
+    "advice": "A judgment on the models",
 }
 SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused", "advice"})
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}

@@ -126,7 +126,7 @@ def test_a_grown_up_phone_menu_keeps_the_five_tabs(sam) -> None:
 def test_the_page_can_be_skipped_to_and_names_its_language(sam) -> None:
     html = sam.get("/more").text
     assert '<a class="skip" href="#main">Skip to content</a>' in html
-    assert 'id="main"' in html and '<html lang="en-GB"' in html
+    assert 'id="main"' in html and '<html lang="en-US"' in html
     assert "style.css" in html and "fonts/atkinson-400.woff2" in html
 
 

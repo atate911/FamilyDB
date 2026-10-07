@@ -131,7 +131,7 @@
         {%- if not mine %}{{ person(row.person) }}{% endif -%}
         <span>{{ icon('clock') }}{{ row.when }}</span>
         {%- if row.late %}<span class="late">{{ row.late }}</span>{% endif -%}
-        {%- if row.status == 'cancelled' %}<span>Cancelled</span>{% endif -%}
+        {%- if row.status == 'cancelled' %}<span>Canceled</span>{% endif -%}
         {%- if open and not compact and not mine %}
           {%- if row.reminder %}<span>{{ icon('bell') }}Reminder {{ row.reminder }}{% if row.reminder_state %} · {{ row.reminder_state }}{% endif %}</span>
           {%- else %}<span>{{ icon('belloff') }}No reminder</span>{% endif -%}
@@ -216,7 +216,7 @@
         <span>{{ row.when }}</span>
         {%- if row.relative in ('today', 'tomorrow', 'now') %}<span class="tag tag--when">{{ icon('cal') }}{{ row.relative | capitalize }}</span>
         {%- elif row.relative %}<span class="rel">{{ row.relative }}</span>{% endif -%}
-        {%- if row.status != 'confirmed' %}<span class="tag tag--off">{{ icon('offc') }}{{ row.status }}</span>{% endif -%}
+        {%- if row.status != 'confirmed' %}<span class="tag tag--off">{{ icon('offc') }}{{ 'canceled' if row.status == 'cancelled' else row.status }}</span>{% endif -%}
         {%- if row.from_google %}<span class="tag tag--off">added in Google</span>{% endif -%}
         {%- if row.location %}<span>{{ icon('pin') }}{{ row.location }}</span>{% endif -%}
         {%- if row.away %}<span>{{ icon('car') }}{{ row.away }}</span>{% endif -%}

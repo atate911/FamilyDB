@@ -288,7 +288,7 @@ GROUPS: tuple[Group, ...] = (
                 "weather_units",
                 "Units",
                 "For the forecast and for distances.",
-                words=(("metric", "°C and kilometres"), ("imperial", "°F and miles")),
+                words=(("metric", "°C and kilometers"), ("imperial", "°F and miles")),
             ),
         ),
     ),
@@ -426,7 +426,7 @@ GROUPS: tuple[Group, ...] = (
         "model",
         "judgement",
         "Asking a stronger model to weigh a change",
-        "Some changes need judgement rather than a rule: which model should take the place of one "
+        "Some changes need judgment rather than a rule: which model should take the place of one "
         "that is going, what a refusal nobody can read means, which new models belong at which "
         "level, and what a price the lists disagree on really is. With this on, the questions "
         "that come up are asked together once a day, with the evening's lookups, in one call; "
@@ -436,7 +436,7 @@ GROUPS: tuple[Group, ...] = (
         (
             field(
                 "judgements",
-                "Ask a stronger model when a change needs judgement",
+                "Ask a stronger model when a change needs judgment",
                 "A few cents each time, and nothing on a day with no question.",
             ),
             field(
@@ -466,7 +466,7 @@ GROUPS: tuple[Group, ...] = (
         "stronger",
         "Better and best models",
         "The models a company answers with at the better and best levels. Empty uses the ones "
-        "this version knows (shown as the default); a judgement may suggest newer ones.",
+        "this version knows (shown as the default); a judgment may suggest newer ones.",
         tuple(
             field(
                 f"{company}_{level}_model",

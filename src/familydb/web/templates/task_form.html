@@ -44,9 +44,9 @@
       <fieldset class="fieldset">
         <legend>Done with it?</legend>
         <div class="field"><label class="field__label" for="e-status">Status</label>
-          <select id="e-status" name="status">{% for value in ['open', 'done', 'cancelled'] %}<option value="{{ value }}"{% if value == task.status %} selected{% endif %}>{{ value | capitalize }}</option>{% endfor %}</select></div>
+          <select id="e-status" name="status">{% for value in ['open', 'done', 'cancelled'] %}<option value="{{ value }}"{% if value == task.status %} selected{% endif %}>{{ 'Canceled' if value == 'cancelled' else value | capitalize }}</option>{% endfor %}</select></div>
         <label class="check"><input type="checkbox" name="clear_reminder" />Cancel the pending reminder</label>
-        <p class="field__hint">Completing or cancelling stops pending reminders; completing one that repeats records it and keeps it coming round. Reopening doesn’t restore them.</p>
+        <p class="field__hint">Completing or canceling stops pending reminders; completing one that repeats records it and keeps it coming round. Reopening doesn’t restore them.</p>
       </fieldset>
 
       <div class="actions">
@@ -60,7 +60,7 @@
         <h2 id="h-know2" class="card__head">Good to know</h2>
         <ul class="tips">
           <li>Ticking it off on the list does the same as setting it to Done here.</li>
-          <li>To-dos aren’t deleted: a cancelled one moves to “Cancelled”, and can be set back to Open.</li>
+          <li>To-dos aren’t deleted: a canceled one moves to “Canceled”, and can be set back to Open.</li>
           <li>If somebody changed it while you had it open, your save is refused, so reload and try again.</li>
         </ul>
       </section>

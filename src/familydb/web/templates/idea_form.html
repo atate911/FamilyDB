@@ -104,7 +104,7 @@
           </div>
           <fieldset class="fieldset fieldset--inner">
             <legend class="field__label">Only in these seasons</legend>
-            <div class="choices">{% for season in seasons %}<label class="choice"><input type="checkbox" name="seasons" value="{{ season }}" {{ 'checked' if editing and season in idea.seasons }} /><span>{{ season | capitalize }}</span></label>{% endfor %}</div>
+            <div class="choices">{% for season in seasons %}<label class="choice"><input type="checkbox" name="seasons" value="{{ season }}" {{ 'checked' if editing and season in idea.seasons }} /><span>{{ 'Fall' if season == 'autumn' else season | capitalize }}</span></label>{% endfor %}</div>
           </fieldset>
           <label class="check"><input type="checkbox" name="needs_booking" value="yes" {{ 'checked' if editing and idea.needs_booking }} />Needs booking</label>
         </div>

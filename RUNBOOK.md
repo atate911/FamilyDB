@@ -259,7 +259,7 @@ curl -s http://127.0.0.1:8080/healthz      # ok
 
 ## 11. Settings, and choosing OpenAI, Claude or Gemini
 
-Every setting here can be changed in `.env` (restart needed) or on `/settings` (no restart). A value set on the page wins; empty its box and `.env` applies again (the greyed value in an empty box shows it; a dropdown says "Default (Thursday)"); a box set on the page is marked "changed". `familydb config` prints the lot and where each came from. `/settings` is a card to each part, saying how it stands and marking what needs a look: General (home, time zone, units, the page's name), AI model (company, key, checked with the company for free, models), Spending, Messages (what is sent unasked, and when), Lookups, Personality and family, Connections (Telegram, Google Calendar), Sign-in and security, What has changed. Each page has one Save; fine-tuning is folded.
+Every setting here can be changed in `.env` (restart needed) or on `/settings` (no restart). A value set on the page wins; empty its box and `.env` applies again (the grayed value in an empty box shows it; a dropdown says "Default (Thursday)"); a box set on the page is marked "changed". `familydb config` prints the lot and where each came from. `/settings` is a card to each part, saying how it stands and marking what needs a look: General (home, time zone, units, the page's name), AI model (company, key, checked with the company for free, models), Spending, Messages (what is sent unasked, and when), Lookups, Personality and family, Connections (Telegram, Google Calendar), Sign-in and security, What has changed. Each page has one Save; fine-tuning is folded.
 
 A change reaches the next message and page at once, a new Telegram token within seconds, the timezone at once. Scheduled jobs (digest, follow-ups, evening check, nudges, lookups, retries) pick up a new time or interval within five minutes, hours in the family's timezone.
 
@@ -337,7 +337,7 @@ Folded under "What one message may use": longest answer (at most 64,000 tokens),
 
 **Firewall.** The bot needs nothing inbound. Behind Caddy or nginx open 80 and 443 (or 80 and the page's own port), and SSH, and nothing else; never 8080, since the page listens on `127.0.0.1` so only the proxy reaches it and the firewall is the second lock on the same door. docs/INSTALL.md, "Looking after the server itself", has the `ufw` commands in the order that does not lock you out, and the two commands that turn on unattended security updates, which matter more than anything else here.
 
-**Logs.** systemd: journald, honouring `SystemMaxUse` in `/etc/systemd/journald.conf` (say `500M` on a small disk). Docker: compose caps each container at five files of 10 MB. Nothing writes a log file of its own. The Telegram token is removed from every log line. `LOG_LEVEL=DEBUG` also logs every HTTP request and is loud.
+**Logs.** systemd: journald, honoring `SystemMaxUse` in `/etc/systemd/journald.conf` (say `500M` on a small disk). Docker: compose caps each container at five files of 10 MB. Nothing writes a log file of its own. The Telegram token is removed from every log line. `LOG_LEVEL=DEBUG` also logs every HTTP request and is loud.
 
 **Disk.** The install is about 600 MB; the database grows a few MB a year. Backups grow: the nightly schedule keeps `--keep-days` (14) and deletes the rest.
 
@@ -373,7 +373,7 @@ Install and server failures (clone, home directory, service starts then stops, p
 - **Telegram "cannot reach Telegram; trying again".** The server cannot get out to Telegram; it retries every thirty seconds. If it lasts, check the network and DNS.
 - **Google "cannot find that calendar" / "can see that calendar but not change it".** Not shared with the service account, or read-only: the calendar's settings, Share with specific people, "Make changes to events" for the address the page names. The id may also be wrong.
 - **Google "Calendar is not turned on in the project".** Enable the Google Calendar API in the key's project, wait a minute, press Connect again.
-- **Google Cloud will not make a key.** Some organisations disable key creation; use a project outside the organisation.
+- **Google Cloud will not make a key.** Some organizations disable key creation; use a project outside the organization.
 - **"Google no longer accepts the saved key."** The key or service account was deleted. Make a new key and connect again (section 5). If the page still will not connect, `familydb google connect KEY_FILE CALENDAR_ID` on the server prints Google's answer, and `familydb google events` shows what the bot sees.
 - **"no family members yet".** Add yourself on the page (setup opens on it), or `familydb members add NAME --role admin`.
 - **"a setting will not do" at startup / `familydb config`.** A value in `.env` is not of the type the setting takes; the line names it. An empty line is fine (not set); `WEB_PORT=eighty` stops it. Quote anything with a space or `#` (a bare value loses everything from the `#`).

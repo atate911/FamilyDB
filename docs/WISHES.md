@@ -44,7 +44,7 @@ This file is what the family decided and how it is built.
   look at the lists when they choose.
 - **"We should" becomes "I want"**: Vera nudges her wording at most once a day, more often the more
   she says "we should", less as she improves, with a warm word now and then when she says "I want".
-- **The kids' screens** are the same Phosphor look, optimised for an iPad, with limited changes.
+- **The kids' screens** are the same Phosphor look, optimized for an iPad, with limited changes.
 - **Tokens**: as few as possible go to the model.
 - **Chores for money** are not part of this.
 
@@ -121,7 +121,7 @@ Every message from a kid carries one line in the current (uncached) turn, built 
 phone. Wording: nudge.` Her topics go only where nobody else reads the reply; at most twelve, locked
 first; usually under 30 tokens. The cached prefix grew by about 800 tokens (the three tools and a
 short section of `prompts/system.md`), read from the cache on every message. The evals in
-`evals/cases.py` (`wish_*`, with Mia in `evals/household.py`) hold the behaviour.
+`evals/cases.py` (`wish_*`, with Mia in `evals/household.py`) hold the behavior.
 
 ### Wording
 

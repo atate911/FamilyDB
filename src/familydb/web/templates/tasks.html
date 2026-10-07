@@ -57,7 +57,7 @@
 
     <div class="todo-bar">
       <nav class="seg" aria-label="Show">
-        {% for value, label in (('open', 'Open'), ('done', 'Done'), ('cancelled', 'Cancelled'), ('all', 'All')) %}
+        {% for value, label in (('open', 'Open'), ('done', 'Done'), ('cancelled', 'Canceled'), ('all', 'All')) %}
           <a href="{{ url_for('web.tasks', status=value, q=query or none) }}"{% if value == status %} aria-current="page"{% endif %}>{{ label }}{% if value == 'open' and open_count %} <span class="n">{{ open_count }}</span>{% endif %}</a>
         {% endfor %}
       </nav>

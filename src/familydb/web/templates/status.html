@@ -252,7 +252,7 @@
       {% endif %}
       {% if model_watch.judgements %}
         {# What a stronger model was asked to weigh. A change it made can be put back, one waiting for an admin put in, each through the settings form. #}
-        <h3 class="mt-4">Judgements</h3>
+        <h3 class="mt-4">Judgments</h3>
         <ul class="items">
           {% for row in model_watch.judgements %}
             <li class="item item--divided item--health">
@@ -274,7 +274,7 @@
           {% endfor %}
         </ul>
       {% elif model_watch.judging %}
-        <p class="small muted mt-3">Judgements are on: nothing has needed one lately.</p>
+        <p class="small muted mt-3">Judgments are on: nothing has needed one lately.</p>
       {% endif %}
     </section>
 
