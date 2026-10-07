@@ -1,12 +1,12 @@
 # Look and your password
 
-Two pages belong to each person alone: **Look**, where you choose how the page looks for you, and **Your password**, where you choose the password you sign in with. Everybody signed in has both, a kid included. Neither is a family setting, and neither is something the assistant can change.
+Two pages belong to each person alone: **Look**, where you choose how the page looks for you, and **Your password**, where you choose the password you sign in with. Everybody signed in as themselves has both, a kid included. Neither is a family setting, and neither is something the assistant can change.
 
 ## Look
 
 Open **Look** from your account menu, or from the menu on a phone. It has two parts: **Day and night**, then a grid of looks, each drawn as a small sample page. Pick one of each and press **Use this look**.
 
-**A look changes colour and nothing else.** The layout, the words, what each page holds and what each button does stay the same. Red means late or broken in every look, and the assistant's own screen looks the same in all of them, so it is recognisable whatever the page wears. Each look is tested against minimum contrast levels by day and by night, and a look that cannot keep them is not offered.
+**A look changes colour and nothing else.** The layout, the words, what each page holds and what each button does stay the same. Red means late or broken in every look, and the assistant's own dark screen keeps its own colours in all of them, so it is recognisable whatever the page wears. Each look is checked against minimum contrast levels by day and by night before it is added.
 
 ### Day and night
 
@@ -41,7 +41,7 @@ Two looks have no day. Phosphor and Afterglow are green-screen looks, so they ar
 
 ## Your password
 
-Open **Your password** from your account menu. It shows only when you are signed in as yourself. [Sign-in and security](/wiki/controls/settings/sign-in) covers the settings an admin can change, and [Recovery](/wiki/operations/recovery) covers a password somebody has lost.
+Open **Your password** from your account menu, which shows it only when you are signed in as yourself. While the family shares one password, an admin reaches it from the Family page or setup step 2. [Sign-in and security](/wiki/controls/settings/sign-in) covers the settings an admin can change, and [Recovery](/wiki/operations/recovery) covers a password somebody has lost.
 
 ### Choosing one
 
@@ -59,7 +59,7 @@ An admin makes a [starting password](/wiki/reference/glossary#starting-password)
 
 1. Sign in with your name and the starting password.
 2. You land on a page headed **Choose your own password**. Nothing else on the page opens until you have, and the form does not ask for the starting one again.
-3. Save a password of your own. The starting one stops working, and you go to Home.
+3. Save a password of your own. The starting one stops working, and you go to Home (an admin with setup unfinished lands on Setup).
 
 Only an admin signed in as themselves can make one, and not for themselves: an admin chooses their own. [Family](/wiki/controls/family) says how.
 
@@ -68,11 +68,11 @@ Only an admin signed in as themselves can make one, and not for themselves: an a
 A phone or computer is signed out, and asks for a password on its next click, when:
 
 - you choose a new password, or an admin makes you a new starting one;
-- an admin takes your password away or switches you off, or gives you a role that may not sign in;
+- an admin takes your password away or switches you off;
 - an admin uses **Sign everyone out**;
 - it goes unused for longer than the days a sign-in lasts, 30 unless an admin changed it.
 
-A new starting password also signs you out on this browser, and the next sign-in sends you back to choosing your own.
+The next sign-in with a new starting password sends you back to choosing your own.
 
 ### While the family still shares one password
 
