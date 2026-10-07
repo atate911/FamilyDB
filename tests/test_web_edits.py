@@ -361,7 +361,9 @@ def test_an_idea_or_every_one_waiting_can_be_looked_up_now(settings, clock, conn
     assert "Asked for now: within a few minutes." in after and "Look it up now" not in after
 
     status = looking.get("/status").text
-    assert "Ideas are looked up together at 9\u00a0pm each evening." in status
+    assert (
+        'Ideas are looked up together at <span class="fig">9\u00a0pm</span> each evening.' in status
+    )
     looking.post("/lookups/now", data={"csrf": _token(looking, "/status")})
     assert "Looking 2 ideas up now" in _said(looking.get("/status"))
     assert ideas.get(conn, second.id).lookup_wanted_at is not None

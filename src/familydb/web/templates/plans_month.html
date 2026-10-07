@@ -43,7 +43,7 @@
                  href="{{ ('#r-' ~ ev.id) if ev.unrated else (('#d-' ~ ev.day) if not ev.past else (url_for('web.idea', idea_id=ev.idea_id) if ev.idea_id and ev.linked else url_for('web.plans', _anchor='d-' ~ ev.day))) }}"
                  aria-label="{{ ev.short }}, {{ ev.time ~ ', ' if ev.time }}{{ ev.title }}, for {{ 'everyone' if ev.who == 'Everyone' else ev.who }}{{ '. Not rated yet' if ev.unrated }}">
                 <span class="ev__top">
-                  {% if ev.before %}<span class="ev__cont">Continued</span>{% elif ev.time %}<time>{{ ev.time }}</time>{% else %}<span class="ev__cont">All day</span>{% endif %}
+                  {% if ev.before %}<span class="ev__cont">Continued</span>{% elif ev.time %}<time>{{ ev.time | figs }}</time>{% else %}<span class="ev__cont">All day</span>{% endif %}
                   {% if ev.unrated %}<span class="ev__rate" title="Not rated yet">{{ icon('smile', size='sm') }}</span>{% endif %}
                   <span class="avs">{% for one in ev.people %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor %}</span>
                 </span>
@@ -71,7 +71,7 @@
             <li{% if row.anchor %} id="d-{{ row.day }}"{% endif %}><a class="item" href="{{ url_for('web.idea', idea_id=row.idea_id) if row.idea_id and row.linked else url_for('web.plans', _anchor='d-' ~ row.day) }}">
               {{ date_tile(row.chip, row.on_today, 'sm') }}
               <span><span class="item__title">{{ row.title }}</span>
-                <span class="meta"><span class="sr">{{ row.short }}, </span><span>{{ row.when }}</span>{% if row.away %}<span>{{ row.away }}</span>{% endif %}{{ people(row.people, row.who) }}</span></span>
+                <span class="meta"><span class="sr">{{ row.short }}, </span><span>{{ row.when | figs }}</span>{% if row.away %}<span>{{ row.away }}</span>{% endif %}{{ people(row.people, row.who) }}</span></span>
               {{ icon('chev', cls='muted') }}</a></li>
           {% endfor %}
         </ul>
@@ -86,7 +86,7 @@
         <ul class="items rates">
           {% for row in rate %}
             <li class="rate" id="r-{{ row.plan_id }}">
-              <div class="item">{{ tile(row.glyph) }}<span><span class="item__title">{{ row.title }}</span><span class="meta"><span>{{ row.when }}</span>{{ people(row.people, row.who if row.who is defined else '') }}</span></span><span></span></div>
+              <div class="item">{{ tile(row.glyph) }}<span><span class="item__title">{{ row.title }}</span><span class="meta"><span>{{ row.when | figs }}</span>{{ people(row.people, row.who if row.who is defined else '') }}</span></span><span></span></div>
               {{ faces(row, 'plans', month=request.args.get('month', '')) }}
             </li>
           {% endfor %}

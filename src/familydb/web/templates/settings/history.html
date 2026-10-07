@@ -10,7 +10,7 @@
             {% if line.secret %}<span class="muted">replaced</span>
             {% elif line.long %}<span class="muted">rewritten</span>
             {% else %}{{ line.old }} <span aria-hidden="true">→</span><span class="sr">to</span> {{ line.new }}{% endif %}</p>
-          <p class="small muted">{{ line.when }}{% if line.who %} · {{ line.who }}{% endif %} · {{ line.source }}</p>
+          <p class="small muted">{{ line.when | figs }}{% if line.who %} · {{ line.who }}{% endif %} · {{ line.source }}</p>
         </li>
       {% endfor %}
     </ul>

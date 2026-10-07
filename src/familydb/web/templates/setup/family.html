@@ -37,7 +37,7 @@
             {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role | capitalize }}</option>{% endfor %}
           </select></div>
         <div class="field field--end"><button class="btn btn--primary" type="submit">Let them in</button></div>
-        <p class="field__hint span-all" id="knock-{{ loop.index }}-h">{% if knock.handle %}{{ knock.handle }} · {% endif %}{{ knock.when }}</p>
+        <p class="field__hint span-all" id="knock-{{ loop.index }}-h">{% if knock.handle %}{{ knock.handle }} · {% endif %}{{ knock.when | figs }}</p>
       </form>
     {% endfor %}
   </section>

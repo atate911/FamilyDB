@@ -129,7 +129,7 @@
       <div class="todo__title">{{ row.title }}</div>
       <div class="meta">
         {%- if not mine %}{{ person(row.person) }}{% endif -%}
-        <span>{{ icon('clock') }}{{ row.when }}</span>
+        <span>{{ icon('clock') }}{{ row.when | figs }}</span>
         {%- if row.late %}<span class="late">{{ row.late }}</span>{% endif -%}
         {%- if row.status == 'cancelled' %}<span>Canceled</span>{% endif -%}
         {%- if open and not compact and not mine %}
@@ -141,7 +141,7 @@
       {% if not compact and not mine %}
         {% if row.notes %}<p class="small">{{ row.notes }}</p>{% endif %}
         {% if row.window %}<p class="small muted">Preferred window: {{ row.window }}
-          {%- if row.nudge and row.nudge.on %} · {{ assistant }} brings it up on {{ row.nudge.on }}{% if row.nudge.last %}, last on {{ row.nudge.last }}{% endif %}
+          {%- if row.nudge and row.nudge.on %} · {{ assistant }} brings it up on {{ row.nudge.on | figs }}{% if row.nudge.last %}, last on {{ row.nudge.last }}{% endif %}
           {%- elif row.nudge %} · not a day or part of the day {{ assistant }} can read, so it comes up only when asked about{% endif %}</p>{% endif %}
         {% if row.repeats %}<p class="small muted">{{ row.repeats }}</p>{% endif %}
       {% endif %}
@@ -175,16 +175,16 @@
     <div class="msg msg--vera"{% if anchor %} id="{{ anchor }}"{% endif %}>
       {{ vera_screen() }}
       <div class="msg__bub">
-        <div class="msg__by">{{ line.who }} <time>{{ line.clock }}</time></div>
+        <div class="msg__by">{{ line.who }} <time>{{ line.clock | figs }}</time></div>
         <div class="msg__text">{{ line.text }}</div>
-        {% if line.did %}<div class="msg__did">Used {{ line.did | join(', ') }}</div>{% endif %}
+        {% if line.did %}<div class="msg__did">{{ line.did | join(' · ') }}</div>{% endif %}
       </div>
     </div>
   {% else %}
     <div class="msg msg--person p{{ line.slot }}{{ ' msg--mine' if mine }}{{ ' msg--failed' if line.failed }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
       {{ avatar(line.slot, line.initial) }}
       <div class="msg__bub">
-        <div class="msg__by">{{ line.who }} <time>{{ line.clock }}</time></div>
+        <div class="msg__by">{{ line.who }} <time>{{ line.clock | figs }}</time></div>
         <div class="msg__text">{{ line.text }}</div>
         {% if line.failed %}<div class="msg__fail">{{ icon('alert', size='sm') }}<span>This one didn’t go through.</span></div>{% endif %}
       </div>
@@ -213,7 +213,7 @@
       <h3 class="plan__title">{% if row.idea_id and row.linked %}<a href="{{ url_for('web.idea', idea_id=row.idea_id) }}">{{ row.title }}</a>{% else %}{{ row.title }}{% endif %}</h3>
       <div class="meta">
         <span class="sr">{{ row.short }}, </span>
-        <span>{{ row.when }}</span>
+        <span>{{ row.when | figs }}</span>
         {%- if row.relative in ('today', 'tomorrow', 'now') %}<span class="tag tag--when">{{ icon('cal') }}{{ row.relative | capitalize }}</span>
         {%- elif row.relative %}<span class="rel">{{ row.relative }}</span>{% endif -%}
         {%- if row.status != 'confirmed' %}<span class="tag tag--off">{{ icon('offc') }}{{ 'canceled' if row.status == 'cancelled' else row.status }}</span>{% endif -%}
@@ -287,7 +287,7 @@
     {% if kid %}
       {% if row.where or row.on %}<p class="idea__for">
         {%- if row.where %}<span>{{ icon('pin', size='sm') }}{{ row.where }}</span>{% endif -%}
-        {%- if row.on %}<span>{{ icon('cal', size='sm') }}{{ row.on }}</span>{% endif -%}
+        {%- if row.on %}<span>{{ icon('cal', size='sm') }}{{ row.on | figs }}</span>{% endif -%}
       </p>{% endif %}
     {% else %}
       <p class="idea__for"><span class="kindw">{{ row.kind_name }} · </span>
@@ -302,7 +302,7 @@
       <div class="idea__tags">
         {%- if row.hidden %}{{ surprise(row.hidden) }}{% endif -%}
         {%- if row.status == 'planned' %}<span class="tag tag--ok">{{ icon('cal') }}Planned</span>{% endif -%}
-        {%- if row.on and not kid %}<span class="tag tag--when">{{ icon('cal') }}{{ row.on }}</span>{% endif -%}
+        {%- if row.on and not kid %}<span class="tag tag--when">{{ icon('cal') }}{{ row.on | figs }}</span>{% endif -%}
         {%- if row.went %}<span class="tag tag--been">{{ row.went }}</span>{% endif -%}
         {%- if row.status == 'dropped' %}<span class="tag tag--off">Dropped</span>{% endif -%}
       </div>

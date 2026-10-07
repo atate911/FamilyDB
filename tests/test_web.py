@@ -492,7 +492,7 @@ def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> 
     assert "adults $28, kids free" in page.text
     assert "9/10" in page.text and "would go again" in page.text
     assert "The girls loved it" in page.text
-    assert "Saturday 3 October, 6:30\u00a0pm" in page.text
+    assert 'Saturday 3 October, <span class="fig">6:30\u00a0pm</span>' in page.text
     assert 'rel="noopener noreferrer"' in page.text
     assert "checked today" in page.text
 
@@ -638,7 +638,10 @@ def test_the_plans_page_shows_what_is_coming_and_what_just_happened(
         plans.update(conn, gone.id, {"status": "cancelled"}, now=NOW_ISO)
     page = _client(settings, clock).get("/plans")
     assert page.status_code == 200
-    assert "Saturday 3 October, 6:30\u00a0pm" in page.text and "in 13 days" in page.text
+    assert (
+        'Saturday 3 October, <span class="fig">6:30\u00a0pm</span>' in page.text
+        and "in 13 days" in page.text
+    )
     assert f'href="/idea/{idea.id}"' in page.text and "Portland" in page.text
     assert "Farmers market" in page.text and "Saturday 12 September" in page.text
     assert "Cancelled dinner" not in page.text  # cancelled plans are not shown

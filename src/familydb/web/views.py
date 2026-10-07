@@ -7,6 +7,7 @@ import calendar as months
 import difflib
 import json
 import math
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -15,6 +16,8 @@ from itertools import islice, pairwise
 from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
+
+from markupsafe import Markup, escape
 
 from familydb import alerts, presents, windows
 from familydb.agenda import Entry
@@ -401,6 +404,22 @@ def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
 
 NUMBER_WORDS = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
 EVERYONE = "Everyone"
+
+
+_CLOCK = re.compile(r"\d{1,2}(?::\d{2})?\u00a0[ap]m")
+
+
+def figs(text: Any) -> Markup:
+    """Clock times in running text ("6:30 pm") in Fraunces' figures, so no zero is slashed (Atkinson
+    Hyperlegible's is). Everything else in the text is escaped as it always is."""
+    text = str(text)
+    out, last = [], 0
+    for found in _CLOCK.finditer(text):
+        out += [escape(text[last : found.start()]), Markup('<span class="fig">'), escape(found[0])]
+        out += [Markup("</span>")]
+        last = found.end()
+    out.append(escape(text[last:]))
+    return Markup("").join(out)
 
 
 def money_text(dollars: float) -> str:
@@ -1300,13 +1319,33 @@ def handed_line(
     }
 
 
+# What a turn did, in words, for each tool that changes something; the ones that only look
+# something up are not said. A tool name is how it works, which is for the logs, not the page.
+DID_WORDS = {
+    "add_idea": "Saved an idea",
+    "update_idea": "Changed an idea",
+    "add_task": "Added a to-do",
+    "update_task": "Changed a to-do",
+    "create_event": "Added a plan",
+    "update_event": "Changed a plan",
+    "delete_event": "Canceled a plan",
+    "remember": "Remembered something",
+    "record_outcome": "Recorded how it went",
+    "look_up_now": "Asked for a lookup",
+    "add_wish": "Added a wish",
+    "update_wish": "Changed a wish",
+    "turn_away": "Turned down a request",
+}
+
+
 def tools_used(actions: Any) -> list[str]:
-    """The tools a turn ran, in order, named once each, failures included."""
+    """What a turn changed, in order, said once each, from the tools it ran (failures included)."""
     seen: list[str] = []
     for action in actions or []:
         name = action.get("tool") if isinstance(action, dict) else None
-        if name and name not in seen:
-            seen.append(name)
+        words = DID_WORDS.get(name or "")
+        if words and words not in seen:
+            seen.append(words)
     return seen
 
 

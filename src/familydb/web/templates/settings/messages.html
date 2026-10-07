@@ -23,7 +23,7 @@
     <ul class="sentrows">
       {% for one in automatic.recent %}
         <li><details class="sentrow">
-          <summary><span class="sentrow__when">{{ one.when }}</span><span>{{ one.kind }} · {{ one.chat }}{% if not one.delivered %} · <span class="warn">not sent yet</span>{% endif %}</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+          <summary><span class="sentrow__when">{{ one.when | figs }}</span><span>{{ one.kind }} · {{ one.chat }}{% if not one.delivered %} · <span class="warn">not sent yet</span>{% endif %}</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
           <blockquote class="said">{{ one.text }}</blockquote>
         </details></li>
       {% endfor %}

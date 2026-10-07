@@ -38,7 +38,7 @@
           {% if talk.state %}
             <p class="ask__last"><span class="ask__last-by">{{ assistant }}</span> {{ talk.note }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
           {% elif talk.line %}
-            <p class="ask__last"><span class="ask__last-by">{{ talk.line.who }}, {{ talk.line.when }}</span> {{ talk.line.text | truncate(180, true, '…') }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
+            <p class="ask__last"><span class="ask__last-by">{{ talk.line.who }}, {{ talk.line.when | figs }}</span> {{ talk.line.text | truncate(180, true, '…') }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
           {% endif %}
         </section>
       {% endif %}
@@ -52,8 +52,8 @@
               {% if first.relative %}<div class="next__tags"><span class="tag tag--when">{{ icon('cal') }}{{ first.relative | capitalize }}</span></div>{% endif %}
               <h3>{% if first.idea_id %}<a href="{{ url_for('web.idea', idea_id=first.idea_id) }}">{{ first.title }}</a>{% else %}{{ first.title }}{% endif %}</h3>
               <div class="meta">
-                <span class="sr">{{ first.when }}, </span>
-                {%- if first.time %}<span>{{ icon('clock') }}{{ first.time }}</span>{% endif -%}
+                <span class="sr">{{ first.when | figs }}, </span>
+                {%- if first.time %}<span>{{ icon('clock') }}{{ first.time | figs }}</span>{% endif -%}
                 {%- if first.away %}<span>{{ icon('car') }}{{ first.away }}</span>{% endif -%}
                 {{ people(first.people, first.who) }}
               </div>
@@ -68,8 +68,8 @@
                   <li><a class="item" href="{{ url_for('web.plans_month', _anchor='d-' ~ entry.day) if grownup else url_for('web.plans', _anchor='d-' ~ entry.day) }}">
                     {{ date_tile(entry.chip, entry.on_today, 'sm') }}
                     <span><span class="item__title">{{ entry.title }}</span>
-                      <span class="meta"><span class="sr">{{ entry.when }}, </span>
-                        {%- if entry.time %}<span>{{ entry.time }}</span>{% endif -%}
+                      <span class="meta"><span class="sr">{{ entry.when | figs }}, </span>
+                        {%- if entry.time %}<span>{{ entry.time | figs }}</span>{% endif -%}
                         {%- if entry.away and grownup %}<span>{{ entry.away }}</span>{% endif -%}
                         {{ people(entry.people, entry.who) }}</span></span>
                     {{ icon('chev', cls='muted') }}</a></li>
@@ -180,7 +180,7 @@
             <input type="hidden" name="happened_on" value="{{ rating.day }}" />
             <input type="hidden" name="back" value="home" />
             <h2 class="card__head" id="h-rate">How did {{ rating.title }} go?</h2>
-            <p class="muted small">{{ rating.when }} · {{ assistant }} uses this for the next suggestions.</p>
+            <p class="muted small">{{ rating.when | figs }} · {{ assistant }} uses this for the next suggestions.</p>
             <span class="faces">
               <button class="face" type="submit" name="went" value="loved">{{ icon('smile') }}<span>Loved it</span><span class="sr"> ({{ rating.title }})</span></button>
               <button class="face" type="submit" name="went" value="ok">{{ icon('meh') }}<span>OK</span><span class="sr"> ({{ rating.title }})</span></button>

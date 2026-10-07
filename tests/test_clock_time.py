@@ -45,3 +45,18 @@ def test_words_the_engine_made_are_said_in_twelve_hours() -> None:
         f"open 6{NB}am to 12{NB}am"
     )
     assert spoken_times("task #12, 1:05 long, v0.2.0") == "task #12, 1:05 long, v0.2.0"
+
+
+def test_clock_times_in_text_get_fraunces_figures_and_nothing_else_is_trusted() -> None:
+    from familydb.web import views
+
+    said = views.figs(f"Sat 3 Oct, 6:30{NB}pm <b>and</b> 10{NB}am")
+    assert str(said) == (
+        f'Sat 3 Oct, <span class="fig">6:30{NB}pm</span> &lt;b&gt;and&lt;/b&gt; '
+        f'<span class="fig">10{NB}am</span>'
+    )
+    # What was typed into an idea is escaped, and "7pm" with a plain space is not a clock the
+    # code wrote, so it is left alone.
+    assert (
+        str(views.figs('<script>"7 pm"</script>')) == "&lt;script&gt;&#34;7 pm&#34;&lt;/script&gt;"
+    )

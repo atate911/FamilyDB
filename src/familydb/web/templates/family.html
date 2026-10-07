@@ -57,7 +57,7 @@
               <div class="field"><label class="field__label" for="knock-role-{{ loop.index }}">Role</label>
                 <select id="knock-role-{{ loop.index }}" name="role">{% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role | capitalize }}</option>{% endfor %}</select></div>
               <div class="field field--end"><button class="btn btn--primary" type="submit">Let them in</button></div>
-              <p class="field__hint span-all" id="knock-{{ loop.index }}-h">{% if knock.handle %}{{ knock.handle }} · {% endif %}Telegram {{ knock.telegram_id }} · {{ knock.where }}, {{ knock.when }}{% if knock.times > 1 %} ({{ knock.times }} times){% endif %}</p>
+              <p class="field__hint span-all" id="knock-{{ loop.index }}-h">{% if knock.handle %}{{ knock.handle }} · {% endif %}Telegram {{ knock.telegram_id }} · {{ knock.where }}, {{ knock.when | figs }}{% if knock.times > 1 %} ({{ knock.times | figs }} times){% endif %}</p>
             </form>
           {% endfor %}
         </section>

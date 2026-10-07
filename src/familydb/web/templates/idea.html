@@ -68,7 +68,7 @@
             <div class="next">
               {% if plan.chip %}{{ date_tile(plan.chip, now=(plan.relative in ('today', 'tomorrow')), size='lg') }}{% endif %}
               <div>
-                <p class="next__when">{{ plan.when }}{% if plan.relative %} <span class="muted">· {{ plan.relative }}</span>{% endif %}{% if plan.status != 'confirmed' %} <span class="tag tag--off">{{ 'canceled' if plan.status == 'cancelled' else plan.status }}</span>{% endif %}</p>
+                <p class="next__when">{{ plan.when | figs }}{% if plan.relative %} <span class="muted">· {{ plan.relative }}</span>{% endif %}{% if plan.status != 'confirmed' %} <span class="tag tag--off">{{ 'canceled' if plan.status == 'cancelled' else plan.status }}</span>{% endif %}</p>
                 <div class="meta">
                   {%- if plan.location %}<span>{{ icon('pin') }}{{ plan.location }}</span>{% endif -%}
                   {{ for_people(row) }}
@@ -112,7 +112,7 @@
           <div class="card__head"><h2 id="h-how">{{ icon('smile') }}How it went</h2></div>
           <ul class="items items--divided">
             {% for outcome in outcomes %}
-              <li class="item"><span><span class="item__title">{{ outcome.when }}{% if outcome.rating %} · {{ outcome.rating }}{% endif %}</span>
+              <li class="item"><span><span class="item__title">{{ outcome.when | figs }}{% if outcome.rating %} · {{ outcome.rating }}{% endif %}</span>
                 <span class="meta">{% if outcome.repeat %}<span>{{ outcome.repeat }}</span>{% endif %}</span>
                 {% if outcome.notes %}<span class="small">{{ outcome.notes }}</span>{% endif %}</span></li>
             {% endfor %}
@@ -150,7 +150,7 @@
         <dl class="kv">
           <dt>For</dt><dd>{{ for_people(row) }}</dd>
           {% if row.where and not place %}<dt>Where</dt><dd>{{ row.where }}</dd>{% endif %}
-          {% if row.on %}<dt>On</dt><dd>{{ row.on }}</dd>{% endif %}
+          {% if row.on %}<dt>On</dt><dd>{{ row.on | figs }}</dd>{% endif %}
           <dt>Indoor or out</dt><dd>{{ setting }}</dd>
           {% if weather %}<dt>Weather</dt><dd>{{ weather }}</dd>{% endif %}
           {% if idea.seasons %}<dt>Seasons</dt><dd>{{ idea.seasons | map('replace', 'autumn', 'fall') | join(', ') }}</dd>{% endif %}

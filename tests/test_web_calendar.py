@@ -50,7 +50,9 @@ def test_the_list_is_google_s_calendar_with_the_bot_s_own_plans_marked(google, c
     )
     text = client.get("/plans").text
     assert "From Google Calendar" in text
-    assert "Sunday 27 September, 2\u00a0pm" in text  # where Google has it, not where it was made
+    assert (
+        'Sunday 27 September, <span class="fig">2\u00a0pm</span>' in text
+    )  # where Google has it, not where it was made
     assert "Dentist" in text and "added in Google" in text
     assert text.count("<summary>Move it</summary>") == 1  # only the bot's own can be moved
     # Looking is not a write: the stored plan catches up when the bot next acts on it.

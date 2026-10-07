@@ -101,9 +101,10 @@ def test_the_tools_a_turn_ran_are_shown_under_the_answer(settings, clock, conn, 
     _say(client, "we should try the ramen place")
     assert client.chat.wait(10)
     page = client.get("/chat").text
-    assert page.index("we should try the ramen place") < page.index("Used add_idea")
-    assert page.index("Saved #1.") < page.index("Used add_idea")
+    assert page.index("we should try the ramen place") < page.index("Saved an idea")
+    assert page.index("Saved #1.") < page.index("Saved an idea")
     assert "waiting for an answer" not in page  # it was answered, whatever the row says
+    assert "add_idea" not in page  # what it did is said in words, not by the tool's name
 
 
 def test_the_page_says_it_is_thinking_and_asks_to_be_shown_again(
@@ -510,3 +511,17 @@ def test_a_parent_moves_between_conversations_and_never_reads_a_kids_words_on_th
     assert "a secret wish" in hers and "Her own conversation, for you to read" in hers
     assert '<form class="composer"' not in hers  # a parent only reads
     assert 'aria-current="page"' in re.search(r'<nav class="convos".*?</nav>', hers, re.S).group(0)
+
+
+def test_what_a_turn_did_is_said_in_words_and_looking_things_up_is_not_said() -> None:
+    from familydb.web import views
+
+    ran = [
+        {"tool": "check_open"},
+        {"tool": "add_task"},
+        {"tool": "search_ideas"},
+        {"tool": "add_task"},
+        {"tool": "remember"},
+    ]
+    assert views.tools_used(ran) == ["Added a to-do", "Remembered something"]
+    assert views.tools_used(None) == []

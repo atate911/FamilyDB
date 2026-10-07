@@ -37,7 +37,7 @@
             <tbody>
               {% for row in model_calls %}
                 <tr>
-                  <td>{{ row.when }}</td>
+                  <td>{{ row.when | figs }}</td>
                   <td>{{ row.what }}{% if row.about %} · {{ row.about }}{% endif %}</td>
                   <td><span class="code">{{ row.model }}{% if row.provider %} ({{ row.provider }}){% endif %}</span></td>
                   <td>{{ row.stop }}</td>

@@ -309,7 +309,7 @@ def test_a_kid_never_sees_the_tools_a_turn_ran(app, family, sam, girls) -> None:
         )
     page = girls["mine"].get("/chat").text
     assert "On your list: a cat." in page
-    assert "Used " not in page and "add_wish" not in page
+    assert "Added a wish" not in page and "add_wish" not in page
 
 
 def wish_service_chat(member_id: int) -> str:

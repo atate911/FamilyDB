@@ -239,7 +239,11 @@ def test_what_is_left_to_do_is_on_home_and_ticks_off_there(settings, clock, conn
     client = _home(settings, clock)
     home = client.get("/").text
     assert home.index("Buy paper towels") < home.index("Call the dentist")  # soonest first
-    assert "Mon 21 Sep, 10\u00a0am" in home and "No date" in home and "All 2 to-dos" in home
+    assert (
+        'Mon 21 Sep, <span class="fig">10\u00a0am</span>' in home
+        and "No date" in home
+        and "All 2 to-dos" in home
+    )
 
     tick = re.search(rf'<form method="post" action="/task/{towels}/done">.*?</form>', home, re.S)
     assert tick is not None and 'aria-label="Mark done: Buy paper towels"' in tick.group(0)
