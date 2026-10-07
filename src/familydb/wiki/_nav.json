@@ -137,6 +137,26 @@
           ]
         },
         {
+          "slug": "controls/setup",
+          "title": "Setup",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations/install",
+            "controls/settings/connections"
+          ]
+        },
+        {
+          "slug": "controls/look-and-password",
+          "title": "Look and Your password",
+          "audience": "grownups",
+          "depth": "howto",
+          "see_also": [
+            "operations/recovery",
+            "security"
+          ]
+        },
+        {
           "slug": "controls/settings",
           "title": "Settings",
           "audience": "admin",

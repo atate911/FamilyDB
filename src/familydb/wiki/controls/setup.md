@@ -1,6 +1,6 @@
 # Setup
 
-Setup walks a new install through the seven things it needs, one short page each, and shows how far you have got. Only an admin can open it, at `/setup`. A parent or a kid who tries is shown which admins to ask.
+Setup walks a new install through the seven things it needs, one short page each, and shows how far you have got. Only an admin can open it, at `/setup`. A parent or a kid who tries is told that an admin does it, and which admins to ask.
 
 You do not have to finish it in one sitting. Each step page says why it matters and what to do, and you can skip any step and return: the pages pick up wherever things stand. [Install and first run](/wiki/operations/install) covers what comes before it, on the server.
 
@@ -77,13 +77,13 @@ The calendar is optional. Without it, plans stay in FamilyDB. It is the longest 
 
 1. **Give FamilyDB its own account at Google.** In Google Cloud, make a project, turn on the Google Calendar API, make a service account (it needs no role), and make a JSON key for it.
 2. **Share the family calendar with it.** In Google Calendar, share the calendar with the service account's address, the `client_email` line in the key file, with permission **Make changes to events**. Then copy the calendar's id from *Integrate calendar*.
-3. **Paste both here.** Paste the key file's contents and the calendar id, and press **Connect**. FamilyDB tries them on the calendar before it keeps them, and says what is wrong if they fail. The key is saved as a file on the server, so it is not in a [safety backup](/wiki/operations/backup-and-restore) of the database.
+3. **Paste both here.** Paste the key file's contents and the calendar id, and press **Connect**. FamilyDB tries them on the calendar before it keeps them, and says what is wrong if they fail. The key is saved as a file on the server, so a [backup](/wiki/operations/backup-and-restore) of the database does not hold it.
 
 ## When setup is done, and before
 
 - **Until the two needed steps are done**, an admin who opens Home is sent to `/setup`. Parents and kids are not sent anywhere, but the pill reads "Can't answer yet", and [Status](/wiki/controls/status) names what is missing.
 - **After that**, Home carries a card, "Finish setting up", listing each unfinished step with a link, and on a phone a strip saying how many steps are left. Only admins see it. It disappears when every step is done.
-- **The overview** says "Let's get FamilyDB ready" until the needed steps are done and "Nearly there" after. Its button reads Start, then "Carry on" with the next unfinished step, then "Everything is set up".
+- **The overview** says "Let's get FamilyDB ready" (with the page's own name) until the needed steps are done and "Nearly there" after. Its button reads Start, then "Carry on" with the next unfinished step, then "Everything is set up".
 - **The last page**, `/setup/done`, says whether the assistant can answer, suggests a first question to ask, and lists what was left for later.
 
 Everything set here can be changed later on the Settings and Family pages, or by going through setup again.
