@@ -14,7 +14,7 @@ A **thread** is a line of work a program runs alongside others. The process star
 | The web chat | A new thread for each turn sent from the page, named `familydb-web-chat-<chat>` | Answers a message typed on the page, so the form post can come straight back |
 | The main thread | The process itself | Waits for a stop signal and does nothing else |
 
-The Telegram side waits on the network without blocking, but the rest of FamilyDB is ordinary synchronous code. Each Telegram handler therefore calls the core through `asyncio.to_thread`, which runs it on a worker thread and leaves the event loop free to keep fetching messages. A job that needs to send to Telegram hands the text to that loop through a thread-safe sender; the web chat needs none, because the page reads the stored message log. A message under way also holds a claim on itself, a [lease](/wiki/reference/glossary#lease), which a small extra thread renews every 30 seconds while the turn runs.
+The Telegram side waits on the network without blocking, but the rest of FamilyDB is ordinary synchronous code. Each Telegram handler therefore calls the core through `asyncio.to_thread`, which leaves the event loop free to keep fetching messages. A job that sends to Telegram hands the text to that loop through a thread-safe sender; the web chat needs none, because the page reads the stored message log. A message under way holds a [lease](/wiki/reference/glossary#lease), renewed every 30 seconds by a small extra thread while the turn runs.
 
 ## One database, a connection per piece of work
 
@@ -30,12 +30,12 @@ A SQLite connection must not be shared between threads, so each piece of work (a
 2. Applies any pending **migrations**: numbered changes to the database's layout, each in its own transaction. One that fails stops the start and leaves the database as it was before that migration.
 3. Makes the database, the Google key and the session key owner-only.
 4. Reads the settings saved on the page and logs one line saying which model answers chat.
-5. Starts the timer, then the web page, then the Telegram supervisor.
+5. Starts the timer, the web page, then the Telegram supervisor.
 6. Waits.
 
-If the web page cannot start (a port in use, or a setting that forbids it), the process logs why and carries on without it.
+If the web page cannot start, the process logs why and carries on without it: `could not serve the web page on <address>` for a port in use, `the web page is not serving` for a setting that forbids it.
 
-A stop signal (SIGTERM from systemd or Docker, or Ctrl-C) is noted by a handler that is installed only once everything above has started. The main thread notices within a second, logs `received signal`, stops the Telegram connection (waiting up to 30 seconds), closes the web server, tells the timer to shut down without waiting for running jobs, and logs `stopped`. The systemd unit allows 150 seconds before it kills the process, because a lookup in the middle of a model call can be slow to notice the stop ([the server](/wiki/operations/host)).
+A stop signal (SIGTERM from systemd or Docker, or Ctrl-C) is caught by a handler installed once everything above has started. The main thread notices within a second, logs `received signal`, stops the Telegram connection (waiting up to 30 seconds), closes the web server, tells the timer to shut down without waiting for running jobs, and logs `stopped`. The systemd unit allows 150 seconds before it kills the process, because a lookup in the middle of a model call can be slow to notice the stop. The compose file sets no stop time, so Docker's default of 10 seconds applies. A turn cut off in the middle of a model call is recovered by its lease and the retry job ([the server](/wiki/operations/host)).
 
 ## What is configured where
 
@@ -45,17 +45,17 @@ A stop signal (SIGTERM from systemd or Docker, or Ctrl-C) is noted by a handler 
 | The database (the Settings page) | Nearly everything else: models, keys, limits, hours, the family's wording | The page, taking effect without a restart |
 | The database (everything else) | Ideas, plans, things to do, messages, the log of model calls, memory | The assistant, the page's forms and the jobs |
 
-What was saved on the page wins over `.env`, which wins over the built-in default. The running process re-reads the saved settings at each entry point (a message, a job, a page view), and the timer moves a changed schedule within five minutes. [The .env file](/wiki/operations/configuration) lists the keys only `.env` sets.
+What was saved on the page wins over `.env`, which wins over the built-in default. The process re-reads saved settings at each entry point (a message, a job, a page view), and the timer moves a changed schedule within five minutes. [The .env file](/wiki/operations/configuration) lists the keys only `.env` sets.
 
 ## What a restart loses
 
-The timer keeps its schedule in memory, not in the database. About a minute after start, a *catch-up* job runs what a restart could have skipped: follow-ups, the evening check of tomorrow's plans, the weekend digest if today is its day and hour has passed, and the daily check of models and prices if a day has gone by. Each is safe to repeat.
+The timer keeps its schedule in memory, not in the database. About a minute after start, a *catch-up* job runs what a restart could have skipped: follow-ups, the evening check of tomorrow's plans, the weekend digest if today is its day and hour has passed, the daily check of models and prices if a day has gone by, and the deletion of shared locations past their day. Each is safe to repeat.
 
 Also gone after a restart:
 
 - **A turn in progress.** Its message keeps its lease until it lapses (five minutes), then the retry job answers it.
 - **Wrong-password counts.** The sign-in lockout is held in memory, so a restart clears it.
-- **Two small caches.** Discovery results and the once-only tokens that stop a double click are kept in memory.
+- **A few small in-memory things.** Discovery results, the once-only tokens that stop a double click, proactive messages held for a moment while the family is talking (the minute job still sends them), and the record of request parts a model company refused.
 
 Messages, replies waiting to be sent, and settings are in the database and survive. [The server](/wiki/operations/host#updates-and-reboots) lists what comes back by itself.
 
@@ -63,13 +63,13 @@ Messages, replies waiting to be sent, and settings are in the database and survi
 
 | Part | On the Status page | In the log |
 |---|---|---|
-| Startup | No row of its own; the assistant's row says whether it can answer | `familydb <version> starting: ...`, `applied migrations [...]` |
-| Timer | No row of its own; Waiting and Messages that did not go through show retries | `settings changed; <job> on`, `retrying N failed message(s)`, `catch-up on start: ...` |
-| Web page | None: if you can read Status, the page is up | `serving the web page at ...`, or `the web page is not serving: ...` |
+| Startup | No row; the assistant's row says whether it can answer | `familydb <version> starting: ...`, `applied migrations [...]` |
+| Timer | No row; Waiting and Messages that did not go through show retries | `settings changed; <job> on`, `retrying N failed message(s)`, `catch-up on start: ...` |
+| Web page | None: if you can read Status, the page is up | `serving the web page at ...`, or `could not serve the web page on ...` or `the web page is not serving: ...` |
 | Telegram | The Telegram row and Connected to | `telegram: polling as @<name>`, `telegram: Telegram refused the bot token ...`, `telegram: cannot reach Telegram ...` |
 | Web chat | The "Writing back" pill | An error line if a turn could not run at all |
 | Model calls | Spending, Where the money went, [Recent activity](/wiki/controls/status/activity) | Agent errors by message id |
 
-The log is the journal under systemd and the container's log on Docker; [the server](/wiki/operations/host#logs) shows how to read it, and [Status](/wiki/controls/status) explains each row.
+The log is the journal under systemd and the container's log on Docker ([the server](/wiki/operations/host#logs)); [Status](/wiki/controls/status) explains each row.
 
 Developer docs: `src/familydb/cli.py` (`run`, `_wait_for_stop`), `app.py` (`App.refresh`, `connect`), `jobs/scheduler.py` (`build_scheduler`, `job_specs`), `channels/telegram.py` (`TelegramSupervisor`), `channels/web.py` (`WebChat`), `web/server.py` (`serve_in_thread`), `store/db.py` (`connect`, `migrate`), `delivery.py` (`lease`); `docs/DESIGN.md`, "Architecture" and "Deployment on a home server or a VPS".

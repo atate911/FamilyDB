@@ -25,12 +25,11 @@ The ranges are from `pyproject.toml`. `pytest` (tests) and `ruff` (style checks)
 
 ## What it does not use
 
-These are the things you might expect to find and will not.
-
 - **No message broker or task queue.** There is no Redis, RabbitMQ or Celery. Jobs run on the in-process timer, and work that must survive a crash, such as a stored reply, waits in the database.
-- **No ORM.** The code writes SQL by hand inside one module per table.
+- **No ORM.** By convention the code writes SQL by hand, one module per table.
 - **No JavaScript framework and no build step.** There is no `package.json`, bundler or Node in the repository, CI or installer. The page is server-rendered HTML, a few stylesheets and a few small scripts in `static/`, served as they are. Fonts and icons are bundled files, so nothing loads from another site.
-- **No separate worker or database process.** There is one program, and Docker runs one container for it, plus Caddy if you turn HTTPS on.
+- **No separate worker or database process.** There is one process, `familydb run`, and Docker runs one container for it. Caddy is a separate program in front, if you turn HTTPS on.
+- **No HTTP client library of its own choosing.** Weather, geocoding and the price lists use `urllib.request` from the standard library. `httpx` is imported by `gemini.py` and `doctor.py`, but it arrives as a dependency of the model companies' libraries and is not in `pyproject.toml`.
 - **No model library outside `agent/providers/`.** Nothing else in the code imports Anthropic's, OpenAI's or Google's model library, so the rest of the program cannot depend on one company.
 
 ## What each costs you to know
