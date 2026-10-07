@@ -4,9 +4,9 @@ FamilyDB reaches Anthropic (Claude), OpenAI and Google (Gemini) through one smal
 
 ## One interface, three modules
 
-Each company has one module in `src/familydb/agent/providers/`. `base.py` says what a module must do, and `anthropic.py`, `openai.py` and `gemini.py` translate to the company's own library: send a request, say whether a model exists, list the models a key may use, check a key, look at a picture and, for OpenAI and Gemini, hear a recording. Nothing outside that folder knows which company is in use. Every call goes through `agent/gateway.py`, which checks the daily limit first and records the call under its kind. A request times out after 120 seconds, and the Claude and OpenAI libraries retry twice on their own first.
+Each company has one module in `src/familydb/agent/providers/`. `base.py` says what a module must do, and `anthropic.py`, `openai.py` and `gemini.py` translate to the company's own library: send a request, say whether a model exists, list the models a key may use, check a key, look at a picture and, for OpenAI and Gemini, hear a recording. Nothing outside that folder knows which company is in use. Every call goes through `agent/gateway.py`, which checks the daily limit first and records the call. A request times out after 120 seconds, and the Claude and OpenAI libraries retry twice on their own first.
 
-What each kind of call carries is in [What leaves the house](/wiki/security/data-and-privacy#what-leaves-the-house). The instructions, the family and the idea list come first and are the same on every message, so the company can [cache](/wiki/reference/glossary#prompt-cache) them. The date, sender, shared location and remembered facts go last. FamilyDB sets `store` to false on every OpenAI request, which asks OpenAI not to store the response.
+What each kind of call carries is in [What leaves the house](/wiki/security/data-and-privacy#what-leaves-the-house). The instructions, family and idea list come first and are the same on every message, so the company can [cache](/wiki/reference/glossary#prompt-cache) them; the date, sender, location and remembered facts go last. FamilyDB sets `store` to false on every OpenAI request, which asks OpenAI not to store the response.
 
 ## Which company does which job
 
@@ -21,7 +21,7 @@ What each kind of call carries is in [What leaves the house](/wiki/security/data
 
 With `provider_fallback` on (the default), another company with a key answers when the first cannot. The spare is the first of Anthropic, OpenAI and Gemini, in that order, that did not fail and has a key. It answers at the same [level](/wiki/reference/glossary#level), and the spending limit is held again at its price.
 
-A turn moves only on its first call, before any tool has run. After that a tool may already have saved an idea or written to the calendar, and starting again elsewhere would do it twice, so the turn stays failed for the retry job (every 5 minutes, 3 times, by default). It moves when the company is busy, unreachable, out of credit, refusing the key, missing the model or has no key at all. It does not move for a request refused as written, which would fail the same way. A voice note or photo is one request, and the next company able to take it is tried for the same failures; neither is retried later, since the recording and picture are not kept.
+A turn moves only on its first call, before any tool has run. After that a tool may already have saved an idea or written to the calendar, and starting again elsewhere would do it twice, so the turn stays failed for the retry job (every 5 minutes, 3 times, by default). It moves when the company is busy, unreachable, out of credit, refusing the key, missing the model or has no key. It does not move for a request refused as written, which would fail the same way. A voice note or photo is one request, and the next company able to take it is tried for the same failures; neither is retried later, since the recording and picture are not kept.
 
 ## Levels and the catalog
 
@@ -43,11 +43,11 @@ Everyday is the model named in your settings, the company's cheapest by default.
 | Caching | Marked on the unchanging parts; an hour by default (`anthropic_cache_ttl`, `1h` or `5m`) | Automatic on a long prefix; FamilyDB sends a `prompt_cache_key`, a hash of the unchanging text | Automatic; nothing is sent |
 | Refusal fallback | On the Claude models that have it (not Haiku or Sonnet), unless `ANTHROPIC_FALLBACKS` is false in `.env` | none | none |
 
-Effort comes from the [Spending](/wiki/controls/settings/spending#thinking) page: `effort` for chat and `worker_effort` for lookups. Each module names the older models rather than the current ones, so a model released later is sent the current shape.
+Effort comes from the [Spending](/wiki/controls/settings/spending#thinking) page: `effort` for chat and `worker_effort` for lookups. Each module names the older models, not the current ones, so a model released later is sent the current shape.
 
 ## Keys
 
-The AI model page checks a key by looking up the chat model with the company, which costs nothing. Refused: the key is not saved. No such model: saved, with a note to choose another. Could not be asked: saved unchecked, and the first message shows whether it works. A model typed into "Another model" is checked the same way and refused only on a definite "no such model".
+The AI model page checks a key by looking up the chat model with the company, which costs nothing. A refused key is not saved. A key whose company has no such model is saved, with a note to choose another. A company that cannot be asked leaves the key saved unchecked, and the first message shows whether it works. A model typed into "Another model" is refused only on a definite "no such model".
 
 ## When a company says no
 

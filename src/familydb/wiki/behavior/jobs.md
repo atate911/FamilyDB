@@ -1,8 +1,6 @@
 # The scheduled jobs
 
-The scheduled jobs are what FamilyDB does without being asked: reminders, lookups, the weekend ideas, the evening-before check and the housekeeping behind them. They run inside the long-running service (`familydb run`) on the family's time zone. `familydb web` serves only the page and runs none of them, so a page started alone sends no reminders.
-
-A job that a setting turns off is not scheduled at all.
+The scheduled jobs are what FamilyDB does without being asked: reminders, lookups, the weekend ideas, the evening-before check and the housekeeping behind them. They run inside the long-running service (`familydb run`) on the family's time zone; `familydb web` runs none, so a page started alone sends no reminders. A job that a setting turns off is not scheduled at all.
 
 ## The jobs
 
@@ -22,13 +20,11 @@ A job that a setting turns off is not scheduled at all.
 | Catch-up (`catch_up`) | once, 60 seconds after the service starts | none | Runs what a restart skipped | Only if it sends the digest |
 | Settings watch (`settings_watch`) | every 5 minutes | none | Moves the other jobs when a setting changes | No |
 
-The program's own default leaves the digest chat empty and lookups off; the installer sets the digest to the page's chat and turns lookups on. The settings are on [Messages](/wiki/controls/settings/messages), [Lookups](/wiki/controls/settings/lookups) and [AI model](/wiki/controls/settings/ai-model#keeping-up-with-the-companies); this page does not repeat them.
+The program's own default leaves the digest chat empty and lookups off; the installer sets the digest to the page's chat and turns lookups on. The settings are on [Messages](/wiki/controls/settings/messages), [Lookups](/wiki/controls/settings/lookups) and [AI model](/wiki/controls/settings/ai-model#keeping-up-with-the-companies).
 
 ## An idle job calls no model
 
-Every job reads the database and the settings first and returns when there is nothing to do. Retries, lookups, the digest and judgements can reach a model, and so can catch-up when it sends the digest. The rest have no path to one: they word what they say from the persona's lines, in code. The evening-before check runs the suggestion engine with web discovery and stale-lookup queuing off.
-
-A test hands retries, lookups, follow-ups and catch-up an API that fails on any request; for the other jobs it holds by the code. Each returns before a call when:
+Every job reads the database and the settings first and returns when there is nothing to do. Retries, lookups, the digest and judgements can reach a model, and so can catch-up when it sends the digest. The rest have no path to one: they word what they say from the persona's lines, in code, and the evening-before check runs the suggestion engine with discovery and stale-lookup queuing off. A test hands retries, lookups, follow-ups and catch-up an API that fails on any request; for the others it holds by the code. A job returns before a call when:
 
 - **Retries:** no failed message is waiting, or each has used its tries.
 - **Lookups:** web tools are off, no key serves lookups, no idea is due, or the day's [spending limit](/wiki/reference/glossary#spending-limit) is used up.
@@ -43,11 +39,11 @@ It takes open things to do with a reminder due, up to 100 a run. Each goes to th
 
 ### Admin alerts
 
-It needs an admin with a Telegram id and a Telegram connection in this process. Without either the trouble stays on Status under Needs a look, and the job tries again next minute. Each trouble is told once, again after 12 hours at the soonest while it lasts, and forgotten when the thing works again. A refusal the program cannot read is told only once it has happened twice.
+It needs an admin with a Telegram id and a Telegram connection in this process; without either, the trouble stays on Status under Needs a look and the job tries again next minute. Each trouble is told once, again after 12 hours at the soonest while it lasts, and forgotten when the thing works again. A refusal the program cannot read is told once it has happened twice.
 
 ### Retry failed
 
-It first sends stored replies that never went, then retries each failed or unanswered message that has tries left, a sender here and no lease held. A failed digest is asked again as the digest. A message out of tries stays on Status under Messages that did not go through. [Lifecycles](/wiki/behavior/lifecycles) covers leases and delivery.
+It first sends stored replies that never went, then retries each failed or unanswered message that has tries left, a sender here and no lease held. A failed digest is asked again as the digest. A message out of tries stays on Status under Messages that did not go through. See [Lifecycles](/wiki/behavior/lifecycles).
 
 ### Look up new ideas
 
@@ -61,11 +57,11 @@ It asks "what should we do this weekend?" as the first admin through the chat pi
 
 ### Follow-ups
 
-It asks once about each confirmed plan that ended before today and started within the last week. It first brings plans in line with Google Calendar and waits when Google cannot be asked, so a cancelled plan is not asked about. A plan with an outcome already is marked asked without a message. The question goes to the plan's chat, or its maker's own chat when it began in a group.
+It asks once about each confirmed plan that ended before today and started within the last week. It first syncs with Google Calendar and waits when Google cannot be asked, so a cancelled plan is not asked about. A plan with an outcome already is marked asked without a message. The question goes to the plan's chat, or its maker's own chat when it began in a group.
 
 ### Evening-before check
 
-It looks at plans for an idea, made in a chat, that start tomorrow and are unchecked, and returns before touching Google when there are none. Otherwise it syncs the calendar (waiting if Google cannot be asked), reads tomorrow's forecast (skipped without a home position) and checks rain for an outdoor idea and the place's saved hours against the plan's time. All well says nothing, and the plan is still marked checked. A heads-up goes to the plan's chat, with a backup idea when the engine finds a good one. A plan nothing can send to waits for the next run.
+It looks at plans for an idea, made in a chat, that start tomorrow and are unchecked, and returns before touching Google when there are none. Otherwise it syncs the calendar (waiting if Google cannot be asked), reads tomorrow's forecast (skipped without a home position), and checks rain for an outdoor idea and the place's saved hours against the plan's time. All well says nothing, and the plan is still marked checked. A heads-up goes to the plan's chat, with a backup idea when the engine finds one. A plan nothing can send to waits for the next run.
 
 ### Models and prices, and judgements
 
@@ -75,15 +71,15 @@ Judgements ask a stronger model only about a question code filed. Once the looku
 
 ### Nudges
 
-It brings up a thing to do whose preferred window code can read ("some Saturday morning"), from an hour into that part of the day. It skips tasks that repeat, have a reminder pending or are under 12 hours old, and any nudged in the last six days; each chat gets at most one a day. It holds back when the calendar shows the next hour busy; with no calendar, or one it cannot reach, it goes anyway.
+It brings up a thing to do whose preferred window code can read ("some Saturday morning"), from an hour into that part of the day. It skips tasks that repeat, have a reminder pending or are under 12 hours old, and any nudged in the last six days; each chat gets one a day at most. It holds back when the calendar shows the next hour busy, but goes anyway with no calendar, or one it cannot reach. [Messages](/wiki/controls/settings/messages#follow-ups-and-notes) has the rules.
 
 ### Forget locations and settings watch
 
-Forget locations deletes a shared position after 24 hours; the assistant uses one for only three. The settings watch re-reads the stored settings and adds, removes or reschedules jobs to match. A schedule you change on the page can take up to five minutes to move, and the log says `settings changed` and names what moved.
+Forget locations deletes a shared position after 24 hours; the assistant uses one for only three. The settings watch re-reads the stored settings and adds, removes or reschedules jobs to match, so a schedule you change on the page can take up to five minutes to move. The log says `settings changed` and names what moved.
 
 ## After a restart
 
-The digest, follow-ups, the evening check and the models check are cron-style and live in memory. One whose time passes while the service is down is not run when it returns, and one that starts more than an hour late (six for the models check) is dropped. Interval jobs carry on. A run is skipped while the same job is still running, and missed runs merge into one.
+The digest, follow-ups, the evening check and the models check are cron-style and live in memory. One whose time passes while the service is down is not run when it returns, and one that starts more than an hour late (six for the models check) is dropped. Interval jobs carry on; a run is skipped while the same job is still running, and missed runs merge into one.
 
 Catch-up covers the gap 60 seconds after the service starts. It:
 
@@ -93,7 +89,7 @@ Catch-up covers the gap 60 seconds after the service starts. It:
 4. Sends the digest if today is its day and its hour has passed, even late that day.
 5. Runs the models check if it is on and 23 hours have passed since the last.
 
-Repeating is safe: each plan and each day's digest is marked once. Lookups and reminders need no catch-up.
+Repeating is safe: each plan and each day's digest is marked once.
 
 ## Seeing that a job ran
 

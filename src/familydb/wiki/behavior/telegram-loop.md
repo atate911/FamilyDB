@@ -19,7 +19,7 @@ A supervisor thread inside `familydb run` re-reads the settings every 5 seconds 
 1. It registers itself as the sender for replies, with and without buttons. Until then nothing can be sent, and replies wait.
 2. It asks Telegram who it is and logs "telegram: polling as @name".
 3. It sets the command menu (the five commands) when it differs from Telegram's. If that fails, the log warns "the command menu could not be set", and the commands still work, only unlisted.
-4. It sets the bot's name to the persona's name (FamilyDB's with no persona) and its description to the `/start` line, each only when it differs, cut to Telegram's length limits. It checks again when either changes. If Telegram asks for a wait, it waits that long. If Telegram is unreachable, it tries again in 30 seconds. If Telegram refuses, it logs a warning and stops until the name or line changes or the bot reconnects. No model is asked.
+4. It sets the bot's name to the persona's name (FamilyDB's with no persona) and its description to the `/start` line, each only when it differs, cut to Telegram's length limits. It checks again when either changes. If Telegram asks for a wait, it waits that long, and if Telegram refuses, it logs a warning and stops until the name or line changes or the bot reconnects. No model is asked.
 5. It asks Telegram every 5 minutes whether the bot can read every message in a group, because a change in BotFather reaches the bot in no update. The Connections card shows the answer.
 
 ## The updates it handles
@@ -33,7 +33,7 @@ A supervisor thread inside `familydb run` re-reads the settings every 5 seconds 
 | `/start` | The introduction, or links a phone to a family member | |
 | A voice note or audio file | Heard, then answered ([Lifecycles](/wiki/behavior/lifecycles#a-voice-note)) | Same rule as text |
 | A photo, or a JPEG, PNG or WebP file, or an album | Looked at ([Lifecycles](/wiki/behavior/lifecycles#a-photo)) | Only when addressed, whatever the setting |
-| A sticker, GIF, video, video note, other file, contact, poll or dice | With no words, "I can't open that kind of message". With a caption, the caption is answered, marked "(with a sticker, not seen)" | Only when addressed |
+| A sticker, GIF, video, video note, other file, contact, poll or dice | With no words, "I can't open that kind of message". With a caption, the caption is answered, marked "(with a sticker, not seen)" | One with no words only when addressed. One with a caption follows the text rule |
 | A shared location, live or not | Kept for use for 3 hours and deleted within a day. The first share is acknowledged, and later updates of a live location are kept silently | |
 | A button tap | Done by code, no model | |
 | The bot added to a group | An introduction, only when someone on the family list added it | |
@@ -58,7 +58,7 @@ A reply that only says something was saved is a 👌 reaction on the message, wh
 
 A reply is stored before it is sent and marked delivered only after the send succeeds, so delivery is at least once. A send Telegram accepted whose answer was lost can arrive twice, and so can the earlier parts of a long reply whose later part failed. Neither runs the model or touches the calendar again.
 
-While Telegram is not connected, replies for it stay stored and go on the next delivery run after it connects. The retry job (every 5 minutes by default) tries every unsent reply each time it runs, and does not count attempts. The weekend digest and follow-ups run the same delivery first. See [Jobs](/wiki/behavior/jobs).
+While Telegram is not connected, replies for it stay stored and go on the next delivery run after it connects. The retry job (every 5 minutes by default) tries every unsent reply each time it runs, and does not count attempts.
 
 ## When Telegram or the token fails
 
@@ -78,12 +78,9 @@ Telegram trouble is not among what admins are told on Telegram. It shows in the 
 | Limit | Value |
 |---|---|
 | A voice note | `voice_max_minutes` (5 by default, 1 to 30) and 20 MB, Telegram's download limit for a bot |
-| A photo | 3.9 MB each, the first four of an album, fetched within 1,600 pixels on the long side |
-| An album | Collected for 1.5 seconds |
-| Fetching a file | 60 seconds |
-| A text part | 4,096 characters |
+| A photo | 3.9 MB each, the first four of an album, collected for 1.5 seconds |
 | Gather pause | `gather_seconds`, 4 by default |
-| Retry job | Every 5 minutes, 3 attempts by default |
+| Retry and delivery job | Every 5 minutes by default; a message is retried 3 times (see [Jobs](/wiki/behavior/jobs)) |
 | The bot's name | Telegram rate-limits renames, and the bot waits as asked |
 
 Developer docs: `src/familydb/channels/telegram.py` (`TelegramChannel`, `TelegramSupervisor`), `channels/markup.py`, `delivery.py`, `routing.py`, and `docs/DESIGN.md` ("Message pipeline", "Group vs DM").

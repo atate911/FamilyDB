@@ -112,6 +112,28 @@
       "see_also": [
         "model",
         "operations"
+      ],
+      "children": [
+        {
+          "slug": "behavior/lifecycles",
+          "title": "Lifecycles: how things change over time",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "model",
+            "behavior/telegram-loop"
+          ]
+        },
+        {
+          "slug": "behavior/telegram-loop",
+          "title": "Telegram: the message loop",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "controls/telegram",
+            "boundaries"
+          ]
+        }
       ]
     },
     {
