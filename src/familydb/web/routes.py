@@ -175,6 +175,7 @@ def home() -> Response | str:
         late,
         plans_href=url_for("web.plans_month" if browsing else "web.plans"),
         todo_href=url_for("web.tasks"),
+        list_href=url_for("web.wishes"),
         kid=not browsing,
         others=_others(coming, visitor.member),
         yes=yes,

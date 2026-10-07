@@ -188,6 +188,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["money"] = views.money_text
     web.jinja_env.filters["figs"] = views.figs
     web.jinja_env.globals["reminders_said"] = views.REMINDERS_SAID
+    web.jinja_env.globals["plan_status_words"] = views.PLAN_STATUS_WORDS
 
     def every_page() -> dict[str, Any]:
         her = personas.active(app.settings)

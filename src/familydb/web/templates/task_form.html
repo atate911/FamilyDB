@@ -15,8 +15,8 @@
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>Who’s it for?</legend>
-        <div class="choices" role="radiogroup" aria-label="Who’s it for">
+        <legend>Who’s doing it?</legend>
+        <div class="choices" role="radiogroup" aria-label="Who’s doing it">
           {# A to-do for nobody in particular keeps being so: an empty choice leaves who it is for as it is. #}
           {% if not owner %}<label class="choice choice--person"><input type="radio" name="owner" value="" checked /><span>{{ avatar(0, '', 'sm') }}Everyone</span></label>{% endif %}
           {% for one in people %}<label class="choice choice--person"><input type="radio" name="owner" value="{{ one.name }}"{% if owner and one.name == owner.name %} checked{% endif %} /><span>{{ avatar(one.slot, one.initial, 'sm') }}{{ one.name }}</span></label>{% endfor %}
@@ -27,7 +27,7 @@
         <legend>When, a reminder, repeats</legend>
         <div class="form__row">
           <div class="field"><label class="field__label" for="e-due">Deadline</label><input id="e-due" type="datetime-local" name="due_at" value="{{ row.due_input }}" aria-describedby="e-due-h" />
-            <span class="field__hint{{ ' late' if words.late }}" id="e-due-h">{% if words.late %}{{ words.late }}. Pick a new one, or empty it for no deadline.{% else %}Times use {{ zone }}. Empty it for no deadline.{% endif %}</span></div>
+            <span class="field__hint{{ ' late' if words.late }}" id="e-due-h">{% if words.late %}{{ words.late }}. Pick a new one, or empty it for no date.{% else %}Times use {{ zone }}. Empty it for no date.{% endif %}</span></div>
           <div class="field"><label class="field__label" for="e-win">Preferred window</label><input id="e-win" type="text" name="preferred_window" maxlength="4000" placeholder="Some Saturday morning" value="{{ task.preferred_window }}" aria-describedby="e-win-h" />
             <span class="field__hint" id="e-win-h">{{ assistant }} brings it up on that day.</span></div>
         </div>

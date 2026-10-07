@@ -33,8 +33,8 @@ bp = Blueprint("edits", __name__)
 
 # The flash category, apart from the settings page's.
 NOTICE = "edit"
-SAVED_IDEA = "Saved #{id} {title}."
-CHANGED_IDEA = "Changed #{id} {title}."
+SAVED_IDEA = "Saved #{id} “{title}”."
+CHANGED_IDEA = "Changed #{id} “{title}”."
 DUPLICATE = "There is already an idea called that: #{id}. Nothing was added."
 STALE_IDEA = (
     "#{id} was changed since you opened it, so nothing was saved. Here it is as it is now; "

@@ -222,7 +222,7 @@
         <span>{{ row.when | figs }}</span>
         {%- if row.relative in ('today', 'tomorrow', 'now') %}<span class="tag tag--when">{{ icon('cal') }}{{ row.relative | capitalize }}</span>
         {%- elif row.relative %}<span class="rel">{{ row.relative }}</span>{% endif -%}
-        {%- if row.status != 'confirmed' %}<span class="tag tag--off">{{ icon('offc') }}{{ 'canceled' if row.status == 'cancelled' else row.status }}</span>{% endif -%}
+        {%- if row.status != 'confirmed' %}<span class="tag tag--off">{{ icon('offc') }}{{ plan_status_words.get(row.status, row.status) }}</span>{% endif -%}
         {%- if row.from_google %}<span class="tag tag--off">added in Google</span>{% endif -%}
         {%- if row.location %}<span>{{ icon('pin') }}{{ row.location }}</span>{% endif -%}
         {%- if row.away %}<span>{{ icon('car') }}{{ row.away }}</span>{% endif -%}

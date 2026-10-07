@@ -33,16 +33,16 @@
           <button class="btn btn--primary adder__btn" type="submit">{{ icon('plus') }}Add</button>
         </div>
         <details class="adder__more">
-          <summary>Who, when, reminder <span class="val">{{ me or 'Everyone' }} · no deadline · no reminder</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+          <summary>Who, when, reminder <span class="val">{{ me or 'Everyone' }} · no date · no reminder</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
           <div class="adder__more-body">
             <div class="field"><label class="field__label" for="q-notes">Notes <span class="opt">(optional)</span></label><textarea id="q-notes" name="notes" rows="2" maxlength="4000" data-dictate></textarea></div>
             <fieldset class="choices" id="q-who">
-              <legend>Who’s it for?</legend>
+              <legend>Who’s doing it?</legend>
               {% for one in people %}{{ who_choice(one.name, one, checked=(one.name == me)) }}{% endfor %}
               {% if not me %}{{ who_choice('', {'slot': 0, 'initial': '', 'name': 'Everyone'}, checked=true) }}{% endif %}
             </fieldset>
             <details class="disclose">
-              <summary>When, a reminder, repeats <span class="val">No deadline</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+              <summary>When, a reminder, repeats <span class="val">No date</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
               <div class="disclose__body adder__opts">
                 <p class="field__hint span-all">Times use {{ zone }}. A deadline or preferred window doesn’t set a reminder or book your calendar.</p>
                 <div class="field"><label class="field__label" for="q-due">Deadline <span class="opt">(optional)</span></label><input id="q-due" type="datetime-local" name="due_at" /></div>

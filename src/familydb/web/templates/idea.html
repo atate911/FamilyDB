@@ -41,7 +41,7 @@
     </div>
     {% if visitor().may('change') %}
       <div class="head-actions">
-        <a class="btn btn--quiet" href="{{ url_for('web.edit_idea', idea_id=idea.id) }}">{{ icon('edit', size='sm') }}Edit</a>
+        <a class="btn btn--quiet" href="{{ url_for('web.edit_idea', idea_id=idea.id) }}">{{ icon('edit', size='sm') }}Edit this idea</a>
         <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
           <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
           <input type="hidden" name="status" value="{{ 'idea' if idea.status == 'dropped' else 'dropped' }}" />
@@ -68,7 +68,7 @@
             <div class="next">
               {% if plan.chip %}{{ date_tile(plan.chip, now=(plan.relative in ('today', 'tomorrow')), size='lg') }}{% endif %}
               <div>
-                <p class="next__when">{{ plan.when | figs }}{% if plan.relative %} <span class="muted">· {{ plan.relative }}</span>{% endif %}{% if plan.status != 'confirmed' %} <span class="tag tag--off">{{ 'canceled' if plan.status == 'cancelled' else plan.status }}</span>{% endif %}</p>
+                <p class="next__when">{{ plan.when | figs }}{% if plan.relative %} <span class="muted">· {{ plan.relative }}</span>{% endif %}{% if plan.status != 'confirmed' %} <span class="tag tag--off">{{ plan_status_words.get(plan.status, plan.status) }}</span>{% endif %}</p>
                 <div class="meta">
                   {%- if plan.location %}<span>{{ icon('pin') }}{{ plan.location }}</span>{% endif -%}
                   {{ for_people(row) }}

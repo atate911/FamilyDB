@@ -415,7 +415,8 @@ def test_in_afterglow_green_is_veras_alone() -> None:
         r, g, b = (int(colour[i : i + 2], 16) for i in (1, 3, 5))
         return g - max(r, b) > 12
 
-    family = ("--link", "--here-icon", "--lit", "--primary", "--primary-edge", "--today", "--chosen")
+    family = ("--link", "--here-icon", "--lit", "--primary", "--primary-edge", "--today")
+    family += ("--chosen",)
     assert [name for name in family if greenish(name)] == []
     assert greenish("--vera")
 

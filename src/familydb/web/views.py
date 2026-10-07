@@ -429,6 +429,10 @@ REMINDERS_SAID = (
 )
 
 
+# A plan's status as the page says it: "maybe", never the calendar's "tentative".
+PLAN_STATUS_WORDS = {"tentative": "Maybe", "cancelled": "Canceled", "confirmed": "On"}
+
+
 def money_text(dollars: float) -> str:
     """ "$0.00", "$2.00"; under ten cents "4¢", which a dollar figure would round to nothing."""
     if 0 < dollars < 0.1:
@@ -576,6 +580,7 @@ def home_line(
     *,
     plans_href: str,
     todo_href: str,
+    list_href: str = "",
     kid: bool = False,
     others: str = "",
     yes: tuple[str, str] | None = None,
@@ -599,7 +604,7 @@ def home_line(
             who, wish = yes
             say(", and " if plan else "")
             say(f"{who} said yes to ")
-            say(wish, todo_href)
+            say(wish, list_href or todo_href)  # her list, where the wish is
             say("!")
         elif plan:
             say(".")
