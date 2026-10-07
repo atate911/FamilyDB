@@ -17,6 +17,16 @@ The suggestion engine is the pattern to copy. Free time, weather, hours, travel 
 verdict come from `suggest/`, are logged to `suggestions`, and reach the model as structured
 results; the model frames the question and writes the reply. It never recomputes a verdict.
 
+**Pay for judgement, not lookups, and give the judgement everything.** The family pays for a
+model to weigh what code cannot: which of a dozen things that all fit suits this family this
+week, given what they loved, what wore them out, what they said yesterday and what was picked
+for them last time. That is worth a stronger model, and only worth it when the model sees
+everything that bears on it. So for a planning question, code assembles a dossier of what the
+household knows (`suggest/dossier.py`) and one call at a stronger level chooses among the
+options code already checked (`suggest/choose.py`), with reasons that cite the dossier; the
+everyday chat model then says it in her words. The easy lookups stay cheap, and the stronger
+model is never asked to look anything up.
+
 ## Five questions every call answers
 
 Every kind of call, present or future, answers these explicitly before it is on by default. An
@@ -109,6 +119,7 @@ Context is built in three layers, and every piece of information belongs to exac
 | Transcribe | a voice note from somebody on the family list, before its chat turn | the hearing model: OpenAI's speech-to-text model or a Gemini model; never Claude, which takes no recordings | the recording, and one line naming the family, her and home so they are spelled right | nothing | its words, which become the message |
 | Judge | a question code filed when a change needs weighing (a model in use going with several to take its place, new models for a company in use, a refusal nobody could read), only while `judgements` is on; the day's questions together with the evening's lookups, a refusal at once; within `judgement_budget` a month | the model at `judgement_level` (best by default) of the lookup company | `prompts/judge.md`; model names, prices, releases, what the family's calls use a model for, a refusal's status and error text; never the family's messages | `give_judgement` only, choosing among the options code gave | one choice per question, which code checks and acts on within `judgement_acts` |
 | Price check | a price of a model in use the two price lists disagree on, filed like a judgement and asked with it | worker model, at the lookup level | `prompts/price_check.md`; the model and what each list says | web search (3), `report_price` | a price from the company's own page, taken only when it matches a list |
+| Choose | a `suggest` call in a chat turn (a family message or the digest) while `choosing` is on, from a grown-up, about anything but right now, with two options or more; once a message, and within `choose_budget` a month and the day's limit | the chat company's model at `choose_level` (best by default) | `prompts/choose.md`; the dossier: the question, who asks and who reads, the family and their own words, the days, every option code checked with its verdict, rating and last note, the finds marked as outside information, a few ruled out, every memory in force, the weeks around, what was picked lately, this chat's last three days | `give_picks` only, among the options in the dossier | up to five picks with a slot and a reason, which code checks and puts first in the result the chat model words |
 | Look | a photo from somebody on the family list, before its chat turn, one call each for up to four of an album's; in a group, only one sent to the bot | the lookup model of the company that looks things up, with a lookup's effort | the picture, at most 1600 pixels on its long side and 3.9 MB (Claude counts its 5 MB on the base64), `prompts/look.md` and the same line of names | nothing | what it is and the words in it that matter, at most 120 words, which become the message |
 
 All of them go through one door, `agent/gateway.ask`, which runs the loop
@@ -167,6 +178,25 @@ price is the same door with the web and the lookup model (reading a page, not we
 figure taken only when it matches one of the lists, recorded as `price_check`. Whether the
 judgements are good is for admins to see: each question, its answer, its reason and what came of
 it are listed under Models and prices on the Status page.
+
+Choosing what to suggest is the call the family pays for on purpose (`suggest/choose.py`,
+kind `choose`, "choosing what to suggest"). Its five answers: asked by code from inside the chat's
+`suggest`, never by a model deciding to escalate, and only while `choosing` is on, for a chat
+message or the digest from a grown-up (a kid's question, `/now`, the evening check and the
+command line never choose), about anything but right now, with at least two options, room in
+the day's limit and in `choose_budget` (US$5 a month by default) for this call's own estimate;
+a retry, or a second `suggest` in the same turn, reuses the picks already made, with no call. It
+sees the dossier and nothing else, built by code, deterministic and capped section by section
+(firm memories never cut), with never another chat's words and never a birthday; it answers on
+the chat surface, so the dossier goes only to the company the family already writes to. It may
+only hand back picks among the options, which `give_picks` checks: each is an option, a
+favourite was done before and a new one never was, a day is inside the window and one the option
+fits, every cite is in the dossier. The picks lead what the chat model is given and it says
+them in order; code has already checked every pick's hours, travel and weather. It is two calls
+at most, 6,000 output tokens, about six cents on Claude Opus; whatever goes wrong, the engine's
+own order is the answer and nobody is told, since a kid must not hear of budgets. Whether the
+picks are good is measured by `evals/` (`leads_with_pick`) and kept with each suggestion
+(`suggestions.picks`).
 
 Batch pricing (each company's half-price, non-real-time endpoints) was weighed for these and left
 out: at a few cents a month the saving is cents, and it would mean submitting on one run and
@@ -299,7 +329,9 @@ everything. The direction:
   never does, and nothing is escalated because a question sounded hard.
 - **Escalate on evidence, not on guesswork.** A cheaper model may hand a task up to a stronger one
   when code can see that it failed: a validation error, a hand-back that did not happen, an empty
-  answer. Not because the question sounded hard.
+  answer. Not because the question sounded hard. Choosing what to suggest is not an escalation:
+  it is a declared kind (`choose`) that code starts for a kind of question the family decided is
+  worth it, at the level they set, never because the chat model asked for help.
 - **Measure before switching.** A model is chosen or replaced on `evals/`: the family's own
   requests with the outcomes expected, graded by code, run against a live model for quality
   (`--provider` with `--model` or `--level` to compare) and tested against fakes for the shape.

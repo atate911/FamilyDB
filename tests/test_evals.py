@@ -84,7 +84,8 @@ def test_a_case_in_the_group_is_sent_there_and_asking_first_passes(settings) -> 
     private = by_name("sensitive_reminder_in_private")
     api = _answer([fakes.text("Shall I set it for 8am tomorrow?")])
     assert "never called add_task" in grade(private, run_case(private, settings, api=api))
-    assert len(api.requests[0]["messages"][-1]["content"]) == 2  # the date, then the message
+    said = [part["text"] for part in api.requests[0]["messages"][-1]["content"]]
+    assert not any("reads your reply" in text for text in said)  # a private chat has no line
 
 
 def test_every_case_has_a_reason_and_a_unique_name() -> None:

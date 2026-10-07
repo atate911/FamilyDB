@@ -696,6 +696,14 @@ PROVIDER=anthropic
 WORKER_PROVIDER=openai
 ```
 
+**Choosing the suggestions.** For a planning question ("what should we do this weekend?",
+"where should we eat tonight?") and the weekend digest, a stronger model chooses the picks from
+everything the family has told the bot and done, and the everyday model words them: about 3 to 13
+cents a question, depending on the company, within US$5 a month unless changed (AI model, under
+"Choosing the suggestions"). It goes to the company that answers the chat, nowhere else. Over the
+month's amount, turned off, or failing, suggestions are made as before. On `/status` it is
+"choosing what to suggest".
+
 **What the fallback does and does not do.** A message the chosen provider cannot take, because it
 is rate limited, unreachable or has no key, is asked of another that has a key. Only before any
 tool has run: once the bot has saved an idea or put something on the calendar, starting again

@@ -149,7 +149,7 @@ class Settings(BaseSettings):
     # chooses the picks, which the chat model then words. At most `choose_budget` US$ a month,
     # within the daily limit; 0, or off, keeps the engine's own order. Never for a kid's
     # question, a question about right now, or anything but a chat message.
-    choosing: bool = False
+    choosing: bool = True
     choose_level: Level = "best"
     choose_budget: float = Field(default=5.0, ge=0, le=50)
     # Model calls one choice may take: the answer, and one more if code refused a pick in it.

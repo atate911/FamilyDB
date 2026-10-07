@@ -49,6 +49,32 @@ def called(name: str, times: int | None = None, where=None, what: str = "") -> C
     return check
 
 
+def leads_with_pick() -> Check:
+    """A stronger call chose (suggest/choose.py), and the reply leads with its first pick: of
+    the ideas it names, the first pick's comes first. Paying for a choice the reply ignores is a
+    cost with no gain."""
+
+    def check(run: Run) -> str | None:
+        chosen = run.named("give_picks")
+        if not chosen:
+            return "nothing was chosen"
+        first = chosen[-1].input["picks"][0]["ref"]
+        if not first.startswith("idea:"):
+            return None  # a find leads: its title is whatever the page called it
+        word = run.house.words.get(int(first.split(":")[1]))
+        if word is None:
+            return f"picked {first}, which is not one of the household's ideas"
+        reply = run.reply.casefold()
+        where = {w: reply.find(w) for w in run.house.words.values() if w in reply}
+        if word not in where:
+            return f"the reply never names the first pick, {word}"
+        if min(where.values()) < where[word]:
+            return f"the reply leads with something other than the first pick, {word}"
+        return None
+
+    return check
+
+
 def never(*names: str) -> Check:
     def check(run: Run) -> str | None:
         used = sorted({c.name for c in run.calls if c.name in names})
@@ -498,8 +524,16 @@ CASES: tuple[Case, ...] = (
     Case(
         "this_weekend",
         ("what should we do this weekend?",),
-        (window("this_weekend"), called("suggest", 1), never(*DIRECT), wrote_only()),
-        "One suggest call; its checks are not repeated by hand.",
+        (
+            window("this_weekend"),
+            called("suggest", 1),
+            never(*DIRECT),
+            wrote_only(),
+            called("give_picks", 1),
+            leads_with_pick(),
+        ),
+        "One suggest call, its checks not repeated by hand; a stronger call chooses, and the "
+        "reply leads with what it chose.",
     ),
     Case(
         "saturday_morning",
@@ -702,6 +736,7 @@ CASES: tuple[Case, ...] = (
             called("suggest", where=covers(TOMORROW), what="for a window taking in tomorrow"),
             wrote_only(),
             shorter_than(600),
+            never("give_picks"),  # a kid's question is not chosen for (suggest/choose.py)
         ),
         "A kid asks in the family group: suggestions for tomorrow, Saturday, however the window "
         "is framed, nothing saved for a question, and a reply short enough for a group.",

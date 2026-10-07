@@ -11,7 +11,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from familydb.integrations.open_meteo import DayForecast
-from familydb.store import db, ideas, members, places, wishes
+from familydb.store import db, ideas, members, memories, outcomes, places, wishes
 
 TZ = ZoneInfo("America/Vancouver")
 NOW = datetime(2026, 9, 25, 15, 30)
@@ -33,6 +33,8 @@ class Household:
     hopscotch: int
     hike: int
     cafe: int
+    # A word each idea is named by in a reply, whatever else is said of it.
+    words: dict[int, str]
 
 
 def _place(conn, idea_id: int, name: str, *, hours: dict, travel: int, lat: float, lon: float):
@@ -134,7 +136,48 @@ def seed(conn) -> Household:
         )
         hike = idea("The falls hike", "outing", setting="outdoor", weather="dry", duration_min=180)
         cafe = idea("Board game cafe", "activity", setting="indoor", duration_min=120)
-    return Household(ramen=ramen, sushi=sushi, hopscotch=hopscotch, hike=hike, cafe=cafe)
+        # How two of them went, for the dossier a stronger call chooses from (suggest/choose.py):
+        # a favourite, and one that was only so-so. Both long enough ago to be offered again.
+        for done, day, rating, notes in (
+            (sushi, "2026-06-12", 9, "the girls loved it"),
+            (cafe, "2026-07-03", 6, "fun, but loud on a Saturday"),
+        ):
+            outcomes.insert(
+                conn,
+                idea_id=done,
+                plan_id=None,
+                happened_on=day,
+                rating=rating,
+                would_repeat=None,
+                notes=notes,
+                recorded_by=sam.id,
+                now=NOW_ISO,
+            )
+            ideas.apply_outcome(conn, done, happened_on=day, avg_rating=float(rating), now=NOW_ISO)
+        # What the family has told her about itself: one must, one taste.
+        for fact, firm in (("no drives over an hour", True), ("the girls love noodles", False)):
+            memories.insert(
+                conn,
+                member_id=None,
+                category="places" if firm else "food",
+                fact=fact,
+                firm=firm,
+                inferred=False,
+                until=None,
+                source_message_id=None,
+                said_by=sam.id,
+                now=NOW_ISO,
+            )
+    words = {
+        ramen: "ramen",
+        sushi: "sushi",
+        hopscotch: "hopscotch",
+        hike: "falls",
+        cafe: "board game",
+    }
+    return Household(
+        ramen=ramen, sushi=sushi, hopscotch=hopscotch, hike=hike, cafe=cafe, words=words
+    )
 
 
 def calendar_events(calendar) -> None:
