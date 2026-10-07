@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 import pytest
+from markupsafe import escape
 
 from familydb.app import App
 from familydb.store import db
@@ -582,7 +583,7 @@ def test_the_list_of_pages_says_how_each_stands_and_leads_to_it(page) -> None:
     text = page.get("/settings").text
     for section in fields.SECTIONS:
         assert f'href="/settings/{section.name}"' in text, section.name
-        assert section.title in text
+        assert str(escape(section.title)) in text  # as the page writes it: What&#39;s…
     assert "Claude (Anthropic) answers, with claude-opus-5." in text  # the test settings' model
     assert "Home is not set yet" in text and "Needs a look" in text
     assert 'name="csrf"' not in text  # nothing to send here: every form is on its own page

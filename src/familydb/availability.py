@@ -26,6 +26,32 @@ def enrichment_available(settings: Settings) -> bool:
     return web_tools_available(settings)
 
 
+def ticketmaster_available(settings: Settings) -> bool:
+    """Ticketmaster is asked what is on within a radius of home: it needs the key and home."""
+    return bool(settings.ticketmaster_api_key) and weather_available(settings)
+
+
+def happening_search_available(settings: Settings) -> bool:
+    """The weekly search near home, and the lookup that proposes calendars: model calls with
+    the web, so they need the web tools, home, and a monthly budget above nothing."""
+    return (
+        settings.happening_search
+        and web_tools_available(settings)
+        and weather_available(settings)
+        and settings.happening_budget > 0
+    )
+
+
+def happening_available(settings: Settings) -> bool:
+    """Whether there is anything near home to read (familydb/happening.py): a calendar,
+    Ticketmaster or the search."""
+    return (
+        bool(settings.event_feeds.strip())
+        or ticketmaster_available(settings)
+        or happening_search_available(settings)
+    )
+
+
 def digest_configured(settings: Settings) -> bool:
     return bool(settings.digest_chat_id)
 

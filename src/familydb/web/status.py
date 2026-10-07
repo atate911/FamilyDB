@@ -13,7 +13,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from familydb import alerts
+from familydb import alerts, happening
 from familydb import model_watch as watch
 from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
@@ -29,6 +29,7 @@ from familydb.dates import utc_iso
 from familydb.integrations.google_calendar import service_account_email
 from familydb.store import alerts as alert_store
 from familydb.store import calls, ideas, members, messages
+from familydb.store import finds as find_store
 from familydb.store import judgements as judgement_store
 from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
@@ -119,6 +120,15 @@ def keys(app: App, stored: dict[str, Any]) -> list[dict[str, Any]]:
     if live.telegram_bot_token and state:
         telegram = f"{telegram}; {state}"
     rows.append(_row("Telegram bot token", telegram_working(app), telegram))
+    rows.append(
+        _row(
+            "Ticketmaster key",
+            bool(live.ticketmaster_api_key) or None,
+            _where("ticketmaster_api_key", live, stored)
+            if live.ticketmaster_api_key
+            else "no key, which is fine: it only adds shows and games near home",
+        )
+    )
     return rows
 
 
@@ -382,6 +392,36 @@ def model_watch(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
             for one in judgement_store.recent(conn, since=since)
         ],
         "judging": app.settings.judgements,
+    }
+
+
+def happening_settings(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """What the settings page for things near home shows besides its boxes: the calendars the
+    app found near home, ticked when the settings read them, the newest marked, and what its
+    model calls have cost this month."""
+    live = app.settings
+    tz = live.tzinfo
+    reading = set(happening.feed_urls(live))
+    run = find_store.source(conn, happening.proposals_source(live.home_area))
+    proposed = find_store.proposals(conn, live.home_area) if live.home_area else []
+    return {
+        "proposals": [
+            {
+                "url": one.url,
+                "title": one.title,
+                "note": one.note,
+                "site": happening.host(one.url),
+                "events": one.events,
+                "ticked": one.url in reading,
+                "new": run is not None
+                and one.found_at == run.checked_at
+                and one.url not in reading,
+            }
+            for one in proposed
+        ],
+        "looked": views.local_moment(run.checked_at, tz) if run else None,
+        "looked_ok": run.ok if run else None,
+        "spent": happening.spent_this_month(conn, live, app.clock.now()),
     }
 
 

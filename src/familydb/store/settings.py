@@ -92,8 +92,19 @@ BEHAVIOUR = (
     "web_session_days",
     "google_calendar_id",
     "log_level",
+    "event_feeds",
+    "happening_radius_km",
+    "happening_search",
+    "happening_refind_days",
+    "happening_budget",
 )
-SECRETS = ("anthropic_api_key", "openai_api_key", "gemini_api_key", "telegram_bot_token")
+SECRETS = (
+    "anthropic_api_key",
+    "openai_api_key",
+    "gemini_api_key",
+    "telegram_bot_token",
+    "ticketmaster_api_key",
+)
 # Who the assistant is and who the family are, with a page of their own (/settings/personality).
 # The page's list of changes shows the long texts among them as "rewritten" rather than word for
 # word (web/views.py `LONG_SETTINGS`).

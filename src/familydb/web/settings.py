@@ -59,7 +59,15 @@ from familydb.agent import gateway, providers
 from familydb.agent.providers import prices
 from familydb.agent.spending import spent_today
 from familydb.app import App
-from familydb.availability import enrichment_available, web_is_public
+from familydb.availability import (
+    enrichment_available,
+    happening_available,
+    happening_search_available,
+    ticketmaster_available,
+    weather_available,
+    web_is_public,
+    web_tools_available,
+)
 from familydb.config import PersonaRewrite, Settings, apply_overrides
 from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
@@ -94,7 +102,11 @@ KEY_LABELS = {
     "openai_api_key": "OpenAI key",
     "gemini_api_key": "Google key",
     "telegram_bot_token": "Telegram bot token",
+    "ticketmaster_api_key": "Ticketmaster key",
 }
+# The keys that are not a model company's, each on the page that uses it rather than among the
+# companies' keys, and listed after them.
+KEY_PAGES = {"telegram_bot_token": "connections", "ticketmaster_api_key": "happening"}
 
 
 def _app() -> App:
@@ -382,6 +394,13 @@ def page(
         )
         for group in fields.groups_in(section)
     }
+    if section == "happening":
+        # A calendar the app proposed is a tick above the box, not a line in it.
+        proposed = {one["url"] for one in extra.get("proposals", [])}
+        for box in groups["feeds"]["boxes"]:
+            box["value"] = "\n".join(
+                line for line in str(box["value"]).splitlines() if line not in proposed
+            )
     return (
         render_template(
             "settings_section.html",
@@ -488,6 +507,21 @@ def _lookups(app: App, conn: Any) -> dict[str, Any]:
     return {"on": enrichment_available(app.settings), "can_look": app.can_ask("worker")}
 
 
+def _happening(app: App, conn: Any) -> dict[str, Any]:
+    live = app.settings
+    return {
+        **status_page.happening_settings(app, conn),
+        "on": happening_available(live),
+        "searching": happening_search_available(live),
+        "search_wanted": live.happening_search,
+        "web": web_tools_available(live),
+        "home": weather_available(live) and bool(live.home_area),
+        "can_look": app.can_ask("worker"),
+        "budget": live.happening_budget,
+        "ticketmaster": ticketmaster_available(live),
+    }
+
+
 def _connections(app: App, conn: Any) -> dict[str, Any]:
     return {
         "google": google_panel(app.settings),
@@ -522,6 +556,7 @@ PAGES = {
     "spending": _spending,
     "messages": _messages,
     "lookups": _lookups,
+    "happening": _happening,
     "connections": _connections,
     "security": _security,
     "history": _history,
@@ -601,6 +636,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
         ),
         "messages": ([weekend, f"Asks how a plan went at {hour(live.follow_up_hour)}."], False),
         "lookups": ([lookups], False),
+        "happening": ([views.happening_state(live)], False),
         "personality": (
             [
                 who,
@@ -643,6 +679,20 @@ def section(name: str) -> tuple[str, int]:
     return page(name)
 
 
+def _with_ticked_feeds(form: Any) -> Any:
+    """The calendars to read, as the page for things near home sends them: the ones the app
+    proposed are ticks, each address the page showed among `proposed`, and the rest are lines in
+    the box. One setting holds them all, so the ticks are folded into the box's lines here."""
+    shown = form.getlist("proposed")
+    if not shown or "event_feeds" not in form:
+        return form
+    ticked = [url for url in form.getlist("feed") if url in shown]
+    typed = [line.strip() for line in form["event_feeds"].splitlines() if line.strip()]
+    folded = form.copy()
+    folded["event_feeds"] = "\n".join([*ticked, *(line for line in typed if line not in shown)])
+    return folded
+
+
 @bp.post("/settings")
 def save() -> Response | tuple[str, int]:
     """Store the behaviour settings, or say which box is wrong and keep what was typed."""
@@ -650,10 +700,9 @@ def save() -> Response | tuple[str, int]:
     here = _section(request.form.get("section"))
     if (complaint := auth.refused()) is not None:
         return _answer(back, here, error=complaint)
-    values, problems = fields.read_form(request.form)
-    typed = {
-        one.key: fields.given(one, request.form) for one in fields.FIELDS if one.key in request.form
-    }
+    form = _with_ticked_feeds(request.form)
+    values, problems = fields.read_form(form)
+    typed = {one.key: fields.given(one, form) for one in fields.FIELDS if one.key in form}
     if not problems:
         stored = _stored()
         proposed = {**stored, **values}
@@ -707,7 +756,8 @@ def save_keys() -> Response | tuple[str, int]:
     if problems:
         if back is not None:
             return _answer(back, here, error=" ".join(problems.values()))
-        where = here or ("connections" if set(problems) == {"telegram_bot_token"} else "model")
+        pages = {KEY_PAGES.get(name, "model") for name in problems}
+        where = here or (pages.pop() if len(pages) == 1 else "model")
         return page(where, problems=problems, error="Nothing was saved.", status=400)
     return _answer(back, here, said=_said(_save(values), keys=True))
 
@@ -1368,7 +1418,7 @@ def _problems_said(problems: dict[str, str]) -> str:
 def _key_order(provider: str) -> list[str]:
     """The key of the company answering now first, as that is the one a new install needs."""
     first = f"{provider}_api_key"
-    return sorted(SECRETS, key=lambda name: (name != first, name == "telegram_bot_token"))
+    return sorted(SECRETS, key=lambda name: (name != first, name in KEY_PAGES))
 
 
 def _said(changed: list[str], *, keys: bool = False) -> str:

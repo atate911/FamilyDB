@@ -87,7 +87,7 @@
 
 {# Every key at once: for a second company's, which is not checked or chosen, and for taking a
    key away. Folded, since the key that matters is the one above. #}
-{% set ai_keys = keys.values() | rejectattr('key', 'equalto', 'telegram_bot_token') | list %}
+{% set ai_keys = keys.values() | rejectattr('key', 'in', ['telegram_bot_token', 'ticketmaster_api_key']) | list %}
 {# The form inside carries the address "Change a key" leads to, so a browser opens the fold. #}
 <details class="panel fold" id="all-keys"{% if ai_keys | selectattr('problem') | list %} open{% endif %}>
   <summary><span class="h2">Every company's key</span></summary>

@@ -66,6 +66,11 @@
                  {% if one.keyboard %}inputmode="{{ one.keyboard }}"{% endif %} />
         </div>
       </div>
+    {% elif one.lines %}
+      {# One thing a line: the calendars to read. #}
+      <textarea id="f-{{ one.key }}" name="{{ one.key }}" rows="4" spellcheck="false"
+        autocomplete="off" placeholder="{{ entry.placeholder }}"
+        {%- if entry.problem or one.note %} aria-describedby="{{ told }}"{% endif %}>{{ entry.value }}</textarea>
     {% else %}
       <input
         id="f-{{ one.key }}"

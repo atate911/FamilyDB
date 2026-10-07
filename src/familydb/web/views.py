@@ -19,9 +19,10 @@ from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
-from familydb import alerts, windows
+from familydb import alerts, happening, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, prices
+from familydb.availability import happening_search_available, ticketmaster_available
 from familydb.config import Settings
 from familydb.integrations.geocode import estimate_travel
 from familydb.memory import words
@@ -1051,6 +1052,20 @@ def found_by_lookup(tool: dict[str, Any]) -> dict[str, Any] | None:
         "sources": [url for url in (clean_url(s) for s in given.get("source_urls") or []) if url],
         "saved": not tool.get("is_error"),
     }
+
+
+def happening_state(settings: Any) -> str:
+    """The settings list's line for things near home: what it reads."""
+    feeds = len(happening.feed_urls(settings))
+    parts = [f"{feeds} calendar{'' if feeds == 1 else 's'}"] if feeds else []
+    if ticketmaster_available(settings):
+        parts.append("Ticketmaster")
+    if happening_search_available(settings):
+        parts.append("a weekly search")
+    if not parts:
+        return "Nothing read yet: turn on web lookups, or add a calendar or a Ticketmaster key."
+    listed = ", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0]
+    return f"Reads {listed}."
 
 
 def lookups_when(settings: Any) -> str:
