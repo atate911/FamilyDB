@@ -51,7 +51,7 @@
 
       <fieldset class="fieldset">
         <legend>Hidden from</legend>
-        <p class="small muted">For a gift idea. A present is kept from whoever it is for, so it stays a surprise; tick anyone else it should be kept from too, or untick somebody to let them see it.</p>
+        <p class="small muted">For a present (kind “gift”). A present is kept from every kid, always, and from the grown-up it is for; tick another grown-up to keep it from them too.</p>
         <div class="choices">
           {% for member in keepable %}
             <label class="choice"><input type="checkbox" name="hidden_from" value="{{ member.id }}" {{ 'checked' if member.id in kept_ids }} /><span>{{ member.display_name }}</span></label>
@@ -123,7 +123,7 @@
           {% else %}
             <li>Only a title and a kind are needed. {{ assistant }} fills in the rest when she looks it up.</li>
             <li>You can also just tell {{ assistant }} in the chat: “we should try the ramen place on Main St”.</li>
-            <li>A gift idea is hidden from whoever it’s for.</li>
+            <li>A present (kind “gift”) is hidden from every kid and from whoever it’s for.</li>
           {% endif %}
         </ul>
       </section>

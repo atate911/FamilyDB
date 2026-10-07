@@ -1,13 +1,14 @@
 """Whom a present is kept from.
 
-A present (an idea of kind "gift") is hidden from exactly the people it names, and the page says
-whom: "Hidden from Maya and Theo". Nobody chose, which is every present until somebody does, means
-the people it is for (`gifts_for` finds them by name among its participants). A present that names
-nobody a family member is kept from the kids, as every present was before this, so saving one with
-no name never shows it to them by accident. Choosing a list of people, even an empty one, overrides
-all of that (the idea form, `ideas.hidden_from`).
+A present (an idea of kind "gift") is kept from every kid, always, and from the grown-up it is for;
+a grown-up may keep one from another grown-up too. The page says whom: "Hidden from the kids and
+Alex". What the idea form chooses (`ideas.hidden_from`) is only the grown-ups; kids are kept from
+by role, so no list can let one see a present. Nobody chose, which is every present until somebody
+does, means the grown-ups the present names (`gifts_for` finds them by name among its
+participants). Choosing a list of grown-ups, even an empty one, overrides that.
 
-Everything that shows ideas asks here, so the pages and the chat tools agree.
+Everything that shows ideas, and the to-dos about them (`tasks.idea_id`), asks here, so the pages
+and the chat tools agree.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store.ideas import Idea
 from familydb.store.members import Member
+from familydb.store.tasks import Task
 
 KIDS = "the kids"
 
@@ -49,17 +51,27 @@ def _named(member: Member, idea: Idea) -> bool:
     return any(wanted.search(person.casefold()) for person in idea.participants)
 
 
+def _kids(people: list[Member]) -> list[Member]:
+    return [member for member in people if member.active and not roles.may(member.role, "decide")]
+
+
+def _words(people: list[Member], grown_ups: list[Member]) -> str:
+    return join_names([*([KIDS] if _kids(people) else []), *(m.display_name for m in grown_ups)])
+
+
+def _kept(people: list[Member], grown_ups: list[Member]) -> Kept:
+    ids = {member.id for member in [*_kids(people), *grown_ups]}
+    return Kept(frozenset(ids), _words(people, grown_ups))
+
+
 def default_for(idea: Idea, people: list[Member]) -> Kept:
-    """Whom a present is kept from when nobody chose: the people it names, else the kids."""
-    active = [member for member in people if member.active]
-    named = [member for member in active if _named(member, idea)]
-    if named:
-        return Kept(
-            frozenset(member.id for member in named),
-            join_names([member.display_name for member in named]),
-        )
-    kids = [member for member in active if not roles.may(member.role, "decide")]
-    return Kept(frozenset(member.id for member in kids), KIDS if kids else "")
+    """Whom a present is kept from when nobody chose: every kid, and the grown-ups it names."""
+    named = [
+        member
+        for member in people
+        if member.active and roles.may(member.role, "decide") and _named(member, idea)
+    ]
+    return _kept(people, named)
 
 
 def of_presents(
@@ -68,56 +80,52 @@ def of_presents(
     """For each present among `found`, whom it is kept from. Other ideas are not in the answer."""
     gifts = [idea for idea in found if idea_store.is_gift(idea)]
     chosen = idea_store.chosen_hidden_from(conn, [idea.id for idea in gifts])
-    active = {member.id: member for member in people if member.active}
+    grown = {
+        member.id: member for member in people if member.active and roles.may(member.role, "decide")
+    }
     kept: dict[int, Kept] = {}
     for idea in gifts:
         ids = chosen.get(idea.id)
         if ids is None:
             kept[idea.id] = default_for(idea, people)
             continue
-        names = [active[one].display_name for one in ids if one in active]
-        kept[idea.id] = Kept(frozenset(one for one in ids if one in active), join_names(names))
+        kept[idea.id] = _kept(people, [grown[one] for one in ids if one in grown])
     return kept
 
 
 def choose(conn: sqlite3.Connection, idea: Idea, member_ids: list[int]) -> None:
-    """Save the people the idea form chose to keep a present from. Exactly the default is kept as
-    no choice at all, so the present goes on following whom it is for if that changes."""
+    """Save the grown-ups the idea form chose to keep a present from (a kid in the list is
+    ignored: kids are kept from by role). Exactly the default is kept as no choice at all, so the
+    present goes on following whom it is for if that changes."""
     people = member_store.list_all(conn)
-    wanted = {one.id for one in people if one.active and one.id in set(member_ids)}
-    chosen = None if wanted == set(default_for(idea, people).ids) else sorted(wanted)
-    idea_store.set_hidden_from(conn, idea.id, chosen)
+    grown = {m.id for m in people if m.active and roles.may(m.role, "decide")}
+    wanted = {one for one in member_ids if one in grown}
+    named = {m.id for m in people if m.id in grown and _named(m, idea)}
+    idea_store.set_hidden_from(conn, idea.id, None if wanted == named else sorted(wanted))
 
 
-def kept_ids(
-    conn: sqlite3.Connection, who: Member | None, *, kids_see_none: bool = False
-) -> set[int]:
-    """The ideas this person must not see: the presents hidden from them. Nobody in particular (the
-    family sharing one password, a job) is kept from nothing, as the grown-ups always were.
-
-    The pages tell a kid of the presents that are not hers, tagged; the chat does not
-    (`kids_see_none`), because a model told of a present can say so anywhere, and the prompt
-    promises a kid never hears of one."""
+def kept_ids(conn: sqlite3.Connection, who: Member | None) -> set[int]:
+    """The ideas this person must not see: every present for a kid, and for a grown-up the ones
+    kept from them. Nobody in particular (the family sharing one password, a job) is kept from
+    nothing, as the grown-ups always were."""
     if who is None:
         return set()
     everything = idea_store.list_all(conn, include_dropped=True)
     kept = of_presents(conn, everything, member_store.list_all(conn))
-    if kids_see_none and not roles.may(who.role, "decide"):
-        return set(kept)
     return {idea_id for idea_id, one in kept.items() if who.id in one.ids}
 
 
-def is_kept_from(
-    conn: sqlite3.Connection,
-    idea: Idea | None,
-    who: Member | None,
-    *,
-    kids_see_none: bool = False,
-) -> bool:
-    """Whether this one idea is a present hidden from this person."""
+def is_kept_from(conn: sqlite3.Connection, idea: Idea | None, who: Member | None) -> bool:
+    """Whether this one idea is a present kept from this person."""
     if idea is None or who is None or not idea_store.is_gift(idea):
         return False
-    if kids_see_none and not roles.may(who.role, "decide"):
-        return True
-    kept = of_presents(conn, [idea], member_store.list_all(conn))
-    return who.id in kept[idea.id].ids
+    return who.id in of_presents(conn, [idea], member_store.list_all(conn))[idea.id].ids
+
+
+def visible_tasks(conn: sqlite3.Connection, found: list[Task], who: Member | None) -> list[Task]:
+    """These to-dos without the ones about a present kept from this person."""
+    about = {task.idea_id for task in found if task.idea_id}
+    if not about or who is None:
+        return found
+    kept = kept_ids(conn, who) & about
+    return [task for task in found if task.idea_id not in kept]

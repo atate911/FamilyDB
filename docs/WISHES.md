@@ -9,12 +9,11 @@ This file is what the family decided and how it is built.
 
 ## What the family decided
 
-- **Sisters never see each other's wishes.** A present is hidden from exactly the people it names:
-  whoever it is for, unless somebody chooses others (or nobody) on the idea, and every page that
-  shows it says whom it is hidden from ("Hidden from Chloe"), so a sister who may know can keep
-  it quiet. A present that names nobody is kept from the kids, as every present once was. Vera
-  never tells a kid of a present in the chat, and a grown-up's own present is kept from them too
-  (`familydb/presents.py`).
+- **Sisters never see each other's wishes.** A present is kept from every kid, always, and from
+  the grown-up it is for; a grown-up may keep one from another grown-up too (chosen on the idea),
+  and every page and the flash on saving say whom it is hidden from ("Hidden from the kids and
+  Alex"). The to-dos about it (`tasks.idea_id`) are kept from the same people. Vera never tells a
+  kid of a present in the chat (`familydb/presents.py`).
 - **The girls use iPads, through the page.** No Telegram for them. Each has a private conversation
   with Vera that the parents can read. Everything goes through tools, so another home app can be
   connected later.

@@ -791,19 +791,18 @@ def _two_kids_and_a_present(app, sam, conn):
     return maya, theo, lego
 
 
-def test_a_present_shows_to_everyone_but_the_people_it_is_hidden_from(
+def test_a_kid_sees_no_present_anywhere_and_a_grown_up_is_told_whom_it_is_kept_from(
     app, sam, family, conn
 ) -> None:
     maya, theo, lego = _two_kids_and_a_present(app, sam, conn)
     mayas, theos = _kid_signed_in(app, sam, maya), _kid_signed_in(app, sam, theo)
-    page = mayas.get("/ideas").text
-    assert "Lego set" in page and "hidden from Theo" in page  # she is told to keep it quiet
-    assert mayas.get(f"/idea/{lego.id}").status_code == 200
-    assert "Lego set" not in theos.get("/ideas").text
-    assert theos.get(f"/idea/{lego.id}").status_code == 404
-    assert "hidden from Theo" in sam.get("/ideas").text and "Lego set" in sam.get("/").text
-    for path in ("/", "/plans", "/restaurants"):  # it is nowhere on his pages
-        assert "Lego set" not in theos.get(path).text, path
+    for kid in (mayas, theos):  # his, hers or anyone's: a kid is kept from every present
+        assert "Lego set" not in kid.get("/ideas").text
+        assert kid.get(f"/idea/{lego.id}").status_code == 404
+        for path in ("/", "/plans", "/restaurants", "/tasks"):
+            assert "Lego set" not in kid.get(path).text, path
+    assert "hidden from the kids" in sam.get("/ideas").text.lower()
+    assert "Lego set" in sam.get("/").text
 
 
 def test_a_grown_up_can_have_a_present_kept_from_them_too(app, sam, alex, family, conn) -> None:
@@ -819,13 +818,15 @@ def test_a_grown_up_can_have_a_present_kept_from_them_too(app, sam, alex, family
     assert alex.get(f"/idea/{scarf.id}/edit").status_code == 404
 
 
-def test_the_idea_form_chooses_whom_a_present_is_hidden_from(app, sam, family, conn) -> None:
+def test_the_idea_form_chooses_which_grown_ups_a_present_is_kept_from(
+    app, sam, alex, family, conn
+) -> None:
     from familydb.store import ideas as idea_store
 
     maya, theo, lego = _two_kids_and_a_present(app, sam, conn)
     page = sam.get(f"/idea/{lego.id}/edit").text
-    assert f'name="hidden_from" value="{theo.id}" checked' in page  # ticked for whom it is for
-    assert f'name="hidden_from" value="{maya.id}" checked' not in page
+    assert f'name="hidden_from" value="{family["alex"].id}"' in page  # a grown-up can be chosen
+    assert f'name="hidden_from" value="{theo.id}"' not in page  # kids are kept from by role
     form = {
         **_tokens(sam, f"/idea/{lego.id}/edit"),
         "revision": re.search(r'name="revision" value="([^"]+)"', page).group(1),
@@ -833,16 +834,16 @@ def test_the_idea_form_chooses_whom_a_present_is_hidden_from(app, sam, family, c
         "kind": "gift",
         "participants": "Theo",
         "hidden_shown": "1",
-        "hidden_from": [str(theo.id), str(maya.id)],  # a chatty sibling, too
+        "hidden_from": [str(family["alex"].id), str(maya.id)],  # a kid in the list is ignored
     }
-    assert sam.post(f"/idea/{lego.id}/edit", data=form).status_code == 302
-    assert idea_store.chosen_hidden_from(conn, [lego.id]) == {lego.id: sorted([maya.id, theo.id])}
-    assert "hidden from Maya and Theo" in sam.get("/ideas").text
-    mayas = _kid_signed_in(app, sam, maya)
-    assert "Lego set" not in mayas.get("/ideas").text
+    saved = sam.post(f"/idea/{lego.id}/edit", data=form, follow_redirects=True)
+    assert "Hidden from the kids and Alex." in saved.text  # the flash says whom
+    assert idea_store.chosen_hidden_from(conn, [lego.id]) == {lego.id: [family["alex"].id]}
+    assert "Lego set" not in alex.get("/ideas").text
+    assert "Lego set" not in _kid_signed_in(app, sam, maya).get("/ideas").text
 
 
-def test_a_new_present_is_kept_from_whom_it_names_unless_somebody_chooses(
+def test_a_new_present_is_kept_from_the_kids_and_the_grown_up_it_names(
     app, sam, family, conn
 ) -> None:
     from familydb.store import ideas as idea_store
@@ -851,14 +852,15 @@ def test_a_new_present_is_kept_from_whom_it_names_unless_somebody_chooses(
     form = {
         **_tokens(sam, "/ideas/new"),
         "title": "Bike bell",
-        "kind": "gift",
+        "kind": "Present",  # any way of saying it
         "participants": "Maya",
         "hidden_shown": "1",
     }
-    assert sam.post("/ideas/new", data=form).status_code == 302
+    saved = sam.post("/ideas/new", data=form, follow_redirects=True)
+    assert "Hidden from the kids." in saved.text
     bell = idea_store.find_similar_title(conn, "Bike bell")
+    assert bell.kind == "gift"
     assert idea_store.chosen_hidden_from(conn, [bell.id]) == {bell.id: None}  # nobody chose
-    assert "hidden from Maya" in sam.get("/ideas").text
 
 
 def test_a_form_without_the_boxes_leaves_a_present_as_it_was(app, sam, family, conn) -> None:
@@ -876,3 +878,32 @@ def test_a_form_without_the_boxes_leaves_a_present_as_it_was(app, sam, family, c
     }
     assert sam.post(f"/idea/{lego.id}/edit", data=form).status_code == 302
     assert idea_store.chosen_hidden_from(conn, [lego.id]) == {lego.id: [maya.id]}
+
+
+def test_a_to_do_for_a_present_is_kept_from_whoever_the_present_is(app, sam, alex, family, conn):
+    """ "Order Alex's watch" is on Sam's To do and Home, and on neither of Alex's."""
+    from familydb.store import ideas as idea_store
+    from familydb.store import tasks as task_store
+
+    with db.transaction(conn):
+        watch = idea_store.insert(
+            conn, title="A watch", kind="gift", participants=["Alex"], now=NOW_ISO
+        )
+        task_store.insert(
+            conn,
+            title="Order the watch",
+            notes="",
+            owner_id=family["sam"].id,
+            due_at=None,
+            preferred_window="",
+            operation_key="watch",
+            channel="web",
+            chat_id="c",
+            now=NOW_ISO,
+            idea_id=watch.id,
+        )
+    for path in ("/tasks", "/"):
+        assert "Order the watch" in sam.get(path).text, path
+        assert "Order the watch" not in alex.get(path).text, path
+    assert alex.get("/task/1/edit").status_code == 404
+    assert sam.get("/task/1/edit").status_code == 200

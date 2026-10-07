@@ -18,7 +18,9 @@ from typing import Any
 from flask import Blueprint, Response, current_app, flash, redirect, request, session, url_for
 from werkzeug.datastructures import MultiDict
 
+from familydb import presents
 from familydb.app import App
+from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.tools import ToolContext
 from familydb.web import auth, views
@@ -191,6 +193,16 @@ def _say(message: str) -> None:
     flash(message, NOTICE)
 
 
+def _kept_note(idea_id: int) -> str:
+    """For a present, whom it is kept from, so saving one says who will not see it."""
+    with closing(_app().connect()) as conn:
+        idea = idea_store.get(conn, idea_id)
+        if idea is None or not idea_store.is_gift(idea):
+            return ""
+        kept = presents.of_presents(conn, [idea], member_store.list_all(conn))[idea_id]
+    return f" {kept.label}." if kept.words else ""
+
+
 def _hidden_from(form: Any) -> list[int] | None:
     """Whom the idea form's "Hidden from" boxes kept a present from. None where the form did not
     ask (a form without the boxes) or, on a new idea, nobody was ticked: nobody chose, so the
@@ -220,7 +232,7 @@ def add_idea() -> Response:
     if "duplicate_of" in result:
         _say(DUPLICATE.format(id=result["duplicate_of"]))
         return _back("web.idea", idea_id=result["duplicate_of"])
-    _say(SAVED_IDEA.format(id=result["id"], title=result["title"]))
+    _say(SAVED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(result["id"]))
     return _back("web.idea", idea_id=result["id"])
 
 
@@ -246,7 +258,7 @@ def edit_idea(idea_id: int) -> Response:
     if result is None:
         _say(complaint or "")
         return _back("web.edit_idea", idea_id=idea_id)
-    _say(CHANGED_IDEA.format(id=result["id"], title=result["title"]))
+    _say(CHANGED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(idea_id))
     return _back("web.idea", idea_id=idea_id)
 
 

@@ -318,3 +318,38 @@ def test_each_person_keeps_a_colour_from_the_day_0039_gave_them_one(tmp_path, mo
         for name in ("a", "b", "c", "d", "e"):
             members.add(conn, name, "kid")
         assert members.add(conn, "ninth", "kid").slot in range(1, 9)  # all eight in use: shared
+
+
+def test_a_present_is_kept_from_kids_by_role_after_0043(tmp_path, monkeypatch):
+    """0043 takes kids out of every chosen `hidden_from` list (a present is kept from every kid,
+    always), leaves NULL as the default, and says "gift" for any way of saying present."""
+    from contextlib import closing
+
+    with closing(db.connect(tmp_path / "old.sqlite3")) as conn:
+        _up_to(monkeypatch, conn, 42)
+        for name, role in (("Sam", "admin"), ("Alex", "parent"), ("Maya", "kid")):
+            conn.execute(
+                "INSERT INTO members (display_name, role, active, created_at) "
+                "VALUES (?, ?, 1, '2026-01-01T00:00:00Z')",
+                (name, role),
+            )
+        for title, kind, kept in (
+            ("a", "gift", "[1,3]"),  # Sam, and Maya, a kid
+            ("b", "gift", "[3]"),  # only a kid: now kept from no grown-up
+            ("c", "gift", None),  # the default
+            ("d", "Present", None),
+        ):
+            conn.execute(
+                "INSERT INTO ideas (title, title_norm, kind, hidden_from, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+                (title, title, kind, kept),
+            )
+        assert 43 in db.migrate(conn)
+        rows = conn.execute("SELECT title, kind, hidden_from FROM ideas ORDER BY id").fetchall()
+        assert [(r["title"], r["kind"], r["hidden_from"]) for r in rows] == [
+            ("a", "gift", "[1]"),
+            ("b", "gift", "[]"),
+            ("c", "gift", None),
+            ("d", "gift", None),
+        ]
+        conn.execute("SELECT idea_id FROM tasks")  # the column is there

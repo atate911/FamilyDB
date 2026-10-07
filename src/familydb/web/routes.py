@@ -153,7 +153,9 @@ def home() -> Response | str:
         everything = [idea for idea in idea_store.list_all(conn) if idea.id not in kept]
         unfinished = status_page.setup_steps(app, conn) if manages else []
         people = member_store.list_all(conn)
-        todo = task_store.list_all(conn, status="open", owner_id=_own_only())
+        todo = presents.visible_tasks(
+            conn, task_store.list_all(conn, status="open", owner_id=_own_only()), visitor.member
+        )
         talk = chat.glance(app, conn) if talks else None
         wished = wish_glance(conn, today)
         slots = views.slot_map(people)
@@ -478,7 +480,9 @@ def _idea_form(record: Any = None) -> str:
         seasons=SEASONS,
         costs=COSTS,
         family=family,
-        keepable=[member for member in people if member.active],
+        keepable=[
+            member for member in people if member.active and roles.may(member.role, "decide")
+        ],
         kept_ids=sorted(kept.ids) if kept else [],
         suggested_by=by,
         added=views.day_short(
@@ -678,11 +682,15 @@ def tasks() -> str:
         status = "open"
     visitor = auth.visitor()
     with closing(app.connect()) as conn:
-        rows = task_store.list_all(
+        rows = presents.visible_tasks(
             conn,
-            status=status,
-            query="" if simple else request.args.get("q", ""),
-            owner_id=_own_only(),
+            task_store.list_all(
+                conn,
+                status=status,
+                query="" if simple else request.args.get("q", ""),
+                owner_id=_own_only(),
+            ),
+            visitor.member,
         )
         open_count = (
             len(rows) if status == "open" and not request.args.get("q") else _open_count(conn)
@@ -723,7 +731,8 @@ def tasks() -> str:
 
 
 def _open_count(conn: Any) -> int:
-    return len(task_store.list_all(conn, status="open", owner_id=_own_only()))
+    found = task_store.list_all(conn, status="open", owner_id=_own_only())
+    return len(presents.visible_tasks(conn, found, auth.visitor().member))
 
 
 def _todo_groups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -743,7 +752,7 @@ def edit_task(task_id: int) -> str:
     app = _app()
     with closing(app.connect()) as conn:
         task = task_store.get(conn, task_id)
-        if task is None:
+        if task is None or not presents.visible_tasks(conn, [task], auth.visitor().member):
             abort(404)
         people = member_store.list_all(conn)
         made_by = task_store.creators(conn, [task.id]).get(task.id)

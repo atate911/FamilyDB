@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
-from familydb import personas
+from familydb import personas, presents
 from familydb.app import App
 from familydb.store import messages as message_store
 from familydb.store import plans as plan_store
@@ -100,9 +100,10 @@ def _late(conn: sqlite3.Connection, visitor: auth.Visitor, tz: Any, today: Any) 
     if not (visitor.may("change") or visitor.may("own_tasks")):
         return 0
     own = None if visitor.may("browse") or visitor.member is None else visitor.member.id
+    found = task_store.list_all(conn, status="open", owner_id=own)
     return sum(
         views.is_late(task, tz, today)
-        for task in task_store.list_all(conn, status="open", owner_id=own)
+        for task in presents.visible_tasks(conn, found, visitor.member)
     )
 
 

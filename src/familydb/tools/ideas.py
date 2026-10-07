@@ -188,7 +188,7 @@ def _resolve_member_name(ctx: ToolContext, name: str | None) -> int | None:
 
 def _kept_from(ctx: ToolContext, idea: ideas.Idea | None) -> bool:
     """Whether this present is hidden from the asker (`presents.py`); a job sees everything."""
-    return presents.is_kept_from(ctx.conn, idea, ctx.member, kids_see_none=True)
+    return presents.is_kept_from(ctx.conn, idea, ctx.member)
 
 
 def _keep_presents(ctx: ToolContext, idea: ideas.Idea) -> None:
@@ -309,6 +309,6 @@ def search_ideas(ctx: ToolContext, args: SearchIdeasInput) -> dict[str, Any]:
         exclude_done_within_days=args.exclude_done_within_days,
         today=ctx.clock.today(),
         limit=limit,
-        exclude_ids=presents.kept_ids(ctx.conn, ctx.member, kids_see_none=True),
+        exclude_ids=presents.kept_ids(ctx.conn, ctx.member),
     )
     return {"count": len(found), "ideas": [render_idea_line(idea) for idea in found]}

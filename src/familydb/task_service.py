@@ -42,6 +42,8 @@ def _validate(conn: sqlite3.Connection, values: dict[str, Any]) -> None:
         values["gift_for"] = (values["gift_for"] or "").strip() or None
         if values["gift_for"] and len(values["gift_for"]) > 80:
             raise ToolError("gift_for is a name: at most 80 characters.")
+    if values.get("idea_id") is not None and ideas.get(conn, values["idea_id"]) is None:
+        raise ToolError("There is no idea with that idea_id.")
     if values.get("owner_id") is not None:
         owner = members.get(conn, values["owner_id"])
         if owner is None or not owner.active:
@@ -97,6 +99,7 @@ def create(
             repeat=columns,
             gift_for=values.get("gift_for"),
             created_by_member_id=values.get("created_by_member_id"),
+            idea_id=values.get("idea_id"),
         )
         if reminder:
             tasks.add_reminder(conn, task_id, reminder)
