@@ -75,12 +75,12 @@ These show things and send nothing. On a database that has never been opened, or
 
 | Command | What it shows |
 |---|---|
-| `familydb doctor [--online] [--fix] [--json]` | Checks the install end to end and prints a fix under anything wrong; exits with status 1 when something must be fixed. `--online` is free: it counts tokens on Anthropic or Gemini, asks Telegram whether the token is live and checks that the pages the setup links to answer. `--fix` makes `.env` and the login key owner-only and applies pending migrations |
+| `familydb doctor [--online] [--fix] [--json]` | Checks the install end to end and prints a fix under anything wrong; exits with status 1 when something must be fixed. `--online` is free: it asks Telegram whether the token is live, counts tokens on Anthropic or Gemini and checks the setup's links. `--fix` makes `.env` and the login key owner-only and applies pending migrations |
 | `familydb config` | Every setting with secrets masked, and where each value came from: **set on the settings page**, **from the environment**, or no mark for a default |
 | `familydb db status` | The schema version, row counts and the last few model calls |
 | `familydb members list [--all]` | The family list; `--all` includes people switched off |
-| `familydb ideas list [--all] [--json]` | The ideas, one line each. Unlike the assistant's list it includes presents; `--all` adds dropped ideas |
-| `familydb debug cost [--days N]` | What each message costs before anyone types, and what the last N days (30 by default) cost per purpose and model |
+| `familydb ideas list [--all]` | The ideas, one line each, presents included; `--all` adds dropped ideas |
+| `familydb debug cost [--days N]` | What the last N days (30 by default) cost per purpose and model |
 | `familydb debug prompt [TEXT] [--as NAME] [--kind KIND] [--idea N]` | The exact request that would be sent, without sending it. `--kind` is chat, digest, retry or enrich |
 | `familydb tool --list` | The tools, whether each is available and which write |
 | `familydb google events [--days N]` | The next 7 days (or N) on the family calendar, as a connection test |
@@ -96,9 +96,9 @@ These act on the real data. None of them asks a model.
 | `familydb db backup DEST` | Copies the database with SQLite's online backup. For a backup you keep, use `maintain.sh backup`, which also makes the file owner-only; on Docker `DEST` is inside the container |
 | `familydb db migrate` | Applies pending [migrations](/wiki/reference/glossary#migration). The service and `maintain.sh upgrade` do it for you |
 | `familydb members add NAME [--role admin\|parent\|kid]` | Adds a person, a parent unless `--role` says otherwise. It skips the Family page's checks, so use the [Family page](/wiki/controls/family) for anyone but the first admin |
-| `familydb google connect KEY_FILE CALENDAR_ID` | Connects the calendar from the server. It tests the key by reading the calendar and by making and deleting a one-day test event, then saves it. The calendar must be shared with edit rights |
+| `familydb google connect KEY_FILE CALENDAR_ID` | Connects the calendar from the server. It tests the key by reading the calendar and making and deleting a one-day test event, then saves it |
 | `familydb follow-ups [--now]` | Shows the schedule; with `--now`, sends the how-did-it-go message for each finished plan. No model call |
-| `familydb tool NAME --json '{...}' [--as NAME]` | Runs one tool with no model. Tools marked writing change the real data, and the calendar tools change the real Google calendar. For testing, ideally on a copy of the data |
+| `familydb tool NAME --json '{...}' [--as NAME]` | Runs one tool with no model. Tools marked writing change the real data, and the calendar tools the real Google calendar |
 
 ## Commands that cost money
 
@@ -108,7 +108,7 @@ Each model call goes through the same daily spending limit as the rest.
 |---|---|
 | `familydb chat TEXT [--as NAME] [--fresh]` | Talks to the assistant in its console chat. Everything it does is real: it saves messages and may add ideas, things to do or calendar events |
 | `familydb repl [--as NAME] [--fresh]` | The same, as an interactive session |
-| `familydb db retry-failed [--reset]` | Asks again about messages whose answer failed and sends the replies. `--reset` first makes given-up messages eligible again, including ones given up on purpose |
+| `familydb db retry-failed [--reset]` | Asks again about failed messages and sends the replies. `--reset` first makes given-up messages eligible again, including ones given up on purpose |
 | `familydb digest [--now]` | Shows the weekend ideas schedule; with `--now`, sends them to the chat chosen under Messages, once a day at most |
 | `familydb enrich [--idea N] [--limit N]` | Looks pending ideas up on the web now; `--idea` redoes one. It needs lookups turned on and a model key |
 | `familydb suggest [--window W] [--as NAME] [--discover]` | Runs the suggestion engine for a window (now, today, this-weekend, next-weekend, someday, or START..END as dates). It is free unless you add `--discover`, which searches the web |

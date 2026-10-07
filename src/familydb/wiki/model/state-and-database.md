@@ -20,7 +20,7 @@ Four things live outside the file: the Google service-account key (`data/google_
 | Calls | `llm_calls`, `tool_calls`, `spend_holds` | Each model call and what it cost, each tool call with its input and output, and the cost reserved for a call in flight |
 | Settings | `app_settings`, `settings_log` | Settings changed on the page, and who changed what (a secret's value is not written to the log) |
 | Models and prices | `models`, `model_changes`, `model_sources`, `judgements` | What the daily check found, and the questions a stronger model was asked about it |
-| Alerts and knocks | `alerts`, `knocks` | Troubles only an admin can fix, and strangers who messaged the bot: who and when, never what they said |
+| Alerts and knocks | `alerts`, `knocks` | Troubles only an admin can fix, and strangers who messaged FamilyDB: who and when, never what they said |
 | Bookkeeping | `schema_version` | Which migrations have run |
 
 > **Anyone who can read the file can read the model-company and Telegram keys saved on the Settings page.** They sit in `app_settings` as plain text, so they are in every backup too. FamilyDB makes the file, and its `-wal` and `-shm` files, readable by their owner only, and tightens an older one when the service starts. Keep it that way wherever you copy it.
@@ -35,7 +35,7 @@ The file only grows. Nothing prunes `messages`, `llm_calls`, `tool_calls`, `sugg
 
 ## Looking at it safely
 
-`familydb db status` prints the schema version, the row counts for members, ideas, places, plans, outcomes, messages and tool calls, and the last five model calls. `familydb ideas list` prints each idea in the one-line form the model reads, but over every idea, presents included (`--all` adds dropped ones), and `familydb members list` prints the family. Each applies pending migrations first. Run them as in [The command line](/wiki/operations/command-line#how-to-run-it); for example, `db status`:
+`familydb db status` prints the schema version, row counts and the last five model calls. `familydb ideas list` prints each idea in the one-line form the model reads, but over every idea, presents included, and `familydb members list` prints the family. Each applies pending migrations first. Run them as in [The command line](/wiki/operations/command-line#how-to-run-it); for example, `db status`:
 
 ```bash
 cd /opt/familydb && sudo -u familydb env HOME=/opt/familydb .venv/bin/familydb db status
@@ -67,11 +67,11 @@ A file that has run a migration the code does not know is newer than the code. `
 
 SQLite keeps recent writes in a write-ahead log, the `familydb.sqlite3-wal` file, with a small `-shm` file beside it, and folds them into the main file from time to time. Both belong to the running database. A copy of the main file alone can miss recent writes, which is why backups use SQLite's own online backup.
 
-FamilyDB opens each connection with the log on, foreign keys on, a wait of up to 5 seconds for a write lock, and `synchronous=NORMAL`. That last setting means a power cut can lose the last few commits from the log, without corrupting the file. Every thread (a page request, a job, Telegram) opens its own connection and does not share one. A write is a short transaction that takes the write lock when it begins, so two writers take turns instead of overwriting each other, and readers are not held up. A tool that has finished stays saved if a later step of the same turn fails.
+Every thread (a page request, a job, Telegram) opens its own connection with the log on, foreign keys on and a wait of up to 5 seconds for a write lock. A write is a short transaction, so two writers take turns instead of overwriting each other, and readers are not held up. A tool that has finished stays saved if a later step of the same turn fails. A power cut can lose the last few commits from the log, without corrupting the file.
 
 ### Backups and restores
 
-A restore replaces the whole file, so everything told to FamilyDB since the backup is gone. Settings and the keys saved on the page come back with it; the Google key file and `.env` do not. Delivery marks, follow-up and check marks and reminders from after the backup are gone too, so some reminders, follow-ups or checks may be sent again. Google keeps its own copy of the calendar. An event made after the backup is still in Google, but no plan owns it, so it shows as added in Google ([Plans and the calendar](/wiki/model/plans-and-calendar)). [Backup and restore](/wiki/operations/backup-and-restore) has the steps.
+A restore replaces the whole file, so everything told to FamilyDB since the backup is gone, including delivery, follow-up and check marks, so some reminders, follow-ups or checks may be sent again. Settings and the keys saved on the page come back with it; the Google key file and `.env` do not. An event made in Google after the backup is still there, but no plan owns it, so it shows as added in Google ([Plans and the calendar](/wiki/model/plans-and-calendar)). [Backup and restore](/wiki/operations/backup-and-restore) has the steps.
 
 ## Rules for admins
 

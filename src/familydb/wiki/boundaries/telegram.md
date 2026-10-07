@@ -1,12 +1,10 @@
 # Telegram as a service
 
-Telegram carries the family's chats with the bot. This page covers the service: what a Telegram bot can and cannot do, what leaves the house through it, and what happens when it is down. Telegram is optional, because the web chat works without it. [Telegram: the message loop](/wiki/behavior/telegram-loop) covers how a message is handled once it arrives, [Telegram: commands and buttons](/wiki/controls/telegram) covers what the family types and taps, and [Connections](/wiki/controls/settings/connections#telegram) covers setting it up.
+Telegram carries the family's chats with FamilyDB. This page covers the service: what a Telegram bot can and cannot do, what leaves the house through it, and what happens when it is down. Telegram is optional, because the web chat works without it. [Telegram: the message loop](/wiki/behavior/telegram-loop) covers how a message is handled once it arrives, [Telegram: commands and buttons](/wiki/controls/telegram) covers what the family types and taps, and [Connections](/wiki/controls/settings/connections#telegram) covers setting it up.
 
 ## How the bot is reached
 
-The bot is made in Telegram with BotFather, which hands out a token. FamilyDB uses that token with the `python-telegram-bot` library and asks Telegram for new updates by long polling: it asks, waits, and asks again. Nothing comes in from outside, so the server needs no public address and no open port for Telegram.
-
-It asks for four kinds of update: messages, edits (only so a live location can keep moving), button taps, and the bot being added to or removed from a chat. A message someone edits is not answered again.
+The bot is made in Telegram with BotFather, which hands out a token. FamilyDB asks Telegram for new updates by long polling: it asks, waits, and asks again. Nothing comes in from outside, so the server needs no public address and no open port for Telegram.
 
 ## What a Telegram bot cannot do
 
@@ -18,18 +16,13 @@ It asks for four kinds of update: messages, edits (only so a live location can k
 | Have voice notes and photos pushed to it | FamilyDB fetches them, and only after the sender is known to be on the family list. See below the table |
 | Open stickers, files and videos | The caption is answered as a message, marked as with something not seen; with no caption FamilyDB says it cannot read that kind |
 | Send as fast as it likes | FamilyDB waits out Telegram's "retry after" only when it sets the bot's name and description. A reply Telegram will not take stays stored and is tried again by the retry job |
-| React in every chat | A plain "saved" in a group is a 👌 reaction. Where Telegram refuses it, a silent ✓ reply goes instead |
-| Always send formatted text | Replies go as Telegram's HTML, drawn from the light Markdown a model writes. If Telegram refuses it, the plain words go instead |
+| React in every chat, or accept every format | A plain "saved" in a group is a 👌 reaction; where Telegram refuses it, a silent ✓ reply goes instead. Replies go as Telegram's HTML; if Telegram refuses it, the plain words go instead |
 
 A voice note or photo is fetched with 60 seconds allowed. A voice note over 20 MB, which FamilyDB treats as Telegram's limit for a bot, is not heard. A photo is fetched at the largest size not above 1,600 pixels on its long side, or the smallest if none is that small, and JPEG, PNG and WebP files sent as documents count too. In a group, a photo is looked at only when it is sent to the bot.
-
-While a message is being answered, "typing…" is sent every few seconds, for at most 3 minutes.
 
 ## Setting it up
 
 Make a bot with BotFather and copy its token. Paste the token into the Telegram step of [Setup](/wiki/controls/setup#telegram) or onto [Connections](/wiki/controls/settings/connections#telegram), then link each person ([Link a Telegram](/wiki/controls/family#link-a-telegram)). For a family group, turn off the bot's privacy setting in BotFather unless you want mentions only, then add the bot.
-
-After a connect, FamilyDB sets the bot's name and description in Telegram to the name it goes by and its `/start` line, and sets the "/" command menu, each only when it differs from what Telegram has. No model is asked.
 
 ## What leaves the house
 
@@ -42,11 +35,10 @@ Telegram sees every message in a chat with the bot, in both directions, includin
 | Telegram cannot be reached | Status and Connections: `cannot reach Telegram; trying again`. Log: `telegram: cannot reach Telegram (...); trying again shortly` | Nothing arrives on Telegram until FamilyDB reconnects, which it tries every 30 seconds. The web chat still works |
 | Telegram refuses the token | Status and Connections: `the token was refused by Telegram`. Log: `telegram: Telegram refused the bot token; replace it on the settings page` | Nothing arrives on Telegram, and nothing retries until the token changes. The web chat still works |
 | A reply cannot be sent | Log: `delivery pending for message N` | The reply was stored first, so it arrives on a later delivery run |
-| The name or description is refused | Log: `telegram: Telegram refused her name or introduction (...)` | Nothing changes for the family. FamilyDB does not try again until the name or line changes or the bot reconnects |
+| The name or description is refused | Log: `telegram: Telegram refused her name or introduction (...)` | Nothing changes. FamilyDB does not try again until the name or line changes or the bot reconnects |
 | The formatting is refused | Log: `telegram: the formatting was refused, so it went as plain words (...)` | The reply arrives without formatting |
 | A reaction is refused | Log: `telegram: no reaction here (...), so the ✓ goes quietly` | A silent ✓ |
 | A tap cannot be marked on its message | Log: `could not add who did it to a message` or `could not take the buttons off a message` | The tap still ran, and the buttons stay |
-| The library or Telegram's rules change | Errors in the server's log | Depends on the change |
 
 Telegram trouble is not among what admins are told on Telegram. It shows in the Telegram row on [Status](/wiki/controls/status) and on Connections, and [Troubleshooting](/wiki/operations/troubleshooting) covers the symptoms.
 

@@ -8,11 +8,11 @@ Commands written as `familydb <command>` run as in [How to run it](/wiki/operati
 
 The file is `/opt/familydb/.env`. FamilyDB reads the `.env` in its working directory when it starts and never again, so a change takes effect at the next restart. A missing file stops the systemd service from starting. On Docker, Compose reads the file on the host and passes the values in; the container has no `.env`.
 
-- Write one `KEY=value` per line, with the key in capitals, which is all the scripts look for. A line starting with `#` is a comment.
+- Write one `KEY=value` per line, with the key in capitals. A line starting with `#` is a comment.
 - Quote any value with a space or a `#`, in single quotes: `WEB_PASSWORD='two words # three'`. Unquoted, python-dotenv and Compose drop a ` #` and what follows, while systemd keeps it, so one line can mean two things.
 - An empty value, such as `HOME_LAT=`, means not set, so the default applies. A few settings, such as the worker model and company and the home area, treat empty as a real answer.
 - A key FamilyDB does not know is ignored without a word, so a misspelled name does nothing.
-- A key given twice takes the last line, and a real environment variable of the same name beats the file.
+- A key given twice takes the last line. A real environment variable of the same name beats the file.
 
 ## How it relates to the Settings page
 
@@ -40,11 +40,7 @@ A key typed on the web page is in every [backup](/wiki/operations/backup-and-res
 | `WEB_PUBLIC_PORT` | empty, meaning 443 | For the scripts and Compose: the port the web page is served on over HTTPS |
 | `COMPOSE_PROFILES` | not set | For Compose: `tls` makes `docker compose up -d` start Caddy too |
 
-Three notes on the table:
-
-- Set `WEB_SECRET_KEY` when more than one process serves the web page. While it is set, **Sign everyone out** cannot replace it: change the value and restart.
-- Outside Docker, keep `WEB_HOST=127.0.0.1` with `WEB_TRUST_PROXY=true`. Bound to another address, the web page believes every client's forwarding headers.
-- With `WEB_TRUST_PROXY` off and the web page open to the network, every visitor shares one lockout.
+Set `WEB_SECRET_KEY` when more than one process serves the web page. While it is set, **Sign everyone out** cannot replace it: change the value and restart. Outside Docker, keep `WEB_HOST=127.0.0.1` with `WEB_TRUST_PROXY=true`, or the web page believes every client's forwarding headers. With `WEB_TRUST_PROXY` off and the web page open to the network, every visitor shares one lockout.
 
 > **Anyone who can reach the web page can use all of it, Settings included,** when `WEB_ALLOW_NO_PASSWORD` is `true` and `WEB_HOST` is open to the network.
 
@@ -54,18 +50,11 @@ The web page refuses to start without one when `WEB_HOST` is not a loopback addr
 
 ### What differs on Docker
 
-Compose sets `FAMILYDB_PATH`, `GOOGLE_KEY_PATH` and `WEB_HOST` itself, so those lines in `.env` have no effect there. The web page binds `0.0.0.0` inside the container, so by the rule above Docker needs a password even though Compose publishes the port to this machine's loopback only. To open it to the local network, drop `127.0.0.1:` from the `ports` line in `docker-compose.yml`.
+Compose sets `FAMILYDB_PATH`, `GOOGLE_KEY_PATH` and `WEB_HOST` itself, so those lines in `.env` have no effect there. The web page binds `0.0.0.0` inside the container, so by the rule above Docker needs a password, though Compose publishes the port to this machine only. To open it to the local network, drop `127.0.0.1:` from the `ports` line in `docker-compose.yml`.
 
 ## What the installer writes
 
-The installer copies `.env.example` to `.env` with mode 600, so every uncommented line of the example is in your file at its default. It then writes:
-
-- `WEB_ENABLED=true`, `WEB_HOST` and `WEB_PORT`: the web page stays on this machine, and Caddy or Compose carries it out.
-- `WEB_PASSWORD`, made up or the one you gave.
-- With HTTPS in front, `WEB_DOMAIN`, `WEB_TRUST_PROXY` and, on Docker, `COMPOSE_PROFILES=tls`. `WEB_PUBLIC_PORT` appears only for a port other than 443.
-- Starting values for `FAMILYDB_TZ`, `WEB_TOOLS_ENABLED=true` and `DIGEST_CHAT_ID=web`, unless you gave others.
-
-Running it again keeps an existing `.env`. If you ask it to start over, it saves the old file as `.env.<timestamp>.bak`, with the same keys in it.
+The installer copies `.env.example` to `.env` with mode 600, so every uncommented line of the example is in your file at its default. It then writes `WEB_ENABLED=true`, `WEB_HOST`, `WEB_PORT` and `WEB_PASSWORD` (made up or the one you gave). With HTTPS in front it adds `WEB_DOMAIN`, `WEB_TRUST_PROXY` and, on Docker, `COMPOSE_PROFILES=tls`; `WEB_PUBLIC_PORT` appears only for a port other than 443. It also gives `FAMILYDB_TZ`, `WEB_TOOLS_ENABLED=true` and `DIGEST_CHAT_ID=web` starting values, unless you gave others. Running it again keeps an existing `.env`; if you ask it to start over, it saves the old file as `.env.<timestamp>.bak`.
 
 ## Changing it safely
 
@@ -120,7 +109,7 @@ a setting will not do:
   `familydb config` prints every setting and where it came from.
 ```
 
-The service exits the same way, and systemd or Docker starts it again every few seconds, so the journal repeats the message until the file is right. Other messages:
+The service exits the same way and systemd or Docker starts it again, so the journal repeats the message until the file is right. Other messages:
 
 | You see | It means |
 |---|---|

@@ -15,13 +15,13 @@ FamilyDB signs in as a Google [service account](/wiki/reference/glossary#service
 | What changed since last time | One request for all plans, using Google's sync token, which FamilyDB keeps; it pages at 2,500 items |
 | A new event, a change, a removal | When a plan is made, moved, edited or canceled, or when the page's forms do the same |
 
-An event carries a title, times, a place and notes. Which tools ask Google, and what Google then sees, is on [What leaves the house](/wiki/security/what-leaves-the-house).
+Which tools ask Google, and what Google then sees, is on [What leaves the house](/wiki/security/what-leaves-the-house).
 
 ## Keeping plans in step
 
 People move and cancel events in Google without telling FamilyDB, so a plan is checked against its event before anything acts on it, and when the evening-before check and the follow-ups run. A moved or edited event changes the plan. A deleted event cancels the plan and puts its idea back. FamilyDB asks Google what changed since the stored token, and keeps the new token only after the plans are updated, so a failure reads the same changes again. If Google has forgotten the token, FamilyDB starts again from the whole calendar.
 
-A retry must not make a second event. Before Google is contacted, FamilyDB records the event id an attempt will use, so after a crash or a lost answer the retry asks for the same event. If Google says the id is taken, FamilyDB fetches that event instead of making another. An attempt is finished when a plan holds that event id.
+A retry must not make a second event. Before Google is contacted, FamilyDB records the event id an attempt will use, so after a crash or a lost answer the retry asks for the same event, or fetches it if Google says the id is taken.
 
 ## What the page shows
 
@@ -31,11 +31,11 @@ A retry must not make a second event. Before Google is contacted, FamilyDB recor
 | No calendar connected, or its key file is missing | `Google Calendar is not connected, so these are the plans FamilyDB has saved.` |
 | Google did not answer | `Google Calendar did not answer, so these are the plans as FamilyDB last saw them. Times may have moved since.` |
 
-The page, and Telegram's `/today` and `/week`, keep Google's answer for 1 minute, so an event added on a phone can take that long to appear. Anything FamilyDB writes clears it at once. No page view asks a model.
+The page, and Telegram's `/today` and `/week`, keep Google's answer for 1 minute, so an event added on a phone can take that long to appear. Anything FamilyDB writes clears it at once.
 
 ## Connecting
 
-The form tries the key and the calendar's id before keeping either: it reads the calendar, adds an all-day event called `FamilyDB connection check`, and deletes it. That event may show briefly in calendar notifications. If the check fails, the page says what is wrong: the key is not a service account's, the calendar is not found (check the id and the sharing), the Calendar API is off in the key's project, or Google refused the key. Any other 403 is reported as the account seeing the calendar but not changing it, whatever the real cause.
+The form tries the key and the calendar's id before keeping either: it reads the calendar, adds an all-day event called `FamilyDB connection check`, and deletes it. That event may show briefly in calendar notifications. If the check fails, the page says what is wrong, such as a key that is not a service account's, a calendar that is not found, or a Calendar API switched off in the key's project.
 
 ## When Google says no later
 

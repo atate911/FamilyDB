@@ -50,8 +50,8 @@ An upgrade does not rewrite the unit; see [Known limits](/wiki/reference/known-l
 
 `--mode docker` runs the `bot` container, plus `caddy` when a domain is set, from `docker-compose.yml`. There is no systemd unit.
 
-- **`bot`:** image `familydb:local`, built from the `Dockerfile` (uid 1000); `./data` is mounted as `/data`; the port is `127.0.0.1:8080:8080`, this machine only.
-- **`caddy`:** `caddy:2-alpine`, only with the `tls` profile (the installer writes `COMPOSE_PROFILES=tls` in `.env` when you give a domain); `./caddy` is mounted as `/data`; ports `80:80` and `443:443`, where the host side of 443 is `WEB_PUBLIC_PORT`.
+- `bot`: image `familydb:local`, built from the `Dockerfile` (uid 1000); `./data` is mounted as `/data`; the port is `127.0.0.1:8080:8080`, this machine only.
+- `caddy`: `caddy:2-alpine`, only with the `tls` profile (the installer writes `COMPOSE_PROFILES=tls` in `.env` when you give a domain); `./caddy` is mounted as `/data`; ports `80:80` and `443:443`, where the host side of 443 is `WEB_PUBLIC_PORT`.
 
 Both restart `unless-stopped`. `WEB_PORT` in `.env` moves FamilyDB's port. The compose file sets no stop timeout, so Docker's default applies, not 150 seconds. `maintain.sh` takes the same commands, except that `https` only moves the port of a web page already on HTTPS.
 
@@ -88,9 +88,9 @@ That covers your distribution's security updates, not Caddy's own repository, wh
 
 After a reboot the service comes back by itself: the installer enables it at boot, and Docker's `unless-stopped` does the same once Docker is up. `maintain.sh status` and the doctor both say whether it is enabled at boot. On every start FamilyDB applies any pending migrations, then:
 
-- **Scheduled jobs.** They live in memory, so 60 seconds after start a catch-up runs the follow-ups, the plan check and the weekend ideas job (the last only if today is its day and its hour has passed), and the daily model check if a day has gone by. A repeat does nothing new.
-- **Reminders.** One that fell due while FamilyDB was down goes out once it is back, worded as late.
-- **A message in the middle of a turn.** Its [lease](/wiki/reference/glossary#lease) lapses and the retry job answers it, and sends any reply that was stored but not delivered. [When a message cannot be answered](/wiki/controls/settings/messages#when-a-message-cannot-be-answered) has the numbers.
+- Scheduled jobs: They live in memory, so 60 seconds after start a catch-up runs the follow-ups, the plan check and the weekend ideas job (the last only if today is its day and its hour has passed), and the daily model check if a day has gone by. A repeat does nothing new.
+- Reminders: One that fell due while FamilyDB was down goes out once it is back, worded as late.
+- A message in the middle of a turn: Its [lease](/wiki/reference/glossary#lease) lapses and the retry job answers it, and sends any reply that was stored but not delivered. [When a message cannot be answered](/wiki/controls/settings/messages#when-a-message-cannot-be-answered) has the numbers.
 
 ## Taking it off again
 

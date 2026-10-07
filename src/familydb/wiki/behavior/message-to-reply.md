@@ -28,8 +28,8 @@ If hearing or looking fails, the message is given up with a line asking for it a
 
 A parent opens an idea, changes its title and presses Save.
 
-1. The browser posts to the web page. FamilyDB first asks who is signed in and whether their role may change things.
-2. The page checks the form's Origin and CSRF token, then makes the tool call as that person, with the revision of the idea the form was drawn from.
+1. The browser posts to the web page. FamilyDB asks who is signed in and whether their role may change things, then checks the form's Origin and CSRF token.
+2. The page makes the tool call as that person, with the revision of the idea the form was drawn from.
 3. The tool compares the revision inside its own transaction, so somebody else's newer edit is not overwritten, and writes the change.
 4. The page shows the result and redirects. No model was asked, and neither the pipeline nor the gateway was involved.
 
@@ -40,15 +40,15 @@ A message *failed* when its turn did not finish. The retry job tries it again un
 | What went wrong | What the family sees | What happens next |
 |---|---|---|
 | The model company is busy or unreachable, or something unexpected broke | A reply saying the message was saved and will be retried | The retry job tries every 5 minutes, without telling the family again. After the last retry, nothing more is said on Telegram |
-| A refusal that retrying will not fix (a key, credit, a refused request) | A reply saying the model cannot be reached and an admin should check the logs | Given up. Status usually names the cause |
+| A refusal that retrying will not fix (a key, credit, a refused request) | A reply saying the model cannot be reached and an admin should check the logs | Given up. Status names the cause where FamilyDB can tell |
 | The day's limit, or no key | A line naming the limit, or saying no model is set up | Given up. Told on the first try, silent on a retry |
 | Out of steps | A reply saying the assistant could not finish within the steps it is allowed | Given up, and told even on a retry |
 
-The exact wording of each reply, and the fix, are in [A message got no reply](/wiki/operations/troubleshooting#a-message-got-no-reply).
+[A message got no reply](/wiki/operations/troubleshooting#a-message-got-no-reply) quotes each reply and gives the fix.
 
 A message gets its first try plus up to 3 retries (the default, set by **Retries before giving up** on [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered)). After the last retry, Telegram hears nothing more and the chat page says the last message was not answered. The message stays failed, not given up, and Status still lists it as `3 tries, will try again`; when the number of tries equals **Retries before giving up**, no more are coming ([known limits](/wiki/reference/known-limits#status-says-will-try-again-after-the-last-try)).
 
-Status lists only failed messages, the newest 10. A message cut off by a restart, or still in the gather pause, is `received`, not yet failed, so it appears only on the chat page and [Recent activity](/wiki/controls/status/activity) until the retry job takes it.
+Status lists only failed messages, the newest 10. A message cut off by a restart, or still in the gather pause, is not yet failed, so it appears only on the chat page and [Recent activity](/wiki/controls/status/activity) until the retry job takes it.
 
 With Telegram disconnected, the retry job skips Telegram messages without counting an attempt, and the log says `not retrying message N: no sender for telegram here`. `familydb db retry-failed --reset` (run as in [The command line](/wiki/operations/command-line#how-to-run-it)) makes messages with no tries left eligible again. It also re-arms messages given up on purpose ([known limits](/wiki/reference/known-limits#reset-on-retry-failed-re-arms-every-message)).
 
@@ -62,6 +62,6 @@ With Telegram disconnected, the retry job skips Telegram messages without counti
 | A reply, stored but not sent | The retry job sends it. If it was sent but not marked, it goes twice; the model is not asked again |
 | A voice note or photo, before it is read | The retry job gives it up and says it could not be read, since the recording is gone. Sending it again works. After it is read, it is retried like any message |
 | A reminder, due during downtime | The next reminders job sends it, marked late. A repeating one resumes at its next time after now, with no flood |
-| A reminder or a wish for the parents, queued but not sent | The retry job sends it. A reminder waiting for a conversation is kept in memory only, so after a restart it is simply sent |
+| A reminder or a wish for the parents, queued but not sent | The retry job sends it. A reminder waiting for a conversation is in memory only, so it is simply sent |
 
 Developer docs: `src/familydb/pipeline.py`, `src/familydb/delivery.py`, `src/familydb/channels/web.py`, `src/familydb/web/edits.py`; `docs/DESIGN.md`, "Message pipeline"; `docs/AI_CALLS.md`, "The one idea".

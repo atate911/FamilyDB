@@ -29,9 +29,7 @@ The block does the one thing the installer cannot do alone. It makes a [deploy k
 
 Then the installer lists what it will change on the server and asks whether to go ahead, and whether the web page has a domain name (press Enter if not).
 
-The key stays at `/root/familydb_deploy` so that [upgrades](/wiki/operations/upgrade-and-rollback) can fetch new versions. Deleting the key on GitHub ends the server's access to the code.
-
-To use an installer option, add it to the end of the `bootstrap.sh` line in the block before you paste it.
+The key stays at `/root/familydb_deploy` so that [upgrades](/wiki/operations/upgrade-and-rollback) can fetch new versions. To use an installer option, add it to the end of the `bootstrap.sh` line in the block before you paste it.
 
 ### 2. Open the page
 
@@ -41,15 +39,15 @@ If the browser says the connection is not private, see [HTTPS and the firewall](
 
 ### 3. Follow the setup
 
-The web page opens on [Setup](/wiki/controls/setup): seven short steps, each saying why it matters. You can skip any step and come back, and Home lists what is left. Until somebody is on the family list and a model can answer, Home sends an admin to the setup.
+The web page opens on [Setup](/wiki/controls/setup): seven short steps, each saying why it matters. You can skip any step and come back, and Home lists what is left.
 
 ## Choices you can make
 
-- **HTTPS.** The installer puts HTTPS in front of the web page unless you pass `--local-only`, or you install on Docker without a domain. [HTTPS and the firewall](/wiki/operations/https-and-firewall) covers the certificate, ports and the firewall.
-- **A domain name.** Add an A record at your registrar pointing at the server, then type the name when the installer asks, or later run `sudo /opt/familydb/scripts/maintain.sh https family.example.com`.
-- **Keep the web page off the internet.** Add `--local-only` to the `bootstrap.sh` line. You then reach the web page through an SSH tunnel, opened from your own computer and not the server: `ssh -L 8080:127.0.0.1:8080 you@server`, then `http://127.0.0.1:8080/` in a browser on that computer. `maintain.sh https` moves you to a public link later.
-- **Docker instead of a virtualenv.** Add `--mode docker`. Docker is installed for you, and FamilyDB and Caddy run as containers instead of a [systemd](/wiki/reference/glossary#systemd) service. Without a domain the web page is reachable from the server only. [The server](/wiki/operations/host#docker-instead) lists what runs.
-- **Other options.** `--dry-run` changes nothing and says what would happen. `--target` installs somewhere other than `/opt/familydb`, but not under `/home`. `--ref` installs a particular tag, branch or commit. `--yes` takes every default. `bootstrap.sh --help` lists them all.
+- HTTPS: The installer puts HTTPS in front of the web page unless you pass `--local-only`, or you install on Docker without a domain. [HTTPS and the firewall](/wiki/operations/https-and-firewall) covers the certificate, ports and the firewall.
+- A domain name: Add an A record at your registrar pointing at the server, then type the name when the installer asks, or later run `sudo /opt/familydb/scripts/maintain.sh https family.example.com`.
+- Keep the web page off the internet: Add `--local-only` to the `bootstrap.sh` line. You then reach the web page through an SSH tunnel, opened from your own computer and not the server: `ssh -L 8080:127.0.0.1:8080 you@server`, then `http://127.0.0.1:8080/` in a browser on that computer. `maintain.sh https` moves you to a public link later.
+- Docker instead of a virtualenv: Add `--mode docker`. Docker is installed for you, and FamilyDB and Caddy run as containers instead of a [systemd](/wiki/reference/glossary#systemd) service. Without a domain the web page is reachable from the server only. [The server](/wiki/operations/host#docker-instead) lists what runs.
+- Other options: `--dry-run` changes nothing and says what would happen. `--ref` installs a particular tag, branch or commit. `--yes` takes every default. `bootstrap.sh --help` lists them all.
 
 Without `--ref`, the version depends on `CHANGELOG.md`; see [Which version it moves to](/wiki/operations/upgrade-and-rollback#which-version-it-moves-to).
 
@@ -64,7 +62,7 @@ It lists every change and asks before it makes any, apart from the key and `git`
 - adds a nightly backup at 03:15 to root's crontab;
 - sets up HTTPS with Caddy and opens ports 80 and 443 if `ufw` is on, unless you chose otherwise.
 
-It records each change in `/var/lib/familydb-install`, and it leaves your SSH configuration, the system Python and every other service alone. Running it again is safe: it installs only what is missing and keeps `.env` and the database. [The server](/wiki/operations/host#everything-the-install-put-on-the-server) lists every path with its owner and the reason.
+It leaves your SSH configuration, the system Python and every other service alone, and running it again is safe: it installs only what is missing and keeps `.env` and the database. [The server](/wiki/operations/host#everything-the-install-put-on-the-server) lists every path with its owner and the reason.
 
 ## Check that it worked
 
