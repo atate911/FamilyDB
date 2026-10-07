@@ -384,6 +384,16 @@
             "operations/recovery",
             "controls/settings/sign-in"
           ]
+        },
+        {
+          "slug": "security/data-and-privacy",
+          "title": "Data and privacy",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "boundaries",
+            "operations/backup-and-restore"
+          ]
         }
       ]
     },

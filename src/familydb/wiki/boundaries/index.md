@@ -27,9 +27,9 @@ so it holds nobody's sign-in and no one's mail is within reach. The calendar is
 read for what is on and written for confirmed plans. With none connected, the page
 shows the saved plans and says so.
 
-**The weather and the map.** The forecast comes from Open-Meteo. Where home is, and
-where a phone says someone is, are named by a reverse geocoder (Nominatim, with
-Open-Meteo as the fallback).
+**The weather and the map.** The forecast comes from Open-Meteo. Your home town is looked up
+on the map by Nominatim (OpenStreetMap), with Open-Meteo's geocoder as the fallback for short town
+names, and where a phone says someone is gets its place name from Nominatim.
 
 **Price lists.** Once a day the model check reads LiteLLM's and OpenRouter's public
 lists and takes a price only when both agree, or when one alone moves sanely.
