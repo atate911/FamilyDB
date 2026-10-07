@@ -157,8 +157,8 @@ def test_every_look_is_written_down_once_in_the_stylesheets() -> None:
     assert themes.index("\n[data-theme] {") < themes.index('\n[data-theme="')
     # The page reads these two with a fallback: a value for every look would change a page that
     # does without.
-    assert not shared & {"--here-icon", "--here-pill"}
-    ignored = {"--sect"} | shared  # --sect: the quiet themes' one extra
+    assert "--here-icon" not in shared
+    ignored = shared
     first = tokens(next(iter(blocks.values()))) - ignored
     for key, body in blocks.items():
         assert tokens(body) - ignored == first, f"{key}: {(tokens(body) - ignored) ^ first}"
@@ -415,7 +415,7 @@ def test_in_afterglow_green_is_veras_alone() -> None:
         r, g, b = (int(colour[i : i + 2], 16) for i in (1, 3, 5))
         return g - max(r, b) > 12
 
-    family = ("--link", "--here-icon", "--lit", "--primary", "--primary-edge", "--today")
+    family = ("--link", "--here-icon", "--lit", "--primary", "--primary-edge", "--today", "--chosen")
     assert [name for name in family if greenish(name)] == []
     assert greenish("--vera")
 
@@ -454,7 +454,9 @@ def test_the_people_and_the_main_buttons_edge_hold_their_floors_in_every_look() 
     short = []
     for one in looks.LOOKS:
         tokens, own = _look_tokens(one.key), _declared(blocks[one.key])
-        pairs = []
+        pairs = [("words on a chosen chip", "on-chosen", "chosen", 4.5)]
+        if "--chosen-edge" in own:
+            pairs.append(("a chosen chip's edge on a card", "chosen-edge", "card", 3.0))
         if "--primary-edge" in own:
             pairs.append(("the main button's edge on a card", "primary-edge", "card", 3.0))
         if one.key == "kitchen" or "--p1-fill" in own:

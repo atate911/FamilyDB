@@ -1,14 +1,13 @@
 /* Looks: sets of the page's colour tokens as light-dark(day, night) pairs, from each palette sheet; web/looks.py
    lists them. Every pair that carries words holds 4.5:1 in both modes, 3:1 for the edge of anything you press.
-   Paper themes (all but Phosphor and Midnight) use their link colour on every page (no --sect) and barely glow
-   (--bloom). Vera's glass is green-black phosphor in all of them.
+   Vera's glass is green-black phosphor in all of them. A token nothing reads is not kept.
 
    Kitchen Table (docs/STYLE.md) is first. The block just below it gives every look the roles Kitchen Table's
    layout reads and the built set lacks (its people, the meaning washes, Vera's box, Send, the five effect
    tokens), worked out from
    that look's own tokens, so no look has to name them (it may). It comes before the looks so a look that
-   names one wins. --here-icon and --here-pill are not in it: the page reads them with a fallback, and
-   Phosphor (in style.css) leaves them unset on purpose. */
+   names one wins. --here-icon is not in it: the page reads it with a fallback, and
+   Phosphor (in style.css) leaves it unset on purpose. */
 
 [data-theme] {
   /* the effects (style.css, section 11), plain: no light on the page, no scanlines, no glow
@@ -21,6 +20,9 @@
   /* the edge of the family's main button, and each person's mark as a fill: their own colour, unless a look
      says otherwise (Afterglow: warm-white edges on dark glass, the people as tinted glass) */
   --primary-edge: var(--primary);
+  --chosen: var(--ink);
+  --on-chosen: var(--paper);
+  --chosen-edge: var(--ink);
   --everyone-fill: var(--everyone);
   --p1-fill: var(--p1);
   --p2-fill: var(--p2);
@@ -106,7 +108,6 @@
   /* surfaces and words: the built names */
   --paper: light-dark(#F6F1E7, #0C100F);
   --paper-2: light-dark(#EFE7D7, #121816);
-  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
   --card: light-dark(#FFFCF6, #161D1B);
   --field: light-dark(#FFFFFF, #1B2321);
   --line: light-dark(#E2D8C4, #24302C);
@@ -115,7 +116,6 @@
   --ink: light-dark(#1D2526, #EEE8DA);
   --ink-2: light-dark(#4B5657, #CBC5B6);
   --ink-3: light-dark(#596263, #A3A69E);
-  --faint-ink: var(--ink-3);
   /* the panel (the sidebar, the phone's top bar): the built names */
   --band: light-dark(#EFE7D7, #121816);
   --band-hi: light-dark(#FFFCF6, #161D1B);
@@ -125,7 +125,6 @@
   --here: light-dark(#FFFCF6, #161D1B);
   --on-here: light-dark(#1D2526, #EEE8DA);
   --here-icon: light-dark(#1E5C4F, #6DFF9C);
-  --here-pill: light-dark(#DCEAE2, #10241A);
   /* the action, focus, today: the built names */
   --link: light-dark(#1E5C4F, #8BD3B4);
   --primary: light-dark(#1E5C4F, #2D7462);
@@ -141,7 +140,6 @@
   --ok: light-dark(#2B7148, #7FE3A5);
   --amber: light-dark(#7E5108, #F5B94A);
   --red: light-dark(#B3381F, #FF8B74);
-  --error-ink: light-dark(#B3381F, #FF8B74);
   /* Vera on the page: the built names */
   --vera: light-dark(#1E5C4F, #6DFF9C);
   --vera-bg: light-dark(#1E5C4F, #4FE08A);
@@ -158,20 +156,9 @@
   --person: #2F5D9B;
   --on-person: #FFFFFF;
   /* depth and light: the built names */
-  --bloom: 0;
-  --glow: 0 1px 0 light-dark(rgb(60 45 20 / .12), rgb(0 0 0 / .5));
-  --glow-hover: 0 4px 12px -4px light-dark(rgb(60 45 20 / .35), rgb(0 0 0 / .7));
   --shadow: 0 1px 0 light-dark(rgb(60 45 20 / .05), rgb(0 0 0 / .4));
   --pop: 0 8px 22px -14px light-dark(rgb(60 45 20 / .45), rgb(0 0 0 / .9));
   --pop-up: 0 -8px 24px -16px light-dark(rgb(60 45 20 / .5), rgb(0 0 0 / .8));
-  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
-  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
-  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
-  --hi: transparent;
-  --scan: transparent;
-  --raster: transparent;
-  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
-  --band-tabs: var(--card);
 
   /* NEW: roles Kitchen Table needs that the built set lacks (the [data-theme] block above gives every other look a value for each) */
   --band-link: light-dark(#1E5C4F, #8BD3B4);
@@ -203,11 +190,9 @@
   color-scheme: dark;
   /* a look names every token the others do; Phosphor, once the default, did not need these two */
   --here-icon: var(--on-here);
-  --here-pill: var(--here);
 
   --paper: #0b0e0d;
   --paper-2: #171c1a;
-  --paper-3: #1d2321;
   --card: #121615;
   --field: #0e1211;
   --line: #232a27;
@@ -217,11 +202,9 @@
   --ink: #edf2ef;
   --ink-2: #bac5bf;          /* secondary words */
   --ink-3: #919e98;          /* quiet words: 6.6:1 on a surface */
-  --faint-ink: #7d8a84;      /* placeholders and ids: 5:1 on a field */
 
   /* The bar, which every theme calls its band: here a pane of the page's own dark. */
   --band: rgb(11 14 13 / 0.82);
-  --band-tabs: rgb(14 18 17 / 0.94);
   --band-hi: #171c1a;
   --band-line: #232a27;
   --on-band: #edf2ef;
@@ -258,23 +241,12 @@
   --today-wash: rgb(255 184 80 / 0.05);
   --person: #ffb850;         /* a family member's face */
   --on-person: #07130c;
-  --error-ink: #ffd6d6;
 
   /* How much the page glows, and what its surfaces cast. Phosphor lights; the paper themes barely do. */
-  --bloom: 1;
-  --glow: 0 0 0 1px rgb(109 255 156 / 0.35), 0 8px 28px -10px rgb(109 255 156 / 0.7);
-  --glow-hover: 0 0 0 1px rgb(109 255 156 / 0.5), 0 10px 34px -10px rgb(109 255 156 / 0.85);
   --shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 12px 32px -22px rgb(0 0 0 / 0.9);
   --pop: 0 22px 44px -18px rgb(0 0 0 / 0.95);
   --pop-up: 0 -8px 30px rgb(0 0 0 / 0.45);
-  --wash: rgb(255 255 255 / 0.05);
-  --wash-faint: rgb(255 255 255 / 0.025);
-  --shade: rgb(0 0 0 / 0.22);
-  --hi: rgb(255 255 255 / 0.05);
-  --scan: rgb(255 255 255 / 0.028);
-  --raster: rgb(0 0 0 / 0.22);
   --ask-bg: rgb(9 12 11 / 0.72);
-  --bar-bg: rgb(18 22 21 / 0.9);
 }
 
 /* ---- Afterglow: a look from the Phosphor design language, on Kitchen Table ---------------- */
@@ -298,7 +270,6 @@
   /* surfaces and words */
   --paper: #070A09;
   --paper-2: #0B0F0E;
-  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
   --card: #0E1312;
   --field: #0A0E0D;
   --line: #22302B;
@@ -307,7 +278,6 @@
   --ink: #E9F1E5;
   --ink-2: #C3CEC2;
   --ink-3: #9DAA9F;
-  --faint-ink: var(--ink-3);
   /* the band: darker glass, the screen's own frame */
   --band: #060A08;
   --band-hi: #0E1312;
@@ -317,7 +287,6 @@
   --here: #121816;
   --on-here: #E9F1E5;
   --here-icon: #EADCC2;
-  --here-pill: #161C1A;
   --band-link: #EADCC2;
   /* the action, focus, today */
   --link: #EADCC2;
@@ -334,7 +303,6 @@
   --ok: #7FE3A5;
   --amber: #F5B94A;
   --red: #FF8B74;
-  --error-ink: #FF8B74;
   /* Vera on the page */
   --vera: #6DFF9C;
   --vera-bg: #A0957F;
@@ -350,20 +318,9 @@
   --person: #2F5D9B;
   --on-person: #FFFFFF;
   /* depth and light */
-  --bloom: 1;
-  --glow: 0 0 0 1px rgb(109 255 156 / .35), 0 8px 28px -10px rgb(109 255 156 / .6);
-  --glow-hover: 0 0 0 1px rgb(109 255 156 / .5), 0 10px 34px -10px rgb(109 255 156 / .8);
   --shadow: inset 0 1px 0 rgb(233 241 229 / .05), 0 1px 0 rgb(0 0 0 / .5);
   --pop: 0 8px 22px -14px rgb(0 0 0 / .9);
   --pop-up: 0 -8px 24px -16px rgb(0 0 0 / .9);
-  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
-  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
-  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
-  --hi: rgb(233 241 229 / .035);
-  --scan: rgb(255 255 255 / .028);
-  --raster: rgb(0 0 0 / .22);
-  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
-  --band-tabs: var(--card);
   /* Kitchen Table's own roles */
   --ok-soft: #10241A;
   --ok-line: #24503A;
@@ -416,6 +373,9 @@
   --p8-on: #E9F1E5;
   --everyone-fill: #616560;
   --everyone-on: #E9F1E5;
+  --chosen: #1C2321;
+  --on-chosen: #EADCC2;
+  --chosen-edge: #EADCC2;
 }
 
 [data-theme="rail"] {
@@ -438,7 +398,6 @@
   --here: light-dark(#FFC917, #FFD23A);
   --on-here: light-dark(#0E1726, #0D1420);
   --here-icon: light-dark(#0E1726, #0D1420);
-  --here-pill: light-dark(#FFC917, #FFD23A);
   --lilac: light-dark(#532CA8, #CFB6FE);
   --cyan: light-dark(#1A5DAE, #A8C0FE);
   --lemon: light-dark(#6E5A2C, #DCC291);
@@ -462,26 +421,11 @@
   --today-wash: light-dark(#FFF5CF, #262112);
   --person: light-dark(#256FC8, #7888D1);
   --on-person: light-dark(#FFFFFF, #0D1420);
-  --error-ink: light-dark(#B42318, #FF8B74);
   --primary-hover: light-dark(color-mix(in srgb, var(--primary) 86%, #000), color-mix(in srgb, var(--primary) 84%, #fff));
-  --bloom: 0.35;
-  --sect: var(--link);
-  --glow: 0 1px 0 light-dark(rgb(14 23 38 / 0.12), rgb(0 0 0 / 0.5));
-  --glow-hover: 0 4px 12px -4px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.7));
   --shadow: 0 1px 0 light-dark(rgb(14 23 38 / 0.04), rgb(255 255 255 / 0.03)), 0 10px 26px -20px light-dark(rgb(14 23 38 / 0.3), rgb(0 0 0 / 0.9));
   --pop: 0 20px 40px -16px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.9));
   --pop-up: 0 -6px 24px light-dark(rgb(14 23 38 / 0.14), rgb(0 0 0 / 0.45));
-  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
-  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
-  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
-  --hi: light-dark(transparent, rgb(255 255 255 / 0.04));
-  --scan: transparent;
-  --raster: transparent;
   --ask-bg: var(--card);
-  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
-  --band-tabs: var(--band);
-  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
-  --faint-ink: var(--ink-3);
 }
 
 [data-theme="enamel"] {
@@ -504,7 +448,6 @@
   --here: #F6F3EF;
   --on-here: light-dark(#0D2D40, #143344);
   --here-icon: light-dark(#0D2D40, #143344);
-  --here-pill: #F6F3EF;
   --lilac: light-dark(#59508F, #BBB7EC);
   --cyan: light-dark(#3B5993, #A4BEEF);
   --lemon: light-dark(#6C5901, #CDBE86);
@@ -528,26 +471,11 @@
   --today-wash: light-dark(#D6EDDF, #102719);
   --person: #6187CE;
   --on-person: light-dark(#162025, #161513);
-  --error-ink: light-dark(#AF3126, #F58D79);
   --primary-hover: light-dark(color-mix(in srgb, var(--primary) 86%, #000), color-mix(in srgb, var(--primary) 84%, #fff));
-  --bloom: 0.3;
-  --sect: var(--link);
-  --glow: 0 1px 0 light-dark(rgb(14 23 38 / 0.12), rgb(0 0 0 / 0.5));
-  --glow-hover: 0 4px 12px -4px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.7));
   --shadow: 0 1px 0 light-dark(rgb(14 23 38 / 0.04), rgb(255 255 255 / 0.03)), 0 10px 26px -20px light-dark(rgb(14 23 38 / 0.3), rgb(0 0 0 / 0.9));
   --pop: 0 20px 40px -16px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.9));
   --pop-up: 0 -6px 24px light-dark(rgb(14 23 38 / 0.14), rgb(0 0 0 / 0.45));
-  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
-  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
-  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
-  --hi: light-dark(transparent, rgb(255 255 255 / 0.04));
-  --scan: transparent;
-  --raster: transparent;
   --ask-bg: var(--card);
-  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
-  --band-tabs: var(--band);
-  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
-  --faint-ink: var(--ink-3);
   --on-vera: light-dark(#FFFFFF, #161513);  /* words on Vera's green fill: white holds 4.5:1 where the look's own on-bright does not */
 }
 
@@ -571,7 +499,6 @@
   --here: light-dark(#FFFFFF, #F2F4FA);
   --on-here: light-dark(#252B4A, #272E52);
   --here-icon: light-dark(#252B4A, #272E52);
-  --here-pill: light-dark(#FFFFFF, #F2F4FA);
   --lilac: light-dark(#525FA0, #A2ACF4);
   --cyan: light-dark(#1867BC, #8BB0FF);
   --lemon: light-dark(#6C691F, #BAB365);
@@ -595,26 +522,11 @@
   --today-wash: light-dark(#E3F3EA, #11241A);
   --person: #4C86DF;
   --on-person: light-dark(#161C24, #0F141B);
-  --error-ink: light-dark(#B42318, #FF8B74);
   --primary-hover: light-dark(color-mix(in srgb, var(--primary) 86%, #000), color-mix(in srgb, var(--primary) 84%, #fff));
-  --bloom: 0.3;
-  --sect: var(--link);
-  --glow: 0 1px 0 light-dark(rgb(14 23 38 / 0.12), rgb(0 0 0 / 0.5));
-  --glow-hover: 0 4px 12px -4px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.7));
   --shadow: 0 1px 0 light-dark(rgb(14 23 38 / 0.04), rgb(255 255 255 / 0.03)), 0 10px 26px -20px light-dark(rgb(14 23 38 / 0.3), rgb(0 0 0 / 0.9));
   --pop: 0 20px 40px -16px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.9));
   --pop-up: 0 -6px 24px light-dark(rgb(14 23 38 / 0.14), rgb(0 0 0 / 0.45));
-  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
-  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
-  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
-  --hi: light-dark(transparent, rgb(255 255 255 / 0.04));
-  --scan: transparent;
-  --raster: transparent;
   --ask-bg: var(--card);
-  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
-  --band-tabs: var(--band);
-  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
-  --faint-ink: var(--ink-3);
 }
 
 [data-theme="ink"] {
@@ -637,7 +549,6 @@
   --here: #FFFFFF;
   --on-here: #000000;
   --here-icon: #000000;
-  --here-pill: #FFFFFF;
   --lilac: light-dark(#7B35E8, #C2A6FF);
   --cyan: light-dark(#2A16D6, #A9B4FF);
   --lemon: light-dark(#6F5900, #FFD84F);
@@ -661,26 +572,11 @@
   --today-wash: light-dark(#E3F3EA, #11241A);
   --person: light-dark(#2A16D6, #5A49E2);
   --on-person: #FFFFFF;
-  --error-ink: light-dark(#D60000, #FF5A4F);
   --primary-hover: light-dark(#333333, #E0E0E0);
-  --bloom: 0;
-  --sect: var(--link);
-  --glow: 0 1px 0 light-dark(rgb(14 23 38 / 0.12), rgb(0 0 0 / 0.5));
-  --glow-hover: 0 4px 12px -4px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.7));
   --shadow: 0 1px 0 light-dark(rgb(14 23 38 / 0.04), rgb(255 255 255 / 0.03)), 0 10px 26px -20px light-dark(rgb(14 23 38 / 0.3), rgb(0 0 0 / 0.9));
   --pop: 0 20px 40px -16px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.9));
   --pop-up: 0 -6px 24px light-dark(rgb(14 23 38 / 0.14), rgb(0 0 0 / 0.45));
-  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
-  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
-  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
-  --hi: light-dark(transparent, rgb(255 255 255 / 0.04));
-  --scan: transparent;
-  --raster: transparent;
   --ask-bg: var(--card);
-  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
-  --band-tabs: var(--band);
-  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
-  --faint-ink: var(--ink-3);
 }
 
 [data-theme="homecomputer"] {
@@ -703,7 +599,6 @@
   --here: light-dark(#F07C1E, #F57F22);
   --on-here: light-dark(#1D1915, #171513);
   --here-icon: light-dark(#1D1915, #171513);
-  --here-pill: light-dark(#F07C1E, #F57F22);
   --lilac: light-dark(#6A47A0, #CDB5FA);
   --cyan: light-dark(#2452C2, #9EBBFF);
   --lemon: light-dark(#7C4F00, #EBC15A);
@@ -727,26 +622,11 @@
   --today-wash: light-dark(#EDD8C0, #2B1F12);
   --person: light-dark(#2F5FD0, #3565D7);
   --on-person: #FFFFFF;
-  --error-ink: light-dark(#B0241A, #FF8B74);
   --primary-hover: light-dark(#F69540, #FF9A4A);
-  --bloom: 0.4;
-  --sect: var(--link);
-  --glow: 0 1px 0 light-dark(rgb(14 23 38 / 0.12), rgb(0 0 0 / 0.5));
-  --glow-hover: 0 4px 12px -4px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.7));
   --shadow: 0 1px 0 light-dark(rgb(14 23 38 / 0.04), rgb(255 255 255 / 0.03)), 0 10px 26px -20px light-dark(rgb(14 23 38 / 0.3), rgb(0 0 0 / 0.9));
   --pop: 0 20px 40px -16px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.9));
   --pop-up: 0 -6px 24px light-dark(rgb(14 23 38 / 0.14), rgb(0 0 0 / 0.45));
-  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
-  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
-  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
-  --hi: light-dark(transparent, rgb(255 255 255 / 0.04));
-  --scan: transparent;
-  --raster: transparent;
   --ask-bg: var(--card);
-  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
-  --band-tabs: var(--band);
-  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
-  --faint-ink: var(--ink-3);
   --on-vera: light-dark(#FFFFFF, #171513);  /* words on Vera's green fill: white holds 4.5:1 where the look's own on-bright does not */
 }
 
@@ -770,7 +650,6 @@
   --here: light-dark(#FFFFFF, #EEF1F8);
   --on-here: light-dark(#0A0F1E, #04060D);
   --here-icon: light-dark(#0A0F1E, #04060D);
-  --here-pill: light-dark(#FFFFFF, #EEF1F8);
   --lilac: light-dark(#5144A0, #C5C4FE);
   --cyan: light-dark(#425FA7, #B2CAFF);
   --lemon: light-dark(#7D5C04, #F5C250);
@@ -794,25 +673,11 @@
   --today-wash: light-dark(#E1F2E8, #0E2219);
   --person: #96B5FB;
   --on-person: #0B1020;
-  --error-ink: light-dark(#B42318, #FF7369);
   --primary-hover: light-dark(#252E48, #FFFFFF);
-  --bloom: 0.6;
-  --glow: 0 0 0 1px color-mix(in srgb, var(--lit) 35%, transparent), 0 8px 28px -10px color-mix(in srgb, var(--lit) 70%, transparent);
-  --glow-hover: 0 0 0 1px color-mix(in srgb, var(--lit) 50%, transparent), 0 10px 34px -10px color-mix(in srgb, var(--lit) 85%, transparent);
   --shadow: 0 1px 0 light-dark(rgb(14 23 38 / 0.04), rgb(255 255 255 / 0.03)), 0 10px 26px -20px light-dark(rgb(14 23 38 / 0.3), rgb(0 0 0 / 0.9));
   --pop: 0 20px 40px -16px light-dark(rgb(14 23 38 / 0.35), rgb(0 0 0 / 0.9));
   --pop-up: 0 -6px 24px light-dark(rgb(14 23 38 / 0.14), rgb(0 0 0 / 0.45));
-  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
-  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
-  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
-  --hi: light-dark(transparent, rgb(255 255 255 / 0.04));
-  --scan: transparent;
-  --raster: transparent;
   --ask-bg: var(--card);
-  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
-  --band-tabs: var(--band);
-  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
-  --faint-ink: var(--ink-3);
 }
 
 /* A browser may choose day or night instead of following the device. Phosphor has no day. */

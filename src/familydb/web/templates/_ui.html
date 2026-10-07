@@ -233,7 +233,7 @@
         <div class="plan__acts">
           <details class="mini-fold">
             <summary>Move it</summary>
-            <form class="mini-fold__body" method="post" action="{{ url_for('edits.move_plan', plan_id=row.id) }}">
+            <form class="mini-fold__body" method="post" action="{{ url_for('edits.move_plan', plan_id=row.id) }}" novalidate>
               <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
               <div class="field"><label class="field__label" for="start-{{ row.id }}">New time</label>
                 <input id="start-{{ row.id }}" name="start" type="datetime-local" required value="{{ row.start_value }}" /></div>

@@ -620,22 +620,8 @@ def home_line(
     return parts
 
 
-# Ways to start, under the box on Home and in an empty chat; never asked of a model.
+# The question setup offers to try first; never asked of a model.
 WEEKEND_QUESTION = "What should we do this weekend?"
-TODAY_QUESTION = "What should we do today?"
-STARTERS = ("Remind me to ", "We should try ")
-
-
-def starters(today: date, *, kid: bool = False) -> list[dict[str, str]]:
-    """The suggestions under the box: what each puts in it, and its label. None for a kid
-    (docs/STYLE.md, "A kid's screen")."""
-    if kid:
-        return []
-    question = TODAY_QUESTION if today.weekday() >= 5 else WEEKEND_QUESTION
-    return [
-        {"say": text, "label": text.rstrip() + ("…" if text.endswith(" ") else "")}
-        for text in (question, *STARTERS)
-    ]
 
 
 # "every:unit" and its words.
