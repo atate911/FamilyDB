@@ -139,6 +139,11 @@ def test_the_page_says_it_is_thinking_and_asks_to_be_shown_again(
     assert ">are you there?</textarea>" in refused.text
     assert 'http-equiv="refresh"' not in refused.text and HELD in refused.text
     assert 'placeholder="Message Vera" enterkeyhint="send">are you there?' in refused.text  # open
+    # Whoever reads can stop it: a page that reloads itself offers a way to turn that off.
+    assert ">Stop updating this page</a>" in page and "/chat?n=7#latest" in page
+    stopped = client.get("/chat?n=7").text
+    assert 'http-equiv="refresh"' not in stopped and "Thinking about the last message" in stopped
+    assert "Stop updating this page" not in stopped and ">Check for her answer</a>" in stopped
     release.set()
     assert client.chat.wait(10)
 

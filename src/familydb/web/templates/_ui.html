@@ -193,13 +193,13 @@
 {%- endmacro %}
 
 {# The thread's last line while the newest message waits: her screen (typing while she writes back), her name, and the page's own words, with a way to look again that works with no script. #}
-{% macro msg_pending(name, state, text, link) -%}
+{% macro msg_pending(name, state, text, link, stop=none) -%}
   <div class="msg msg--vera msg--pending" role="status">
     {{ vera_screen('', 'busy' if state == 'thinking' else '') }}
     <div class="msg__bub">
       <div class="msg__by">{{ name }}</div>
       {{ text }}{% if state == 'thinking' %}<span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>{% endif %}
-      <br><a href="{{ link }}">Check for her answer</a>
+      <br><a href="{{ link }}">Check for her answer</a>{% if stop %} · <a href="{{ stop }}">Stop updating this page</a>{% endif %}
     </div>
   </div>
 {%- endmacro %}

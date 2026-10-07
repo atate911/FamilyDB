@@ -28,7 +28,7 @@
         <section class="ask o1" aria-labelledby="h-ask">
           <div class="ask__head">{{ vera_screen('lg', 'busy' if busy else 'hello') }}<div><p class="ask__who">{{ assistant }}</p><h1 id="h-ask" class="ask__q"><label for="text">What’s on your mind?</label></h1></div></div>
           {% include "_composer.html" %}
-          <p class="composer__foot mt-3">
+          <p class="composer__foot{{ ' composer__foot--kid' if not grownup }} mt-3">
             {%- if not grownup %}Goes to your own chat with {{ assistant }}{% if readers %}; {{ readers }} can read it{% endif %}.
               {%- if left is not none %} {{ left }} message{{ '' if left == 1 else 's' }} left today.{% endif %}
             {%- elif member %}Goes to the family chat as {{ member.display_name }}.

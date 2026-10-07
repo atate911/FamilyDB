@@ -127,6 +127,8 @@ a:hover { color: var(--ink); }
 .nav a:hover { background: var(--card); color: var(--ink); }
 .nav a[aria-current="page"] { background: var(--here); color: var(--on-here); box-shadow: inset 3px 0 0 var(--here-icon), var(--shadow); }
 .nav a[aria-current="page"] .icon { color: var(--here-icon); }
+/* a quiet count on the current item reads in that item's own ink, not the dimmer one that was drawn for the page */
+.nav a[aria-current="page"] .badge--quiet { color: var(--on-here); }
 .nav .badge { margin-left: auto; }
 .nav-group { padding: var(--s5) var(--s3) var(--s2); }
 .me { margin-top: auto; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s3); align-items: center; padding: var(--s3); border-radius: var(--r-md); background: var(--card); border: 1px solid var(--line); }
@@ -144,7 +146,8 @@ a:hover { color: var(--ink); }
 /* the account corner of the sidebar: your password, and signing out (a form, so it's a POST) */
 .me__acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s3); margin-top: 2px; }
 .me__acts form { margin: 0; }
-.me__acts .textbtn { min-height: 32px; font-size: var(--t-sm); }
+.me__acts a { display: inline-flex; align-items: center; min-height: var(--target); }
+.me__acts .textbtn { min-height: var(--target); font-size: var(--t-sm); }
 .topbar, .tabbar { display: none; }
 
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s5); flex-wrap: wrap; margin-bottom: var(--s6); }
@@ -415,7 +418,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 /* 5.14 Health pill (same state everywhere) */
 /* When all is well the pill is quiet: Vera's soft green, the family's type, a still dot.
    The glass pill with the mono voice appears only when there is something to notice (writing back, resting, can't answer). */
-.pill-health { display: inline-flex; align-items: center; gap: var(--s2); min-height: 36px; padding: 0 var(--s3); border-radius: var(--r-pill); font-family: var(--font-text); font-size: var(--t-sm); font-weight: 700; text-decoration: none; background: var(--vera-soft); color: var(--vera); border: 1px solid var(--vera-line); align-self: flex-start; }
+.pill-health { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: 0 var(--s3); border-radius: var(--r-pill); font-family: var(--font-text); font-size: var(--t-sm); font-weight: 700; text-decoration: none; background: var(--vera-soft); color: var(--vera); border: 1px solid var(--vera-line); align-self: flex-start; }
 .pill-health:hover { color: var(--vera); border-color: var(--vera); }
 .pill-health::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .pill-health--busy, .pill-health--rest, .pill-health--down { font-family: var(--font-mono); font-weight: 400; background: var(--glass); border-color: var(--glass-line); }
@@ -1167,7 +1170,8 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   /* Ask Vera on the phone: one row, so the next plan and anything late show on the first screen */
   .ask { padding: var(--s3) var(--s4) var(--s4); }
   .ask__head { margin-bottom: var(--s3); }
-  .ask__head p, .ask .composer__foot, .ask__last { display: none; }
+  /* a kid's line says who can read her chat and how many messages are left, so it stays */
+  .ask__head p, .ask .composer__foot:not(.composer__foot--kid), .ask__last { display: none; }
   .home-head__line { font-size: var(--t-md); }
   .ask__head h2 { font-size: var(--t-h3); }
   .ask textarea { min-height: 100px; padding: 12px 14px; font-size: var(--t-md); }

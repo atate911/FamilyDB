@@ -54,6 +54,8 @@ LATEST = "latest"
 NOBODY = "Say who is asking."
 NO_FAMILY = "There is nobody in the family list yet. Add someone on the Family page."
 RETRY_REFRESH_SECONDS = REFRESH_STEPS["retrying"][0]
+# `n` this far along asks no more: the page's own "Stop updating" link.
+STOP_LOOKING = len(REFRESH_STEPS["thinking"])
 # Slack on top of every attempt the settings allow, a retry interval apart.
 RETRY_SLACK_MINUTES = 5
 # What the page says in her place while the newest message waits: its words, no model call.
@@ -316,6 +318,10 @@ def page(
                 "chat.show", n=looked + 1, **with_kid, _anchor=LATEST
             ),  # the next look, one further along
             check=url_for("chat.show", **with_kid, _anchor=LATEST),  # a look from the start
+            # Without this the page reloads itself with no way to stop it (WCAG 2.2.1).
+            stop=url_for("chat.show", n=STOP_LOOKING, **with_kid, _anchor=LATEST)
+            if refresh
+            else None,
             latest=LATEST,
             reading=reading.display_name if reading else None,
             private=kid_chat,
