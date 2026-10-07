@@ -352,6 +352,8 @@ any copy of `data/` that holds it: a private key there is readable from the bot'
 
 **Tasks kept for a window.** A task kept for "one of these Saturday mornings" is brought up in the chat it was asked in when such a morning comes round and the calendar is free for the hour ahead: each task once a week at most, and one a day in each chat. Only plain days and parts of the day count; "before Christmas" is left alone. It makes no model call, and the settings page (under Messages) turns it off.
 
+**What is on near home.** Under its own page on the settings, named as the family call it. The calendars it reads (an iCal or .ics address a line, or ticked among those it found near home), an optional Ticketmaster key (free, from developer.ticketmaster.com: the Consumer Key of an app made there), and the weekly search with its monthly budget. Each calendar and Ticketmaster are read once a day with no model call; the search runs once a week, and the lookup for calendars every 30 days and when the home area changes, both within `HAPPENING_BUDGET` a month (US$1 unless changed) and the daily limit. `familydb happening` reads what is due now, `--now` everything; the Status page shows each source and what the searches cost this month, and an admin is told on Telegram when one cannot be read three days running. What it finds is offered in the suggestions and listed on the Plans page's third tab.
+
 **Cost.** Enrichment is at most three searches and three page reads per idea; discovery at most four searches per window and question kind per twelve hours. Both run on the lookup model (GPT-6 Luna by default, the same as chat; section 11), and all of it counts towards the daily spending limit.
 
 ## 10. The web page
