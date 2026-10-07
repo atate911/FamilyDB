@@ -15,7 +15,7 @@ from typing import Any
 from flask import Flask, render_template, request
 from werkzeug.security import safe_join
 
-from familydb import __version__, personas
+from familydb import __version__, happening, personas
 from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
 from familydb.channels.web import WebChat
@@ -44,7 +44,10 @@ from familydb.web.keys import session_secret
 
 log = logging.getLogger(__name__)
 
-MAX_BODY_BYTES = 64 * 1024  # nothing here takes an upload
+MAX_BODY_BYTES = 64 * 1024  # every form but one: nothing else takes an upload
+# The chat's box, after sign-in, may carry a photo (chat.send); the server reads no more than that
+# of any request, and Flask still refuses anything over MAX_BODY_BYTES everywhere else.
+MAX_UPLOAD_BYTES = chat.MAX_UPLOAD_BYTES
 CONTENT_SECURITY_POLICY = (
     "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
@@ -209,6 +212,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
             "status_words": views.STATUS_LIGHTS.get(light or ""),
             "assistant": her.name,
             "has_persona": her is not personas.PLAIN,
+            # What is on near home goes by the family's name for it (familydb/happening.py).
+            "happening_name": happening.NAME,
             **_look(),
         }
 
@@ -235,7 +240,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     return web
 
 
-# A monitor may ask healthz every few seconds, so these are not worth a query.
+# A monitor may ask healthz every few seconds, so these are not worth reading the settings:
+# healthz asks only whether the database answers and the jobs are running (familydb/health.py).
 SETTINGS_FREE = frozenset({"web.healthz", "static"})
 
 

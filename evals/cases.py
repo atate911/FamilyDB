@@ -7,14 +7,16 @@ accepts each of them; it fails what is wrong, not what is merely different.
 from __future__ import annotations
 
 import re
+import sqlite3
 from collections.abc import Callable
 from datetime import date, timedelta
 
 from evals.harness import GROUP, Call, Case, Check, Run
-from evals.household import NOW
-from familydb import personas
+from evals.household import NOW, NOW_ISO, Household
+from familydb import personas, windows
 from familydb.errors import ToolError
 from familydb.routing import is_confirmation
+from familydb.store import db, members, memories
 from familydb.suggest.engine import resolve_window
 from familydb.suggest.types import SuggestInput
 
@@ -44,6 +46,32 @@ def called(name: str, times: int | None = None, where=None, what: str = "") -> C
             return f"{name} was called, but not {what or 'as expected'}: " + "; ".join(
                 str(c.input) for c in found
             )
+        return None
+
+    return check
+
+
+def leads_with_pick() -> Check:
+    """A stronger call chose (suggest/choosing.py), and the reply leads with its first pick: of
+    the ideas it names, the first pick's comes first. Paying for a choice the reply ignores is a
+    cost with no gain."""
+
+    def check(run: Run) -> str | None:
+        chosen = run.named("give_picks")
+        if not chosen:
+            return "nothing was chosen"
+        first = chosen[-1].input["picks"][0]["ref"]
+        if not first.startswith("idea:"):
+            return None  # a find leads: its title is whatever the page called it
+        word = run.house.words.get(int(first.split(":")[1]))
+        if word is None:
+            return f"picked {first}, which is not one of the household's ideas"
+        reply = run.reply.casefold()
+        where = {w: reply.find(w) for w in run.house.words.values() if w in reply}
+        if word not in where:
+            return f"the reply never names the first pick, {word}"
+        if min(where.values()) < where[word]:
+            return f"the reply leads with something other than the first pick, {word}"
         return None
 
     return check
@@ -82,6 +110,42 @@ def mentions(*words: str) -> Check:
     def check(run: Run) -> str | None:
         missing = [w for w in words if w.casefold() not in run.reply.casefold()]
         return f"reply does not mention {', '.join(missing)}" if missing else None
+
+    return check
+
+
+def never_mentions(*words: str) -> Check:
+    """None of these in the reply: what must not be claimed, such as a booking never made."""
+
+    def check(run: Run) -> str | None:
+        reply = run.reply.casefold().replace("\u2019", "'")
+        said = [w for w in words if w.casefold() in reply]
+        return f"says {', '.join(repr(w) for w in said)}" if said else None
+
+    return check
+
+
+def kept(table: str, count: int) -> Check:
+    """How many rows the table holds once the case is over: a plan really made, say."""
+
+    def check(run: Run) -> str | None:
+        found = run.counts.get(table)
+        return None if found == count else f"{table}: {found}, expected {count}"
+
+    return check
+
+
+def reminds_on(day: str, *, not_on: str = "") -> Check:
+    """A live reminder on `day` (the family's clock), and none left on `not_on`."""
+
+    def check(run: Run) -> str | None:
+        live = [r for r in run.reminders if r.live]
+        if not any(r.at.startswith(day) for r in live):
+            found = "; ".join(f"{r.title} at {r.at}" for r in live) or "none"
+            return f"no live reminder on {day} (live: {found})"
+        if not_on and any(r.at.startswith(not_on) for r in live):
+            return f"a reminder is still on {not_on}"
+        return None
 
     return check
 
@@ -281,6 +345,37 @@ def on_list(which: str) -> Callable[[Call], bool]:
 
 TOMORROW = NOW.date() + timedelta(days=1)  # Saturday 26 September
 
+
+def _bad_back(conn: sqlite3.Connection, house: Household) -> None:
+    """Sam told her a while ago: no long drives for now. Hopscotch is 35 minutes away."""
+    sam = members.find_by_name(conn, "Sam")
+    assert sam is not None
+    with db.transaction(conn):
+        memories.insert(
+            conn,
+            member_id=sam.id,
+            category="health",
+            fact="No drives over 30 minutes until my back is better",
+            firm=True,
+            inferred=False,
+            until=None,
+            source_message_id=None,
+            said_by=sam.id,
+            now=NOW_ISO,
+            rule={"max_travel_minutes": 30},
+        )
+
+
+def _readable_window(call: Call) -> bool:
+    """A task kept for a time code can bring it up at (windows.py), with nothing invented."""
+    said = str(call.input.get("preferred_window") or "")
+    return windows.read(said) is not None and not call.input.get("remind_at")
+
+
+def _about_kiggins(call: Call) -> bool:
+    return "kiggins" in str(call.input).casefold()
+
+
 CASES: tuple[Case, ...] = (
     # -- capture
     Case(
@@ -328,6 +423,26 @@ CASES: tuple[Case, ...] = (
         "A reminder on Tuesday 29 September, or a question about the time; never an idea.",
     ),
     Case(
+        "shopping_add",
+        ("We're out of milk and eggs",),
+        (
+            called(
+                "shopping_list",
+                1,
+                lambda c: (
+                    c.input.get("action") == "add"
+                    and all(
+                        any(word in str(item).casefold() for item in c.input.get("items") or [])
+                        for word in ("milk", "eggs")
+                    )
+                ),
+                "adding milk and eggs",
+            ),
+            wrote_only("shopping_list"),
+        ),
+        "What the family needs to get goes on the shopping list: not a task, not an idea.",
+    ),
+    Case(
         "someday_saturday_morning",
         (
             "One of these Saturday mornings I need to get my knife sharpened at the "
@@ -339,14 +454,15 @@ CASES: tuple[Case, ...] = (
                 1,
                 lambda c: (
                     "saturday" in str(c.input.get("preferred_window") or "").casefold()
-                    and not c.input.get("remind_at")
+                    and _readable_window(c)
                     and not c.input.get("due_at")
                 ),
-                "with a Saturday-morning window and no invented date",
+                "with a Saturday-morning window code can read, and no invented date",
             ),
             wrote_only("add_task"),
         ),
-        "Vague timing stays vague: a window, no reminder, no deadline, no calendar entry.",
+        "Vague timing stays vague: a window, no reminder, no deadline, no calendar entry; and "
+        "worded so the nudges can bring it up on a free Saturday morning.",
     ),
     Case(
         "gutters_before_christmas",
@@ -361,8 +477,27 @@ CASES: tuple[Case, ...] = (
     Case(
         "arrange_not_book",
         ("Don't let me forget to make a dentist appointment.",),
-        (called("add_task", 1), wrote_only("add_task")),
-        "Arranging an appointment is a task, not the appointment.",
+        (called("add_task", 1), wrote_only("add_task"), promises_nothing()),
+        "Arranging an appointment is a task, not the appointment; and with no time to bring it "
+        "up at, nothing is promised that will not happen.",
+    ),
+    Case(
+        "colonoscopy_free_time",
+        ("Next time I have some free time, I need to schedule my colonoscopy",),
+        (
+            called("add_task", 1, _readable_window, "kept for free time code can read"),
+            never("create_event"),
+            wrote_only("add_task"),
+        ),
+        "Scheduling an appointment is a task, kept for the next free time, which code can then "
+        "bring up when the calendar is free; never an appointment invented on the calendar.",
+    ),
+    Case(
+        "colonoscopy_in_the_group",
+        ("Next time I have some free time, I need to schedule my colonoscopy",),
+        (asked(), wrote_only()),
+        "A health errand in the family group, kids reading: ask before it goes there.",
+        chat=GROUP,
     ),
     Case(
         "bins_every_sunday",
@@ -498,8 +633,16 @@ CASES: tuple[Case, ...] = (
     Case(
         "this_weekend",
         ("what should we do this weekend?",),
-        (window("this_weekend"), called("suggest", 1), never(*DIRECT), wrote_only()),
-        "One suggest call; its checks are not repeated by hand.",
+        (
+            window("this_weekend"),
+            called("suggest", 1),
+            never(*DIRECT),
+            wrote_only(),
+            called("give_picks", 1),
+            leads_with_pick(),
+        ),
+        "One suggest call, its checks not repeated by hand; a stronger call chooses, and the "
+        "reply leads with what it chose.",
     ),
     Case(
         "saturday_morning",
@@ -520,6 +663,81 @@ CASES: tuple[Case, ...] = (
         ("what restaurants did we want to try that we should consider now?",),
         (mentions("Ramen", "Sushi Hana"), wrote_only()),
         "Recall from the list.",
+    ),
+    Case(
+        "this_afternoon",
+        ("I'm bored. What should I do this afternoon?",),
+        (window("now", "today"), never(*DIRECT), wrote_only(), shorter_than(700)),
+        "The guiding scenario: the rest of this afternoon, checked by the engine, said briefly.",
+    ),
+    Case(
+        "girls_what_they_wanted",
+        ("The girls are bored an want something fun, what did they want to do?",),
+        (mentions("Hopscotch"), wrote_only()),
+        "Recall what was saved for them (Hopscotch, with the girls) before anything new.",
+    ),
+    Case(
+        "favorites_right_now",
+        ("Give me something expected we could do right now that we'd love.",),
+        (
+            called(
+                "suggest",
+                where=lambda c: (
+                    c.input.get("window") == "now" and c.input.get("prefer") == "favorites"
+                ),
+                what="window now, favorites first",
+            ),
+            never(*DIRECT),
+            wrote_only(),
+        ),
+        'Right now, and "expected" as the owner said it: something they know they love.',
+    ),
+    Case(
+        "thai_open_now",
+        ("We want Thai food, what's open now?",),
+        (
+            called(
+                "suggest",
+                where=lambda c: (
+                    "thai" in str(c.input.get("topic") or "").casefold()
+                    and c.input.get("window") in ("now", "today")
+                ),
+                what="about Thai, for now",
+            ),
+            never(*DIRECT),
+            wrote_only(),
+        ),
+        "Nothing Thai is saved: the engine is asked about Thai for now, and nothing is invented. "
+        "With --web, a place is looked for (find_places), and what it finds is said as found.",
+        settings={"find_places": True},
+    ),
+    Case(
+        "kiggins_movie",
+        ("I heard there's a good movie at the Kiggins theater, should we book it?",),
+        (
+            either(
+                called("suggest", where=_about_kiggins, what="about the Kiggins"),
+                called("add_idea", where=_about_kiggins, what="the Kiggins"),
+                asked(),
+                what="neither looked into the Kiggins, saved it, nor asked",
+            ),
+            no_clock_times(),
+            never_mentions("i booked", "booked it", "booked you", "reserved", "got tickets"),
+            wrote_only("add_idea", "update_idea"),
+        ),
+        "No showtimes are known and nothing can be booked: none invented, none claimed.",
+    ),
+    Case(
+        "must_is_respected",
+        ("anything fun we could do this weekend?",),
+        (
+            called("suggest"),
+            caveated("Hopscotch", "back", "drive", "far", "30 min", "minutes"),
+            wrote_only(),
+        ),
+        "Sam's firm rule (no drives over 30 minutes) is kept, by code: Hopscotch, 35 minutes "
+        "away, is not offered, or only with the reason it is out.",
+        seed=_bad_back,
     ),
     # -- feedback, plans
     Case(
@@ -548,14 +766,41 @@ CASES: tuple[Case, ...] = (
                 asked(),
                 what="neither on the calendar for the 18th nor a question about the time",
             ),
-            either(
-                called("add_task", where=starts("remind_at", "2026-11-11"), what="a week before"),
-                asked(),
-                what="no reminder a week before",
-            ),
-            wrote_only("create_event", "add_task", "add_idea", "update_idea"),
+            either(reminds_on("2026-11-11"), asked(), what="no reminder a week before"),
+            wrote_only("create_event", "update_event", "add_task", "add_idea", "update_idea"),
         ),
         "A plan on the 18th and a reminder on the 11th, or a question first.",
+    ),
+    Case(
+        "plan_moves_reminder",
+        (
+            "Beck is playing at the Crystal Ballroom on the 18th of November at 8pm. Put it on "
+            "my schedule and set a reminder a week before.",
+            "Beck moved to the 19th, same time. Can you move it?",
+        ),
+        (
+            called("update_event", where=starts("start", "2026-11-19"), what="to the 19th"),
+            reminds_on("2026-11-12", not_on="2026-11-11"),
+            wrote_only(
+                "create_event", "update_event", "add_task", "update_task", "add_idea", "update_idea"
+            ),
+        ),
+        "A reminder set for a plan moves with it: a week before the 19th, no longer the 11th.",
+    ),
+    Case(
+        "plan_without_a_calendar",
+        ("We're going to the symphony on Saturday October 3rd at 8pm, put it on the schedule",),
+        (
+            called(
+                "create_event",
+                where=lambda c: c.result.get("available") is not False,
+                what="kept, with no calendar connected",
+            ),
+            kept("plans", 1),
+            wrote_only("create_event", "add_idea", "update_idea"),
+        ),
+        "No Google calendar is connected: the plan is still kept, here, as a plan.",
+        calendar=False,
     ),
     # -- long, rambling and spoken messages
     Case(
@@ -702,6 +947,7 @@ CASES: tuple[Case, ...] = (
             called("suggest", where=covers(TOMORROW), what="for a window taking in tomorrow"),
             wrote_only(),
             shorter_than(600),
+            never("give_picks"),  # a kid's question is not chosen for (suggest/choosing.py)
         ),
         "A kid asks in the family group: suggestions for tomorrow, Saturday, however the window "
         "is framed, nothing saved for a question, and a reply short enough for a group.",

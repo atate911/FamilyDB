@@ -1,4 +1,6 @@
-"""Daily forecasts from Open-Meteo, with sunrise and sunset: free, no key, 16 days ahead."""
+"""Daily forecasts from Open-Meteo, with sunrise and sunset: free, no key, 16 days ahead. For a
+day or two it also brings each hour, so "now", "this afternoon" or a plan at ten is judged by its
+own hours rather than the day's worst (`DayForecast.between`), in the same request."""
 
 from __future__ import annotations
 
@@ -8,7 +10,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Any, Protocol
 
@@ -27,6 +29,9 @@ DAILY_FIELDS = (
     "sunrise",
     "sunset",
 )
+HOURLY_FIELDS = ("weather_code", "temperature_2m", "precipitation_probability")
+# Hour by hour when the request covers at most this many days: now, today, tomorrow, a weekend.
+HOURLY_DAYS = 2
 CACHE_SECONDS = 3600
 # Open-Meteo serves 16 forecast days including today, so the last one is today + 15.
 MAX_DAYS_AHEAD = 15
@@ -64,6 +69,14 @@ WEATHER_CODES: dict[int, str] = {
 
 
 @dataclass(frozen=True)
+class Hour:
+    minute: int  # when the hour starts, in minutes after midnight, in the family's timezone
+    code: int | None
+    rain_chance: int | None  # percent
+    temp: float | None
+
+
+@dataclass(frozen=True)
 class DayForecast:
     date: date
     code: int | None
@@ -74,6 +87,9 @@ class DayForecast:
     precipitation: float | None  # mm or inches, per settings
     sunrise: int | None = None  # minutes after midnight, in the family's timezone
     sunset: int | None = None
+    hours: tuple[Hour, ...] = ()
+    # On a forecast for part of the day (`between`): its first and last minute.
+    span: tuple[int, int] | None = None
 
     @property
     def daylight(self) -> tuple[int, int] | None:
@@ -81,6 +97,27 @@ class DayForecast:
         if self.sunrise is None or self.sunset is None or self.sunrise >= self.sunset:
             return None
         return self.sunrise, self.sunset
+
+    def between(self, start: int, end: int) -> DayForecast:
+        """The day as its hours from `start` to `end` (minutes after midnight) have it: the worst
+        hour's weather (the highest code is the wettest), the highest chance of rain, the warmest
+        and the coldest. The whole day when no hours came, or none fall in the stretch."""
+        inside = [hour for hour in self.hours if hour.minute < end and hour.minute + 60 > start]
+        if not inside:
+            return self
+        codes = [hour.code for hour in inside if hour.code is not None]
+        chances = [hour.rain_chance for hour in inside if hour.rain_chance is not None]
+        temps = [hour.temp for hour in inside if hour.temp is not None]
+        code = max(codes) if codes else self.code
+        return replace(
+            self,
+            code=code,
+            summary=summarize_code(code),
+            rain_chance=max(chances) if chances else self.rain_chance,
+            high=max(temps) if temps else self.high,
+            low=min(temps) if temps else self.low,
+            span=(start, end),
+        )
 
     def to_public(self, units: str) -> dict[str, Any]:
         temp = "F" if units == "imperial" else "C"
@@ -133,6 +170,7 @@ def parse_daily(payload: dict[str, Any]) -> list[DayForecast]:
     sums = column("precipitation_sum")
     sunrises = column("sunrise")
     sunsets = column("sunset")
+    hours = parse_hourly(payload)
     out: list[DayForecast] = []
     for i, day in enumerate(dates):
         code = codes[i]
@@ -148,9 +186,39 @@ def parse_daily(payload: dict[str, Any]) -> list[DayForecast]:
                 precipitation=None if sums[i] is None else float(sums[i]),
                 sunrise=local_minutes(sunrises[i], when),
                 sunset=local_minutes(sunsets[i], when),
+                hours=tuple(hours.get(when, ())),
             )
         )
     return out
+
+
+def parse_hourly(payload: dict[str, Any]) -> dict[date, list[Hour]]:
+    """Each day's hours from an Open-Meteo response's `hourly` block, when it has one."""
+    hourly = payload.get("hourly") or {}
+    times = hourly.get("time") or []
+
+    def column(name: str) -> list[Any]:
+        values = hourly.get(name) or []
+        return list(values) + [None] * (len(times) - len(values))
+
+    codes = column("weather_code")
+    temps = column("temperature_2m")
+    chances = column("precipitation_probability")
+    days: dict[date, list[Hour]] = {}
+    for i, stamp in enumerate(times):
+        try:
+            moment = datetime.fromisoformat(str(stamp))
+        except ValueError:
+            continue
+        days.setdefault(moment.date(), []).append(
+            Hour(
+                minute=moment.hour * 60 + moment.minute,
+                code=None if codes[i] is None else int(codes[i]),
+                rain_chance=None if chances[i] is None else int(chances[i]),
+                temp=None if temps[i] is None else float(temps[i]),
+            )
+        )
+    return days
 
 
 class OpenMeteo:
@@ -174,6 +242,8 @@ class OpenMeteo:
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
         }
+        if (end - start).days < HOURLY_DAYS:
+            params["hourly"] = ",".join(HOURLY_FIELDS)
         if self.units == "imperial":
             params["temperature_unit"] = "fahrenheit"
             params["precipitation_unit"] = "inch"

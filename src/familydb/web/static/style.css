@@ -330,6 +330,8 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
 .composer__who { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; font-size: var(--t-meta); color: var(--ink-2); }
 .composer__who b { color: var(--ink); }
 .composer__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; font-size: var(--t-meta); color: var(--ink-2); }
+.composer__photo { font-weight: 700; color: var(--ink); }
+.composer__foot input[type="file"] { max-width: 100%; font: inherit; }
 .starters { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .starter { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); padding: 0 var(--s4); border-radius: var(--r-pill); font: inherit; font-size: var(--t-meta); font-weight: 700; text-decoration: none; cursor: pointer; border: 1.5px solid var(--line-2); background: var(--card); color: var(--ink); }
 /* a starter that sends is filled, with the send icon; one that fills the box is an outline with a pen, ending in … */
@@ -369,6 +371,9 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
    the family shares one password ("From") or the phone may send where it is. Both sit in her dark box too. */
 .msg__text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg__did { margin-top: var(--s1); font-size: var(--t-sm); color: var(--ink-3); }
+.msg__buttons { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+.msg__buttons form { margin: 0; }
+.msg__for { flex-basis: 100%; font-size: var(--t-sm); color: var(--ink-3); }
 .mic-slot { display: inline-flex; align-items: stretch; }
 .mic-slot:empty { display: none; }
 button.mic { min-width: var(--target); min-height: var(--target); padding: 0; display: inline-grid; place-items: center; border-radius: var(--r-md); border: 1.5px solid var(--edge); background: var(--field); color: var(--ink); cursor: pointer; }
@@ -759,6 +764,7 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .plans-agenda { list-style: none; margin: 0; padding: 0; }
 .plan { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); padding: var(--s3) 0; border-top: 1px solid var(--line); }
 .plans-agenda > .plan:first-child { border-top: 0; }
+.plan--bare { grid-template-columns: minmax(0, 1fr); }  /* no date tile: the day is the heading above it (what is on near home) */
 .plan > .dt { align-self: start; }
 .plan__title { font-family: var(--font-text); font-size: var(--t-md); font-weight: 700; line-height: 1.25; letter-spacing: 0; }
 .plan__title a { color: var(--ink); text-decoration-color: var(--line-2); }
@@ -1241,7 +1247,8 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .plans { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "cal" "list" "rate"; gap: var(--s4); }
   .cal-bar { display: grid; gap: var(--s3); }
   .cal-bar .seg { display: flex; }
-  .cal-bar .seg a { flex: 1; }
+  /* Each tab as wide as its words, sharing what is left, so a long third one (what is on near home) wraps less */
+  .cal-bar .seg a { flex: 1 1 auto; padding: 0 var(--s3); }
   .month-nav h2 { font-size: 1.375rem; padding: 0; }
   .plans__list .item__trail { display: none; }
   .cal__wh > span { padding: 6px 0; text-align: center; font-size: var(--t-xs); letter-spacing: 0; }
@@ -1746,3 +1753,14 @@ li:target { border-radius: var(--r-md); }
 .share-cell { display: inline-flex; align-items: center; gap: var(--s2); }
 .tables { display: grid; gap: var(--s5); margin-top: var(--s4); }
 .inline-action { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+
+/* The family's lists (/lists): a tick beside each thing, what was got folded away. */
+.list-items { list-style: none; margin: 0 0 var(--s4); padding: 0; }
+.list-items li { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.list-items form { margin: 0; }
+.list-got { margin-top: var(--s4); }
+.list-got summary { cursor: pointer; font-weight: 700; }
+
+/* What is new in the version running, on the Status page (whatsnew.py). */
+.whats-new dt { font-weight: 700; margin-top: var(--s3); }
+.whats-new dd { margin: var(--s1) 0 0; }

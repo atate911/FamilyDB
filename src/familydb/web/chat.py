@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 from contextlib import closing
 from datetime import datetime, timedelta
+from functools import wraps
 from typing import Any
 
 from flask import (
@@ -21,14 +22,16 @@ from flask import (
     url_for,
 )
 
-from familydb import personas, roles
+from familydb import audience, buttons, personas, roles, undo
 from familydb.agent import spending
 from familydb.app import App
 from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
 from familydb.config import Settings
+from familydb.dates import utc_iso
 from familydb.store import calls
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
+from familydb.store import tasks as task_store
 from familydb.store.messages import Message
 from familydb.web import auth, views
 from familydb.web import status as status_page
@@ -42,6 +45,9 @@ bp = Blueprint("chat", __name__)
 WHO_KEY = "who"
 # Whether this browser sends where it is with each message: off until someone ticks the box.
 WHERE_KEY = "send_where"
+# The newest of her messages this browser has seen, and in which conversation: the Chat link's
+# "2 new" (shell.py). Kept in the session cookie, so per device and never a write.
+SEEN_KEY = "seen"
 THREAD_LIMIT = 60
 # While an answer is on its way a page asks again soon, then less often, then stops and leaves a
 # visible link: a page left open does not ask all night. Seconds before each next look, by what the
@@ -58,6 +64,13 @@ RETRY_REFRESH_SECONDS = REFRESH_STEPS["retrying"][0]
 STOP_LOOKING = len(REFRESH_STEPS["thinking"])
 # Slack on top of every attempt the settings allow, a retry interval apart.
 RETRY_SLACK_MINUTES = 5
+# The most any request may carry, a photo in this box (the server's read limit too).
+MAX_UPLOAD_BYTES = 4_500_000
+# A photo sent from the chat's box: what can be looked at, and how big (pipeline.MAX_PHOTO_BYTES).
+PHOTO_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})
+MAX_PHOTO_BYTES = 3_900_000
+PHOTO_TYPE = "Send a photo as a JPEG or PNG picture."
+PHOTO_TOO_BIG = "That photo is too big to send: up to about 3.9 MB."
 # What the page says in her place while the newest message waits: its words, no model call.
 THINKING = "Thinking about the last message. The answer will show here when it arrives."
 HELD = (
@@ -97,12 +110,9 @@ def _chat() -> WebChat:
     return current_app.config["FAMILYDB_CHAT"]
 
 
-# A kid's own conversation, which a parent may read (docs/WISHES.md).
-PRIVATE = "member:{id}"
-
-
 def private_chat(member_id: int) -> str:
-    return PRIVATE.format(id=member_id)
+    """A kid's own conversation, which a parent may read (docs/WISHES.md; audience.py)."""
+    return audience.private_chat(member_id)
 
 
 def messages_left(app: App, conn: Any, member: member_store.Member | None) -> int | None:
@@ -122,7 +132,8 @@ def is_kid() -> bool:
 
 
 def my_chat() -> str:
-    """A kid talks in her own conversation; everybody else in the family's."""
+    """A kid talks in her own conversation; everybody else in the family's (audience.page_chat,
+    which routing.py also asks, so the page and what is sent to it cannot disagree)."""
     visitor = auth.visitor()
     if visitor.member is not None and not visitor.may("decide"):
         return private_chat(visitor.member.id)
@@ -172,9 +183,16 @@ def box(family: list[str], *, locked: bool = False, prompt: str = PROMPT) -> dic
     }
 
 
+# What another app shares to the page (the manifest's share_target, on Android): its parts.
+SHARED = ("title", "text", "url")
+
+
 def asked() -> str | None:
-    """A question handed over by a link; it waits in the box until Send."""
-    return request.args.get("ask", "")[:MAX_MESSAGE].strip() or None
+    """A question handed over by a link (`ask`), or what another app shared here (a title, words
+    and a link, each once); it waits in the box until Send."""
+    shared = dict.fromkeys(part for key in SHARED if (part := request.args.get(key, "").strip()))
+    words = request.args.get("ask", "") or "\n".join(shared)
+    return words[:MAX_MESSAGE].strip() or None
 
 
 def standing(
@@ -263,6 +281,13 @@ def page(
                 }
             ]
         left = messages_left(app, conn, visitor.member)
+        pressed = {} if reading is not None else _task_buttons(conn, thread)
+        if reading is None and before is None:  # the newest is on screen: nothing is new now
+            session[SEEN_KEY] = {
+                "chat": chat_id,
+                "id": message_store.newest_from_her(conn, chat_id),
+            }
+        undoing = {} if reading is not None else _undoable(app, conn, thread, visitor)
     # The log keeps a turn's tool calls against the question; the page shows them under the
     # answer to those who browse the household. A kid never sees how it works (DESIGN.md 16).
     answered = {message.reply_to for message in thread if message.reply_to is not None}
@@ -279,6 +304,9 @@ def page(
         )
         for message in thread
     ]
+    for line, message in zip(lines, thread, strict=True):
+        line["tasks"] = pressed.get(line["id"], [])
+        line["undo"] = undoing.get(message.reply_to) if line["from_bot"] else None
     last = thread[-1] if thread else None
     # Older messages are only to be read: nothing is on its way there, so nothing waits.
     state, handing = (None, None) if before else standing(app, thread, chat_id)
@@ -334,9 +362,47 @@ def page(
             telegram=_telegram(app) if visitor.may("browse") else None,
             me=_me(visitor, slots),
             left=left,
+            presses=PAGE_BUTTONS,
         ),
         status,
     )
+
+
+# The buttons under a reminder the page draws as forms too; the rest are Telegram's own.
+PAGE_BUTTONS = buttons.REMINDER
+
+
+def _task_buttons(conn: Any, thread: list[Message]) -> dict[int, list[dict[str, Any]]]:
+    """By message, the open tasks whose buttons go under it on the page: Done, In an hour and
+    Tomorrow, as on Telegram, under the newest message to carry each (a reminder snoozed twice is
+    pressed once). Done or cancelled since, a task has none."""
+    newest: dict[int, int] = {}
+    for message in thread:
+        for button in message.buttons or []:
+            action, _, number = str(button.get("data", "")).partition(":")
+            if action in dict(PAGE_BUTTONS) and number.isascii() and number.isdigit():
+                newest[int(number)] = message.id
+    drawn: dict[int, list[dict[str, Any]]] = {}
+    for task_id, message_id in sorted(newest.items()):
+        task = task_store.get(conn, task_id)
+        if task is not None and task.status == "open":
+            drawn.setdefault(message_id, []).append(
+                {"id": task.id, "title": task.title, "revision": task.revision}
+            )
+    return drawn
+
+
+def _undoable(app: App, conn: Any, thread: list[Message], visitor: auth.Visitor) -> dict[int, int]:
+    """By the message a reply answers, the change its turn made that this visitor may still take
+    back (familydb/undo.py: within a day, theirs, or anybody's for whoever may change things)."""
+    asked = [message.id for message in thread if message.direction == "in"]
+    since = utc_iso(app.clock.now() - undo.WINDOW)
+    mine = visitor.member.id if visitor.member else None
+    return {
+        message_id: int(row["id"])
+        for message_id, row in calls.undoable_for(conn, asked, since=since).items()
+        if visitor.may("change") or (mine is not None and row["member_id"] == mine)
+    }
 
 
 def _readers(family: list[member_store.Member]) -> str:
@@ -458,6 +524,19 @@ def show() -> Any:
     return page(reading=kid, before=older, looked=looked)
 
 
+def _photo() -> tuple[tuple[str, bytes] | None, str | None]:
+    """The photo sent with the message, if any, as its type and bytes; or why it cannot go."""
+    sent = request.files.get("photo")
+    if sent is None or not sent.filename:
+        return None, None
+    if sent.mimetype not in PHOTO_TYPES:
+        return None, PHOTO_TYPE
+    data = sent.read(MAX_PHOTO_BYTES + 1)
+    if len(data) > MAX_PHOTO_BYTES:
+        return None, PHOTO_TOO_BIG
+    return (sent.mimetype, data), None
+
+
 def _position(form: Any) -> tuple[float, float] | None:
     """Where the phone said it was; None when it said nothing or "Send where I am" is not ticked."""
     if form.get(WHERE_KEY) != "1":
@@ -471,13 +550,30 @@ def _position(form: Any) -> tuple[float, float] | None:
     return lat, lon
 
 
+def _roomy(view: Any) -> Any:
+    """Let this view's request carry a photo: every other form is held to a few kilobytes, this
+    one, reached only signed in (the gate runs first), to what the server reads at most."""
+
+    @wraps(view)
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        request.max_content_length = MAX_UPLOAD_BYTES
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
 @bp.post("/chat")
+@_roomy
 @once
 def send() -> Response | Any:
-    """Hand one message to the channel and come back to the thread. Home's box posts here too."""
+    """Hand one message to the channel and come back to the thread. Home's box posts here too,
+    and the chat's may carry a photo."""
     if (complaint := auth.refused()) is not None:
         return page(error=complaint, typed=request.form.get("text", ""), status=400)
     text = request.form.get("text", "")
+    photo, complaint = _photo()
+    if complaint is not None:
+        return page(error=complaint, typed=text, status=400)
     # Signed in as themselves, they are who is asking whatever the form says.
     me = auth.visitor().name
     who = me or request.form.get("who", "").strip()
@@ -489,7 +585,8 @@ def send() -> Response | Any:
     if me is None:
         session[WHO_KEY] = who
     session[WHERE_KEY] = request.form.get(WHERE_KEY) == "1"  # the box stays as they left it
-    if (complaint := _chat().ask(sent, who, my_chat(), _position(request.form))) is not None:
+    asked = _chat().ask(sent, who, my_chat(), _position(request.form), photo=photo)
+    if (complaint := asked) is not None:
         return page(error=complaint, typed=text, status=400)
     log.info("web chat: %s asked something", who)
     # Redirect, since refreshing a POST would send the message again.

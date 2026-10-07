@@ -24,6 +24,10 @@
   {% if grownup %}
     <h2 class="group-h">For the family</h2>
     <ul class="slist">
+      {% if viewer.may('change') %}
+        {% set lead %}{{ tile('list') }}{% endset %}
+        {{ srow(url_for('web.lists_page'), 'Lists', 'What the family needs to get', lead=lead) }}
+      {% endif %}
       {% if wishing == 'decide' %}
         {% set lead %}{{ tile('gift') }}{% endset %}
         {% set trail %}{% if shell.decide %}{{ badge('act', shell.decide, 'to decide') }}{% endif %}{% endset %}

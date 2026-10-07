@@ -56,6 +56,7 @@
   {{ group(groups.second) }}
   {{ group(groups.watch) }}
   {{ group(groups.judgement) }}
+  {{ group(groups.choosing) }}
   {{ group(groups.stronger) }}
   {# Not floating here: it would float beside the key box above, which it does not save. #}
   {{ save_bar('Save models', still=true) }}
@@ -71,7 +72,7 @@
 </form>
 
 {# Every key at once, folded: for a second company's key and for taking one away. #}
-{% set ai_keys = keys.values() | rejectattr('key', 'equalto', 'telegram_bot_token') | list %}
+{% set ai_keys = keys.values() | rejectattr('key', 'in', ['telegram_bot_token', 'ticketmaster_api_key']) | list %}
 {# The form inside carries the address "Change a key" leads to, so a browser opens the fold. #}
 <details class="card fold sgroup" id="all-keys"{% if ai_keys | selectattr('problem') | list %} open{% endif %}>
   <summary><h2>Every company’s key</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>

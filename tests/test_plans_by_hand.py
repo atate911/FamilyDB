@@ -1,5 +1,5 @@
 """Plans with or without Google Calendar: FamilyDB keeps its own, and copies them across when
-there is a calendar."""
+there is a calendar (tools/gcal.py, calendar_sync.adopt_local)."""
 
 from __future__ import annotations
 
@@ -44,9 +44,10 @@ def test_a_plan_is_made_moved_and_cancelled_with_no_calendar(registry, conn, her
     made, data = _run(
         registry, "create_event", here, title="Ramen", start="2026-09-26T18:30", idea_id=idea.id
     )
-    assert not made.is_error and data["event"] is None and "FamilyDB only" in data["note"]
+    assert not made.is_error and data["event"] is None and "kept here" in data["calendar"]
     plan = plans.get(conn, data["plan"]["id"])
-    assert plan.google_event_id is None and plan.calendar_id is None
+    # On no calendar yet; it holds the id its event will have, so it goes on Google once.
+    assert plan.calendar_id is None
     assert ideas.get(conn, idea.id).status == "planned"
     # Asking again for the same plan finds it, instead of making a second.
     _, again = _run(
@@ -66,13 +67,16 @@ def test_a_plan_in_the_past_is_still_refused(registry, here) -> None:
     assert result.is_error and "past" in data["error"]
 
 
-def test_without_a_calendar_only_get_calendar_and_hand_made_events_are_unavailable(
+def test_without_a_calendar_the_saved_plans_are_the_calendar_and_hand_made_events_are_not(
     registry, here
 ) -> None:
+    _run(registry, "create_event", here, title="Picnic", start="2026-09-26T13:00")
     _, data = _run(registry, "get_calendar", here, start="2026-09-26", end="2026-09-27")
-    assert data["available"] is False
-    _, data = _run(registry, "update_event", here, event_id="abc", title="x")
-    assert data["available"] is False  # an event somebody added by hand lives only in Google
+    assert data["calendar"] is None and "kept here" in data["plans"]
+    assert "Picnic" in json.dumps(data["days"])
+    result, data = _run(registry, "update_event", here, event_id="abc", title="x")
+    # An event somebody added by hand lives only in Google: with none, there is none to change.
+    assert result.is_error and "no event abc" in data["error"]
 
 
 def test_a_plan_that_is_on_google_cannot_be_changed_while_google_is_not_connected(
@@ -81,8 +85,8 @@ def test_a_plan_that_is_on_google_cannot_be_changed_while_google_is_not_connecte
     _, data = _run(registry, "create_event", on_google, title="Dinner", start="2026-09-26T18:30")
     plan_id = data["plan"]["id"]
     assert plans.get(conn, plan_id).google_event_id
-    result, data = _run(registry, "delete_event", here, plan_id=plan_id)
-    assert result.is_error and "not connected" in data["error"]
+    _, data = _run(registry, "delete_event", here, plan_id=plan_id)
+    assert data["available"] is False and "Google calendar" in data["reason"]
     assert plans.get(conn, plan_id).status == "confirmed"
 
 

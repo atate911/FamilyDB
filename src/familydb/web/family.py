@@ -22,7 +22,7 @@ from flask import (
 )
 
 from familydb import family as rules
-from familydb import passwords, roles
+from familydb import passwords, personas, roles
 from familydb.agent import spending
 from familydb.app import App
 from familydb.dates import utc_iso
@@ -30,6 +30,7 @@ from familydb.store import calls
 from familydb.store import knocks as knock_store
 from familydb.store import logins as login_store
 from familydb.store import members as member_store
+from familydb.store import push as push_store
 from familydb.store.logins import Login
 from familydb.web import auth, views
 from familydb.web import status as status_page
@@ -313,22 +314,76 @@ def you() -> str | tuple[str, int]:
 
 
 def _you_page(*, error: str | None = None, status: int = 200) -> tuple[str, int]:
-    with closing(_app().connect()) as conn:
+    app = _app()
+    with closing(app.connect()) as conn:
         own = own_form(conn)
         parents = [
             person.display_name
             for person in member_store.list_all(conn)
             if person.active and roles.may(person.role, "decide")
         ]
+        notices = _notices(app, conn)
     return (
         render_template(
             "you.html",
             error=error,
             own=own,
             parents_text=views.names_text([{"name": name} for name in parents]),
+            notices=notices,
         ),
         status,
     )
+
+
+def _notices(app: App, conn: Any) -> dict[str, Any] | None:
+    """Notifications on this device, for somebody signed in as themselves while the family has
+    them on (push.py); None otherwise."""
+    member = auth.visitor().member
+    if member is None or not app.settings.web_push:
+        return None
+    name = personas.active(app.settings).name
+    return {
+        "key": push_store.public_key(conn) or "",
+        "devices": push_store.count_for(conn, member.id),
+        "words": {key: words.format(name=name) for key, words in views.PUSH_WORDS.items()},
+    }
+
+
+@bp.post("/you/push")
+def push_on() -> tuple[str, int]:
+    """This device, to be told when she writes (static/push.js posts it, with the CSRF token)."""
+    if (complaint := auth.refused()) is not None:
+        return complaint, 403
+    member = auth.visitor().member
+    if member is None:
+        return "Sign in as yourself to have notices.", 403
+    app = _app()
+    form = request.form
+    try:
+        with closing(app.connect()) as conn:
+            rules.subscribe_push(
+                conn,
+                member,
+                endpoint=form.get("endpoint", ""),
+                p256dh=form.get("p256dh", ""),
+                auth=form.get("auth", ""),
+                now=app.clock.now(),
+            )
+    except rules.PushRefused as refused:
+        return str(refused), 400
+    return "", 204
+
+
+@bp.post("/you/push/off")
+def push_off() -> tuple[str, int]:
+    if (complaint := auth.refused()) is not None:
+        return complaint, 403
+    member = auth.visitor().member
+    if member is None:
+        return "Sign in as yourself to have notices.", 403
+    with closing(_app().connect()) as conn:
+        rules.unsubscribe_push(conn, member, endpoint=request.form.get("endpoint", ""))
+    return "", 204
 
 
 def own_form(conn: Any) -> dict[str, Any]:

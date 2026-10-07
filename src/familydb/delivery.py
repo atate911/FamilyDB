@@ -152,6 +152,14 @@ def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
                 "UPDATE messages SET delivered_at = ? WHERE id = ?",
                 (utc_iso(app.clock.now()), message_id),
             )
+        # One she sent of her own accord: the channel may tell a device too (push.py). Whatever
+        # becomes of that, the message is delivered.
+        notify = app.notifiers.get(row.channel) if row.sent_as else None
+        if notify is not None:
+            try:
+                notify(conn, row)
+            except Exception:
+                log.exception("could not tell any device of message %s", message_id)
         return True
 
 

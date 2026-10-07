@@ -197,3 +197,67 @@ def test_worker_rejects_undeclared_mutation_and_wrong_idea(env):
         assert not turn.result.actions[0]["ok"]
         assert ideas.get(env.conn, data["id"]).status == "idea"
         assert ideas.get(env.conn, data["id"]).enrichment == "pending"
+
+
+def test_the_weekly_search_is_discovery_under_a_kind_of_its_own(
+    settings, clock, conn, registry
+) -> None:
+    finds = [
+        {
+            "title": "Lantern walk",
+            "url": "https://parks.example.org/lanterns",
+            "dates": "Fri 9 Oct, 7pm",
+            "starts_on": "2026-10-09",
+            "starts_time": "19:00",
+            "summary": "Bring a lantern.",
+        },
+        {
+            "title": "Pumpkin patch",
+            "url": "https://farm.example.org/pumpkins",
+            "dates": "October weekends",
+            "starts_on": "2026-10-03",
+            "summary": "U-pick.",
+        },
+        {
+            "title": "Guessed",
+            "url": "https://example.org/guess",
+            "starts_on": "next Saturday",
+            "summary": "No day code can read.",
+        },
+    ]
+    api = fakes.FakeMessagesAPI(*fakes.discover_script(finds))
+    turn = _run("scout", api, settings, clock, registry, conn)
+    request = api.requests[0]
+    assert [t["name"] for t in request["tools"]] == ["report_finds", "web_search", "web_fetch"]
+    assert request["system"][0]["text"] == load_prompt("discover")
+    assert turn.handed_back("report_finds")
+    starts = [find.get("starts") for find in turn.ctx.scratch["finds"]]
+    assert starts == ["2026-10-09T19:00", "2026-10-03"]  # the guess was refused
+    kinds = {row[0] for row in conn.execute("SELECT kind FROM llm_calls")}
+    assert kinds == {"scout"}
+
+
+def test_the_calendar_lookup_hands_back_addresses_only(settings, clock, conn, registry) -> None:
+    feeds = [
+        {
+            "title": "Library",
+            "url": "webcal://library.example.org/events.ics",
+            "why": "Story time.",
+        },
+        {"title": "Library again", "url": "https://LIBRARY.example.org/events.ics", "why": "Same."},
+        {"title": "Not a link", "url": "javascript:alert(1)", "why": "No."},
+    ]
+    api = fakes.FakeMessagesAPI(
+        fakes.message(
+            [fakes.tool_use("tu_feeds", "report_feeds", {"feeds": feeds})], stop_reason="tool_use"
+        )
+    )
+    turn = _run("find_feeds", api, settings, clock, registry, conn)
+    request = api.requests[0]
+    assert [t["name"] for t in request["tools"]] == ["report_feeds", "web_search", "web_fetch"]
+    assert request["tools"][1]["max_uses"] == 6
+    assert request["system"][0]["text"] == load_prompt("find_feeds")
+    assert turn.handed_back("report_feeds")
+    assert turn.ctx.scratch["feeds"] == [
+        {"title": "Library", "url": "https://library.example.org/events.ics", "why": "Story time."}
+    ]

@@ -7,11 +7,11 @@ from __future__ import annotations
 import re
 import sqlite3
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from familydb.store.db import utcnow_iso
+from familydb.store.db import from_json, to_json, utcnow_iso
 
 Category = Literal["food", "activities", "places", "health", "routine", "other"]
 Status = Literal["active", "replaced", "forgotten"]
@@ -49,10 +49,15 @@ class Memory(BaseModel):
     forgotten_at: str | None = None
     forgotten_by: int | None = None
     forgotten_by_name: str | None = None
+    # What code holds suggestions to, for a firm one (suggest/rules.py): max_travel_minutes,
+    # max_cost_level, setting, avoid.
+    rule: dict[str, Any] | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Memory:
-        return cls(**dict(row))
+        data = dict(row)
+        data["rule"] = from_json(data.get("rule")) or None
+        return cls(**data)
 
 
 def normalize(fact: str) -> str:
@@ -72,12 +77,13 @@ def insert(
     source_message_id: int | None,
     said_by: int | None,
     now: str | None = None,
+    rule: dict[str, Any] | None = None,
 ) -> Memory:
     stamp = now or utcnow_iso()
     cur = conn.execute(
         "INSERT INTO memories (member_id, category, fact, fact_norm, firm, inferred, until, "
-        "source_message_id, said_by, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "source_message_id, said_by, created_at, updated_at, rule) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             member_id,
             category,
@@ -90,6 +96,7 @@ def insert(
             said_by,
             stamp,
             stamp,
+            to_json(rule) if rule else None,
         ),
     )
     memory = get(conn, int(cur.lastrowid or 0))
@@ -122,6 +129,16 @@ def firm_up(conn: sqlite3.Connection, memory_id: int, *, firm: bool, now: str) -
     )
 
 
+def set_rule(
+    conn: sqlite3.Connection, memory_id: int, rule: dict[str, Any] | None, *, now: str
+) -> None:
+    """What code holds suggestions to, given (again) for a memory already kept."""
+    conn.execute(
+        "UPDATE memories SET rule = ?, updated_at = ? WHERE id = ?",
+        (to_json(rule) if rule else None, now, memory_id),
+    )
+
+
 def replace(conn: sqlite3.Connection, memory_id: int, *, by: int, now: str) -> None:
     conn.execute(
         "UPDATE memories SET status = 'replaced', replaced_by = ?, updated_at = ? WHERE id = ?",
@@ -141,6 +158,16 @@ def active(conn: sqlite3.Connection, *, today: date) -> list[Memory]:
     """Every memory in force today, oldest first."""
     rows = conn.execute(
         f"{_SELECT} WHERE r.status = 'active' AND (r.until IS NULL OR r.until >= ?) ORDER BY r.id",
+        (today.isoformat(),),
+    )
+    return [Memory.from_row(row) for row in rows]
+
+
+def held(conn: sqlite3.Connection, *, today: date) -> list[Memory]:
+    """The firm memories in force today with a rule code holds suggestions to, oldest first."""
+    rows = conn.execute(
+        f"{_SELECT} WHERE r.status = 'active' AND r.firm = 1 AND r.rule IS NOT NULL "
+        "AND (r.until IS NULL OR r.until >= ?) ORDER BY r.id",
         (today.isoformat(),),
     )
     return [Memory.from_row(row) for row in rows]

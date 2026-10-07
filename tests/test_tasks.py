@@ -36,9 +36,13 @@ def test_deadlines_and_flexible_windows_do_not_schedule_reminders(ctx):
     assert task["reminder"] is None
     assert task["owner"] == "Sam"
     # The tool result is the task's columns, less its idempotency key and who made it (that is for
-    # the page's "Set by", not for the model), plus owner and reminder.
+    # the page's "Set by", not for the model), and the ones kept for code while they are empty,
+    # plus owner and reminder.
+    from familydb.tools.tasks import UNSAID_WHEN_EMPTY
+
     columns = {row["name"] for row in ctx.conn.execute("PRAGMA table_info(tasks)")}
-    assert set(task) == columns - {"operation_key", "created_by_member_id"} | {"owner", "reminder"}
+    unsaid = {"operation_key", "created_by_member_id", *UNSAID_WHEN_EMPTY}
+    assert set(task) == columns - unsaid | {"owner", "reminder"}
     assert not ctx.conn.execute("SELECT * FROM plans").fetchall()
 
 
@@ -213,6 +217,50 @@ def test_an_open_task_ticks_off_where_it_is_listed(settings, clock, conn, family
     assert f"/task/{task.id}/done" not in client.get("/tasks?status=done").text  # no tick left
 
 
+def test_a_reminder_in_the_page_chat_is_ticked_or_snoozed_there(settings, clock, conn, family):
+    """On Telegram a reminder carries Done, In an hour and Tomorrow; on the page it carried none,
+    so somebody who only uses the page could not act on it where it arrived. The chat draws them
+    as forms, through the same update_task, under the newest reminder of each open task."""
+    from familydb import buttons
+
+    client = _client(settings, clock)
+    form = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', client.get("/tasks").text))
+    client.post("/tasks/new", data={**form, "title": "Call the plumber"})
+    task = tasks.list_all(conn)[0]
+    with db.transaction(conn):
+        for _ in range(2):  # reminded twice: the buttons go under the second only
+            messages.insert_out(
+                conn,
+                channel="web",
+                chat_id="web",
+                text="Reminder: Call the plumber.",
+                now="2026-09-20T21:00:00Z",
+                buttons=buttons.for_reminder(task.id),
+            )
+    chat = client.get("/chat").text
+    assert chat.count(f'action="/task/{task.id}/done"') == 1
+    snooze = re.search(
+        rf'action="/task/{task.id}/snooze">((?:(?!</form>).)*?value="tomorrow".*?)</form>',
+        chat,
+        re.S,
+    )
+    assert snooze is not None and "Tomorrow" in snooze.group(1)
+    fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', snooze.group(1)))
+    assert fields["back"] == "chat" and fields["when"] == "tomorrow"
+    snoozed = client.post(f"/task/{task.id}/snooze", data=fields, follow_redirects=True)
+    assert "#1 Call the plumber comes back at 2:03\u00a0pm tomorrow." in snoozed.text
+    assert tasks.get(conn, task.id).reminder.remind_at == "2026-09-21T21:03:00Z"
+    chat = client.get("/chat").text
+    done = re.search(rf'action="/task/{task.id}/done">(.*?)</form>', chat, re.S)
+    fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', done.group(1)))
+    assert client.post(f"/task/{task.id}/done", data=fields).headers["Location"] == "/chat"
+    assert tasks.get(conn, task.id).status == "done"
+    assert f"/task/{task.id}/" not in client.get("/chat").text  # nothing left to press
+    wrong = {**fields, "once": "again", "when": "next year"}
+    client.post(f"/task/{task.id}/snooze", data=wrong)
+    assert tasks.get(conn, task.id).status == "done"
+
+
 def test_topic_selection_is_applied_before_shortlist_limit(ctx):
     with db.transaction(ctx.conn):
         for n in range(12):
@@ -250,9 +298,9 @@ def test_free_form_capture_hands_the_words_to_chat(settings, clock, conn, family
     form.update(text=raw, who="Sam", intent="save_idea")
     received = []
     chat = client.application.config["FAMILYDB_CHAT"]
-    monkeypatch.setattr(chat, "ask", lambda *args: received.append(args))
+    monkeypatch.setattr(chat, "ask", lambda *args, **more: received.append((*args, more)))
     assert client.post("/chat", data=form).status_code == 302
-    assert received == [("Save this idea for later:\n" + raw, "Sam", "web", None)]
+    assert received == [("Save this idea for later:\n" + raw, "Sam", "web", None, {"photo": None})]
 
 
 def test_an_idea_number_not_on_the_list_is_reported_not_silently_empty(ctx):
@@ -272,3 +320,52 @@ def test_an_idea_number_not_on_the_list_is_reported_not_silently_empty(ctx):
     )
     assert [c.idea_id for c in mixed.candidates] == [sushi.id]
     assert any("#9999" in note for note in mixed.skipped_checks)
+
+
+def test_a_task_for_everyone_is_nobodys_and_says_where_it_will_go(ctx):
+    """ "Remind us all" is a task with no owner, whose reminder goes to the family's chat; one for
+    somebody else says so too. The model is told where in words it can say back."""
+    for_all = add_task(ctx, AddTaskInput(title="Swim bags", owner="everyone"))
+    assert for_all["task"]["owner_id"] is None
+    assert for_all["reminder_destination"] == "the chat on the page"
+    family_chat = ctx.settings.model_copy(update={"family_chat_id": "-100"})
+    ctx.settings = family_chat
+    assert add_task(ctx, AddTaskInput(title="Bins", owner="all of us"))["reminder_destination"] == (
+        "the Telegram group"
+    )
+    mine = add_task(ctx, AddTaskInput(title="Call the plumber"))
+    assert mine["reminder_destination"] == (
+        "the chat on the page (on Telegram once you open your chat with Vera)"
+    )
+    alex = add_task(ctx, AddTaskInput(title="Pick up the cake", owner="Alex"))
+    assert alex["reminder_destination"] == (
+        "the chat on the page (on Telegram once Alex opens a chat with Vera)"
+    )
+    with db.transaction(ctx.conn):
+        messages.insert_in(
+            ctx.conn,
+            channel="telegram",
+            channel_update_id="hello",
+            chat_id="1002",
+            member_id=alex["task"]["owner_id"],
+            text="/start",
+            now="2026-09-01T00:00:00Z",
+        )
+    again = add_task(ctx, AddTaskInput(title="Pick up the candles", owner="Alex"))
+    assert again["reminder_destination"] == "Alex's own chat on Telegram"
+    moved = update_task(ctx, UpdateTaskInput(task_id=again["task"]["id"], owner="everyone"))
+    assert moved["task"]["owner_id"] is None
+
+
+def test_the_page_says_where_a_reminder_will_go(settings, clock, conn, family):
+    from familydb.web import views
+
+    saved = {
+        "task": {"id": 7, "title": "Call the plumber", "reminder": None},
+        "reminder_destination": "the chat on the page",
+    }
+    assert views.task_saved(saved) == "Added to your to-dos: Call the plumber."
+    saved["task"]["reminder"] = {"remind_at": "2026-09-22T16:00:00Z"}
+    assert views.task_saved(saved) == (
+        "Added to your to-dos: Call the plumber. Its reminder goes to the chat on the page."
+    )

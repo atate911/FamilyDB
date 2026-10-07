@@ -83,4 +83,5 @@
     {% endif %}
     <p class="privacy page-foot mt-6">{{ icon('chat', size='sm') }}<span>You can also tell {{ assistant }}: “remind Alex to call the dentist on Tuesday at 9”. She’ll send it once Telegram is connected.</span></p>
   {% endif %}
+  {% if grownup %}<p class="page-foot mt-6"><a href="{{ url_for('web.export_tasks') }}">{{ icon('arrowdown', size='sm') }}Download the to-dos as a spreadsheet</a></p>{% endif %}
 {% endblock %}

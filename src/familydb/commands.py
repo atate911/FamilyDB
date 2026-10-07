@@ -26,13 +26,14 @@ import sqlite3
 from collections.abc import Callable
 from contextlib import closing
 from datetime import date, datetime, timedelta
+from typing import Any
 
-from familydb import agenda, family, presents, task_service, voice
-from familydb.agenda import Agenda, Entry
+from familydb import agenda, buttons, family, presents, roles, task_service, voice
+from familydb.agenda import Agenda
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.dates import clock_time, spoken_times, utc_iso
-from familydb.store import knocks, members, messages, tasks
+from familydb.store import knocks, lists, members, messages, tasks
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.store.tasks import Task
@@ -45,9 +46,11 @@ log = logging.getLogger(__name__)
 MENU = (
     ("today", "What's on today"),
     ("week", "The next seven days"),
-    ("tasks", "Open tasks in this chat"),
+    ("tasks", "Open tasks: this chat's and yours"),
     ("now", "What could start right now"),
     ("lookup", "Look up the ideas waiting, now"),
+    ("undo", "Undo your last change here"),
+    ("list", "The shopping list"),
 )
 NAMES = frozenset(name for name, _ in MENU)
 MAX_TASKS = 12
@@ -200,12 +203,22 @@ def _answer(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> Outgoin
     except sqlite3.IntegrityError:
         log.info("command %s/%s arrived twice at once", msg.channel, msg.channel_update_id)
         return None
-    text = ANSWERS[name](app, conn, msg, member, asked.id)
+    said = ANSWERS[name](app, conn, msg, member, asked.id)
+    # An answer may come with buttons (/list's ticks), kept with it like a reminder's.
+    text, row = said if isinstance(said, tuple) else (said, [])
     with transaction(conn):
         out = messages.insert_out(
-            conn, channel=msg.channel, chat_id=msg.chat_id, text=text, reply_to=asked.id, now=now
+            conn,
+            channel=msg.channel,
+            chat_id=msg.chat_id,
+            text=text,
+            reply_to=asked.id,
+            now=now,
+            buttons=row or None,
         )
-    return OutgoingMessage(msg.chat_id, text, "ok", in_message_id=asked.id, out_message_id=out.id)
+    return OutgoingMessage(
+        msg.chat_id, text, "ok", in_message_id=asked.id, out_message_id=out.id, buttons=row
+    )
 
 
 def _today(
@@ -213,8 +226,11 @@ def _today(
 ) -> str:
     today = app.clock.today()
     seen = agenda.read(app, conn, today, today)
-    timed = [(_entry_key(entry, today), _entry_text(entry, today)) for entry in _on(seen, today)]
-    timed += _tasks_today(conn, msg, today, app, member)
+    timed = [
+        (agenda.entry_key(entry, today), agenda.entry_text(entry, today))
+        for entry in agenda.on(seen, today)
+    ]
+    timed += _tasks_today(conn, msg, member, today, app)
     lines = [text for _, text in sorted(timed)] or ["Nothing on."]
     said = voice.say(app.settings, "cmd_today", seed=seed, day=f"{today:%a %d %b}")
     return _with_source(_under(said, lines), seen)
@@ -227,46 +243,21 @@ def _week(app: App, conn: sqlite3.Connection, _msg: IncomingMessage, _: Member, 
     lines = []
     for offset in range(7):
         day = today + timedelta(days=offset)
-        on = sorted(_on(seen, day), key=lambda entry: _entry_key(entry, day))
-        things = "; ".join(_entry_text(entry, day) for entry in on) or "nothing on"
+        on = sorted(agenda.on(seen, day), key=lambda entry: agenda.entry_key(entry, day))
+        things = "; ".join(agenda.entry_text(entry, day) for entry in on) or "nothing on"
         month = f" {day:%b}" if offset == 0 or day.day == 1 else ""
         lines.append(f"{day:%a} {day.day}{month}: {things}")
     said = voice.say(app.settings, "cmd_week", seed=seed)
     return _with_source(_under(said, lines), seen)
 
 
-def _on(seen: Agenda, day: date) -> list[Entry]:
-    return [entry for entry in seen.entries if day in entry.days()]
-
-
-def _entry_key(entry: Entry, day: date) -> str:
-    return "" if entry.all_day or entry.start[:10] < day.isoformat() else entry.start[11:16]
-
-
-def _entry_text(entry: Entry, day: date) -> str:
-    title = entry.title + (f" (#{entry.idea_id})" if entry.idea_id else "")
-    if entry.status == "tentative":
-        title += ", tentative"
-    if entry.all_day:
-        return f"All day: {title}"
-    started_before = entry.start[:10] < day.isoformat()
-    ends_today = entry.end is not None and entry.end[:10] == day.isoformat()
-    if started_before:
-        return (
-            f"until {clock_time(entry.end)} {title}"
-            if ends_today and entry.end
-            else f"All day: {title}"
-        )
-    if ends_today and entry.end:
-        return f"{clock_time(entry.start)} to {clock_time(entry.end)} {title}"
-    return f"{clock_time(entry.start)} {title}"
-
-
 def _tasks_today(
-    conn: sqlite3.Connection, msg: IncomingMessage, today: date, app: App, member: Member
+    conn: sqlite3.Connection, msg: IncomingMessage, member: Member, today: date, app: App
 ) -> list[tuple[str, str]]:
     found = []
-    for task in presents.visible_tasks(conn, tasks.in_chat(conn, msg.channel, msg.chat_id), member):
+    for task in presents.visible_tasks(
+        conn, tasks.open_for(conn, msg.channel, msg.chat_id, member.id), member
+    ):
         if task.reminder is not None:
             at = _local(task.reminder.remind_at, app)
             if at.date() == today:
@@ -290,7 +281,11 @@ def _with_source(said: str, seen: Agenda) -> str:
 def _tasks(
     app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
 ) -> str:
-    kept = presents.visible_tasks(conn, tasks.in_chat(conn, msg.channel, msg.chat_id), member)
+    # This chat's, and the asker's own wherever they were set: a task Sam set for Alex is Alex's;
+    # none about a present kept from the asker.
+    kept = presents.visible_tasks(
+        conn, tasks.open_for(conn, msg.channel, msg.chat_id, member.id), member
+    )
     lines = [_task_text(task, app) for task in kept[:MAX_TASKS]]
     if len(kept) > MAX_TASKS:
         lines.append(f"…and {len(kept) - MAX_TASKS} more on the web page's Tasks.")
@@ -299,8 +294,11 @@ def _tasks(
 
 def _task_text(task: Task, app: App) -> str:
     facts = []
-    if task.reminder is not None and task.reminder.delivered_at is None:
-        facts.append(f"reminder {_local_when(task.reminder.remind_at, app)}")
+    if task.reminder is not None:
+        when = _local_when(task.reminder.remind_at, app)
+        # Sent and still open: say so, so a reminder nobody acted on is not taken for none.
+        sent = task.reminder.delivered_at is not None
+        facts.append(f"reminded {when}" if sent else f"reminder {when}")
     if task.due_at:
         facts.append(f"due {_local_when(task.due_at, app)}")
     facts.append(task_service.repeat_words(task) or "")
@@ -378,6 +376,7 @@ def _lookup(
         clock=app.clock,
         member=member,
         message_id=seed,
+        source="command",
     )
     result = app.registry.dispatch("look_up_now", {}, ctx)
     answered = json.loads(result.content)
@@ -390,10 +389,56 @@ def _lookup(
     return voice.say(app.settings, "lookups_asked", seed=seed, count=count)
 
 
-ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, int], str]] = {
+def _undo(
+    app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
+) -> str:
+    """/undo: the undo tool, as the member asking, in this chat (familydb/undo.py)."""
+    ctx = ToolContext(
+        conn=conn,
+        settings=app.settings,
+        clock=app.clock,
+        member=member,
+        message_id=seed,
+        calendar=app.calendar,
+        source="command",
+    )
+    result = app.registry.dispatch("undo", {}, ctx)
+    answered = json.loads(result.content)
+    if result.is_error:
+        return voice.say(app.settings, "undo_not", seed=seed, why=answered.get("error", ""))
+    return voice.say(app.settings, "undo_done", seed=seed, what=answered["undone"])
+
+
+# At most this many ticks under /list; the rest are on the page.
+MAX_LIST_BUTTONS = 12
+
+
+def _list(
+    app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
+) -> tuple[str, list[buttons.Button]]:
+    """/list: what is still to get on the shopping list, with a tick for each for whoever may
+    change things (a tap takes off its own row)."""
+    list_ref = lists.find(conn, "shopping")
+    held = (
+        [item for item in lists.items(conn, list_ref) if item.ticked_at is None] if list_ref else []
+    )
+    if not held:
+        return voice.say(app.settings, "cmd_list_empty", seed=seed), []
+    row: list[buttons.Button] = []
+    if roles.may(member.role, "change"):
+        for item in held[:MAX_LIST_BUTTONS]:
+            tick = [{"label": f"✓ {item.text[:28]}", "data": f"tick:{item.id}"}]
+            row += buttons.in_row(tick, str(item.id))
+    said = voice.say(app.settings, "cmd_list", seed=seed)
+    return _under(said, [item.text for item in held]), row
+
+
+ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, int], Any]] = {
     "today": _today,
     "week": _week,
     "tasks": _tasks,
     "now": _now,
     "lookup": _lookup,
+    "undo": _undo,
+    "list": _list,
 }

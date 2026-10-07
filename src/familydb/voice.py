@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from familydb import personas
+from familydb import happening, personas
 from familydb.dates import utc_iso
 from familydb.store import messages
 
@@ -59,6 +59,18 @@ EVENTS: dict[str, Event] = {
         ("title", "who", "task", "due"),
         {"title": "bins out", "who": " (Sam)", "task": 12, "due": "Tue 22 Sep at 7:30 am"},
     ),
+    "reminder_from": Event(
+        "Under a reminder somebody asked for on another's behalf",
+        "{asker} asked me to remind you.",
+        ("asker",),
+        {"asker": "Sam"},
+    ),
+    "reminder_plan": Event(
+        "Under a reminder set before a plan: when the plan is",
+        "It's {when}.",
+        ("when",),
+        {"when": "on Wed 19 Nov at 19:30"},
+    ),
     "gift_ideas": Event(
         "Gift ideas under a birthday's reminder",
         "Gift ideas saved for {who}: {ideas}.",
@@ -90,9 +102,45 @@ EVENTS: dict[str, Event] = {
     ),
     "cmd_today": Event("Answering /today", "Today, {day}:", ("day",), {"day": "Sat 26 Sep"}),
     "cmd_week": Event("Answering /week", "The next seven days:", ()),
-    "cmd_tasks": Event("Answering /tasks", "Open tasks in this chat:", ()),
+    "cmd_tasks": Event("Answering /tasks", "Open tasks, this chat's and yours:", ()),
     "cmd_now": Event(
         "Answering /now", "From the list, {window}:", ("window",), {"window": "now until 7:30 pm"}
+    ),
+    "push_note": Event(
+        "The notice on a phone or tablet when she writes on the page (never the words)",
+        "{name} has a message",
+        (),
+        {},
+    ),
+    "morning": Event(
+        "The morning message: its first line",
+        "Good morning. Here's {day}:",
+        ("day",),
+        {"day": "Tue 6 Oct"},
+    ),
+    "morning_ending": Event(
+        "The morning message: a dated idea that ends this week, with a free day for it",
+        "{idea} ends {last}; {free} looks free for it.",
+        ("idea", "last", "free"),
+        {"idea": "The lantern festival", "last": "Sunday", "free": "Saturday"},
+    ),
+    "morning_chase": Event(
+        "The morning message: reminders from yesterday nobody acted on",
+        "Still open from yesterday:",
+        (),
+        {},
+    ),
+    "morning_deadlines": Event(
+        "The morning message: what is due tomorrow",
+        "Due tomorrow:",
+        (),
+        {},
+    ),
+    "morning_roundup": Event(
+        "The morning message, once a week: to-dos that have waited",
+        "Waiting a week or more, with nothing to bring them up (tell me if any can go):",
+        (),
+        {},
     ),
     "plan_rain": Event(
         "The evening before an outdoor plan, when rain is likely",
@@ -135,6 +183,18 @@ EVENTS: dict[str, Event] = {
         ("who", "when"),
         {"who": "Sam", "when": "7 pm on Sun 4 Oct"},
     ),
+    "tap_ticked": Event(
+        "A thing on the list ticked with its button",
+        "Got it ✓ {item} ({who}).",
+        ("item", "who"),
+        {"item": "milk", "who": "Sam"},
+    ),
+    "tap_undone": Event(
+        "Undo tapped under a reply",
+        "Undone ({who}): {what}.",
+        ("who", "what"),
+        {"who": "Sam", "what": "added task #12 Call the plumber"},
+    ),
     "tap_snoozed": Event(
         "A reminder snoozed with its button",
         "Snoozed until {when} ({who}).",
@@ -142,8 +202,14 @@ EVENTS: dict[str, Event] = {
         {"who": "Sam", "when": "9:30 am tomorrow"},
     ),
     "tap_again": Event(
-        "A plan worth doing again, tapped",
-        "Noted: worth doing again ({who}).",
+        "A plan loved, tapped",
+        "Noted: loved it, and worth doing again ({who}).",
+        ("who",),
+        {"who": "Sam"},
+    ),
+    "tap_ok": Event(
+        "A plan that was OK, tapped",
+        "Noted: it was OK ({who}).",
         ("who",),
         {"who": "Sam"},
     ),
@@ -212,6 +278,22 @@ EVENTS: dict[str, Event] = {
             "found": "• #31 Hopscotch: Indoor play · hours saved for sat, sun\n"
             "• #32 Ramen Ryoma: Noodle bar · closed mon",
         },
+    ),
+    "cmd_list": Event("Heading /list", "On the shopping list:", (), {}),
+    "cmd_list_empty": Event(
+        "Answering /list when it is empty", "Nothing on the shopping list.", (), {}
+    ),
+    "undo_done": Event(
+        "Answering /undo",
+        "Undone: {what}.",
+        ("what",),
+        {"what": "added task #12 Call the plumber"},
+    ),
+    "undo_not": Event(
+        "Answering /undo when nothing was undone",
+        "Nothing undone: {why}.",
+        ("why",),
+        {"why": "nothing of yours to undo here from the last day"},
     ),
     "lookups_asked": Event(
         "Answering /lookup",
@@ -355,6 +437,46 @@ EVENTS: dict[str, Event] = {
         "The status page has it; another model, or a newer FamilyDB, may be needed.",
         ("company", "detail"),
         {"company": "OpenAI", "detail": "API error 400: Unsupported parameter"},
+    ),
+    "alert_happening": Event(
+        "Telling an admin: a place I read for what is on could not be read",
+        "I couldn't read one of the places I check for what's on near home: {detail}. It's in "
+        "the settings, on the {page} page.",
+        ("detail", "page"),
+        {
+            "detail": "library.example.org could not be read for 3 days running (HTTP 404)",
+            "page": happening.NAME,
+        },
+    ),
+    "alert_calendars": Event(
+        "Telling an admin: event calendars found near home",
+        "I found {detail} near home. Tick the ones to read in the settings, on the {page} page.",
+        ("detail", "page"),
+        {
+            "detail": "2 new event calendars: Fort Vancouver Regional Library and Vancouver "
+            "Parks and Recreation",
+            "page": happening.NAME,
+        },
+    ),
+    "alert_backup": Event(
+        "Telling an admin: the backups stopped working",
+        "The backups need a look: {detail}. Until one works, what the family has told me is on "
+        "this server alone. RUNBOOK section 7 has the backup line to check.",
+        ("detail",),
+        {"detail": "the last good backup was made 2026-10-01 10:15 UTC"},
+    ),
+    "alert_disk": Event(
+        "Telling an admin: the server's disk is nearly full",
+        "The server's disk is nearly full ({detail}). When it fills, I can't keep anything, "
+        "messages included: old backups and logs are the usual things to clear.",
+        ("detail",),
+        {"detail": "312 MB free"},
+    ),
+    "alert_telegram": Event(
+        "On the status page: Telegram refused the bot's token",
+        "Telegram refused my token, so I can't hear or answer anyone there. A new one from "
+        "@BotFather can be pasted on the settings page, under Connections.",
+        (),
     ),
     "alert_advice": Event(
         "Telling an admin: what a judgment on the models said",

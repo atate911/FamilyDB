@@ -718,6 +718,8 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
         "member_store",
         "memories",
         "memory_store",
+        "finds",
+        "find_store",
     }
     writes = {
         "insert",
@@ -826,6 +828,8 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         # A kid's wish lists and a parent's answers (docs/WISHES.md).
         "add_wish",
         "update_wish",
+        "undo",  # the Undo beside a form's notice and under her reply (familydb/undo.py)
+        "shopping_list",  # the Lists page (tools/lists.py)
     }
     # And it runs them the one way: through the registry, which validates and owns the transaction.
     assert (
@@ -857,8 +861,10 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     reading = {"revision", "age_on"}
     # Taking somebody off the list for good (the family asked for it; DESIGN.md section 16).
     removing = {"remove"}
-    assert ruled <= {"add", "change"} | reading | signing_in | linking | removing, ruled
-    assert {"add", "change"} | signing_in | linking | removing <= ruled
+    # Notices on one's own devices, turned on and off on Your password (familydb/push.py).
+    pushing = {"subscribe_push", "unsubscribe_push"}
+    assert ruled <= {"add", "change"} | reading | signing_in | linking | removing | pushing, ruled
+    assert {"add", "change"} | signing_in | linking | removing | pushing <= ruled
 
     # The doors are shut to everything else, but not whole packages: `views.py` reads opening hours
     # from `tools.places` and tidies links with `tools.urls`, which write nothing.
@@ -1004,15 +1010,27 @@ def test_a_form_token_outside_ascii_is_refused_and_not_a_crash(settings, clock, 
 
 
 def test_the_server_refuses_a_body_before_reading_it(settings, clock) -> None:
-    from familydb.web import MAX_BODY_BYTES
+    """The server reads no more than a photo in the chat's box; every other form is held to a few
+    kilobytes by Flask, and the chat's own only after sign-in (chat._roomy)."""
+    from familydb.web import MAX_BODY_BYTES, MAX_UPLOAD_BYTES
     from familydb.web.server import create_server
 
     app = App(settings.model_copy(update={"web_port": _free_port()}), clock)
     server = create_server(app)
     try:
-        assert server.adj.max_request_body_size == MAX_BODY_BYTES
+        assert server.adj.max_request_body_size == MAX_UPLOAD_BYTES
     finally:
         server.close()
+    client = create_app(
+        App(settings.model_copy(update={"web_password": "open sesame please"}), clock)
+    ).test_client()
+    big = {"password": "x" * (MAX_BODY_BYTES + 1)}
+    assert client.post("/login", data=big).status_code == 413
+    assert client.post("/chat", data={"text": "x" * (MAX_BODY_BYTES + 1)}).status_code in (
+        302,
+        401,
+        403,
+    )
 
 
 def test_a_public_page_needs_a_password_worth_having(settings, clock) -> None:

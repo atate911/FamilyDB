@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from contextlib import closing
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any
 
 from flask import (
@@ -19,12 +21,14 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, personas, presents, roles
+from familydb import agenda, export, happening, health, personas, presents, roles
 from familydb.app import App
-from familydb.availability import calendar_available, enrichment_available
+from familydb.availability import calendar_available, enrichment_available, happening_available
 from familydb.dates import next_birthday, utc_iso
 from familydb.store import calls
+from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store
+from familydb.store import lists as list_store
 from familydb.store import members as member_store
 from familydb.store import memories as memory_store
 from familydb.store import messages as message_store
@@ -38,6 +42,7 @@ from familydb.web import auth, chat, shell, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
+log = logging.getLogger(__name__)
 bp = Blueprint("web", __name__)
 
 LIST_LIMIT = 200
@@ -57,6 +62,8 @@ HOME_PLANS = 4
 HOME_IDEAS = 4
 HOME_TASKS = 4
 PLANS_AHEAD_DAYS = 90
+# The most things near home one page lists: four weeks of a busy city's calendars.
+HAPPENING_MOST = 300
 PLANS_BEHIND_DAYS = 30
 # The home-screen icon's ground (static/brand/icon-512.png), which the manifest's colours match so
 # opening the app is one colour from the icon to the splash.
@@ -84,8 +91,20 @@ def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
 
 @bp.get("/healthz")
 def healthz() -> Response:
-    """A liveness check for a monitor or proxy, open before sign-in."""
-    return Response("ok\n", mimetype="text/plain")
+    """For a monitor or proxy, open before sign-in: "ok", or 503 and what is wrong (the database
+    does not answer, or the scheduled jobs went quiet; familydb/health.py)."""
+    ok, words = health.check(_app())
+    return Response(f"{words}\n", status=200 if ok else 503, mimetype="text/plain")
+
+
+@bp.get("/sw.js")
+def service_worker() -> Response:
+    """The service worker that shows "she has a message" (push.py), served from the top so it
+    may show for every page. Open before sign-in, like the manifest: it holds nothing but code."""
+    folder = Path(current_app.static_folder or "")
+    response = Response((folder / "sw.js").read_text("utf-8"), mimetype="text/javascript")
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @bp.get("/manifest.webmanifest")
@@ -109,6 +128,13 @@ def manifest() -> Response:
         "background_color": ICON_GROUND,
         "theme_color": ICON_GROUND,
         "icons": [{**icon, "type": "image/png"} for icon in icons],
+        # Share a link or some words to it from another app (Android): they wait in the chat's
+        # box until Send, so nothing is sent by sharing.
+        "share_target": {
+            "action": "/chat",
+            "method": "GET",
+            "params": {"title": "title", "text": "text", "url": "url"},
+        },
     }
     return Response(json.dumps(body, sort_keys=True), mimetype="application/manifest+json")
 
@@ -428,6 +454,7 @@ def idea(idea_id: int) -> str:
         plans = plan_store.for_idea(conn, idea_id)
         asking = _who(conn)
         looked_up = calls.last_lookup_turn(conn, idea_id) if visitor.may("manage") else None
+        changed = calls.last_change(conn, idea_id=idea_id) if visitor.may("browse") else None
         family = member_store.list_all(conn)
         slots = views.slot_map(family)
         kept = presents.of_presents(conn, [record], family).get(idea_id)
@@ -440,7 +467,6 @@ def idea(idea_id: int) -> str:
         original_by=views.original_by(original, family, settings.tzinfo) if original else None,
         today=today.isoformat(),
         ratings=RATINGS,
-        can_schedule=True,  # FamilyDB keeps its own plans, and copies them to Google when it can
         on_google=calendar_available(settings),
         can_look_up=enrichment_available(settings) and record.status != "dropped",
         looked_up=looked_up,
@@ -452,6 +478,9 @@ def idea(idea_id: int) -> str:
         place=views.place_panel(place, now, settings.place_stale_days, today),
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
         plans=[views.plan_row(p, today) for p in reversed(plans)],
+        changed=views.changed_line(
+            changed, settings.tzinfo, assistant=personas.active(settings).name
+        ),
     )
 
 
@@ -509,6 +538,60 @@ def edit_idea(idea_id: int) -> str:
     if record is None:
         abort(404)
     return _idea_form(record)
+
+
+@bp.get("/lists")
+def lists_page() -> str:
+    """The family's lists: what is still to get, a box to add to each, a tick for each thing
+    (forms through shopping_list, edits.change_list). The shopping list is always there."""
+    with closing(_app().connect()) as conn:
+        names = list_store.names(conn)
+        shown = []
+        for name in ["shopping", *(other for other in names if other != "shopping")]:
+            ref = list_store.find(conn, name)
+            held = list_store.items(conn, ref) if ref is not None else []
+            shown.append(
+                {
+                    "name": name,
+                    "title": views.list_title(name),
+                    "to_get": [item.text for item in held if item.ticked_at is None],
+                    "ticked": [item.text for item in held if item.ticked_at is not None],
+                }
+            )
+    return render_template("lists.html", lists=shown)
+
+
+def _download(text: str, name: str, mimetype: str) -> Response:
+    log.info("%s was downloaded by %s", name, auth.client_address())
+    response = Response(text, mimetype=mimetype)
+    response.headers["Content-Disposition"] = f'attachment; filename="{name}"'
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@bp.get("/export/plans.ics")
+def export_plans() -> Response:
+    """The plans as a calendar file any calendar can open (export.py), for a grown-up."""
+    app = _app()
+    with closing(app.connect()) as conn:
+        text = export.plans_ics(conn, app.settings, app.clock.now())
+    return _download(text, "familydb-plans.ics", "text/calendar")
+
+
+@bp.get("/export/ideas.csv")
+def export_ideas() -> Response:
+    """The ideas as a spreadsheet, without a present kept from whoever asks (presents.py)."""
+    with closing(_app().connect()) as conn:
+        text = export.ideas_csv(conn, presents.kept_ids(conn, auth.visitor().member))
+    return _download(text, "familydb-ideas.csv", "text/csv")
+
+
+@bp.get("/export/tasks.csv")
+def export_tasks() -> Response:
+    """The things to do as a spreadsheet, for a grown-up, who sees everybody's."""
+    with closing(_app().connect()) as conn:
+        text = export.tasks_csv(conn)
+    return _download(text, "familydb-to-dos.csv", "text/csv")
 
 
 @bp.get("/memory")
@@ -611,9 +694,31 @@ def plans() -> str:
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
         today=today.isoformat(),
-        can_schedule=True,
         on_google=calendar_available(app.settings),
         **asking,
+    )
+
+
+@bp.get("/happening")
+def happening_page() -> str:
+    """What is on near home in the weeks ahead, as the family's sources list it, by day."""
+    app = _app()
+    today = app.clock.today()
+    with closing(app.connect()) as conn:
+        found = find_store.upcoming(
+            conn,
+            start=today,
+            end=today + timedelta(days=happening.HORIZON_DAYS),
+            limit=HAPPENING_MOST,
+        )
+        troubled = [one for one in find_store.sources(conn) if not one.ok]
+    return render_template(
+        "happening.html",
+        name=happening.NAME,
+        days=views.happening_days(found, today),
+        ahead=happening.HORIZON_DAYS,
+        reading=happening_available(app.settings),
+        trouble=[views.find_source_row(one, app.settings.tzinfo) for one in troubled],
     )
 
 
@@ -776,9 +881,11 @@ def edit_task(task_id: int) -> str:
             abort(404)
         people = member_store.list_all(conn)
         made_by = task_store.creators(conn, [task.id]).get(task.id)
+        changed = calls.last_change(conn, task_id=task.id)
     tz = app.settings.tzinfo
     slots = views.slot_map(people)
-    row = views.task_row(task, tz, nudging=app.settings.task_nudges)
+    row = views.task_row(task, tz, app.clock.today(), nudging=app.settings.task_nudges)
+    row["changed"] = views.changed_line(changed, tz, assistant=personas.active(app.settings).name)
     return render_template(
         "task_form.html",
         task=task,

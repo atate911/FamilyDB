@@ -17,6 +17,9 @@ CAPTURE_PREFIX = "Save this idea for later:\n"
 # A voice note keeps its heard words after VOICE_PREFIX (UNHEARD, with its length, until then).
 VOICE_PREFIX = "(voice note) "
 UNHEARD = "(voice note, {length}, not heard)"
+# What a message past the family's keeping says instead of its words (jobs/tidy.py): it keeps its
+# place in the conversation and what points at it, not what was said.
+WORDS_GONE = "(not kept)"
 # A tapped button is kept as a message from whoever tapped it (familydb/buttons.py).
 TAP_PREFIX = "(tapped) "
 # Words that came with something nobody could look at (a video, a file).
@@ -367,6 +370,26 @@ def last_for_chat(
     return [Message.from_row(row) for row in reversed(rows)]
 
 
+def newest_from_her(conn: sqlite3.Connection, chat_id: str) -> int:
+    """The id of the newest message she sent to a page conversation (0 for none)."""
+    row = conn.execute(
+        "SELECT max(id) FROM messages WHERE channel = 'web' AND chat_id = ? "
+        "AND direction = 'out' AND cancelled_at IS NULL",
+        (chat_id,),
+    ).fetchone()
+    return int(row[0] or 0)
+
+
+def unread(conn: sqlite3.Connection, chat_id: str, *, after: int) -> int:
+    """How many messages she sent to a page conversation after message `after`."""
+    row = conn.execute(
+        "SELECT count(*) FROM messages WHERE channel = 'web' AND chat_id = ? "
+        "AND direction = 'out' AND cancelled_at IS NULL AND id > ?",
+        (chat_id, after),
+    ).fetchone()
+    return int(row[0])
+
+
 def has_before(conn: sqlite3.Connection, chat_id: str, message_id: int) -> bool:
     """Whether a chat holds anything older than this message."""
     return (
@@ -439,3 +462,19 @@ def said_by_since(conn: sqlite3.Connection, member_id: int, since: str) -> list[
         (member_id, since),
     )
     return [row[0] for row in rows]
+
+
+def forget_words(conn: sqlite3.Connection, before: str) -> int:
+    """Empty the words of every message received or sent before `before` (UTC), keeping the row:
+    replies, reminders, memories, wishes and calls point at it. Never one still to be sent or
+    answered, nor a reminder whose task is still open. Returns how many."""
+    cur = conn.execute(
+        "UPDATE messages SET text = ?, buttons = NULL "
+        "WHERE received_at < ? AND text != ? "
+        "AND NOT (direction = 'out' AND delivered_at IS NULL AND cancelled_at IS NULL) "
+        "AND NOT (direction = 'in' AND status = 'received') "
+        "AND id NOT IN (SELECT r.message_id FROM reminders r JOIN tasks t ON t.id = r.task_id "
+        "WHERE r.message_id IS NOT NULL AND r.cancelled_at IS NULL AND t.status = 'open')",
+        (WORDS_GONE, before, WORDS_GONE),
+    )
+    return cur.rowcount

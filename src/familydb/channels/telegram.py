@@ -346,9 +346,24 @@ def split_text(text: str, limit: int = int(MessageLimit.MAX_TEXT_LENGTH)) -> lis
 
 
 def keyboard(row: list[dict[str, str]]) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        [[InlineKeyboardButton(button["label"], callback_data=button["data"]) for button in row]]
-    )
+    """The buttons under a message: one row, or one per `row` key in the order they come
+    (buttons.in_row)."""
+    rows: dict[str, list[InlineKeyboardButton]] = {}
+    for button in row:
+        rows.setdefault(button.get("row", ""), []).append(
+            InlineKeyboardButton(button["label"], callback_data=button["data"])
+        )
+    return InlineKeyboardMarkup(list(rows.values()))
+
+
+def without_row(markup: Any, data: str) -> InlineKeyboardMarkup | None:
+    """What stays under a message once the row holding the button tapped goes; None for none."""
+    rows = [
+        list(row)
+        for row in getattr(markup, "inline_keyboard", None) or ()
+        if not any(getattr(button, "callback_data", None) == data for button in row)
+    ]
+    return InlineKeyboardMarkup(rows) if rows else None
 
 
 def tap_in_thread(app: App, query: Any) -> buttons.Tapped | None:
@@ -739,7 +754,7 @@ class TelegramChannel:
 
     async def on_tap(self, update: Any, context: Any) -> None:
         """A button tapped: done by code, said in her words (buttons.py). Everyone in the chat sees
-        who did what, and the buttons go.
+        who did what, and the buttons go: its own row, where a message has several.
         """
         query = update.callback_query
         if query is None:
@@ -753,6 +768,7 @@ class TelegramChannel:
         if tapped is None or not tapped.finished:
             return
         words = getattr(query.message, "text", None) if query.message is not None else None
+        left = without_row(getattr(query.message, "reply_markup", None), query.data or "")
         if tapped.note and words:
             kept = getattr(query.message, "text_html", None) or html.escape(words, quote=False)
             try:
@@ -760,12 +776,13 @@ class TelegramChannel:
                     query.edit_message_text,
                     f"{words}\n\n{tapped.note}",
                     drawn=f"{kept}\n\n{markup.to_html(tapped.note)}",
+                    **({"reply_markup": left} if left is not None else {}),
                 )
                 return
             except Exception:
                 log.info("telegram: could not add who did it to a message", exc_info=True)
         try:
-            await query.edit_message_reply_markup(reply_markup=None)
+            await query.edit_message_reply_markup(reply_markup=left)
         except Exception:
             log.info("telegram: could not take the buttons off a message", exc_info=True)
 
@@ -899,6 +916,17 @@ class TelegramSupervisor:
             await running.stop()
         self._set("off")
 
+    def _token_refused(self, refused: bool) -> None:
+        """Noted for the Status page (alerts.py, kind telegram), or forgotten once it connects;
+        never told on Telegram, which cannot carry it."""
+        from familydb import alerts
+
+        with closing(self.app.connect()) as conn:
+            if refused:
+                alerts.note(conn, "telegram", "", "the token was refused", self.app.clock.now())
+            else:
+                alerts.working(conn, "telegram")
+
     async def _open(self, token: str) -> tuple[Any, bool]:
         channel = self.make_channel(self.app, token)
         try:
@@ -906,6 +934,7 @@ class TelegramSupervisor:
         except InvalidToken:
             log.error("telegram: Telegram refused the bot token; replace it on the settings page")
             self._set("the token was refused by Telegram")
+            await asyncio.to_thread(self._token_refused, True)
             await _quietly_stop(channel)
             return None, True
         except NetworkError as exc:
@@ -915,6 +944,7 @@ class TelegramSupervisor:
             return None, False
         name = getattr(channel, "username", None)
         self._set(f"connected as @{name}" if name else "connected")
+        await asyncio.to_thread(self._token_refused, False)
         self._introduced = self._seen = None
         self._learn_at = 0.0
         return channel, False

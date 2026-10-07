@@ -30,6 +30,7 @@ from familydb.app import App, build_app
 from familydb.availability import (
     digest_configured,
     enrichment_available,
+    happening_available,
     web_available,
     web_tools_available,
 )
@@ -97,6 +98,16 @@ def _ready(application: App) -> sqlite3.Connection:
     conn = application.connect()
     application.refresh(conn)
     return conn
+
+
+def _push_key(application: App) -> None:
+    """The key that signs pushes to the family's devices, made once at start (push.py), never on
+    a page view."""
+    from familydb import push
+    from familydb.dates import utc_iso
+
+    with closing(application.connect()) as conn:
+        push.ensure_key(conn, utc_iso(application.clock.now()))
 
 
 FROM_PAGE = "set on the settings page"
@@ -265,7 +276,28 @@ def db_backup(dest: Path = typer.Argument(..., help="Path of the backup file to 
     dest.parent.mkdir(parents=True, exist_ok=True)
     with closing(application.connect()) as conn, closing(sqlite3.connect(str(dest))) as target:
         conn.backup(target)
-    typer.echo(f"backup written to {dest}")
+        # The copy itself is read back: a backup nobody can restore is no backup.
+        verdict = str(target.execute("PRAGMA quick_check").fetchone()[0])
+    ok = verdict == "ok"
+    from familydb.store import backups
+
+    try:
+        with closing(application.connect()) as conn, db.transaction(conn):
+            backups.record(
+                conn,
+                path=str(dest),
+                size=dest.stat().st_size,
+                ok=ok,
+                detail=None if ok else verdict[:200],
+                now=utc_iso(application.clock.now()),
+            )
+    except sqlite3.OperationalError as exc:  # a database not migrated yet keeps no record
+        log.warning("the backup was not recorded: %s", exc)
+    if not ok:
+        failed = f"the backup at {dest} failed its check: {verdict}"
+        typer.secho(failed, fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    typer.echo(f"backup written to {dest}, and checked")
 
 
 @members_app.command("add")
@@ -388,6 +420,7 @@ def tool_cmd(
             member=_acting_member(application, conn, as_member),
             calendar=application.calendar,
             weather=application.weather,
+            source="cli",
         )
         result = registry.dispatch(name, payload, ctx)
     typer.echo(result.content, err=result.is_error)
@@ -418,7 +451,7 @@ def debug_prompt(
     from familydb.jobs.weekend_digest import digest_channel
     from familydb.store import places
 
-    if kind not in gateway.KINDS or kind == "discover":
+    if kind not in gateway.KINDS or kind in ("discover", "places", "scout", "find_feeds"):
         typer.echo("--kind is one of chat, digest, retry or enrich", err=True)
         raise typer.Exit(code=2)
     application = build_app()
@@ -675,10 +708,38 @@ def doctor(
 
 
 @app.command()
+def export(
+    folder: Path = typer.Argument(..., help="Where to write the four files."),
+) -> None:
+    """Write the family's data to a folder: plans.ics, ideas.csv, tasks.csv and everything.json,
+    with no key, password or device in them (familydb/export.py)."""
+    from familydb import export as taking
+
+    application = build_app()
+    with closing(_ready(application)) as conn:
+        written = taking.write_all(conn, application.settings, folder, application.clock.now())
+    for path in written:
+        typer.echo(str(path))
+
+
+@app.command()
+def health() -> None:
+    """Whether FamilyDB is well: the database answers and the scheduled jobs are running.
+    Exits 1 when not, for Docker's HEALTHCHECK or a monitor."""
+    from familydb import health as well
+
+    ok, words = well.check(build_app())
+    typer.echo(words)
+    if not ok:
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def run() -> None:
     """Start the bot: apply migrations, then serve the configured channels until stopped."""
     application = build_app()
     application.migrate()
+    _push_key(application)
     privacy.tighten(application.settings)
     application.refresh()
     settings = application.settings
@@ -698,6 +759,9 @@ def run() -> None:
 
     scheduler = build_scheduler(application)
     scheduler.start()
+    from familydb import health
+
+    health.ticked(application)
     stop_web = None
     if web_available(settings):
         from familydb.web.server import serve_in_thread
@@ -715,6 +779,8 @@ def run() -> None:
         if stop_web is not None:
             stop_web()
         scheduler.shutdown(wait=False)
+        with suppress(Exception):  # a database gone with the stop is no reason to raise
+            health.stopped(application)
     log.info("stopped")
 
 
@@ -895,6 +961,7 @@ def suggest(
             geocoder=application.geocoder,
             api=api,
             discover_cache=application.discover_cache,
+            source="cli",
         )
         result = application.registry.dispatch("suggest", payload, ctx)
     if result.is_error:
@@ -921,6 +988,7 @@ def web(
         overrides["web_port"] = port
     application = build_app(**overrides)
     application.migrate()
+    _push_key(application)
     privacy.tighten(application.settings)
     try:
         serve(application)
@@ -1006,6 +1074,32 @@ def enrich(
         raise typer.Exit(code=1)
     _cli_senders(application)
     counts = run_enrichment(application, idea_id=idea_id, limit=limit)
+    typer.echo(", ".join(f"{key}: {value}" for key, value in counts.items()))
+
+
+@app.command("happening")
+def happening_now(
+    everything: bool = typer.Option(
+        False, "--now", help="Read every source now, even those read in the last day or week."
+    ),
+) -> None:
+    """Read what is on near home now (the running bot does this hourly, each source when due).
+
+    With --now the weekly search and the lookup for calendars run too, within the month's
+    budget for them."""
+    from familydb.jobs.happening import run_happening
+
+    application = build_app()
+    application.migrate()
+    if not happening_available(application.settings):
+        typer.echo(
+            "nothing to read: add a calendar or a Ticketmaster key, or turn on web lookups, "
+            "on the settings page",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    _cli_senders(application)
+    counts = run_happening(application, everything=everything)
     typer.echo(", ".join(f"{key}: {value}" for key, value in counts.items()))
 
 

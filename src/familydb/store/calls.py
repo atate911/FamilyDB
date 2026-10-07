@@ -28,10 +28,14 @@ def log_tool_call(
     duration_ms: int | None,
     now: str | None = None,
     turn: str | None = None,
+    member_id: int | None = None,
+    source: str | None = None,
+    undo: dict[str, Any] | None = None,
 ) -> int:
     cur = conn.execute(
         "INSERT INTO tool_calls (message_id, iteration, tool_use_id, tool_name, input, output, "
-        "is_error, duration_ms, created_at, turn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "is_error, duration_ms, created_at, turn, member_id, source, undo) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             message_id,
             iteration,
@@ -43,6 +47,9 @@ def log_tool_call(
             duration_ms,
             now or utcnow_iso(),
             turn,
+            member_id,
+            source,
+            to_json(undo) if undo is not None else None,
         ),
     )
     return int(cur.lastrowid or 0)
@@ -265,6 +272,83 @@ def last_lookup_turn(conn: sqlite3.Connection, idea_id: int) -> str | None:
         (idea_id,),
     ).fetchone()
     return row["turn"] if row else None
+
+
+def get(conn: sqlite3.Connection, call_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM tool_calls WHERE id = ?", (call_id,)).fetchone()
+
+
+def last_undoable(
+    conn: sqlite3.Connection, *, member_id: int, message_id: int, since: str
+) -> sqlite3.Row | None:
+    """This person's last change that can be taken back, made since `since` in the chat
+    `message_id` was said in, and before it (undo.py)."""
+    return conn.execute(
+        "SELECT t.* FROM tool_calls t JOIN messages m ON m.id = t.message_id "
+        "JOIN messages here ON here.id = ? "
+        "WHERE t.member_id = ? AND t.undo IS NOT NULL AND t.undone_at IS NULL "
+        "AND t.created_at >= ? AND t.message_id != here.id "
+        "AND m.channel = here.channel AND m.chat_id = here.chat_id "
+        "ORDER BY t.id DESC LIMIT 1",
+        (message_id, member_id, since),
+    ).fetchone()
+
+
+def undoable_for(
+    conn: sqlite3.Connection, message_ids: list[int], *, since: str
+) -> dict[int, sqlite3.Row]:
+    """By message, the last change its turn made that can still be taken back: the Undo under a
+    reply (the page's chat, and Telegram's button)."""
+    if not message_ids:
+        return {}
+    marks = ",".join("?" * len(message_ids))
+    rows = conn.execute(
+        f"SELECT * FROM tool_calls WHERE message_id IN ({marks}) AND undo IS NOT NULL "
+        "AND undone_at IS NULL AND created_at >= ? ORDER BY id",
+        (*message_ids, since),
+    ).fetchall()
+    return {int(row["message_id"]): row for row in rows}
+
+
+def claim_undo(conn: sqlite3.Connection, call_id: int, *, now: str) -> bool:
+    """Mark a call undone before undoing it, so two presses undo it once. Call inside a
+    transaction; False when it was undone already."""
+    return (
+        conn.execute(
+            "UPDATE tool_calls SET undone_at = ? WHERE id = ? AND undone_at IS NULL",
+            (now, call_id),
+        ).rowcount
+        == 1
+    )
+
+
+def release_undo(conn: sqlite3.Connection, call_id: int) -> None:
+    """The undo did not go through: the call can be undone again."""
+    conn.execute("UPDATE tool_calls SET undone_at = NULL WHERE id = ?", (call_id,))
+
+
+# The tools that change an idea or a task, and where in what they answer its number is.
+CHANGES_IDEA = {"add_idea": "$.id", "update_idea": "$.id", "create_event": "$.idea.id"}
+CHANGES_TASK = {"add_task": "$.task.id", "update_task": "$.task.id"}
+
+
+def last_change(
+    conn: sqlite3.Connection, *, idea_id: int | None = None, task_id: int | None = None
+) -> sqlite3.Row | None:
+    """The last call that changed this idea or task, whoever made it and from where, with the
+    name of who did (`who`): its page's "changed by Sam on the page"."""
+    tools, number = (CHANGES_IDEA, idea_id) if idea_id is not None else (CHANGES_TASK, task_id)
+    found = " OR ".join(
+        f"(t.tool_name = '{name}' AND json_extract(t.output, '{path}') = ?)"
+        for name, path in tools.items()
+    )
+    return conn.execute(
+        "SELECT t.*, m.display_name AS who FROM tool_calls t "
+        "LEFT JOIN members m ON m.id = t.member_id "
+        f"WHERE t.is_error = 0 AND json_valid(t.output) AND ({found}) "
+        "ORDER BY t.id DESC LIMIT 1",
+        (number,) * len(tools),
+    ).fetchone()
 
 
 def tool_calls_for_message(conn: sqlite3.Connection, message_id: int) -> list[dict[str, Any]]:
