@@ -37,8 +37,8 @@ The [Settings pages](/wiki/controls/settings) are a card for each part:
 - **Sign-in and security**: passwords, how long a sign-in lasts, seeing a key, signing everyone out
 - **What has changed**: every change made on the page, and who made it
 
-A form on the page is not a second way to change things. Each one runs the same
-tool the model would run when asked in chat, so the checks are the same code.
+The forms for ideas, plans and things to do run the same tools the model runs when asked in chat,
+so the checks are the same code. Settings forms check what you type by the same rules as `.env`.
 
 ## Telegram
 
