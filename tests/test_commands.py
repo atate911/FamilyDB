@@ -68,9 +68,9 @@ def test_today_is_the_calendar_and_this_chats_reminders(settings, conn, family) 
     assert _ask(app, "/today") == (
         "Here's today, Fri 25 Sep:\n"
         "All day: Grandma visiting\n"
-        "17:00-18:00 Soccer practice\n"
-        f"17:30 due: File the taxes (task #{taxes.id})\n"
-        f"19:00 reminder: Bins out (task #{bins.id})"
+        "5\u00a0pm to 6\u00a0pm Soccer practice\n"
+        f"5:30\u00a0pm due: File the taxes (task #{taxes.id})\n"
+        f"7\u00a0pm reminder: Bins out (task #{bins.id})"
     )
 
 
@@ -82,8 +82,8 @@ def test_the_week_names_each_day_and_the_month_where_it_turns(settings, conn, fa
     assert _ask(app, "/week") == (
         "Here's the week ahead:\n"
         "Fri 25 Sep: nothing on\n"
-        "Sat 26: 09:00-10:00 Swim lessons; 18:00 Sleepover\n"
-        "Sun 27: until 10:00 Sleepover\n"
+        "Sat 26: 9\u00a0am to 10\u00a0am Swim lessons; 6\u00a0pm Sleepover\n"
+        "Sun 27: until 10\u00a0am Sleepover\n"
         "Mon 28: nothing on\n"
         "Tue 29: nothing on\n"
         "Wed 30: nothing on\n"
@@ -110,7 +110,7 @@ def test_tasks_are_this_chats_open_ones(settings, conn, family) -> None:
     app = _app(settings)
     assert _ask(app, "/tasks") == (
         "Still to do here:\n"
-        f"#{bins.id} Bins out (Sam): reminder Sun 27 Sep 19:00, every week\n"
+        f"#{bins.id} Bins out (Sam): reminder Sun 27 Sep 7\u00a0pm, every week\n"
         f"#{knives.id} Get the knives sharpened: some Saturday morning"
     )
     for n in range(12):
@@ -131,8 +131,10 @@ def test_now_is_the_engine_without_a_model(settings, conn) -> None:
     said = _ask(app, "/now")
     assert said is not None
     lines = said.splitlines()
-    assert lines[0] == "From your list, now until 19:30:"
-    assert lines[1].startswith("#1 Ramen place on Main St: can go 15:42-16:48 today, about 12 min")
+    assert lines[0] == "From your list, now until 7:30\u00a0pm:"
+    assert lines[1].startswith(
+        "#1 Ramen place on Main St: can go 3:42\u00a0pm to 4:48\u00a0pm today, about 12 min"
+    )
     assert lines[3].startswith("Not now: #3 Hopscotch Portland (needs about 2 h, only 1.5 h free)")
     assert lines[4:] == ["Not checked: weather not configured."]
     assert conn.execute("SELECT count(*) FROM llm_calls").fetchone()[0] == 0

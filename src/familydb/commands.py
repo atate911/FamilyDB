@@ -31,7 +31,7 @@ from familydb import agenda, family, task_service, voice
 from familydb.agenda import Agenda, Entry
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
-from familydb.dates import utc_iso
+from familydb.dates import clock_time, spoken_times, utc_iso
 from familydb.store import knocks, members, messages, tasks
 from familydb.store.db import transaction
 from familydb.store.members import Member
@@ -251,11 +251,13 @@ def _entry_text(entry: Entry, day: date) -> str:
     ends_today = entry.end is not None and entry.end[:10] == day.isoformat()
     if started_before:
         return (
-            f"until {entry.end[11:16]} {title}" if ends_today and entry.end else f"All day: {title}"
+            f"until {clock_time(entry.end)} {title}"
+            if ends_today and entry.end
+            else f"All day: {title}"
         )
     if ends_today and entry.end:
-        return f"{entry.start[11:16]}-{entry.end[11:16]} {title}"
-    return f"{entry.start[11:16]} {title}"
+        return f"{clock_time(entry.start)} to {clock_time(entry.end)} {title}"
+    return f"{clock_time(entry.start)} {title}"
 
 
 def _tasks_today(
@@ -267,12 +269,14 @@ def _tasks_today(
             at = _local(task.reminder.remind_at, app)
             if at.date() == today:
                 found.append(
-                    (f"{at:%H:%M}", f"{at:%H:%M} reminder: {task.title} (task #{task.id})")
+                    (f"{at:%H:%M}", f"{clock_time(at)} reminder: {task.title} (task #{task.id})")
                 )
         if task.due_at:
             due = _local(task.due_at, app)
             if due.date() == today:
-                found.append((f"{due:%H:%M}", f"{due:%H:%M} due: {task.title} (task #{task.id})"))
+                found.append(
+                    (f"{due:%H:%M}", f"{clock_time(due)} due: {task.title} (task #{task.id})")
+                )
     return found
 
 
@@ -292,9 +296,9 @@ def _tasks(app: App, conn: sqlite3.Connection, msg: IncomingMessage, _: Member, 
 def _task_text(task: Task, app: App) -> str:
     facts = []
     if task.reminder is not None and task.reminder.delivered_at is None:
-        facts.append(f"reminder {_local(task.reminder.remind_at, app):%a %d %b %H:%M}")
+        facts.append(f"reminder {_local_when(task.reminder.remind_at, app)}")
     if task.due_at:
-        facts.append(f"due {_local(task.due_at, app):%a %d %b %H:%M}")
+        facts.append(f"due {_local_when(task.due_at, app)}")
     facts.append(task_service.repeat_words(task) or "")
     facts.append(task.preferred_window)
     owner = f" ({task.owner})" if task.owner else ""
@@ -304,6 +308,12 @@ def _task_text(task: Task, app: App) -> str:
 
 def _local(value: str, app: App) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(app.clock.tz)
+
+
+def _local_when(value: str, app: App) -> str:
+    """ "Thu 1 Oct 8 pm": a stored instant in the family's time, the way they read it."""
+    moment = _local(value, app)
+    return f"{moment:%a %d %b} {clock_time(moment)}"
 
 
 def _now(
@@ -336,7 +346,8 @@ def _now(
     if result.skipped_checks:
         skipped = dict.fromkeys(note.split(":", 1)[0] for note in result.skipped_checks)
         lines.append("Not checked: " + "; ".join(skipped) + ".")
-    return _under(voice.say(app.settings, "cmd_now", seed=seed, window=result.window.label), lines)
+    said = voice.say(app.settings, "cmd_now", seed=seed, window=spoken_times(result.window.label))
+    return spoken_times(_under(said, lines))
 
 
 def _option_text(candidate: Candidate) -> str:

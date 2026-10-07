@@ -130,7 +130,7 @@ def test_the_days_a_thing_is_on_are_set_shown_and_cleared_from_the_page(planning
     saved = ideas.get(conn, 1)
     assert (saved.happens_from, saved.happens_until) == ("2026-10-17T18:30", "2026-10-18")
     shown = planning.get("/idea/1").text
-    assert "Sat 17 Oct, 18:30 to Sun 18 Oct 2026" in shown
+    assert "Sat 17 Oct, 6:30\u00a0pm to Sun 18 Oct 2026" in shown
     assert 'value="2026-10-17T18:30"' in shown  # the plan form starts at its start
     form = planning.get("/idea/1/edit").text
     assert 'value="2026-10-17"' in form and 'value="18:30"' in form
@@ -347,7 +347,7 @@ def test_an_idea_or_every_one_waiting_can_be_looked_up_now(settings, clock, conn
         first = ideas.insert(conn, title="Hopscotch", kind="outing")
         second = ideas.insert(conn, title="Ramen", kind="restaurant")
     page = looking.get(f"/idea/{first.id}").text
-    assert "Looked up together at 21:00 each evening." in page and "Look it up now" in page
+    assert "Looked up together at 9\u00a0pm each evening." in page and "Look it up now" in page
     sent = looking.post(f"/idea/{first.id}/lookup", data={"csrf": _token(looking, "/")})
     assert sent.headers["Location"] == f"/idea/{first.id}"
     after = looking.get(f"/idea/{first.id}").text
@@ -355,7 +355,7 @@ def test_an_idea_or_every_one_waiting_can_be_looked_up_now(settings, clock, conn
     assert "Asked for now: within a few minutes." in after and "Look it up now" not in after
 
     status = looking.get("/status").text
-    assert "Ideas are looked up together at 21:00 each evening." in status
+    assert "Ideas are looked up together at 9\u00a0pm each evening." in status
     looking.post("/lookups/now", data={"csrf": _token(looking, "/status")})
     assert "Looking 2 ideas up now" in _said(looking.get("/status"))
     assert ideas.get(conn, second.id).lookup_wanted_at is not None

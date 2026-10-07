@@ -20,6 +20,7 @@ from familydb import alerts, presents, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, prices
 from familydb.config import Settings
+from familydb.dates import clock_time, hour_words
 from familydb.integrations.geocode import estimate_travel
 from familydb.memory import words
 from familydb.store.ideas import Idea
@@ -155,7 +156,11 @@ def on_text(idea: Idea) -> str | None:
     first, last = idea.first_day, idea.last_day
     if first is None:
         return None
-    time = f", {idea.happens_from[11:16]}" if idea.happens_from and "T" in idea.happens_from else ""
+    time = (
+        f", {clock_time(idea.happens_from)}"
+        if idea.happens_from and "T" in idea.happens_from
+        else ""
+    )
     if last is None:
         return f"from {first:%a} {first.day} {first:%b %Y}{time}"
     if last == first:
@@ -379,7 +384,7 @@ def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
     if task.due_at:
         moment = datetime.fromisoformat(task.due_at.replace("Z", "+00:00")).astimezone(tz)
         day = relative_text(moment.date().isoformat(), today)
-        due = f"was due {day}" if late else f"due {day}, {moment:%H:%M}"
+        due = f"was due {day}" if late else f"due {day}, {clock_time(moment)}"
     return {
         "id": task.id,
         "title": task.title,
@@ -483,7 +488,7 @@ def todo_row(
         due = moment.date()
         when = day_short(due)
         if (moment.hour, moment.minute) != (0, 0):
-            when += f", {moment:%H:%M}"
+            when += f", {clock_time(moment)}"
         late = late_words(due, today, kid=kid)
         if kid and late is None and (ahead := relative_text(due.isoformat(), today)):
             when += f", {ahead}"
@@ -685,7 +690,7 @@ def hours_rows(place: Place | None) -> list[dict[str, str]]:
         elif not ranges:
             text = "closed"
         else:
-            text = format_ranges(ranges) or "closed"
+            text = format_ranges(ranges, spoken=True) or "closed"
         rows.append({"day": DAY_NAMES[key], "hours": text})
     return rows
 
@@ -718,10 +723,10 @@ def freshness_text(place: Place | None, now: datetime, stale_days: int) -> str |
 
 
 def hours_today(place: Place | None, today: date) -> str | None:
-    """ "open today 11:30 to 21:00", "closed today", or None where the hours are not known."""
+    """ "open today 11:30 am to 9 pm", "closed today", or None where the hours are not known."""
     state, ranges = open_on(place, today)
     words = TODAY_HOURS[state]
-    return words.format(ranges=format_ranges(ranges) or "").strip() if words else None
+    return words.format(ranges=format_ranges(ranges, spoken=True) or "").strip() if words else None
 
 
 def place_panel(
@@ -784,7 +789,7 @@ def day_text(value: str) -> str:
         moment = datetime.fromisoformat(stamp)
     except ValueError:
         return stamp
-    return f"{moment:%A} {moment.day} {moment:%B}, {moment:%H:%M}"
+    return f"{moment:%A} {moment.day} {moment:%B}, {clock_time(moment)}"
 
 
 def date_chip(value: str) -> dict[str, Any] | None:
@@ -854,7 +859,7 @@ def entry_row(
         "idea_id": entry.idea_id,
         "title": entry.title,
         "when": when,
-        "time": None if entry.all_day else entry.start[11:16],
+        "time": None if entry.all_day else clock_time(entry.start),
         "relative": "now" if days[0] < today <= days[-1] else relative_text(entry.start, today),
         "chip": date_chip(entry.start),
         "on_today": days[0] <= today <= days[-1],
@@ -1517,7 +1522,7 @@ def found_by_lookup(tool: dict[str, Any]) -> dict[str, Any] | None:
 def lookups_when(settings: Any) -> str:
     if settings.lookups_when == "asap":
         return "as soon as each is added"
-    return f"together at {settings.lookup_hour:02d}:00 each evening"
+    return f"together at {hour_words(settings.lookup_hour)} each evening"
 
 
 def local_clock(value: str, tz: ZoneInfo) -> str:
@@ -1528,7 +1533,7 @@ def local_clock(value: str, tz: ZoneInfo) -> str:
         return ""
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=UTC)
-    return f"{moment.astimezone(tz):%H:%M}"
+    return clock_time(moment.astimezone(tz))
 
 
 def day_heading(day: str, today: date) -> str:
@@ -1562,7 +1567,7 @@ def local_moment(value: str, tz: ZoneInfo) -> str:
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=UTC)
     here = moment.astimezone(tz)
-    return f"{here.day} {here:%b}, {here:%H:%M}"
+    return f"{here.day} {here:%b}, {clock_time(here)}"
 
 
 def setting_text(value: str | None) -> str:

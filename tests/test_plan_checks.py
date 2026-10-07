@@ -77,8 +77,8 @@ def test_rain_for_an_outdoor_plan_comes_with_an_indoor_backup(settings, conn, fa
         "and it's an outdoor one."
     )
     assert backup == (
-        f"If you'd rather switch: #{cafe.id} Board game cafe, open Saturday 10:00-22:00, "
-        "about 10 min drive (estimate)."
+        f"If you'd rather switch: #{cafe.id} Board game cafe, "
+        "open Saturday 10\u00a0am to 10\u00a0pm, about 10 min drive (estimate)."
     )
     assert conn.execute("SELECT count(*) FROM llm_calls").fetchone()[0] == 0
     assert run_plan_checks(app) == 0  # once
@@ -105,7 +105,7 @@ def test_a_place_listed_as_closed_then(settings, conn, family) -> None:
     assert run_plan_checks(app) == 2
     assert said[0].split("\n")[0] == (
         f"Heads-up for tomorrow's #{ramen.id} Ramen Ichiban: Ramen Ichiban is listed as open "
-        "17:00-22:00 on Saturdays, as far as I know. Worth a quick check."
+        "5\u00a0pm to 10\u00a0pm on Saturdays, as far as I know. Worth a quick check."
     )
     closed_heads_up = said[1].split("\n")[0]
     assert closed_heads_up.endswith(

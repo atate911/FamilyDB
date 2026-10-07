@@ -239,7 +239,7 @@ def test_what_is_left_to_do_is_on_home_and_ticks_off_there(settings, clock, conn
     client = _home(settings, clock)
     home = client.get("/").text
     assert home.index("Buy paper towels") < home.index("Call the dentist")  # soonest first
-    assert "Mon 21 Sep, 10:00" in home and "No date" in home and "All 2 to-dos" in home
+    assert "Mon 21 Sep, 10\u00a0am" in home and "No date" in home and "All 2 to-dos" in home
 
     tick = re.search(rf'<form method="post" action="/task/{towels}/done">.*?</form>', home, re.S)
     assert tick is not None and 'aria-label="Mark done: Buy paper towels"' in tick.group(0)
@@ -315,10 +315,13 @@ def test_a_to_do_is_worded_by_how_late_it_is() -> None:
         updated_at=NOW_ISO,
     )
     row = views.todo_row(task, TZ, today, {"sam": 1})
-    assert row["late"] == "1 day late" and row["when"] == "Sat 19 Sep, 09:00"
+    assert row["late"] == "1 day late" and row["when"] == "Sat 19 Sep, 9\u00a0am"
     assert row["person"] == {"name": "Sam", "slot": 1, "initial": "S"}
     soon = task.model_copy(update={"due_at": "2026-09-23T16:30:00Z"})
-    assert views.todo_row(soon, TZ, today, {}, kid=True)["when"] == "Wed 23 Sep, 09:30, in 3 days"
+    assert (
+        views.todo_row(soon, TZ, today, {}, kid=True)["when"]
+        == "Wed 23 Sep, 9:30\u00a0am, in 3 days"
+    )
     loose = task.model_copy(update={"due_at": None, "owner": None})
     assert views.todo_row(loose, TZ, today, {})["when"] == "No date"
     assert views.todo_row(loose, TZ, today, {})["person"]["name"] == "Everyone"

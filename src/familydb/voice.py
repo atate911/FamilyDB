@@ -57,7 +57,7 @@ EVENTS: dict[str, Event] = {
         "Reminder: {title}{who}  -  task #{task}. This was due {due}; I was offline then. "
         "Tell me when it's done or ask to snooze it.",
         ("title", "who", "task", "due"),
-        {"title": "bins out", "who": " (Sam)", "task": 12, "due": "Tue 22 Sep at 07:30"},
+        {"title": "bins out", "who": " (Sam)", "task": 12, "due": "Tue 22 Sep at 7:30 am"},
     ),
     "gift_ideas": Event(
         "Gift ideas under a birthday's reminder",
@@ -92,7 +92,7 @@ EVENTS: dict[str, Event] = {
     "cmd_week": Event("Answering /week", "The next seven days:", ()),
     "cmd_tasks": Event("Answering /tasks", "Open tasks in this chat:", ()),
     "cmd_now": Event(
-        "Answering /now", "From the list, {window}:", ("window",), {"window": "now until 19:30"}
+        "Answering /now", "From the list, {window}:", ("window",), {"window": "now until 7:30 pm"}
     ),
     "plan_rain": Event(
         "The evening before an outdoor plan, when rain is likely",
@@ -117,7 +117,7 @@ EVENTS: dict[str, Event] = {
         {
             "idea": 7,
             "title": "Board game cafe",
-            "why": "can go 10:00-12:00 Saturday, about 10 min drive (estimate)",
+            "why": "can go 10 am to 12 pm Saturday, about 10 min drive (estimate)",
         },
     ),
     "follow_up": Event(
@@ -133,13 +133,13 @@ EVENTS: dict[str, Event] = {
         "A repeating reminder's Done tapped",
         "Done ✓ ({who}). Next time: {when}.",
         ("who", "when"),
-        {"who": "Sam", "when": "19:00 on Sun 04 Oct"},
+        {"who": "Sam", "when": "7 pm on Sun 4 Oct"},
     ),
     "tap_snoozed": Event(
         "A reminder snoozed with its button",
         "Snoozed until {when} ({who}).",
         ("who", "when"),
-        {"who": "Sam", "when": "09:30 tomorrow"},
+        {"who": "Sam", "when": "9:30 am tomorrow"},
     ),
     "tap_again": Event(
         "A plan worth doing again, tapped",

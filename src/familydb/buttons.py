@@ -20,7 +20,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from familydb import roles, voice
-from familydb.dates import utc_iso
+from familydb.dates import clock_time, utc_iso
 from familydb.store import calls, ideas, members, messages, outcomes, plans, tasks, wishes
 from familydb.store.db import transaction
 from familydb.tools.registry import ToolContext
@@ -240,11 +240,11 @@ def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> 
 
 
 def when_text(moment: datetime, today: date) -> str:
-    """When a snoozed reminder comes back, time first so it reads after "until" and "at": "20:05
-    today", "09:30 on Mon 28 Sep".
+    """When a snoozed reminder comes back, time first so it reads after "until" and "at": "8:05 pm
+    today", "9:30 am on Mon 28 Sep".
     """
     if moment.date() == today:
-        return f"{moment:%H:%M} today"
+        return f"{clock_time(moment)} today"
     if moment.date() == today + timedelta(days=1):
-        return f"{moment:%H:%M} tomorrow"
-    return f"{moment:%H:%M} on {moment:%a %d %b}"
+        return f"{clock_time(moment)} tomorrow"
+    return f"{clock_time(moment)} on {moment:%a %d %b}"

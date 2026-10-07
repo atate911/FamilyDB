@@ -414,9 +414,10 @@ def test_the_status_page_says_where_it_read_and_what_changed(settings, conn, fam
     client = create_app(later).test_client()
     text = client.get("/status").text
     panel = text[text.index('id="models"') : text.index("</section>", text.index('id="models"'))]
-    assert "LiteLLM&#39;s price list" in panel and "Read 21 Sep, 05:17" in panel
+    assert "LiteLLM&#39;s price list" in panel and "Read 21 Sep, 5:17\u00a0am" in panel
     assert (
-        "OpenRouter&#39;s price list" in panel and "Could not be read 21 Sep, 05:17: 503" in panel
+        "OpenRouter&#39;s price list" in panel
+        and "Could not be read 21 Sep, 5:17\u00a0am: 503" in panel
     )
     assert "Anthropic&#39;s list for the key" in panel
     assert "$5 in, $25 out → $6 in, $30 out a million tokens" in panel

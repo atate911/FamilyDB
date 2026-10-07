@@ -48,6 +48,7 @@ from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import enrichment_available, web_is_public
 from familydb.config import PersonaRewrite, Settings, apply_overrides
+from familydb.dates import hour_words
 from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
@@ -542,7 +543,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
         today = spent_today(conn, live, app.clock.now())
         flags = section_flags(app, conn, steps=steps, spent=today)
         latest = [change(line, live.tzinfo) for line in settings_store.history(conn, limit=1)]
-    hour = "{:02d}:00".format
+    hour = hour_words
     units = fields.BY_KEY["weather_units"].word(live.weather_units)
     if live.home_area and live.home_lat is not None:
         home = live.home_area

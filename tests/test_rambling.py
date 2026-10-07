@@ -137,7 +137,7 @@ def test_the_page_says_when_a_dated_idea_is_on(conn, family) -> None:
 
     concert = _idea(conn, "Beck", happens_from="2026-11-18T20:00", happens_until="2026-11-18")
     run = _idea(conn, "Nutcracker", happens_from="2026-12-05", happens_until="2027-01-02")
-    assert idea_row(concert, TZ)["on"] == "Wed 18 Nov 2026, 20:00"
+    assert idea_row(concert, TZ)["on"] == "Wed 18 Nov 2026, 8\u00a0pm"
     assert idea_row(run, TZ)["on"] == "Sat 5 Dec 2026 to Sat 2 Jan 2027"
     assert idea_row(_idea(conn, "Plain"), TZ)["on"] is None
 

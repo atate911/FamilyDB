@@ -38,7 +38,7 @@
             <select id="e-rep" name="repeat">{% for value, label in row.repeat_options %}<option value="{{ value }}"{% if value == row.repeat_choice %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
         </div>
         <label class="check"><input type="checkbox" name="repeat_after_done"{% if task.repeat_from == 'done' %} checked{% endif %} />Count from when it’s done</label>
-        <p class="field__hint">A repeat starts from the reminder: every week from Sunday 19:00, say. Counted from when it’s done, it comes round that long after each time it is ticked off.</p>
+        <p class="field__hint">A repeat starts from the reminder: every week from Sunday 7 pm, say. Counted from when it’s done, it comes round that long after each time it is ticked off.</p>
       </fieldset>
 
       <fieldset class="fieldset">

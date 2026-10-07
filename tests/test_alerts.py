@@ -252,4 +252,4 @@ def test_the_status_page_says_what_needs_attention_and_who_was_told(
     with transaction(conn):
         alert_store.mark_told(conn, "credit", "openai", now="2026-09-20T21:04:00Z")
     text = create_app(App(settings, clock)).test_client().get("/status").text
-    assert "admins told on Telegram 20 Sep, 14:04" in text
+    assert "admins told on Telegram 20 Sep, 2:04\u00a0pm" in text

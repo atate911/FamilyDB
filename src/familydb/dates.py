@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+import re
+from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from familydb.clock import Clock
@@ -90,3 +91,39 @@ def next_birthday(birth_date: str | None, today: date) -> date | None:
         if day >= today:
             return day
     raise AssertionError("a birthday comes round within a year")
+
+
+def clock_time(value: datetime | time | str) -> str:
+    """A time of day as the family reads it: "9 am", "1:30 pm", "12 pm". The number is held to
+    am or pm by a no-break space. Takes a time, a datetime (its wall time as it is) or an
+    "HH:MM" or "YYYY-MM-DDTHH:MM" string. What the model is sent and what is stored stay 24-hour."""
+    if isinstance(value, str):
+        text = value[11:16] if "T" in value else value  # an offset after the minutes is ignored
+        hour, minute = int(text[:2]), int(text[3:5])
+    else:
+        hour, minute = value.hour, value.minute
+    clock = f"{hour % 12 or 12}:{minute:02d}" if minute else str(hour % 12 or 12)
+    return f"{clock}\u00a0{'am' if hour < 12 else 'pm'}"
+
+
+def hour_words(hour: int) -> str:
+    """An hour on the dot, as the settings say it: "7 am", "12 pm"."""
+    return clock_time(time(hour))
+
+
+_HH_MM = re.compile(r"\b([01]\d|2[0-4]):([0-5]\d)\b(?:-([01]\d|2[0-4]):([0-5]\d)\b)?")
+
+
+def spoken_times(text: str) -> str:
+    """Every "HH:MM" in text, and "HH:MM-HH:MM" stretch, written as the family reads it ("7:30 pm",
+    "3 pm to 5 pm"), for words the engine made for a person; "24:00", the end of a day, is
+    "12 am"."""
+
+    def at(hour: str, minute: str) -> str:
+        return clock_time(f"{int(hour) % 24:02d}:{minute}")
+
+    def one(found: re.Match[str]) -> str:
+        first = at(found[1], found[2])
+        return f"{first} to {at(found[3], found[4])}" if found[3] else first
+
+    return _HH_MM.sub(one, text)

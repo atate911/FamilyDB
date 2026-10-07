@@ -16,7 +16,7 @@ from datetime import UTC, date, datetime, timedelta, tzinfo
 from typing import Any
 
 from familydb import audience, presents, voice
-from familydb.dates import utc_iso
+from familydb.dates import clock_time, utc_iso
 from familydb.errors import ToolError
 from familydb.store import ideas, members, messages, tasks, wishes
 from familydb.store.db import transaction
@@ -289,7 +289,8 @@ def late_note(remind_at: str, queued_at: str, tz: tzinfo) -> str | None:
     due = datetime.fromisoformat(remind_at)
     if datetime.fromisoformat(queued_at) - due <= LATE_AFTER:
         return None
-    return due.astimezone(tz).strftime("%a %d %b at %H:%M")
+    local = due.astimezone(tz)
+    return f"{local:%a %d %b} at {clock_time(local)}"
 
 
 def birthday_wishes(conn: sqlite3.Connection, task: Task) -> list[str]:

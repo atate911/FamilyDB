@@ -50,7 +50,7 @@ def test_the_list_is_google_s_calendar_with_the_bot_s_own_plans_marked(google, c
     )
     text = client.get("/plans").text
     assert "From Google Calendar" in text
-    assert "Sunday 27 September, 14:00" in text  # where Google has it, not where it was made
+    assert "Sunday 27 September, 2\u00a0pm" in text  # where Google has it, not where it was made
     assert "Dentist" in text and "added in Google" in text
     assert text.count("<summary>Move it</summary>") == 1  # only the bot's own can be moved
     # Looking is not a write: the stored plan catches up when the bot next acts on it.
@@ -86,7 +86,9 @@ def test_a_weekend_away_is_on_each_of_its_days_in_the_month(google, conn, family
     text = client.get("/plans/month?month=2026-10").text
     assert "October 2026" in text
     assert text.count("Camping") == 6  # three days in the grid, and the same three as a list
-    assert 'id="d-2026-10-02"' in text and "18:30" in text  # the day, in the list under the grid
+    assert (
+        'id="d-2026-10-02"' in text and "6:30\u00a0pm" in text
+    )  # the day, in the list under the grid
     assert "month=2026-09" in text and "month=2026-11" in text  # earlier and later
 
 

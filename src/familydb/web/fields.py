@@ -14,6 +14,7 @@ from zoneinfo import available_timezones
 
 from familydb.agent.providers.prices import hearing_suggestions, suggestions
 from familydb.config import Settings
+from familydb.dates import hour_words
 from familydb.store.settings import BEHAVIOUR
 from familydb.web.views import DAY_NAMES
 
@@ -199,7 +200,7 @@ def zones() -> tuple[str, ...]:
 
 YES_NO = (("true", "yes"), ("false", "no"))
 HOURS = tuple(str(hour) for hour in range(24))
-HOUR_WORDS = tuple((str(hour), f"{hour:02d}:00") for hour in range(24))
+HOUR_WORDS = tuple((str(hour), hour_words(hour)) for hour in range(24))
 EFFORT = (
     ("low", "Low"),
     ("medium", "Medium"),

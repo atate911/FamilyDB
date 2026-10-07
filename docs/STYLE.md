@@ -301,8 +301,10 @@ slashed zero is a help to reading. `.code` keeps model names, keys and codes in 
 | — | 28 / 34 / 21 px | a date tile's day: normal, Next up, small |
 | `--t-display` | 44 px | the big money on Status (other figures 30–32) |
 
-Times follow the family's clock setting, with no leading zero in 12-hour time ("9 am"), and a
-number is held to its unit by a no-break space ("18 min"). Paragraphs stop at about 62
+Times are 12-hour with no leading zero ("9 am", "1:30 pm"; the family chose it, and it
+keeps the slashed zero out of a time), through `dates.clock_time` on the page and in Telegram.
+What is stored and what the model is sent stay 24-hour. A number is held to its unit by a
+no-break space ("18 min"). Paragraphs stop at about 62
 characters.
 
 ## Shape and space

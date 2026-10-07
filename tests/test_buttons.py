@@ -90,10 +90,10 @@ def test_snoozing_moves_the_reminder(settings, clock, conn, family) -> None:
     app = App(settings, clock)  # Sunday 20 September, 14:03
     task = _task(settings, clock, conn, family)
     tapped = _tap(app, conn, f"hour:{task['id']}")
-    assert tapped.note == "I'll bring it up again at 15:03 today (Sam)."
+    assert tapped.note == "I'll bring it up again at 3:03\u00a0pm today (Sam)."
     assert tasks.get(conn, task["id"]).reminder.remind_at == "2026-09-20T22:03:00Z"
     tapped = _tap(app, conn, f"tomorrow:{task['id']}", tap_id="q2")
-    assert tapped.note == "I'll bring it up again at 14:03 tomorrow (Sam)."
+    assert tapped.note == "I'll bring it up again at 2:03\u00a0pm tomorrow (Sam)."
     reminder = tasks.get(conn, task["id"]).reminder
     assert (
         reminder.remind_at == "2026-09-21T21:03:00Z"
@@ -104,9 +104,9 @@ def test_snoozing_moves_the_reminder(settings, clock, conn, family) -> None:
 def test_when_a_snooze_comes_back_reads_after_until_and_at() -> None:
     now = datetime(2026, 9, 20, 14, 3)
     today = now.date()
-    assert buttons.when_text(now + timedelta(hours=1), today) == "15:03 today"
-    assert buttons.when_text(now + timedelta(days=1), today) == "14:03 tomorrow"
-    assert buttons.when_text(now + timedelta(days=3), today) == "14:03 on Wed 23 Sep"
+    assert buttons.when_text(now + timedelta(hours=1), today) == "3:03\u00a0pm today"
+    assert buttons.when_text(now + timedelta(days=1), today) == "2:03\u00a0pm tomorrow"
+    assert buttons.when_text(now + timedelta(days=3), today) == "2:03\u00a0pm on Wed 23 Sep"
 
 
 def test_a_follow_up_is_answered_by_tapping(settings, clock, conn, family) -> None:

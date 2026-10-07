@@ -218,7 +218,7 @@ def test_the_page_after_a_failed_message_was_given_up_on(status, conn, family) -
 
 def test_the_dates_are_the_family_s(status, conn, clock) -> None:
     _call(conn, model="claude-opus-5")
-    assert "20 Sep, 14:03" in _flat(status.get("/status"))  # NOW_ISO is 21:03 UTC
+    assert "20 Sep, 2:03 pm" in _flat(status.get("/status"))  # NOW_ISO is 21:03 UTC
     assert utc_iso(clock.now()) == NOW_ISO
 
 
