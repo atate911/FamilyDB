@@ -55,6 +55,8 @@
   --t-h3: 1.1875rem;  /* 19 */
   --t-h2: 1.4375rem;  /* 23 */
   --t-h1: 2.625rem;   /* 42 */
+  /* the longest line a paragraph runs to, in the text's own ems (about 62 characters of Atkinson) */
+  --measure: 34em;
   --t-display: 2.75rem;/* 44 money */
 
   /* spacing (4 px steps) */
@@ -95,6 +97,9 @@ a:hover { color: var(--ink); }
 .num, .dt__d, .money, .figure dd, .day__n, .rank__n, .meter__scale { font-family: var(--font-num); font-variant-numeric: lining-nums tabular-nums; }
 /* money and clock times in running text: the same figures as the big money, so every zero is open */
 .fig { font-family: "Fraunces Text Figures", var(--font-text); font-variant-numeric: lining-nums; margin-inline: -0.03em; }
+/* a long link or address breaks inside its card instead of pushing the page wider */
+.main, .solo, .me { overflow-wrap: anywhere; }
+.tag, .chip, .btn, .badge, .pill-health, .seg a, .choice span, .nav a, .tabbar a { overflow-wrap: normal; }
 /* headings break evenly, running text avoids a lone last word */
 h1, h2, h3, .lede { text-wrap: balance; }
 p, li, dd, .lede { text-wrap: pretty; }
@@ -105,7 +110,7 @@ p, li, dd, .lede { text-wrap: pretty; }
 .skip { position: absolute; left: var(--s4); top: -100px; z-index: 50; background: var(--card); color: var(--ink); border: 2px solid var(--ink); border-radius: var(--r-md); padding: var(--s2) var(--s4); font-weight: 700; }
 .skip:focus { top: var(--s3); }
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
-.measure { max-width: 62ch; }
+.measure { max-width: var(--measure); }
 .mt-2 { margin-top: var(--s2); } .mt-3 { margin-top: var(--s3); } .mt-4 { margin-top: var(--s4); } .mt-5 { margin-top: var(--s5); } .mt-6 { margin-top: var(--s6); }
 @media (min-width: 821px) { .phone-only { display: none !important; } }
 
@@ -157,7 +162,7 @@ p, li, dd, .lede { text-wrap: pretty; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s5); flex-wrap: wrap; margin-bottom: var(--s6); }
 /* the date line above a greeting: 15 px bold, as chosen */
 .page-head .overline { margin-bottom: 6px; font-size: var(--t-meta); text-transform: none; letter-spacing: .02em; }
-.lede { font-size: var(--t-lede); color: var(--ink-2); margin-top: var(--s2); max-width: 62ch; }
+.lede { font-size: var(--t-lede); color: var(--ink-2); margin-top: var(--s2); max-width: var(--measure); }
 .lede a { color: var(--ink); text-decoration-color: var(--link); text-decoration-thickness: 2px; font-weight: 700; }
 .lede a:hover { color: var(--link); }
 .head-actions { display: flex; gap: var(--s3); flex-wrap: wrap; }
@@ -309,7 +314,7 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
 .banner--alert { --b-bg: var(--red-soft); --b-line: var(--red-line); --b-ic: var(--red); }
 .banner__ic { width: var(--tile-md); height: var(--tile-md); border-radius: 50%; display: grid; place-items: center; background: var(--card); color: var(--b-ic); border: 1.5px solid var(--b-line); }
 .banner:not(.banner--ok):not(.banner--warn):not(.banner--alert) .banner__ic { background: var(--paper-2); border-color: var(--paper-2); }
-.banner__text { max-width: 62ch; }
+.banner__text { max-width: var(--measure); }
 .banner__text b { font-weight: 700; }
 .banner--hero { padding: var(--s5) var(--s6); border-radius: var(--r-lg); }
 .banner--hero .banner__ic { width: var(--tile-lg); height: var(--tile-lg); background: var(--b-ic); color: var(--card); border: 0; }
@@ -350,7 +355,7 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
 .home-head { margin-bottom: var(--s4); }
 .home-head__hi { font-family: var(--font-head); font-weight: 600; font-size: var(--t-h3); font-variation-settings: "SOFT" 100; color: var(--ink); }
 .home-head__day { font-family: var(--font-text); font-weight: 700; font-size: var(--t-meta); color: var(--ink-3); }
-.home-head__line { margin-top: 2px; font-size: 1.25rem; line-height: 1.4; color: var(--ink-2); max-width: 62ch; }
+.home-head__line { margin-top: 2px; font-size: 1.25rem; line-height: 1.4; color: var(--ink-2); max-width: var(--measure); }
 .home-head__line a { color: var(--ink); font-weight: 700; text-decoration-color: var(--link); text-decoration-thickness: 2px; }
 .card__foot--split { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s2) var(--s4); }
 .convos__h { margin: var(--s3) var(--s3) var(--s1); font-size: var(--t-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
@@ -391,7 +396,7 @@ input[type=text], input[type=search], input[type=date], input[type=datetime-loca
 input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 1; }
 select { appearance: none; padding-right: 40px; background-image: linear-gradient(45deg, transparent 50%, var(--ink-2) 50%), linear-gradient(135deg, var(--ink-2) 50%, transparent 50%); background-position: right 20px center, right 14px center; background-size: 6px 6px; background-repeat: no-repeat; }
 input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; border-color: var(--ink); }
-.check { display: inline-flex; align-items: center; gap: var(--s3); min-height: var(--target); font-weight: 700; cursor: pointer; }
+.check { display: inline-flex; align-items: center; gap: var(--s3); min-height: var(--target); font-weight: 400; cursor: pointer; }
 .check input { width: 22px; height: 22px; margin: 0; accent-color: var(--vera-bg); flex: none; }
 .check--off { color: var(--ink-3); cursor: not-allowed; }
 .searchbox { position: relative; }
@@ -557,7 +562,7 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 /* 5.24 Key / value details */
 .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s2) var(--s5); align-items: baseline; }
 .kv dt { font-size: var(--t-meta); color: var(--ink-3); }
-.kv dd { font-weight: 700; }
+.kv dd { font-weight: 400; }
 
 /* 5.25 Signed-out layout and the person picker */
 .solo { min-height: 100vh; padding: var(--s6) var(--s4) var(--s8); }
@@ -677,7 +682,7 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
   .mapband__fold > summary { display: none; }
   .mapband__fold::details-content { content-visibility: visible; display: block; }
 }
-.mapband__cap { max-width: 72ch; margin-bottom: var(--s3); }
+.mapband__cap { max-width: var(--measure); margin-bottom: var(--s3); }
 .instrument__pane { background: var(--glass); border-radius: var(--r-lg); padding: var(--s3); box-shadow: inset 0 0 0 1px var(--glass-line); }
 .radar { display: block; width: 100%; max-width: 860px; height: auto; margin: 0 auto; }
 .radar--narrow { display: none; }
@@ -1324,7 +1329,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 /* a group of settings: a card with its heading, what it is for, and its boxes two to a row */
 .sgroup__h { display: flex; align-items: center; gap: var(--s3); font-size: var(--t-h3); }
 .sgroup__h .icon { color: var(--ink-3); }
-.sgroup__note { margin-top: var(--s2); color: var(--ink-2); font-size: var(--t-meta); max-width: 72ch; }
+.sgroup__note { margin-top: var(--s2); color: var(--ink-2); font-size: var(--t-meta); max-width: var(--measure); }
 .fold__body > .sgroup__note { margin-top: 0; }
 .sgroup > .sgrid, .sgroup .fold__body > .sgrid { margin-top: var(--s4); }
 .sgroup--danger { border-color: var(--red-line); }
