@@ -25,7 +25,7 @@ There are three strengths, whichever company: **everyday** (the company's own mo
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
 | Answering the family (`chat_level`) | everyday | The strength for chat. | everyday, better or best |
-| The weekend digest (`digest_level`) | everyday | The strength for the weekend ideas, sent once a week, so a stronger model adds little. | everyday, better or best |
+| The weekend digest (`digest_level`) | everyday | The strength for the weekend ideas. | everyday, better or best |
 | Looking things up (`lookup_level`) | everyday | The strength for filling in an idea and finding what is on. | everyday, better or best |
 
 ### Which model is everyday
@@ -39,11 +39,11 @@ There are three strengths, whichever company: **everyday** (the company's own mo
 | Gemini everyday chat model (`gemini_model`) | `gemini-3.1-flash-lite` |
 | Gemini everyday lookup model (`gemini_worker_model`) | `gemini-3.1-flash-lite` |
 
-The card shows the models for the company in use, least expensive first, with the price per million [tokens](/wiki/reference/glossary#token) read and written; the other companies' are under "Other models". "Another model" accepts any name the company offers: FamilyDB refuses a name the company says it does not have, and accepts any name when the company cannot be asked. Prices come from the [daily check](/wiki/controls/status/models-and-prices#what-the-daily-check-does); a model it does not know is counted dearer than any listed, so the daily limit errs on the safe side.
+The card shows the models for the company in use, least expensive first, with the price per million [tokens](/wiki/reference/glossary#token) read and written; the other companies' are under "Other models". "Another model" accepts any name the company offers: FamilyDB refuses a name the company says it does not have, and accepts any name when the company cannot be asked. Prices come from the [daily check](/wiki/controls/status/models-and-prices#what-the-daily-check-does); a model it does not know is counted dearer than any listed.
 
 ### Better and best models
 
-Folded away on the card. Empty uses the ones this version knows; a judgment (below) may suggest newer ones. The settings are `openai_better_model`, `openai_best_model`, `anthropic_better_model`, `anthropic_best_model`, `gemini_better_model` and `gemini_best_model`.
+Folded away on the card, one box for each company and level (`openai_better_model`, `gemini_best_model` and so on). Empty uses the ones this version knows; a judgment (below) may suggest newer ones.
 
 ## A second company
 
@@ -62,7 +62,7 @@ With a key for another company as well, FamilyDB can use it for lookups, or let 
 
 ## Asking a stronger model to weigh a change
 
-Some changes need judgment and not a rule: which model replaces one that is going, what a refusal nobody can read means, which new models belong at which level, what a price the lists disagree on really is. With this on, FamilyDB asks the day's questions together after the evening's lookup time (at once if lookups are set to "as soon as added"), in one call, plus at most two price checks that search the web. A refusal is asked at once. The call carries model names, prices and error messages, never the family's messages.
+Some changes need judgment and not a rule: which model replaces one that is going, what a refusal nobody can read means, which new models belong at which level, what a disputed price really is. With this on, FamilyDB asks the day's questions together after the evening's lookup time, in one call, plus at most two price checks that search the web; a refusal is asked at once. The call carries model names, prices and error messages, never the family's messages.
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
@@ -80,8 +80,8 @@ A judgment never changes a setting by itself except under "within cost"; a deare
 | Listen to voice notes (`voice_notes`) | on | Writes down voice notes sent on Telegram and answers them as if typed. Off asks the family to type. | on or off |
 | Longest voice note heard (`voice_max_minutes`) | 5 | A longer one is not heard at all, since every minute is paid for. | 1 to 30 |
 | Who hears them (`transcribe_provider`) | empty | Empty uses the chat company when it can hear, otherwise another company with a key. | OpenAI or Gemini |
-| OpenAI hearing model (`openai_transcribe_model`) | `gpt-4o-mini-transcribe` | The model OpenAI uses to write a voice note down. | A model name |
-| Gemini hearing model (`gemini_transcribe_model`) | Gemini's lookup model | Empty uses it. | A model name |
+| OpenAI hearing model (`openai_transcribe_model`) | `gpt-4o-mini-transcribe` | Writes a voice note down when OpenAI hears it. | A model name |
+| Gemini hearing model (`gemini_transcribe_model`) | Gemini's lookup model | The same for Gemini. Empty uses its lookup model. | A model name |
 | Look at photos (`photos`) | on | The lookup model reads a photo sent on Telegram (a poster, a menu, a ticket) and writes down what it shows. | on or off |
 
 Claude cannot hear voice notes, so they need an OpenAI or Gemini key. A voice note goes to the company that hears it; a photo goes to the company that looks things up, costs about a tenth of a cent, and is not kept. Of an album, only the first 4 photos are looked at. In a group, a photo is looked at only when it is sent to the bot, by a mention in its caption or a reply. Neither recording is kept; only the words are. What leaves the house is on [What leaves the house](/wiki/security/what-leaves-the-house).

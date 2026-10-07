@@ -10,7 +10,7 @@ Messages go to the model company you chose, and almost nothing else leaves the s
 
 What each company does with what it receives is governed by its own terms, not by FamilyDB. The page itself loads nothing from other sites. What is stored on the server is on [What is stored and for how long](/wiki/security/data-and-privacy).
 
-## The table
+## What leaves, to whom, and how to stop it
 
 Where a row says "the company", the second company can receive the same content when the first is busy, out of credit or refusing. It needs a saved key and **Ask another company when the first cannot** on, which is the default.
 

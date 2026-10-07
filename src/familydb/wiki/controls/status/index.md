@@ -20,7 +20,7 @@ The pill is the small state in the sidebar and the phone's top bar for parents a
 | **Writing back** | A reply is being written in your own chat. |
 | **Ready** | None of the above. |
 
-The banner says "can't answer right now" for both kinds of Can't answer, "is resting until midnight" for Resting, and "is ready" otherwise. It never says Writing back; the pill does, on any page. A line under the heading gives what was spent today, what the last 30 days cost, which parts need a look and which are not connected yet. A part needs a look when its row is amber or red. Not connected is a choice and is not counted as a fault.
+The banner says "can't answer right now" for both kinds of Can't answer, "is resting until midnight" for Resting, and "is ready" otherwise; it never says Writing back. A line under it gives what was spent today, what the last 30 days cost, which parts need a look and which are not connected yet. Not connected is a choice, not a fault.
 
 The pill goes by the Needs a look list, not by whether anything is answering: a model company out of credit makes the pill read Can't answer even while the second company is answering. The day's limit row stays listed after midnight, so the pill can keep reading Can't answer ([known limits](/wiki/reference/known-limits#the-days-limit-keeps-the-pill-red-after-midnight)).
 
@@ -40,9 +40,9 @@ The other rows (Google Calendar, a model company refusing part of a request or r
 
 Every figure is **an estimate worked out from each call's size and a price table, not your bill.** Set a spending limit with the model company as well. How the estimate is made, and what to turn down, is on [Cost](/wiki/operations/cost).
 
-- **Spent today** is what recorded calls have cost since midnight in the family's time zone, against the daily limit, with an upright line for a usual day. Admins get **Change the limit**.
-- **Last 30 days** shows the cost, the usual day (the average over the days in those 30 that had any calls) and "Questions answered", the number of calls made for answering the family.
-- **Where the money went** gives calls and dollars by kind of call, and the share of what was sent that came back from the [prompt cache](/wiki/reference/glossary#prompt-cache), which costs less.
+- **Spent today** is what recorded calls have cost since midnight in the family's time zone, against the daily limit, with a line for a usual day. Admins get **Change the limit**.
+- **Last 30 days** shows the cost, the usual day (the average over the days in those 30 that had any calls) and "Questions answered".
+- **Where the money went** gives calls and dollars by kind of call, and how much of what was sent came back from the [prompt cache](/wiki/reference/glossary#prompt-cache), which costs less.
 
 ## How each part is doing
 
@@ -58,7 +58,7 @@ Every row has a tag in words, never color alone, and an admin gets a button besi
 | **Google Calendar** | **Needs a look** when a calendar is named but its key file is missing. **Not connected**: plans stay inside FamilyDB. | The Calendar step of Setup. |
 | **Looking things up** | **Off**: new ideas get no hours, prices or drive times. | **Turn it on** on [Lookups](/wiki/controls/settings/lookups). |
 
-The **Backup** row is the second company, not your database backup. **Connected to** repeats the facts behind these rows: the calendar and the address it is reached as, the home position, whether lookups can run, where the weekend ideas go, and how the web page is protected.
+The **Backup** row (the second company, not your database backup) is what [A second company](/wiki/controls/settings/ai-model#a-second-company) sets up. **Connected to** repeats the facts behind these rows: the calendar and its address, the home position, whether lookups can run, where the weekend ideas go, and how the web page is protected.
 
 ## Waiting and Worth a look
 
@@ -74,9 +74,4 @@ The **Backup** row is the second company, not your database backup. **Connected 
 
 ## When something is wrong
 
-1. Read the pill and the banner. Can't answer yet means setup is not finished; the assistant's row names the missing steps.
-2. Read **Needs a look**, then any amber or red row under **How each part is doing**.
-3. For one message that went wrong, open it under Recent activity.
-4. For a message that never got a reply, check **Messages that did not go through**, then [Troubleshooting](/wiki/operations/troubleshooting#a-message-got-no-reply).
-
-What FamilyDB sends without being asked is listed on [Messages](/wiki/controls/settings/messages), not here.
+Read the pill and the banner, then **Needs a look**, then any amber or red row under **How each part is doing**. For one message that went wrong, open it under Recent activity. For a message that never got a reply, see [Troubleshooting](/wiki/operations/troubleshooting#a-message-got-no-reply). What FamilyDB sends without being asked is listed on [Messages](/wiki/controls/settings/messages), not here.
