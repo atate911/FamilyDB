@@ -959,6 +959,7 @@ def wishes() -> str:
         kids=shown,
         names=names,
         parents_text=views.names_text([{"name": name} for name in parents]),
+        parents_or=views.join_or(parents) or "a parent",
         parent=visitor.may("decide"),
         one=bool(wanted) or not visitor.may("decide"),
         choices=[(value or "everyday", name) for value, name, _ in views.WISH_LISTS],

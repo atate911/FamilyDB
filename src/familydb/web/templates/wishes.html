@@ -93,11 +93,14 @@
       <p class="small muted">{{ assistant }} {{ 'turned these away.' if parent else 'couldn’t put these on your list. What to do next is beside each.' }}</p>
       <ul class="wturned">
         {% for row in kid.turned %}
-          <li>
+          <li id="wish-{{ row.id }}">
             <div><b>{{ row.title }}</b> <span class="tags">
               <span class="tag tag--off">{{ icon('offc') }}{{ (row.concern | capitalize) if parent else row.concern_kid }}</span>
               {%- if row.review == 'asked' %}<span class="tag tag--pending">Asked a parent</span>{% endif -%}
             </span></div>
+            {% if not parent and row.review not in ('offered', 'asked') %}
+              <p class="small">Ask {{ parents_or }} about it.</p>
+            {% endif %}
             {% if not parent and row.review == 'offered' %}
               <form method="post" action="{{ url_for('edits.ask_parent', wish_id=row.id) }}">{{ hidden(kid) }}
                 <button class="btn btn--quiet btn--sm" type="submit">{{ icon('send', size='sm') }}Ask a parent</button></form>
