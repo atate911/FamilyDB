@@ -1,10 +1,11 @@
 """What the page's frame says around every page: who is signed in, how the assistant stands (the
 health pill), and the counts that sit by a page's name in the sidebar ("3 late", "1 to decide").
-Read from the log and the tables, no model call. Only a page built on `base_kitchen.html` asks, so
+Read from the log and the tables, no model call. Only a page built on `base.html` asks, so
 a page that has not moved to it costs nothing."""
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
@@ -19,6 +20,8 @@ from familydb.store import tasks as task_store
 from familydb.web import auth, chat, views
 from familydb.web import settings as settings_page
 from familydb.web import status as status_page
+
+log = logging.getLogger(__name__)
 
 # How far back a plan still waits to be rated; the follow-up job asks about the same ones.
 RATE_DAYS = 14
@@ -77,12 +80,18 @@ def frame(app: App) -> Frame:
         return Frame(me)
     today = app.clock.today()
     tz = app.settings.tzinfo
-    with closing(app.connect()) as conn:
-        late = _late(conn, visitor, tz, today)
-        decide = _to_decide(conn, visitor, today)
-        rate = _to_rate(conn, visitor, today)
-        check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
-        pill = _pill(app, conn, visitor) if visitor.may("browse") else None
+    try:
+        with closing(app.connect()) as conn:
+            late = _late(conn, visitor, tz, today)
+            decide = _to_decide(conn, visitor, today)
+            rate = _to_rate(conn, visitor, today)
+            check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
+            pill = _pill(app, conn, visitor) if visitor.may("browse") else None
+    except sqlite3.OperationalError:
+        # A database not yet migrated: the frame is drawn without counts, so a page that says
+        # "not found" or "not yours" never fails itself.
+        log.warning("the menu's counts could not be read", exc_info=True)
+        return Frame(me)
     return Frame(me, pill, late, decide, rate, check)
 
 

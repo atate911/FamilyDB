@@ -36,7 +36,7 @@ def _revision(client, member_id: int) -> str:
 
 
 def _said(response) -> str:
-    return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
+    return " ".join(re.findall(r'class="(?:said|banner__text)"[^>]*>\s*([^<]+)', response.text))
 
 
 def test_somebody_can_be_added_from_the_page(page, conn) -> None:
@@ -128,7 +128,7 @@ def test_a_stranger_who_messaged_the_bot_can_be_added_from_the_page(
     assert reply.status == "unknown_sender" and "5555" in reply.text
 
     text = page.get("/family").text
-    assert "Asked to talk to the bot" in text
+    assert "Waiting to be let in" in text
     assert 'value="Robin Lee"' in text and "@robin" in text and "Telegram 5555" in text
     assert (
         "pod bay" not in re.findall(r'id="knocking".*?</section>', text, re.S)[0].split("</h2>")[1]
@@ -140,7 +140,7 @@ def test_a_stranger_who_messaged_the_bot_can_be_added_from_the_page(
     )
     assert sent.status_code == 302
     assert members.find_by_name(conn, "Robin").channel_user_id == "5555"
-    assert "Asked to talk to the bot" not in page.get("/family").text  # gone once added
+    assert "Waiting to be let in" not in page.get("/family").text  # gone once added
 
 
 def test_a_link_is_made_for_somebody_and_shown_once(page, conn, family) -> None:
@@ -187,7 +187,7 @@ def test_a_kid_is_given_a_birthday_and_male_or_female(page, conn, family) -> Non
     )
     saved = members.get(conn, girls.id)
     assert (saved.birth_date, saved.gender) == ("2017-03-14", "female")
-    assert '<span class="tag">9</span>' in page.get("/family").text  # her age, worked out
+    assert "<span>Age 9</span>" in page.get("/family").text  # her age, worked out
 
 
 def test_a_grown_up_is_given_a_birthday_but_no_gender_box(page, conn, family) -> None:
@@ -232,6 +232,6 @@ def test_somebody_can_be_taken_off_for_good_once_the_box_is_ticked(page, conn, f
     assert sure.headers["Location"] == "/family"
     assert "Alex is off the family list for good" in _said(page.get("/family"))
     assert members.get(conn, alex.id) is None
-    listed = re.search(r'<ul class="panel plain people">.*?</ul>', page.get("/family").text, re.S)
+    listed = re.search(r'<ul class="items fam">.*?</ul>', page.get("/family").text, re.S)
     assert "Alex" not in listed.group(0) and "Sam" in listed.group(0)
     assert page.get(f"/family/{alex.id}").status_code == 404

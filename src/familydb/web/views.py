@@ -16,7 +16,7 @@ from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
-from familydb import alerts, windows
+from familydb import alerts, presents, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, prices
 from familydb.config import Settings
@@ -95,6 +95,39 @@ REFUSALS = {
         "Ticking off your things to do is not part of your role yet. Ask an admin.",
     ),
 }
+
+
+def admin_only(admins: list[str], *, grown_up: bool) -> tuple[str, str, str]:
+    """What is said where somebody who is not an admin opens Settings, setup or the family list:
+    the heading, the words, and who to ask. A kid is told there is nothing she need do."""
+    asking = join_or(admins) if admins else "an admin"
+    if admins:
+        who = (
+            admins[0] + " is the admin"
+            if len(admins) == 1
+            else presents.join_names(admins) + " are the admins"
+        )
+        line = f"{who} in this family."
+    else:
+        line = ""
+    if grown_up:
+        title, why = REFUSALS["manage"]
+        return title, why, line
+    return (
+        "This part is for grown-ups",
+        "Settings, setting up and the family list are changed by an admin. There\u2019s nothing "
+        f"here you need to do: ask {asking} if something here needs to change.",
+        line,
+    )
+
+
+def join_or(names: list[str]) -> str:
+    """ "Sam", "Sam or Alex", "Sam, Alex or Jo"."""
+    if len(names) < 2:
+        return "".join(names)
+    return f"{', '.join(names[:-1])} or {names[-1]}"
+
+
 MAP_URL = "https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=17/{lat}/{lon}"
 MAP_SEARCH = "https://www.openstreetmap.org/search?query={query}"
 

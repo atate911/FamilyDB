@@ -61,6 +61,11 @@ def _tokens(client, url: str) -> dict[str, str]:
     return found
 
 
+def _ticked(words: str, page: str) -> bool:
+    """Whether the page says `words` after a tick, as a step that is done does."""
+    return bool(re.search(r'class="state-done"><svg[^>]*>.*?</svg>' + re.escape(words), page, re.S))
+
+
 def _post(browser, step: str, action: str, **form: str):
     """Send a form the way the setup page draws it: tokens, and where to come back to."""
     data = {**_tokens(browser, f"/setup/{step}"), "then": f"/setup/{step}", **form}
@@ -82,7 +87,7 @@ def test_a_new_install_opens_on_setup_until_it_can_answer(fresh) -> None:
     page = fresh.get("/setup").text
     for title in ("Add yourself", "Your own password", "Connect an AI model"):
         assert title in page
-    assert page.count('class="tag need-needed">needed<') == 2  # yourself, and a model
+    assert page.count('tag--look"><svg') == page.count(">Needed<") == 2  # yourself, and a model
     assert 'href="/setup/you">Start' in page
     assert "Go to the home page" not in page  # it would only send you back here
 
@@ -90,7 +95,7 @@ def test_a_new_install_opens_on_setup_until_it_can_answer(fresh) -> None:
 def test_every_step_says_where_it_is_and_how_to_leave(fresh) -> None:
     page = fresh.get("/setup/model").text
     assert "Step 3 of 7" in page and 'aria-current="step"' in page
-    assert 'href="/setup/password">← Back' in page
+    assert re.search(r'href="/setup/password">\s*<svg[^>]*>.*?</svg>Back', page, re.S)
     assert "Skip for now" in page and 'href="/setup/home"' in page
     assert fresh.get("/setup/nothing-like-this").status_code == 404
 
@@ -101,18 +106,18 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     # 1. Yourself, as the admin.
     back = _post(fresh, "you", "/family", name="Sam", role="admin")
     assert back.headers["Location"] == "/setup/you"
-    assert "✓ On the list as Sam." in fresh.get("/setup/you").text
+    assert _ticked("On the list as Sam.", fresh.get("/setup/you").text)
 
     # 2. Your own password, which signs this browser in as Sam and ends the installer's.
     sam = members.find_by_name(conn, "Sam")
     page = fresh.get("/setup/password").text
-    assert f'name="member" value="{sam.id}"' in page and "For <strong>Sam</strong>" in page
+    assert f'name="member" value="{sam.id}"' in page and "For <b>Sam</b>" in page
     ours = "pancakes on sunday mornings"
     back = _post(fresh, "password", "/you", member=str(sam.id), new=ours, again=ours)
     assert back.headers["Location"] == "/setup/password"
     page = fresh.get("/setup/password").text
     assert "You sign in as Sam from now on" in page
-    assert "✓ Everybody signs in as themselves." in page and "You sign in as Sam" in page
+    assert _ticked("Everybody signs in as themselves.", page) and "You sign in as Sam" in page
     stranger = app_client(app)
     assert stranger.post("/login", data={"password": INSTALLERS}).status_code == 400
     refused = stranger.post("/login", data={"name": "Sam", "password": INSTALLERS})
@@ -139,7 +144,7 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     assert '<option value="America/Vancouver" selected>Vancouver · UTC-07:00</option>' in step
     _post(fresh, "home", "/settings", home_area="Vancouver, WA", weather_units="imperial")
     page = fresh.get("/setup/home").text
-    assert "Found Vancouver, Washington" in page and "✓ Vancouver, WA" in page
+    assert "Found Vancouver, Washington" in page and _ticked("Vancouver, WA", page)
     assert app.settings.weather_units == "imperial"
 
     done = fresh.get("/setup/done").text
@@ -235,7 +240,7 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     assert linked.headers["Location"] == "/setup/telegram"
     page = fresh.get("/setup/telegram").text
     assert "The bot knows Sam on Telegram now" in page
-    assert "✓ @tate_family_bot, and it knows Sam." in page
+    assert _ticked("@tate_family_bot, and it knows Sam.", page)
 
     # And the weekend ideas can follow them there.
     _post(fresh, "telegram", "/settings", digest_chat_id="555")
@@ -244,10 +249,13 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     # The group's steps say whether BotFather's privacy setting still needs turning off.
     app.channel_facts["telegram"] = {"reads_groups": False}
     group = " ".join(fresh.get("/setup/telegram").text.split())
-    assert "send <code>/setprivacy</code>" in group and "take it out and add it back" in group
+    assert (
+        'send <code class="cmd-inline">/setprivacy</code>' in group
+        and "take it out and add it back" in group
+    )
     app.channel_facts["telegram"] = {"reads_groups": True}
     group = " ".join(fresh.get("/setup/telegram").text.split())
-    assert "✓ Its privacy setting is off" in group and "/setprivacy" not in group
+    assert _ticked("Its privacy setting is off", group) and "/setprivacy" not in group
 
 
 def test_the_weekend_ideas_are_offered_by_the_day_they_come(fresh, conn) -> None:
@@ -315,7 +323,7 @@ def test_the_family_step_lets_in_whoever_messaged_the_bot(fresh, conn) -> None:
     _post(fresh, "family", "/family", name="Alex", role="parent", telegram_id="777")
     page = fresh.get("/setup/family").text
     assert "Alex is on the family list." in page and "Waiting to be let in" not in page
-    assert "✓ 2 on the list." in page
+    assert _ticked("2 on the list.", page)
 
 
 def test_the_calendar_step_explains_google_and_reports_a_bad_paste(fresh) -> None:
@@ -326,7 +334,7 @@ def test_the_calendar_step_explains_google_and_reports_a_bad_paste(fresh) -> Non
         fresh, "calendar", "/settings/google/connect", key="not json at all", calendar_id="c"
     )
     assert back.headers["Location"] == "/setup/calendar"
-    assert 'class="error" role="alert"' in fresh.get("/setup/calendar").text
+    assert 'role="alert"' in fresh.get("/setup/calendar").text
 
 
 def test_a_form_can_only_ask_to_come_back_to_a_setup_page(fresh) -> None:

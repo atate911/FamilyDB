@@ -1,14 +1,15 @@
 {# The three companies to choose between, as setup's model step and the AI model settings page
    both offer them: a card each, leading back to the same page with that company chosen. #}
-<div class="choices">
+{% from "_ui.html" import icon with context %}
+<div class="companies">
   {% for one in companies %}
-    <a class="choice{% if one.name == company %} chosen{% endif %}"
+    <a class="company{% if one.name == company %} company--chosen{% endif %}"
        href="{{ url_for(request.endpoint, company=one.name, **request.view_args) }}"
        {% if one.name == company %}aria-current="true"{% endif %}>
-      <strong>{{ one.label }}{% if one.name == 'openai' %} <span class="tag need-recommended">recommended</span>{% endif %}</strong>
-      <span class="muted">{{ one.line }}</span>
-      {% if one.has_key and one.name == answering %}<span class="muted">✓ answers now</span>
-      {% elif one.has_key %}<span class="muted">✓ a key is saved</span>{% endif %}
+      <b class="company__name">{{ one.label }}{% if one.name == 'openai' %}<span class="tag tag--ok">recommended</span>{% endif %}</b>
+      <span class="company__line">{{ one.line }}</span>
+      {% if one.has_key and one.name == answering %}<span class="company__state">{{ icon('check', size='sm') }}answers now</span>
+      {% elif one.has_key %}<span class="company__state">{{ icon('check', size='sm') }}a key is saved</span>{% endif %}
     </a>
   {% endfor %}
 </div>

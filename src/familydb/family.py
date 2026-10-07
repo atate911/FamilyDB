@@ -324,6 +324,26 @@ def _last_admin_signing_in(conn: sqlite3.Connection, person: Member) -> bool:
     return [admin.id for admin in signing_in] == [person.id]
 
 
+NOT_A_LOOK = "That is not one of the looks on the Look page."
+
+
+def choose_look(conn: sqlite3.Connection, member_id: int, value: str) -> str:
+    """Keep somebody's look with them, so it follows them to every phone and computer they sign in
+    on. `value` is what the Look page's form holds as the look cookie does ("rail.dark"); one that
+    names no look is refused. Only ever for the person signed in: the page passes their own id."""
+    from familydb.web import looks  # the looks are the page's; this checks a choice against them
+
+    key, _, mode = value.partition(".")
+    chosen = looks.choose(key, mode)
+    if chosen is None:
+        raise FamilyError(NOT_A_LOOK)
+    kept = looks.value(*chosen)
+    with transaction(conn):
+        _someone(conn, member_id)
+        members.set_look(conn, member_id, kept)
+    return kept
+
+
 def choose_password(conn: sqlite3.Connection, member_id: int, password: str, *, now: str) -> None:
     """Somebody's own choice of password. Every other browser signed in as them is signed out, since
     each sign-in carries a mark of its password. The caller has made sure it is the person.

@@ -1,28 +1,22 @@
-{% from "_ui.html" import icon %}
-<section class="panel" id="changes">
+{% from "_ui.html" import icon with context %}
+<section class="card sgroup" id="changes" aria-labelledby="g-changes">
   {% if history %}
-    {# A key or a password is never shown, only that it was replaced; a long text only that it
-       was rewritten. #}
-    <ul class="plain changes">
+    <h2 class="sr" id="g-changes">Changes, newest first</h2>
+    {# A key or a password is never shown, only that it was replaced; a long text only that it was rewritten. #}
+    <ul class="changes">
       {% for line in history %}
-        <li>
-          <div>
-            <strong>{{ line.label }}</strong>
-            {% if line.secret %}
-              replaced
-            {% elif line.long %}
-              rewritten
-            {% else %}
-              {{ line.old }} → {{ line.new }}
-            {% endif %}
-          </div>
-          <div class="muted">
-            {{ line.when }}{% if line.who %} · {{ line.who }}{% endif %} · {{ line.source }}
-          </div>
+        <li class="change">
+          <p><b>{{ line.label }}</b>
+            {% if line.secret %}<span class="muted">replaced</span>
+            {% elif line.long %}<span class="muted">rewritten</span>
+            {% else %}{{ line.old }} <span aria-hidden="true">→</span><span class="sr">to</span> {{ line.new }}{% endif %}</p>
+          <p class="small muted">{{ line.when }}{% if line.who %} · {{ line.who }}{% endif %} · {{ line.source }}</p>
         </li>
       {% endfor %}
     </ul>
+    <p class="small muted mt-4">A key or a password is never shown, only that it was replaced; a long text only that it was rewritten.</p>
   {% else %}
-    <p class="muted empty">{{ icon('clock') }}<span>Nothing has been changed here yet.</span></p>
+    <h2 class="sr" id="g-changes">Changes</h2>
+    <p class="empty">{{ icon('history') }}<span>Nothing has been changed here yet.</span></p>
   {% endif %}
 </section>

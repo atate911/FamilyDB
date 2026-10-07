@@ -86,7 +86,7 @@ def test_it_adds_up_what_the_models_cost(status, conn) -> None:
     )
     _call(conn, model="gemini-3.8-flash", usage={"input_tokens": 300, "output_tokens": 50})
     text = _flat(status.get("/status"))
-    assert "2 model calls in the last 30 days" in text
+    assert "2 calls in 30 days" in text
     assert "44% of what was sent came back from the cache" in text
     assert "4,800" in text and "claude-opus-5" in text
     assert "gemini-3.8-flash (Google Gemini)" in text  # the last one, and who served it
@@ -137,7 +137,7 @@ def test_it_shows_what_went_wrong(status, conn, family) -> None:
     assert "claude-opus-5 — end" not in text
 
 
-def test_the_screen_turns_amber_near_the_limit_and_red_past_it(status, conn) -> None:
+def test_the_page_warns_near_the_limit_and_rests_past_it(status, conn) -> None:
     def spend(dollars: float) -> None:
         with db.transaction(conn):
             calls.log_llm_call(
@@ -156,13 +156,12 @@ def test_the_screen_turns_amber_near_the_limit_and_red_past_it(status, conn) -> 
 
     spend(1.6)  # of the $2.00 limit
     text = _flat(status.get("/status"))
-    assert '<div class="crt readout near" aria-hidden="true">' in text
-    assert "[################....] 80%" in text
+    assert "Near the limit" in text and 'class="meter__fill"' in text
+    assert "is ready." in text and "well under budget" not in text
     spend(0.5)
     text = _flat(status.get("/status"))
-    assert '<div class="crt readout near over" aria-hidden="true">' in text
-    assert "[####################] 105%" in text and "Limit reached" in text
-    assert "The limit is reached: nothing more is asked of a model until midnight." in text
+    assert "Limit reached" in text and "is resting until midnight." in text
+    assert "nothing more is asked of a model until midnight" in text
 
 
 def test_the_status_page_is_behind_the_password(settings, clock, conn, family) -> None:
@@ -185,7 +184,7 @@ def test_a_calendar_named_but_not_signed_into_is_not_connected(settings, clock, 
     app = App(settings.model_copy(update={"google_calendar_id": "family@group.calendar"}), clock)
     text = _flat(create_app(app).test_client().get("/status"))
     assert "not connected yet: connect it on the settings page" in text
-    assert "no home coordinates" in text
+    assert "No home coordinates" in text
 
 
 def test_the_status_page_asks_nothing_of_a_model(status, conn, monkeypatch) -> None:
@@ -239,3 +238,44 @@ def test_a_new_install_starts_by_adding_yourself(settings, clock, conn) -> None:
     named = settings.model_copy(update={"google_calendar_id": "family@example.com"})
     calendar = next(s for s in services(App(named, clock), conn) if "calendar" in str(s).lower())
     assert "familydb auth google" not in str(calendar) and "settings page" in str(calendar)
+
+
+def test_each_part_says_how_it_stands_and_the_verdict_agrees(status) -> None:
+    text = _flat(status.get("/status"))
+    assert "How each part is doing" in text
+    for area in (
+        "Spending",
+        "Sign-in",
+        "Backup",
+        "Telegram",
+        "Google Calendar",
+        "Looking things up",
+    ):
+        assert f'<span class="item__title">{area}</span>' in text, area
+    # A part that is not connected yet is a choice, said in words and not as a fault.
+    assert (
+        "Not connected" in text
+        and "Telegram and Google Calendar aren\u2019t connected yet." in text
+    )
+
+
+def test_the_verdict_is_built_from_the_parts_it_sits_over() -> None:
+    from familydb.web.status import Pill, verdict
+
+    parts = [
+        {"area": "Spending", "state": "ok"},
+        {"area": "Sign-in", "state": "look"},
+        {"area": "Telegram", "state": "better"},
+    ]
+    ready = Pill("ready", "Vera is ready", "Ready")
+    said = verdict(parts, name="Vera", standing=ready, spent=0.0, thirty=1.26)
+    assert said["tone"] == "ok" and said["heading"] == "Vera is ready, and well under budget."
+    assert "Nothing spent today; the last 30 days cost $1.26." in said["text"]
+    assert (
+        "Sign-in needs a look." in said["text"]
+        and "Telegram isn\u2019t connected yet." in said["text"]
+    )
+    down = verdict(parts, name="Vera", standing=Pill("down", "", ""), spent=0.0, thirty=0.0)
+    assert down["tone"] == "alert" and down["heading"] == "Vera can\u2019t answer right now."
+    rest = verdict(parts, name="Vera", standing=Pill("rest", "", ""), spent=2.0, thirty=3.0)
+    assert rest["tone"] == "warn" and "About $2.00 spent today" in rest["text"]

@@ -50,6 +50,40 @@ older than what is installed. It gets a date when it is released.
   a grown-up's own present, and a present for somebody else now shows to a kid,
   tagged, so she knows to keep it quiet. A present that names nobody is still kept
   from the kids, and Vera still never tells a kid of one in the chat.
+- **A new Kids' lists and What Vera knows.** Each kid's lists are one line to a
+  wish that opens to its buttons, with a grip to drag it (where scripts run);
+  a parent answers inside the line, sees what Vera turned away beside the list
+  and what was answered lately, and a kid sees what to do next about what Vera
+  could not put on her list. What Vera knows groups what the family has told her
+  by person, in each person's colour.
+- **A new Family, Your password and Look.** The family list, each person's page
+  and the password pages are redone, with a starting password shown once in a
+  box of its own. Each person's look is now kept with them, so it comes with
+  them to every phone and computer they sign in on, and everybody else keeps
+  their own. A new look, Afterglow, joins the others: charcoal glass with faint
+  scanlines, always night.
+- **A new Settings.** The list of settings is one row to a part, each saying
+  how it stands now and tagged when it needs a look or is switched off, with
+  the sections beside each other on every page. Every section is redone on the
+  new look: the same settings and the same saving, with each one's help under
+  it, and a bar at the foot of a form that says what an empty box does. The
+  sign-in page now says "the one FamilyDB started with" for the first password.
+- **A new Setup.** The list of steps, each step and the last page are on the
+  new look: a row to a step tagged Done, Needed, Recommended or Optional, the
+  steps along the top, Back and Next at the foot, and the Calendar step in three
+  cards. What each step asks and does is as before. Where it said "the password
+  the installer made up" it now says "the password FamilyDB started with".
+- **A new Status, activity, sign-in and error pages.** Status opens with one
+  line on whether she is ready and what is worth a look, then today's spending
+  against the limit, how each part is doing (with a button beside the ones that
+  need something), and the rest as before. It is for every grown-up, a parent
+  included; a kid has no Status and no health pill. One message's full history,
+  the sign-in page, "Page not found" and the pages that say "for an admin" or
+  "for grown-ups" are on the new look too. A kid who opens Settings is told who
+  to ask.
+- **The old look's leftovers are gone.** Every page is on Kitchen Table now, so
+  the old stylesheet, icon sheet, menu script and favicons are removed, and the
+  home-screen icon and the page's tab icon are FamilyDB's own mark.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

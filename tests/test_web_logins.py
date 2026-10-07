@@ -78,7 +78,7 @@ def _start(browser, member_id: int) -> str:
     sent = browser.post(f"/family/{member_id}/password", data=form)
     assert sent.status_code == 302 and sent.headers["Location"] == f"/family/{member_id}"
     page = browser.get(f"/family/{member_id}").text
-    return re.search(r'<code class="made">([^<]+)</code>', page).group(1)
+    return re.search(r'<code class="code made__pw">([^<]+)</code>', page).group(1)
 
 
 @pytest.fixture
@@ -164,7 +164,8 @@ def test_the_first_admin_s_own_password_ends_the_shared_one(app, family) -> None
     # The other browser is signed out, and the way in asks for a name now.
     assert before.get("/ideas").headers["Location"].startswith("/login")
     page = before.get("/login").text
-    assert '<label for="name">Your name</label>' in page and "Family password" not in page
+    assert re.search(r'<label[^>]*for="name">Your name</label>', page)
+    assert "Family password" not in page
     nameless = before.post("/login", data={"password": SHARED})
     assert nameless.status_code == 400 and "Type your name" in nameless.text
     wrong = before.post("/login", data={"name": "Sam", "password": SHARED})
@@ -215,7 +216,7 @@ def test_a_starting_password_is_shown_once_and_must_be_replaced(app, sam, family
     made = _start(sam, family["alex"].id)
     assert len(made) == passwords.STARTING_LENGTH
     again = sam.get(f"/family/{family['alex'].id}").text
-    assert made not in again and "Has a starting password they have not used yet." in again
+    assert made not in again and "Has a starting password they haven\u2019t used yet." in again
 
     alex = _browser(app)
     signed_in = alex.post("/login", data={"name": "Alex", "password": made, "next": "/ideas"})
@@ -305,6 +306,9 @@ def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, famil
     for path in ("/settings", *every_settings_page, "/family", "/family/1", "/setup"):
         refused = alex.get(path)
         assert refused.status_code == 403 and "For an admin" in refused.text, path
+        assert (
+            "Sam is the admin in this family." in refused.text and 'href="/status"' in refused.text
+        )
     assert alex.post("/settings", data=_tokens(alex, "/you")).status_code == 403
     # Who she is is an admin's to change, the form as much as the page.
     for path in ("/settings/personality", "/settings/personality/restore"):
@@ -319,25 +323,18 @@ def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, famil
     assert 'href="/settings"' in admin_nav and 'href="/family"' in admin_nav
 
 
-def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, sam, alex) -> None:
-    """One menu at the end of the bar: every settings page, the Look page, who is signed in, their
-    password, sign out. Somebody who may not change settings sees only the last three and the
-    Look page.
-    """
-    menu = re.search(r'<details class="menu[^"]*">.*?</details>', sam.get("/status").text, re.S)
-    assert menu is not None
-    links = re.findall(r'<a[^>]* href="([^"]+)"', menu.group(0))
-    assert links == [
-        "/settings",
-        *(f"/settings/{section.name}" for section in fields.SECTIONS),
-        "/look",
-        "/you",
-    ]
-    assert "Signed in as <strong>Sam</strong>" in menu.group(0)
-    assert 'action="/logout"' in menu.group(0)
+def test_every_settings_page_is_beside_its_page_and_the_account_corner_holds_the_rest(
+    app, sam, alex
+) -> None:
+    """Settings lists each of its pages beside the one you are on; the account corner of the sidebar
+    holds Look, Your password and Sign out, and an admin's menu is the only one with Settings."""
     here = sam.get("/settings/spending").text
-    assert '<details class="menu here">' in here
-    assert re.search(r'href="/settings/spending" aria-current="page"', here)
+    nav = re.search(r'<nav class="settings-nav".*?</nav>', here, re.S)
+    assert nav is not None
+    links = re.findall(r'<a[^>]* href="([^"]+)"', nav.group(0))
+    assert links == [f"/settings/{section.name}" for section in fields.SECTIONS]
+    assert re.search(r'href="/settings/spending" aria-current="page"', here)  # beside its page
+    assert re.search(r'href="/settings" aria-current="page"', here)  # and Settings in the sidebar
 
     # On the new frame the same things sit in the account corner of the sidebar.
     side = re.search(r'<aside class="side".*?</aside>', alex.get("/").text, re.S)
@@ -391,7 +388,7 @@ def test_changing_your_password_needs_the_one_in_use_and_keeps_this_browser(app,
 
 def test_showing_a_key_and_signing_everyone_out_ask_for_your_own(app, sam) -> None:
     page = sam.get("/settings/security").text
-    assert '<label for="reveal-password">Your password</label>' in page
+    assert re.search(r'<label[^>]*for="reveal-password">Your password</label>', page)
     assert "Everybody signs in as themselves" in page and "New family password" not in page
     form = {**_tokens(sam, "/settings/security"), "key": "anthropic_api_key"}
     assert sam.post("/settings/reveal", data={**form, "password": SHARED}).status_code == 401
@@ -478,11 +475,12 @@ def test_a_kid_signs_in_reads_and_talks_but_changes_nothing(app, sam, family) ->
         assert girls.get(path).status_code == 403, path
     assert "For a parent" in girls.get("/status").text
     refused = girls.get("/settings")
-    assert refused.status_code == 403 and "For an admin" in refused.text
+    assert refused.status_code == 403 and "This part is for grown-ups" in refused.text
+    assert "ask Sam if something here needs to change" in refused.text
     nav = girls.get("/").text
     assert 'href="/status"' not in nav and 'href="/memory"' not in nav
     assert "Add an idea" not in girls.get("/ideas").text
-    assert '<span class="tag">signs in</span>' in sam.get("/family").text
+    assert '<span class="tag tag--ok">Signs in</span>' in sam.get("/family").text
 
 
 def test_a_permission_taken_from_kids_is_kept_everywhere(app, sam, family, monkeypatch) -> None:
@@ -684,9 +682,10 @@ def test_a_kid_is_never_shown_how_it_works(app, sam, family) -> None:
         assert said in grown_up, said
 
 
-def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, family, alex):
-    """Amber ▲ while something only an admin can fix goes on, red ■ while nobody can be
-    answered; a parent's tile never lights, and a kid has none."""
+def test_the_health_pill_and_status_follow_what_is_wrong(app, sam, family, alex):
+    """Quiet while all is well, "needs a look" while something only an admin can fix goes on, and
+    "can't answer" while nobody can be answered: the pill and the page say the same. Status is for
+    every grown-up, a parent included, and a kid has neither."""
     from familydb.store import alerts as alert_store
     from familydb.web import status as status_page
 
@@ -694,19 +693,28 @@ def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, fam
         with closing(app.connect()) as conn, db.transaction(conn):
             alert_store.note(conn, kind, "", "test", now=NOW_ISO, keep_after="2026-01-01T00:00:00Z")
 
-    def tile(browser) -> str:
-        page = browser.get("/memory").text  # a page still on the old frame, which has the tile
-        found = re.search(r'<a class="to-status[^"]*"[^>]*>.*?</a>', page, re.S)
-        return found.group(0) if found else ""
+    def pill(browser) -> str:
+        found = re.search(
+            r'<a class="pill-health[^"]*"[^>]*>.*?</a>', browser.get("/status").text, re.S
+        )
+        return re.sub(r"<[^>]+>", " ", found.group(0)) if found else ""
 
-    assert "lit" not in tile(sam) and "Status</span>" in tile(sam)
-    note("price")  # news, not trouble
-    assert "lit" not in tile(sam)
+    assert "is ready" in pill(sam) and 'id="attention"' not in sam.get("/status").text
+    note("price")  # news, not trouble: the pill stays quiet
+    assert "is ready" in pill(sam)
     note("calendar")
-    assert "lit-warn" in tile(sam) and "Status: needs a look" in tile(sam) and "▲" in tile(sam)
+    assert "is ready" in pill(sam) and 'id="attention"' in sam.get("/status").text
     note("key")
-    assert "lit-bad" in tile(sam) and "Status: not answering" in tile(sam) and "■" in tile(sam)
-    assert "lit" not in tile(alex) and "Status</span>" in tile(alex)
+    assert "can\u2019t answer right now" in pill(sam)
+    assert "can\u2019t answer right now" in sam.get("/status").text
+    assert "can\u2019t answer right now" in pill(
+        alex
+    )  # a parent reads the same, and cannot change it
+    assert alex.get("/status").status_code == 200
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    refused = girls.get("/status")
+    assert refused.status_code == 403 and "pill-health" not in refused.text
     with closing(app.connect()) as conn:
         assert status_page.light(app, conn) == "bad"
 

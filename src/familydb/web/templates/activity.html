@@ -1,102 +1,110 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, page_head %}
+{% from "_ui.html" import icon, tag with context %}
 {% block title %}{{ title }} · Status · {{ site_title }}{% endblock %}
-{% block body_class %}page-status{% endblock %}
 {% block content %}
-  {{ page_head(title, when, 'status', [('Status', url_for('web.status'))]) }}
+  <a class="crumb" href="{{ url_for('web.status') }}">{{ icon('chevl', size='sm') }}Status</a>
+  <div class="page-head">
+    <div><p class="overline">One message, start to finish</p><h1>{{ title }}</h1><p class="lede">{{ when }}</p></div>
+  </div>
 
-  {% if asked %}
-    <section class="panel">
-      <h2>{{ icon('chat') }}What was asked</h2>
-      <p class="said-text">{{ said }}</p>
-      {% for reply in replies %}
-        <h3>What {{ assistant if has_persona else 'it' }} said</h3>
-        <p class="said-text">{{ reply }}</p>
-      {% else %}
-        <p class="muted">No reply was kept for it{% if asked.error %}: {{ asked.error }}{% endif %}.</p>
-      {% endfor %}
-    </section>
-  {% endif %}
-
-  {% for one in found %}
-    <section class="panel">
-      <h2>{{ icon('search') }}What the lookup found</h2>
-      {% if one.skipped %}
-        <p>Nothing saved{% if one.idea_id %} for <a href="{{ url_for('web.idea', idea_id=one.idea_id) }}">#{{ one.idea_id }}</a>{% endif %}: {{ one.skipped }}</p>
-      {% else %}
-        <dl class="facts">
-          <dt>Place</dt><dd>{{ one.name }}{% if one.idea_id %} (for <a href="{{ url_for('web.idea', idea_id=one.idea_id) }}">#{{ one.idea_id }}</a>){% endif %}</dd>
-          {% if one.summary %}<dt>What it is</dt><dd>{{ one.summary }}</dd>{% endif %}
-          {% if one.address %}<dt>Address</dt><dd>{{ one.address }}</dd>{% endif %}
-          {% if one.hours %}<dt>Hours</dt><dd>{{ one.hours | join(', ') }}</dd>{% endif %}
-          {% if one.closed %}<dt>Closed</dt><dd>{{ one.closed | join(', ') }}</dd>{% endif %}
-          {% if one.price_note %}<dt>Prices</dt><dd>{{ one.price_note }}</dd>{% endif %}
-          {% if one.phone %}<dt>Phone</dt><dd>{{ one.phone }}</dd>{% endif %}
-          {% if one.website %}<dt>Website</dt><dd><a href="{{ one.website }}" rel="noopener noreferrer">{{ one.website }}</a></dd>{% endif %}
-          {% if one.booking_url %}<dt>Tickets</dt><dd><a href="{{ one.booking_url }}" rel="noopener noreferrer">{{ one.booking_url }}</a></dd>{% endif %}
-        </dl>
-        {% if one.sources %}
-          <h3>Pages it read</h3>
-          <ul class="plain">
-            {% for url in one.sources %}<li><a href="{{ url }}" rel="noopener noreferrer">{{ url }}</a></li>{% endfor %}
-          </ul>
-        {% endif %}
-        {% if not one.saved %}<p class="error">The save was refused; the answer to it is below.</p>{% endif %}
+  <div class="list-grid mt-4">
+    <div class="stack">
+      {% if asked %}
+        <section class="card" aria-labelledby="h-asked">
+          <h2 class="card__head" id="h-asked">{{ icon('chat') }}What was asked</h2>
+          <blockquote class="said">{{ said }}</blockquote>
+          {% for reply in replies %}
+            <h3 class="field__label mt-4">What {{ assistant if has_persona else 'it' }} said</h3>
+            <blockquote class="said said--vera">{{ reply }}</blockquote>
+          {% else %}
+            <p class="small muted mt-3">No reply was kept for it{% if asked.error %}: {{ asked.error }}{% endif %}.</p>
+          {% endfor %}
+        </section>
       {% endif %}
-    </section>
-  {% endfor %}
 
-  <section class="panel">
-    <h2>{{ icon('mark') }}Model calls</h2>
-    <p>{{ totals.calls }} call{{ '' if totals.calls == 1 else 's' }}:
-      {{ "{:,}".format(totals.sent) }} tokens in, the cached ones included, and
-      {{ "{:,}".format(totals.back) }} back,
-      {% if totals.searches %}{{ totals.searches }} web search{{ '' if totals.searches == 1 else 'es' }},{% endif %}
-      about ${{ "%.4f"|format(totals.cost) }}, {{ "%.1f"|format(totals.ms / 1000) }}s in all.</p>
-    <div class="scroll">
-      <table class="data">
-        <tr>
-          <th scope="col">when</th><th scope="col">for</th><th scope="col">model</th><th scope="col">ended</th>
-          <th scope="col" class="num">sent</th><th scope="col" class="num">cached</th><th scope="col" class="num">written</th>
-          <th scope="col" class="num">back</th><th scope="col" class="num">searches</th><th scope="col" class="num">US$</th><th scope="col" class="num">ms</th>
-        </tr>
-        {% for row in model_calls %}
-          <tr>
-            <td>{{ row.when }}</td>
-            <td>{{ row.what }}{% if row.about %} · {{ row.about }}{% endif %}</td>
-            <td>{{ row.model }}{% if row.provider %} ({{ row.provider }}){% endif %}</td>
-            <td>{{ row.stop }}</td>
-            <td class="num">{{ "{:,}".format(row.sent) }}</td>
-            <td class="num">{{ "{:,}".format(row.cached) }}</td>
-            <td class="num">{{ "{:,}".format(row.written) }}</td>
-            <td class="num">{{ "{:,}".format(row.back) }}</td>
-            <td class="num">{{ row.searches }}</td>
-            <td class="num">{{ "%.4f"|format(row.cost) }}{% if row.estimated %}*{% endif %}</td>
-            <td class="num">{{ row.ms if row.ms is not none else '' }}</td>
-          </tr>
-        {% endfor %}
-      </table>
+      <section class="card" aria-labelledby="h-calls">
+        <h2 class="card__head" id="h-calls">{{ icon('pulse') }}Model calls</h2>
+        <p>{{ totals.calls }} call{{ '' if totals.calls == 1 else 's' }}: {{ "{:,}".format(totals.sent) }} tokens in, the cached ones included, and {{ "{:,}".format(totals.back) }} back,
+          {% if totals.searches %}{{ totals.searches }} web search{{ '' if totals.searches == 1 else 'es' }},{% endif %}
+          about <span class="fig">${{ "%.4f"|format(totals.cost) }}</span>, {{ "%.1f"|format(totals.ms / 1000) }} s in all.</p>
+        <div class="scroll mt-3" tabindex="0" role="region" aria-label="Model calls, scrolls sideways">
+          <table class="data">
+            <thead><tr>
+              <th scope="col">When</th><th scope="col">For</th><th scope="col">Model</th><th scope="col">Ended</th>
+              <th scope="col" class="num">Sent</th><th scope="col" class="num">Cached</th><th scope="col" class="num">Written</th>
+              <th scope="col" class="num">Back</th><th scope="col" class="num">Searches</th><th scope="col" class="num">US$</th><th scope="col" class="num">ms</th>
+            </tr></thead>
+            <tbody>
+              {% for row in model_calls %}
+                <tr>
+                  <td>{{ row.when }}</td>
+                  <td>{{ row.what }}{% if row.about %} · {{ row.about }}{% endif %}</td>
+                  <td><span class="code">{{ row.model }}{% if row.provider %} ({{ row.provider }}){% endif %}</span></td>
+                  <td>{{ row.stop }}</td>
+                  <td class="num">{{ "{:,}".format(row.sent) }}</td>
+                  <td class="num">{{ "{:,}".format(row.cached) }}</td>
+                  <td class="num">{{ "{:,}".format(row.written) }}</td>
+                  <td class="num">{{ "{:,}".format(row.back) }}</td>
+                  <td class="num">{{ row.searches }}</td>
+                  <td class="num">{{ "%.4f"|format(row.cost) }}{% if row.estimated %}*{% endif %}</td>
+                  <td class="num">{{ row.ms if row.ms is not none else '' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted mt-3">The table scrolls sideways. Sent is what was not in the cache; cached came back from it at a tenth of the price; written went into it. * a model without a listed price, counted high.</p>
+      </section>
+
+      {% if tool_calls %}
+        <section class="card" aria-labelledby="h-tools">
+          <h2 class="card__head" id="h-tools">{{ icon('list') }}Tools {{ 'she' if has_persona else 'it' }} used</h2>
+          <ol class="tools">
+            {% for tool in tool_calls %}
+              <li><details class="tool">
+                <summary><span class="code">{{ tool.name }}</span>{% if tool.error %} {{ tag('broken', 'Failed', 'alert') }}{% endif %}{% if tool.ms is not none %}<span class="muted small">{{ tool.ms }} ms</span>{% endif %}{{ icon('chev', size='sm', cls='chev') }}</summary>
+                <div class="tool__body">
+                  <h3 class="field__label">Given</h3>
+                  <div class="pane pane--code"><pre>{{ tool.given }}</pre></div>
+                  <h3 class="field__label">Answered</h3>
+                  <div class="pane pane--code"><pre>{{ tool.answer }}</pre></div>
+                </div>
+              </details></li>
+            {% endfor %}
+          </ol>
+        </section>
+      {% endif %}
     </div>
-    <p class="muted small">Sent is what was not in the cache; cached came back from it at a tenth
-      of the price; written went into it. * a model without a listed price, counted high.</p>
-  </section>
 
-  {% if tool_calls %}
-    <section class="panel">
-      <h2>{{ icon('list') }}Tools it used</h2>
-      <ol class="plain tool-calls">
-        {% for tool in tool_calls %}
-          <li>
-            <details>
-              <summary><code>{{ tool.name }}</code>{% if tool.error %} <span class="warn">failed</span>{% endif %}{% if tool.ms is not none %} <span class="muted">{{ tool.ms }} ms</span>{% endif %}</summary>
-              <h3>Given</h3>
-              <pre class="json">{{ tool.given }}</pre>
-              <h3>Answered</h3>
-              <pre class="json">{{ tool.answer }}</pre>
-            </details>
-          </li>
-        {% endfor %}
-      </ol>
-    </section>
-  {% endif %}
+    <div class="aside-stack">
+      {% for one in found %}
+        <section class="card" aria-labelledby="h-found-{{ loop.index }}">
+          <h2 class="card__head" id="h-found-{{ loop.index }}">{{ icon('search') }}What the lookup found</h2>
+          {% if one.skipped %}
+            <p>Nothing saved{% if one.idea_id %} for <a href="{{ url_for('web.idea', idea_id=one.idea_id) }}">#{{ one.idea_id }}</a>{% endif %}: {{ one.skipped }}</p>
+          {% else %}
+            <dl class="kv kv--stack">
+              <dt>Place</dt><dd>{{ one.name }}{% if one.idea_id %} (for <a href="{{ url_for('web.idea', idea_id=one.idea_id) }}">#{{ one.idea_id }}</a>){% endif %}</dd>
+              {% if one.summary %}<dt>What it is</dt><dd>{{ one.summary }}</dd>{% endif %}
+              {% if one.address %}<dt>Address</dt><dd>{{ one.address }}</dd>{% endif %}
+              {% if one.hours %}<dt>Hours</dt><dd>{{ one.hours | join(', ') }}</dd>{% endif %}
+              {% if one.closed %}<dt>Closed</dt><dd>{{ one.closed | join(', ') }}</dd>{% endif %}
+              {% if one.price_note %}<dt>Prices</dt><dd>{{ one.price_note }}</dd>{% endif %}
+              {% if one.phone %}<dt>Phone</dt><dd>{{ one.phone }}</dd>{% endif %}
+              {% if one.website %}<dt>Website</dt><dd><a href="{{ one.website }}" rel="noopener noreferrer">{{ one.website }}</a></dd>{% endif %}
+              {% if one.booking_url %}<dt>Tickets</dt><dd><a href="{{ one.booking_url }}" rel="noopener noreferrer">{{ one.booking_url }}</a></dd>{% endif %}
+            </dl>
+            {% if one.sources %}
+              <h3 class="field__label mt-4">Pages it read</h3>
+              <ul class="links-list">
+                {% for url in one.sources %}<li><a href="{{ url }}" rel="noopener noreferrer">{{ url }}</a></li>{% endfor %}
+              </ul>
+            {% endif %}
+            {% if not one.saved %}<p class="small mt-3"><b>The save was refused;</b> the answer to it is below.</p>{% endif %}
+          {% endif %}
+        </section>
+      {% endfor %}
+      <p class="note">{{ icon('lock') }}Only an admin sees this page: it holds the family’s own words.</p>
+    </div>
+  </div>
 {% endblock %}

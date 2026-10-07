@@ -877,7 +877,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
             for alias in node.names
         }
         assert synced <= {"event_changes"}, f"{name} imports {synced}"
-        if name != "family.py":
+        if name not in {"family.py", "look.py"}:
             family_rules = any(
                 isinstance(node, ast.ImportFrom)
                 and (
@@ -1085,9 +1085,7 @@ def test_a_page_the_bot_serves_is_never_cached(settings, clock, conn, family) ->
 @pytest.mark.parametrize(
     ("path", "sheet", "sprite", "font"),
     [
-        # Pages on the new frame, and pages not moved to it yet: each names its own files.
-        ("/", "style-kitchen.css", "icons-kitchen.svg", "atkinson-400.woff2"),
-        ("/memory", "style.css", "icons.svg", "dm-sans.woff2"),
+        ("/", "style.css", "icons.svg", "atkinson-400.woff2"),
     ],
 )
 def test_a_browser_keeps_what_the_page_links_to_until_it_changes(
@@ -1101,7 +1099,7 @@ def test_a_browser_keeps_what_the_page_links_to_until_it_changes(
     assert stylesheet is not None
     style = (Path(web_module.__file__).parent / "static" / sheet).read_bytes()
     assert stylesheet.group(2) == hashlib.sha256(style).hexdigest()[:12]
-    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page) or path == "/memory"
+    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page) or path == "/status"
     assert re.search(rf'<use href="/static/{re.escape(sprite)}\?v=[0-9a-f]{{12}}#i-', page)
     kept = client.get(stylesheet.group(1))
     assert kept.status_code == 200 and "immutable" in kept.headers["Cache-Control"]
@@ -1125,3 +1123,25 @@ def test_the_added_date_is_the_family_s_date(settings, clock, conn, family) -> N
         )
     page = _client(settings, clock).get(f"/idea/{idea.id}")
     assert "added Sun 20 Sep" in page.text
+
+
+def test_the_look_page_writes_only_a_look_and_only_through_the_rules() -> None:
+    """Somebody's look follows them (`members.look`), written through `family.choose_look`: that
+    is the one call the Look page makes into the rules, and it reaches no table itself."""
+    import ast
+
+    import familydb.web as package
+
+    module = Path(package.__file__).parent / "look.py"
+    tree = ast.parse(module.read_text("utf-8"), filename=module.name)
+    called = {
+        node.func.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "rules"
+    }
+    assert called == {"choose_look"}
+    reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+    assert not any(name.startswith("familydb.store") for name in reached)

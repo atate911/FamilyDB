@@ -1,112 +1,87 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, page_head %}
+{% from "_ui.html" import icon, avatar, page_head with context %}
 {% block title %}Family · {{ site_title }}{% endblock %}
 {% block content %}
-  {% call page_head('Family', 'Who the bot talks to.', 'family') %}
-    <a class="button" href="#add">{{ icon('person_plus') }}Add somebody</a>
+  {% call page_head('Family', 'Who ' ~ assistant ~ ' talks to. Each person signs in as themselves, with a password of their own: open somebody to give them a starting password.') %}
+    <a class="btn btn--primary" href="#add">{{ icon('plus') }}Add somebody</a>
   {% endcall %}
-  <p class="muted small">On Telegram the bot knows people by their Telegram id, so add it here to
-    let somebody message it from their phone. Anybody not on this list who writes is told their
-    id and turned away. On this page each person signs in as themselves, with a password of their
-    own: open somebody to give them a starting password.</p>
   {% if not personal %}
-    <p class="panel muted">Everybody signs in with the family password for now, so this page
-      cannot tell who is who. <a href="{{ url_for('family.you') }}">Choose your own password</a>,
-      as an admin, then give everybody else a starting password here.</p>
+    <p class="note mt-4">{{ icon('lock') }}<span>Everybody signs in with the family password for now, so this page cannot tell who is who. <a href="{{ url_for('family.you') }}">Choose your own password</a>, as an admin, then give everybody else a starting password here.</span></p>
   {% endif %}
 
-  <ul class="panel plain people">
-    {% for person in people %}
-      <li class="{{ '' if person.active else 'off' }}">
-        <span class="avatar role-{{ person.role }}" aria-hidden="true">{{ person.name[:1] | upper }}</span>
-        <div class="person">
-          <strong>{{ person.name }}</strong>
-          <span class="tag">{{ person.role }}</span>
-          {% if person.age is not none %}<span class="tag">{{ person.age }}</span>{% endif %}
-          {% if not person.active %}<span class="tag warn">switched off</span>{% endif %}
-          {% if person.sign_in == 'own' %}<span class="tag">signs in</span>
-          {% elif person.sign_in == 'starting' %}<span class="tag">starting password</span>{% endif %}
-        </div>
-        <div class="muted">
-          {% if person.telegram_id %}Telegram {{ person.telegram_id }}
-          {% elif person.elsewhere %}known on {{ person.elsewhere }}
-          {% elif person.role == 'kid' and not person.sign_in %}named in ideas and plans
-          {% else %}web page and console only{% endif %}
-          {% if person.id in today %}
-            · {{ today[person.id] }} of {{ daily_limit }} messages today
-          {% endif %}
-        </div>
-        <a class="button ghost" href="{{ url_for('family.edit', member_id=person.id) }}">{{ icon('edit') }}Change</a>
-      </li>
-    {% else %}
-      <li class="muted empty">{{ icon('family') }}<span>Nobody yet. Add yourself first, as an admin.</span></li>
-    {% endfor %}
-  </ul>
+  <div class="list-grid mt-4">
+    <div class="stack">
+      <section class="card" aria-labelledby="h-people">
+        <h2 class="sr" id="h-people">The family list</h2>
+        {% if people %}
+          <ul class="items fam">
+            {% for person in people %}
+              <li><a class="item item--divided{{ ' item--off' if not person.active }}" href="{{ url_for('family.edit', member_id=person.id) }}">
+                {{ avatar(person.slot, person.name[:1] | upper, 'lg') }}
+                <span><span class="item__title">{{ person.name }}</span>
+                  <span class="meta">
+                    <span class="role role--{{ person.role }}">{{ person.role | capitalize }}</span>
+                    {%- if person.age is not none %}<span>Age {{ person.age }}</span>{% endif -%}
+                    <span>
+                      {%- if person.telegram_id %}Telegram {{ person.telegram_id }}
+                      {%- elif person.elsewhere %}Known on {{ person.elsewhere }}
+                      {%- elif person.role == 'kid' and not person.sign_in %}Named in ideas and plans
+                      {%- else %}Web page and console only{% endif -%}
+                    </span>
+                    {%- if person.id in today %}<span>{{ today[person.id] }} of {{ daily_limit }} messages today</span>{% endif -%}
+                  </span></span>
+                <span class="item__trail">
+                  {%- if not person.active %}<span class="tag tag--off">Switched off</span>
+                  {%- elif person.sign_in == 'own' %}<span class="tag tag--ok">Signs in</span>
+                  {%- elif person.sign_in == 'starting' %}<span class="tag tag--off">{{ icon('key') }}Starting password</span>{% endif -%}
+                  <span class="linkbtn">{{ icon('edit', size='sm') }}Change<span class="sr"> {{ person.name }}</span></span>
+                </span></a></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="empty">{{ icon('people') }}<span>Nobody yet. Add yourself first, as an admin.</span></p>
+        {% endif %}
+        <p class="small muted mt-3">On Telegram, {{ assistant }} knows people by their Telegram id, so add it here to let somebody message her from their phone. Anybody not on this list who writes is told their id and turned away.</p>
+      </section>
 
-  {% if knocks %}
-    <section class="panel" id="knocking">
-      <h2>{{ icon('bell') }}Asked to talk to the bot</h2>
-      <p class="muted">People who messaged it on Telegram and were turned away, newest first. Add
-        the ones you know; ignore the rest, and they drop off this list after a month.</p>
-      <ul class="plain knocks">
-        {% for knock in knocks %}
-          <li>
-            <form class="form" method="post" action="{{ url_for('family.add') }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-              <input type="hidden" name="once" value="{{ once_token() }}" />
+      {% if knocks %}
+        <section class="card" id="knocking" aria-labelledby="h-knocks">
+          <h2 class="card__head" id="h-knocks">Waiting to be let in</h2>
+          <p class="small muted mb-4">People who messaged {{ assistant }} on Telegram and were turned away, newest first. Add the ones you know; ignore the rest, and they drop off this list after a month.</p>
+          {% for knock in knocks %}
+            <form class="form__row form__row--3 knock-form" method="post" action="{{ url_for('family.add') }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
               <input type="hidden" name="telegram_id" value="{{ knock.telegram_id }}" />
-              <div class="field">
-                <label for="knock-name-{{ loop.index }}">Name</label>
-                <input id="knock-name-{{ loop.index }}" name="name" required maxlength="80"
-                       value="{{ knock.name }}" placeholder="Alex" />
-                <p class="muted hint">
-                  {% if knock.handle %}{{ knock.handle }} · {% endif %}Telegram {{ knock.telegram_id }}
-                  · {{ knock.where }}, {{ knock.when }}{% if knock.times > 1 %} ({{ knock.times }} times){% endif %}
-                </p>
-              </div>
-              <div class="field">
-                <label for="knock-role-{{ loop.index }}">Role</label>
-                <select id="knock-role-{{ loop.index }}" name="role">
-                  {% for role in roles %}
-                    <option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div class="field actions end"><button type="submit">{{ icon('plus') }}Add</button></div>
+              <div class="field"><label class="field__label" for="knock-name-{{ loop.index }}">Name</label>
+                <input id="knock-name-{{ loop.index }}" type="text" name="name" required maxlength="80" value="{{ knock.name }}" placeholder="Alex" aria-describedby="knock-{{ loop.index }}-h" /></div>
+              <div class="field"><label class="field__label" for="knock-role-{{ loop.index }}">Role</label>
+                <select id="knock-role-{{ loop.index }}" name="role">{% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role | capitalize }}</option>{% endfor %}</select></div>
+              <div class="field field--end"><button class="btn btn--primary" type="submit">Let them in</button></div>
+              <p class="field__hint span-all" id="knock-{{ loop.index }}-h">{% if knock.handle %}{{ knock.handle }} · {% endif %}Telegram {{ knock.telegram_id }} · {{ knock.where }}, {{ knock.when }}{% if knock.times > 1 %} ({{ knock.times }} times){% endif %}</p>
             </form>
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endif %}
-
-  <section class="panel" id="add">
-    <h2>{{ icon('person_plus') }}Add somebody</h2>
-    <form class="form" method="post" action="{{ url_for('family.add') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-      <input type="hidden" name="once" value="{{ once_token() }}" />
-      <div class="field">
-        <label for="name">Name</label>
-        <input id="name" name="name" required maxlength="80" placeholder="Alex" />
-      </div>
-      <div class="field">
-        <label for="role">Role</label>
-        <select id="role" name="role">
-          {% for role in roles %}
-            <option value="{{ role }}" {{ 'selected' if role == ('admin' if not people else 'parent') }}>{{ role }}</option>
           {% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label for="telegram_id">Telegram id</label>
-        <input id="telegram_id" name="telegram_id" inputmode="numeric" placeholder="optional" />
-      </div>
-      <div class="field actions end">
-        <button type="submit">{{ icon('plus') }}Add</button>
-      </div>
-    </form>
-    <dl class="facts roles">
-      {% for role in roles %}<dt>{{ role }}</dt><dd>{{ role_words[role] }}</dd>{% endfor %}
-    </dl>
-  </section>
+        </section>
+      {% endif %}
+    </div>
+
+    <div class="aside-stack">
+      <section class="card" id="add" aria-labelledby="h-add-p">
+        <h2 class="card__head" id="h-add-p">Add somebody</h2>
+        <form class="form form--tight" method="post" action="{{ url_for('family.add') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          <div class="form__row">
+            <div class="field"><label class="field__label" for="f-name">Name</label><input id="f-name" type="text" name="name" required maxlength="80" placeholder="e.g. Grandma" /></div>
+            <div class="field"><label class="field__label" for="f-role">Role</label>
+              <select id="f-role" name="role">{% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == ('admin' if not people else 'parent') }}>{{ role | capitalize }}</option>{% endfor %}</select></div>
+          </div>
+          <div class="field"><label class="field__label" for="f-tg">Telegram id <span class="opt">(optional)</span></label><input id="f-tg" type="text" name="telegram_id" inputmode="numeric" /></div>
+          <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('plus') }}Add</button></div>
+        </form>
+      </section>
+      <section class="card" aria-labelledby="h-roles">
+        <h2 class="card__head" id="h-roles">What each role does</h2>
+        <dl class="roles">{% for role in roles %}<dt><span class="role role--{{ role }}">{{ role | capitalize }}</span></dt><dd>{% set words = role_words[role].replace('the bot', assistant) %}{{ words[:1] | upper }}{{ words[1:] }}</dd>{% endfor %}</dl>
+      </section>
+    </div>
+  </div>
 {% endblock %}

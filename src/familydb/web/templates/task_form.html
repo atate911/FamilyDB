@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, avatar, page_head %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, avatar, page_head %}
 {% block title %}Edit a to-do · {{ site_title }}{% endblock %}
 {% block content %}
   {{ page_head('Edit a to-do', task.title ~ ' · added' ~ (' by ' ~ made_by if made_by else '') ~ ' on ' ~ added, crumb=('To do', url_for('web.tasks'))) }}

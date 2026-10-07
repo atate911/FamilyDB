@@ -174,7 +174,7 @@ def test_a_damaged_private_key_is_refused(page) -> None:
 
 def test_a_calendar_id_is_required(page) -> None:
     response = _connect(page, calendar="  ")
-    assert response.status_code == 400 and "calendar's id" in response.text
+    assert response.status_code == 400 and "calendar\u2019s id" in response.text
 
 
 # -- the integration's own checks

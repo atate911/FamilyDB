@@ -1,109 +1,81 @@
-{% from "_ui.html" import icon %}
-{% from "_settings.html" import box %}
+{% from "_ui.html" import icon with context %}
+{% from "_settings.html" import setting with context %}
 {% set token = keys.telegram_bot_token %}
-<section class="panel" id="telegram">
-  <h2>{{ icon('send') }}Telegram</h2>
+<section class="card sgroup" id="telegram" aria-labelledby="g-tg">
+  <h2 class="sgroup__h" id="g-tg">{{ icon('send') }}Telegram</h2>
   <p class="state-line">
     {% if bot %}Connected as <a href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">@{{ bot }}</a>.
     {% elif token.set and telegram.startswith('the token') %}<span class="warn">Telegram refused the token that is saved.</span>
-      Copy it again from BotFather (send it <code>/mybots</code>, choose the bot, then <em>API Token</em>).
+      Copy it again from BotFather (send it <code class="cmd-inline">/mybots</code>, choose the bot, then <em>API Token</em>).
     {% elif token.set %}A token is saved{% if telegram %}: {{ telegram }}{% endif %}.
     {% else %}Not set up, so the family uses the chat on this page instead.{% endif %}
   </p>
-  <form method="post" action="{{ url_for('settings.save_keys') }}">
+  <form class="form form--tight mt-4" method="post" action="{{ url_for('settings.save_keys') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="section" value="connections" />
-    <div class="setting{% if token.problem %} bad{% endif %}">
-      <div class="setting-head">
-        <label for="k-telegram_bot_token">{{ token.label }}</label>
-        <span class="key-state">{% if token.stored %}saved here{% elif token.set %}from the server's .env file{% else %}not saved yet{% endif %}</span>
+    <div class="setting{{ ' setting--bad' if token.problem }}">
+      <div class="setting__head">
+        <label class="field__label" for="k-telegram_bot_token">{{ token.label }}</label>
+        <span class="keystate">{% if token.stored %}saved here{% elif token.set %}from the server’s .env file{% else %}not saved yet{% endif %}</span>
       </div>
-      <input id="k-telegram_bot_token" name="telegram_bot_token" type="password" autocomplete="off"
-             spellcheck="false" aria-describedby="token-said"
+      <input id="k-telegram_bot_token" name="telegram_bot_token" type="password" autocomplete="off" spellcheck="false" aria-describedby="token-said"
              placeholder="{% if token.set %}paste a new one to replace it{% else %}7123456789:AA…{% endif %}" />
       {% if token.problem %}
-        <p id="token-said" class="error" role="alert">{{ token.problem }}</p>
+        <p id="token-said" class="field__error" role="alert">{{ token.problem }}</p>
       {% else %}
-        <p class="muted hint" id="token-said">The long line BotFather sent when the bot was made.
-          A new one reaches the bot within a few seconds.</p>
+        <p class="field__hint" id="token-said">The long line BotFather sent when the bot was made. A new one reaches the bot within a few seconds.</p>
       {% endif %}
-      {% if token.stored %}
-        <label class="check"><input type="checkbox" name="remove_telegram_bot_token" value="1" />Remove it</label>
-      {% endif %}
+      {% if token.stored %}<label class="check"><input type="checkbox" name="remove_telegram_bot_token" value="1" />Remove it</label>{% endif %}
     </div>
-    <button type="submit">{{ icon('check') }}Save the token</button>
+    <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}Save the token</button></div>
   </form>
 
   {% set answering = groups['telegram-answering'] %}
-  <h3 id="{{ answering.group.name }}">{{ answering.group.title }}</h3>
-  <form method="post" action="{{ url_for('settings.save') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-    <input type="hidden" name="section" value="connections" />
-    <div class="grid">{% for one in answering.boxes %}{{ box(one) }}{% endfor %}</div>
-    <button class="quiet" type="submit">{{ icon('check') }}Save</button>
+  <form class="sub-form" method="post" action="{{ url_for('settings.save') }}" aria-labelledby="{{ answering.group.name }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="connections" />
+    <h3 class="lines__h" id="{{ answering.group.name }}">{{ answering.group.title }}</h3>
+    <div class="sgrid">{% for one in answering.boxes %}{{ setting(one) }}{% endfor %}</div>
+    <button class="btn btn--quiet btn--sm" type="submit">{{ icon('check', size='sm') }}Save</button>
   </form>
 
   {% set in_groups = groups['telegram-groups'] %}
-  <h3 id="{{ in_groups.group.name }}">{{ in_groups.group.title }}</h3>
-  {% if reads_groups %}
-    <p class="state-line">It reads every message in the groups it is in.</p>
-  {% elif reads_groups is not none %}
-    <p class="state-line"><span class="warn">In a group it sees only a message that mentions it
-      or replies to it</span>: Telegram's privacy setting for bots is on. To let it read the family
-      group, send BotFather <code>/setprivacy</code>, choose @{{ bot }}, then <em>Disable</em>;
-      then take the bot out of the group and add it back, which is when Telegram applies it.</p>
-  {% endif %}
-  <form method="post" action="{{ url_for('settings.save') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-    <input type="hidden" name="section" value="connections" />
-    <div class="grid">{% for one in in_groups.boxes %}{{ box(one) }}{% endfor %}</div>
-    <button class="quiet" type="submit">{{ icon('check') }}Save</button>
+  <form class="sub-form" method="post" action="{{ url_for('settings.save') }}" aria-labelledby="{{ in_groups.group.name }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="connections" />
+    <h3 class="lines__h" id="{{ in_groups.group.name }}">{{ in_groups.group.title }}</h3>
+    {% if reads_groups %}
+      <p class="state-line">It reads every message in the groups it is in.</p>
+    {% elif reads_groups is not none %}
+      <p class="state-line"><span class="warn">In a group it sees only a message that mentions it or replies to it</span>: Telegram’s privacy setting for bots is on. To let it read the family group, send BotFather <code class="cmd-inline">/setprivacy</code>, choose @{{ bot }}, then <em>Disable</em>; then take the bot out of the group and add it back, which is when Telegram applies it.</p>
+    {% endif %}
+    <div class="sgrid">{% for one in in_groups.boxes %}{{ setting(one) }}{% endfor %}</div>
+    <button class="btn btn--quiet btn--sm" type="submit">{{ icon('check', size='sm') }}Save</button>
   </form>
-  <p class="muted small">Making a bot, linking your phone to it and adding the family's group chat
-    are in <a href="{{ url_for('setup.step', name='telegram') }}">the Telegram step of setup</a>,
-    one step at a time.</p>
+  <p class="small muted mt-4">Making a bot, linking your phone to it and adding the family’s group chat are in <a href="{{ url_for('setup.step', name='telegram') }}">the Telegram step of setup</a>, one step at a time.</p>
 </section>
 
-<section class="panel" id="google">
-  <h2>{{ icon('plans') }}Google Calendar</h2>
+<section class="card sgroup" id="google" aria-labelledby="g-gc">
+  <h2 class="sgroup__h" id="g-gc">{{ icon('cal') }}Google Calendar</h2>
   <p class="state-line">
     {% if google.connected and google.calendar %}
-      Connected, using <code>{{ google.calendar }}</code>.
-      {% if google.email %}
-        The bot reaches it as <code>{{ google.email }}</code>: the calendar must stay shared with
-        that address, allowing <em>Make changes to events</em>.
-      {% endif %}
-    {% elif google.connected %}
-      Connected, but no calendar is chosen yet. Connect again, or type its id below.
-    {% else %}
-      Not connected, so plans are kept here but never put on a calendar.
-    {% endif %}
+      Connected, using <code class="code">{{ google.calendar }}</code>.
+      {% if google.email %}The bot reaches it as <code class="code">{{ google.email }}</code>: the calendar must stay shared with that address, allowing <em>Make changes to events</em>.{% endif %}
+    {% elif google.connected %}Connected, but no calendar is chosen yet. Connect again, or type its id below.
+    {% else %}Not connected, so plans are kept here but never put on a calendar.{% endif %}
   </p>
-  <details class="more" {% if not google.connected %}open{% endif %}>
-    <summary>{{ icon('plug') }}{% if google.connected %}Connect again{% else %}Connect Google Calendar{% endif %}</summary>
-    <div class="inner">
-      <p class="muted">
-        Once, in <a href="{{ links.google_cloud }}" target="_blank"
-        rel="noopener noreferrer">Google Cloud</a>: make a project, turn on the Google Calendar
-        API, make a <strong>service account</strong> and a JSON key for it. Then share the
-        family calendar with the service account's address (the <code>client_email</code> in the
-        key), allowing <em>Make changes to events</em>. Paste the key file and the calendar's id
-        here. The
-        <a href="{{ url_for('setup.step', name='calendar') }}">Google Calendar step of setup</a>
-        goes through it click by click.
-      </p>
+  <details class="fieldfold mt-4"{% if not google.connected %} open{% endif %}>
+    <summary>{{ icon('plug') }}{% if google.connected %}Connect again{% else %}Connect Google Calendar{% endif %}{{ icon('chev', size='sm', cls='chev') }}</summary>
+    <div class="fieldfold__body">
+      <p class="small">Once, in <a href="{{ links.google_cloud }}" target="_blank" rel="noopener noreferrer">Google Cloud</a>: make a project, turn on the Google Calendar API, make a <b>service account</b> and a JSON key for it. Then share the family calendar with the service account’s address (the <code class="cmd-inline">client_email</code> in the key), allowing <em>Make changes to events</em>. Paste the key file and the calendar’s id here. The <a href="{{ url_for('setup.step', name='calendar') }}">Google Calendar step of setup</a> goes through it click by click.</p>
       {% include "_google_connect.html" %}
     </div>
   </details>
-
   {% set calendar = groups.calendar %}
-  <details class="more"{% if calendar.open %} open{% endif %}>
-    <summary>Use a calendar by its id</summary>
-    <form class="inner" method="post" action="{{ url_for('settings.save') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-      <input type="hidden" name="section" value="connections" />
-      <div class="grid">{% for one in calendar.boxes %}{{ box(one) }}{% endfor %}</div>
-      <button type="submit">{{ icon('check') }}Save the id</button>
+  <details class="fieldfold mt-3"{% if calendar.open %} open{% endif %}>
+    <summary>Use a calendar by its id{{ icon('chev', size='sm', cls='chev') }}</summary>
+    <form class="fieldfold__body" method="post" action="{{ url_for('settings.save') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="connections" />
+      {% for one in calendar.boxes %}{{ setting(one) }}{% endfor %}
+      <div><button class="btn btn--quiet btn--sm" type="submit">{{ icon('check', size='sm') }}Save the id</button></div>
     </form>
   </details>
 </section>

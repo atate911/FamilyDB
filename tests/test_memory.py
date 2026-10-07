@@ -344,11 +344,12 @@ def test_the_page_shows_what_is_remembered_and_where_it_came_from(
     page = _page(settings, clock).get("/memory")
     assert page.status_code == 200
     text = page.text
-    assert "What Vera remembers" in text and "the girls" in text
-    assert "<strong>vegetarian</strong>" in text and ">must<" in text
+    assert "What Vera knows" in text and "the girls" in text
+    assert "<b>vegetarian</b>" in text and ">Must<" in text
     assert "Sam, Sunday 20 September, in a voice note" in text
     assert "so the girls are vegetarian now" in text and "(voice note)" not in text
     assert 'href="/memory"' in text  # in the bar, for everybody signed in
+    assert 'class="av p3' in text or 'class="av p' in text  # each person under their own colour
 
 
 def test_remembering_and_forgetting_from_the_page(settings, clock, conn, family) -> None:
@@ -378,7 +379,7 @@ def test_remembering_and_forgetting_from_the_page(settings, clock, conn, family)
     after = client.get("/memory").text
     assert "Forgotten: allergic to peanuts." in after
     assert memories.get(conn, kept[0].id).status == "forgotten"
-    assert "Forgotten</span>" in after  # listed under Forgotten, not remembered
+    assert "<s>allergic to peanuts</s>" in after  # listed under Forgotten, not remembered
 
 
 def test_the_page_refuses_a_fact_left_empty_and_a_post_from_elsewhere(

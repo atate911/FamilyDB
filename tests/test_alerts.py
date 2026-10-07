@@ -247,7 +247,7 @@ def test_the_status_page_says_what_needs_attention_and_who_was_told(
 ) -> None:
     alerts.note(conn, "credit", "openai", "insufficient_quota", clock.now())
     text = create_app(App(settings, clock)).test_client().get("/status").text
-    assert "Needs attention" in text and "OpenAI is out of credit" in text
+    assert "Needs a look" in text and "OpenAI is out of credit" in text
     assert "admins are told on Telegram within a minute" in text
     with transaction(conn):
         alert_store.mark_told(conn, "credit", "openai", now="2026-09-20T21:04:00Z")

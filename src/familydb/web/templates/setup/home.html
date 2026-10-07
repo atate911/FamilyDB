@@ -1,35 +1,24 @@
+{% from "_ui.html" import icon with context %}
 {% from "_settings.html" import grouped_options %}
-<p class="why">
-  Where the family lives decides the weather forecast, how far away things are, and what is on
-  nearby. The town is enough; no street address.
-</p>
-<form class="panel form" method="post" action="{{ url_for('settings.save') }}">
+<p class="lede">Where the family lives decides the weather forecast, how far away things are, and what is on nearby. The town is enough; no street address.</p>
+<form class="card form form--tight setup-card" method="post" action="{{ url_for('settings.save') }}">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="then" value="{{ then }}" />
-  <div class="field wide">
-    <label for="home-area">Your town or area</label>
-    <input id="home-area" name="home_area" required maxlength="120" value="{{ home.area }}"
-           placeholder="Vancouver, WA" />
-    <p class="muted hint">As you would tell someone: a town and a state or country. It is looked
-      up on OpenStreetMap’s map, and the page says what it found.
-      {% if home.lat is not none %}Found at {{ home.lat }}, {{ home.lon }}.{% endif %}</p>
+  <div class="field"><label class="field__label" for="home-area">Your town or area</label>
+    <input id="home-area" type="text" name="home_area" required maxlength="120" value="{{ home.area }}" placeholder="Vancouver, WA" aria-describedby="home-area-h" />
+    <p class="field__hint" id="home-area-h">As you would tell someone: a town and a state or country. It is looked up on OpenStreetMap’s map, and the page says what it found.{% if home.lat is not none %} Found at {{ home.lat }}, {{ home.lon }}.{% endif %}</p></div>
+  <div class="form__row">
+    <div class="field"><label class="field__label" for="home-tz">Time zone</label>
+      <select id="home-tz" name="family_tz" aria-describedby="home-tz-h">
+        {% if not home.tz_listed %}<option value="{{ home.tz }}" selected>{{ home.tz }}</option>{% endif %}
+        {{ grouped_options(zones, home.tz) }}
+      </select>
+      <p class="field__hint" id="home-tz-h">Taken from the server. Change it only if it is wrong: it decides what “tonight” and “this weekend” mean. Choose the nearest city in the same zone.</p></div>
+    <div class="field"><label class="field__label" for="home-units">Units</label>
+      <select id="home-units" name="weather_units">
+        <option value="metric" {% if home.units == 'metric' %}selected{% endif %}>°C and kilometres</option>
+        <option value="imperial" {% if home.units == 'imperial' %}selected{% endif %}>°F and miles</option>
+      </select></div>
   </div>
-  <div class="field">
-    <label for="home-tz">Time zone</label>
-    <select id="home-tz" name="family_tz" aria-describedby="home-tz-hint">
-      {% if not home.tz_listed %}<option value="{{ home.tz }}" selected>{{ home.tz }}</option>{% endif %}
-      {{ grouped_options(zones, home.tz) }}
-    </select>
-    <p id="home-tz-hint" class="muted hint">Taken from the server. Change it only if it is wrong:
-      it decides what “tonight” and “this weekend” mean. Choose the nearest city in the same
-      zone.</p>
-  </div>
-  <div class="field">
-    <label for="home-units">Units</label>
-    <select id="home-units" name="weather_units">
-      <option value="metric" {% if home.units == 'metric' %}selected{% endif %}>°C and kilometres</option>
-      <option value="imperial" {% if home.units == 'imperial' %}selected{% endif %}>°F and miles</option>
-    </select>
-  </div>
-  <div class="field wide actions"><button type="submit">Save where home is</button></div>
+  <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}Save where home is</button></div>
 </form>

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 from contextlib import closing
+from pathlib import Path
 
 import pytest
 
@@ -32,7 +33,7 @@ def girls(app, sam, family):  # noqa: F811
 
 
 def _said(response) -> str:
-    return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
+    return " ".join(re.findall(r'class="(?:said|banner__text)"[^>]*>\s*([^<]+)', response.text))
 
 
 def _add(client, title, which="everyday", **extra):
@@ -57,7 +58,7 @@ def test_a_kid_keeps_her_own_list_on_the_page(app, family, girls) -> None:  # no
     assert [w.title for w in mine] == ["Lego", "Kite"]
     # One line to a wish, which opens to its buttons, with a grip to drag it by.
     listed = kid.get("/wishes").text
-    assert listed.count('<details class="wish-open">') == 3 and 'class="wish-grip"' in listed
+    assert listed.count('<details class="wish__open">') == 3 and 'class="wish__grip"' in listed
     # Kite to the top, with the button's form.
     kite = mine[1]
     kid.post(f"/wish/{kite.id}/move", data={**_form(kid, "/wishes"), "position": "1"})
@@ -229,3 +230,31 @@ def test_a_kid_ticks_off_her_own_things_to_do_and_nobody_else_s(app, family, gir
     with closing(app.connect()) as conn:
         assert tasks.get(conn, swim).status == "done"
         assert tasks.get(conn, car).status == "open"
+
+
+def test_one_line_to_a_wish_and_the_hooks_the_script_looks_for(app, family, sam, girls) -> None:  # noqa: F811
+    """wishes.js drags by `.wish__grip` and sends the line's `form.wish__move`: both are in the
+    markup, so the move goes through the same token and tool as a button."""
+    script = (Path(__file__).parents[1] / "src/familydb/web/static/wishes.js").read_text()
+    assert '".wish__grip"' in script and "form.wish__move" in script
+    _add(girls["mine"], "Lego")
+    page = girls["mine"].get("/wishes").text
+    line = re.search(r'<li class="wish wish--line".*?</li>', page, re.S).group(0)
+    assert 'class="wish__grip"' in line and 'class="wish__move"' in line
+    assert "Number 1: </span>Lego" in line and 'class="wish__n wish__n--first"' in line
+    # Her line has no answer: only a parent's does.
+    assert "wish__answer" not in line
+    parent = sam.get(f"/wishes?who={family['girls'].id}").text
+    assert 'class="wish__answer"' in parent and "Not this time</button>" in parent
+
+
+def test_what_each_person_is_told_about_whom_a_list_is_not_secret_from(
+    app,  # noqa: F811
+    family,
+    sam,  # noqa: F811
+    girls,
+) -> None:
+    kid = girls["mine"].get("/wishes").text
+    assert "can see it." in kid and "Sam" in kid.split("can see it.")[0].rsplit("secret", 1)[-1]
+    assert "Planning a present?" in sam.get("/wishes").text
+    assert "Planning a present?" not in kid

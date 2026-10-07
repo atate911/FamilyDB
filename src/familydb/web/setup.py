@@ -41,6 +41,17 @@ NEED_WORDS = {
 }
 
 
+STEP_GLYPHS = {
+    "you": "smile",
+    "password": "lock",
+    "model": "sparkle",
+    "home": "home",
+    "telegram": "send",
+    "family": "people",
+    "calendar": "cal",
+}
+
+
 def _app() -> App:
     return current_app.config["FAMILYDB_APP"]
 
@@ -88,6 +99,7 @@ def done() -> str:
         later=[step for step in steps if not step.done],
         bot=status_page.telegram_name(app),
         admin=admin,
+        step_glyphs=STEP_GLYPHS,
         question=views.WEEKEND_QUESTION,
         **_told(),
     )

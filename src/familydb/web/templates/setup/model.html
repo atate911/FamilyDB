@@ -1,62 +1,43 @@
-<p class="why">
-  {{ site_title }} uses an AI model to understand what the family says and to write its answers.
-  It needs an account with one of these three companies, and you pay the company for what it
-  uses: for a family, usually a few dollars a month. As well as any limit you set with the
-  company, {{ site_title }} stops for the day once it has spent its own daily limit
-  (US${{ '%.2f' % limit }}).
-</p>
+{% from "_ui.html" import icon with context %}
+<p class="lede">{{ site_title }} uses an AI model to understand what the family says and to write its answers. It needs an account with one of these three companies, and you pay the company for what it uses: for a family, usually a few dollars a month. As well as any limit you set with the company, {{ site_title }} stops for the day once it has spent its own daily limit (US<span class="fig">${{ '%.2f' % limit }}</span>).</p>
 
 {% include "_company_cards.html" %}
 
-<section class="panel">
-  <h2>Get a key from {{ label }}</h2>
+<section class="card setup-card" aria-labelledby="h-getkey">
+  <h2 class="card__head" id="h-getkey">Get a key from {{ label }}</h2>
   {% include "_key_steps.html" %}
-
-  <form class="form" method="post" action="{{ url_for('settings.save_model') }}">
+  <form class="form form--tight mt-4" method="post" action="{{ url_for('settings.save_model') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="then" value="{{ then }}" />
     <input type="hidden" name="provider" value="{{ company }}" />
-    <div class="field wide">
-      <label for="model-key">Paste the {{ label }} key here</label>
-      <input id="model-key" name="key" type="password" autocomplete="off" spellcheck="false"
-             {% if not has_key %}required{% endif %}
-             placeholder="{% if has_key %}a key is saved: paste a new one to replace it{% else %}{{ prefix }}…{% endif %}" />
-      <p class="muted hint">It is checked with {{ label }} before it is kept, which costs nothing.
-        It is stored on your server and never shown on this page again.
-        {% if company == answering %}{{ label }} answers with {{ model }}.{% endif %}</p>
+    <div class="field"><label class="field__label" for="model-key">Paste the {{ label }} key here</label>
+      <input id="model-key" name="key" type="password" autocomplete="off" spellcheck="false" {% if not has_key %}required{% endif %}
+             placeholder="{% if has_key %}a key is saved: paste a new one to replace it{% else %}{{ prefix }}…{% endif %}" aria-describedby="model-key-h" />
+      <p class="field__hint" id="model-key-h">It is checked with {{ label }} before it is kept, which costs nothing. It is stored on your server and never shown on this page again.{% if company == answering %} {{ label }} answers with {{ model }}.{% endif %}</p>
       {% if lineup %}
-        <p class="muted hint">{{ label }}’s models, cheapest first:
+        <p class="field__hint">{{ label }}’s models, cheapest first:
           {% for one in lineup -%}
             {{ one.label }} ({{ one.level }}{% if one.price %}, {{ one.price }}{% endif %}){{ "; " if not loop.last else "." }}
           {% endfor -%}
-          Everyday answers unless you choose a stronger one for the chat, the weekend digest or
-          the lookups, under How strong a model answers on the
-          <a href="{{ url_for('settings.section', name='model', _anchor='levels') }}">AI model</a> settings page.
-          Prices are US dollars for a million tokens read and written.</p>
+          Everyday answers unless you choose a stronger one for the chat, the weekend digest or the lookups, under How strong a model answers on the <a href="{{ url_for('settings.section', name='model', _anchor='levels') }}">AI model</a> settings page. Prices are US dollars for a million tokens read and written.</p>
       {% endif %}
     </div>
-    <div class="field wide actions">
-      <button type="submit">
-        {%- if has_key and company != answering %}Use {{ label }}{% else %}Save and check the key{% endif -%}
-      </button>
-    </div>
+    <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}
+      {%- if has_key and company != answering %}Use {{ label }}{% else %}Save and check the key{% endif -%}
+    </button></div>
   </form>
 </section>
 
-<details class="more">
-  <summary>The daily limit: US${{ '%.2f' % limit }}</summary>
-  <div class="inner">
-    <p class="muted">What {{ site_title }} may spend in a day across every message and lookup, as
-      it estimates it. Once reached, it stops asking the AI until midnight and says so. 0 means
-      no limit.</p>
-    <form class="form" method="post" action="{{ url_for('settings.save') }}">
+<details class="fieldfold">
+  <summary>The daily limit <span class="val">US<span class="fig">${{ '%.2f' % limit }}</span></span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+  <div class="fieldfold__body">
+    <p class="small">What {{ site_title }} may spend in a day across every message and lookup, as it estimates it. Once reached, it stops asking the AI until midnight and says so. 0 means no limit.</p>
+    <form class="form__row form__row--3" method="post" action="{{ url_for('settings.save') }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
       <input type="hidden" name="then" value="{{ then }}" />
-      <div class="field">
-        <label for="daily-limit">Daily limit (US$)</label>
-        <input id="daily-limit" name="daily_spend_limit" inputmode="decimal" value="{{ limit }}" />
-      </div>
-      <div class="field actions"><button type="submit">Save the limit</button></div>
+      <div class="field"><label class="field__label" for="daily-limit">Daily limit (US$)</label>
+        <input id="daily-limit" type="text" name="daily_spend_limit" inputmode="decimal" value="{{ limit }}" /></div>
+      <div class="field field--end"><button class="btn btn--quiet" type="submit">Save the limit</button></div>
     </form>
   </div>
 </details>

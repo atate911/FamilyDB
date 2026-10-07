@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, avatar, tag, page_head, msg, msg_pending %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, avatar, tag, page_head, msg, msg_pending %}
 {% block title %}{{ 'Chat with ' ~ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-chat{% endblock %}
 {# While an answer is on its way a meta refresh fetches the page again (works without scripts), soon at first and then less often, and stops, leaving the visible link. Only set while something really is being thought about, and never on a page holding typed words, which it would take with it. While a turn runs the box is closed; waiting on the retry job it stays open and ask.js looks again instead. #}

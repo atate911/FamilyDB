@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, avatar, badge, tag, tile, srow, page_head %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, avatar, badge, tag, tile, srow, page_head %}
 {% block title %}Menu · {{ site_title }}{% endblock %}
 {% block content %}
   {# The phone's menu. Grown-ups: everything the tab bar has no room for. A kid: her other pages and signing out. #}
@@ -14,7 +14,7 @@
 
   <ul class="slist mt-3">
     {% set lead %}{{ tile('palette') }}{% endset %}
-    {{ srow(url_for('look.show'), 'Look', 'How the page looks, in this browser', lead=lead) }}
+    {{ srow(url_for('look.show'), 'Look', ('Yours, on every phone and computer you use' if not grownup else 'Yours, on every phone and computer you sign in on') if shell.me.name else 'How the page looks, in this browser', lead=lead) }}
     {% if not grownup %}
       {% set lead %}{{ tile('bulb') }}{% endset %}
       {{ srow(url_for('web.ideas'), 'Ideas', 'Places to go and things to try', lead=lead) }}

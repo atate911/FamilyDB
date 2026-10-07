@@ -105,7 +105,7 @@ def test_a_rewrite_is_used_and_can_be_restored(page, conn) -> None:
         "default": {"text": rewrite, "of": written_of}
     }
     history = page.get("/settings/history").text
-    assert "Her description</strong>" in history
+    assert "Her description</b>" in history
     assert "rewritten" in history and "a little dry" not in history  # not echoed in the log
     assert "Vera, in your words." in page.get("/settings").text  # the overview's card says so
     assert page.post("/settings/personality/restore", data=_form(page)).status_code == 302
@@ -187,7 +187,8 @@ def test_her_lines_can_be_rewritten_and_a_bad_one_is_refused(page, conn) -> None
 def _reads(page, event: str) -> list[str]:
     """How the page says one of her lines reads, wording by wording."""
     shown = page.get("/settings/personality").text
-    listed = re.search(rf'<ul aria-labelledby="r-{event}">(.*?)</ul>', shown, re.S).group(1)
+    reads = rf'<ul class="reads__list" aria-labelledby="r-{event}">(.*?)</ul>'
+    listed = re.search(reads, shown, re.S).group(1)
     return [html.unescape(words) for words in re.findall(r"<li>(.*?)</li>", listed, re.S)]
 
 
@@ -405,7 +406,11 @@ def test_a_name_of_their_own_is_hers_wherever_she_is_named(page, conn) -> None:
     assert "<title>Chat with Juno · " in chat and "<span>Chat with Juno</span>" in chat
     assert "Vera" not in chat
     history = page.get("/settings/history").text
-    assert re.search(r"<strong>Her name</strong>\s*default → Juno", history)
+    assert re.search(
+        r'<b>Her name</b>\s*default <span aria-hidden="true">→</span>'
+        r'<span class="sr">to</span> Juno',
+        history,
+    )
 
 
 def test_under_none_the_bot_is_familydb_and_their_name_for_her_is_kept(page, conn) -> None:
@@ -488,7 +493,7 @@ def test_the_family_s_notes_reach_the_prefix_after_her_character_and_before_the_
 ) -> None:
     shown = page.get("/settings/personality").text
     assert "Anything to add" in shown
-    box = r'<textarea id="p-notes" name="persona_notes" rows="4"[^>]*\smaxlength="1000"[^>]*>'
+    box = r'<textarea id="p-notes" name="persona_notes" rows="3"[^>]*\smaxlength="1000"[^>]*>'
     assert re.search(box, shown)
     before = _tokens(page)
     saved = page.post("/settings/personality", data=_drawn(page, persona_notes=f" {NOTES}\r\n"))
@@ -508,7 +513,7 @@ def test_the_family_s_notes_reach_the_prefix_after_her_character_and_before_the_
     assert f'maxlength="1000">{NOTES}</textarea>' in shown
     assert _tokens(page) > before  # what they add to every message is counted
     history = page.get("/settings/history").text
-    assert "Notes on how she talks</strong>" in history
+    assert "Notes on how she talks</b>" in history
     assert "Captain" not in history  # not echoed in the log
 
 
@@ -638,7 +643,7 @@ def test_the_page_says_when_her_own_description_has_changed_since_she_was_rewrit
     assert line in hers
     _rewritten_from(conn, hers.replace(line, "Be {name}, and do not overdo it."))
     shown = page.get("/settings/personality").text
-    notice = "Vera's own description has changed since you rewrote her."
+    notice = "Vera\u2019s own description has changed since you rewrote her."
     assert notice in shown and "Your rewrite is as you left it." in shown
     assert shown.index(notice) < shown.index('name="persona_text"')  # above her description
     changes = re.search(r'<pre class="changes">(.*?)</pre>', shown, re.S).group(1)
@@ -648,7 +653,7 @@ def test_the_page_says_when_her_own_description_has_changed_since_she_was_rewrit
     assert "@@" not in changes and "---" not in changes  # no headers a family cannot read
     # With the name they call her, the notice says it.
     page.post("/settings/personality", data=_drawn(page, persona_name="Juno"))
-    assert "Juno's own description has changed" in page.get("/settings/personality").text
+    assert "Juno\u2019s own description has changed" in page.get("/settings/personality").text
 
 
 def test_changes_far_apart_are_shown_apart_with_what_is_between_left_out() -> None:
@@ -716,4 +721,4 @@ def test_every_line_she_says_is_in_a_group_of_its_own_kind(page) -> None:
     assert sorted(grouped) == sorted(voice.EVENTS) and len(grouped) == len(set(grouped))
     shown = page.get("/settings/personality").text
     assert "Reminders and follow-ups" in shown and ">Other<" not in shown
-    assert "<summary>When she cannot answer</summary>" in shown  # folded, until one is written
+    assert "<summary>When she cannot answer" in shown  # folded, until one is written

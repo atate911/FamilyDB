@@ -183,8 +183,9 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["once_token"] = once.once_token
     web.jinja_env.globals["links"] = links.LINKS
     web.jinja_env.globals["settings_sections"] = fields.SECTIONS
-    # The new frame's pill and counts, read only by a page built on base_kitchen.html.
+    # The new frame's pill and counts, read only by a page built on base.html.
     web.jinja_env.globals["shell_frame"] = lambda: shell.frame(app)
+    web.jinja_env.globals["money"] = views.money_text
 
     def every_page() -> dict[str, Any]:
         her = personas.active(app.settings)
@@ -251,8 +252,10 @@ def _picking_up_settings(app: App, web: Flask) -> Any:
 
 
 def _look() -> dict[str, Any]:
-    """The look this browser chose, as the templates want it."""
-    wearing, mode = looks.parse(request.cookies.get(looks.COOKIE))
+    """The look to wear: the signed-in person's own, which follows them to every device; with
+    nobody signed in (the sign-in page, the family sharing one password) this browser's."""
+    member = auth.visitor().member
+    wearing, mode = looks.parse(member.look if member else request.cookies.get(looks.COOKIE))
     return {
         "look": wearing,
         "look_mode": mode,

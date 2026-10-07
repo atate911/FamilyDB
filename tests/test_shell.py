@@ -1,4 +1,4 @@
-"""The frame around the page (templates/base_kitchen.html, web/shell.py): who sees which pages in
+"""The frame around the page (templates/base.html, web/shell.py): who sees which pages in
 the menu, the health pill, and the counts by a page's name. Read on `/more`, the phone's menu,
 which is the first page built on it."""
 
@@ -127,7 +127,7 @@ def test_the_page_can_be_skipped_to_and_names_its_language(sam) -> None:
     html = sam.get("/more").text
     assert '<a class="skip" href="#main">Skip to content</a>' in html
     assert 'id="main"' in html and '<html lang="en-GB"' in html
-    assert "style-kitchen.css" in html and "fonts/atkinson-400.woff2" in html
+    assert "style.css" in html and "fonts/atkinson-400.woff2" in html
 
 
 def test_somebody_who_is_not_signed_in_gets_no_menu(app) -> None:

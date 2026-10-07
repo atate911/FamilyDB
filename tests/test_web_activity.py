@@ -20,11 +20,13 @@ alex = logins.alex
 
 def _activity(page: str) -> list[tuple[str, str]]:
     """Each line of recent activity: where it opens, and its title."""
-    found = re.search(r'<section class="panel" id="activity">.*?</section>', page, re.S)
+    found = re.search(r'<section class="card span-all" id="activity".*?</section>', page, re.S)
     assert found is not None
     return re.findall(
-        r'<a href="(/status/activity/[^"]+)">\s*<span class="activity-title">([^<]+)</span>',
+        r'<a class="item item--divided" href="(/status/activity/[^"]+)">.*?'
+        r'<span class="item__title">([^<]+)</span>',
         found.group(0),
+        re.S,
     )
 
 
@@ -55,7 +57,7 @@ def test_a_message_s_history_shows_every_call_and_tool_and_the_reply(app, sam, a
     assert "A message from Sam" in page and "we should try the ramen place" in page
     assert "Saved #1 Ramen place." in page  # the reply
     assert "2 calls:" in page and page.count("<td>answering the family</td>") == 2
-    assert "<code>add_idea</code>" in page
+    assert '<span class="code">add_idea</span>' in page
     # What the model sent is shown as it came, never as markup.
     assert "Ramen &lt;b&gt;place&lt;/b&gt;" in page and "<b>place</b>" not in page
 
@@ -92,7 +94,7 @@ def test_a_lookup_s_history_says_what_it_found_and_the_pages_it_read(
     assert "sat 10:00-20:00" in page
     # A page it read is a link only when it is a web address; the rest stays words.
     assert '<a href="https://example.com/place"' in page and 'href="javascript:' not in page
-    assert "<code>save_place</code>" in page
+    assert '<span class="code">save_place</span>' in page
     assert ideas.get(conn, idea.id).enrichment == "done"
     # And the idea itself says how it was looked up, with the way to it.
     assert f'href="{lines[0][0]}">How it was looked up</a>' in client.get(f"/idea/{idea.id}").text

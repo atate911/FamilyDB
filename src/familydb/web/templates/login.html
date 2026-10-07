@@ -1,58 +1,50 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, crt %}
+{% from "_ui.html" import icon, brand_mark, wordmark with context %}
 {% block title %}Sign in · {{ site_title }}{% endblock %}
 {% block body_class %}page-signin{% endblock %}
-{% block content %}
-  <section class="panel narrow signin">
-    {% call crt('power-on') %}
-      <svg class="crt-face" viewBox="0 0 60 30" focusable="false">
-        <path class="eye" d="M18 4V10"/><path class="eye" d="M42 4V10"/>
-        <path d="M18 20C24.8 25.4 35.2 25.4 42 20"/>
-      </svg>
-      <p class="signin-ready caps">Ready.<span class="crt-cursor"></span></p>
-    {% endcall %}
-    <h1>Sign in to {{ site_title }}</h1>
-    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-    <form method="post" action="{{ url_for('auth.sign_in') }}">
-      {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
-      {% if personal %}
-        {# Everybody signs in as themselves: the name is the one on the Family page. #}
-        <label for="name">Your name</label>
-        <input
-          id="name"
-          name="name"
-          autocomplete="username"
-          autocapitalize="words"
-          maxlength="80"
-          value="{{ name }}"
-          {{ '' if name else 'autofocus' }}
-          required
-        />
-        <label for="password">Your password</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          {{ 'autofocus' if name }}
-          required
-        />
-      {% else %}
-        <label for="password">Family password</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          autofocus
-          required
-        />
-      {% endif %}
-      <button type="submit">Sign in{{ icon('right') }}</button>
-    </form>
-    {% if personal %}
-      <p class="muted hint">Forgotten it? An admin can make you a new starting password on the
-        Family page.</p>
-    {% endif %}
-  </section>
+{# Nobody is signed in, so there is no menu to draw: the page is the one card. #}
+{% block frame %}
+  <main class="solo" id="main">
+    <div class="solo__in">
+      <section class="pane brand-row" aria-label="{{ site_title }}">
+        {{ brand_mark(cls='pane__mark') }}
+        <div>
+          <p class="pane__line">{{ wordmark(site_title) }}</p>
+          <p class="pane__sub mt-2">Ready.</p>
+        </div>
+      </section>
+      <div class="signin signin--one mt-6">
+        <form class="card form" method="post" action="{{ url_for('auth.sign_in') }}" aria-labelledby="h-signin">
+          <h1 id="h-signin" class="signin__h">Sign in to {{ site_title }}</h1>
+          {% if error %}
+            <div class="banner banner--alert banner--slim" role="alert">
+              <span class="banner__ic">{{ icon('alert') }}</span>
+              <p class="banner__text">{{ error }}</p>
+            </div>
+          {% endif %}
+          {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
+          {% if personal %}
+            {# Everybody signs in as themselves: the name is the one on the Family page. #}
+            <div class="field"><label class="field__label" for="name">Your name</label>
+              <input id="name" type="text" name="name" autocomplete="username" autocapitalize="words" maxlength="80" value="{{ name }}" {{ '' if name else 'autofocus' }} required /></div>
+            <div class="field"><label class="field__label" for="password">Your password</label>
+              <input id="password" type="password" name="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" {{ 'autofocus' if name }} required aria-describedby="password-h" />
+              <span class="field__hint" id="password-h">You can paste it, or let your browser fill it in.</span></div>
+          {% else %}
+            <p class="small">Until an admin chooses their own password, the family signs in with one shared password, and this page can’t tell who is who.</p>
+            <div class="field"><label class="field__label" for="password">Family password</label>
+              <input id="password" type="password" name="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" autofocus required /></div>
+          {% endif %}
+          <div class="actions"><button class="btn btn--primary" type="submit">Sign in{{ icon('chev', size='sm') }}</button></div>
+          {% if personal %}
+            <p class="small muted">Forgotten it? An admin can make you a new starting password on the Family page. On a shared computer, sign out when you’re done.</p>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+    <footer class="foot">
+      <p class="foot__line">{{ brand_mark('xs') }}A little less planning. A little more together.</p>
+      <p class="foot__legal">{{ footer }}</p>
+    </footer>
+  </main>
 {% endblock %}

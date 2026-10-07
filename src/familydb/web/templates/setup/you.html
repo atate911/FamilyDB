@@ -1,23 +1,16 @@
-<p class="why">
-  {{ site_title }} only talks to people on its family list, so a stranger who finds it gets
-  nowhere. You are the first, as an <strong>admin</strong>: the person who looks after it. Next
-  you choose your own password for this page; the rest of the family comes in a later step.
-</p>
+{% from "_ui.html" import icon with context %}
+<p class="lede">{{ site_title }} only talks to people on its family list, so a stranger who finds it gets nowhere. You are the first, as an <b>admin</b>: the person who looks after it. Next you choose your own password for this page; the rest of the family comes in a later step.</p>
 {% if admin %}
   <p>To change your name later, use the <a href="{{ url_for('family.show') }}">Family page</a>.</p>
 {% else %}
-  <form class="panel form" method="post" action="{{ url_for('family.add') }}">
+  <form class="card form form--tight setup-card" method="post" action="{{ url_for('family.add') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="once" value="{{ once_token() }}" />
     <input type="hidden" name="then" value="{{ then }}" />
     <input type="hidden" name="role" value="admin" />
-    <div class="field wide">
-      <label for="you-name">Your first name</label>
-      <input id="you-name" name="name" required maxlength="80" autocomplete="given-name"
-             placeholder="Sam" />
-      <p class="muted hint">What the family calls you. It is how {{ site_title }} knows who
-        asked for what, and whose name the weekend ideas are sent in.</p>
-    </div>
-    <div class="field wide actions"><button type="submit">Add me</button></div>
+    <div class="field"><label class="field__label" for="you-name">Your first name</label>
+      <input id="you-name" type="text" name="name" required maxlength="80" autocomplete="given-name" placeholder="Sam" aria-describedby="you-name-h" />
+      <p class="field__hint" id="you-name-h">What the family calls you. It is how {{ site_title }} knows who asked for what, and whose name the weekend ideas are sent in.</p></div>
+    <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('plus') }}Add me</button></div>
   </form>
 {% endif %}

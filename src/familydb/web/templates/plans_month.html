@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, avatar, page_head, date_tile, people, tile, faces, badge %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, avatar, page_head, date_tile, people, tile, faces, badge %}
 {% block title %}{{ month }} · {{ site_title }}{% endblock %}
 {% block content %}
   {% call page_head('Plans', 'What’s on the family calendar. After each plan, ' ~ assistant ~ ' asks how it went.') %}

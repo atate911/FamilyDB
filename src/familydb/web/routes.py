@@ -56,8 +56,9 @@ HOME_IDEAS = 4
 HOME_TASKS = 4
 PLANS_AHEAD_DAYS = 90
 PLANS_BEHIND_DAYS = 30
-# The page's charcoal: `--bg` in style.css and the theme colour in base.html.
-CHARCOAL = "#0b0e0d"
+# The home-screen icon's ground (static/brand/icon-512.png), which the manifest's colours match so
+# opening the app is one colour from the icon to the splash.
+ICON_GROUND = "#0e1312"
 
 
 def _app() -> App:
@@ -90,12 +91,9 @@ def manifest() -> Response:
     """The home-screen manifest. Open before sign-in: a phone asks without the cookie, and it says
     nothing the sign-in page does not."""
     title = _app().settings.web_title
-    small, large = (
-        url_for("static", filename="icon-192.png"),
-        url_for("static", filename="icon-512.png"),
-    )
+    large = url_for("static", filename="brand/icon-512.png")
     icons = [
-        {"src": small, "sizes": "192x192"},
+        {"src": url_for("static", filename="brand/apple-touch-icon.png"), "sizes": "180x180"},
         {"src": large, "sizes": "512x512"},
         {"src": large, "sizes": "512x512", "purpose": "maskable"},
     ]
@@ -106,8 +104,8 @@ def manifest() -> Response:
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
-        "background_color": CHARCOAL,
-        "theme_color": CHARCOAL,
+        "background_color": ICON_GROUND,
+        "theme_color": ICON_GROUND,
         "icons": [{**icon, "type": "image/png"} for icon in icons],
     }
     return Response(json.dumps(body, sort_keys=True), mimetype="application/manifest+json")
@@ -516,6 +514,7 @@ def memory() -> str:
         "memory.html",
         **views.memory_page(everything, people, app.clock.today(), app.settings.tzinfo),
         people=people,
+        slots=views.slot_map(people),
         kinds=views.MEMORY_KINDS,
     )
 
@@ -813,6 +812,8 @@ def _lists(conn: Any, kid: member_store.Member, today: date) -> dict[str, Any]:
     return {
         "id": kid.id,
         "name": kid.display_name,
+        "slot": kid.slot or 0,
+        "initial": kid.display_name[:1].upper(),
         "lists": lists,
         "answered": answered,
         "turned": turned,
@@ -863,7 +864,10 @@ def wishes() -> str:
             shown = [_lists(conn, visitor.member, today)]
         else:
             abort(404)
-        family = [member.display_name for member in member_store.list_all(conn)]
+        people = member_store.list_all(conn)
+        family = [member.display_name for member in people]
+    names = {member.id: member.display_name for member in people}
+    parents = [m.display_name for m in people if m.active and roles.may(m.role, "decide")]
     talk = (
         {}
         if visitor.may("decide") or not visitor.may("chat")
@@ -875,6 +879,8 @@ def wishes() -> str:
         ask_label=chat.KID_LIST_LABEL.format(name=personas.active(app.settings).name),
         **talk,
         kids=shown,
+        names=names,
+        parents_text=views.names_text([{"name": name} for name in parents]),
         parent=visitor.may("decide"),
         one=bool(wanted) or not visitor.may("decide"),
         choices=[(value or "everyday", name) for value, name, _ in views.WISH_LISTS],

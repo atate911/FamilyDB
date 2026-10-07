@@ -41,9 +41,10 @@ from familydb import passwords, personas, roles
 from familydb.app import App
 from familydb.config import Settings
 from familydb.store import logins
+from familydb.store import members as member_store
 from familydb.store.logins import Login, SignIn
 from familydb.store.members import Member
-from familydb.web import views
+from familydb.web import looks, views
 
 log = logging.getLogger(__name__)
 
@@ -479,7 +480,17 @@ def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
     if needed and request.endpoint not in EVERYBODY_S_OWN and not who.may(needed):
         title, why = views.REFUSALS[needed]
         why = why.format(name=personas.active(_app().settings).name)
-        return render_template("403.html", title=title, why=why), 403
+        extra = {}
+        if needed == "manage":
+            with closing(_app().connect()) as conn:
+                admins = [
+                    person.display_name
+                    for person in member_store.list_all(conn)
+                    if person.role == "admin" and person.active
+                ]
+            title, why, line = views.admin_only(admins, grown_up=who.may("browse"))
+            extra = {"admins_line": line}
+        return render_template("403.html", title=title, why=why, **extra), 403
     return None
 
 
@@ -565,6 +576,8 @@ def sign_in() -> Response | tuple[str, int]:
         log.info("web login as member %s from %s", found.member.id, who)
         response = redirect(url_for("family.you") if found.login.temporary else target or HOME)
         remember_device(response, settings, found.login)
+        # Their look comes with them to this phone, and the sign-in page here wears it next time.
+        looks.remember(response, found.member.look, secure=settings.web_trust_proxy)
         return response
     if found is None and name:
         passwords.hash_matches(_decoy(), given)

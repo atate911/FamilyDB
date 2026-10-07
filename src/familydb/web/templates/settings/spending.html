@@ -1,7 +1,5 @@
-{% from "_settings.html" import form %}
-{% from "_ui.html" import icon %}
+{% from "_settings.html" import form with context %}
+{% from "_ui.html" import icon with context %}
 {% call form('spending', groups.values()) %}
-  <p class="panel notice spent">{{ icon('coin') }}<span>About <strong>${{ '%.2f' | format(today) }}</strong>
-    spent today{% if limit %}, of the ${{ '%.2f' | format(limit) }} limit{% endif %}.
-    <a href="{{ url_for('web.status') }}">What it cost, call by call</a></span></p>
+  <div class="banner banner--slim spent"><span class="banner__ic">{{ icon('dollar') }}</span><p class="banner__text">About <b>${{ '%.2f' | format(today) }}</b> spent today{% if limit %}, of the ${{ '%.2f' | format(limit) }} limit{% endif %}. <a href="{{ url_for('web.status') }}">What it cost, call by call</a></p></div>
 {% endcall %}

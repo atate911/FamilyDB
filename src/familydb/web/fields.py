@@ -60,7 +60,7 @@ class Section:
 
     name: str  # its address, /settings/<name>
     title: str
-    icon: str  # in static/icons.svg, or "presence"
+    glyph: str  # its picture, in static/icons.svg
     blurb: str
 
 
@@ -237,14 +237,16 @@ def _models(company: str, label: str) -> tuple[Field, Field]:
 
 SECTIONS: tuple[Section, ...] = (
     Section("general", "General", "home", "Where home is, its clock and units, and this page."),
-    Section("model", "AI model", "mark", "Which company answers, with which model, and its key."),
-    Section("spending", "Spending", "coin", "The daily limit, and what one message may use."),
+    Section(
+        "model", "AI model", "sparkle", "Which company answers, with which model, and its key."
+    ),
+    Section("spending", "Spending", "dollar", "The daily limit, and what one message may use."),
     Section("messages", "Messages", "bell", "What is sent without being asked, and when."),
     Section("lookups", "Lookups", "search", "Filling ideas in from the web."),
     Section(
         "personality",
         "Personality and family",
-        "presence",
+        "smile",
         "Who she is, and who you are, in your own words.",
     ),
     Section("connections", "Connections", "plug", "Telegram, and Google Calendar."),
@@ -254,7 +256,7 @@ SECTIONS: tuple[Section, ...] = (
         "key",
         "Passwords, how long a sign-in lasts, seeing a key, signing everyone out.",
     ),
-    Section("history", "What has changed", "clock", "Every change made here, and who made it."),
+    Section("history", "What has changed", "history", "Every change made here, and who made it."),
 )
 SECTION_BY_NAME: dict[str, Section] = {one.name: one for one in SECTIONS}
 

@@ -607,7 +607,12 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
         render_template(
             "settings.html",
             sections=[
-                {"section": one, "lines": states[one.name][0], "look": states[one.name][1]}
+                {
+                    "section": one,
+                    "lines": states[one.name][0],
+                    "look": states[one.name][1],
+                    "off": one.name == "lookups" and not enrichment_available(live),
+                }
                 for one in fields.SECTIONS
             ],
             said=said,

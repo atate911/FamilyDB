@@ -1,10 +1,7 @@
-{% from "_settings.html" import form %}
-{% from "_ui.html" import icon %}
+{% from "_settings.html" import form with context %}
+{% from "_ui.html" import icon with context %}
 {% if on and not can_look %}
-  <p class="panel notice">{{ icon('warning') }}<span>Looking ideas up is on, but there is no key
-    for the company that does it, so nothing is looked up until there is one: see
-    <a href="{{ url_for('settings.section', name='model') }}">AI model</a>.</span></p>
+  <div class="banner banner--warn banner--slim"><span class="banner__ic">{{ icon('alert') }}</span><p class="banner__text">Looking ideas up is on, but there is no key for the company that does it, so nothing is looked up until there is one: see <a href="{{ url_for('settings.section', name='model') }}">AI model</a>.</p></div>
 {% endif %}
 {{ form('lookups', groups.values()) }}
-<p class="muted small">Which company and which model look things up is on the
-  <a href="{{ url_for('settings.section', name='model', _anchor='models') }}">AI model</a> page.</p>
+<p class="note">{{ icon('sparkle') }}<span>Which company and which model look things up is on the <a href="{{ url_for('settings.section', name='model', _anchor='models') }}">AI model</a> page.</span></p>

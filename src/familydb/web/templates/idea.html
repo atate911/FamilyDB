@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, tile, tag, avatar, page_head, date_tile, surprise with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, tile, tag, avatar, page_head, date_tile, surprise with context %}
 {% block title %}{{ idea.title }} · {{ site_title }}{% endblock %}
 {# Who is doing this: asked only while the family shares a password. Somebody signed in as
    themselves is who, and the page knows it. #}
