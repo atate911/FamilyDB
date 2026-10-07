@@ -1148,3 +1148,23 @@ def test_the_look_page_writes_only_a_look_and_only_through_the_rules() -> None:
     assert called == {"choose_look"}
     reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
     assert not any(name.startswith("familydb.store") for name in reached)
+
+
+def test_ideas_has_one_search_and_the_quick_note_comes_after_the_list(
+    settings, clock, conn, family
+) -> None:
+    from familydb.store import db as db_store
+    from familydb.store import ideas as idea_store
+
+    with db_store.transaction(conn):
+        idea_store.insert(conn, title="Ramen place", kind="restaurant", now=NOW_ISO)
+    page = _signed_in(settings, clock).get("/ideas").text
+    assert page.count(">Filter<") == 0 and ">Search</button>" in page  # one Search, not two Filters
+    assert "Narrow by kind, person or status" in page
+    assert page.index("Ramen place") < page.index("Save a thought for later")
+
+
+def test_on_the_phone_home_the_setup_strip_waits_under_the_plans(settings, clock, family) -> None:
+    page = _signed_in(settings, clock).get("/").text  # a model is not set up, so setup has steps
+    assert "Setup:" in page
+    assert page.index('aria-labelledby="h-next"') < page.index("Setup:")

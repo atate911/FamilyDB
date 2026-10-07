@@ -33,3 +33,13 @@ def test_a_kids_line_about_who_reads_her_chat_stays_on_the_phone() -> None:
     home = (WEB / "templates" / "home.html").read_text()
     assert "composer__foot--kid" in home
     assert ".ask .composer__foot:not(.composer__foot--kid)" in css
+
+
+def test_the_chat_room_is_window_high_on_a_desktop_too() -> None:
+    css = (WEB / "static" / "style.css").read_text()
+    wide = css[css.index("@media (min-width: 821px) and (min-height: 600px)") :][:600]
+    assert (
+        ".chat { height:" in wide
+        and ".scroller { flex: 1 1 0;" in wide
+        and "overflow-y: auto" in wide
+    )

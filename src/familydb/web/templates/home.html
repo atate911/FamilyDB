@@ -13,13 +13,6 @@
   </div>
   {% if not talk %}<h1 class="sr">{{ site_title }}</h1>{% endif %}
 
-  {% if setup %}
-    <div class="banner banner--warn banner--slim phone-only mt-2">
-      <span class="banner__ic">{{ icon('alert') }}</span>
-      <p class="banner__text"><b>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</b></p>
-      <a class="btn btn--quiet btn--sm" href="{{ url_for('setup.overview') }}">Continue</a>
-    </div>
-  {% endif %}
 
   <div class="home-grid mt-4">
     <div class="stack">
@@ -87,6 +80,14 @@
         {% endif %}
         {% if source != 'google' and grownup %}<p class="card__foot">{{ icon('info', size='sm') }} {{ source_note }}</p>{% endif %}
       </section>
+      {# On the phone the setup strip waits under the plans: what the family came for first. #}
+      {% if setup %}
+        <div class="banner banner--warn banner--slim phone-only o2">
+          <span class="banner__ic">{{ icon('alert') }}</span>
+          <p class="banner__text"><b>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</b></p>
+          <a class="btn btn--quiet btn--sm" href="{{ url_for('setup.overview') }}">Continue</a>
+        </div>
+      {% endif %}
 
       {% if grownup %}
         <section class="card o6" aria-labelledby="h-ideas">

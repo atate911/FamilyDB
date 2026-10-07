@@ -1355,6 +1355,14 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .chat { height: auto; }
   .scroller { flex: none; overflow: visible; }
 }
+/* Desktop: the room is as high as the window, the thread scrolls inside it and the box stays on screen,
+   as on the phone. A short window falls back to the page scrolling. */
+@media (min-width: 821px) and (min-height: 600px) {
+  .chat { height: max(480px, calc(100dvh - 296px)); min-height: 0; }
+  .room { min-height: 0; }
+  .scroller { flex: 1 1 0; min-height: 0; overflow-y: auto; scroll-padding-top: 56px; }
+  .convos { overflow-y: auto; min-height: 0; }
+}
 .privacy--room { display: none; padding: var(--s2) var(--s4) var(--s3); font-size: var(--t-sm); }
 @media (min-width: 821px) { .chat .privacy--room { display: none; } }
 

@@ -18,7 +18,6 @@
     {% set lede = 'Errands, appointments to arrange, and things you mean to get done.' %}
     {% if status == 'open' and open_count %}{% set lede = lede ~ ' ' ~ open_count ~ ' open' ~ (', ' ~ late_count ~ ' of them late' if late_count else '') ~ '.' %}{% endif %}
     {{ page_head('To do', lede) }}
-    <p class="small muted mb-4">Times use {{ zone }}. A deadline or preferred window doesn’t set a reminder or book your calendar.</p>
 
     {% if visitor().may('change') %}
       <form class="card adder adder--todo" method="post" action="{{ url_for('edits.add_task') }}" aria-labelledby="h-add" novalidate>
@@ -41,6 +40,7 @@
             <details class="disclose">
               <summary>When, a reminder, repeats <span class="val">No deadline</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
               <div class="disclose__body adder__opts">
+                <p class="field__hint span-all">Times use {{ zone }}. A deadline or preferred window doesn’t set a reminder or book your calendar.</p>
                 <div class="field"><label class="field__label" for="q-due">Deadline <span class="opt">(optional)</span></label><input id="q-due" type="datetime-local" name="due_at" /></div>
                 <div class="field"><label class="field__label" for="q-win">Preferred window <span class="opt">(optional)</span></label><input id="q-win" type="text" name="preferred_window" maxlength="4000" placeholder="Some Saturday morning" /></div>
                 <div class="field"><label class="field__label" for="q-rem">Remind me at <span class="opt">(optional)</span></label><input id="q-rem" type="datetime-local" name="remind_at" /></div>

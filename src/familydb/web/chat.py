@@ -73,7 +73,7 @@ LOST = "That message was not answered. Send it again if it still matters."
 RETRYING_PLAIN = "{name} will answer that soon. The answer will show here when it arrives."
 PROMPT = "Message {name}"
 LOCKED = "You can write again once {name} has answered."
-HOME_PROMPT = "Plans for the weekend, an idea to keep, a reminder, the calendar…"
+HOME_PROMPT = "Ask, save an idea, set a reminder…"
 KID_HOME_PROMPT = "Something you\u2019d like, a question, something fun to do…"
 # Atop a kid's list: goes to her conversation, where it is sorted.
 KID_LIST_PROMPT = "Something you\u2019d like, a question, an idea… {name} will sort it out"
