@@ -129,9 +129,10 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP INDEX plans_google_event_idx")
         for table in ("finds", "find_sources", "feed_proposals"):
             conn.execute(f"DROP TABLE {table}")
+        conn.execute("ALTER TABLE suggestions DROP COLUMN picks")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
-        assert db.migrate(conn) == list(range(8, 40))
+        assert db.migrate(conn) == list(range(8, 41))
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 
