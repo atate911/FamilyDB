@@ -28,6 +28,7 @@ familydb = "familydb.cli:run_cli"
 [dependency-groups]
 dev = [
     "pytest>=9.1",
+    "pytest-xdist>=3.8",
     "ruff>=0.16",
 ]
 
@@ -53,6 +54,9 @@ extend-immutable-calls = ["typer.Argument", "typer.Option"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Every core: the suite takes under a minute on four instead of three. `-n 0` runs it in one
+# process, for a debugger or a single test.
+addopts = "-n auto"
 markers = [
     "live: hits the real Anthropic API (needs FAMILYDB_LIVE=1 and ANTHROPIC_API_KEY)",
 ]
