@@ -21,6 +21,7 @@ from familydb.integrations.geocode import Geocoder
 from familydb.integrations.ical import IcalFeeds
 from familydb.integrations.open_meteo import OpenMeteo
 from familydb.integrations.price_lists import PriceLists
+from familydb.integrations.ticketmaster import Ticketmaster
 from familydb.store import db, members
 from familydb.store.members import Member
 from familydb.tools import ToolContext, ToolRegistry, ToolResult, build_registry
@@ -153,6 +154,7 @@ def no_network(monkeypatch: pytest.MonkeyPatch, request) -> None:
     monkeypatch.setattr(OpenMeteo, "_fetch", staticmethod(_boom))
     monkeypatch.setattr(PriceLists, "_fetch", staticmethod(_boom))
     monkeypatch.setattr(IcalFeeds, "_fetch", staticmethod(_boom))
+    monkeypatch.setattr(Ticketmaster, "_fetch", staticmethod(_boom))
 
 
 @pytest.fixture
