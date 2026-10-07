@@ -261,7 +261,8 @@ def page(
                 }
             ]
         left = messages_left(app, conn, visitor.member)
-    # The log keeps a turn's tool calls against the question; the page shows them under the answer.
+    # The log keeps a turn's tool calls against the question; the page shows them under the
+    # answer to those who browse the household. A kid never sees how it works (DESIGN.md 16).
     answered = {message.reply_to for message in thread if message.reply_to is not None}
     actions = {message.id: message.actions for message in thread}
     lines = [
@@ -269,7 +270,7 @@ def page(
             message,
             names,
             tz,
-            did=views.tools_used(actions.get(message.reply_to)),
+            did=views.tools_used(actions.get(message.reply_to)) if visitor.may("browse") else [],
             waiting=message.id not in answered,
             assistant=assistant,
             slots=slots,

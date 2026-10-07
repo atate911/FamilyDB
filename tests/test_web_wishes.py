@@ -258,3 +258,61 @@ def test_what_each_person_is_told_about_whom_a_list_is_not_secret_from(
     assert "can see it." in kid and "Sam" in kid.split("can see it.")[0].rsplit("secret", 1)[-1]
     assert "Planning a present?" in sam.get("/wishes").text
     assert "Planning a present?" not in kid
+
+
+def test_home_counts_what_waits_on_each_kid(app, family, sam, girls) -> None:  # noqa: F811
+    """The card on a parent's Home says "1 to decide" against the kid it waits on, whatever the
+    wish's own number is."""
+    from familydb import wish_service
+
+    with closing(app.connect()) as conn:
+        for number in range(4):  # so the wish's id is not the kid's
+            turned = wish_service.turn_away(
+                conn,
+                app.settings,
+                owner=members.get(conn, family["girls"].id),
+                summary=f"a thing {number}",
+                concern="rule",
+                reviewable=number == 3,  # only the last can be asked about
+                now=app.clock.now(),
+            )
+    girls["mine"].post(
+        f"/wish/{turned.wish.id}/ask", data=_form(girls["mine"], "/wishes"), follow_redirects=True
+    )
+    home = sam.get("/").text
+    card = home[home.index('id="h-wish"') :].split("</section>")[0]
+    hers, chloes = (
+        next(entry for entry in card.split("<li>") if name in entry)
+        for name in (family["girls"].display_name, "Chloe")
+    )
+    assert "1 to decide" in hers and "to decide" not in chloes  # not on whoever has that number
+
+
+def test_a_kid_never_sees_the_tools_a_turn_ran(app, family, sam, girls) -> None:  # noqa: F811
+    """The log keeps a turn's tool calls against the question; a kid reading her chat never sees
+    how it works (docs/DESIGN.md section 16)."""
+    from familydb.store import messages
+
+    chat = wish_service_chat(family["girls"].id)
+    with closing(app.connect()) as conn, db.transaction(conn):
+        asked = messages.insert_in(
+            conn,
+            channel="web",
+            channel_update_id=None,
+            chat_id=chat,
+            member_id=family["girls"].id,
+            text="can I have a cat",
+        )
+        messages.mark_processed(conn, asked.id, [{"tool": "add_wish", "input": {}}])
+        messages.insert_out(
+            conn, channel="web", chat_id=chat, text="On your list: a cat.", reply_to=asked.id
+        )
+    page = girls["mine"].get("/chat").text
+    assert "On your list: a cat." in page
+    assert "Used " not in page and "add_wish" not in page
+
+
+def wish_service_chat(member_id: int) -> str:
+    from familydb.web import chat
+
+    return chat.private_chat(member_id)

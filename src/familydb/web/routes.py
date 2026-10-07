@@ -299,7 +299,7 @@ def _kids_card(wished: dict[str, Any] | None, people: list[member_store.Member])
     cards = []
     for kid in wished["kids"]:
         person = by_id.get(kid["id"])
-        waiting = sum(1 for row in wished["waiting"] if row["id"] == kid["id"])
+        waiting = sum(1 for row in wished["waiting"] if row["kid_id"] == kid["id"])
         pronoun = {"female": "her", "male": "his"}.get(person.gender or "", "their")
         cards.append(
             {
@@ -833,7 +833,7 @@ def wish_glance(conn: Any, today: date) -> dict[str, Any] | None:
         if not kids:
             return None
         waiting = [
-            {"kid": kid["name"], "id": kid["id"], **row}
+            {**row, "kid": kid["name"], "kid_id": kid["id"]}
             for kid in kids
             for row in kid["turned"]
             if row["review"] == "asked" or row["concern"] == views.CONCERN_WORDS["inappropriate"]

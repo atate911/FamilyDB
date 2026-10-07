@@ -687,8 +687,11 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 /* One instrument: the radar, in its own band after the idea cards (Ideas only) */
 .mapband { margin-top: var(--s7); }
 .mapband > h2 { font-size: var(--t-h2); margin-bottom: var(--s2); }
-.mapband__fold > summary { display: none; }
-.mapband__fold::details-content { content-visibility: visible; display: block; }
+/* the fold is always open on a wide screen; a browser that cannot do that (no ::details-content) keeps its summary so it still opens */
+@supports selector(::details-content) {
+  .mapband__fold > summary { display: none; }
+  .mapband__fold::details-content { content-visibility: visible; display: block; }
+}
 .mapband__cap { max-width: 72ch; margin-bottom: var(--s3); }
 .instrument__pane { background: var(--glass); border-radius: var(--r-lg); padding: var(--s3); box-shadow: inset 0 0 0 1px var(--glass-line); }
 .radar { display: block; width: 100%; max-width: 860px; height: auto; margin: 0 auto; }
@@ -995,13 +998,16 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .adder--todo > h2, .adder--todo > input { grid-column: 1 / -1; }
 .adder--todo .choices > legend { margin-bottom: var(--s1); }
 .adder--todo { grid-template-columns: minmax(0, 1fr); }
-/* desktop: the box, then who and when, then Add as a full-width bar. The phone puts box and Add in one row. */
-.adder__row { display: contents; }
-.adder--todo .adder__btn { order: 10; grid-column: 1 / -1; justify-self: stretch; }
+/* one row to add at every width: the box, its mic if dictation is on, Add; who and when sit beneath */
+.adder__row { display: flex; gap: var(--s2); align-items: stretch; }
+.adder__row input { flex: 1; min-width: 0; }
+.adder--todo .adder__btn { flex: none; padding: 0 var(--s4); }
 .adder__more { order: 5; min-width: 0; }
-.adder__more > summary { display: none; }
-/* on the desktop the fold is always open; the summary only exists for the phone */
-.adder__more::details-content { content-visibility: visible; display: block; }
+/* on the desktop the fold is always open; the summary only exists for the phone, and for a browser without ::details-content */
+@supports selector(::details-content) {
+  .adder__more > summary { display: none; }
+  .adder__more::details-content { content-visibility: visible; display: block; }
+}
 .adder__more-body { display: grid; gap: var(--s3); }
 .adder .disclose { grid-column: 1 / -1; }
 .adder__opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); align-items: start; }
@@ -1209,9 +1215,6 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .toolbar { margin-top: var(--s4); }
 
   /* To do: one row to add a to-do at the top of the list; who, when and reminder fold beneath it */
-  .adder__row { display: flex; gap: var(--s2); align-items: stretch; }
-  .adder__row input { flex: 1; min-width: 0; }
-  .adder--todo .adder__btn { order: 0; flex: none; padding: 0 var(--s4); }
   .adder__more > summary { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s2); min-height: var(--target); padding: 6px 0; cursor: pointer; font-weight: 700; font-size: var(--t-meta); }
   .adder__more > summary::-webkit-details-marker { display: none; }
   .adder__more > summary .val { font-weight: 400; color: var(--ink-2); }
@@ -1310,10 +1313,10 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .srow__text b { font-size: var(--t-md); }
 
   /* Chat: an app-height room; the box is pinned, the thread opens at the newest */
-  .chat-page .main { padding: 0; }
-  .chat-page .foot { margin-left: var(--s4); margin-right: var(--s4); padding-bottom: var(--s4); }
+  .page-chat .main { padding: 0; }
+  .page-chat .foot { margin-left: var(--s4); margin-right: var(--s4); padding-bottom: var(--s4); }
   .convos__h { display: none; }
-  .chat-page .page-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
+  .page-chat .page-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
   .chat { display: flex; flex-direction: column; gap: 0; height: calc(100vh - var(--topbar-h) - var(--tabbar-total)); height: calc(100dvh - var(--topbar-h) - var(--tabbar-total)); min-height: 0; }
   .convos { display: flex; gap: var(--s2); overflow-x: auto; padding: var(--s3) var(--s4) var(--s2); scrollbar-width: none; flex: none; }
   .convo { flex: none; padding: 4px var(--s4) 4px 4px; border-radius: var(--r-pill); background: var(--card); border-color: var(--line-2); grid-template-columns: auto auto; gap: var(--s2); }

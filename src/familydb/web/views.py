@@ -960,13 +960,12 @@ def month_calendar(
                     "current": day.month == first.month,
                     "today": day == today,
                     "weekend": day.weekday() >= 5,
+                    # One dot for each person a plan is for, so two people never read as the house.
                     "dots": [
-                        {
-                            **(r["people"][0] if len(r["people"]) == 1 else people_dot()),
-                            "past": day < today,
-                        }
-                        for r in today_rows[:3]
-                    ],
+                        {**person, "past": day < today}
+                        for r in today_rows
+                        for person in (r["people"] or [people_dot()])
+                    ][:3],
                     "label": _spoken(day, today_rows, unrated) if today_rows else None,
                     # The first plan that day still to be rated, so the day links to its faces.
                     "rate": next((r["id"] for r in today_rows if r["id"] in unrated), None),
@@ -987,7 +986,7 @@ def month_calendar(
 
 
 def people_dot() -> dict[str, Any]:
-    """The marker for a plan that is for several people or everyone: the house."""
+    """The marker for a plan that is for everyone: the house."""
     return {"name": EVERYONE, "slot": 0, "initial": ""}
 
 
