@@ -81,10 +81,12 @@
         {% if source != 'google' and grownup %}<p class="card__foot">{{ icon('info', size='sm') }} {{ source_note }}</p>{% endif %}
       </section>
       {# On the phone the setup strip waits under the plans: what the family came for first. #}
-      {% if setup %}
+      {# Only the steps it needs or that are recommended are counted as left; optional ones wait. #}
+      {% set setup_left = setup | rejectattr('need', 'equalto', 'optional') | list %}
+      {% if setup_left %}
         <div class="banner banner--warn banner--slim phone-only o2">
           <span class="banner__ic">{{ icon('alert') }}</span>
-          <p class="banner__text"><b>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</b></p>
+          <p class="banner__text"><b>Setup: {{ setup_left | length }} step{{ '' if setup_left | length == 1 else 's' }} left</b></p>
           <a class="btn btn--quiet btn--sm" href="{{ url_for('setup.overview') }}">Continue</a>
         </div>
       {% endif %}
@@ -164,11 +166,13 @@
 
       {% if setup %}
         <section class="card card--setup desk-only" id="setup" aria-labelledby="h-setup">
-          <div class="card__head"><h2 id="h-setup">Finish setting up</h2><span class="tag tag--look">{{ icon('alert') }}{{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</span></div>
+          <div class="card__head"><h2 id="h-setup">{{ 'Finish setting up' if setup_left else 'When you like' }}</h2>
+            {%- if setup_left %}<span class="tag tag--look">{{ icon('alert') }}{{ setup_left | length }} step{{ '' if setup_left | length == 1 else 's' }} left</span>
+            {%- else %}<span class="tag tag--off">Optional</span>{% endif %}</div>
           <ol class="steps">
             {% for step in setup %}<li><div><a href="{{ step.link }}">{{ step.text }}</a></div></li>{% endfor %}
           </ol>
-          <p class="card__foot">Each one is a short page that says what to do. <a href="{{ url_for('setup.overview') }}">All the setup steps</a> · Only admins see this.</p>
+          <p class="card__foot">Each one is a short page that says what to do{{ ', or lets you say it isn’t for you' if not setup_left }}. <a href="{{ url_for('setup.overview') }}">All the setup steps</a> · Only admins see this.</p>
         </section>
       {% endif %}
 

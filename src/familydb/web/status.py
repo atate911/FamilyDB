@@ -729,6 +729,8 @@ class SetupStep:
     done: bool
     detail: str
     todo: str  # the home page line while not done
+    # An optional step the family said is not for them: counted as left nowhere.
+    skipped: bool = False
 
 
 SETUP_ORDER = ("you", "password", "model", "home", "telegram", "family", "calendar")
@@ -815,16 +817,18 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
             "Link your phone to the Telegram bot, so it knows who is writing."
             if live.telegram_bot_token
             else "Add a Telegram bot, so the family can message it from their phones.",
+            live.setup_skip_telegram,
         ),
         SetupStep(
             "family",
-            "The rest of the family",
+            "The family, and their sign-ins",
             "Family",
             "optional",
             2,
             len(everyone) > 1,
             f"{len(everyone)} on the list." if everyone else "Nobody yet.",
             "Add the rest of the family, so plans can include them.",
+            live.setup_skip_family,
         ),
         SetupStep(
             "calendar",
@@ -837,6 +841,7 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
             if calendar_available(live)
             else "Not connected, so plans stay on this page.",
             "Connect Google Calendar, so plans land on the family calendar.",
+            live.setup_skip_calendar,
         ),
     ]
 
@@ -849,9 +854,9 @@ def ready_to_answer(steps: list[SetupStep]) -> bool:
 def setup_steps(app: App, conn: sqlite3.Connection) -> list[dict[str, str]]:
     """What is left to set up, most important first: a sentence and its setup page."""
     return [
-        {"text": step.todo, "link": f"/setup/{step.name}"}
+        {"text": step.todo, "link": f"/setup/{step.name}", "need": step.need}
         for step in setup_progress(app, conn)
-        if not step.done
+        if not step.done and not step.skipped
     ]
 
 

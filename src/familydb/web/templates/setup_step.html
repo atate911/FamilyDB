@@ -27,7 +27,16 @@
     <h1>{{ step.title }}</h1>
   </header>
   {{ told(said | join(' '), problems | join(' ')) }}
-  {% if step.done %}<p class="state-done">{{ icon('check') }}{{ step.detail }}</p>{% endif %}
+  {% if step.done %}<p class="state-done">{{ icon('check') }}{{ step.detail }}</p>
+  {%- elif step.skipped %}
+    <form class="state-skipped" method="post" action="{{ url_for('settings.save') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="then" value="{{ then }}" />
+      <input type="hidden" name="setup_skip_{{ step.name }}" value="false" />
+      <p>{{ icon('offc') }}You said this isn’t for you, so nothing counts it as left.</p>
+      <button class="btn btn--quiet btn--sm" type="submit">Bring it back</button>
+    </form>
+  {%- endif %}
 
   <div class="step-body">
     {% include "setup/" ~ step.name ~ ".html" %}
@@ -35,10 +44,19 @@
 
   <nav class="step-nav" aria-label="Setup">
     <a class="btn btn--quiet" href="{{ previous }}">{{ icon('chevl', size='sm') }}Back</a>
-    <a class="btn {% if step.done %}btn--primary{% else %}btn--quiet{% endif %}" href="{{ following }}">
-      {%- if step.done %}Next{% elif step.need == 'needed' %}Skip for now{% else %}Skip this{% endif %}{{ icon('chev', size='sm') }}</a>
+    {% if not step.done and not step.skipped and step.need == 'optional' %}
+      {# Said once, and kept: the step leaves every count of what is left (status.setup_progress). #}
+      <form method="post" action="{{ url_for('settings.save') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="then" value="{{ following }}" />
+        <input type="hidden" name="setup_skip_{{ step.name }}" value="true" />
+        <button class="btn btn--quiet" type="submit">Not for us</button>
+      </form>
+    {% endif %}
+    <a class="btn {% if step.done or step.skipped %}btn--primary{% else %}btn--quiet{% endif %}" href="{{ following }}">
+      {%- if step.done or step.skipped %}Next{% elif step.need == 'needed' %}Skip for now{% else %}Later{% endif %}{{ icon('chev', size='sm') }}</a>
   </nav>
   {% if not step.done and step.need == 'needed' %}
-    <p class="small muted mt-3">Skipping is fine: nothing else depends on doing it now. It cannot answer anyone until it is done, and the home page will bring you back here.</p>
+    <p class="small muted mt-3">You can come back to this. Until it’s done, {{ assistant }} can’t answer anyone, and Home brings you back here.</p>
   {% endif %}
 {% endblock %}

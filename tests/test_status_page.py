@@ -234,6 +234,7 @@ def test_a_new_install_starts_by_adding_yourself(settings, clock, conn) -> None:
     assert first == {
         "text": "Add yourself, as an admin, then the rest of the family.",
         "link": "/setup/you",
+        "need": "needed",
     }
     family.add(conn, "Sam", "admin", telegram_id=None, now=NOW_ISO)
     assert all(step["link"] != "/setup/you" for step in setup_steps(app, conn))

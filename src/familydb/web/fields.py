@@ -357,6 +357,19 @@ GROUPS: tuple[Group, ...] = (
         folded=True,
     ),
     Group(
+        "general",
+        "setup",
+        "Setup steps that aren't for us",
+        "A step said to be not for you is left out of what Home and setup count as left. Its "
+        "page is still there, and saying No here brings it back.",
+        (
+            field("setup_skip_telegram", "Telegram isn't for us"),
+            field("setup_skip_family", "Nobody else to add"),
+            field("setup_skip_calendar", "Google Calendar isn't for us"),
+        ),
+        folded=True,
+    ),
+    Group(
         "model",
         "who",
         "Who answers",

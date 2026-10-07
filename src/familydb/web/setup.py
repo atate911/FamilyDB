@@ -17,10 +17,11 @@ from flask import (
     url_for,
 )
 
-from familydb import personas
+from familydb import personas, presents, roles
 from familydb.agent import providers
 from familydb.app import App
 from familydb.store import knocks as knock_store
+from familydb.store import logins as login_store
 from familydb.store import members as member_store
 from familydb.web import auth, fields, views
 from familydb.web import status as status_page
@@ -77,7 +78,7 @@ def overview() -> str:
     return render_template(
         "setup.html",
         steps=steps,
-        next_step=next((step for step in steps if not step.done), None),
+        next_step=next((step for step in steps if not step.done and not step.skipped), None),
         started=any(step.done for step in steps),
         ready=status_page.ready_to_answer(steps),
         needed=sum(1 for step in steps if step.need == "needed"),
@@ -92,13 +93,17 @@ def done() -> str:
     with closing(app.connect()) as conn:
         steps = status_page.setup_progress(app, conn)
         admin = _admin(conn)
+        # The admin setting up is asked for their own on the password step, not here.
+        unsigned = [one for one in without_sign_in(conn) if admin is None or one.id != admin.id]
     return render_template(
         "setup_done.html",
         steps=steps,
         ready=status_page.ready_to_answer(steps),
-        later=[step for step in steps if not step.done],
+        later=[step for step in steps if not step.done and not step.skipped],
         bot=status_page.telegram_name(app),
         admin=admin,
+        unsigned=presents.join_names([one.display_name for one in unsigned]),
+        unsigned_many=len(unsigned) > 1,
         step_glyphs=STEP_GLYPHS,
         question=views.WEEKEND_QUESTION,
         **_told(),
@@ -220,10 +225,21 @@ def _telegram(app: App, conn: Any) -> dict[str, Any]:
     }
 
 
+def without_sign_in(conn: Any) -> list[member_store.Member]:
+    """Who on the list may sign in but has no password of any kind yet: named where setup ends."""
+    logins = login_store.by_member(conn)
+    return [
+        person
+        for person in member_store.list_all(conn)
+        if person.active and person.id not in logins and roles.may(person.role, "sign_in")
+    ]
+
+
 def _family(app: App, conn: Any) -> dict[str, Any]:
     live = app.settings
     return {
         "people": member_store.list_all(conn),
+        "logins": login_store.by_member(conn),
         "roles": member_store.ROLES,
         "role_words": views.ROLE_WORDS,
         "bot": status_page.telegram_name(app),
