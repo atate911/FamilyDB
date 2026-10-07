@@ -5,11 +5,13 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import date, datetime, time, timedelta
 
+from familydb import happening
 from familydb.availability import enrichment_available
 from familydb.dates import parse_date_range, utc_iso, weekend_window
 from familydb.errors import ToolError
 from familydb.store import ideas, outcomes, suggestions
 from familydb.store.db import transaction
+from familydb.suggest import listed as listing
 from familydb.suggest.compose import compose
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
@@ -157,11 +159,17 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
             ideas.requeue_enrichment(ctx.conn, stale_ids, now=ctx.now_iso())
         skipped.append("stale place details re-queued for a refresh")
 
+    # What the family's sources already list for these days costs nothing to read; when they
+    # list enough, the web is not searched again, unless the question asks for something.
+    stored = listing.listed(ctx, context)
     finds, note = ([], None)
-    if args.discover:
+    if args.discover and (constraints.topic or len(stored) < listing.COVERED):
         finds, note = discover(ctx, context, constraints)
     if note:
         skipped.append(note)
+    finds, more = listing.merge_finds(stored, finds)
+    if more:
+        skipped.append(f"{more} more listed for these days on the page {happening.NAME}")
 
     since = utc_iso(ctx.clock.now() - timedelta(days=RECENT_SUGGESTION_DAYS))
     recently = suggestions.recently_suggested(ctx.conn, since=since)

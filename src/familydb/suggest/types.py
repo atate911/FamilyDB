@@ -84,6 +84,8 @@ class WebFind(BaseModel):
     dates: str | None = None
     summary: str = ""
     source: str | None = None
+    # When it starts, as code reads it ("YYYY-MM-DD" or "YYYY-MM-DDTHH:MM"), when known.
+    starts: str | None = None
 
 
 class DaySummary(BaseModel):
