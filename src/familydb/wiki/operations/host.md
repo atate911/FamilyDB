@@ -1,6 +1,6 @@
 # The server
 
-This page says what the install put on the server, how the service behaves, what grows, and how to take FamilyDB off again. For the page's HTTPS, ports and firewall, see [HTTPS and the firewall](/wiki/operations/https-and-firewall). For logs, see [Diagnostics](/wiki/operations/diagnostics#logs).
+This page says what the install put on the server, how the service behaves, what grows, and how to take FamilyDB off again. For the web page's HTTPS, ports and firewall, see [HTTPS and the firewall](/wiki/operations/https-and-firewall). For logs, see [Diagnostics](/wiki/operations/diagnostics#logs).
 
 ## Everything the install put on the server
 
@@ -10,13 +10,13 @@ The installer records each change outside `/opt/familydb` in `/var/lib/familydb-
 |---|---|---|
 | `/opt/familydb` code: `src/`, `scripts/`, `deploy/`, `.git` | root; others cannot write | The program. FamilyDB runs it but cannot change it, so a mistake in it cannot rewrite its own code |
 | `/opt/familydb/.venv/` | root, readable by `familydb` | The Python environment, built by `uv` and rebuilt by each upgrade. uv's cache and Python sit in `.cache/` and `.local/` beside it |
-| `/opt/familydb/.env` | `familydb`, mode 600 | The page's address, the shared password and any key you put there. If you decline to keep it when you rerun `install.sh`, the old one is saved as `.env.<timestamp>.bak`, root-owned, mode 600 |
+| `/opt/familydb/.env` | `familydb`, mode 600 | The web page's address, the shared password and any key you put there. If you decline to keep it when you rerun `install.sh`, the old one is saved as `.env.<timestamp>.bak`, root-owned, mode 600 |
 | `/opt/familydb/data/` | `familydb`, mode 700 | The database, `google_key.json` and `web_secret`: everything the family tells it |
 | `/opt/familydb/backups/` | folder owned by `familydb`; files mode 600 | The nightly and safety backups. [Backup and restore](/wiki/operations/backup-and-restore#what-is-in-a-backup-and-what-is-not) says what a backup holds |
-| `/opt/familydb/caddy/` | Docker with a domain only | Caddy's certificate and private key, kept apart from `data/` so the bot's container cannot read the key |
+| `/opt/familydb/caddy/` | Docker with a domain only | Caddy's certificate and private key, kept apart from `data/` so FamilyDB's container cannot read the key |
 | The `familydb` account | system account | No password and no login, home `/opt/familydb`. FamilyDB runs as it, so a mistake cannot reach the rest of the machine |
 | `/etc/systemd/system/familydb.service`, and its link in `multi-user.target.wants` | root | The service, so FamilyDB starts at boot and restarts if it stops. Virtualenv installs only |
-| `/etc/caddy/Caddyfile` | root | One site block that passes the page to FamilyDB. Not written with `--local-only` |
+| `/etc/caddy/Caddyfile` | root | One site block that passes the web page to FamilyDB. Not written with `--local-only` |
 | `/var/lib/caddy/.local/share/caddy` | `caddy` account | Caddy's certificates, outside the install |
 | Root's crontab | root | One line, tagged `familydb-maintain-backup`: the nightly backup at 03:15 |
 | `/root/familydb_deploy` and `.pub` | root, mode 600 | The deploy key, so upgrades can fetch the code. Deleting it on GitHub ends the server's access |
@@ -30,7 +30,7 @@ On Docker, `data/` belongs to uid 1000 (the container's `familydb`), `.env` stay
 
 ## The service
 
-A virtualenv install runs one [systemd](/wiki/reference/glossary#systemd) unit, a copy of `deploy/familydb.service`. It runs `/opt/familydb/.venv/bin/familydb run` as `familydb` with `.env` as its environment file. That one process serves the page, polls Telegram and runs every scheduled job.
+A virtualenv install runs one [systemd](/wiki/reference/glossary#systemd) unit, a copy of `deploy/familydb.service`. It runs `/opt/familydb/.venv/bin/familydb run` as `familydb` with `.env` as its environment file. That one process serves the web page, polls Telegram and runs every scheduled job.
 
 ```bash
 sudo systemctl status familydb
@@ -53,7 +53,7 @@ An upgrade does not rewrite the unit; see [Known limits](/wiki/reference/known-l
 - **`bot`:** image `familydb:local`, built from the `Dockerfile` (uid 1000); `./data` is mounted as `/data`; the port is `127.0.0.1:8080:8080`, this machine only.
 - **`caddy`:** `caddy:2-alpine`, only with the `tls` profile (the installer writes `COMPOSE_PROFILES=tls` in `.env` when you give a domain); `./caddy` is mounted as `/data`; ports `80:80` and `443:443`, where the host side of 443 is `WEB_PUBLIC_PORT`.
 
-Both restart `unless-stopped`. `WEB_PORT` in `.env` moves the bot's port. The compose file sets no stop timeout, so Docker's default applies, not 150 seconds. `maintain.sh` takes the same commands, except that `https` only moves the port of a page already on HTTPS.
+Both restart `unless-stopped`. `WEB_PORT` in `.env` moves FamilyDB's port. The compose file sets no stop timeout, so Docker's default applies, not 150 seconds. `maintain.sh` takes the same commands, except that `https` only moves the port of a web page already on HTTPS.
 
 ## Disk and memory
 
@@ -84,7 +84,7 @@ sudo apt update && sudo apt install -y unattended-upgrades
 sudo dpkg-reconfigure --priority=low unattended-upgrades
 ```
 
-That covers your distribution's security updates, not Caddy's own repository, which the installer adds only for a page at a public address with no domain when the system's Caddy is older than 2.10. Run `sudo apt update && sudo apt upgrade` now and then. On Docker, an upgrade does not fetch a newer `caddy:2-alpine`.
+That covers your distribution's security updates, not Caddy's own repository, which the installer adds only for a web page at a public address with no domain when the system's Caddy is older than 2.10. Run `sudo apt update && sudo apt upgrade` now and then. On Docker, an upgrade does not fetch a newer `caddy:2-alpine`.
 
 After a reboot the service comes back by itself: the installer enables it at boot, and Docker's `unless-stopped` does the same once Docker is up. `maintain.sh status` and the doctor both say whether it is enabled at boot. On every start FamilyDB applies any pending migrations, then:
 

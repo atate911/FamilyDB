@@ -51,7 +51,7 @@ A reply that only says something was saved is a 👌 reaction on the message, wh
 
 ## Sending
 
-- **Formatting.** Models write light Markdown. Code turns bold, italics, strikethrough, inline code, code blocks and links (http and https only) into Telegram's HTML, headings into bold and bullets into •. Everything else is escaped, so a message can never become markup of its own. If marks cross, the message goes with its marks as written. If Telegram still refuses, the plain words go, and the log says `the formatting was refused`. Stored text and the page's text stay as written.
+- **Formatting.** Models write light Markdown. Code turns bold, italics, strikethrough, inline code, code blocks and links (http and https only) into Telegram's HTML, headings into bold and bullets into •. Everything else is escaped, so a message can never become markup of its own. If marks cross, the message goes with its marks as written. If Telegram still refuses, the plain words go, and the log says `telegram: the formatting was refused, so it went as plain words`. Stored text and the page's text stay as written.
 - **Length.** A part is at most 4,096 characters, split at a line break where possible, else a space. Buttons go under the last part. A command's answer has its first line in bold.
 - **Where it lands.** The answer to a person's update replies to their message. A reminder, weekend ideas or a note from a job is a new message to the chat.
 - **Time-outs.** FamilyDB waits 30 seconds for Telegram to take a part sent by a job and 120 seconds for the answer to an update. A send that times out counts as failed, and the stored reply goes out on a later delivery run.

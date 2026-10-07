@@ -64,13 +64,13 @@ The **Backup** row (the second company, not your database backup) is what [A sec
 
 **Waiting** counts ideas by lookup state and says when they are looked up, by default together in the evening. Below that are the next five ideas due and **Messages that did not go through**: the five most recent messages that failed, with their text, the error, and either "given up on" or "N tries, will try again". A message stays listed until a retry answers it. Parents see that text, from any chat; Recent activity is admin-only. Status can say "will try again" after the last try ([known limits](/wiki/reference/known-limits#status-says-will-try-again-after-the-last-try)); the retry numbers are on [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered).
 
-**Worth a look** lists the six most recent calls in the last 30 days that ended oddly, and the six most recent lookups that gave up.
+**Worth a look** lists the six most recent calls in the last 30 days that ended oddly, and the six most recent lookups that failed.
 
 | Item | It means | Do this |
 |---|---|---|
 | A call ended with **max_tokens** | The answer was cut short at the output limit. | Raise **Longest answer (tokens)** on [Spending](/wiki/controls/settings/spending#what-one-message-may-use). |
 | A call ended with **refusal** | The model declined to answer. | Find that time under Recent activity and open it. |
-| A **lookup that failed** | The lookup gave up. The note says why. | Open the idea and press **Look it up again**. |
+| A **lookup that failed** | The lookup was given up on. The note says why. | Open the idea and press **Look it up again**. |
 
 ## When something is wrong
 

@@ -42,6 +42,6 @@ The mic uses the browser's own speech recognition: Safari sends the sound to App
 
 Reading the log is on [Diagnostics](/wiki/operations/diagnostics#logs).
 
-## Where this page is served, and a name for it
+## Where the web page is served, and a name for it
 
 Two read-only cards at the bottom of General show how the web page is reached (the address you opened it at, the port FamilyDB listens on, whether Caddy passes it on) and the steps to give it a domain name. Nothing on them is saved; they fill the commands in for you, and the commands run on the server. The choices and the commands are on [HTTPS and the firewall](/wiki/operations/https-and-firewall).

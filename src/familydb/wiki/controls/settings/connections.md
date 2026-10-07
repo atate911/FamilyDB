@@ -6,7 +6,7 @@ The Connections card connects Telegram and Google Calendar, and is the one place
 
 Telegram lets everyone message the assistant from their phone, and carries reminders and the weekend ideas. The card says whether the Telegram bot is connected (and as which bot), whether Telegram refused the saved token, or that none is set.
 
-To make the bot and connect it:
+To make the Telegram bot and connect it:
 
 1. On your phone, install Telegram if you do not have it, and open it.
 2. Search for **BotFather**, Telegram's own tool for making bots, and choose the one with the blue tick.
@@ -21,7 +21,7 @@ To make the bot and connect it:
 
 The token is write-only. It is saved in the database, so it is in every [backup](/wiki/operations/backup-and-restore), and it is never shown again in a form. The change log records that it changed, never its value. To see it, use [See a key](/wiki/controls/settings/sign-in#see-a-key). If Telegram refuses it, copy it again from BotFather: send `/mybots`, choose the bot, then **API Token**.
 
-Connecting the bot does not tell it who anyone is. Each person has to be linked to a Telegram account on [Family](/wiki/controls/family#link-a-telegram), and the first admin should be linked so that a trouble needing a look reaches them on Telegram; Setup does the first admin's link with **That's me**. Status words a refusal as "Telegram refused the bot token"; the log line adds "replace it on the settings page".
+Connecting the Telegram bot does not tell it who anyone is. Each person has to be linked to a Telegram account on [Family](/wiki/controls/family#link-a-telegram), and the first admin should be linked so that a trouble needing a look reaches them on Telegram; Setup does the first admin's link with **That's me**. Status words a refusal as "Telegram refused the bot token"; the log line adds "replace it on the settings page".
 
 ### Answering on Telegram
 
@@ -38,11 +38,11 @@ Connecting the bot does not tell it who anyone is. Each person has to be linked 
 
 A plain "saved" in the group is a 👌 on the message, which buzzes nobody (a silent ✓ reply where reactions are off).
 
-The card also says whether the bot can read every message in a group. If Telegram's privacy setting for bots is on, it sees only messages that mention it or reply to it. To let it read the family group:
+The card also says whether the Telegram bot can read every message in a group. If Telegram's privacy setting for bots is on, it sees only messages that mention it or reply to it. To let it read the family group:
 
 1. Send BotFather `/setprivacy`.
-2. Choose the bot, then **Disable**.
-3. Remove the bot from the group and add it again, which is when Telegram applies the change.
+2. Choose the Telegram bot, then **Disable**.
+3. Remove the Telegram bot from the group and add it again, which is when Telegram applies the change.
 
 What the service is, and what it does when Telegram is down, is on [Telegram as a service](/wiki/boundaries/telegram).
 

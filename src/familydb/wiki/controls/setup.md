@@ -1,12 +1,12 @@
 # Setup
 
-Setup walks a new install through the seven things it needs, one short page each, and shows how far you have got. Only an admin can open it, at `/setup`. Once people sign in as themselves, a parent or a kid who tries is told that an admin does it, and which admins to ask.
+Setup walks a new install through the seven things it needs, one short web page each, and shows how far you have got. Only an admin can open it, at `/setup`. Once people sign in as themselves, a parent or a kid who tries is told that an admin does it, and which admins to ask. [Install and first run](/wiki/operations/install) covers what comes before it, on the server.
 
-You do not have to finish it in one sitting. Each step page says why it matters and what to do, and you can skip any step and return: the pages pick up wherever things stand. [Install and first run](/wiki/operations/install) covers what comes before it, on the server.
+You can skip any step and return; the pages pick up wherever things stand.
 
 ## How progress is read
 
-**Nothing records that a step is done.** Each time you open a setup page, the page checks whether what the step sets up is there, and reads the result. It makes no network call and no model call. So a step goes back to not done if you undo it: remove the Telegram token and the Telegram step is open again. Skipping a step only moves you to the next page.
+**Nothing records that a step is done.** Each time you open a setup page, it checks whether what the step sets up is there, and reads the result. It makes no network call and no model call. So a step goes back to not done if you undo it: remove the Telegram token and the Telegram step is open again. Skipping a step only moves you to the next page.
 
 Each step has one of four tags on the overview:
 
@@ -17,76 +17,66 @@ Each step has one of four tags on the overview:
 | **Recommended** | Not required, but the install is weaker without it. |
 | **Optional** | You can leave it out and nothing breaks. |
 
-A step's own page says the same in its heading line, for example "Step 3 of 7 · about 5 minutes · needed before it can answer".
-
 ## The seven steps
 
 | # | Page | Time | Tag | What you need | Done when |
 |---|---|---|---|---|---|
 | 1 | `/setup/you` | 1 min | Needed | Your first name | An admin is on the family list. |
 | 2 | `/setup/password` | 1 min | Recommended | A password of at least 12 characters | An admin can sign in as themselves, or no password is set at all. |
-| 3 | `/setup/model` | 5 min | Needed | An account with Anthropic, OpenAI or Google, and a key | A model can answer chat: from a key saved here, one set in the server's environment, or a backup company's. |
+| 3 | `/setup/model` | 5 min | Needed | An account with Anthropic, OpenAI or Google, and a key | A model can answer chat: from a key saved here, one set in the server's environment, or the second company's. |
 | 4 | `/setup/home` | 1 min | Recommended | Your town | A home area is saved and has been found on the map. |
-| 5 | `/setup/telegram` | 5 min | Optional | Telegram on your phone | A bot token is saved and not refused, and at least one person on the list has their Telegram linked. The step page itself looks at the first admin. |
+| 5 | `/setup/telegram` | 5 min | Optional | Telegram on your phone | A bot token is saved and not refused, and at least one person on the list has their Telegram linked. The step page itself looks at the admin who was added first. |
 | 6 | `/setup/family` | 2 min | Optional | The names of the rest of the family | More than one person is on the list. |
 | 7 | `/setup/calendar` | 10 min | Optional | Any Google account | A calendar id is saved and its key file is on the server. |
 
-Each form on a step page is the same form as the one on the Settings or Family page that owns the change, and it brings you back to the step afterwards.
+Each form on a step page is the one on the Settings or Family screen that owns the change, and it brings you back to the step.
 
 ### Add yourself, and your password
 
-Step 1 adds you as an admin. Step 2 gives you a password of your own. From then on the shared password opens nothing, and everybody signs in as themselves, each with a [starting password](/wiki/reference/glossary#starting-password) you make on the Family page. If no admin is on the list yet, step 2 tells you to go back to step 1, because the first person with their own password has to be an admin.
+Step 1 adds you as an admin. Step 2 gives you a password of your own. From then on the shared password opens nothing, and everybody signs in as themselves, each with a [starting password](/wiki/reference/glossary#starting-password) you make on Family. If no admin is on the list yet, step 2 sends you back to step 1, because the first person with their own password has to be an admin.
 
 ### Connect an AI model
 
-Pick a company and paste its key. The key is checked with the company, which costs nothing: a wrong key is refused, and if the company cannot be reached the key is kept and the first message shows whether it works. Saving a key makes that company the one that answers. The step also shows that company's models cheapest first, and a folded "The daily limit" with the [spending limit](/wiki/reference/glossary#spending-limit). Stronger models and the rest are on the [AI model](/wiki/controls/settings/ai-model) page.
+Pick a model company and paste its key. The company checks the key at no cost, and a wrong key is refused. Saving a key makes that company the one that answers. The step also lists that company's models cheapest first, and shows the [spending limit](/wiki/reference/glossary#spending-limit) in a fold. A second company (the **Backup** row on Status, not your database backup), stronger models and the rest are on [AI model](/wiki/controls/settings/ai-model); how keys are kept is under [Keys](/wiki/controls/settings/ai-model#keys).
 
 ### Where home is
 
-Your town decides the forecast, how far away things are and what is on nearby. The time zone, taken from the server, and the units are on the same form. Check the time zone: it decides what "tonight" and "this weekend" mean. See [General settings](/wiki/controls/settings/general).
+Your town decides the forecast and what is on nearby. The time zone, taken from the server, and the units are on the same form. Check the time zone, because it decides what "tonight" means: see [General](/wiki/controls/settings/general#where-home-is).
 
 ### Telegram
 
-The step shows the part you are at, of six:
+The step shows the part you are at: no token yet, token refused, connecting, connected but nobody on the list yet, not linked yet, or linked. It reloads itself every 4 seconds, at most 45 times, while it waits. Making the Telegram bot and pasting its token are on [Connections](/wiki/controls/settings/connections#telegram).
 
-1. **No token yet.** Six numbered instructions: install Telegram, open BotFather, send `/newbot`, give a name and a username ending in `bot`, then paste the token it sends.
-2. **Token refused.** A banner says Telegram did not accept it. Copy it again from BotFather (`/mybots`, your bot, API Token).
-3. **Connecting.** The token is saved but Telegram has not answered, or cannot be reached (the last word is shown in brackets). The page reloads itself every 4 seconds, at most 45 times, then stops and offers a link to look again.
-4. **Connected, but nobody on the list yet.** The page names the bot and says to add yourself first, with a link to step 1. Come back afterwards.
-5. **Not linked yet.** Open the bot on your phone, press Start or send any message, and your message appears on the step; the page looks again by itself every 4 seconds, up to 45 times, until it arrives. Press **That's me** beside it.
-6. **Linked.** You can try it. If the weekend ideas still go to the page's own chat, a button sends them to you on Telegram instead.
+**Give the first admin a Telegram id.** Without one, nothing that needs a look reaches you on Telegram; it shows only on Status.
 
-Once the bot is connected, two folds at the bottom add a family group chat (BotFather's `/setprivacy`, Disable, then add the bot to the group) and swap in a different bot.
-
-#### Three ways to link a person's Telegram
-
-| Way | Where | How it works |
-|---|---|---|
-| **That's me** | The Telegram step | For the first admin on the list, who should be the person setting up; anyone else uses one of the other two ways. You message the bot, it does not know you, and your message appears on the page. One press links that Telegram to that admin. Only private chats are offered here. |
-| **Let them in** | The Family step | For somebody not on the list yet. Send them the bot's `t.me` link. When they press Start they appear under "Waiting to be let in", with the name Telegram gave. Choose a role (Parent is preselected) and press **Let them in**. |
-| **A link of their own** | A person's page under Family | For somebody already on the list. **Make a link for [name]** shows a link once. Whoever opens it first and presses Start is linked to that person, so send it to them alone. It works once, for 24 hours, and a new one replaces the last. The bot must be connected first. |
-
-After a link, the assistant answers that person on Telegram. A stranger who writes to the bot is recorded and shows on these pages. See [Telegram: commands and buttons](/wiki/controls/telegram).
+**That's me.** Open the Telegram bot on your phone and press Start or send any message. It does not know you, so your message appears on the step; press **That's me** beside it to link that Telegram to the admin who was added first. Only private chats are offered here. To link anybody else, see [Link a Telegram](/wiki/controls/family#link-a-telegram).
 
 ### The rest of the family
 
-Add each person with a name and a role: admin, parent or kid. A kid can be added so plans can include them even if they never write to the bot. To let somebody sign in to the page, open them on the Family page and make a starting password. [Family](/wiki/controls/family) covers it.
+Add each person with a name and a role: admin, parent or kid. A kid can be added so plans can include them even if they never write to the bot. To let somebody sign in to the web page, open them on Family and make a starting password; [Family](/wiki/controls/family) covers it.
 
 ### Google Calendar
 
-The calendar is optional. Without it, plans stay in FamilyDB. It is the longest step, about ten minutes, and it is done once. It has three cards:
+The calendar is optional; without it, plans stay in FamilyDB. It is the longest step, about 10 minutes, and you do it once:
 
-1. **Give FamilyDB its own account at Google.** In Google Cloud, make a project, turn on the Google Calendar API, make a service account (it needs no role), and make a JSON key for it.
-2. **Share the family calendar with it.** In Google Calendar, share the calendar with the service account's address, the `client_email` line in the key file, with permission **Make changes to events**. Then copy the calendar's id from *Integrate calendar*.
-3. **Paste both here.** Paste the key file's contents and the calendar id, and press **Connect**. FamilyDB reads the calendar, then adds and removes a test event to prove it can make changes, before it keeps them; if that fails it says what is wrong. The key is saved as a file on the server, so a [backup](/wiki/operations/backup-and-restore) of the database does not hold it.
+- Give FamilyDB its own [service account](/wiki/reference/glossary#service-account) at Google and make a JSON key for it.
+- Share the family calendar with that account, with permission **Make changes to events**.
+- Paste the key file and the calendar id, and press **Connect**.
+
+The numbered steps are on [Connections](/wiki/controls/settings/connections#google-calendar). The key is saved as a file on the server, so a [backup](/wiki/operations/backup-and-restore) of the database does not hold it.
 
 ## When setup is done, and before
 
-- **Until the two needed steps are done**, an admin who opens Home is sent to `/setup`. So is anybody, while the family still shares one password or has none, because nobody is known to be an admin yet. Parents are not sent anywhere, but the pill reads "Can't answer yet", and [Status](/wiki/controls/status) names what is missing. Kids see no pill.
-- **After that**, Home carries a card, "Finish setting up", listing each unfinished step with a link, and on a phone a strip saying how many steps are left. Only admins see it. It disappears when every step is done.
-- **The overview** says "Let's get FamilyDB ready" (with the page's own name) until the needed steps are done and "Nearly there" after. Its button reads Start, then "Carry on" with the next unfinished step, then "Everything is set up".
-- **The last page**, `/setup/done`, says whether the assistant can answer, suggests a first question to ask, and lists what was left for later.
+- **Until the two needed steps are done**, an admin who opens Home is sent to `/setup`. So is anybody, while the family still shares one password or has none, because nobody is known to be an admin yet. A parent signed in as themselves is not sent anywhere, but the pill reads "Can't answer yet" and [Status](/wiki/controls/status) names what is missing. Kids see no pill.
+- **After that**, Home carries a card, "Finish setting up", listing each unfinished step with a link, and on a phone a strip saying how many steps are left. Only admins see it, and it disappears when every step is done.
+- **The overview** says "Let's get FamilyDB ready" until the needed steps are done and "Nearly there" after. Its button reads Start, then "Carry on" with the next unfinished step, then "Everything is set up".
+- **The last page**, `/setup/done`, says whether the assistant can answer, suggests a first question, and lists what was left for later.
 
-Everything set here can be changed later on the Settings and Family pages, or by going through setup again.
+Everything set here can be changed later on Settings and Family, or by going through setup again.
 
-Developer docs: `src/familydb/web/setup.py` and `web/status.py` (`setup_progress`, `ready_to_answer`, `setup_steps`), the `web/templates/setup/` folder, and `docs/INSTALL.md`, "Follow the setup on the page".
+### The first week
+
+1. Send the assistant a message, on Telegram or in Chat.
+2. Try `/today` on Telegram.
+3. Add an idea, in chat or on Ideas.
+4. Check [Status](/wiki/controls/status) after 3 days.

@@ -40,12 +40,13 @@ grep -m1 '^## v' /opt/familydb/CHANGELOG.md
 
 - If the new version is the same as yours, older, or already contained in yours, `upgrade` says `Already up to date` and changes nothing else.
 - If the two histories have split, which happens after a force-push, it refuses with `moving to it would go backwards` and changes nothing else.
-- To see the newest release, fetch and list the tags, then compare with the `Version:` line from `status`:
 
-  ```bash
-  sudo git -C /opt/familydb fetch --tags origin
-  sudo git -C /opt/familydb tag -l 'v*' --sort=-v:refname | head -1
-  ```
+To see the newest release, fetch and list the tags, then compare with the `Version:` line from `status`:
+
+```bash
+sudo git -C /opt/familydb fetch --tags origin
+sudo git -C /opt/familydb tag -l 'v*' --sort=-v:refname | head -1
+```
 
 To move forward to a particular tag yourself, take a backup, then check it out, reinstall the dependencies and restart, which migrates. No restore is needed.
 
@@ -74,7 +75,7 @@ The code is in a private repository, so the fetch has to prove it may read it. W
 | A token | The installer did not keep it. Give it for each upgrade; it is used for that fetch only and never written down. Tokens expire |
 | A copy you made yourself | There is nothing to fetch. Unpack a new archive over the install, rerun `install.sh` and restart; `docs/INSTALL.md`, "Day to day", has the steps |
 
-With a token, run these, and `unset GITHUB_TOKEN` afterward so it does not stay in your shell:
+With a token, run these. The last line keeps the token from staying in your shell:
 
 ```bash
 read -rs GITHUB_TOKEN && export GITHUB_TOKEN
@@ -90,43 +91,41 @@ Stop FamilyDB, then roll back or finish by hand. Do not run `upgrade` again. If 
 
 1. Find the backup the upgrade took. The log lists every past upgrade, so take the last line:
 
-   ```bash
-   sudo grep 'so a bad upgrade can be undone' /var/log/familydb-maintain.log | tail -1
-   ```
+```bash
+sudo grep 'so a bad upgrade can be undone' /var/log/familydb-maintain.log | tail -1
+```
 
-   The line looks like this, and the path follows `Write a backup to`:
+The line looks like this, and the path follows `Write a backup to`:
 
-   ```text
-   03:15:07 change: Write a backup to /opt/familydb/backups/familydb-20261007031507123456789.sqlite3 :: so a bad upgrade can be undone
-   ```
+```text
+03:15:07 change: Write a backup to /opt/familydb/backups/familydb-20261007031507123456789.sqlite3 :: so a bad upgrade can be undone
+```
 
 2. Find the commit that was installed:
 
-   ```bash
-   sudo git -C /opt/familydb reflog | grep 'moving from' | head -3
-   ```
+```bash
+sudo git -C /opt/familydb reflog | grep 'moving from' | head -3
+```
 
-   The newest line is the upgrade. Copy the word after `moving from`, here `3b2a1c0`:
+The newest line is the upgrade. Copy the word after `moving from`, here `3b2a1c0`:
 
-   ```text
-   9d8e7f6 HEAD@{0}: checkout: moving from 3b2a1c0 to origin/main
-   ```
+```text
+9d8e7f6 HEAD@{0}: checkout: moving from 3b2a1c0 to origin/main
+```
 
-3. Stop FamilyDB.
+3. Stop FamilyDB. On a virtualenv install:
 
-   On a virtualenv install:
+```bash
+sudo systemctl stop familydb
+```
 
-   ```bash
-   sudo systemctl stop familydb
-   ```
+On Docker:
 
-   On Docker:
+```bash
+sudo docker compose --project-directory /opt/familydb stop bot
+```
 
-   ```bash
-   sudo docker compose --project-directory /opt/familydb stop bot
-   ```
-
-4. Finish the upgrade or go back.
+4. Finish the upgrade or go back, as below.
 
 To finish it, fix what the error names, reinstall the dependencies (the `uv sync` or `build` line above) and run `sudo /opt/familydb/scripts/maintain.sh restart`. A migration that failed leaves FamilyDB stopped, with the migrations before it already applied.
 

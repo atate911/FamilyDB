@@ -1,6 +1,6 @@
 # The command line
 
-Use `maintain.sh` for looking after the server and `familydb` for everything else the page cannot do: checking the install, running now what a job would run later, and making a password for somebody locked out. Everything the family does day to day is on the web page or in Telegram.
+Use `maintain.sh` for looking after the server and `familydb` for everything else the web page cannot do: checking the install, running now what a job would run later, and making a password for somebody locked out. Everything the family does day to day is on the web page or in Telegram.
 
 | Family | What it is | Use it for |
 |---|---|---|
@@ -22,7 +22,7 @@ Every command is `sudo /opt/familydb/scripts/maintain.sh <command>`. `--dry-run`
 | `logs [N]` | Shows the last N lines (50 by default) and then follows the log until you press Ctrl-C |
 | `restart` | Restarts FamilyDB and says whether it came back |
 | `schedule-backups` | Puts the nightly backup in root's crontab; `--keep-days N` sets how long backups are kept |
-| `https [DOMAIN]` | Puts the page on HTTPS and gets the certificate. `--port N` or `--port random` moves it. See [HTTPS and the firewall](/wiki/operations/https-and-firewall) |
+| `https [DOMAIN]` | Puts the web page on HTTPS and gets the certificate. `--port N` or `--port random` moves it. See [HTTPS and the firewall](/wiki/operations/https-and-firewall) |
 | `port N` | Moves FamilyDB's own port (8080 unless moved). See [HTTPS and the firewall](/wiki/operations/https-and-firewall#move-the-public-port) |
 | `password [NAME]` | Makes a new starting password and prints it once. See [Recovery](/wiki/operations/recovery) |
 
@@ -42,7 +42,7 @@ sudo docker compose --project-directory /opt/familydb stop bot
 sudo docker compose --project-directory /opt/familydb start bot
 ```
 
-On Docker, `https` only moves the port of a page that is already on HTTPS; the other commands work as written.
+On Docker, `https` only moves the port of a web page that is already on HTTPS; the other commands work as written.
 
 ## How to run it
 
@@ -58,7 +58,7 @@ On Docker, run it in a fresh container:
 sudo docker compose --project-directory /opt/familydb run --rm -T bot familydb <command>
 ```
 
-Two commands read better inside the running container, because a fresh one has no terminal and nothing listening on the page's port. Use `exec` for `doctor` and `repl`:
+Two commands read better inside the running container, because a fresh one has no terminal and nothing listening on the web page's port. Use `exec` for `doctor` and `repl`:
 
 ```bash
 sudo docker compose --project-directory /opt/familydb exec bot familydb doctor
@@ -118,4 +118,4 @@ Each model call goes through the same daily spending limit as the rest.
 | Command | What it does |
 |---|---|
 | `familydb run` | The long-running service: it applies migrations, then starts the jobs, the web page and Telegram. The systemd unit runs exactly this. Never start a second one beside it: that repeats the jobs and the Telegram polling |
-| `familydb web [--host H] [--port N]` | Serves only the page, with no jobs and no Telegram, for trying it. If the service is running, pass a different `--port` |
+| `familydb web [--host H] [--port N]` | Serves only the web page, with no jobs and no Telegram, for trying it. If the service is running, pass a different `--port` |
