@@ -15,9 +15,10 @@ fails, and it would skip the backup and the dependency install.
 Do these in order, and **do not run `upgrade` again**: after a failed upgrade it can say
 "Already up to date" and do nothing (see [If the upgrade stops partway](#if-the-upgrade-stops-partway)).
 
-1. Find the backup the upgrade took. Its path was printed near the top ("Write a backup to ..."), and is in the log: `sudo grep -B1 'so a bad upgrade can be undone' /var/log/familydb-maintain.log`.
-2. Stop the bot: `sudo systemctl stop familydb` (Docker: `sudo docker compose --project-directory /opt/familydb stop bot`).
-3. Run the three commands under [Rolling back](#rolling-back).
+1. **Find the backup the upgrade took.** Its path was printed near the top ("Write a backup to ...") and is in the log, which lists every past upgrade, so take the last one: `sudo grep 'so a bad upgrade can be undone' /var/log/familydb-maintain.log | tail -1` (the path follows "Write a backup to").
+2. **Find the commit that was installed.** `sudo git -C /opt/familydb reflog | grep 'moving from' | head -3`: the first name after "moving from" in the newest line for the upgrade is it. (The upgrade's "Currently on:" line, near the top of its output, shows the same version.)
+3. **Stop the bot:** `sudo systemctl stop familydb` (Docker: `sudo docker compose --project-directory /opt/familydb stop bot`).
+4. Run the three commands under [Rolling back](#rolling-back) with those two values.
 
 ## What an upgrade does
 
@@ -50,7 +51,8 @@ newest release tag (`v…`).
 
 - If the new version is the same as yours, older, or already contained in yours, it says "Already up to date" and stops, changing nothing else.
 - If the two histories have split apart, it refuses with "… moving to it would go backwards" and changes nothing else. That happens after a force-push, for example.
-- To move to a particular version, use the rollback steps below with that commit in place of the old one, and restore a backup from before you ran the newer code. A bare `git checkout` is not enough: it does not reinstall the dependencies, migrate, or restart.
+- To move **forward** to a particular tag yourself: `sudo git -C /opt/familydb checkout --quiet --detach <tag>`, then `sudo uv sync --frozen --no-dev --project /opt/familydb` (Docker: `sudo docker compose --project-directory /opt/familydb build`), then `maintain.sh restart`, which migrates. No restore is needed. To move **backward**, use [Rolling back](#rolling-back), which loses what was told since that backup. A bare `git checkout` alone is not enough: it does not reinstall the dependencies, migrate, or restart.
+- To see which rule applies now, look at the newest heading: `grep -m1 '^## v' /opt/familydb/CHANGELOG.md`. "In progress" means it follows the default branch.
 
 ## The fetch needs a credential
 
@@ -62,7 +64,7 @@ fetch from, and it says so briefly).
 | Installed with | What happens |
 |---|---|
 | A deploy key (the default) | Already wired up. It works while the key file stays where the installer put it, `/root/familydb_deploy`, and the key has no passphrase. It does not expire on its own; deleting it on GitHub ends the access |
-| A token | The installer deliberately did not keep it. Give it for each upgrade: `read -rs GITHUB_TOKEN && export GITHUB_TOKEN`, then `sudo --preserve-env=GITHUB_TOKEN /opt/familydb/scripts/maintain.sh upgrade`. It is used for that fetch only and never written down. Tokens expire |
+| A token | The installer deliberately did not keep it. Give it for each upgrade: `read -rs GITHUB_TOKEN && export GITHUB_TOKEN`, then `sudo --preserve-env=GITHUB_TOKEN /opt/familydb/scripts/maintain.sh upgrade`. It is used for that fetch only and never written down; run `unset GITHUB_TOKEN` afterwards so it does not stay in your shell. Tokens expire |
 | A copy you made yourself | Nothing to fetch. Unpack a new archive over the install (`.env` and `data/` are not in it), rerun `install.sh`, restart. `docs/INSTALL.md`, "Day to day", has the steps |
 
 To stop needing a token, make a deploy key and point the checkout at it once
@@ -87,9 +89,11 @@ order:
 
 ```bash
 sudo git -C /opt/familydb checkout --quiet --detach <the commit that was installed>
-sudo uv sync --frozen --no-dev --project /opt/familydb          # Docker: docker compose build
+sudo uv sync --frozen --no-dev --project /opt/familydb
 sudo /opt/familydb/scripts/maintain.sh restore <the backup the upgrade took>
 ```
+
+On Docker, the second command is `sudo docker compose --project-directory /opt/familydb build`.
 
 The order matters. The old code goes back first, then its dependencies, because the restore
 itself runs on the code that is checked out: it validates the backup with the virtualenv's
