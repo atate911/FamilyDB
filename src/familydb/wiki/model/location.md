@@ -11,7 +11,7 @@ FamilyDB names the place once, as in "Old Town, Portland". On Telegram it replie
 
 ## What is kept and for how long
 
-FamilyDB keeps one position for each person, and each new share replaces it. The assistant uses it for 3 hours after the share. The forget-locations job (`forget_locations`, every 10 minutes) deletes it when it is a day old. Backups keep the coordinates until they are pruned ([Backup and restore](/wiki/operations/backup-and-restore)).
+FamilyDB keeps one position for each person, and each new share replaces it. The assistant uses it for 3 hours after the share. The forget-locations job (`forget_locations`, every 10 minutes) deletes it when it is a day old, and so does the next share by anybody. Backups keep the coordinates until they are pruned ([Backup and restore](/wiki/operations/backup-and-restore)).
 
 ## Who sees it
 
@@ -37,6 +37,13 @@ A position already shared stays until it ages out: the assistant stops using it 
 
 ## What outlives the coordinates
 
-The place name can stay in a stored message after the coordinates are gone. See [A place name outlives the coordinates](/wiki/reference/known-limits#a-place-name-outlives-the-coordinates).
+## The place name goes with the position
+
+When a position is forgotten, by the job, by the next share or because the person is taken off for good, FamilyDB takes its place name out of what held it:
+
+- The "Got it" reply loses the name in parentheses.
+- The model texts, tool calls and suggestions kept for [Recent activity](/wiki/controls/status/activity) show "[place forgotten]" in its place. Only rows made after the name was given are changed, and a name shorter than 3 characters is left.
+
+Two things are not scrubbed. Coordinates inside kept model texts go only with those texts, after their own days. Words of the assistant or the family that name the place, such as "I am at the park", stay in the messages.
 
 Developer docs: src/familydb/whereabouts.py and suggest/origin.py; docs/DESIGN.md, "Suggestion engine: answering "what should we do?"".

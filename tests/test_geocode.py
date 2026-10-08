@@ -96,3 +96,14 @@ def test_distance_and_travel_estimate(settings) -> None:
     home = settings.model_copy(update={"home_lat": 0.0, "home_lon": 0.0})
     minutes, km = estimate_travel(home, 0.0, 1.0)
     assert minutes == 173 and abs(km - 144.5) < 0.2
+
+
+def test_a_miss_is_remembered_until_it_is_forgotten(settings) -> None:
+    geocoder, calls, _ = _geocoder(settings, [[], {}, [], {}])  # Nominatim, then Open-Meteo
+    assert geocoder.geocode("Nowhereville, WA") is None
+    asked = len(calls)
+    assert geocoder.geocode("nowhereville,  wa") is None
+    assert len(calls) == asked  # the second came from memory
+    geocoder.forget("Nowhereville, WA")
+    assert geocoder.geocode("Nowhereville, WA") is None
+    assert len(calls) == 2 * asked

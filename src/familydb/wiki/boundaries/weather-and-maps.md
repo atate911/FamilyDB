@@ -28,13 +28,13 @@ Every request carries a `User-Agent` naming FamilyDB. When an operator sets `GEO
 
 Nominatim's policy allows one request a second, and FamilyDB spaces its Nominatim requests at least a second apart. A named place that lands more than 150 km from home is retried with the home area added, since it probably matched somewhere else of the same name. If the retry is also far, or no home area is set, the place is rejected. Geocoding gives up after 15 seconds.
 
-A shared position is named once and reused while the person stays within 200 metres ([Shared location](/wiki/model/location)). Lookups are cached in memory, reverse ones to about 100 metres. A forward lookup that finds nothing, or fails, is remembered as nothing until FamilyDB restarts or a setting changes, so a town that failed during an outage can keep answering "not found" until then.
+A shared position is named once and reused while the person stays within 200 metres ([Shared location](/wiki/model/location)). Lookups are cached in memory, reverse ones to about 100 metres. A forward lookup that finds nothing, or fails, is remembered as nothing until FamilyDB restarts or a setting changes. Saving the home town again forgets its miss and asks the map again.
 
 ## When a lookup fails
 
 | Where | What you see |
 |---|---|
-| Saving the home town | `Could not find <town> on the map. Type its latitude and longitude as well.` The previous position stays. Saving the same town text again does not retry the lookup, so type the latitude and longitude instead |
+| Saving the home town | `Could not find <town> on the map. Type its latitude and longitude as well.` The previous position stays. Save the same town again to retry the lookup while no position is kept; if it fails again, type the latitude and longitude |
 | A place saved by a lookup | The place is saved without coordinates or travel time |
 | A suggestion near a named place | `Could not place <name>, so travel is from home`, also when the place was found but too far from home |
 | A shared position | FamilyDB still has the coordinates. The reply just does not name the place |

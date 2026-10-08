@@ -50,7 +50,7 @@ A message gets its first try plus up to 3 retries (the default, set by **Retries
 
 Status lists only failed messages, the newest 10. A message cut off by a restart, or still in the gather pause, is not yet failed, so it appears only on the chat page and [Recent activity](/wiki/controls/status/activity) until the retry job takes it.
 
-With Telegram disconnected, the retry job skips Telegram messages without counting an attempt, and the log says `not retrying message N: no sender for telegram here`. `familydb db retry-failed --reset` (run as in [The command line](/wiki/operations/command-line#how-to-run-it)) makes messages with no tries left eligible again. It also re-arms messages given up on purpose ([known limits](/wiki/reference/known-limits#reset-on-retry-failed-re-arms-every-message)).
+With Telegram disconnected, the retry job skips Telegram messages without counting an attempt, and the log says `not retrying message N: no sender for telegram here`. `familydb db retry-failed --reset` (run as in [The command line](/wiki/operations/command-line#how-to-run-it)) gives failed messages with no tries left new tries. A message given up on purpose, such as one from a person taken off or a kid over the day's limit, stays given up.
 
 ## What survives a restart
 

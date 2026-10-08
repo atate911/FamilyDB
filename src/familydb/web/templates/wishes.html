@@ -102,7 +102,7 @@
               <form method="post" action="{{ url_for('edits.ask_parent', wish_id=row.id) }}">{{ hidden(kid) }}
                 <button class="btn btn--quiet btn--sm" type="submit">{{ icon('send', size='sm') }}Ask a parent</button></form>
             {% endif %}
-            {% if parent and one and row.review == 'asked' %}
+            {% if parent and one and row.to_decide %}
               <form class="stack-actions" method="post" action="{{ url_for('edits.answer_wish', wish_id=row.id) }}">{{ hidden(kid) }}
                 <button class="btn btn--primary btn--sm" type="submit" name="status" value="granted">{{ icon('check', size='sm') }}Yes!</button>
                 <button class="btn btn--quiet btn--sm" type="submit" name="status" value="declined">Not this time</button></form>

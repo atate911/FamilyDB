@@ -249,6 +249,25 @@ older than what is installed. It gets a date when it is released.
   favorite, something new and a wildcard, each with a reason; Vera says them.
   Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
   a kid's question or one about right now.
+- **Fixed: opening a Telegram link no longer wipes a birthday or gender.** Linking a person's
+  Telegram used to clear what the family list held for them.
+- **Fixed: a wish turned away as not OK can be answered from the page.** It was counted under
+  "to decide" but showed no buttons; a parent now gets Yes! and Not this time on a kid's page, as
+  in Telegram. A kid never sees them.
+- **Fixed: `familydb db retry-failed --reset` leaves given-up messages alone.** It used to give
+  every failed message new tries, including ones given up on purpose (a person taken off, a kid
+  over the day's limit). It now resets only those that ran out of tries.
+- **Fixed: `familydb doctor --fix` says what it fixed.** The "fixed:" lines were lost when it
+  checked again after the repair.
+- **Fixed: strangers who messaged the bot, and Telegram links nobody opened, are forgotten on
+  time.** They were dropped only when the next one came; the nightly tidy now drops them.
+- **Fixed: saving the same home town again tries the map again.** If the first lookup found
+  nothing, saving the unchanged text did nothing; it now looks again while no coordinates are kept.
+- **A forgotten location now takes its place name with it.** A shared location was deleted after a
+  day, but the name it was given ("Old Town, Portland") stayed in the "Got it" reply and in the
+  words and results kept for the Troubleshooting pages. When the location is forgotten, or the
+  person taken off, the name is replaced there with "[place forgotten]". Coordinates inside the
+  kept model words still go only with those words, after their own days.
 - **Plainer words in the scripts.** The upgrade no longer says migrations "never
   rewrite" what is there: they can, so it says the backup taken first covers it and
   that going back means restoring that backup. `uninstall.sh --help` now says the
