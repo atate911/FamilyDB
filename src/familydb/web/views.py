@@ -1465,6 +1465,7 @@ ALERT_TITLES = {
     "key": "{company} refused its key",
     "limit": "The day's spending limit was used up",
     "calendar": "Google Calendar stopped letting the bot in",
+    "calendar_access": "Google Calendar is no longer showing the bot its calendar",
     "model": "A model in use is going, or has gone",
     "price": "The price of a model in use changed",
     "prices": "The price lists need a look",

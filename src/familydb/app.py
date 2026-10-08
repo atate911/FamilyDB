@@ -85,9 +85,10 @@ class App:
             self._calendar.report = self._calendar_said
         return self._calendar
 
-    def _calendar_said(self, trouble: str | None) -> None:
-        """Google would not let the bot in (what it said), or answered again (None): noted for an
-        admin or forgotten (alerts.py).
+    def _calendar_said(self, trouble: str | None, lost_access: bool = False) -> None:
+        """Google would not let the bot in (what it said; `lost_access` when the key works but the
+        calendar is not there for it), or answered again (None): noted for an admin or forgotten
+        (alerts.py).
         """
         from familydb import alerts
 
@@ -95,8 +96,10 @@ class App:
             with closing(self.connect()) as conn:
                 if trouble is None:
                     alerts.working(conn, "calendar")
+                    alerts.working(conn, "calendar_access")
                 else:
-                    alerts.note(conn, "calendar", "", trouble, self.clock.now())
+                    kind = "calendar_access" if lost_access else "calendar"
+                    alerts.note(conn, kind, "", trouble, self.clock.now())
         except (sqlite3.Error, OSError) as exc:
             log.warning("could not note what Google Calendar said: %s", exc)
 

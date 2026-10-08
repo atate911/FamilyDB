@@ -386,6 +386,14 @@ EVENTS: dict[str, Event] = {
         "connecting again there puts either right.",
         (),
     ),
+    "alert_calendar_access": Event(
+        "Telling an admin: the calendar is no longer there for me",
+        "Google Calendar no longer shows me the calendar, so plans aren't reaching it and I "
+        "can't tell a plan moved there from one taken off. Check that it is still shared with "
+        "my service account (its address is on the settings page, under Connections) and not "
+        "deleted; sharing it again, or connecting another there, puts it right.",
+        (),
+    ),
     "alert_model": Event(
         "Telling an admin: a model in use is going, or gone",
         "A model I use is going away: {detail}. Another can be chosen on the settings page, "

@@ -1113,6 +1113,7 @@ LINE_GROUPS = (
             "alert_key",
             "alert_limit",
             "alert_calendar",
+            "alert_calendar_access",
             "alert_model",
             "alert_price",
             "alert_prices",

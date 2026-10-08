@@ -237,6 +237,11 @@ installed.
 - **Status says plainly when a message was given up on.** A message that had used all its
   retries still read "will try again"; it now says it was given up on, and that the words
   are there to send again.
+- **A calendar Google stops showing no longer cancels plans.** If the calendar was unshared or
+  could not be reached, moving a plan read Google's "not found" as the event being deleted and
+  cancelled the plan here. Now only an event missing from a calendar Google still shows counts as
+  deleted; otherwise the plan is left as it is and admins are told the calendar is no longer
+  there for the bot.
 
 ### New since v0.1.0
 

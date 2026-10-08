@@ -166,6 +166,19 @@ def test_a_call_let_through_forgets_every_day_s_limit_note(conn, settings) -> No
     assert _found(conn) == set()
 
 
+def test_a_calendar_out_of_reach_is_its_own_note_and_forgotten_when_google_answers(
+    calendar_settings, clock, conn
+) -> None:
+    app = App(calendar_settings, clock)
+    app._calendar_said("not shared", True)
+    assert _found(conn) == {("calendar_access", "")}
+    assert "still shared" in alerts.wording(
+        calendar_settings, alert_store.current(conn, since="2000-01-01")[0]
+    )
+    app._calendar_said(None, False)
+    assert _found(conn) == set()
+
+
 def test_google_shutting_the_bot_out_is_noted_and_forgotten_when_it_answers(
     calendar_settings, clock, conn
 ) -> None:

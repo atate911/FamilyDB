@@ -331,7 +331,9 @@ def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
 # Alert kinds (familydb/alerts.py) that stop the family being answered, and others worth a look.
 # Price moves, usage shifts, new models and judgements are news and leave the light alone.
 STOPPING = frozenset({"credit", "key", "limit"})
-WORRYING = frozenset({"calendar", "model", "prices", "api", "refused", "happening"})
+WORRYING = frozenset(
+    {"calendar", "calendar_access", "model", "prices", "api", "refused", "happening"}
+)
 
 
 def light(app: App, conn: sqlite3.Connection) -> str | None:
