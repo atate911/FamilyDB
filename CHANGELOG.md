@@ -245,6 +245,10 @@ installed.
 - **The Google Calendar alert says what is wrong.** Admins were told to check that the calendar
   was still shared when the real trouble was a refused or missing key. That alert now speaks of
   the key; the sharing advice goes with the new alert for a calendar the bot can no longer see.
+- **A missed heads-up is tried again on the plan's day.** If nothing could send to a plan's chat
+  the evening before, the rain and opening-hours check was dropped for good. It is now tried
+  again on the day itself while the plan has not begun, worded for today, and a plan is still
+  only ever checked once.
 
 ### New since v0.1.0
 

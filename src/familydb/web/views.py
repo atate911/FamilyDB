@@ -1663,7 +1663,7 @@ AUTOMATIC = (
         "others",
         "Tomorrow's plans, checked",
         "free",
-        ("plan_rain", "plan_closed", "plan_backup"),
+        ("plan_rain", "plan_rain_today", "plan_closed", "plan_closed_today", "plan_backup"),
     ),
     ("nudges", "others", "A task brought up", "free", ("nudge",)),
     # The morning message is one message; each part is counted as its own (store/mornings.py).

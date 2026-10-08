@@ -205,13 +205,14 @@ def unrated(conn: sqlite3.Connection, *, today: str, since: str) -> list[Plan]:
     return [Plan.from_row(row) for row in rows]
 
 
-def due_for_check(conn: sqlite3.Connection, *, day: str) -> list[Plan]:
-    """Live plans for an idea that start on `day`, made in a chat, and not checked yet."""
+def due_for_check(conn: sqlite3.Connection, *, days: tuple[str, ...]) -> list[Plan]:
+    """Live plans for an idea that start on one of `days`, made in a chat, and not checked yet."""
+    marks = ", ".join("?" for _ in days)
     rows = conn.execute(
         "SELECT * FROM plans WHERE status != 'cancelled' AND checked_at IS NULL "
-        "AND idea_id IS NOT NULL AND chat_id IS NOT NULL AND substr(start, 1, 10) = ? "
-        "ORDER BY start",
-        (day,),
+        "AND idea_id IS NOT NULL AND chat_id IS NOT NULL "
+        f"AND substr(start, 1, 10) IN ({marks}) ORDER BY start",
+        days,
     )
     return [Plan.from_row(row) for row in rows]
 

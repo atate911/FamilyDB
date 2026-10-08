@@ -148,9 +148,25 @@ EVENTS: dict[str, Event] = {
         ("plan", "weather"),
         {"plan": "#4 The falls hike", "weather": "70% chance of rain"},
     ),
+    "plan_rain_today": Event(
+        "An outdoor plan later today, when rain is likely and the evening before was missed",
+        "A heads-up for today: {weather} for {plan}, which is outdoors.",
+        ("plan", "weather"),
+        {"plan": "#4 The falls hike", "weather": "70% chance of rain"},
+    ),
     "plan_closed": Event(
         "The evening before a plan, when the place looks closed then",
         "A heads-up for tomorrow's {plan}: {place} is {hours}.",
+        ("plan", "place", "hours"),
+        {
+            "plan": "#1 Ramen night",
+            "place": "Ramen Ichiban",
+            "hours": "listed as closed on Mondays",
+        },
+    ),
+    "plan_closed_today": Event(
+        "A plan later today, when the place looks closed and the evening before was missed",
+        "A heads-up for today's {plan}: {place} is {hours}.",
         ("plan", "place", "hours"),
         {
             "plan": "#1 Ramen night",
@@ -662,7 +678,17 @@ PLAIN: dict[str, str] = {
 }
 
 FOLDABLE = frozenset(
-    {"reminder", "reminder_late", "nudge", "follow_up", "plan_rain", "plan_closed", "lookup_done"}
+    {
+        "reminder",
+        "reminder_late",
+        "nudge",
+        "follow_up",
+        "plan_rain",
+        "plan_rain_today",
+        "plan_closed",
+        "plan_closed_today",
+        "lookup_done",
+    }
 )
 ACTIVE = timedelta(minutes=5)
 HOLD = timedelta(minutes=2)
