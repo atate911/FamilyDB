@@ -116,6 +116,15 @@ def kept_ids(conn: sqlite3.Connection, who: Member | None) -> set[int]:
     return {idea_id for idea_id, one in kept.items() if who.id in one.ids}
 
 
+def gift_ids(conn: sqlite3.Connection) -> set[int]:
+    """Every present, for a chat where not everyone there may know of them."""
+    return {
+        idea.id
+        for idea in idea_store.list_all(conn, include_dropped=True)
+        if idea_store.is_gift(idea)
+    }
+
+
 def without(items: list[Any], kept: set[int]) -> list[Any]:
     """These plans or agenda entries (anything with an `idea_id`) minus the ones made from an idea
     in `kept`, the present a plan is for being the idea it was made from."""

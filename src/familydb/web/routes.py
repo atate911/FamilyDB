@@ -177,7 +177,7 @@ def home() -> Response | str:
             return redirect(url_for("setup.overview"))
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
         kept = presents.kept_ids(conn, visitor.member)
-        on = _no_gifts(seen.entries, kept)
+        on = presents.without(seen.entries, kept)
         everything = [idea for idea in idea_store.list_all(conn) if idea.id not in kept]
         unfinished = status_page.setup_steps(app, conn) if manages else []
         people = member_store.list_all(conn)
@@ -686,7 +686,7 @@ def plans() -> str:
             today - timedelta(days=PLANS_BEHIND_DAYS),
             today + timedelta(days=PLANS_AHEAD_DAYS),
         )
-        on = _no_gifts(seen.entries, presents.kept_ids(conn, auth.visitor().member))
+        on = presents.without(seen.entries, presents.kept_ids(conn, auth.visitor().member))
         people = member_store.list_all(conn)
         rows = _plan_rows(conn, app, on, today, views.slot_map(people), None, past=True)
         asking = _who(conn)
@@ -741,7 +741,7 @@ def plans_month() -> str:
     weeks_last = last_day + timedelta(days=6 - last_day.weekday())
     with closing(app.connect()) as conn:
         seen = agenda.read(app, conn, weeks_first, weeks_last)
-        on = _no_gifts(seen.entries, presents.kept_ids(conn, auth.visitor().member))
+        on = presents.without(seen.entries, presents.kept_ids(conn, auth.visitor().member))
         people = member_store.list_all(conn)
         slots = views.slot_map(people)
         rows = _plan_rows(conn, app, on, today, slots, None, past=True)
@@ -776,11 +776,6 @@ def plans_month() -> str:
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
     )
-
-
-def _no_gifts(entries: list[agenda.Entry], kept: set[int]) -> list[agenda.Entry]:
-    """What is on, without plans made from a present that is hidden from the one looking."""
-    return [entry for entry in entries if entry.idea_id not in kept]
 
 
 def _own_only() -> int | None:

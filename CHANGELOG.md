@@ -214,6 +214,8 @@ older than what is installed. It gets a date when it is released.
   a kid's question or one about right now.
 - **Presents stay hidden in "How did it go?".** A plan made for a present no longer shows its
   title, or counts in "to rate", for the kids or the grown-up the present is kept from.
+- **Presents stay hidden in /today and /week.** Plans made for a present are left out for the kids
+  and the grown-up it is kept from, and out of any group chat a kid is in.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
