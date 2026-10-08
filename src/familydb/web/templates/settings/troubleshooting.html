@@ -1,0 +1,99 @@
+{% from "_settings.html" import form with context %}
+{% from "_ui.html" import icon, tag with context %}
+
+<section class="card sgroup" id="lately" aria-labelledby="g-lately">
+  <h2 class="sgroup__h" id="g-lately">{{ icon('pulse') }}The last day</h2>
+  <p>
+    <b>{{ seen.errors }}</b> error{{ '' if seen.errors == 1 else 's' }} and
+    <b>{{ seen.warnings }}</b> warning{{ '' if seen.warnings == 1 else 's' }} logged;
+    <b>{{ seen.failed_calls }}</b> call{{ '' if seen.failed_calls == 1 else 's' }} to a model failed in the last week.
+  </p>
+  {% if attention %}
+    <h3 class="field__label mt-4">Needs a look</h3>
+    <ul class="plain">
+      {% for row in attention %}<li><b>{{ row.label }}</b> <span class="muted small">{{ row.detail }}</span></li>{% endfor %}
+    </ul>
+  {% endif %}
+  {% if stuck %}
+    <h3 class="field__label mt-4">Messages that did not go through</h3>
+    <ul class="plain">
+      {% for row in stuck %}
+        <li><span class="muted small">{{ row.when | figs }}</span>
+          {% if row.given_up %}{{ tag('look', 'Given up') }}{% endif %}
+          <a href="{{ url_for('activity.show', key='m' ~ row.id) }}">{{ row.error or 'no reason recorded' }}</a>
+          <span class="muted small">after {{ row.tries }} {{ 'try' if row.tries == 1 else 'tries' }}</span></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if failed_lookups %}
+    <h3 class="field__label mt-4">Ideas a lookup could not fill in</h3>
+    <ul class="plain">
+      {% for row in failed_lookups %}
+        <li><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a> <span class="muted small">{{ row.note }}</span></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if not (attention or stuck or failed_lookups) %}
+    <p class="muted small mt-3">Nothing is waiting on an admin, no message is stuck and no lookup has failed lately.</p>
+  {% endif %}
+</section>
+
+<section class="card sgroup" id="models" aria-labelledby="g-models">
+  <h2 class="sgroup__h" id="g-models">{{ icon('sparkle') }}Calls to a model that failed</h2>
+  {% if failed_calls %}
+    <div class="scroll" tabindex="0" role="region" aria-label="Failed calls, scrolls sideways">
+      <table class="data">
+        <thead><tr><th scope="col">When</th><th scope="col">For</th><th scope="col">Model</th><th scope="col">What it said</th></tr></thead>
+        <tbody>
+          {% for row in failed_calls %}
+            <tr>
+              <td>{{ row.when | figs }}</td>
+              <td>{{ row.what }}</td>
+              <td><span class="code">{{ row.model }}{% if row.provider %} ({{ row.provider }}){% endif %}</span></td>
+              <td><a href="{{ url_for('troubleshooting.one', text_id=row.id) }}">{{ row.error | truncate(140) }}</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted small">{% if kept_days %}No call to a model has failed while its words were being kept.{% else %}Failed calls show here only while the models’ words are kept (below); the problem log has them either way.{% endif %}</p>
+  {% endif %}
+  <p class="mt-3"><a class="btn btn--quiet btn--sm" href="{{ url_for('troubleshooting.texts') }}">{{ icon('list', size='sm') }}Read what the models were sent and said</a>
+    <span class="small muted">{{ "{:,}".format(kept.calls) }} call{{ '' if kept.calls == 1 else 's' }} kept{% if kept.calls %}, {{ "{:,}".format(kept.chars) }} characters{% endif %}.</span></p>
+</section>
+
+<section class="card sgroup" id="problem-log" aria-labelledby="g-problems">
+  <h2 class="sgroup__h" id="g-problems">{{ icon('alert') }}The problem log</h2>
+  <p class="sgroup__note">Warnings and errors the server logged, newest first. The same trouble again is one line with a count.</p>
+  <p class="small">
+    {% for key, words in filters.items() %}
+      {% if key == show %}<b>{{ words }}</b>{% else %}<a href="{{ url_for('settings.section', name='troubleshooting', show=key, _anchor='problem-log') }}">{{ words }}</a>{% endif %}{{ ' · ' if not loop.last }}
+    {% endfor %}
+  </p>
+  {% if problem_rows %}
+    <ol class="tools mt-3">
+      {% for row in problem_rows %}
+        <li><details class="tool">
+          <summary>
+            {{ tag('broken', row.level.title(), 'alert') if row.bad else tag('look', row.level.title()) }}
+            <span>{{ row.message | truncate(110) }}</span>
+            <span class="muted small">{{ row.area }} · {{ row.when | figs }}{% if row.count > 1 %} · {{ row.count }} times{% endif %}</span>
+            {{ icon('chev', size='sm', cls='chev') }}
+          </summary>
+          <div class="tool__body">
+            <p>{{ row.message }}</p>
+            <p class="small muted">First seen {{ row.first | figs }}, last {{ row.when | figs }}, {{ row.count }} time{{ '' if row.count == 1 else 's' }}. From <span class="code">{{ row.logger }}</span>.</p>
+            {% if row.detail %}<div class="pane pane--code"><pre>{{ row.detail }}</pre></div>{% endif %}
+          </div>
+        </details></li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="empty mt-3">{{ icon('okc') }}<span>Nothing has been logged at this level.</span></p>
+  {% endif %}
+  <p class="small muted mt-4">Only lines at the level chosen below are kept, and only for a month. The server’s own log, with everything it writes, is on the machine it runs on.</p>
+</section>
+
+{{ form('troubleshooting', groups.values()) }}
+<p class="note">{{ icon('lock') }}<span>Only an admin sees this page and the models’ words: they hold the family’s own.</span></p>

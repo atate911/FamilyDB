@@ -112,3 +112,18 @@ def test_simultaneous_edits_only_commit_one_revision(settings, conn, clock, fami
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(edit, ["First edit", "Second edit"]))
     assert sum(not result.is_error for result in results) == 1
+
+
+def test_an_idea_keeps_the_ages_it_suits(registry, ctx) -> None:
+    from familydb.agent.render import render_idea_line
+
+    _, data = _call(registry, ctx, "add_idea", title="Trampoline park", kind="activity", min_age=6)
+    assert data["min_age"] == 6 and data["max_age"] is None
+    assert "| ages 6+ |" in render_idea_line(ideas.get(ctx.conn, data["id"]))
+    # The oldest is checked against the youngest it already has.
+    refused, said = _call(registry, ctx, "update_idea", id=data["id"], max_age=4)
+    assert refused.is_error and said["error"] == "min_age 6 is over max_age 4"
+    _, data = _call(registry, ctx, "update_idea", id=data["id"], max_age=12)
+    assert "| ages 6-12 |" in render_idea_line(ideas.get(ctx.conn, data["id"]))
+    refused, said = _call(registry, ctx, "add_idea", title="Odd", kind="other", min_age=-1)
+    assert refused.is_error and said["error"] == "an age is 0 to 120"

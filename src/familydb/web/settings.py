@@ -41,19 +41,27 @@ from flask import (
 )
 from pydantic import ValidationError
 
-from familydb import passwords, personas, voice
+from familydb import export, passwords, personas, voice
 from familydb.agent import gateway, providers
 from familydb.agent.providers import prices
 from familydb.agent.spending import spent_today
 from familydb.app import App
-from familydb.availability import enrichment_available, web_is_public
+from familydb.availability import (
+    enrichment_available,
+    happening_available,
+    happening_search_available,
+    ticketmaster_available,
+    weather_available,
+    web_is_public,
+    web_tools_available,
+)
 from familydb.config import PersonaRewrite, Settings, apply_overrides
 from familydb.dates import hour_words
 from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
-from familydb.web import auth, fields, keys, views
+from familydb.web import auth, fields, keys, troubleshooting, views
 from familydb.web import status as status_page
 
 log = logging.getLogger(__name__)
@@ -81,7 +89,11 @@ KEY_LABELS = {
     "openai_api_key": "OpenAI key",
     "gemini_api_key": "Google key",
     "telegram_bot_token": "Telegram bot token",
+    "ticketmaster_api_key": "Ticketmaster key",
 }
+# The keys that are not a model company's, each on the page that uses it rather than among the
+# companies' keys, and listed after them.
+KEY_PAGES = {"telegram_bot_token": "connections", "ticketmaster_api_key": "happening"}
 
 
 def _app() -> App:
@@ -351,6 +363,13 @@ def page(
         )
         for group in fields.groups_in(section)
     }
+    if section == "happening":
+        # A calendar the app proposed is a tick above the box, not a line in it.
+        proposed = {one["url"] for one in extra.get("proposals", [])}
+        for box in groups["feeds"]["boxes"]:
+            box["value"] = "\n".join(
+                line for line in str(box["value"]).splitlines() if line not in proposed
+            )
     return (
         render_template(
             "settings_section.html",
@@ -447,8 +466,24 @@ def _lookups(app: App, conn: Any) -> dict[str, Any]:
     return {"on": enrichment_available(app.settings), "can_look": app.can_ask("worker")}
 
 
+def _happening(app: App, conn: Any) -> dict[str, Any]:
+    live = app.settings
+    return {
+        **status_page.happening_settings(app, conn),
+        "on": happening_available(live),
+        "searching": happening_search_available(live),
+        "search_wanted": live.happening_search,
+        "web": web_tools_available(live),
+        "home": weather_available(live) and bool(live.home_area),
+        "can_look": app.can_ask("worker"),
+        "budget": live.happening_budget,
+        "ticketmaster": ticketmaster_available(live),
+    }
+
+
 def _connections(app: App, conn: Any) -> dict[str, Any]:
     return {
+        "offers": {"family_chat_id": status_page.digest_chats(conn, app.settings.tzinfo)},
         "google": google_panel(app.settings),
         "bot": status_page.telegram_name(app),
         "telegram": app.channel_states.get("telegram", ""),
@@ -481,8 +516,10 @@ PAGES = {
     "spending": _spending,
     "messages": _messages,
     "lookups": _lookups,
+    "happening": _happening,
     "connections": _connections,
     "security": _security,
+    "troubleshooting": troubleshooting.page_data,
     "history": _history,
 }
 
@@ -543,6 +580,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
         today = spent_today(conn, live, app.clock.now())
         flags = section_flags(app, conn, steps=steps, spent=today)
         latest = [change(line, live.tzinfo) for line in settings_store.history(conn, limit=1)]
+        trouble_lines = troubleshooting.overview_lines(app, conn)
     hour = hour_words
     units = fields.BY_KEY["weather_units"].word(live.weather_units)
     if live.home_area and live.home_lat is not None:
@@ -588,6 +626,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
         ),
         "messages": ([weekend, f"Asks how a plan went at {hour(live.follow_up_hour)}."], False),
         "lookups": ([lookups], False),
+        "happening": ([views.happening_state(live)], False),
         "personality": (
             [
                 who,
@@ -602,6 +641,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
             False,
         ),
         "security": ([steps["password"].detail], flags["security"]),
+        "troubleshooting": (trouble_lines, False),
         "history": ([changed], False),
     }
     return (
@@ -635,6 +675,20 @@ def section(name: str) -> tuple[str, int]:
     return page(name)
 
 
+def _with_ticked_feeds(form: Any) -> Any:
+    """The calendars to read, as the page for things near home sends them: the ones the app
+    proposed are ticks, each address the page showed among `proposed`, and the rest are lines in
+    the box. One setting holds them all, so the ticks are folded into the box's lines here."""
+    shown = form.getlist("proposed")
+    if not shown or "event_feeds" not in form:
+        return form
+    ticked = [url for url in form.getlist("feed") if url in shown]
+    typed = [line.strip() for line in form["event_feeds"].splitlines() if line.strip()]
+    folded = form.copy()
+    folded["event_feeds"] = "\n".join([*ticked, *(line for line in typed if line not in shown)])
+    return folded
+
+
 @bp.post("/settings")
 def save() -> Response | tuple[str, int]:
     """Store the behaviour settings, or say which box is wrong and keep what was typed."""
@@ -642,10 +696,9 @@ def save() -> Response | tuple[str, int]:
     here = _section(request.form.get("section"))
     if (complaint := auth.refused()) is not None:
         return _answer(back, here, error=complaint)
-    values, problems = fields.read_form(request.form)
-    typed = {
-        one.key: fields.given(one, request.form) for one in fields.FIELDS if one.key in request.form
-    }
+    form = _with_ticked_feeds(request.form)
+    values, problems = fields.read_form(form)
+    typed = {one.key: fields.given(one, form) for one in fields.FIELDS if one.key in form}
     if not problems:
         stored = _stored()
         proposed = {**stored, **values}
@@ -698,7 +751,8 @@ def save_keys() -> Response | tuple[str, int]:
     if problems:
         if back is not None:
             return _answer(back, here, error=" ".join(problems.values()))
-        where = here or ("connections" if set(problems) == {"telegram_bot_token"} else "model")
+        pages = {KEY_PAGES.get(name, "model") for name in problems}
+        where = here or (pages.pop() if len(pages) == 1 else "model")
         return page(where, problems=problems, error="Nothing was saved.", status=400)
     return _answer(back, here, said=_said(_save(values), keys=True))
 
@@ -736,6 +790,36 @@ def reveal() -> tuple[str, int]:
         revealed=(name, value),
         said=f"The {KEY_LABELS[name]} is shown below, this once.",
     )
+
+
+@bp.post("/settings/export")
+def export_everything() -> Response | tuple[str, int]:
+    """Everything the family has kept, as one JSON file (export.py), after the sign-in password
+    is typed again as for showing a key, and counted with it against guessing."""
+    app = _app()
+    if (complaint := auth.refused()) is not None:
+        return page("security", error=complaint, status=400)
+    who = auth.client_address()
+    attempt = f"{who} reveal"
+    lockout = current_app.config["FAMILYDB_LOCKOUT"]
+    now = app.clock.now()
+    if lockout.locked(attempt, now):
+        return page("security", error=LOCKED_OUT, status=429)
+    if auth.visitor().signed_in:
+        given = request.form.get("password", "")
+        if not given:
+            return page("security", error=NEEDS_PASSWORD, status=400)
+        if not auth.confirms(given):
+            lockout.failed(attempt, now)
+            return page("security", error=WRONG_PASSWORD, status=401)
+        lockout.passed(attempt)
+    with closing(app.connect()) as conn:
+        text = export.everything_json(conn, now)
+    log.warning("everything the family keeps was taken away by %s", who)
+    response = Response(text, mimetype="application/json")
+    response.headers["Content-Disposition"] = 'attachment; filename="familydb-everything.json"'
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 # -- which company answers, and its key --------------------------------------------------------
@@ -918,10 +1002,18 @@ LINE_GROUPS = (
         (
             "reminder",
             "reminder_late",
+            "reminder_from",
+            "reminder_plan",
             "gift_ideas",
             "gift_ideas_none",
             "birthday_wishes",
             "nudge",
+            "push_note",
+            "morning",
+            "morning_ending",
+            "morning_chase",
+            "morning_deadlines",
+            "morning_roundup",
             "plan_rain",
             "plan_closed",
             "plan_backup",
@@ -935,7 +1027,10 @@ LINE_GROUPS = (
             "tap_done",
             "tap_done_again",
             "tap_snoozed",
+            "tap_undone",
+            "tap_ticked",
             "tap_again",
+            "tap_ok",
             "tap_not_again",
             "tap_missed",
             "tap_wish_yes",
@@ -976,6 +1071,10 @@ LINE_GROUPS = (
             "cmd_week",
             "cmd_tasks",
             "cmd_now",
+            "cmd_list",
+            "cmd_list_empty",
+            "undo_done",
+            "undo_not",
             "lookups_asked",
             "lookups_none",
             "lookups_off",
@@ -1022,6 +1121,11 @@ LINE_GROUPS = (
             "alert_api",
             "alert_refused",
             "alert_advice",
+            "alert_happening",
+            "alert_calendars",
+            "alert_backup",
+            "alert_disk",
+            "alert_telegram",
         ),
     ),
 )
@@ -1319,7 +1423,7 @@ def _problems_said(problems: dict[str, str]) -> str:
 def _key_order(provider: str) -> list[str]:
     """The answering company's key first, as a new install needs it."""
     first = f"{provider}_api_key"
-    return sorted(SECRETS, key=lambda name: (name != first, name == "telegram_bot_token"))
+    return sorted(SECRETS, key=lambda name: (name != first, name in KEY_PAGES))
 
 
 def _said(changed: list[str], *, keys: bool = False) -> str:

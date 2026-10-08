@@ -114,3 +114,29 @@ def test_get_forecast_unavailable_without_coordinates(
     result = registry.dispatch("get_forecast", {"start": "2026-09-26", "end": "2026-09-27"}, ctx)
     data = json.loads(result.content)
     assert not result.is_error and data["available"] is False
+
+
+def test_a_day_or_two_comes_hour_by_hour_and_is_judged_by_the_hours_asked(settings) -> None:
+    """Rain at six in the morning says nothing about the afternoon: the stretch asked about is
+    its worst hour, its highest chance of rain, its warmest and coldest."""
+    from familydb.integrations.open_meteo import parse_hourly
+
+    hourly = {
+        "time": [f"2026-09-26T{h:02d}:00" for h in range(24)],
+        "weather_code": [61] * 10 + [2] * 14,
+        "temperature_2m": [8.0 + h for h in range(24)],
+        "precipitation_probability": [90] * 10 + [10] * 14,
+    }
+    day = parse_daily({**SAMPLE, "hourly": hourly})[0]
+    assert len(day.hours) == 24 and day.rain_chance == 5  # the day's own figure
+    afternoon = day.between(14 * 60, 18 * 60)
+    assert (afternoon.code, afternoon.summary, afternoon.rain_chance) == (2, "partly cloudy", 10)
+    assert (afternoon.high, afternoon.low, afternoon.span) == (25.0, 22.0, (840, 1080))
+    assert afternoon.daylight == day.daylight  # sunrise and sunset are the day's
+    morning = day.between(8 * 60 + 30, 11 * 60)  # 08:30 to 11:00: three hours touch it
+    assert (morning.code, morning.rain_chance) == (61, 90)
+    assert DayForecast(date(2026, 9, 26), 1, "clear", 1.0, 0.0, 5, 0.0).between(0, 600).span is None
+    assert parse_hourly({}) == {}
+    client = OpenMeteo(settings.model_copy(update={"home_lat": 45.63, "home_lon": -122.67}))
+    assert "hourly=weather_code" in client._url(date(2026, 9, 26), date(2026, 9, 27))
+    assert "hourly" not in client._url(date(2026, 9, 26), date(2026, 10, 2))

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 
-from familydb import buttons, family, roles, voice
+from familydb import audience, buttons, family, roles, voice
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import ToolError
@@ -128,7 +128,7 @@ def occasion_passes(settings: Settings, occasion: Occasion, owner: Member, today
 
 
 def private_chat(member_id: int) -> str:
-    return f"member:{member_id}"
+    return audience.private_chat(member_id)
 
 
 def _tell_parents(

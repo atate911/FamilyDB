@@ -28,6 +28,38 @@
   </form>
 </section>
 
+{% set keeping = groups['keeping'] %}
+<section class="card sgroup" id="{{ keeping.group.name }}" aria-labelledby="g-keep">
+  <h2 class="sgroup__h" id="g-keep">{{ icon('clock') }}{{ keeping.group.title }}</h2>
+  <form class="form form--tight mt-3" method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="security" />
+    <div class="sgrid">{% for one in keeping.boxes %}{{ setting(one) }}{% endfor %}</div>
+    <div><button class="btn btn--quiet btn--sm" type="submit">{{ icon('check', size='sm') }}Save</button></div>
+  </form>
+</section>
+
+<section class="card sgroup" id="take-away" aria-labelledby="g-take">
+  <h2 class="sgroup__h" id="g-take">{{ icon('arrowdown') }}The family’s data, to take away</h2>
+  <p class="sgroup__note">
+    The plans as a calendar file any calendar opens, and the ideas and the things to do as
+    spreadsheets, for any grown-up:
+    <a href="{{ url_for('web.export_plans') }}">plans</a>,
+    <a href="{{ url_for('web.export_ideas') }}">ideas</a>,
+    <a href="{{ url_for('web.export_tasks') }}">things to do</a>.
+    Everything the family has kept (people, ideas, places, plans, things to do, what is
+    remembered, wish lists, lists and every message) is one file for an admin. No key, password
+    or device is ever in it.
+  </p>
+  <form class="form__row form__row--3 mt-3" method="post" action="{{ url_for('settings.export_everything') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {% if needs_password %}
+      <div class="field"><label class="field__label" for="export-password">{{ 'Your password' if own_password else 'Family password' }}</label>
+        <input id="export-password" name="password" type="password" autocomplete="current-password" /></div>
+    {% endif %}
+    <div class="field field--end"><button class="btn btn--quiet" type="submit">{{ icon('arrowdown') }}Download everything</button></div>
+  </form>
+</section>
+
 <section class="card sgroup" id="reveal" aria-labelledby="g-reveal">
   <h2 class="sgroup__h" id="g-reveal">{{ icon('key') }}See a key</h2>
   {% set saved = keys.values() | selectattr('set') | list %}

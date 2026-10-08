@@ -46,7 +46,9 @@ def run_plan_checks(app: App) -> int:
         if app.calendar is not None:
             try:
                 now = utc_iso(app.clock.now())
-                sync_plans(conn, app.calendar, app.settings.google_calendar_id, now)
+                sync_plans(
+                    conn, app.calendar, app.settings.google_calendar_id, now, tz=app.clock.tz
+                )
             except Exception:
                 log.exception("plan checks deferred: the calendar could not be checked")
                 return 0
@@ -105,6 +107,8 @@ def _heads_up(
     span = _span(plan)
     label = f"#{idea.id} {plan.title}"
     needs_dry = idea.setting == "outdoor" or idea.weather == "dry"
+    # The plan's own hours when the forecast has them: a shower at dawn spoils no picnic at noon.
+    forecast = forecast.between(*span) if forecast is not None else None
     if needs_dry and forecast is not None and day_is_dry(forecast) is False:
         chance = forecast.rain_chance
         weather = f"{chance}% chance of rain" if chance else forecast.summary.lower()
@@ -161,8 +165,8 @@ def _backup(
     span: tuple[int, int],
     setting: str | None,
 ) -> str | None:
-    """Another idea for the same time from the engine, or None. The calendar is left out: it
-    holds the plan itself, leaving no time free."""
+    """Another idea for the same time from the engine, or None. The calendar, Google's or the
+    plans kept here, is left out: it holds the plan itself, leaving no time free."""
     ctx = ToolContext(
         conn=conn,
         settings=app.settings,
@@ -171,6 +175,7 @@ def _backup(
         calendar=None,
         weather=app.weather,
         geocoder=app.geocoder,
+        ignore_busy=True,
     )
     asked = SuggestInput(
         window="dates",

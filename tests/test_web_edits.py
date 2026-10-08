@@ -65,6 +65,7 @@ def test_an_idea_can_be_added_from_the_page(page, conn) -> None:
             tags="food, cheap",
             cost_level=2,
             duration_min=60,
+            min_age=6,
             needs_booking="yes",
             who="Alex",
         ),
@@ -75,8 +76,10 @@ def test_an_idea_can_be_added_from_the_page(page, conn) -> None:
     assert saved.participants == ["whole family", "the girls"]
     assert saved.tags == ["cheap", "food"]  # the store lowercases and sorts them
     assert saved.cost_level == 2 and saved.duration_min == 60 and saved.needs_booking
+    assert saved.min_age == 6 and saved.max_age is None
     assert saved.suggested_by_name == "Alex"  # the form said who, and the tool recorded it
-    assert "Saved #1 Ramen place." in _said(page.get("/idea/1"))
+    shown = page.get("/idea/1")
+    assert "Saved #1 Ramen place." in _said(shown) and "<dt>Ages</dt><dd>6+</dd>" in shown.text
 
 
 def test_an_idea_with_no_title_is_refused_and_nothing_is_written(page, conn) -> None:
@@ -289,12 +292,27 @@ def test_without_a_calendar_plans_are_kept_here_by_hand(page, conn):
         data={"csrf": _token(page, "/plans"), "title": "Picnic", "start": "2026-09-26T13:00"},
     )
     plan = plans.get(conn, 1)
-    assert plan.title == "Picnic" and plan.google_event_id is None and plan.calendar_id is None
+    # On no calendar yet: it holds the id its event will have, so it goes on Google once.
+    assert plan.title == "Picnic" and plan.calendar_id is None
     assert "Added to the plans: Picnic" in _said(page.get("/plans"))
     page.post("/plan/1/move", data={"csrf": _token(page, "/plans"), "start": "2026-09-27T15:00"})
     assert plans.get(conn, 1).start.startswith("2026-09-27T15:00")
     page.post("/plan/1/cancel", data={"csrf": _token(page, "/plans")})
     assert plans.get(conn, 1).status == "cancelled"
+
+
+def test_without_a_calendar_the_page_keeps_the_plan_here(page, conn):
+    """No Google calendar: the page says so, and its plan form still works, keeping the plan here
+    (tools/gcal.py), where it used to show no form at all and refuse one."""
+    assert "not connected" in page.get("/plans").text
+    sent = page.post(
+        "/plans/new",
+        data={"csrf": _token(page, "/plans"), "title": "Picnic", "start": "2026-09-26T18:30"},
+    )
+    assert sent.status_code == 302
+    plan = plans.get(conn, 1)
+    assert plan.title == "Picnic" and plan.calendar_id is None and plan.google_event_id
+    assert "Picnic" in page.get("/plans").text
 
 
 @pytest.mark.parametrize(
@@ -390,3 +408,24 @@ def test_a_done_to_do_can_be_put_back_from_the_done_list(page, conn) -> None:
     page.post("/task/1/reopen", data={"csrf": _token(page, "/tasks"), "once": "o11"})
     assert 'id="t-1"' in page.get("/tasks").text  # open again (this also shows the flash)
     assert 'id="t-1"' not in page.get("/tasks?status=done").text
+
+
+def test_several_ideas_are_added_at_once_one_a_line(page, conn) -> None:
+    """A list typed or pasted in, one idea a line and one kind for them all: each added by
+    add_idea as the single form would, and the notice says what was there already."""
+    first = {"csrf": _token(page, "/ideas/new"), "title": "Ramen place", "kind": "restaurant"}
+    page.post("/ideas/new", data={**first, "once": "a"})
+    lines = "Taco truck\n\nRamen place\nDumpling house\nTaco truck\n"
+    form = {"csrf": _token(page, "/ideas/new"), "once": "b", "titles": lines, "kind": "restaurant"}
+    sent = page.post("/ideas/several", data=form, follow_redirects=True)
+    assert "Added #2 Taco truck, #3 Dumpling house. Already there: #1 Ramen place." in _said(sent)
+    assert [idea.title for idea in ideas.list_all(conn)] == [
+        "Ramen place",
+        "Taco truck",
+        "Dumpling house",
+    ]
+    assert 'class="undo-form"' not in sent.text  # one Undo could not take back them all
+    empty = {**form, "once": "c", "titles": "\n \n"}
+    assert "Write one idea a line" in _said(
+        page.post("/ideas/several", data=empty, follow_redirects=True)
+    )

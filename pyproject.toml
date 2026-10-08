@@ -11,11 +11,13 @@ dependencies = [
     "google-api-python-client>=2.190,<3",
     "google-auth>=2.30,<3",
     "google-genai>=2.24,<3",
+    "icalendar>=6.1,<7",
     "markdown>=3.7,<4",
     "openai>=2.54,<4",
     "pydantic>=2.9,<3",
     "pydantic-settings>=2.15,<3",
     "python-telegram-bot>=22.8,<23",
+    "recurring-ical-events>=3.3,<4",
     "typer>=0.27,<1",
     "tzdata",
     "waitress>=3.0,<4",
@@ -27,6 +29,7 @@ familydb = "familydb.cli:run_cli"
 [dependency-groups]
 dev = [
     "pytest>=9.1",
+    "pytest-xdist>=3.8",
     "ruff>=0.16",
 ]
 
@@ -52,6 +55,9 @@ extend-immutable-calls = ["typer.Argument", "typer.Option"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Every core: the suite takes under a minute on four instead of three. `-n 0` runs it in one
+# process, for a debugger or a single test.
+addopts = "-n auto"
 markers = [
     "live: hits the real Anthropic API (needs FAMILYDB_LIVE=1 and ANTHROPIC_API_KEY)",
 ]

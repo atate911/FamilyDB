@@ -12,6 +12,7 @@ from functools import cache
 from typing import Any, Literal
 from zoneinfo import available_timezones
 
+from familydb import happening, logs
 from familydb.agent.providers.prices import hearing_suggestions, suggestions
 from familydb.config import Settings
 from familydb.dates import hour_words
@@ -22,6 +23,8 @@ NUMBER = {"int": "a whole number", "float": "a number"}
 NOT_A_NUMBER = "That needs to be {what}."
 TOO_LONG = "That is longer than a setting should be."
 MAX_LENGTH = 400
+# A box of lines holds several addresses, so it may be longer; the setting's own limit agrees.
+MAX_LINES_LENGTH = 2000
 COMPANIES = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google"}
 # Places, not legacy aliases and offsets, and UTC, which many a server keeps.
 ZONE_PREFIXES = ("Africa/", "America/", "Antarctica/", "Asia/", "Atlantic/", "Australia/")
@@ -50,6 +53,8 @@ class Field:
     keyboard: str = ""
     # For a list box, the words for the last choice, which opens a box to type any other.
     another: str = ""
+    # A box of several lines, one thing a line (the calendars to read), drawn as a text area.
+    lines: bool = False
 
     def word(self, value: str) -> str:
         return dict(self.words).get(value, value)
@@ -157,6 +162,7 @@ def field(
     unset: str = "",
     company: str = "",
     another: str = "",
+    lines: bool = False,
 ) -> Field:
     kind, derived = _shape(Settings.model_fields[key].annotation)
     if kind == "toggle" and not words:
@@ -174,6 +180,7 @@ def field(
         company=company,
         keyboard=_keyboard(key, kind),
         another=another or ("Another model" if suggested else ""),
+        lines=lines,
     )
 
 
@@ -243,7 +250,13 @@ SECTIONS: tuple[Section, ...] = (
     ),
     Section("spending", "Spending", "dollar", "The daily limit, and what one message may use."),
     Section("messages", "Messages", "bell", "What is sent without being asked, and when."),
-    Section("lookups", "Lookups", "search", "Filling ideas in from the web."),
+    Section("lookups", "Lookups", "search", "Filling ideas in, and taking off what is over."),
+    Section(
+        "happening",
+        happening.NAME,
+        "ticket",
+        "What is on near home: the calendars it reads, Ticketmaster, and a weekly search.",
+    ),
     Section(
         "personality",
         "Personality and family",
@@ -256,6 +269,12 @@ SECTIONS: tuple[Section, ...] = (
         "Sign-in and security",
         "key",
         "Passwords, how long a sign-in lasts, seeing a key, signing everyone out.",
+    ),
+    Section(
+        "troubleshooting",
+        "Troubleshooting",
+        "pulse",
+        "What went wrong, how much is logged, and the words of every call to a model.",
     ),
     Section("history", "What has changed", "history", "Every change made here, and who made it."),
 )
@@ -334,27 +353,6 @@ GROUPS: tuple[Group, ...] = (
                 "never passes through FamilyDB and costs nothing. Firefox has no mic.",
             ),
         ),
-    ),
-    Group(
-        "general",
-        "log",
-        "The server's log",
-        "For whoever looks after the server.",
-        (
-            field(
-                "log_level",
-                "Log detail",
-                "How much the server writes to its log. Debug is for chasing a problem.",
-                choices=("DEBUG", "INFO", "WARNING", "ERROR"),
-                words=(
-                    ("DEBUG", "Debug: everything"),
-                    ("INFO", "Info: the usual"),
-                    ("WARNING", "Warnings and errors"),
-                    ("ERROR", "Errors only"),
-                ),
-            ),
-        ),
-        folded=True,
     ),
     Group(
         "model",
@@ -458,6 +456,35 @@ GROUPS: tuple[Group, ...] = (
                 "judgement_budget",
                 "Most to spend on it in a month (US$)",
                 "Counted within the daily limit as well. 0 asks nothing.",
+            ),
+        ),
+    ),
+    Group(
+        "model",
+        "choosing",
+        "Choosing the suggestions",
+        'For a question like "what should we do this weekend?" or "where should we eat '
+        'tonight?", and the weekend digest, a stronger model is given everything the family has '
+        "told her and done that bears on it (ratings and notes, what she remembers, the last weeks "
+        "and the next, this chat's last few days) and chooses the picks; she then says them in her "
+        "own words. It goes to the company that answers the chat, nowhere else. Quick questions "
+        "about right now, and the kids' questions, are answered as before, at no extra cost.",
+        (
+            field(
+                "choosing",
+                "Have a stronger model choose the suggestions",
+                "About 3 to 13 cents a planning question, depending on the company.",
+            ),
+            field(
+                "choose_level",
+                "How strong a model chooses",
+                "Best by default: this is the judgement worth paying for.",
+            ),
+            field(
+                "choose_budget",
+                "Most to spend on it in a month (US$)",
+                "Counted within the daily limit as well. Once it is spent, suggestions are made as "
+                "before until the month turns. 0 chooses nothing.",
             ),
         ),
     ),
@@ -751,6 +778,63 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "messages",
+        "morning",
+        "Each morning",
+        "One message a morning in each chat that has something for it, and none on an empty day. "
+        "Written, not thought up, so it costs nothing.",
+        (
+            field(
+                "morning_hour",
+                "Time of the morning message",
+                "In the family's time zone. After a restart it still goes, until noon.",
+                choices=HOURS,
+                words=HOUR_WORDS,
+            ),
+            field(
+                "morning_agenda",
+                "The day ahead",
+                "Today's plans, reminders and deadlines, and a dated idea that ends this week when "
+                "a free day could fit it.",
+            ),
+            field(
+                "chase_missed",
+                "A reminder nobody acted on, once more",
+                "The morning after a reminder went and was neither done nor snoozed, once, with a "
+                "button to tick it off.",
+            ),
+            field(
+                "deadline_heads_up",
+                "What is due tomorrow",
+                "The morning before a deadline, so a deadline is not missed for want of a "
+                "reminder.",
+            ),
+            field(
+                "forgotten_roundup",
+                "What has waited a week or more",
+                "Once a week: to-dos a week old or more with no reminder or time to bring them up, "
+                "five at most.",
+            ),
+            field("roundup_day", "Day of the week for that", words=tuple(DAY_NAMES.items())),
+        ),
+    ),
+    Group(
+        "messages",
+        "push",
+        "On phones and tablets",
+        "For anybody who uses only the page: each turns it on for their own device, under Your "
+        "password.",
+        (
+            field(
+                "web_push",
+                "Say when she has written",
+                "A notice on the device that she has a message, when she writes of her own accord "
+                "(a reminder, the morning message), never the words. Apple's or Google's push "
+                "service carries it and sees only that one went.",
+            ),
+        ),
+    ),
+    Group(
+        "messages",
         "admins",
         "When something needs fixing",
         "Written, not thought up, so they cost nothing. The status page lists the same.",
@@ -793,6 +877,14 @@ GROUPS: tuple[Group, ...] = (
                 "Days before details look old",
                 "After this, an idea's hours and prices are marked as worth checking again.",
             ),
+            field(
+                "find_places",
+                "Look for a place when nothing saved fits",
+                "Asked for a kind of place nothing on the list fits (\u201cThai food, what\u2019s "
+                "open now?\u201d), for now or the next two days, a lookup searches nearby and "
+                "offers a few, said as found on the web. Each search costs a little, within the "
+                "daily limit; the same ask within the hour is searched once.",
+            ),
         ),
     ),
     Group(
@@ -820,6 +912,20 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "lookups",
+        "tidy",
+        "What is over",
+        "",
+        (
+            field(
+                "tidy_ideas",
+                "Take an idea off a week after its last day",
+                "An event or a show whose dates have passed leaves the list overnight, so it stops "
+                "coming up and is no longer sent with every message. Its page can bring it back.",
+            ),
+        ),
+    ),
+    Group(
+        "lookups",
         "pace",
         "How often",
         "",
@@ -837,6 +943,59 @@ GROUPS: tuple[Group, ...] = (
             ),
         ),
         folded=True,
+    ),
+    Group(
+        "happening",
+        "feeds",
+        "Calendars read by hand",
+        "Any calendar you know of, one address a line: the iCal or .ics link a library, a school "
+        "or a venue gives for subscribing. Read once a day by this server, which sends nothing of "
+        "the family with it.",
+        (
+            field(
+                "event_feeds",
+                "Calendar addresses",
+                "One a line, starting with https:// (a webcal:// link works too).",
+                unset="none",
+                lines=True,
+            ),
+        ),
+    ),
+    Group(
+        "happening",
+        "search",
+        "Looking on its own",
+        "Once a week it searches the web for what is on near home over the next four weeks, and "
+        "every so often it looks for calendars near home to offer you above. Both are model calls "
+        "with the web, a few cents each, held to the month's budget here and the daily limit. "
+        "They need web lookups on, under Lookups.",
+        (
+            field("happening_search", "Search the web for what is on"),
+            field(
+                "happening_refind_days",
+                "Days between looking for calendars",
+                "It also looks at once when the home area changes.",
+            ),
+            field(
+                "happening_budget",
+                "Most it may spend a month (US$)",
+                "0 makes no model calls for it; the calendars and Ticketmaster cost nothing.",
+            ),
+        ),
+    ),
+    Group(
+        "happening",
+        "near",
+        "How far",
+        "",
+        (
+            field(
+                "happening_radius_km",
+                "Kilometers from home",
+                "For Ticketmaster. A calendar lists what it lists; the search keeps to about two "
+                "hours away.",
+            ),
+        ),
     ),
     Group(
         "connections",
@@ -868,11 +1027,23 @@ GROUPS: tuple[Group, ...] = (
             ),
             field(
                 "private_when_personal",
-                "Send what's for one person to their own chat",
+                "Send what's for one person to them",
                 "A reminder for somebody's own task, a note on an idea they added, how their "
-                "plan went: to their own chat with the bot, once they have written to it there, "
-                "rather than to the whole group. What is for everyone stays in the group. Either "
-                'way, a plain "saved" in the group is a 👌 on the message, which buzzes nobody.',
+                "plan went: to their own chat with the bot on Telegram, once they have written "
+                "to it there, or else to their conversation on this page, rather than to the "
+                "group, this page or whoever's chat it was asked for in. What is for everyone "
+                'stays in the group. Either way, a plain "saved" in the group is a 👌 on the '
+                "message, which buzzes nobody.",
+            ),
+            field(
+                "family_chat_id",
+                "The family's chat",
+                "Where a reminder for everyone goes when it was asked for on this page or in "
+                "somebody's own chat (one asked for in a group stays there). Choose a chat it "
+                "has seen, or another Telegram chat by its id. Default: where the weekend ideas "
+                "go, else where it was asked for.",
+                unset="where the weekend ideas go",
+                another="Another Telegram chat",
             ),
         ),
     ),
@@ -892,6 +1063,67 @@ GROUPS: tuple[Group, ...] = (
         ),
     ),
     Group(
+        "troubleshooting",
+        "log",
+        "How much is logged",
+        "Turn this up when chasing a problem, and back down afterwards: more detail is more to "
+        "read, and Debug writes a lot.",
+        (
+            field(
+                "log_level",
+                "What the server writes",
+                "To its own log, which the lines below are drawn from. Nothing less than this "
+                "can be kept or shown.",
+                choices=("DEBUG", "INFO", "WARNING", "ERROR"),
+                words=(
+                    ("DEBUG", "Debug: everything"),
+                    ("INFO", "Info: the usual"),
+                    ("WARNING", "Warnings and errors"),
+                    ("ERROR", "Errors only"),
+                ),
+            ),
+            field(
+                "problem_log_level",
+                "What is kept here to read",
+                "The lines at least this serious are kept in the database and listed on this "
+                "page for a month. Warnings and errors are the ones that say what went wrong.",
+                choices=("DEBUG", "INFO", "WARNING", "ERROR"),
+                words=(
+                    ("DEBUG", "Debug: everything"),
+                    ("INFO", "Info and up"),
+                    ("WARNING", "Warnings and errors"),
+                    ("ERROR", "Errors only"),
+                ),
+            ),
+            field(
+                "log_areas",
+                "A different level for one part",
+                "One a line: a part, an equals sign and a level, such as models=DEBUG. The parts "
+                "are " + ", ".join(logs.AREAS) + ". Anything else with a dot in it is taken as a "
+                "logger's own name.",
+                unset="none",
+                lines=True,
+            ),
+        ),
+    ),
+    Group(
+        "troubleshooting",
+        "words",
+        "The models' own words",
+        "",
+        (
+            field(
+                "keep_ai_text_days",
+                "Days the models' words are kept",
+                "Everything each model was sent and said, so an admin can read it below. 0 keeps "
+                "none. It holds the family's own words, including the family and ideas lists "
+                "sent with every message, and whatever a grown-up has kept from the others: only "
+                "admins see it, and a backup keeps what it held. It goes sooner than this if "
+                "messages are set to be forgotten sooner.",
+            ),
+        ),
+    ),
+    Group(
         "security",
         "signing-in",
         "Staying signed in",
@@ -901,6 +1133,21 @@ GROUPS: tuple[Group, ...] = (
                 "web_session_days",
                 "Days a sign-in lasts",
                 "How long a phone or computer stays signed in before it asks again.",
+            ),
+        ),
+    ),
+    Group(
+        "security",
+        "keeping",
+        "How long messages are kept",
+        "",
+        (
+            field(
+                "keep_messages_days",
+                "Days a message keeps its words",
+                "0 keeps them for good. Otherwise, each night, a message older than this keeps "
+                "its place in the conversation but not what it said; at least 30 days. What she "
+                "remembers, the ideas, plans and to-dos are kept whatever this says.",
             ),
         ),
     ),
@@ -921,7 +1168,9 @@ def parse(one: Field, given: str) -> Any:
     text = given.strip()
     if not text:
         return None
-    if len(text) > MAX_LENGTH:
+    if one.lines:
+        text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
+    if len(text) > (MAX_LINES_LENGTH if one.lines else MAX_LENGTH):
         raise ValueError(TOO_LONG)
     if one.kind == "toggle":
         return text == "true"

@@ -8,6 +8,17 @@ older than what is installed. It gets a date when it is released.
 
 ### New since v0.2.0
 
+- **Troubleshooting**, for admins, on the settings page. What went wrong in one place: what needs
+  an admin, messages that did not go through, lookups that failed, calls to a model that failed
+  and why, and a problem log of the warnings and errors the server logged (the same trouble
+  again is one line with a count). Beside it, the words of every call to a model, as sent and as
+  answered, with the instructions and tools it started from, and a link to them from each model
+  call on a message's history. Log levels are on the page too: what the server writes, how much
+  of it is kept to read, and a different level for one part (models, Telegram, jobs, the web
+  page...), so chasing one problem needs no flood from the rest. The models' words are kept for
+  14 days unless the family says otherwise (0 keeps none), go sooner with the messages if those
+  are set to be forgotten sooner, and go for good with a person taken off. They hold the
+  family's own words, which an admin can read; a backup keeps what it held.
 - **Looks.** Each browser can choose how the page looks on a new Look page, in
   the bar's menu for anybody signed in: Phosphor, as before, or Midnight, Home
   Computer, Ink, Enamel, Rail yellow or Fjord, each by day and by night, and
@@ -94,6 +105,114 @@ older than what is installed. It gets a date when it is released.
   number can be tapped to call; an old browser that cannot do day-and-night colours
   gets plain ones. A ticked-off to-do has an Undo, and a kid's To do keeps this week's
   under "Done lately".
+- **Reminders reach the person they are for.** A reminder set on the page, or
+  set for somebody else ("remind Alex to..."), goes to that person's own
+  Telegram chat with Vera, saying who asked, or to their conversation on the
+  page until they open one. One for everyone goes to the family's chat, a new
+  setting on Connections. Taking somebody off cancels the to-dos they owned
+  outside the family group, which would otherwise have become everyone's.
+- **Plans work without Google Calendar.** They are kept here, count as busy
+  time for suggestions and nudges, and go onto Google once it is connected.
+  A plan made on the page is checked the evening before and asked about after,
+  like one made in a chat; a plan that moves is checked again for its new day;
+  and the evening check runs every hour until ten, so a plan made late for
+  tomorrow is still caught.
+- **A reminder before a plan moves with it.** "Remind me a week before the
+  concert" is tied to the concert: it moves when the concert does, by Vera or
+  in Google, goes if it is canceled, says when the concert is, and is done
+  once it is over.
+- **Suggestions look at every idea.** Every saved idea is checked, not only the
+  first eight, and asking again brings others up. "The kids" now finds an idea
+  saved "with the girls", and an idea whose plan has passed can be suggested
+  again.
+- **To-dos do not get lost.** "Next time I have some free time" and "this
+  weekend" are understood, so Vera brings them up then; when nothing will
+  bring one up, she offers a reminder. /tasks shows a reminder already sent,
+  and Tomorrow under a reminder is never the middle of the night.
+- **A morning message.** At seven (Messages, Each morning), one message a chat
+  with what is on today, a reminder from yesterday nobody acted on, what is due
+  tomorrow, and on Sundays the to-dos nothing will bring up. An idea that ends
+  this week, with a free day before then, is mentioned once. Nothing is sent on
+  an empty day, and each part has its own switch.
+- **Notices on phones and tablets for people who use only the page.** The Chat
+  link says how many of Vera's messages are new, and each of you can turn on
+  notices for your own device under Your password: "Vera has a message", never
+  her words. On an iPhone or iPad the page must be added to the Home Screen
+  first.
+- **Undo.** "Undo that", /undo, an Undo beside the page's notice after a change,
+  and a ↩ Undo button under her reply in your own Telegram chat take back your
+  last change within a day: an idea added or changed, a to-do, a plan made or
+  moved, something remembered, a list change. What cannot be taken back (how a
+  plan went, a message already sent) is said so. An idea's page and a to-do say
+  who changed them last, and from where.
+- **Shopping lists.** "We're out of milk" goes on the shopping list, once however
+  it is written; other lists by name ("the hardware list"). /list on Telegram
+  shows it with a ✓ to tap for each thing, and a new Lists page (in the menu on
+  a phone) adds, ticks and clears. For now a kid can read the lists and is told
+  to ask a parent to add.
+- **Buttons on the page.** A reminder in the page's chat has Done and the
+  snoozes under it, as on Telegram, so a kid without Telegram can tick off her
+  own. On Telegram, a tap takes away only the row it was on.
+- **A clash is said.** A plan made or moved onto something already on the
+  calendar says what it clashes with.
+- **Getting things in.** Several ideas at once on the new-idea page, one a line;
+  a photo from the page's chat, as from Telegram; and on Android, sharing a page
+  or some words to the installed page opens the chat with them in the box.
+- **Your favorites can win.** Ask for "our usual" or something you know you'd
+  love, and what you loved comes first. A restaurant you went to is offered again
+  after three weeks, an activity after a month, a day trip after six months. One
+  disappointing visit no longer rules a place out for good: it is offered with
+  the rating said, and only two low ratings in a row in the same year leave it
+  out. "How was it?" now has Loved it, It was OK, Not again and Didn't go.
+- **Firm rules are kept.** Tell Vera "no drives over 30 minutes until my back is
+  better", or "nothing loud", and suggestions keep to it, saying why something
+  was left out, including /now and the evening backup. What she remembers shows
+  what each rule holds.
+- **Ages.** An idea can say the ages it suits ("ages 6+"), and one a kid coming
+  is too young or too old for is left out, with the reason.
+- **Lookups fill in more.** When Vera looks an idea up, what it costs, indoors or
+  out, how long a visit takes, whether to book, the ages it suits, and an
+  event's dates go on the idea, where you had not said already. Asked for
+  something cheap, an idea whose price nobody knows is said as such.
+- **Now means now.** "Now" and "today" are judged by their own hours, so rain this
+  morning does not rule out this afternoon, and the evening check looks at the
+  hours of the plan itself.
+- **What is over leaves the list.** An event a week past its last day is taken
+  off overnight (Lookups page); its page can bring it back.
+- **Places on the web, if you want them.** Asked for a kind of place nothing on
+  your list fits ("Thai food, what's open now?"), Vera can look nearby and offer
+  a few, said as found on the web. It costs a little each time, so it is off
+  until you turn it on (Lookups, "Look for a place when nothing saved fits").
+- **Your data, to take away.** Download the plans for another calendar, and the
+  ideas and to-dos as spreadsheets, from the foot of those pages; an admin can
+  download everything the family has kept, after typing their password again.
+  `familydb export` does the same on the server. Never a key or a password.
+- **How long messages are kept is yours to choose.** For good, as before, unless
+  you set a number of days under Sign-in and security: older messages then keep
+  their place in the conversation but not their words.
+- **Backups that are checked.** Each night's backup is read back to make sure it
+  could be restored, Status says when the last good one was, and admins are told
+  when none has worked for a day and a half, or the disk is nearly full. A
+  Telegram token that stopped working shows on Status.
+- **A health check that means it.** `/healthz` and the new `familydb health` say
+  whether the database answers and the scheduled jobs are running, and Docker
+  uses it to mark the bot unhealthy.
+- **What's new** at the bottom of the Status page: this list, for the version
+  running.
+- **What's going down?** What is on near home, found by the app: the calendars
+  of the library, the city, parks and venues near you (it looks for them itself
+  and offers them to tick), Ticketmaster's shows with a free key, and a weekly
+  search. A third tab beside Plans' Month and List, for grown-ups, and offered
+  in the suggestions. Reading calendars and Ticketmaster asks no model; the
+  search and the calendar lookup are held to their own US$1 a month.
+- **Vera's picks, chosen with everything she knows.** For "what should we do
+  this weekend?" or "where should we eat tonight?", and the Thursday digest, a
+  stronger model is given what the family has told her and done (ratings and
+  notes, what she remembers, the weeks around, this chat) and chooses a
+  favorite, something new and a wildcard, each with a reason; Vera says them.
+  Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
+  a kid's question or one about right now.
+
 
 ## v0.2.0 — second alpha (2026-10-05)
 

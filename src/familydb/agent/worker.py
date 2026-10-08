@@ -1,4 +1,4 @@
-"""Worker turns (enrichment, discovery): the only turns with web tools, handing results back
+"""Worker turns (enrichment, discovery, places): the only turns with web tools, handing results back
 through strict client tools. What each kind may use is in `gateway.KINDS`."""
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.tools import ToolContext, ToolRegistry
 
-WorkerKind = Literal["enrich", "discover"]
+WorkerKind = Literal["enrich", "discover", "places", "scout", "find_feeds"]
 
 
 @dataclass
@@ -71,6 +71,7 @@ def run_worker_turn(
         geocoder=geocoder,
         worker_idea_id=idea_id,
         about=about,
+        source="worker",
     )
     result = gateway.ask(
         kind,

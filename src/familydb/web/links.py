@@ -21,4 +21,5 @@ LINKS: dict[str, str] = {
     "google_calendar_settings": "https://calendar.google.com/calendar/r/settings",
     "telegram": "https://telegram.org/",
     "botfather": "https://t.me/BotFather",
+    "ticketmaster_developer": "https://developer.ticketmaster.com/",
 }

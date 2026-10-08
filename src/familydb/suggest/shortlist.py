@@ -1,16 +1,36 @@
-"""Stage: which ideas plausibly fit the window; pure rules, the first failing one is the reason."""
+"""Stage: which ideas plausibly fit the window; pure rules, the first failing one is the reason.
+
+Every idea that passes goes on to be evaluated: that is local work (its place, and arithmetic), so
+none is left "not checked in detail" for coming late on the list, and which are shown is decided
+after, by the same order the reply is given in (compose.py).
+"""
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import date
 
 from familydb.config import Settings
+from familydb.dates import age_on
 from familydb.integrations.open_meteo import DayForecast
-from familydb.store.ideas import GIFT, Idea
+from familydb.store.ideas import GIFT, Idea, ages_text
+from familydb.store.members import Member
+from familydb.suggest import people as who
 from familydb.suggest.types import Candidate, Constraints, Context, Shortlisted
 
-RECENTLY_DONE_DAYS = 60
-LOW_RATING = 5.0
+# How long an idea that was done rests before it is offered again, by kind: a restaurant is good
+# again sooner than a day trip. Any other kind rests REST_DAYS; asked for their favorites ("our
+# usual"), a week is enough.
+REST_DAYS = 60
+REST_BY_KIND = {"restaurant": 21, "activity": 30, "outing": 60, "day_trip": 180}
+FAVORITE_REST_DAYS = 7
+# A rating below this is a disappointment. Only the last two in a year count: one is feedback, not
+# a dislike (docs/MEMORY.md), so it is offered as possible with the rating said; two in a row rule
+# it out. Older ones have lapsed: the place, or the family, has moved on.
+LOW_RATING = 5
+RATING_DAYS = 365
+# Loved: a rating this high last time, or "again" the latest word on it.
+FAVORITE_RATING = 8
 RAIN_CHANCE_MAX = 50
 RAIN_CODES = {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99}
 SNOW_CODES = {71, 73, 75, 77, 85, 86}
@@ -19,8 +39,6 @@ WARM_F = 64.0
 LONG_IDEA_MINUTES = 480
 # The least free time worth offering an idea of unknown length for.
 SHORT_VISIT_MINUTES = 60
-SHORTLIST_MAX = 8
-ANYONE = {"whole family", "family", "everyone", "anyone", "all of us"}
 
 
 def fmt_minutes(minutes: int) -> str:
@@ -52,20 +70,52 @@ def day_has_snow(forecast: DayForecast | None) -> bool | None:
     return forecast.code in SNOW_CODES
 
 
-def _status_reason(idea: Idea, today: date) -> str | None:
+def rest_days(idea: Idea, prefer: str = "new") -> int:
+    """How long this idea rests once done before it is offered again."""
+    if prefer == "favorites":
+        return FAVORITE_REST_DAYS
+    return REST_BY_KIND.get(idea.kind.casefold(), REST_DAYS)
+
+
+def _status_reason(
+    idea: Idea, today: date, plan: tuple[date, date] | None, rest: int = REST_DAYS
+) -> str | None:
+    """Why an idea is not for now, from what became of it. `plan` is its latest live plan's first
+    and last day: a planned idea is out while that is to come, and once it is over counts as done
+    on its day, so an idea nobody said how it went is not left out for good. `rest` is how many
+    days a done one rests (`rest_days`)."""
     if idea.status == "planned":
-        return "already planned"
-    if idea.status == "done" and idea.last_done_at:
+        if plan is None:
+            return "already planned"
+        first, last = plan
+        if last >= today:
+            return f"already planned for {day_text(first)}"
+        if (today - last).days < rest:
+            return f"was planned for {day_text(first)}"
+    elif idea.status == "done" and idea.last_done_at:
         try:
             days_ago = (today - date.fromisoformat(idea.last_done_at[:10])).days
         except ValueError:
             days_ago = None
-        if days_ago is not None and days_ago < RECENTLY_DONE_DAYS:
-            weeks = max(1, days_ago // 7)
+        if days_ago is not None and days_ago < rest:
+            if days_ago < 7:
+                return {0: "done today", 1: "done yesterday"}.get(
+                    days_ago, f"done {days_ago} days ago"
+                )
+            weeks = days_ago // 7
             return f"done {weeks} week{'s' if weeks != 1 else ''} ago"
-    if idea.avg_rating is not None and idea.avg_rating < LOW_RATING:
-        return f"rated {idea.avg_rating:g}/10 last time"
     return None
+
+
+def rating_reason(ratings: Sequence[int]) -> tuple[str | None, str | None]:
+    """(why it is out, what to say of it) from its ratings in the last year, newest first."""
+    last = list(ratings[:2])
+    if len(last) == 2 and all(rating < LOW_RATING for rating in last):
+        said = f"{last[0]}" if last[0] == last[1] else f"{last[1]} and {last[0]}"
+        return f"rated {said}/10 the last two times", None
+    if last and last[0] < LOW_RATING:
+        return None, f"rated {last[0]}/10 last time"
+    return None, None
 
 
 def day_text(day: date) -> str:
@@ -98,28 +148,77 @@ def dates_reason(idea: Idea, context: Context) -> str | None:
     return dates_text(idea)
 
 
-def participants_match(idea: Idea, requested: list[str]) -> bool:
+def participants_match(
+    idea: Idea, requested: list[str], people: Sequence[Member] | None = None
+) -> bool:
+    """Whether an idea is for who is coming. With the family list (`people`) both are read as
+    the people they mean (suggest/people.py), and fit when they share somebody; words that name
+    nobody on it, or no list, are compared as text."""
     if not requested or not idea.participants:
         return True
-    wanted = [r.casefold().strip() for r in requested]
+    if people:
+        wanted, saved = who.resolve(requested, people), who.resolve(idea.participants, people)
+        if wanted.anyone or saved.anyone or wanted.ids & saved.ids:
+            return True
+        if not wanted.unplaced and not saved.unplaced:
+            return False
+    folded = [r.casefold().strip() for r in requested]
     for entry in idea.participants:
         text = entry.casefold().strip()
-        if text in ANYONE:
+        if text in who.ANYONE:
             return True
-        if any(w in text or text in w for w in wanted):
+        if any(w in text or text in w for w in folded):
             return True
     return False
 
 
+def kids_coming(
+    constraints: Constraints, people: Sequence[Member], today: date
+) -> list[tuple[str, int]]:
+    """(name, age) of each kid the question is about whose age is known: those it names, or
+    every kid when it names nobody on the family list (the family is going)."""
+    named = who.resolve(constraints.participants, people) if constraints.participants else None
+    everyone = named is None or named.anyone or not named.ids
+    coming = []
+    for member in people:
+        if member.role != "kid" or not member.active:
+            continue
+        if not everyone and named is not None and member.id not in named.ids:
+            continue
+        age = age_on(member.birth_date, today)
+        if age is not None:
+            coming.append((member.display_name, age))
+    return coming
+
+
+def _age_reason(idea: Idea, kids: Sequence[tuple[str, int]]) -> str | None:
+    """Why an idea is not for a kid coming: "Mia is 4; ages 6+"."""
+    for name, age in kids:
+        if (idea.min_age is not None and age < idea.min_age) or (
+            idea.max_age is not None and age > idea.max_age
+        ):
+            return f"{name} is {age}; {ages_text(idea)}"
+    return None
+
+
 def _constraint_reason(idea: Idea, constraints: Constraints) -> str | None:
+    """Why the question's limits, or a firm rule's (named by its memory), leave it out."""
     if (
         constraints.max_cost_level is not None
         and idea.cost_level is not None
         and idea.cost_level > constraints.max_cost_level
     ):
-        return "over the budget asked for"
+        held = constraints.because("max_cost_level")
+        return f"dearer than {held} allows" if held else "over the budget asked for"
     if constraints.setting and idea.setting not in (constraints.setting, "either"):
+        held = constraints.because("setting")
+        if held:
+            return f"{idea.setting} only, and {held} says {constraints.setting}"
         return f"{idea.setting} only"
+    tags = {" ".join(tag.casefold().split()) for tag in idea.tags}
+    for tag in constraints.avoid:
+        if tag in tags:
+            return f"{tag}, which {constraints.because(f'avoid:{tag}')} rules out"
     if (
         constraints.max_duration_minutes is not None
         and idea.duration_min is not None
@@ -199,11 +298,23 @@ def _duration_fit(idea: Idea, days: list[date], context: Context) -> tuple[list[
 
 
 def shortlist(
-    all_ideas: list[Idea], context: Context, constraints: Constraints, settings: Settings
-) -> tuple[list[Shortlisted], list[Candidate], list[Candidate]]:
-    """(kept for evaluation, ruled out with reasons, extras beyond the cap as 'possible')."""
+    all_ideas: list[Idea],
+    context: Context,
+    constraints: Constraints,
+    settings: Settings,
+    *,
+    people: Sequence[Member] | None = None,
+    plans: Mapping[int, tuple[date, date]] | None = None,
+    ratings: Mapping[int, Sequence[int]] | None = None,
+    prefer: str = "new",
+) -> tuple[list[Shortlisted], list[Candidate]]:
+    """(kept for evaluation, ruled out with reasons). `people` is the family list, to read who
+    is coming by; `plans` each idea's latest live plan (`store.plans.latest_by_idea`); `ratings`
+    each idea's in the last year, newest first (`store.outcomes.recent_ratings`); `prefer` what
+    they asked for, new things or favorites, which rest less."""
     kept: list[Shortlisted] = []
     ruled_out: list[Candidate] = []
+    kids = kids_coming(constraints, people or (), context.today)
 
     def out(idea: Idea, reason: str) -> None:
         ruled_out.append(
@@ -215,12 +326,22 @@ def shortlist(
             continue
         if idea.status == "dropped" or idea.kind.casefold() == GIFT:
             continue
-        reason = _status_reason(idea, context.today)
+        reason = _status_reason(
+            idea, context.today, (plans or {}).get(idea.id), rest_days(idea, prefer)
+        )
         if reason:
             out(idea, reason)
             continue
-        if not participants_match(idea, constraints.participants):
+        reason, caveat = rating_reason((ratings or {}).get(idea.id, ()))
+        if reason:
+            out(idea, reason)
+            continue
+        if not participants_match(idea, constraints.participants, people):
             out(idea, f"for {', '.join(idea.participants)}")
+            continue
+        reason = _age_reason(idea, kids)
+        if reason:
+            out(idea, reason)
             continue
         if idea.seasons and context.season not in idea.seasons:
             out(idea, f"for {', '.join(idea.seasons)}")
@@ -234,7 +355,7 @@ def shortlist(
             out(idea, reason)
             continue
         if context.window is None:
-            kept.append(Shortlisted(idea, [], "unknown"))
+            kept.append(Shortlisted(idea, [], "unknown", caveat))
             continue
         fits, weather_state, reason = _weather_fit(idea, context, settings)
         if reason:
@@ -244,17 +365,5 @@ def shortlist(
         if reason:
             out(idea, reason)
             continue
-        kept.append(Shortlisted(idea, fits, weather_state))  # type: ignore[arg-type]
-
-    kept.sort(key=lambda s: (s.idea.times_done > 0, s.idea.last_done_at or "", s.idea.id))
-    extras = [
-        Candidate(
-            idea_id=s.idea.id,
-            title=s.idea.title,
-            verdict="possible",
-            reasons=["not checked in detail"],
-            fits_days=[d.isoformat() for d in s.fits_days],
-        )
-        for s in kept[SHORTLIST_MAX:]
-    ]
-    return kept[:SHORTLIST_MAX], ruled_out, extras
+        kept.append(Shortlisted(idea, fits, weather_state, caveat))  # type: ignore[arg-type]
+    return kept, ruled_out

@@ -226,6 +226,28 @@ def test_in_a_shared_chat_her_topics_stay_hers(settings, clock, conn, family, mi
     assert "Mia is a girl, 9." in sent and "pet" not in sent
 
 
+def test_in_a_shared_chat_her_wording_is_not_nudged(settings, clock, conn, family, mia) -> None:
+    """ "Can we…" in the family group is a question for everyone, and a nudge would be said in front
+    of them: the wording is hers alone, as her topics are; in her own chat it is still there."""
+    app = App(settings, clock)
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Saturday?")]))
+    handle_incoming(
+        app,
+        IncomingMessage("telegram", "g2", "-500", "1003", "can we do something fun tomorrow?"),
+        api=api,
+        conn=conn,
+    )
+    assert "Wording" not in json.dumps(api.requests[0]["messages"][-1])
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Saturday?")]))
+    handle_incoming(
+        app,
+        IncomingMessage("telegram", "k2", "1003", "1003", "can we do something fun tomorrow?"),
+        api=api,
+        conn=conn,
+    )
+    assert "Wording: nudge." in json.dumps(api.requests[0]["messages"][-1])
+
+
 def test_a_kid_s_own_conversation_on_the_page_is_private(conn, family) -> None:
     from familydb.agent.render import render_audience_line
 

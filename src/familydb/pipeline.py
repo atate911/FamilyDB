@@ -13,10 +13,13 @@ from typing import Any
 
 from familydb import (
     audience,
+    buttons,
     family,
     memory,
     personas,
     roles,
+    routing,
+    undo,
     voice,
     whereabouts,
     wish_service,
@@ -710,6 +713,14 @@ def _answer(
     ]
     reply_buttons = carried[0] if len(carried) == 1 else None
     now = utc_iso(app.clock.now())
+    # In somebody's own Telegram chat, a reply that changed something can take it back: an Undo
+    # under it (familydb/undo.py), on its own row. A group is spared one under every "saved".
+    if msg.channel == "telegram" and not routing.is_group(msg.channel, msg.chat_id):
+        since = utc_iso(app.clock.now() - undo.WINDOW)
+        changed = calls.undoable_for(conn, [inbound_id], since=since).get(inbound_id)
+        if changed is not None:
+            carried_too = buttons.in_row(reply_buttons, "carried") if reply_buttons else []
+            reply_buttons = carried_too + buttons.for_undo(int(changed["id"]))
     with transaction(conn):
         # Carried by this reply: marked sent with it, so the delivery job finds nothing.
         messages.mark_delivered(conn, [h.message_id for h in taken], now=now)
@@ -874,8 +885,9 @@ def _think(
 def _kid_line(
     app: App, conn: sqlite3.Connection, member: Member, text: str, *, private: bool
 ) -> str:
-    """A kid's age and, where nobody else reads, her wish topics; whether to nudge her wording
-    (docs/WISHES.md). All chosen by code.
+    """A kid's age and, where nobody else reads, her wish topics and whether to nudge her wording
+    (docs/WISHES.md): in a group "can we…" is a question for the family, and a nudge there would
+    be said in front of everyone. All chosen by code.
     """
     now = app.clock.now()
     today = now.astimezone(app.settings.tzinfo).date()
@@ -884,7 +896,7 @@ def _kid_line(
         family.age_on(member.birth_date, today),
         member.gender,
         wishes.topics(conn, member.id, utc_iso(now)) if private else None,
-        wording.choose(conn, app.settings, member.id, text, now),
+        wording.choose(conn, app.settings, member.id, text, now) if private else None,
     )
 
 

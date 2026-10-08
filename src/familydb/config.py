@@ -54,6 +54,7 @@ SECRET_FIELDS = frozenset(
         "gemini_api_key",
         "openai_api_key",
         "telegram_bot_token",
+        "ticketmaster_api_key",
         "web_password",
         "web_password_hash",
         "web_secret_key",
@@ -128,6 +129,17 @@ class Settings(BaseSettings):
     # press.
     judgement_acts: Literal["within_cost", "suggest"] = "within_cost"
     judgement_budget: float = Field(default=1.0, ge=0, le=50)
+    # Choosing what to suggest (suggest/choosing.py): for a planning question or the weekend
+    # digest, a stronger model is given everything the household knows that bears on it and
+    # chooses the picks, which the chat model then words. At most `choose_budget` US$ a month,
+    # within the daily limit; 0, or off, keeps the engine's own order. Never for a kid's
+    # question, a question about right now, or anything but a chat message.
+    choosing: bool = True
+    choose_level: Level = "best"
+    choose_budget: float = Field(default=5.0, ge=0, le=50)
+    # Model calls one choice may take: the answer, and one more if code refused a pick in it.
+    # Each re-sends the whole dossier at the strong level, so it stays small.
+    choose_max_iterations: int = Field(default=2, ge=1, le=5)
 
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-3.1-flash-lite"
@@ -209,9 +221,12 @@ class Settings(BaseSettings):
     # and one reply (pipeline.receive). 0 answers each at once.
     gather_seconds: int = Field(default=4, ge=0, le=30)
     telegram_require_mention: bool = False
-    # What is only for one person goes to their own chat with her rather than the group it began in,
-    # when they have one (routing.py).
+    # What is only for one person goes to them (routing.py): their own Telegram chat with her, else
+    # their conversation on the page, rather than the group, the page or the chat it began in.
     private_when_personal: bool = True
+    # The family's chat, where a reminder for everyone goes when it was not asked for in a group
+    # (routing.family_chat): a Telegram chat id, or "web" for the page. Unset: the weekend ideas'.
+    family_chat_id: str | None = None
     # Voice notes are heard by a speech model, then answered as if typed (gateway.listen). Claude
     # hears nothing, so a family on Claude alone needs an OpenAI or Gemini key.
     voice_notes: bool = True
@@ -246,12 +261,44 @@ class Settings(BaseSettings):
     digest_hour: int = Field(default=18, ge=0, le=23)
     follow_up_hour: int = Field(default=10, ge=0, le=23)
     task_nudges: bool = True
+    # The nightly tidy (jobs/tidy.py): an idea whose dates are a week past leaves the list.
+    tidy_ideas: bool = True
+    # How many days a message keeps its words (jobs/tidy.py); 0 keeps them for good, the default
+    # and the family's to change (docs/DESIGN.md section 16).
+    keep_messages_days: int = Field(default=0, ge=0, le=36500)
+    # A place nothing saved fits, looked for on the web (suggest/places.py). Spending, so the
+    # family's to turn on (docs/DESIGN.md section 16): off until they do.
+    find_places: bool = False
     follow_ups: bool = True
     plan_checks: bool = True
     plan_check_hour: int = Field(default=19, ge=0, le=23)
+    # The morning message (jobs/morning.py): each part on by default, the family's decision.
+    morning_hour: int = Field(default=7, ge=0, le=23)
+    morning_agenda: bool = True
+    chase_missed: bool = True
+    deadline_heads_up: bool = True
+    forgotten_roundup: bool = True
+    roundup_day: Weekday = "sun"
+    # "Vera has a message" on the phones and tablets of people who use only the page (push.py).
+    web_push: bool = True
     google_calendar_id: str | None = None
     google_key_path: Path = Path("data/google_key.json")
     enrichment_notes: bool = True
+
+    # Dated things near home, found by the app (familydb/happening.py, jobs/happening.py). The
+    # calendars it reads, one address a line: those it proposed that an admin ticked, and any
+    # pasted by hand. Read by this server once a day; nothing of the family is sent with them.
+    event_feeds: str = Field(default="", max_length=2000)
+    # Ticketmaster's events within this many kilometers of home, with its free key.
+    ticketmaster_api_key: str | None = None
+    happening_radius_km: int = Field(default=80, ge=5, le=300)
+    # A web search for what is on near home over the next four weeks, once a week, and a lookup
+    # for event calendars near home every `happening_refind_days` days. Both are model calls, held
+    # with the rest of the job's to `happening_budget` US$ a month, within the daily
+    # limit; 0 makes none.
+    happening_search: bool = True
+    happening_refind_days: int = Field(default=30, ge=7, le=90)
+    happening_budget: float = Field(default=1.0, ge=0, le=20)
 
     web_enabled: bool = False
     web_host: str = "127.0.0.1"
@@ -272,6 +319,11 @@ class Settings(BaseSettings):
 
     console_member: str | None = None
     log_level: str = "INFO"
+    # How much of the log is kept in the database for the Troubleshooting page, a different level
+    # for chosen areas (logs.py), and how long the words of model calls are kept (0 keeps none).
+    problem_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "WARNING"
+    log_areas: str = Field(default="", max_length=2000)
+    keep_ai_text_days: int = Field(default=14, ge=0, le=365)
     # Sent with each OpenStreetMap geocoder lookup as its usage policy asks (an email address or a
     # web page). Empty, none is sent: it leaves the house with every lookup, so it is the operator's
     # to give.
@@ -292,6 +344,26 @@ class Settings(BaseSettings):
                 and names.get(str(key).lower(), str(key).lower()) not in EMPTY_MEANS_UNSET_EXCEPT
             )
         }
+
+    @field_validator("event_feeds")
+    @classmethod
+    def _feed_lines(cls, value: str) -> str:
+        """One calendar's address a line, blank lines dropped; each a web address."""
+        from urllib.parse import urlsplit
+
+        lines = []
+        for line in value.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith("webcal://"):
+                line = "https://" + line[len("webcal://") :]
+            parts = urlsplit(line)
+            if parts.scheme not in ("http", "https") or not parts.hostname:
+                raise ValueError(f"each line is a web address starting with https://: {line}")
+            if line not in lines:
+                lines.append(line)
+        return "\n".join(lines)
 
     @field_validator("persona")
     @classmethod
@@ -369,6 +441,14 @@ class Settings(BaseSettings):
     @classmethod
     def _upper(cls, value: str) -> str:
         return value.upper()
+
+    @field_validator("log_areas")
+    @classmethod
+    def _area_lines(cls, value: str) -> str:
+        """One area a line, `models=DEBUG`; blank lines dropped."""
+        from familydb.logs import parse_areas
+
+        return "\n".join(f"{name}={level}" for name, level in parse_areas(value).items())
 
     @model_validator(mode="after")
     def _resolve_timezone(self) -> Settings:

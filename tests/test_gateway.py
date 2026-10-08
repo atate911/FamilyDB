@@ -82,7 +82,10 @@ def test_each_kind_is_declared_whole(kind, registry, settings) -> None:
     else:  # a worker: its own tools, its hand-back among them, and a cap on any web it has
         assert set(call.tools) <= set(specs) and set(call.hand_back) <= set(call.tools)
         assert all(specs[name].worker_only for name in call.tools)
-        assert call.surface == "worker" and call.hand_back
+        assert call.hand_back
+        # Only workers get the web. A hand-back kind may answer on the chat surface when it sees
+        # the family's own words, so they go only to the company the family already writes to.
+        assert call.surface == "worker" or call.web_searches is None
         # The judge weighs facts it is given and has no web; a worker that searches is capped.
         assert call.web_searches is None or call.web_searches > 0
 
@@ -174,3 +177,11 @@ def test_what_was_spent_is_told_apart_by_purpose(settings, clock, conn, family) 
     page = create_app(App(settings, clock)).test_client().get("/status").text
     assert "looking ideas up" in page and "answering the family" in page
     assert "not recorded (older calls)" in page
+
+
+def test_choosing_answers_on_the_chat_surface() -> None:
+    """The dossier holds the family's words and memories: never to a different lookup company."""
+    call = gateway.spec("choose")
+    assert call.surface == "chat" and call.web_searches is None
+    assert call.tools == ("give_picks",) == call.hand_back
+    assert call.iterations == "choose_max_iterations" and call.level == "choose_level"

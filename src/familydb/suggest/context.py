@@ -6,9 +6,12 @@ from __future__ import annotations
 import logging
 from datetime import date, timedelta
 
+from familydb.availability import calendar_available
 from familydb.clock import season_for
 from familydb.errors import ToolError
 from familydb.free_time import events_by_day, free_spans
+from familydb.integrations.open_meteo import DayForecast
+from familydb.saved_plans import SavedPlans
 from familydb.suggest.types import Context, DayBounds, DayContext
 from familydb.tools import ToolContext
 from familydb.tools.weather import forecast_days
@@ -36,12 +39,17 @@ def build_context(
     free_by_day: dict[str, list[tuple[int, int]]] = {}
     commitments: dict[str, list[str]] = {}
     free_known = True
-    if ctx.calendar is None:
+    calendar = ctx.calendar
+    if calendar is None and not ctx.ignore_busy and not calendar_available(ctx.settings):
+        # No Google calendar: the plans kept here are what takes time up (saved_plans.py).
+        calendar = SavedPlans(ctx.conn, tz)
+        skipped.append("no Google calendar connected: only the plans saved here count as busy")
+    if calendar is None:
         skipped.append("calendar not connected")
         free_known = False
     else:
         try:
-            for day, todays in events_by_day(ctx.calendar, start, end, tz):
+            for day, todays in events_by_day(calendar, start, end, tz):
                 free_by_day[day.isoformat()] = free_spans(todays, day, tz, *limits[day])
                 commitments[day.isoformat()] = [e.title for e in todays if e.all_day] + [
                     e.title for e in todays if not e.all_day
@@ -74,13 +82,19 @@ def build_context(
                 date=day,
                 spans=free_by_day.get(day.isoformat(), _unknown(limits[day])),
                 free_known=free_known,
-                forecast=forecasts.get(day),
+                forecast=_part(forecasts.get(day), limits[day]),
                 commitments=commitments.get(day.isoformat(), []),
                 bounds=limits[day],
             )
         )
         day += timedelta(days=1)
     return Context((start, end), days, season_for(start, southern=southern), today, skipped)
+
+
+def _part(forecast: DayForecast | None, limits: tuple[int, int]) -> DayForecast | None:
+    """The day's weather for the hours asked about, when the forecast has them: rain at six in
+    the morning says nothing about this afternoon."""
+    return forecast.between(*limits) if forecast is not None else None
 
 
 def _unknown(limits: tuple[int, int]) -> list[tuple[int, int]]:

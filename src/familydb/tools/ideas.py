@@ -8,6 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from familydb import presents
+from familydb import undo as taking_back
 from familydb.agent.render import render_idea_line
 from familydb.dates import parse_date, parse_datetime
 from familydb.errors import ToolError
@@ -69,6 +70,8 @@ class AddIdeaInput(BaseModel):
     lead_time_days: int | None = Field(
         default=None, description="How far ahead it must be booked, in days."
     )
+    min_age: int | None = Field(default=None, description="Ages 6+ is min_age 6.")
+    max_age: int | None = None
     happens_from: str | None = Field(default=None, description=FROM_HELP)
     happens_until: str | None = Field(default=None, description=UNTIL_HELP)
     suggested_by: str | None = Field(
@@ -94,6 +97,8 @@ class UpdateIdeaInput(BaseModel):
     cost_level: CostLevel | None = None
     needs_booking: bool | None = None
     lead_time_days: int | None = None
+    min_age: int | None = None
+    max_age: int | None = None
     happens_from: str | None = Field(default=None, description=FROM_HELP + CLEARS)
     happens_until: str | None = Field(default=None, description=UNTIL_HELP + CLEARS)
     status: Status | None = Field(
@@ -169,6 +174,22 @@ def _dated(
     return changes
 
 
+# Ages an idea can be for: a toddler to a grandparent.
+OLDEST = 120
+
+
+def _ages(given_min: int | None, given_max: int | None, before: ideas.Idea | None = None) -> None:
+    """Refuse ages that cannot be: below nought, past `OLDEST`, or the youngest over the oldest
+    (with `before`'s, for the one not given)."""
+    for age in (given_min, given_max):
+        if age is not None and not 0 <= age <= OLDEST:
+            raise ToolError(f"an age is 0 to {OLDEST}")
+    low = given_min if given_min is not None else (before.min_age if before else None)
+    high = given_max if given_max is not None else (before.max_age if before else None)
+    if low is not None and high is not None and low > high:
+        raise ToolError(f"min_age {low} is over max_age {high}")
+
+
 def _first(ctx: ToolContext, text: str) -> str:
 
     text = text.strip()
@@ -217,6 +238,7 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
             "idea": existing.model_dump(mode="json"),
         }
     suggested_by = _resolve_member_name(ctx, args.suggested_by)
+    _ages(args.min_age, args.max_age)
     fields = args.model_dump(exclude={"title", "kind", "suggested_by", *DATES})
     fields |= _dated(ctx, args.happens_from, args.happens_until)
     with transaction(ctx.conn):
@@ -230,6 +252,9 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
             **fields,
         )
         _keep_presents(ctx, idea)
+    taking_back.keep(
+        ctx, "drop_idea", f"added idea #{idea.id} {idea.title}", idea=idea.id, status=idea.status
+    )
     return idea.model_dump(mode="json")
 
 
@@ -257,13 +282,23 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
             )
         if current is None or _kept_from(ctx, current):
             raise ToolError(f"no idea #{args.id}")
+        _ages(args.min_age, args.max_age, current)
         changes |= _dated(ctx, args.happens_from, args.happens_until, current)
         idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
         if idea is not None:
             _keep_presents(ctx, idea)
     if idea is None:
         raise ToolError(f"no idea #{args.id}")
-    return idea.model_dump(mode="json")
+    was, now_is = current.model_dump(mode="json"), idea.model_dump(mode="json")
+    taking_back.keep(
+        ctx,
+        "restore_idea",
+        f"changed idea #{idea.id} {idea.title}",
+        idea=idea.id,
+        before={key: was.get(key) for key in changes},
+        after={key: now_is.get(key) for key in changes},
+    )
+    return now_is
 
 
 @tool(

@@ -84,6 +84,17 @@ def test_rain_for_an_outdoor_plan_comes_with_an_indoor_backup(settings, conn, fa
     assert run_plan_checks(app) == 0  # once
 
 
+def test_rain_at_dawn_spoils_no_plan_at_ten(settings, conn, family) -> None:
+    """The plan's own hours, when the forecast has them, not the day's worst."""
+    from familydb.integrations.open_meteo import Hour
+
+    dawn = tuple(Hour(h * 60, 61 if h < 8 else 1, 90 if h < 8 else 5, 12.0) for h in range(24))
+    plan = _plan(conn, _idea(conn, "The falls hike", setting="outdoor"))
+    app, said = _app(settings, weather=(DayForecast(**{**WET.__dict__, "hours": dawn}),))
+    assert run_plan_checks(app) == 0 and said == []
+    assert plans.get(conn, plan.id).checked_at is not None
+
+
 def test_a_dry_evening_before_says_nothing(settings, conn, family) -> None:
     plan = _plan(conn, _idea(conn, "The falls hike", setting="outdoor"))
     app, said = _app(settings, weather=(DRY,))

@@ -20,6 +20,7 @@ from typing import Literal
 
 from familydb.app import App
 from familydb.calendar_sync import event_changes
+from familydb.dates import clock_time
 from familydb.store import plans as plan_store
 from familydb.store.plans import Plan
 
@@ -74,7 +75,8 @@ def _from_plan(plan: Plan) -> Entry:
 
 
 def read(app: App, conn: sqlite3.Connection, first: date, last: date) -> Agenda:
-    saved = [_from_plan(plan) for plan in plan_store.overlapping(conn, str(first), str(last))]
+    kept = plan_store.overlapping(conn, str(first), str(last))
+    saved = [_from_plan(plan) for plan in kept]
     calendar = app.calendar
     if calendar is None:
         return Agenda(saved, "saved")
@@ -105,4 +107,37 @@ def read(app: App, conn: sqlite3.Connection, first: date, last: date) -> Agenda:
                 idea_id=plan.idea_id if plan else None,
             )
         )
+    # Kept here before Google was connected, and not on it yet (calendar_sync.adopt_local).
+    entries += [_from_plan(plan) for plan in kept if plan.calendar_id is None]
     return Agenda(sorted(entries, key=lambda entry: entry.start), "google")
+
+
+def on(seen: Agenda, day: date) -> list[Entry]:
+    """What is on that day, as read."""
+    return [entry for entry in seen.entries if day in entry.days()]
+
+
+def entry_key(entry: Entry, day: date) -> str:
+    """Its place in a day's list: all day first, then by time."""
+    return "" if entry.all_day or entry.start[:10] < day.isoformat() else entry.start[11:16]
+
+
+def entry_text(entry: Entry, day: date, *, numbers: bool = True) -> str:
+    """One line of a day ("10 am to 12 pm Zoo (#4)"), as /today and the morning message say it;
+    without `numbers` no idea number (where a kid reads, the numbers being the workings)."""
+    title = entry.title + (f" (#{entry.idea_id})" if entry.idea_id and numbers else "")
+    if entry.status == "tentative":
+        title += ", tentative"
+    if entry.all_day:
+        return f"All day: {title}"
+    started_before = entry.start[:10] < day.isoformat()
+    ends_today = entry.end is not None and entry.end[:10] == day.isoformat()
+    if started_before:
+        return (
+            f"until {clock_time(entry.end)} {title}"
+            if ends_today and entry.end
+            else f"All day: {title}"
+        )
+    if ends_today and entry.end:
+        return f"{clock_time(entry.start)} to {clock_time(entry.end)} {title}"
+    return f"{clock_time(entry.start)} {title}"

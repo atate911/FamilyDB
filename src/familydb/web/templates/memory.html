@@ -20,6 +20,7 @@
                 <div class="mem__body">
                   <p class="mem__fact"><b>{{ row.fact }}</b>
                     {%- if row.firm %}<span class="tag tag--firm">Must</span>{% endif -%}
+                    {%- if row.held %}<span class="tag tag--off">{{ row.held }}</span>{% endif -%}
                     {%- if row.guess %}<span class="tag tag--off">A guess</span>{% endif -%}
                     {%- if row.until %}<span class="tag tag--when">{{ icon('cal') }}{{ 'Ended' if row.ended else 'Until' }} {{ row.until }}</span>{% endif -%}</p>
                   <p class="mem__src"><span class="mem__kind">{{ row.kind }}</span> · {{ row.source }}{% if row.said %}: <q>{{ row.said }}</q>{% endif %}</p>

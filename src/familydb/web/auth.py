@@ -80,6 +80,8 @@ MAX_ADDRESS = 64
 # icons, which a phone fetches without the cookie.
 OPEN_ENDPOINTS = frozenset(
     {"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "web.manifest", "static"}
+    # The service worker, which a phone fetches to show a notice, without the cookie (push.py).
+    | {"web.service_worker"}
 )
 # Where somebody signed in with a starting password may go before they have chosen their own.
 CHOOSING = frozenset({"family.you", "family.choose"})
@@ -92,6 +94,8 @@ NEEDS: dict[str, roles.Permission] = {
     "family": "manage",
     # Private words from any chat.
     "activity": "manage",
+    # What each model was sent and said, and the log: the same private words, in full.
+    "troubleshooting": "manage",
     # How it works and how to run it: not for kids (docs/DESIGN.md section 16).
     "wiki": "browse",
 }
@@ -102,15 +106,29 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "web.edit_task": "change",
     "web.memory": "browse",
     "web.status": "browse",
+    # What is on near home: grown-ups' (Ticketmaster lists shows for adults too), like Plans' tabs.
+    "web.happening_page": "browse",
+    # The family's data to take away (export.py): a grown-up's; everything is an admin's.
+    "web.export_plans": "browse",
+    "web.export_ideas": "browse",
+    "web.export_tasks": "browse",
     "web.wishes": "wish",
     "edits.add_wish": "wish",
     "edits.move_wish": "wish",
     "edits.withdraw_wish": "wish",
     "edits.ask_parent": "wish",
     "edits.answer_wish": "decide",
-    # A kid may tick only her own (update_task holds that for page and chat alike).
+    # A kid may tick or snooze only her own (update_task holds that for page and chat alike).
     "edits.finish_task": "own_tasks",
     "edits.reopen_task": "own_tasks",
+    "edits.snooze_task": "own_tasks",
+    # Taking back a change: anybody may try; undo.py says whose they may (a kid, her own tasks).
+    "edits.undo": "own_tasks",
+    # The lists are the grown-ups' until the family decides what a kid may do with them.
+    "web.lists_page": "change",
+    # Notices on one's own devices, for anybody signed in as themselves (push.py).
+    "family.push_on": "sign_in",
+    "family.push_off": "sign_in",
 }
 EVERYBODY_S_OWN = CHOOSING
 HOME = "/"

@@ -118,7 +118,7 @@ Settings, General: type the home town as you would say it ("Vancouver, WA") and 
 
 ## 7. Backups
 
-The database is one file holding everything the family said. The installer scheduled a nightly backup; by hand:
+The database is one file holding everything the family said (and, for an admin to read when something is wrong, the words of recent calls to a model, for the days set on the settings page's Troubleshooting). The installer scheduled a nightly backup; by hand:
 
 ```bash
 sudo scripts/maintain.sh schedule-backups --keep-days 14
@@ -131,6 +131,8 @@ One line in root's crontab, for Docker or systemd: at 03:15 a backup into `backu
 ```
 15 3 * * * sudo -u familydb env FAMILYDB_PATH=/opt/familydb/data/familydb.sqlite3 /opt/familydb/.venv/bin/familydb db backup /opt/familydb/backups/familydb-$(date +\%F).sqlite3
 ```
+
+Each backup is read back once written (SQLite's `quick_check` on the copy) and recorded in the database: a copy that fails says so and exits 1, so cron mails it. Status and `familydb doctor` say when the last good one was, and once any has been recorded, admins are told when none has worked for a day and a half (the hourly upkeep, which also tells them when the disk has less than 500 MB free).
 
 `FAMILYDB_PATH` is set because cron does not run in the checkout, so `.env` is not read and the relative default path points at nothing (the backup then says so and writes nothing rather than backing up an empty database). `backups/` must be writable by `familydb`. Docker: `docker compose exec bot familydb db backup /data/backups/familydb-$(date +%F).sqlite3`. Calendar events are also in Google.
 
@@ -159,6 +161,23 @@ sudo systemctl start familydb                      # or: docker compose start bo
 `familydb db status` then shows row counts and schema version; an older file is migrated on the next start.
 
 A key or token saved on the settings page lives in this file, so it is in every backup; section 11 says when to keep keys in `.env` instead.
+
+**Moving to a new server.**
+
+1. On the new server, install as in section 1 (the installer's block from `docs/INSTALL.md`), then stop the bot: `sudo systemctl stop familydb` (or `docker compose stop bot`).
+2. On the old one, take a backup and stop the bot, so nothing is said to it after the copy: `sudo scripts/maintain.sh backup`, then `sudo systemctl stop familydb`.
+3. Copy the newest file from the old `backups/` to the new server, with `.env` (it holds what the installer wrote, and any key kept outside the page) and `data/google_key.json` if Google Calendar is connected.
+4. On the new server: `sudo scripts/maintain.sh restore /path/to/familydb-XXXX.sqlite3`, which checks it, puts it in place and starts the bot.
+5. Point the domain at the new address if there is one; on Telegram nothing changes, since the token moved with the database or `.env`.
+6. Check: `familydb health` says ok, `familydb doctor` is clean, and the Status page shows the last good backup once the first night has passed. Each phone that had notices turned on keeps them only if the address is the same; otherwise turn them on again under Your password.
+
+**Taking the data away.** A backup is the database itself, for FamilyDB to read. To take the family's data somewhere else:
+
+```bash
+familydb export ~/familydb-export       # docker compose exec bot familydb export /data/export
+```
+
+writes `plans.ics` (every plan, for any calendar), `ideas.csv` and `tasks.csv` (spreadsheets), and `everything.json` (people, ideas, places, how things went, plans, things to do, what is remembered, wish lists, lists and every message), with no key, password, Telegram id or device in any of them. On the page, a grown-up downloads the first three from the foot of Plans, Ideas and To do; an admin downloads everything from Sign-in and security, after typing their password again.
 
 ## 8. Upgrades
 
@@ -189,6 +208,8 @@ A Docker install whose Caddy kept its certificate in `data/caddy` should `mv dat
 **The evening before a plan.** At `PLAN_CHECK_HOUR` (19:00) each plan for tomorrow is rechecked in code: rain forecast for an outdoor idea, or its place listed closed then, gets a heads-up in the plan's chat with another idea for the same time when one fits; all well, nothing is said. No model call; "Check tomorrow's plans the evening before" (settings, Messages) turns it off.
 
 **Tasks kept for a window.** "One of these Saturday mornings" is brought up in the task's chat when such a morning comes round and the calendar is free for the hour ahead: each task once a week at most, one a day per chat. Only plain days and parts of the day count ("before Christmas" is left alone). No model call; the settings page (Messages) turns it off.
+
+**What is on near home.** Under its own page on the settings, named as the family call it. The calendars it reads (an iCal or .ics address a line, or ticked among those it found near home), an optional Ticketmaster key (free, from developer.ticketmaster.com: the Consumer Key of an app made there), and the weekly search with its monthly budget. Each calendar and Ticketmaster are read once a day with no model call; the search runs once a week, and the lookup for calendars every 30 days and when the home area changes, both within `HAPPENING_BUDGET` a month (US$1 unless changed) and the daily limit. `familydb happening` reads what is due now, `--now` everything; the Status page shows each source and what the searches cost this month, and an admin is told on Telegram when one cannot be read three days running. What it finds is offered in the suggestions and listed on the Plans page's third tab.
 
 **Cost.** Enrichment is at most three searches and three page reads per idea; discovery at most four searches per window and question kind per twelve hours. Both run on the lookup model (GPT-6 Luna by default; section 11) and count towards the daily limit.
 
@@ -249,13 +270,16 @@ What a sign-in buys: a parent's password (or, for now, a kid's) is most of the b
 ```bash
 curl -sI http://127.0.0.1:8080/            # 302 to /login, plus the security headers
 curl -s http://127.0.0.1:8080/healthz      # ok
+familydb health                            # the same, without the page (exit 1 when unwell)
 ```
+
+`/healthz` and `familydb health` say "ok" when the database answers and the scheduled jobs are running; otherwise what is wrong, with a 503 (or exit 1): "the database does not answer", or "the scheduled jobs have not run for 20 minutes" when `familydb run` went quiet without stopping. A page served alone (`familydb web`) has no jobs and is judged by its database; a bot stopped on purpose is not trouble. The Docker image runs `familydb health` as its HEALTHCHECK, so `docker compose ps` shows "unhealthy" when it fails three times in a row.
 
 `familydb web --port 8099` serves the page alone in the foreground, with no Telegram or jobs: the quickest way to try a `WEB_` change without restarting the bot.
 
 **Notes.** The login cookie is signed with a key generated once into `data/web_secret`; "Sign everyone out" replaces it and ends every sign-in everywhere. Set `WEB_SECRET_KEY` instead when running more than one process (or everyone is signed out at random); the page cannot replace a pinned key. The page opens its own database connection per request, safe beside the bot writing (WAL mode).
 
-**Status.** `/status` answers "is it working?" without a log: which model answers chat, digest and lookups; whether each key is set and whether from `.env` or the page; whether Telegram is connected; whether calendar, weather, web lookups and digest are set up; today's cost against the limit; cost in dollars over thirty days per purpose and per model; where each purpose's input went (instructions, tools, idea list, history, message; the real total shared out by size); prompt-cache share; what awaits lookup, which messages did not go through, and failures worth a look. Dollar figures are estimates from a price table; an asterisk marks a model the table does not list, counted high. It asks nothing of a model, so refreshing is free.
+**Status.** `/status` answers "is it working?" without a log: which model answers chat, digest and lookups; whether each key is set and whether from `.env` or the page; whether Telegram is connected; whether calendar, weather, web lookups and digest are set up; today's cost against the limit; cost in dollars over thirty days per purpose and per model; where each purpose's input went (instructions, tools, idea list, history, message; the real total shared out by size); prompt-cache share; what awaits lookup, which messages did not go through, and failures worth a look. Dollar figures are estimates from a price table; an asterisk marks a model the table does not list, counted high. It asks nothing of a model, so refreshing is free. At the bottom, What's new lists what came in the version running, read from the CHANGELOG.md that shipped with it (the Docker image copies it): the section still being written when the install follows the default branch.
 
 ## 11. Settings, and choosing OpenAI, Claude or Gemini
 
@@ -317,6 +341,8 @@ Folded under "What one message may use": longest answer (at most 64,000 tokens),
 **Worthwhile combination.** Extraction of addresses and hours is most of the volume once lookups are on; if chat moves to another provider for its writing, keep lookups on the cheaper one: `PROVIDER=anthropic`, `WORKER_PROVIDER=openai`.
 
 **Fallback.** A message the chosen provider cannot take (rate limited, unreachable, no key) is asked of another that has a key, but only before any tool has run: once an idea is saved or the calendar written, starting again elsewhere would do it twice, so a turn failing after that stays failed for the retry job. A malformed request is not handed over either (it would fail the same way). `PROVIDER_FALLBACK=false` turns it off.
+
+**Choosing the suggestions.** For a planning question ("what should we do this weekend?", "where should we eat tonight?") and the weekend digest, a stronger model chooses the picks from everything the family has told the bot and done, and the everyday model words them: about 3 to 13 cents a question, depending on the company, within US$5 a month unless changed (AI model, under "Choosing the suggestions"). It goes to the company that answers the chat, nowhere else. Over the month's amount, turned off, or failing, suggestions are made as before. On `/status` it is "choosing what to suggest".
 
 **What differs.** Claude's prompt cache is marked explicitly and lasts `ANTHROPIC_CACHE_TTL`; OpenAI and Gemini cache long prefixes themselves, so that setting does nothing there. Lookups and discovery work on all three. Conversations to OpenAI are sent with storage off. `familydb debug validate-tools` and `familydb doctor --online` check key and tools on Claude and Gemini (token counting, free); OpenAI has no such endpoint, so the first real message checks. Choosing the company and key on the settings page checks the key with the company for free, whichever it is.
 

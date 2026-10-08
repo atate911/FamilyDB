@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from familydb import alerts
-from familydb.agent import compose, spending
+from familydb.agent import compose, spending, transcript
 from familydb.agent.compose import Composed
 from familydb.agent.history import HistoryTurn
 from familydb.agent.loop import MessagesAPI, TurnResult, run_turn, worth_switching
@@ -44,7 +44,19 @@ from familydb.tools import ToolContext, ToolRegistry
 
 log = logging.getLogger(__name__)
 
-Kind = Literal["chat", "digest", "retry", "enrich", "discover", "judge", "price_check"]
+Kind = Literal[
+    "chat",
+    "digest",
+    "retry",
+    "enrich",
+    "discover",
+    "places",
+    "scout",
+    "find_feeds",
+    "choose",
+    "judge",
+    "price_check",
+]
 
 
 @dataclass(frozen=True)
@@ -107,6 +119,56 @@ KINDS: dict[str, CallSpec] = {
             hand_back=("report_finds",),
             web_searches=4,
             **_WORKER,
+        ),
+        # A place nothing saved fits, found on the web for now or the next days, while the family
+        # has `find_places` on (suggest/places.py); never an event, which is discovery's.
+        CallSpec(
+            "places",
+            "searching for a place nothing saved fits",
+            prompt="places",
+            tools=("report_finds",),
+            hand_back=("report_finds",),
+            web_searches=4,
+            **_WORKER,
+        ),
+        # The weekly search for what is on near home over the next four weeks (jobs/happening.py):
+        # discovery's prompt and hand-back, a kind of its own so its cost is held to the
+        # family's monthly budget for it rather than counted with the chat's.
+        CallSpec(
+            "scout",
+            "searching for what is on near home",
+            prompt="discover",
+            tools=("report_finds",),
+            hand_back=("report_finds",),
+            web_searches=4,
+            **_WORKER,
+        ),
+        # Looking for event calendars near home to offer the family (jobs/happening.py): what
+        # it hands back is only addresses, each read by code before anyone is offered it.
+        CallSpec(
+            "find_feeds",
+            "looking for event calendars near home",
+            prompt="find_feeds",
+            tools=("report_feeds",),
+            hand_back=("report_feeds",),
+            web_searches=6,
+            **_WORKER,
+        ),
+        # Choosing what to suggest for a planning question (suggest/choosing.py): the family's own
+        # words and memories go into it, so it answers on the chat surface, the company the
+        # family already writes to, at the level the family chose for it, with no web. Its only
+        # output is one hand-back, checked by code; at most two calls, since each re-sends the
+        # whole dossier at the strong level.
+        CallSpec(
+            "choose",
+            "choosing what to suggest",
+            surface="chat",
+            level="choose_level",
+            prompt="choose",
+            tools=("give_picks",),
+            hand_back=("give_picks",),
+            iterations="choose_max_iterations",
+            max_tokens=6000,
         ),
         # Weighs a change the code narrowed to a few options (familydb/judgement.py); no web.
         CallSpec(
@@ -283,6 +345,8 @@ def listen(
         clock=clock,
         message_id=message_id,
         kind=LISTEN,
+        sent=f"[a voice note, {audio.seconds} seconds, {audio.mime}; the recording is not kept]"
+        + (f"\n[hints] {hints}" if hints else ""),
         doing="hear a voice note",
         model_of=lambda provider: provider.listener(),
         estimate=lambda provider, model: spending.estimate_hearing(
@@ -320,6 +384,7 @@ def look(
         clock=clock,
         message_id=message_id,
         kind=LOOK,
+        sent=f"[a photo, {picture.mime}; the picture is not kept]\n[asked] {ask}",
         doing="look at a photo",
         model_of=lambda provider: provider.viewer(),
         estimate=lambda provider, model: spending.estimate_looking(provider.name, model),
@@ -335,6 +400,7 @@ def _written_down(
     clock: Clock,
     message_id: int | None,
     kind: str,
+    sent: str,
     doing: str,
     model_of: Callable[[Provider], str | None],
     estimate: Callable[[Provider, str | None], float],
@@ -352,6 +418,20 @@ def _written_down(
         except AgentError as exc:
             _let_go(conn, held, clock.now())
             alerts.noticed(conn, exc, provider=provider.name, now=clock.now(), model=model)
+            transcript.keep_failure(
+                conn,
+                settings,
+                None,
+                exc,
+                message_id=message_id,
+                turn=None,
+                iteration=1,
+                kind=kind,
+                about=None,
+                provider=provider.name,
+                model=model or provider.name,
+                now=clock.now(),
+            )
             if not worth_switching(exc):
                 raise
             log.warning("%s could not %s (%s)", provider.name, doing, exc)
@@ -361,8 +441,9 @@ def _written_down(
             _let_go(conn, held, clock.now())
             raise
         dollars, listed = prices.cost(provider.name, written.model or model, written.usage)
+        turn = uuid.uuid4().hex[:16]
         with transaction(conn):
-            calls.log_llm_call(
+            call_id = calls.log_llm_call(
                 conn,
                 message_id=message_id,
                 iteration=1,
@@ -377,10 +458,23 @@ def _written_down(
                 cost_usd=dollars,
                 cost_estimated=not listed,
                 kind=kind,
-                turn=uuid.uuid4().hex[:16],
+                turn=turn,
             )
             spending.settle(conn, held, clock.now())
             alerts.answered(conn, provider.name, model)
+        transcript.keep_heard(
+            conn,
+            settings,
+            call_id=call_id,
+            message_id=message_id,
+            turn=turn,
+            kind=kind,
+            provider=provider.name,
+            model=written.model or model or provider.name,
+            sent=sent,
+            heard=written.text,
+            now=clock.now(),
+        )
         if written.dropped:
             alerts.dropped(conn, provider.name, model, written.dropped, clock.now())
         if written.stop == "refusal":

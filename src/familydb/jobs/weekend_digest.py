@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 from contextlib import closing
 
+from familydb import routing
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
 from familydb.availability import digest_configured
@@ -20,11 +21,8 @@ DIGEST_TEXT = "Weekend digest: what should we do this weekend?"
 
 
 def digest_channel(chat_id: str) -> str:
-    """Which channel a configured chat id belongs to: "console" or "web" by name, else Telegram."""
-    for named in ("console", "web"):
-        if chat_id.startswith(named):
-            return named
-    return "telegram"
+    """Which channel a configured chat id belongs to (routing.channel_of)."""
+    return routing.channel_of(chat_id)
 
 
 def run_digest(app: App, *, api: MessagesAPI | None = None) -> OutgoingMessage | None:

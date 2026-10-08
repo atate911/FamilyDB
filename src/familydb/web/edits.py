@@ -18,7 +18,7 @@ from typing import Any
 from flask import Blueprint, Response, current_app, flash, redirect, request, session, url_for
 from werkzeug.datastructures import MultiDict
 
-from familydb import presents
+from familydb import buttons, presents
 from familydb.app import App
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
@@ -34,6 +34,12 @@ bp = Blueprint("edits", __name__)
 # The flash category, apart from the settings page's.
 NOTICE = "edit"
 SAVED_IDEA = "Saved #{id} {title}."
+# Several ideas at once, one a line (add_ideas).
+MOST_AT_ONCE = 20
+ADDED_SEVERAL = "Added {ideas}."
+ALREADY_THERE = "Already there: {ideas}."
+NOT_ADDED = "Not added: {ideas}."
+NEEDS_LINES = "Write one idea a line, and the kind they all are."
 CHANGED_IDEA = "Changed #{id} {title}."
 DUPLICATE = "There is already an idea called that: #{id}. Nothing was added."
 STALE_IDEA = (
@@ -52,12 +58,19 @@ TICKED = "Done: {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
 REOPENED = "Back on your list: {title}."
+# Beside the notice after a change that can be taken back: the call to undo (undo.py).
+UNDO_NOTICE = "undo"
+UNDONE = "Undone: {what}."
+NOTHING_TO_UNDO = "There is nothing here to undo."
+SNOOZED = "#{id} {title} comes back at {when}."
+SNOOZED_PLAIN = "{title} comes back at {when}."
+NOT_A_SNOOZE = "Choose In an hour or Tomorrow."
 LOOKING = "Looking {what} up now: within a few minutes."
 NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
 FORGOTTEN = "Forgotten: {fact}. It will not come back from what was said before."
 NEEDS_FACT = "Say what to remember."
-TICK_PAGES = {"home": "web.home", "tasks": "web.tasks"}
+TICK_PAGES = {"home": "web.home", "tasks": "web.tasks", "chat": "chat.show"}
 NEEDS_TITLE = "An idea needs a title."
 NEEDS_KIND = "An idea needs a kind: restaurant, outing, trip, show…"
 NOT_A_NUMBER = "{label} needs to be a number."
@@ -69,6 +82,8 @@ IDEA_NUMBERS = (
     ("duration_min", "The shortest time"),
     ("duration_max", "The longest time"),
     ("lead_time_days", "The booking lead time"),
+    ("min_age", "The youngest age"),
+    ("max_age", "The oldest age"),
 )
 
 
@@ -77,10 +92,16 @@ def _app() -> App:
 
 
 def run(
-    name: str, values: dict[str, Any], *, hidden_from: list[int] | None = None
+    name: str,
+    values: dict[str, Any],
+    *,
+    hidden_from: list[int] | None = None,
+    undo_target: int | None = None,
+    offer_undo: bool = True,
 ) -> tuple[dict[str, Any] | None, str | None]:
     """Run one tool as whoever is signed in, or, under the shared password, whoever the form said.
-    Returns its result, or what went wrong (an unavailable tool's reason included)."""
+    Returns its result, or what went wrong (an unavailable tool's reason included). A change that
+    can be taken back leaves an Undo beside the notice the page shows next."""
     app = _app()
     with closing(app.connect()) as conn:
         who = auth.visitor().name or _remember(request.form.get("who", ""))
@@ -109,6 +130,8 @@ def run(
             idea_revision=request.form.get("revision") if name == "update_idea" else None,
             task_revision=_task_revision(request.form) if name == "update_task" else None,
             hidden_from=hidden_from,
+            source="page",
+            undo_target=undo_target,
         )
         result = app.registry.dispatch(name, values, ctx)
     payload = json.loads(result.content)
@@ -116,6 +139,8 @@ def run(
         return None, payload.get("error", "that did not work")
     if payload.get("available") is False:
         return None, payload.get("reason", "that is not set up yet")
+    if result.undoable and offer_undo:
+        flash(str(result.call_id), UNDO_NOTICE)
     log.info("%s from the page by %s", name, auth.client_address())
     return payload, None
 
@@ -236,6 +261,41 @@ def add_idea() -> Response:
         return _back("web.idea", idea_id=result["duplicate_of"])
     _say(SAVED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(result["id"]))
     return _back("web.idea", idea_id=result["id"])
+
+
+@bp.post("/ideas/several")
+@once
+def add_ideas() -> Response:
+    """Several ideas at once, one a line and one kind for them all: `add_idea` for each, no model
+    call, and a notice of what was added and what was there already."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.new_idea")
+    kind = _text(request.form, "kind")
+    lines = [line.strip() for line in request.form.get("titles", "").splitlines()]
+    titles = list(dict.fromkeys(line for line in lines if line))[:MOST_AT_ONCE]
+    if not titles or not kind:
+        _say(NEEDS_LINES)
+        return _back("web.new_idea")
+    added: list[str] = []
+    there: list[str] = []
+    refused: list[str] = []
+    for title in titles:
+        # Each its own call, kept as such; one Undo would take back only the last, so none.
+        result, complaint = run("add_idea", {"title": title, "kind": kind}, offer_undo=False)
+        if result is None:
+            refused.append(f"{title} ({complaint})")
+        elif "duplicate_of" in result:
+            there.append(f"#{result['duplicate_of']} {title}")
+        else:
+            added.append(f"#{result['id']} {result['title']}")
+    said = [
+        words.format(ideas=", ".join(found))
+        for words, found in ((ADDED_SEVERAL, added), (ALREADY_THERE, there), (NOT_ADDED, refused))
+        if found
+    ]
+    _say(" ".join(said))
+    return _back("web.ideas")
 
 
 @bp.post("/idea/<int:idea_id>/edit")
@@ -445,7 +505,7 @@ def add_task() -> Response:
         if chosen:
             values.update(repeat_fields(chosen) or {})
         result, complaint = run("add_task", values)
-        _say(complaint or f"Added to your to-dos: {result['task']['title']}.")
+        _say(complaint or views.task_saved(result))
     return _back("web.tasks")
 
 
@@ -508,6 +568,83 @@ def reopen_task(task_id: int) -> Response:
         result, complaint = run("update_task", {"task_id": task_id, "status": "open"})
         _say(complaint or REOPENED.format(title=result["task"]["title"]))
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/task/<int(max=9223372036854775807):task_id>/snooze")
+@once
+def snooze_task(task_id: int) -> Response:
+    """In an hour or Tomorrow under a reminder in the chat, as the buttons under it on Telegram:
+    a new reminder through `update_task`, at the time a tap there would set
+    (`buttons.snoozed_until`), at the revision the reminder was drawn at."""
+    action = request.form.get("when", "")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif _task_revision(request.form) is None:
+        _say("Reload this task before snoozing it.")
+    elif action not in buttons.SNOOZES:
+        _say(NOT_A_SNOOZE)
+    else:
+        clock = _app().clock
+        moment = buttons.snoozed_until(action, clock.now())
+        values = {"task_id": task_id, "remind_at": moment.strftime("%Y-%m-%dT%H:%M")}
+        result, complaint = run("update_task", values)
+        said = SNOOZED if auth.visitor().may("browse") else SNOOZED_PLAIN
+        when = buttons.when_text(moment, clock.today())
+        _say(complaint or said.format(id=task_id, title=result["task"]["title"], when=when))
+    return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/undo")
+@once
+def undo() -> Response:
+    """Undo beside a form's notice, and under her reply in the chat: the undo tool for the one
+    change the button names (ToolContext.undo_target, never the tool's input), as whoever is
+    signed in; it says who may. Back to the page the button was on."""
+    target = request.form.get("target", "")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif not (target.isascii() and target.isdigit() and len(target) <= 18):
+        _say(NOTHING_TO_UNDO)
+    else:
+        result, complaint = run("undo", {}, undo_target=int(target))
+        _say(complaint or UNDONE.format(what=result["undone"]))
+    back = request.form.get("back", "")
+    # Only a path on this page: never somewhere else a form could be made to send a person.
+    if not back.startswith("/") or back.startswith("//") or "\\" in back:
+        back = url_for("web.home")
+    return redirect(back)
+
+
+LIST_ACTIONS = frozenset(views.LIST_SAID)
+
+
+@bp.post("/lists/change")
+@once
+def change_list() -> Response:
+    """A list's box, ticks and clearing: shopping_list, as she would call it, as whoever is signed
+    in (a kid may not, until the family decides)."""
+    action = request.form.get("action", "")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.lists_page")
+    if action not in LIST_ACTIONS:
+        return _back("web.lists_page")
+    name = _text(request.form, "name") or "shopping"
+    things = [line.strip() for line in request.form.get("items", "").splitlines() if line.strip()]
+    result, complaint = run("shopping_list", {"action": action, "items": things, "name": name})
+    if result is None:
+        _say(complaint or "")
+        return _back("web.lists_page")
+    title = views.list_title(result["list"]).lower()
+    said = []
+    if done := result.get(action):
+        said.append(views.LIST_SAID[action].format(list=title, items=", ".join(done)))
+    elif action == "clear_ticked":
+        said.append(views.LIST_SAID[action].format(list=title, items=""))
+    if already := result.get("already"):
+        said.append(views.LIST_ALREADY.format(items=", ".join(already)))
+    _say(" ".join(said))
+    return _back("web.lists_page")
 
 
 @bp.post("/memory/new")

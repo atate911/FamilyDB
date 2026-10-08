@@ -525,3 +525,76 @@ def test_what_a_turn_did_is_said_in_words_and_looking_things_up_is_not_said() ->
     ]
     assert views.tools_used(ran) == ["Added a to-do", "Remembered something"]
     assert views.tools_used(None) == []
+
+
+def test_the_chat_link_counts_what_she_said_since_this_browser_looked(settings, clock, family):
+    """Somebody who uses only the page had no way to know she had written: the Chat link says
+    "2 new" until the chat is opened. Kept in this browser's session, no write."""
+    client = _client(settings, clock)
+    badge = re.compile(r'class="badge badge--act">(\d+) new<')
+    assert badge.search(client.get("/").text) is None  # a new browser starts from now
+    with closing(db.connect(settings.familydb_path)) as conn, db.transaction(conn):
+        for words in ("Reminder: bins out.", "Reminder: call the plumber."):
+            messages.insert_out(
+                conn, channel="web", chat_id=DEFAULT_CHAT, text=words, now="2026-09-20T21:05:00Z"
+            )
+    assert badge.search(client.get("/").text).group(1) == "2"
+    client.get("/chat")
+    assert badge.search(client.get("/").text) is None
+
+
+def test_what_another_app_shares_waits_in_the_box(settings, clock, family):
+    """The manifest offers the page as a place to share to (Android); what comes waits in the box
+    until Send, so sharing sends nothing."""
+    client = _client(settings, clock)
+    manifest = json.loads(client.get("/manifest.webmanifest").text)
+    assert manifest["share_target"]["action"] == "/chat"
+    page = client.get(
+        "/chat",
+        query_string={
+            "title": "Kiggins",
+            "text": "Look https://kiggins.example",
+            "url": "https://kiggins.example",
+        },
+    ).text
+    box = re.search(r"<textarea[^>]*>([^<]*)</textarea>", page).group(1)
+    assert box == "Kiggins\nLook https://kiggins.example\nhttps://kiggins.example"
+    with closing(db.connect(settings.familydb_path)) as conn:
+        assert conn.execute("SELECT count(*) FROM messages").fetchone()[0] == 0
+
+
+def test_a_photo_goes_from_the_chats_box_as_one_from_telegram_would(
+    settings, clock, family, monkeypatch
+):
+    """The page could not send a photo; now the chat's box can, alone or with words, and it
+    reaches the pipeline as Telegram's do, to be looked at and never kept."""
+    import io
+
+    from familydb.channels import web as channel
+    from familydb.web.chat import MAX_PHOTO_BYTES
+
+    seen: list = []
+    monkeypatch.setattr(channel, "handle_incoming", lambda app, msg, api=None: seen.append(msg))
+    client = _client(settings, clock)
+    page = client.get("/chat").text
+    assert 'enctype="multipart/form-data"' in page and 'name="photo"' in page
+    picture = b"\x89PNG\r\n\x1a\n" + b"0" * 200_000  # far over any other form's limit
+    form = {"csrf": _token(client), "once": "p1", "who": "Sam", "text": ""}
+    sent = client.post(
+        "/chat",
+        data={**form, "photo": (io.BytesIO(picture), "beach.png", "image/png")},
+        content_type="multipart/form-data",
+    )
+    assert sent.status_code == 302
+    client.chat.wait()
+    (msg,) = seen
+    (note,) = msg.photos
+    assert (note.mime, note.size, note.fetch()) == ("image/png", len(picture), picture)
+    odd = {**form, "once": "p2", "photo": (io.BytesIO(b"%PDF-1.7"), "x.pdf", "application/pdf")}
+    refused = client.post("/chat", data=odd, content_type="multipart/form-data")
+    assert refused.status_code == 400 and "JPEG or PNG" in refused.text
+    huge = (io.BytesIO(b"0" * (MAX_PHOTO_BYTES + 1)), "big.jpg", "image/jpeg")
+    refused = client.post(
+        "/chat", data={**form, "once": "p3", "photo": huge}, content_type="multipart/form-data"
+    )
+    assert refused.status_code == 400 and "too big" in refused.text

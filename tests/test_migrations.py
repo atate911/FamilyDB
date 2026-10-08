@@ -15,6 +15,9 @@ EXPECTED_TABLES = {
     "llm_calls",
     "ideas_fts",
     "schema_version",
+    "finds",
+    "find_sources",
+    "feed_proposals",
 }
 
 
@@ -118,6 +121,24 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP INDEX plans_google_event_idx")
         conn.execute("ALTER TABLE ideas DROP COLUMN hidden_from")
         conn.execute("ALTER TABLE members DROP COLUMN look")
+        conn.execute("DROP TABLE list_items")
+        conn.execute("DROP TABLE lists")
+        conn.execute("DROP TABLE push_subscriptions")
+        conn.execute("DROP TABLE push_key")
+        conn.execute("DROP TABLE mornings")
+        conn.execute("ALTER TABLE ideas DROP COLUMN nudged_at")
+        for column in ("min_age", "max_age"):
+            conn.execute(f"ALTER TABLE ideas DROP COLUMN {column}")
+        conn.execute("DROP TABLE heartbeat")
+        conn.execute("DROP TABLE backups")
+        conn.execute("DROP INDEX tool_calls_undo_idx")
+        for column in ("member_id", "source", "undo", "undone_at"):
+            conn.execute(f"ALTER TABLE tool_calls DROP COLUMN {column}")
+        for table in ("finds", "find_sources", "feed_proposals"):
+            conn.execute(f"DROP TABLE {table}")
+        conn.execute("ALTER TABLE suggestions DROP COLUMN picks")
+        for table in ("ai_texts", "ai_blobs", "problems"):
+            conn.execute(f"DROP TABLE {table}")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
         assert db.migrate(conn) == [v for v, _, _ in db.list_migrations() if v >= 8]
@@ -353,3 +374,33 @@ def test_a_present_is_kept_from_kids_by_role_after_0043(tmp_path, monkeypatch):
             ("d", "gift", None),
         ]
         conn.execute("SELECT idea_id FROM tasks")  # the column is there
+
+
+def test_a_plan_made_on_the_page_before_0044_gets_the_pages_chat(tmp_path, monkeypatch):
+    """Plans the page made had no chat, so nothing checked or asked about them; 0044 gives the
+    live ones somebody made the page's own conversation, and leaves the rest as they were."""
+    from contextlib import closing
+
+    with closing(db.connect(tmp_path / "old.sqlite3")) as conn:
+        _up_to(monkeypatch, conn, 43)
+        conn.execute(
+            "INSERT INTO members (display_name, role, active, created_at) "
+            "VALUES ('Sam', 'admin', 1, '2026-01-01T00:00:00Z')"
+        )
+        for title, by, status in (
+            ("Page", 1, "confirmed"),
+            ("Gone", 1, "cancelled"),
+            ("X", None, "confirmed"),
+        ):
+            conn.execute(
+                "INSERT INTO plans (title, start, all_day, status, created_by, created_at, "
+                "updated_at) VALUES (?, '2026-09-26T10:00', 0, ?, ?, '2026-01-01T00:00:00Z', "
+                "'2026-01-01T00:00:00Z')",
+                (title, status, by),
+            )
+        assert 44 in db.migrate(conn)
+        chats = {
+            row["title"]: (row["channel"], row["chat_id"])
+            for row in conn.execute("SELECT title, channel, chat_id FROM plans")
+        }
+        assert chats == {"Page": ("web", "web"), "Gone": (None, None), "X": (None, None)}

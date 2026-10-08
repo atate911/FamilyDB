@@ -90,4 +90,5 @@
       <p class="note mt-4">{{ icon('compass') }}Looking things up is off, so new ideas won’t get hours, prices or drive times.{% if managing %} <a href="{{ url_for('settings.section', name='lookups') }}">Turn it on in Settings</a>{% endif %}</p>
     {% endif %}
   {% endif %}
+  {% if grownup %}<p class="page-foot mt-6"><a href="{{ url_for('web.export_ideas') }}">{{ icon('arrowdown', size='sm') }}Download the ideas as a spreadsheet</a></p>{% endif %}
 {% endblock %}

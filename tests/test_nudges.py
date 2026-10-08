@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import datetime, timedelta
 
 import pytest
@@ -52,6 +53,7 @@ def _at(app, moment: datetime) -> None:
 def _task(conn, title="Get the knives sharpened", window="one of these Saturday mornings", **kw):
     """Said on Friday morning, in the page's chat unless another is named."""
     values = {"title": title, "preferred_window": window, "owner_id": kw.pop("owner_id", None)}
+    values["window_until"] = kw.pop("window_until", None)
     return task_service.create(
         conn,
         values,
@@ -75,6 +77,10 @@ def _task(conn, title="Get the knives sharpened", window="one of these Saturday 
         ("weeknights", set(range(5)), ("evening",), "a weekday evening"),
         ("some evening", set(range(7)), ("evening",), "an evening"),
         ("Monday or Wednesday night", {0, 2}, ("evening",), "a Monday or Wednesday evening"),
+        # Free time, said whole: any day the calendar has two hours free.
+        ("Next time I have some free time", set(range(7)), ("day",), "a day with two hours free"),
+        ("whenever we get a chance", set(range(7)), ("day",), "a day with two hours free"),
+        ("in my spare time", set(range(7)), ("day",), "a day with two hours free"),
     ],
 )
 def test_a_window_is_read_as_days_and_parts_of_the_day(said, days, parts, words) -> None:
@@ -93,10 +99,30 @@ def test_a_window_is_read_as_days_and_parts_of_the_day(said, days, parts, words)
         "tonight",
         "Saturday at 3",
         "Sat morning",
+        "sometime",
+        "next time I have some free time and the car is fixed",
+        "this weekend",  # with no day it was said on to count from
     ],
 )
 def test_a_window_with_any_word_it_does_not_know_is_not_read(said) -> None:
     assert windows.read(said) is None
+
+
+def test_this_weekend_ends_on_the_sunday_after_it_was_said() -> None:
+    """Read as every weekend it would nag for good; read as nothing it never came up at all."""
+    thursday = FRIDAY.date() - timedelta(days=1)
+    until = windows.until("sometime this weekend", thursday)
+    assert until == SATURDAY.date() + timedelta(days=1)
+    assert windows.until("this week, in the evening", until) == until  # said on the Sunday
+    assert windows.until("one of these Saturday mornings", thursday) is None
+    window = windows.read("this weekend", until=until, today=thursday)
+    assert window is not None and set(window.days) == {5, 6}
+    assert window.words("free") == "a free weekend day by Sun 27 Sep"
+    assert window.open_at(SATURDAY) == "day"
+    assert window.open_at(SATURDAY + timedelta(days=7)) is None  # the weekend after
+    assert windows.read("this weekend", until=until, today=until + timedelta(days=1)) is None
+    morning = windows.read("this weekend morning", until=until, today=thursday)
+    assert morning is not None and morning.parts == ("morning",)
 
 
 def test_a_nudge_goes_from_an_hour_into_the_part_until_an_hour_before_its_end() -> None:
@@ -149,6 +175,30 @@ def test_a_busy_calendar_holds_it_until_an_hour_is_free(settings, conn, family) 
     _at(app, SATURDAY.replace(hour=11))
     assert run_nudges(app) == 1
     assert said[-1].startswith("It's Saturday morning")
+
+
+def test_free_time_comes_up_when_the_calendar_has_two_hours_free(settings, conn, family) -> None:
+    calendar = CountingCalendar()
+    tuesday = SATURDAY + timedelta(days=3)  # 09:00
+    calendar.seed("Dentist", tuesday.replace(hour=10), tuesday.replace(hour=11))
+    _task(conn, "Schedule my colonoscopy", window="next time I have some free time")
+    app, said = _app(settings, tuesday, calendar=calendar)
+    assert run_nudges(app) == 0  # an hour free, not two
+    _at(app, tuesday.replace(hour=11))
+    assert run_nudges(app) == 1
+    assert said[-1].startswith(
+        "It's Tuesday morning, with two hours free, a good moment for this one: "
+        "Schedule my colonoscopy."
+    )
+
+
+def test_this_weekend_comes_up_that_weekend_only(settings, conn, family) -> None:
+    sunday = (SATURDAY + timedelta(days=1)).date().isoformat()
+    _task(conn, "Clean the garage", window="this weekend", window_until=sunday)
+    app, said = _app(settings, SATURDAY + timedelta(days=7))
+    assert run_nudges(app) == 0  # the weekend after: over
+    _at(app, SATURDAY)
+    assert run_nudges(app) == 1 and said[-1].startswith("It's Saturday, a good moment")
 
 
 def test_a_busy_day_on_the_calendar_brings_nothing_up(settings, conn, family) -> None:
@@ -239,6 +289,22 @@ def test_the_model_is_told_when_a_task_will_come_up(settings, conn, family) -> N
     assert kept["nudges"] == "on a free Saturday morning"
     vague = add_task(ctx, AddTaskInput(title="Gutters", preferred_window="before Christmas"))
     assert "nudges" not in vague
+    # Only the weekly list of what has waited will bring it up: the model is told, so it offers
+    # a reminder for sooner; with that list off, nothing will.
+    assert vague["comes_up"] == (
+        "in Sunday morning's list once a week old; offer a reminder for sooner"
+    )
+    assert "comes_up" not in kept
+    quiet = _ctx(settings, conn, family, forgotten_roundup=False)
+    alone = add_task(quiet, AddTaskInput(title="Shed", preferred_window="before Christmas"))
+    assert alone["comes_up"] == "not by itself; offer a reminder"
+    due = add_task(ctx, AddTaskInput(title="Water bill", due_at="2026-10-02T17:00"))
+    assert due["comes_up"] == "the morning before it is due"
+    reminded = add_task(ctx, AddTaskInput(title="Bins", remind_at="2026-09-30T19:00"))
+    assert "comes_up" not in reminded
+    weekend = add_task(ctx, AddTaskInput(title="Garage", preferred_window="this weekend"))
+    assert weekend["nudges"] == "on a free weekend day by Sun 27 Sep"
+    assert tasks.get(conn, weekend["task"]["id"]).window_until == "2026-09-27"
     listed = {task["id"]: task for task in list_tasks(ctx, ListTasksInput())["tasks"]}
     assert listed[kept["task"]["id"]]["nudges"] == "on a free Saturday morning"
     assert "nudges" not in listed[vague["task"]["id"]]
@@ -250,15 +316,38 @@ def test_the_model_is_told_when_a_task_will_come_up(settings, conn, family) -> N
     assert "nudges" not in add_task(off, AddTaskInput(title="Bike", preferred_window="a weekend"))
 
 
+def test_in_a_group_a_plain_save_is_not_followed_by_an_offer(settings, conn, family) -> None:
+    """In the family group a plain save is only ✓ (the family's decision): what will bring it up
+    is still said, but not that a reminder should be offered, which everyone would read."""
+    with db.transaction(conn):
+        asked = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="g9",
+            chat_id="-100",
+            member_id=family["sam"].id,
+            text="Don't let me forget to make a dentist appointment.",
+            now="2026-09-25T17:00:00Z",
+        )
+    ctx = _ctx(settings, conn, family)
+    in_group = dataclasses.replace(ctx, message_id=asked.id)
+    saved = add_task(in_group, AddTaskInput(title="Dentist appointment"))
+    assert saved["comes_up"] == "in Sunday morning's list once a week old"
+    alone = add_task(ctx, AddTaskInput(title="Dentist appointment, mine"))
+    assert alone["comes_up"].endswith("; offer a reminder for sooner")
+
+
 def test_the_tasks_page_says_when_one_comes_up(settings, conn, family) -> None:
     from tests.test_web_edits import _client
 
     read = _task(conn)
     _task(conn, "Clear the gutters", window="some time before Christmas")
+    _task(conn, "Clean the garage", window="this weekend", window_until="2026-09-20")  # over
     with db.transaction(conn):
         tasks.mark_nudged(conn, read.id, utc_iso(SATURDAY))
     page = _client(settings, FixedClock(SATURDAY, TZ)).get("/tasks").text
     assert "Vera brings it up on a free Saturday morning, last on Sat 26 Sep" in page
-    assert "not a day or part of the day Vera can read, so it comes up only when asked" in page
+    unread = "not a day or part of the day Vera can read, so it comes up only when asked"
+    assert page.count(unread) == 2
     quiet = _client(settings.model_copy(update={"task_nudges": False}), FixedClock(SATURDAY, TZ))
     assert "brings it up" not in quiet.get("/tasks").text

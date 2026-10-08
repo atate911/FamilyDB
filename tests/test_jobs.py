@@ -9,7 +9,7 @@ from familydb.clock import FixedClock
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.scheduler import build_scheduler
 from familydb.pipeline import retry_message
-from familydb.store import calls, ideas, messages
+from familydb.store import calls, finds, ideas, messages
 from tests import fakes
 from tests.conftest import TZ
 
@@ -685,15 +685,26 @@ def test_no_job_calls_the_model_when_there_is_nothing_to_do(settings, clock, con
     """Every scheduled job must be free when the family is quiet. The API is billed per call."""
     from familydb.jobs.catch_up import run_catch_up
     from familydb.jobs.follow_ups import run_follow_ups
+    from familydb.jobs.happening import run_happening
 
     api = fakes.FakeMessagesAPI()  # any request at all raises "no scripted response left"
-    quiet = _web_app(settings, clock, digest_chat_id="-100")
+    # The weekly search near home is a call the family chose, made when it is due; here it is
+    # off, and below it has just run, so nothing is due.
+    quiet = _web_app(settings, clock, digest_chat_id="-100", happening_search=False)
     quiet.senders["telegram"] = lambda *_: None
 
     assert run_retries(quiet, api=api) == 0
     assert run_enrichment(quiet, api=api) == {"done": 0, "skipped": 0, "failed": 0, "deferred": 0}
     assert run_follow_ups(quiet) == 0
     assert run_catch_up(quiet, api=api) == {"follow_ups": 0, "digest": "not due"}
+    assert set(run_happening(quiet, api=api).values()) == {0}
+    assert api.requests == []
+
+    searched = _web_app(settings, clock, home_area="Vancouver, WA")
+    with db.transaction(conn):
+        for source, kind in (("web:near-home", "web"), ("proposals:vancouver, wa", "proposals")):
+            finds.source_answered(conn, source, kind, ok=True, note="", found=0, at=NOW_ISO)
+    assert set(run_happening(searched, api=api).values()) == {0}
     assert api.requests == []
 
     # An enrichment run with the web off must not even reach for a client.

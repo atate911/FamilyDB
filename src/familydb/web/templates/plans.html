@@ -9,6 +9,7 @@
       <nav class="seg" aria-label="How to show the plans">
         <a href="{{ url_for('web.plans_month') }}">{{ icon('grid', size='sm') }}Month</a>
         <a href="{{ url_for('web.plans') }}" aria-current="page">{{ icon('list', size='sm') }}List</a>
+        <a href="{{ url_for('web.happening_page') }}">{{ icon('ticket', size='sm') }}{{ happening_name }}</a>
       </nav>
     </div>
     <p class="note mt-2">{{ icon('cal') }}{{ source_note }}{% if source != 'google' and managing %} <a href="{{ url_for('settings.section', name='connections') }}">Connect Google Calendar</a>{% endif %}</p>
@@ -19,7 +20,7 @@
       <div class="card__head"><h2 id="h-coming">{{ icon('cal') }}Coming up</h2>{% if grownup %}<span class="small muted">{{ upcoming | length }} in the next {{ ahead }} days</span>{% endif %}</div>
       {% for group in months %}
         <h3 class="group-h">{{ group.title }}</h3>
-        <ul class="plans-agenda">{% for row in group.rows %}{{ plan(row, acts=can_schedule) }}{% endfor %}</ul>
+        <ul class="plans-agenda">{% for row in group.rows %}{{ plan(row, acts=true) }}{% endfor %}</ul>
       {% else %}
         <p class="empty">{{ icon('cal') }}<span>Nothing on the calendar for the next {{ ahead }} days.</span></p>
       {% endfor %}
@@ -63,4 +64,5 @@
       </div>
     {% endif %}
   </div>
+  {% if grownup %}<p class="page-foot mt-6"><a href="{{ url_for('web.export_plans') }}">{{ icon('arrowdown', size='sm') }}Download the plans for another calendar</a></p>{% endif %}
 {% endblock %}

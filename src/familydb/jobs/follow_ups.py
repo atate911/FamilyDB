@@ -40,7 +40,11 @@ def run_follow_ups(app: App) -> int:
         if app.calendar is not None:
             try:
                 sync_plans(
-                    conn, app.calendar, app.settings.google_calendar_id, utc_iso(app.clock.now())
+                    conn,
+                    app.calendar,
+                    app.settings.google_calendar_id,
+                    utc_iso(app.clock.now()),
+                    tz=app.clock.tz,
                 )
             except Exception:
                 log.exception("follow-ups deferred: the calendar could not be checked")

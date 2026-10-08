@@ -19,17 +19,18 @@ from zoneinfo import ZoneInfo
 
 from markupsafe import Markup, escape
 
-from familydb import alerts, presents, windows
+from familydb import alerts, happening, presents, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, prices
+from familydb.availability import happening_search_available, ticketmaster_available
 from familydb.config import Settings
 from familydb.dates import clock_time, hour_words
 from familydb.integrations.geocode import estimate_travel
 from familydb.memory import words
-from familydb.store.ideas import Idea
+from familydb.store.ideas import Idea, ages_text
 from familydb.store.members import Member
 from familydb.store.memories import Memory
-from familydb.store.messages import VOICE_PREFIX, Message, as_said
+from familydb.store.messages import VOICE_PREFIX, WORDS_GONE, Message, as_said
 from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
@@ -287,6 +288,8 @@ def idea_row(idea: Idea, tz: ZoneInfo, *, hidden: str | None = None) -> dict[str
         "tags": idea.tags,
         "duration": duration_text(idea),
         "cost": cost_text(idea.cost_level),
+        # "6+", "3-8", "up to 10": the page's label says "Ages".
+        "ages": (ages_text(idea) or " ").split(" ", 1)[1] or None,
         "rating": rating_text(idea),
         "details": details_text(idea),
         "pending": idea.enrichment == "pending",
@@ -322,6 +325,23 @@ def excerpt(text: str, fact: str, room: int = SOURCE_CHARS) -> str:
     return piece
 
 
+def rule_text(rule: dict[str, Any] | None) -> str | None:
+    """What suggestions are held to by a firm memory's rule (suggest/rules.py), in a few words:
+    "held to: a 30 min drive at most, indoors"."""
+    if not rule:
+        return None
+    said = []
+    if (minutes := rule.get("max_travel_minutes")) is not None:
+        said.append(f"a {minutes} min drive at most")
+    if (level := rule.get("max_cost_level")) is not None:
+        said.append("free things" if level == 0 else f"{cost_text(level)} at most")
+    if setting := rule.get("setting"):
+        said.append(f"{setting}s")
+    if avoid := rule.get("avoid"):
+        said.append("nothing " + " or ".join(avoid))
+    return "held to: " + ", ".join(said) if said else None
+
+
 def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
     when = day_text(local_day(memory.created_at, tz))
     who = memory.said_by_name
@@ -330,6 +350,8 @@ def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
         said = None
     else:
         text = as_said(memory.source_text or "")
+        if text == WORDS_GONE:  # past the family's keeping (jobs/tidy.py)
+            text = ""
         voiced = text.startswith(VOICE_PREFIX)
         source = f"{who or 'Somebody'}, {when}{', in a voice note' if voiced else ''}"
         said = excerpt(text.removeprefix(VOICE_PREFIX), memory.fact) or None
@@ -339,6 +361,7 @@ def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
         "about": memory.about_name or "The family",
         "kind": MEMORY_KINDS.get(memory.category, memory.category),
         "firm": memory.firm,
+        "held": rule_text(memory.rule),
         "guess": memory.inferred,
         "until": day_text(memory.until) if memory.until else None,
         "ended": bool(memory.until and memory.until < today.isoformat()),
@@ -430,9 +453,10 @@ def figs(text: Any) -> Markup:
 
 
 # The one sentence about where reminders go, said the same on every page that says it.
+# Where a reminder goes (routing.py), said the same on every page that sets one.
 REMINDERS_SAID = (
-    "Reminders appear in the chat while FamilyDB is running, and in Telegram when it is connected. "
-    "They aren\u2019t phone notifications."
+    "A reminder goes to whoever it is for: their own Telegram chat once they have started one, "
+    "otherwise the chat here."
 )
 
 
@@ -561,7 +585,7 @@ def todo_page_row(
     """A to-do for the To do page: the short row Home draws, and what the page adds under it. A
     kid's carries "Set by" when somebody else set it, and none of how reminders get there."""
     row = todo_row(task, tz, today, slots, kid=kid)
-    nudge = nudge_words(task, tz) if nudging and not kid else None
+    nudge = nudge_words(task, tz, today) if nudging and not kid else None
     set_by = creator if creator and creator.casefold() != (me or "").casefold() else None
     return {
         **row,
@@ -674,12 +698,66 @@ def repeat_text(task: Task, tz: ZoneInfo) -> str | None:
     return words
 
 
-def nudge_words(task: Task, tz: ZoneInfo) -> dict[str, str] | None:
+def list_title(name: str) -> str:
+    """A list as the page names it: "Shopping list", "Hardware list"."""
+    return f"{name[:1].upper()}{name[1:]} list"
+
+
+# What a list's form says it did (edits.change_list), by what was asked.
+LIST_SAID = {
+    "add": "Added to the {list}: {items}.",
+    "tick": "Got: {items}.",
+    "untick": "Back on the {list}: {items}.",
+    "remove": "Taken off the {list}: {items}.",
+    "clear_ticked": "Cleared what was got from the {list}.",
+}
+LIST_ALREADY = "Already on it: {items}."
+
+
+# Notifications on this device (/you, static/push.js): what the section says as it stands.
+PUSH_WORDS = {
+    "is_on": "On for this device: a notice says when {name} has written.",
+    "is_off": "Off for this device.",
+    "unable": "This browser cannot show notices from a page. On an iPhone or iPad, add this page "
+    "to the Home Screen (Share, then Add to Home Screen) and open it from there; it needs iOS 16.4 "
+    "or later.",
+    "refused": "The browser was told not to show notices from this page; that is changed in its "
+    "settings for the site.",
+    "failed": "That did not work. Try again in a moment.",
+}
+
+
+# Where a change came from (tool_calls.source), as the history line under an idea or task says it.
+CHANGED_FROM = {
+    "chat": "through {name}",
+    "tap": "with a button",
+    "page": "on the page",
+    "command": "with a command",
+    "job": "by {name} on her own",
+    "worker": "by a lookup",
+    "cli": "on the server",
+}
+
+
+def changed_line(row: Any, tz: ZoneInfo, *, assistant: str) -> str | None:
+    """The last change to an idea or task, for a grown-up: "Changed by Sam on the page, Tue 6 Oct
+    09:10". None when nothing is known (made before changes were kept by whom)."""
+    if row is None or row["source"] is None:
+        return None
+    verb = "Added" if str(row["tool_name"]).startswith(("add_", "create_")) else "Changed"
+    who = f" by {row['who']}" if row["who"] else ""
+    where = CHANGED_FROM.get(row["source"], "").format(name=assistant)
+    when = datetime.fromisoformat(row["created_at"].replace("Z", "+00:00")).astimezone(tz)
+    return f"{verb}{who} {where}, {when:%a} {when.day} {when:%b %H:%M}".replace("  ", " ")
+
+
+def nudge_words(task: Task, tz: ZoneInfo, today: date) -> dict[str, str] | None:
     """For an open task kept for a window (jobs/nudges.py): `on`, "a free Saturday morning", and
-    `last`; or `unread` when the window cannot be read. None for a task not waiting on one."""
+    `last`; or `unread` when the window cannot be read (or "this weekend" is over). None for a
+    task not waiting on one."""
     if task.status != "open" or task.repeats or not task.preferred_window:
         return None
-    window = windows.read(task.preferred_window)
+    window = windows.read(task.preferred_window, until=task.until, today=today)
     if window is None:
         return {"unread": "yes"}
     said = {"on": window.words("free")}
@@ -689,7 +767,7 @@ def nudge_words(task: Task, tz: ZoneInfo) -> dict[str, str] | None:
     return said
 
 
-def task_row(task: Task, tz: ZoneInfo, *, nudging: bool = False) -> dict[str, Any]:
+def task_row(task: Task, tz: ZoneInfo, today: date, *, nudging: bool = False) -> dict[str, Any]:
     """One task on the tasks page. `nudging` is the `task_nudges` setting."""
     choice = f"{task.repeat_every}:{task.repeat_unit}" if task.repeats else ""
     options = list(REPEATS)
@@ -708,7 +786,7 @@ def task_row(task: Task, tz: ZoneInfo, *, nudging: bool = False) -> dict[str, An
         "repeat_options": options,
         # So saving changes the repeat only when it changed.
         "repeat_was": f"{choice}:{task.repeat_from}" if choice else "",
-        "nudge": nudge_words(task, tz) if nudging else None,
+        "nudge": nudge_words(task, tz, today) if nudging else None,
     }
 
 
@@ -1258,7 +1336,10 @@ def places_map(placed: list[tuple[Idea, Away]]) -> dict[str, Any] | None:
 
 AGENDA_NOTES = {
     "google": "From Google Calendar, including anything added there directly.",
-    "saved": "Google Calendar is not connected, so these are the plans FamilyDB has saved.",
+    "saved": (
+        "Google Calendar is not connected, so these are the plans kept here. They go on it once "
+        "it is."
+    ),
     "unavailable": (
         "Google Calendar did not answer, so these are the plans as FamilyDB last saw them. "
         "Times may have moved since."
@@ -1384,8 +1465,27 @@ ALERT_TITLES = {
     "api": "A company stopped taking part of a request",
     "refused": "{company} is refusing requests",
     "advice": "A judgment on the models",
+    "happening": "A place read for what is on near home could not be read",
+    "calendars": "Event calendars found near home",
+    "backup": "The backups need a look",
+    "disk": "The server's disk is nearly full",
+    "telegram": "Telegram refused the bot's token",
 }
-SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused", "advice"})
+SAID_IN_DETAIL = frozenset(
+    {
+        "model",
+        "price",
+        "prices",
+        "new",
+        "shift",
+        "api",
+        "refused",
+        "advice",
+        "happening",
+        "backup",
+        "disk",
+    }
+)
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
 
 
@@ -1396,7 +1496,9 @@ def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[s
     seen = f"since {local_moment(alert.first_at, tz)}"
     if alert.times > 1:
         seen += f", {alert.times} times, last {local_moment(alert.last_at, tz)}"
-    if alert.told_at:
+    if alert.kind in alerts.NOT_ON_TELEGRAM:
+        told = "shown here only, since Telegram cannot carry it"
+    elif alert.told_at:
         told = f"admins told on Telegram {local_moment(alert.told_at, tz)}"
     elif not telling:
         told = "telling admins is switched off (Settings, Messages)"
@@ -1433,6 +1535,64 @@ def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
     running = f", {source.failures} checks running" if source.failures > 1 else ""
     detail = f"Could not be read {when}{running}: {source.note}."
     return {"label": label, "detail": detail, "on": False}
+
+
+def find_row(find: Any, today: date) -> dict[str, Any]:
+    """One thing near home as its page lists it."""
+    first = date.fromisoformat(find.starts_at[:10])
+    last = date.fromisoformat(find.ends_at[:10]) if find.ends_at else first
+    if "T" in find.starts_at:
+        when = find.starts_at[11:16]
+    elif last > first:
+        when = f"until {last:%a} {last.day} {last:%b}" if first <= today else "all day"
+    else:
+        when = "all day"
+    who = (
+        happening.host(find.url)
+        if find.kind == happening.WEB and find.url
+        else happening.source_name(find.source)
+    )
+    summary = find.summary or ""
+    return {
+        "when": when,
+        "title": find.title,
+        "url": find.url if find.url and find.url.startswith(("https://", "http://")) else None,
+        "where": find.venue or find.address,
+        "price": find.price_note,
+        "summary": summary if len(summary) <= 160 else summary[:159].rstrip() + "…",
+        "who": who,
+    }
+
+
+def happening_days(found: Sequence[Any], today: date) -> list[dict[str, Any]]:
+    """What is on near home, by the day it starts, soonest first; what began before today and is
+    still on goes under today."""
+    days: dict[date, list[dict[str, Any]]] = {}
+    for find in found:
+        day = max(date.fromisoformat(find.starts_at[:10]), today)
+        days.setdefault(day, []).append(find_row(find, today))
+    return [
+        {
+            "label": "Today" if day == today else f"{day:%A} {day.day} {day:%B}",
+            "today": day == today,
+            "rows": sorted(rows, key=lambda row: (row["when"][0].isdigit(), row["when"])),
+        }
+        for day, rows in sorted(days.items())
+    ]
+
+
+def find_source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
+    """A place read for what is on near home, as a light: when, and how it went."""
+    label = happening.source_name(source.source)
+    if happening.source_kind(source.source) == happening.FEED:
+        label = f"Calendar at {label}"
+    label = label[0].upper() + label[1:]
+    when = local_moment(source.checked_at, tz)
+    if source.ok:
+        return {"label": label, "detail": f"Read {when}: {source.note}.", "on": True}
+    running = f", {source.failures} days running" if source.failures > 1 else ""
+    detail = f"Could not be read {when}{running}: {source.note}."
+    return {"label": label, "detail": detail, "on": False if source.failures > 1 else None}
 
 
 JUDGEMENT_TITLES = {
@@ -1497,6 +1657,11 @@ AUTOMATIC = (
         ("plan_rain", "plan_closed", "plan_backup"),
     ),
     ("nudges", "others", "A task brought up", "free", ("nudge",)),
+    # The morning message is one message; each part is counted as its own (store/mornings.py).
+    ("morning_agenda", "morning", "The day ahead, each morning", "free", ("morning:agenda",)),
+    ("chase_missed", "morning", "A reminder nobody acted on", "free", ("morning:chase",)),
+    ("deadline_heads_up", "morning", "What is due tomorrow", "free", ("morning:deadlines",)),
+    ("forgotten_roundup", "morning", "What has waited a week", "free", ("morning:roundup",)),
     (
         "lookups",
         "others",
@@ -1515,6 +1680,7 @@ AUTOMATIC = (
     ("kids_answers", "", "A parent's answer, to a kid", "free", ("wish_granted", "wish_declined")),
 )
 AUTOMATIC_BY_EVENT = {event: title for _, _, title, _, events in AUTOMATIC for event in events}
+AUTOMATIC_BY_EVENT["morning"] = "The morning message"
 
 
 def chat_words(conn_chat: str, member_name: str | None) -> str:
@@ -1577,6 +1743,20 @@ def found_by_lookup(tool: dict[str, Any]) -> dict[str, Any] | None:
         "sources": [url for url in (clean_url(s) for s in given.get("source_urls") or []) if url],
         "saved": not tool.get("is_error"),
     }
+
+
+def happening_state(settings: Any) -> str:
+    """The settings list's line for things near home: what it reads."""
+    feeds = len(happening.feed_urls(settings))
+    parts = [f"{feeds} calendar{'' if feeds == 1 else 's'}"] if feeds else []
+    if ticketmaster_available(settings):
+        parts.append("Ticketmaster")
+    if happening_search_available(settings):
+        parts.append("a weekly search")
+    if not parts:
+        return "Nothing read yet: turn on web lookups, or add a calendar or a Ticketmaster key."
+    listed = ", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0]
+    return f"Reads {listed}."
 
 
 def lookups_when(settings: Any) -> str:
@@ -1865,3 +2045,14 @@ def countdown(days: int | None) -> str | None:
     if days == 0:
         return "Today!"
     return "Tomorrow!" if days == 1 else f"In {days} days"
+
+
+def task_saved(result: dict[str, Any]) -> str:
+    """The notice after a to-do is added on the page: what it is, in words (no number: that is
+    the workings), and where its reminder will arrive (routing.for_task, as add_task worked it
+    out), when it has one."""
+    task = result["task"]
+    said = f"Added to your to-dos: {task['title']}."
+    if task.get("reminder") and result.get("reminder_destination"):
+        said += f" Its reminder goes to {result['reminder_destination']}."
+    return said

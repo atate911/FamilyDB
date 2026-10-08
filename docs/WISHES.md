@@ -117,10 +117,11 @@ fields. There is no list tool: her topics come in her turn line, and parents use
 
 Every message from a kid carries one line in the current (uncached) turn, built by code
 (`render.render_kid_line`), e.g. `Mia is a girl, 9. Her wish topics: pet (locked to 2026-10-09),
-phone. Wording: nudge.` Her topics go only where nobody else reads the reply; at most twelve, locked
+phone. Wording: nudge.` Her topics and the wording go only where nobody else reads the reply (in the
+family group "can we…" is a question for everyone, and a nudge would be said in front of them); at most twelve, locked
 first; usually under 30 tokens. The cached prefix grew by about 800 tokens (the three tools and a
 short section of `prompts/system.md`), read from the cache on every message. The evals in
-`evals/cases.py` (`wish_*`, with Mia in `evals/household.py`) hold the behavior.
+`evals/cases.py` (`wish_*`, with Mia and her little sister Chloe in `evals/household.py`) hold the behavior.
 
 ### Wording
 

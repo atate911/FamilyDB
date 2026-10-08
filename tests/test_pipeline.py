@@ -179,7 +179,7 @@ def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clo
     assert tool_result["type"] == "tool_result"
     data = json.loads(tool_result["content"])
     assert data["web_finds"][0]["url"] == find["url"] and data["skipped_checks"] == [
-        "calendar not connected",
+        "no Google calendar connected: only the plans saved here count as busy",
         "weather not configured",
     ]
     assert len(app.discover_cache) == 1

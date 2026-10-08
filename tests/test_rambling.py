@@ -114,7 +114,7 @@ def test_a_dated_idea_is_only_suggested_on_its_own_days(
     later = _idea(conn, "Lantern festival", happens_from="2026-10-17", happens_until="2026-10-18")
     over = _idea(conn, "Summer fair", happens_from="2026-08-01", happens_until="2026-08-02")
     running = _idea(conn, "Corn maze", setting="indoor", happens_from="2026-09-01")
-    kept, ruled_out, _ = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
+    kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
     reasons = {c.idea_id: c.reasons[0] for c in ruled_out}
     assert reasons[later.id] == "on Sat 17 Oct to Sun 18 Oct"
     assert reasons[over.id] == "was over on Sun 2 Aug"
@@ -127,7 +127,7 @@ def test_someday_still_leaves_out_what_is_over(conn, settings, thursday_clock, f
     context = build_context(_ctx(conn, settings, thursday_clock, family), None)
     later = _idea(conn, "Lantern festival", happens_from="2026-10-17", happens_until="2026-10-18")
     over = _idea(conn, "Summer fair", happens_from="2026-08-01", happens_until="2026-08-02")
-    kept, ruled_out, _ = shortlist(ideas.list_all(conn), context, Constraints(), settings)
+    kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), settings)
     assert [s.idea.id for s in kept] == [later.id]
     assert [(c.idea_id, c.reasons) for c in ruled_out] == [(over.id, ["was over on Sun 2 Aug"])]
 
