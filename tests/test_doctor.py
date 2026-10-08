@@ -169,3 +169,284 @@ def test_a_link_that_is_gone_or_has_moved_is_said(settings) -> None:
     fine = doctor.Report()
     doctor.check_links(fine, lambda url: (200, url))
     assert fine.checks[0].verdict == doctor.OK
+
+
+# --- what only a look at the running bot and its data can say ------------------------------------
+
+
+def _later(settings, clock, minutes: int) -> App:
+    from datetime import timedelta
+
+    from familydb.clock import FixedClock
+
+    return App(settings, FixedClock(clock.now() + timedelta(minutes=minutes), clock.tz))
+
+
+def _detail_of(report: doctor.Report, name: str) -> str:
+    return next(check.detail for check in report.checks if check.name == name)
+
+
+def test_the_report_is_filed_under_headings_a_page_of_it_can_be_read_by(
+    settings, clock, conn, family
+) -> None:
+    _app, report = _report(settings, clock)
+    assert all(check.group for check in report.checks)
+    groups = list(dict.fromkeys(check.group for check in report.checks))
+    assert groups[:3] == ["Settings", "Database", "Family"]
+    lines = doctor.text(report)
+    assert lines[0] == "▸ Settings"
+    assert "▸ Running" in lines
+    assert lines[-1] == doctor.verdict(report)
+    assert report.as_dict()["checks"][0]["group"] == "Settings"
+
+
+def test_a_family_that_never_chose_a_time_zone_is_told_the_servers_is_utc(
+    settings, clock, conn, family, monkeypatch
+) -> None:
+    from familydb.config import Settings
+
+    monkeypatch.delenv("TZ", raising=False)
+    bare = Settings(
+        _env_file=None,
+        provider="anthropic",
+        anthropic_api_key="k",
+        familydb_path=settings.familydb_path,
+        family_tz=None,
+        model_watch=False,
+    )
+    report = doctor.run(App(bare, clock))
+    assert _verdict_of(report, "time zone") == doctor.WARN
+    chosen = _report(settings, clock)[1]
+    assert _verdict_of(chosen, "time zone") == doctor.OK
+    assert "America/Vancouver" in _detail_of(chosen, "time zone")
+    assert "14:03" in _detail_of(chosen, "time zone")
+
+
+def test_the_database_file_is_checked_by_sqlite_itself(settings, clock, conn, family) -> None:
+    _app, report = _report(settings, clock)
+    assert _verdict_of(report, "integrity") == doctor.OK
+
+    class Damaged:
+        def execute(self, _sql):
+            rows = [("*** in database main ***",), ("Page 3: btreeInitPage() returns error 11",)]
+            return type("Rows", (), {"fetchall": lambda self: rows})()
+
+    broken = doctor.Report()
+    doctor.check_integrity(App(settings, clock), Damaged(), broken)  # type: ignore[arg-type]
+    only = broken.checks[0]
+    assert only.verdict == doctor.FAIL
+    assert "2 problem(s)" in only.detail
+    assert "maintain.sh restore" in only.fix
+
+
+def test_a_file_sqlite_opens_but_cannot_read_is_a_finding_not_a_crash(settings, clock) -> None:
+    settings.familydb_path.write_bytes(b"this is not a database" * 400)
+    report = doctor.run(App(settings, clock))
+    assert _verdict_of(report, "database") == doctor.FAIL
+    assert "restore" in next(c for c in report.checks if c.name == "database").fix
+    assert not report.healthy
+
+
+@pytest.mark.skipif(os.name != "posix", reason="file modes are a POSIX idea")
+def test_a_database_other_users_can_read_is_said_and_fix_closes_it(
+    settings, clock, conn, family
+) -> None:
+    Path(settings.familydb_path).chmod(0o644)
+    app, report = _report(settings, clock)
+    assert _verdict_of(report, "data files") == doctor.WARN
+    assert settings.familydb_path.name in _detail_of(report, "data files")
+    doctor.correct(app, report)
+    assert Path(settings.familydb_path).stat().st_mode & 0o077 == 0
+    assert _verdict_of(doctor.run(app), "data files") == doctor.OK
+
+
+def test_what_has_been_spent_today_is_set_against_the_limit(
+    settings, clock, conn, family, monkeypatch
+) -> None:
+    from familydb.agent import spending
+
+    monkeypatch.setattr(spending, "spent_today", lambda *_a: 0.5)
+    report = _report(settings, clock, daily_spend_limit=2.0)[1]
+    assert _verdict_of(report, "spending today") == doctor.OK
+    assert "$0.50 of $2.00" in _detail_of(report, "spending today")
+    assert "25%" in _detail_of(report, "spending today")
+
+    monkeypatch.setattr(spending, "spent_today", lambda *_a: 2.0)
+    used = _report(settings, clock, daily_spend_limit=2.0)[1]
+    assert _verdict_of(used, "spending today") == doctor.WARN
+    assert "until midnight" in _detail_of(used, "spending today")
+    assert used.healthy  # a limit the family set is not a fault
+
+    free = _report(settings, clock, daily_spend_limit=0)[1]
+    assert "no daily limit" in _detail_of(free, "spending today")
+
+
+def test_a_scheduler_that_is_up_but_quiet_is_a_failure_with_the_command(
+    settings, clock, conn, family
+) -> None:
+    from familydb import health
+
+    app = App(settings, clock)
+    assert _verdict_of(doctor.run(app), "scheduled jobs") == doctor.SKIP  # never started
+    health.ticked(app)
+    ticking = doctor.run(_later(settings, clock, 3))
+    assert _verdict_of(ticking, "scheduled jobs") == doctor.OK
+    assert "3 min ago" in _detail_of(ticking, "scheduled jobs")
+
+    quiet = doctor.run(_later(settings, clock, 40))
+    assert _verdict_of(quiet, "scheduled jobs") == doctor.FAIL
+    assert "40 min" in _detail_of(quiet, "scheduled jobs")
+    assert not quiet.healthy
+
+    health.stopped(_later(settings, clock, 41))
+    on_purpose = doctor.run(_later(settings, clock, 90))
+    assert _verdict_of(on_purpose, "scheduled jobs") == doctor.SKIP
+    assert on_purpose.healthy
+
+
+def _stuck(conn, family, update_id: str, *, minutes_ago: int, state: str = "received", **more):
+    from datetime import UTC, datetime, timedelta
+
+    from familydb.dates import utc_iso
+    from familydb.store import messages
+
+    when = utc_iso(datetime(2026, 9, 20, 21, 3, tzinfo=UTC) - timedelta(minutes=minutes_ago))
+    message = messages.insert_in(
+        conn,
+        channel="telegram",
+        channel_update_id=update_id,
+        chat_id="1001",
+        member_id=family["sam"].id,
+        text="hello",
+        now=when,
+    )
+    conn.execute(
+        "UPDATE messages SET status = ?, error = ?, give_up = ?, processed_at = ? WHERE id = ?",
+        (
+            state,
+            more.get("error"),
+            int(more.get("give_up", False)),
+            when if state == "failed" else None,
+            message.id,
+        ),
+    )
+    conn.commit()
+    return message
+
+
+def test_a_message_nobody_answered_is_said_with_how_to_retry_it(
+    settings, clock, conn, family
+) -> None:
+    _stuck(conn, family, "u1", minutes_ago=2)  # being answered right now: no trouble
+    assert _verdict_of(_report(settings, clock)[1], "messages") == doctor.OK
+
+    _stuck(conn, family, "u2", minutes_ago=30, state="failed", error="boom")
+    report = _report(settings, clock)[1]
+    assert _verdict_of(report, "waiting messages") == doctor.WARN
+    assert "1 message(s)" in _detail_of(report, "waiting messages")
+    assert "retry-failed" in next(c for c in report.checks if c.name == "waiting messages").fix
+    assert report.healthy
+
+
+def test_a_message_given_up_on_names_why_but_a_removed_member_is_no_trouble(
+    settings, clock, conn, family
+) -> None:
+    _stuck(
+        conn, family, "u3", minutes_ago=45, state="failed", give_up=True, error="member_inactive"
+    )
+    assert _verdict_of(_report(settings, clock)[1], "messages") == doctor.OK
+
+    _stuck(
+        conn,
+        family,
+        "u4",
+        minutes_ago=45,
+        state="failed",
+        give_up=True,
+        error="AgentError: credit balance is too low\nmore",
+    )
+    report = _report(settings, clock)[1]
+    assert _verdict_of(report, "given-up messages") == doctor.WARN
+    assert "credit balance is too low" in _detail_of(report, "given-up messages")
+    assert "more" not in _detail_of(report, "given-up messages")
+
+
+def test_a_reply_that_was_never_sent_is_said(settings, clock, conn, family) -> None:
+    from familydb.store import messages
+
+    messages.insert_out(
+        conn, channel="telegram", chat_id="1001", text="hi", now="2026-09-20T20:00:00Z"
+    )
+    conn.commit()
+    report = _report(settings, clock)[1]
+    assert _verdict_of(report, "unsent replies") == doctor.WARN
+    assert "never delivered" in _detail_of(report, "unsent replies")
+
+
+def test_trouble_the_admins_were_told_of_and_errors_logged_are_listed(
+    settings, clock, conn, family
+) -> None:
+    from datetime import UTC, datetime
+
+    from familydb.store import alerts as alert_store
+    from familydb.store import problems
+
+    clean = _report(settings, clock)[1]
+    assert _verdict_of(clean, "alerts") == doctor.OK
+    assert _verdict_of(clean, "logged errors") == doctor.OK
+
+    alert_store.note(
+        conn,
+        "credit",
+        "anthropic",
+        "out of credit",
+        now="2026-09-20T20:00:00Z",
+        keep_after="2026-09-01T00:00:00Z",
+    )
+    alert_store.note(  # news, not trouble; and backups have their own row
+        conn,
+        "new",
+        "gpt-9",
+        "a new model",
+        now="2026-09-20T20:00:00Z",
+        keep_after="2026-09-01T00:00:00Z",
+    )
+    problems.record(
+        conn,
+        level="ERROR",
+        source="familydb.jobs",
+        message="digest failed",
+        now=datetime(2026, 9, 20, 20, 0, tzinfo=UTC),
+    )
+    conn.commit()
+    report = _report(settings, clock)[1]
+    assert _verdict_of(report, "alerts") == doctor.WARN
+    assert "credit (anthropic): out of credit" in _detail_of(report, "alerts")
+    assert "gpt-9" not in _detail_of(report, "alerts")
+    assert _verdict_of(report, "logged errors") == doctor.WARN
+    assert "familydb.jobs: digest failed" in _detail_of(report, "logged errors")
+    assert report.healthy  # told and logged is worth a look, not a stop
+
+
+def test_a_name_in_env_that_nothing_reads_is_said_with_the_one_it_is_close_to(
+    settings, clock, conn, family, tmp_path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        "WEB_ENABLED=true\nWEB_PROT=8080\nanthropic_api_key=k\nTZ=UTC\nCOMPOSE_PROFILES=tls\n"
+        "export DAILY_SPEND_LIMT=3\n"
+    )
+    (tmp_path / ".env").chmod(0o600)
+    _app, report = _report(settings, clock)
+    check = next(c for c in report.checks if c.name == "env options")
+    assert check.verdict == doctor.WARN
+    assert "WEB_PROT (did you mean WEB_PORT?)" in check.detail
+    assert "DAILY_SPEND_LIMT (did you mean DAILY_SPEND_LIMIT?)" in check.detail
+    assert "TZ" not in check.detail and "anthropic_api_key" not in check.detail
+    assert "COMPOSE_PROFILES" not in check.detail
+    assert report.healthy  # worth a look, not a stop
+
+    (tmp_path / ".env").write_text("WEB_ENABLED=true\nWEB_PORT=8080\n")
+    (tmp_path / ".env").chmod(0o600)
+    _app, clean = _report(settings, clock)
+    assert "env options" not in [c.name for c in clean.checks]
