@@ -12,7 +12,7 @@ from functools import cache
 from typing import Any, Literal
 from zoneinfo import available_timezones
 
-from familydb import happening
+from familydb import happening, logs
 from familydb.agent.providers.prices import hearing_suggestions, suggestions
 from familydb.config import Settings
 from familydb.dates import hour_words
@@ -270,6 +270,12 @@ SECTIONS: tuple[Section, ...] = (
         "key",
         "Passwords, how long a sign-in lasts, seeing a key, signing everyone out.",
     ),
+    Section(
+        "troubleshooting",
+        "Troubleshooting",
+        "pulse",
+        "What went wrong, how much is logged, and the words of every call to a model.",
+    ),
     Section("history", "What has changed", "history", "Every change made here, and who made it."),
 )
 SECTION_BY_NAME: dict[str, Section] = {one.name: one for one in SECTIONS}
@@ -347,27 +353,6 @@ GROUPS: tuple[Group, ...] = (
                 "never passes through FamilyDB and costs nothing. Firefox has no mic.",
             ),
         ),
-    ),
-    Group(
-        "general",
-        "log",
-        "The server's log",
-        "For whoever looks after the server.",
-        (
-            field(
-                "log_level",
-                "Log detail",
-                "How much the server writes to its log. Debug is for chasing a problem.",
-                choices=("DEBUG", "INFO", "WARNING", "ERROR"),
-                words=(
-                    ("DEBUG", "Debug: everything"),
-                    ("INFO", "Info: the usual"),
-                    ("WARNING", "Warnings and errors"),
-                    ("ERROR", "Errors only"),
-                ),
-            ),
-        ),
-        folded=True,
     ),
     Group(
         "model",
@@ -1074,6 +1059,67 @@ GROUPS: tuple[Group, ...] = (
                 "Set when you connect. For another calendar, share it with the service account "
                 "first, then paste its id from Google Calendar: the calendar's Settings and "
                 "sharing, under Integrate calendar.",
+            ),
+        ),
+    ),
+    Group(
+        "troubleshooting",
+        "log",
+        "How much is logged",
+        "Turn this up when chasing a problem, and back down afterwards: more detail is more to "
+        "read, and Debug writes a lot.",
+        (
+            field(
+                "log_level",
+                "What the server writes",
+                "To its own log, which the lines below are drawn from. Nothing less than this "
+                "can be kept or shown.",
+                choices=("DEBUG", "INFO", "WARNING", "ERROR"),
+                words=(
+                    ("DEBUG", "Debug: everything"),
+                    ("INFO", "Info: the usual"),
+                    ("WARNING", "Warnings and errors"),
+                    ("ERROR", "Errors only"),
+                ),
+            ),
+            field(
+                "problem_log_level",
+                "What is kept here to read",
+                "The lines at least this serious are kept in the database and listed on this "
+                "page for a month. Warnings and errors are the ones that say what went wrong.",
+                choices=("DEBUG", "INFO", "WARNING", "ERROR"),
+                words=(
+                    ("DEBUG", "Debug: everything"),
+                    ("INFO", "Info and up"),
+                    ("WARNING", "Warnings and errors"),
+                    ("ERROR", "Errors only"),
+                ),
+            ),
+            field(
+                "log_areas",
+                "A different level for one part",
+                "One a line: a part, an equals sign and a level, such as models=DEBUG. The parts "
+                "are " + ", ".join(logs.AREAS) + ". Anything else with a dot in it is taken as a "
+                "logger's own name.",
+                unset="none",
+                lines=True,
+            ),
+        ),
+    ),
+    Group(
+        "troubleshooting",
+        "words",
+        "The models' own words",
+        "",
+        (
+            field(
+                "keep_ai_text_days",
+                "Days the models' words are kept",
+                "Everything each model was sent and said, so an admin can read it below. 0 keeps "
+                "none. It holds the family's own words, including the family and ideas lists "
+                "sent with every message, and whatever a grown-up has kept from the others: only "
+                "admins see it, and a backup keeps what it held. It goes sooner than this if "
+                "messages are set to be forgotten sooner.",
             ),
         ),
     ),

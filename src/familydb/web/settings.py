@@ -61,7 +61,7 @@ from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
-from familydb.web import auth, fields, keys, views
+from familydb.web import auth, fields, keys, troubleshooting, views
 from familydb.web import status as status_page
 
 log = logging.getLogger(__name__)
@@ -519,6 +519,7 @@ PAGES = {
     "happening": _happening,
     "connections": _connections,
     "security": _security,
+    "troubleshooting": troubleshooting.page_data,
     "history": _history,
 }
 
@@ -579,6 +580,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
         today = spent_today(conn, live, app.clock.now())
         flags = section_flags(app, conn, steps=steps, spent=today)
         latest = [change(line, live.tzinfo) for line in settings_store.history(conn, limit=1)]
+        trouble_lines = troubleshooting.overview_lines(app, conn)
     hour = hour_words
     units = fields.BY_KEY["weather_units"].word(live.weather_units)
     if live.home_area and live.home_lat is not None:
@@ -639,6 +641,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
             False,
         ),
         "security": ([steps["password"].detail], flags["security"]),
+        "troubleshooting": (trouble_lines, False),
         "history": ([changed], False),
     }
     return (

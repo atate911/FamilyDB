@@ -319,6 +319,11 @@ class Settings(BaseSettings):
 
     console_member: str | None = None
     log_level: str = "INFO"
+    # How much of the log is kept in the database for the Troubleshooting page, a different level
+    # for chosen areas (logs.py), and how long the words of model calls are kept (0 keeps none).
+    problem_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "WARNING"
+    log_areas: str = Field(default="", max_length=2000)
+    keep_ai_text_days: int = Field(default=14, ge=0, le=365)
     # Sent with each OpenStreetMap geocoder lookup as its usage policy asks (an email address or a
     # web page). Empty, none is sent: it leaves the house with every lookup, so it is the operator's
     # to give.
@@ -436,6 +441,14 @@ class Settings(BaseSettings):
     @classmethod
     def _upper(cls, value: str) -> str:
         return value.upper()
+
+    @field_validator("log_areas")
+    @classmethod
+    def _area_lines(cls, value: str) -> str:
+        """One area a line, `models=DEBUG`; blank lines dropped."""
+        from familydb.logs import parse_areas
+
+        return "\n".join(f"{name}={level}" for name, level in parse_areas(value).items())
 
     @model_validator(mode="after")
     def _resolve_timezone(self) -> Settings:

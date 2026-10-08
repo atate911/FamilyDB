@@ -35,6 +35,7 @@ from familydb.web import (
     routes,
     setup,
     shell,
+    troubleshooting,
     views,
 )
 from familydb.web import settings as settings_page
@@ -221,6 +222,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
     web.register_blueprint(activity.bp)
+    web.register_blueprint(troubleshooting.bp)
     web.register_blueprint(chat.bp)
     web.register_blueprint(edits.bp)
     web.register_blueprint(family.bp)

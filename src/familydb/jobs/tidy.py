@@ -7,7 +7,9 @@ an idea that is planned or done. `tidy_ideas` turns it off.
 And when the family keeps messages for a number of days (`keep_messages_days`, Sign-in and
 security; 0, for good, unless they choose), the words of every message older than that are
 emptied (`messages.forget_words`): the row stays, since replies, reminders, memories, wishes and
-calls point at it. Nothing to do costs a query or two."""
+calls point at it. The words of model calls kept for the Troubleshooting pages go after
+`keep_ai_text_days`, or with the messages' words if those go sooner, and so does the problem log
+past its month. Nothing to do costs a query or two."""
 
 from __future__ import annotations
 
@@ -17,7 +19,7 @@ from datetime import timedelta
 
 from familydb.app import App
 from familydb.dates import utc_iso
-from familydb.store import ideas, messages
+from familydb.store import ai_texts, ideas, messages, problems
 from familydb.store.db import transaction
 from familydb.tools import ToolContext
 
@@ -37,6 +39,7 @@ def run_tidy(app: App) -> int:
     settings = app.settings
     if settings.keep_messages_days:
         forget_old_words(app, settings.keep_messages_days)
+    forget_old_texts(app)
     if not settings.tidy_ideas:
         return 0
     before = (app.clock.today() - timedelta(days=GRACE_DAYS)).isoformat()
@@ -54,6 +57,19 @@ def run_tidy(app: App) -> int:
     if taken_off:
         log.info("tidy: took %d idea(s) off the list, their dates past", taken_off)
     return taken_off
+
+
+def forget_old_texts(app: App) -> int:
+    """Let go of the kept words of model calls past their time, and the old problem log."""
+    settings = app.settings
+    days = settings.keep_ai_text_days
+    if settings.keep_messages_days:
+        days = min(days, max(settings.keep_messages_days, LEAST_KEEP_DAYS)) if days else 0
+    with closing(app.connect()) as conn, transaction(conn):
+        problems.trim(conn, now=app.clock.now())
+        if not days:
+            return ai_texts.forget_all(conn)
+        return ai_texts.forget_before(conn, ai_texts.cutoff(days, now=app.clock.now()))
 
 
 def forget_old_words(app: App, days: int) -> int:

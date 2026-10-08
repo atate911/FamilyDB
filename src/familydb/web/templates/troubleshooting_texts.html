@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, tag, page_head with context %}
+{% block title %}What the models were sent and said · Troubleshooting · {{ site_title }}{% endblock %}
+{% block content %}
+  {{ page_head('What the models were sent and said', 'Every call, in words, newest first.', crumb=('Troubleshooting', url_for('settings.section', name='troubleshooting'))) }}
+
+  {% if not kept_days %}
+    <div class="banner banner--warn banner--slim"><span class="banner__ic">{{ icon('alert') }}</span><p class="banner__text">Keeping the models’ words is switched off, so nothing new is kept. Turn it on under <a href="{{ url_for('settings.section', name='troubleshooting', _anchor='words') }}">Troubleshooting</a>.</p></div>
+  {% endif %}
+
+  <section class="card mt-4">
+    <p class="small">
+      {% for key, words in filters.items() %}
+        {% if key == show %}<b>{{ words }}</b>{% else %}<a href="{{ url_for('troubleshooting.texts', show=key, kind=kind or none) }}">{{ words }}</a>{% endif %}{{ ' · ' if not loop.last }}
+      {% endfor %}
+    </p>
+    <form class="form__row mt-3" method="get" action="{{ url_for('troubleshooting.texts') }}">
+      <input type="hidden" name="show" value="{{ show }}" />
+      <div class="field"><label class="field__label" for="kind">Kind of call</label>
+        <select id="kind" name="kind">
+          <option value="">Any</option>
+          {% for key, words in kinds %}<option value="{{ key }}"{{ ' selected' if key == kind }}>{{ words }}</option>{% endfor %}
+        </select></div>
+      <div class="field field--end"><button class="btn btn--quiet" type="submit">{{ icon('filter') }}Show</button></div>
+    </form>
+    {% if rows %}
+      <div class="scroll mt-3" tabindex="0" role="region" aria-label="Model calls, scrolls sideways">
+        <table class="data">
+          <thead><tr><th scope="col">When</th><th scope="col">For</th><th scope="col">Model</th><th scope="col">Ended</th><th scope="col" class="num">Characters</th><th scope="col"><span class="sr">Whole message</span></th></tr></thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                <td><a href="{{ url_for('troubleshooting.one', text_id=row.id) }}">{{ row.when | figs }}</a></td>
+                <td>{{ row.what }}{% if row.about %} · {{ row.about }}{% endif %}{% if row.iteration > 1 %} <span class="muted small">step {{ row.iteration }}</span>{% endif %}</td>
+                <td><span class="code">{{ row.model }}{% if row.provider %} ({{ row.provider }}){% endif %}</span></td>
+                <td>{% if row.failed %}{{ tag('broken', 'Failed', 'alert') }}{% else %}answered{% endif %}</td>
+                <td class="num">{{ "{:,}".format(row.size) }}</td>
+                <td>{% if row.activity %}<a href="{{ url_for('activity.show', key=row.activity) }}">Start to finish</a>{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted mt-3">{{ "{:,}".format(kept.calls) }} call{{ '' if kept.calls == 1 else 's' }} kept for {{ kept_days }} day{{ '' if kept_days == 1 else 's' }}; the latest {{ rows | length }} shown. A failed call keeps what it was sent and why it failed.</p>
+    {% else %}
+      <p class="empty mt-3">{{ icon('list') }}<span>Nothing kept{{ ' that failed' if show == 'failed' }} yet.</span></p>
+    {% endif %}
+  </section>
+  <p class="note">{{ icon('lock') }}<span>Only an admin sees this page: it holds the family’s own words, in every chat.</span></p>
+{% endblock %}

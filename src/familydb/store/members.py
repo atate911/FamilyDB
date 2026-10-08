@@ -185,6 +185,10 @@ def erase(conn: sqlite3.Connection, member_id: int) -> dict[str, int]:
         "(SELECT id FROM memories WHERE member_id = ?)",
         (member_id,),
     )
+    # The words of calls made for their messages carry their name in the prompt (ai_texts.py).
+    from familydb.store import ai_texts
+
+    ai_texts.forget_of_messages(conn, member_id)
     for (table, column), how in sorted(POINTING_AT.items(), key=lambda item: item[1] == "delete"):
         if how == "unname":
             sql = f"UPDATE {table} SET {column} = NULL WHERE {column} = ?"

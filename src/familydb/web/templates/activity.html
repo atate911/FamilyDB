@@ -32,7 +32,7 @@
             <thead><tr>
               <th scope="col">When</th><th scope="col">For</th><th scope="col">Model</th><th scope="col">Ended</th>
               <th scope="col" class="num">Sent</th><th scope="col" class="num">Cached</th><th scope="col" class="num">Written</th>
-              <th scope="col" class="num">Back</th><th scope="col" class="num">Searches</th><th scope="col" class="num">US$</th><th scope="col" class="num">ms</th>
+              <th scope="col" class="num">Back</th><th scope="col" class="num">Searches</th><th scope="col" class="num">US$</th><th scope="col" class="num">ms</th><th scope="col"><span class="sr">Its words</span></th>
             </tr></thead>
             <tbody>
               {% for row in model_calls %}
@@ -48,6 +48,7 @@
                   <td class="num">{{ row.searches }}</td>
                   <td class="num">{{ "%.4f"|format(row.cost) }}{% if row.estimated %}*{% endif %}</td>
                   <td class="num">{{ row.ms if row.ms is not none else '' }}</td>
+                  <td>{% if row.words %}<a href="{{ url_for('troubleshooting.one', text_id=row.words) }}">Words</a>{% endif %}</td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -55,6 +56,18 @@
         </div>
         <p class="small muted mt-3">The table scrolls sideways. Sent is what was not in the cache; cached came back from it at a tenth of the price; written went into it. * a model without a listed price, counted high.</p>
       </section>
+
+      {% if failed_calls %}
+        <section class="card" aria-labelledby="h-failed">
+          <h2 class="card__head" id="h-failed">{{ icon('alert') }}Calls that got no answer</h2>
+          <ul class="plain">
+            {% for row in failed_calls %}
+              <li><span class="muted small">{{ row.when | figs }}</span> <span class="code">{{ row.model }}</span>
+                <a href="{{ url_for('troubleshooting.one', text_id=row.id) }}">{{ row.error | truncate(160) }}</a></li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
 
       {% if tool_calls %}
         <section class="card" aria-labelledby="h-tools">
