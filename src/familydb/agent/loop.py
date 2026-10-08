@@ -119,9 +119,13 @@ def run_turn(
     for iteration in range(1, limit + 1):
         try:
             held = spending.admit(
-                ctx.conn, settings, ctx.clock.now(), _estimate(request, active, surface, settings)
+                ctx.conn,
+                settings,
+                ctx.clock.now(),
+                _estimate(request, active, surface, settings),
+                company=active.name,
             )
-        except spending.SpendingLimitReached as exc:
+        except spending.LIMITS as exc:
             written = {spec.name for spec in registry.specs() if spec.writes}
             completed = [a for a in actions if a.get("ok") and a.get("tool") in written]
             if not completed:
@@ -148,7 +152,14 @@ def run_turn(
                     model=request.model or active.model_for(surface),  # type: ignore[arg-type]
                 )
                 _failed(ctx, settings, request, active, surface, exc, iteration, kind)
-                switchable = fallback is not None and active is not fallback
+                # A stand-in that has had its month's worth is not asked: the failure stands.
+                switchable = (
+                    fallback is not None
+                    and active is not fallback
+                    and not spending.company_full(
+                        ctx.conn, settings, ctx.clock.now(), fallback.name
+                    )
+                )
                 if not (switchable and first_call_only(request) and worth_switching(exc)):
                     raise
                 log.warning(

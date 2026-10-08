@@ -16,12 +16,19 @@ PASSWORD = "open sesame please"
 
 
 @pytest.fixture
-def page(settings, clock, conn, family):
+def page(settings, clock, conn, family, monkeypatch):
     """A signed-in client on a database the test can also reach through `conn`."""
     app = App(settings.model_copy(update={"web_password": PASSWORD}), clock)
     client = create_app(app).test_client()
     assert client.post("/login", data={"password": PASSWORD}).status_code == 302
     client.app = app  # the test looks at what the page put in force
+    # A key is checked with its company before it is kept; no test asks one.
+    from familydb.agent.providers.anthropic import AnthropicProvider
+    from familydb.agent.providers.gemini import GeminiProvider
+    from familydb.agent.providers.openai import OpenAIProvider
+
+    for company in (AnthropicProvider, GeminiProvider, OpenAIProvider):
+        monkeypatch.setattr(company, "check_key", lambda self: "unchecked")
     return client
 
 
@@ -44,7 +51,7 @@ def _errors(text: str) -> list[str]:
     """What the page complained of: under a box, or in the banner at the top."""
     boxes = re.findall(r'class="field__error" role="alert">\s*([^<]+)', text)
     banners = re.findall(
-        r'role="alert"[^>]*><span class="banner__ic">.*?</span>\s*'
+        r'role="alert"[^>]*>\s*<span class="banner__ic">.*?</span>\s*'
         r'<p class="banner__text">\s*([^<]+)',
         text,
         re.S,
@@ -76,10 +83,8 @@ def test_saving_puts_it_in_force_at_once(page, conn) -> None:
         "Saved. Changed: Company that answers, Weekend ideas time, Look ideas up on the web."
         in (after)
     )
-    assert (
-        '<label class="field__label" for="model-key">Google key</label>'
-        in page.get("/settings/model").text
-    )
+    # The page names who answers by what each use falls back to.
+    assert "Default: Gemini 3.1 Flash-Lite (everyday)" in page.get("/settings/model").text
     assert 'value="19" selected' in page.get("/settings/messages").text
 
 
@@ -254,58 +259,55 @@ def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, c
 
 
 def test_a_model_box_offers_models_without_limiting_them(page) -> None:
-    """A dropdown of the company's models, each with what it is, and "Another model" opening a
-    box to type one the list does not have: a model released next week has to fit."""
+    """The lineup's dropdown of a company's models, each with what it is, and a model its list
+    does not have still kept: a model released next week has to fit."""
     text = page.get("/settings/model").text
-    assert _choices(text, "openai_model")[0] == "Default (gpt-6-luna)"
-    assert "gpt-6-luna · GPT-6 Luna, everyday · $0.10 in, $0.50 out" in _choices(
-        text, "openai_model"
+    assert _choices(text, "openai_model")[0] == "GPT-6 Luna · default"
+    assert "gpt-5" in _choices(text, "openai_model")  # one the lineup has no name for, by its name
+    saved = page.post("/settings/models", data={"csrf": _token(page), "openai_model": "gpt-6-sol"})
+    assert saved.status_code == 302 and page.app.settings.openai_model == "gpt-6-sol"
+    after = page.get("/settings/model").text
+    assert '<option value="gpt-6-sol" selected>GPT-6 Sol</option>' in after
+    # A name the list does not offer (set from the environment, or typed on an older page) stays
+    # chosen: saving the page again does not lose it.
+    page.post("/settings", data=_whole_form(page, openai_model="gpt-7-nova"))
+    assert (
+        '<option value="gpt-7-nova" selected>gpt-7-nova</option>'
+        in page.get("/settings/model").text
     )
-    assert _choices(text, "openai_model")[-1] == "Another model…"
-    assert '<input id="a-openai_model" name="openai_model_another"' in text
-    page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
-    assert page.app.settings.openai_model == "gpt-6-sol"
-    assert '<option value="gpt-6-sol" selected>' in page.get("/settings/model").text
-
-    # Another, typed: taken, and shown again as typed, with "Another" chosen.
-    typed = _whole_form(page, openai_model="another", openai_model_another="gpt-7-nova")
-    page.post("/settings", data=typed)
+    page.post("/settings/models", data={"csrf": _token(page), "openai_model": "gpt-7-nova"})
     assert page.app.settings.openai_model == "gpt-7-nova"
-    text = page.get("/settings/model").text
-    assert '<option value="another" selected>Another model…</option>' in text
-    assert 'name="openai_model_another" type="text" autocomplete="off"' in text
-    assert 'value="gpt-7-nova"' in text
-    # What was typed under a list that did not say "Another" is not read.
-    page.post("/settings", data=_whole_form(page, openai_model="", openai_model_another="x"))
+    # Emptied, it is the default again.
+    page.post("/settings/models", data={"csrf": _token(page), "openai_model": ""})
     assert page.app.settings.openai_model == "gpt-6-luna"
 
 
 def _choices(text: str, key: str) -> list[str]:
     """What one dropdown offers, as it reads."""
-    found = re.search(rf'<select id="f-{key}"[^>]*>(.*?)</select>', text, re.S)
+    found = re.search(rf'<select name="{key}"[^>]*>(.*?)</select>', text, re.S)
     assert found is not None
     return [" ".join(one.split()) for one in re.findall(r">([^<]+)</option>", found.group(1))]
 
 
-def test_each_level_says_which_model_it_means_and_what_it_costs(page) -> None:
+def _row(text: str, use: str) -> str:
+    """One use's row of the AI model page."""
+    found = re.search(rf'id="row-{use}".*?</li>', text, re.S)
+    assert found is not None
+    return found.group(0)
+
+
+def test_each_use_says_which_model_it_falls_back_to(page) -> None:
+    """A use nobody chose for answers as the older settings say, and its row says which model that
+    is, so a level set before the page was redrawn is never invisible."""
     # The fixture's everyday Claude is Opus: a level up never answers with a cheaper model.
-    assert _choices(page.get("/settings/model").text, "chat_level")[1:] == [
-        "everyday: Claude Opus 5 ($5.00 in, $25.00 out)",
-        "better: Claude Opus 5 ($5.00 in, $25.00 out)",
-        "best: Claude Opus 5 ($5.00 in, $25.00 out)",
-    ]
+    assert "Default: Claude Opus 5 (best)" in _row(page.get("/settings/model").text, "chat")
     page.post("/settings", data=_whole_form(page, provider="openai", digest_level="best"))
     assert page.app.settings.digest_level == "best"
     text = page.get("/settings/model").text
-    assert _choices(text, "digest_level")[1:] == [
-        "everyday: GPT-6 Luna ($0.10 in, $0.50 out)",
-        "better: GPT-6 Sol ($2.00 in, $10.00 out)",
-        "best: GPT-6 Astra ($10.00 in, $50.00 out)",
-    ]
-    assert '<option value="best" selected>best: GPT-6 Astra' in text
-    # A model box says where each name stands, and what it costs.
-    assert "gpt-6-sol · GPT-6 Sol, better · $2.00 in, $10.00 out" in _choices(text, "openai_model")
-    assert "gpt-5 · $1.25 in, $10.00 out" in _choices(text, "openai_model")
+    assert "Default: GPT-6 Luna (everyday)" in _row(text, "chat")
+    # Followed exactly while the strengths agree; at its own once they do not.
+    assert "Default: GPT-6 Astra (best)" in _row(text, "digest")
+    assert "Default: same as lookups" in _row(text, "look")
 
 
 def test_the_daily_limit_is_on_the_page(page) -> None:
@@ -336,36 +338,48 @@ def _ask(monkeypatch, company: _Company) -> None:
 
 
 def test_a_model_the_company_does_not_have_is_refused(page, monkeypatch) -> None:
-
     company = _Company({"gpt-6-luna"})
     _ask(monkeypatch, company)
-    response = page.post("/settings", data=_whole_form(page, openai_model="gpt-6-lunar"))
-    assert response.status_code == 400
-    assert "OpenAI says it has no model called gpt-6-lunar. Check the spelling." in _errors(
-        response.text
-    )
-    assert page.app.settings.openai_model == "gpt-6-luna"
+    form = {"csrf": _token(page), "openai_model": "gpt-6-lunar"}
+    # From an older page's form, and from this one: the same sentence, and nothing saved.
+    for path in ("/settings", "/settings/models"):
+        response = page.post(path, data=form)
+        assert response.status_code == 400
+        assert "OpenAI says it has no model called gpt-6-lunar. Check the spelling." in _errors(
+            response.text
+        )
+        assert page.app.settings.openai_model == "gpt-6-luna"
+    # What was typed comes back in its box, with the fold it is in open, not a blank one.
+    assert '<option value="gpt-6-lunar" selected>gpt-6-lunar</option>' in response.text
+    assert '<details class="mp-fold" id="lineup" open>' in response.text
     # A save that leaves the model alone does not ask again.
     company.asked.clear()
-    page.post("/settings", data=_whole_form(page, effort="low"))
+    page.post("/settings/models", data={"csrf": _token(page), "effort_chat": "low"})
     assert company.asked == []
 
 
 def test_a_hearing_model_is_offered_and_checked_like_the_other_models(page, monkeypatch) -> None:
-    """Each with what it costs, by the minute for one billed so, and a name its company does not
-    have is refused, as every voice note would otherwise go unheard."""
-    text = page.get("/settings/model").text
-    offered = _choices(text, "openai_transcribe_model")
-    assert "whisper-1 · $0.006 a minute" in offered
-    assert "gpt-4o-mini-transcribe · $1.25 in, $5.00 out" in offered
+    """Voice notes are a row of their own: the models that hear are offered, by the minute for one
+    billed so, and a name its company does not have is refused, as every voice note would
+    otherwise go unheard."""
+    row = _row(page.get("/settings/model").text, "hear")
+    assert '<option value="openai:whisper-1">whisper-1</option>' in row
+    assert "Claude" not in row.split("</select>")[0]  # Claude hears nothing, so it is not offered
+    assert "$0.006" in row  # what a minute costs, in the comparison
     _ask(monkeypatch, _Company({"gpt-4o-mini-transcribe"}))
-    typo = _whole_form(page, openai_transcribe_model="gpt-4o-mini-transcrib")
-    response = page.post("/settings", data=typo)
+    typo = {
+        "csrf": _token(page),
+        "choice_hear": "openai:__other",
+        "other_hear": "gpt-4o-mini-transcrib",
+    }
+    response = page.post("/settings/models", data=typo)
     assert response.status_code == 400
-    assert "OpenAI says it has no model called gpt-4o-mini-transcrib. Check the spelling." in (
-        _errors(response.text)
-    )
-    assert page.app.settings.openai_transcribe_model == "gpt-4o-mini-transcribe"
+    assert (
+        "Voice notes: OpenAI says it has no model called gpt-4o-mini-transcrib. Check the spelling."
+        in _errors(response.text)
+    )  # under its row, and at the top
+    assert page.app.settings.model_choices == {}
+    assert 'value="gpt-4o-mini-transcrib"' in response.text  # and what was typed is not lost
 
 
 def test_a_company_that_cannot_be_asked_does_not_block_a_save(page, monkeypatch) -> None:
@@ -582,16 +596,29 @@ def _drawn(text: str) -> set[str]:
 
 
 def test_every_setting_is_on_exactly_one_page_and_the_right_one(page) -> None:
-    """Split into pages, a setting could fall between them, or turn up on two and be saved twice."""
+    """Split into pages, a setting could fall between them, or turn up on two and be saved twice.
+    The ones the AI model page replaced with a choice for each use (`fields.LEGACY`) are drawn
+    nowhere: each is only what a use falls back to."""
     found: dict[str, list[str]] = {}
     for section in fields.SECTIONS:
         response = page.get(f"/settings/{section.name}")
         assert response.status_code == 200, section.name
         for key in _drawn(response.text):
             found.setdefault(key, []).append(section.name)
-    assert sorted(found) == sorted(BEHAVIOUR)
+    assert sorted(found) == sorted(set(BEHAVIOUR) - fields.LEGACY)
     assert {key: pages for key, pages in found.items() if len(pages) > 1} == {}
-    assert {key: pages[0] for key, pages in found.items()} == fields.SECTION_OF
+    drawn_on = {key: where for key, where in fields.SECTION_OF.items() if key not in fields.LEGACY}
+    assert {key: pages[0] for key, pages in found.items()} == drawn_on
+
+
+def test_a_setting_the_model_page_replaced_is_still_read_as_a_default(page, conn) -> None:
+    """Nothing is lost on upgrade: what an older page stored still says what each use does."""
+    assert set(BEHAVIOUR) >= fields.LEGACY
+    assert {"chat_level", "provider", "voice_notes", "provider_fallback"} <= fields.LEGACY
+    page.post("/settings", data=_whole_form(page, chat_level="best", voice_notes="false"))
+    assert settings_store.overrides(conn) == {"chat_level": "best", "voice_notes": False}
+    row = _row(page.get("/settings/model").text, "hear")
+    assert "Default: off" in row
 
 
 def test_a_page_that_is_not_one_is_not_found(page) -> None:

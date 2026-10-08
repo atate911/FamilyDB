@@ -298,12 +298,22 @@ everything.
   by level in `agent/providers/catalog.py` (everyday, better, best: GPT-6 Luna, Sol and Astra; Claude
   Haiku, Sonnet and Opus; Gemini Flash-Lite, Flash and Pro), with its cost and whether it thinks;
   a test holds the catalog to what the provider modules send. `everyday` is each company's own model
-  setting, its cheapest by default (also tested). The family chooses a level per situation
-  (`chat_level` for chat and retries, `digest_level` for the digest and its retries, `lookup_level`
-  for lookups and discovery); a call that moves to the fallback company is answered at the same level
-  there. A level up never answers with a cheaper model than everyday, so an everyday model set above
-  the lineup's, or one the price table does not list, stays. The family chooses; the model never
-  does.
+  setting, its cheapest by default (also tested). The family chooses a company and a model for each
+  of eight **uses** (`agent/uses.py`: answering the family, the digest, choosing suggestions,
+  lookups, what is on near home, voice notes, photos, weighing changes), each covering the kinds of
+  call `gateway.KINDS` names for it; `gateway.ask` (and `listen`, `look`) lays the choice over the
+  settings (`uses.overlay`) so the request builder and the daily check need only ask there. A use
+  nobody chose for is answered as `chat_level`, `digest_level`, `lookup_level` and the older
+  settings say (`uses.default_choice`), so an install that never opens the page is untouched. A call
+  that moves to a stand-in company is answered at the strength of the model chosen (the level the
+  lineup gives it, everyday for one it does not list). A level up never answers with a cheaper model
+  than everyday, so an everyday model set above the lineup's, or one the price table does not list,
+  stays. The family chooses; the model never does.
+- **The page shows the cost of a choice before it is made.** `web/models_page.py` prices the last 30
+  days of `llm_calls` at every model a use could be given (`prices.cost`, the sums the daily limit
+  uses), a typical month's use where a use has no calls, and does no model call. A company's monthly
+  limit (`spending.admit(company=)`) and whether it may answer or stand in are the family's word per
+  company (`Settings.company_options`).
 - **A company nobody listed has no lineup.** One an admin adds (`docs/COMPANIES.md`) names its own
   everyday, better and best models, and an unpriced model is counted at `prices.UNLISTED`, dearer
   than any listed. It is asked nothing until chosen or allowed to stand in, and it has no hosted web

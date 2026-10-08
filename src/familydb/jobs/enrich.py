@@ -15,7 +15,7 @@ from typing import Any
 from familydb import routing, voice
 from familydb.agent import spending
 from familydb.agent.loop import MessagesAPI
-from familydb.agent.spending import SpendingLimitReached
+from familydb.agent.spending import LIMITS
 from familydb.agent.worker import WorkerTurn, home_location, run_worker_turn
 from familydb.app import App
 from familydb.availability import enrichment_available
@@ -233,7 +233,7 @@ def enrich_idea(
             user_location=home_location(app.settings),
         )
     except AgentError as exc:
-        if exc.retryable or isinstance(exc, SpendingLimitReached):
+        if exc.retryable or isinstance(exc, LIMITS):
             log.warning("enrichment of idea %s deferred: %s", idea.id, exc)
             return "deferred"
         _mark(conn, app, idea.id, "failed", f"worker: {exc}")

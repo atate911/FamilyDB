@@ -28,7 +28,7 @@ from familydb.agent.providers.base import (
     WebAccess,
 )
 from familydb.config import Settings
-from familydb.errors import ConfigError
+from familydb.errors import AgentError, ConfigError
 
 log = logging.getLogger(__name__)
 
@@ -46,8 +46,52 @@ def refusable_parts(name: str) -> tuple[str, ...]:
     return tuple(part.name for part in getattr(module, "PARTS", ()))
 
 
+class Withheld:
+    """A company the family has not let answer: asked nothing, so all it will say is that it cannot
+    be. Everything else is the company's own, for the places that only name it."""
+
+    def __init__(self, inner: Provider) -> None:
+        self._inner = inner
+        self.name = inner.name
+
+    def configured(self) -> bool:
+        return False
+
+    def _refuse(self) -> AgentError:
+        return AgentError(
+            f"{companies.label(self.name)} is not let to answer, so nothing was sent to it",
+            retryable=False,
+        )
+
+    # Nothing the family wrote is sent to a company they switched off, whoever forgot to ask
+    # `configured()` first: the three ways a request leaves are closed here.
+    def send(self, request: Any) -> Any:
+        raise self._refuse()
+
+    def transcribe(self, audio: Any, hints: str) -> Any:
+        raise self._refuse()
+
+    def describe(self, picture: Any, ask: str) -> Any:
+        raise self._refuse()
+
+    def __getattr__(self, attribute: str) -> Any:
+        return getattr(self._inner, attribute)
+
+
 def build(name: str, settings: Settings, api: Any = None, audio: Any = None) -> Provider:
-    """The provider by name; `api` and `audio` inject test stand-ins."""
+    """The provider by name; `api` and `audio` inject test stand-ins. A company the family has not
+    let answer (`CompanyOptions.allowed`) comes back unable to be asked."""
+    provider = _make(name, settings, api=api, audio=audio)
+    return provider if companies.allowed(name, settings) else Withheld(provider)  # type: ignore[return-value]
+
+
+def has_credentials(name: str, settings: Settings) -> bool:
+    """Whether the company has what it needs to be asked (a key, or none for one on this network),
+    whether or not the family has let it answer."""
+    return _make(name, settings).configured()
+
+
+def _make(name: str, settings: Settings, api: Any = None, audio: Any = None) -> Provider:
     if name == "anthropic":
         from familydb.agent.providers.anthropic import AnthropicProvider
 
@@ -132,13 +176,15 @@ def for_surface(
     searches the web (`web`), a chosen company without hosted search is passed over for the first
     other that has it and a key: the family's lookups do not stop for the chat company's sake."""
     primary = build(chosen(settings, surface), settings, api=api)
-    if web and api is None and not can_search(primary) and settings.provider_fallback:
-        # Only with a second company allowed: with it off the family has said one company sees
-        # their words, and a lookup waits rather than go to another (or one is chosen for lookups).
+    if web and api is None and not can_search(primary):
+        # Only a company the family let stand in: with none, one company sees their words, and a
+        # lookup waits rather than go to another (or one is chosen for lookups).
         able = [
             spare
             for spare in (build(name, settings) for name in others(primary.name, settings))
-            if can_search(spare) and spare.configured()
+            if can_search(spare)
+            and spare.configured()
+            and companies.may_stand_in(spare.name, settings)
         ]
         if able:
             return min(able, key=lambda spare: _everyday_output(spare, surface))
@@ -155,17 +201,23 @@ def _everyday_output(provider: Provider, surface: Surface) -> float:
 def fallback_for(
     settings: Settings, surface: Surface, primary: str, *, web: bool = False
 ) -> Provider | None:
-    """The other provider, when switched on, keyed and allowed to stand in; else None."""
-    if not settings.provider_fallback:
-        return None
+    """The first other company that is keyed, allowed and may stand in; else None."""
     for candidate in others(primary, settings):
-        company = companies.get(candidate, settings)
-        if company is None or not company.stands_in:
+        if companies.get(candidate, settings) is None or not companies.may_stand_in(
+            candidate, settings
+        ):
             continue
         spare = build(candidate, settings)
         if spare.configured() and (can_search(spare) or not web):
             return spare
     return None
+
+
+def _first_then_standing(settings: Settings, able: list[Provider]) -> list[Provider]:
+    """The first company able, then those of the rest the family let stand in."""
+    if not able:
+        return []
+    return [able[0], *[p for p in able[1:] if companies.may_stand_in(p.name, settings)]]
 
 
 def hearers(settings: Settings, audio: Any = None) -> list[Provider]:
@@ -186,8 +238,9 @@ def hearers(settings: Settings, audio: Any = None) -> list[Provider]:
         if provider.listener() and provider.configured()
     ]
     if settings.transcribe_provider and (not able or able[0].name != settings.transcribe_provider):
-        return able if settings.provider_fallback else []
-    return able if settings.provider_fallback else able[:1]
+        # The one chosen to hear cannot: only a company that may stand in answers.
+        return [spare for spare in able if companies.may_stand_in(spare.name, settings)]
+    return _first_then_standing(settings, able)
 
 
 def lookers(settings: Settings, api: Any = None) -> list[Provider]:
@@ -201,7 +254,7 @@ def lookers(settings: Settings, api: Any = None) -> list[Provider]:
         for provider in (build(name, settings) for name in [first, *others(first, settings)])
         if provider.viewer() and provider.configured()
     ]
-    return able if settings.provider_fallback else able[:1]
+    return _first_then_standing(settings, able)
 
 
 def ready(settings: Settings, surface: Surface, api: Any = None, *, web: bool = False) -> bool:
@@ -236,6 +289,7 @@ __all__ = [
     "ToolOutcome",
     "TurnRequest",
     "WebAccess",
+    "Withheld",
     "build",
     "catalog",
     "chosen",

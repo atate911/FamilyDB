@@ -37,7 +37,7 @@ Status and `familydb debug cost` name each kind of call by what it was for. Noth
 | Answering a message again after a failure | The retry job, every 5 minutes by default, up to 3 retries by default | Only after a failure |
 | Looking ideas up | One turn per idea, up to 3 searches; by default together at 21:00, up to 40 a night | After an install; the program's own default is off |
 | Searching for what is on | Inside a suggestion that asks what is on, up to 4 searches; kept 12 hours per window | With lookups |
-| Weighing a change in the models | Evenings when a change needs weighing (a refusal at once), on `judgement_level` (`best` by default), within `judgement_budget` (US$1 a month by default) | No |
+| Weighing a change in the models | Evenings when a change needs weighing (a refusal at once), at the strength of its row (`best` by default), within `judgement_budget` (US$1 a month by default) | No |
 | Checking a disputed price | With the weighing, up to 2 questions per run (every 15 minutes), 3 searches each, same budget | No |
 | Listening to voice notes | Each voice note, up to 5 minutes by default, before its chat call | Yes, with an OpenAI or Gemini key |
 | Reading photos | Each photo, up to four of an album, on the lookup model, before its chat call | Yes |
@@ -48,10 +48,10 @@ A voice note or a photo pays twice: once to be written down, then as a chat mess
 
 | Lever | Setting | Default |
 |---|---|---|
-| Model strength for chat, weekend ideas, lookups and photos | [`chat_level`, `digest_level`, `lookup_level`](/wiki/controls/settings/ai-model#how-strong-a-model-answers) | everyday, the cheapest |
+| Which model does each thing the assistant does, and what it would cost | [The rows of AI model](/wiki/controls/settings/ai-model#what-does-what) (older installs: `chat_level`, `digest_level`, `lookup_level`) | everyday, the cheapest |
 | Thinking, history, ideas and steps | [`effort`, `worker_effort`, `history_limit`, `history_hours`, `prompt_idea_limit`, `agent_max_iterations`](/wiki/controls/settings/spending#thinking) | medium, low, 20, 6 hours, 150, 8 |
 | Web lookups and discovery | [`web_tools_enabled`](/wiki/controls/settings/lookups#looking-ideas-up) | on after an install |
-| Voice notes and photos | [`voice_notes`, `photos`](/wiki/controls/settings/ai-model#voice-notes-and-photos) | on |
+| Voice notes and photos | [Their rows on AI model](/wiki/controls/settings/ai-model#voice-notes-and-photos) | on |
 | Weekend ideas | [`digest_chat_id`](/wiki/controls/settings/messages#weekend-ideas) (empty sends none) | the web chat after an install; otherwise empty |
 
 Effort does nothing for a model that does not think, such as Claude Haiku 4.5.
@@ -67,4 +67,4 @@ A kind of call that starts costing much more raises a row on Status: see [Models
 
 ## The company's own limit
 
-Because the daily limit is an estimate, the model company's own limit is the backstop: set a monthly limit or alert in its console. If the account runs out of credit, a row appears under **Needs a look**. With a second company's key saved and **Ask another company when the first cannot** on (the default), the call can go to that company, but only before the turn has changed anything. A rate limit is retried, not failed for good.
+Because the daily limit is an estimate, the model company's own limit is the backstop: set a monthly limit or alert in its console. If the account runs out of credit, a row appears under **Needs a look**. With a second company's key saved and **May stand in** on for it (the default), the call can go to that company, but only before the turn has changed anything. A monthly limit for each company is set on [AI model](/wiki/controls/settings/ai-model#companies). A rate limit is retried, not failed for good.

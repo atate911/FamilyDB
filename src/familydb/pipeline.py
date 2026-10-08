@@ -25,10 +25,10 @@ from familydb import (
     wish_service,
     wording,
 )
-from familydb.agent import gateway, spending
+from familydb.agent import gateway, spending, uses
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
-from familydb.agent.providers import Audio, Picture
+from familydb.agent.providers import Audio, Picture, companies
 from familydb.agent.render import (
     render_audience_line,
     render_folded_line,
@@ -38,7 +38,7 @@ from familydb.agent.render import (
     render_retry_note,
     render_user_turn,
 )
-from familydb.agent.spending import SpendingLimitReached
+from familydb.agent.spending import CompanyLimitReached, SpendingLimitReached
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage, PhotoNote
 from familydb.clock import FixedClock
@@ -388,7 +388,7 @@ def _hear(
     note = msg.voice
     assert note is not None
     settings = app.settings
-    if not settings.voice_notes:
+    if not uses.on(settings, "hear"):
         return _not_heard(app, conn, msg, inbound_id, "voice notes are off", "voice_off")
     if not gateway.can_listen(settings, audio=hearing):
         return _not_heard(app, conn, msg, inbound_id, "nobody can hear", "voice_no_ears")
@@ -441,7 +441,7 @@ def _look(
     notes = msg.photos
     settings = app.settings
     caption = msg.text.strip()
-    if not settings.photos:
+    if not uses.on(settings, "look"):
         if not caption:
             return _not_heard(
                 app, conn, msg, inbound_id, "photos are off", "photo_off", what="photo"
@@ -655,6 +655,15 @@ def _answer(
                 seed=inbound_id,
                 plain=plain,
                 limit=f"{exc.limit:.2f}",
+            )
+        elif isinstance(exc, CompanyLimitReached):
+            reply = voice.say(
+                app.settings,
+                "company_limit",
+                seed=inbound_id,
+                plain=plain,
+                company=companies.label(exc.company, app.settings),
+                limit=f"${exc.limit:.2f}",
             )
         else:
             reply = voice.say(

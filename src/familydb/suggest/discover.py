@@ -10,7 +10,7 @@ import logging
 from datetime import date, timedelta
 from typing import Any, Literal
 
-from familydb.agent import providers
+from familydb.agent import gateway
 from familydb.agent.worker import home_location, run_worker_turn
 from familydb.availability import web_tools_available
 from familydb.config import Settings
@@ -83,7 +83,7 @@ def discover(
     """Finds for the window, plus a `skipped_checks` note when discovery did not run."""
     if not web_tools_available(ctx.settings):
         return [], NOTE_OFF
-    if not providers.ready(ctx.settings, "worker", api=ctx.api, web=True):
+    if not gateway.can_ask(ctx.settings, "discover", api=ctx.api):
         return [], NOTE_NO_KEY
     request = render_discover_request(context, constraints, ctx.settings)
     window = cache_key(context.window)

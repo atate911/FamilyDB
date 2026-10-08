@@ -290,7 +290,8 @@ def test_a_company_answers_once_chosen_and_stays_until_another_is(page, conn):
     add_openrouter(page)
     chosen = post(page, "/settings/companies/openrouter/use")
     assert chosen.status_code == 302
-    assert page.app.settings.provider == "openrouter"
+    # The chat row says it, as choosing it in the table would, and what follows the chat follows it.
+    assert page.app.settings.model_choices == {"chat": "openrouter:deepseek/deepseek-chat"}
     assert "OpenRouter answers the family now" in page.get("/settings/model").text
     # Every page still draws with it answering.
     for path in (
@@ -302,9 +303,10 @@ def test_a_company_answers_once_chosen_and_stays_until_another_is(page, conn):
     ):
         assert page.get(path).status_code == 200, path
     in_use = post(page, "/settings/companies/openrouter/remove")
-    assert in_use.status_code == 400 and "answering now" in in_use.text
-    post(page, "/settings/model", provider="openai", key="sk-new")
-    assert page.app.settings.provider == "openai"
+    assert in_use.status_code == 400 and "chosen for Answering the family" in in_use.text
+    post(page, "/settings/models", choice_chat="")  # back to the default, which is OpenAI's
+    assert page.app.settings.model_choices == {}
+    assert post(page, "/settings/companies/openrouter/remove").status_code == 302
 
 
 def test_a_company_without_its_key_cannot_be_chosen(page, conn):
@@ -464,8 +466,13 @@ def test_the_company_boxes_stay_dropdowns_and_offer_no_added_company_for_lookups
         assert one.choices == companies.SPARE_ORDER, key
     add_openrouter(page)
     text = page.get("/settings/model").text
-    lookups = text.split('<select id="f-worker_provider"')[1].split("</select>")[0]
-    assert "openrouter" not in lookups  # it has no hosted search, so it is not offered for lookups
+
+    def row(use):
+        return re.search(rf'id="row-{use}".*?</select>', text, re.S).group(0)
+
+    assert '<optgroup label="OpenRouter">' in row("chat")
+    # It has no hosted search, so it is not offered for the lookups.
+    assert "OpenRouter" not in row("lookup")
 
 
 # -- a new company is priced at once, or said to be unpriced
@@ -517,3 +524,21 @@ def test_the_key_is_asked_for_again_before_the_new_address_is_even_looked_up(pag
     monkeypatch.setattr(address, "classify", lambda host: 1 / 0)  # a lookup would blow up
     refused = edit(page, base_url="https://elsewhere.example/v1")
     assert refused.status_code == 400 and "type its key again" in refused.text
+
+
+def test_what_the_card_says_of_standing_in_is_the_latest_word_over_the_panels(page, conn):
+    """The AI model page's panel and this card both say whether the company may stand in: whichever
+    spoke last wins, and the card shows what is in force, not only its own definition."""
+    add_openrouter(page)
+    assert edit(page, stand_in="1").status_code == 302
+    assert companies.may_stand_in("openrouter", page.app.settings)
+    # The panel unticks it: that is now the word in force, and the card shows it unticked.
+    post(page, "/settings/models", company=["openrouter"], allow_openrouter="1")
+    assert not companies.may_stand_in("openrouter", page.app.settings)
+    assert settings_store.get(conn, "company_options") == {"openrouter": {"stand_in": False}}
+    shown = page.get("/settings/model").text
+    assert re.search(r'name="stand_in" value="1"(?! checked)', shown)
+    # The card ticks it again: its word is the latest, and the panel's is not left over it.
+    assert edit(page, stand_in="1").status_code == 302
+    assert settings_store.get(conn, "company_options") is None
+    assert companies.may_stand_in("openrouter", page.app.settings)

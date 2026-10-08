@@ -43,7 +43,7 @@ from flask import (
 from pydantic import ValidationError
 
 from familydb import export, model_watch, passwords, personas, voice
-from familydb.agent import gateway, providers
+from familydb.agent import gateway, providers, uses
 from familydb.agent.providers import companies, prices
 from familydb.agent.spending import spent_today
 from familydb.app import App
@@ -56,13 +56,21 @@ from familydb.availability import (
     web_is_public,
     web_tools_available,
 )
-from familydb.config import CompanyDef, PersonaRewrite, Settings, apply_overrides
+from familydb.config import CompanyDef, CompanyOptions, PersonaRewrite, Settings, apply_overrides
 from familydb.dates import hour_words
 from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
-from familydb.web import auth, company_forms, fields, keys, troubleshooting, views
+from familydb.web import (
+    auth,
+    company_forms,
+    fields,
+    keys,
+    models_page,
+    troubleshooting,
+    views,
+)
 from familydb.web import status as status_page
 
 log = logging.getLogger(__name__)
@@ -385,6 +393,7 @@ def page(
             section=fields.SECTION_BY_NAME[section],
             sections=fields.SECTIONS,
             groups=groups,
+            problems=problems,
             keys=_key_rows(live, overrides, problems, revealed),
             said=said,
             error=error,
@@ -459,6 +468,8 @@ def _model(app: App, conn: Any) -> dict[str, Any]:
     added = [company_forms.panel(company, live) for company in companies.added(live)]
     return {
         **company_choice(live, request.args.get("company", "")),
+        # Drawn again after a complaint, it shows what was typed, so nothing else is lost.
+        "built": models_page.build(app, conn, request.form if request.method == "POST" else None),
         "in_use": in_use,
         "added": added,
         "templates": [
@@ -771,6 +782,19 @@ def save_keys() -> Response | tuple[str, int]:
             problems[name] = fields.TOO_LONG
         else:
             values[name] = given
+    if not problems:
+        # A model company's key is checked with it (a free request) before it is kept; only a
+        # key it clearly refuses stops the save, and one it cannot be asked about is kept.
+        app = _app()
+        trial = None
+        for company in companies.BUILT_IN:
+            if values.get(company.key_setting):
+                trial = trial or apply_overrides(
+                    app.base_settings,
+                    {k: v for k, v in {**_stored(), **values}.items() if v is not None},
+                )
+                if providers.build(company.slug, trial).check_key() == "refused":
+                    problems[company.key_setting] = KEY_REFUSED.format(company=company.label)
     if problems:
         if back is not None:
             return _answer(back, here, error=" ".join(problems.values()))
@@ -914,6 +938,66 @@ def save_model() -> Response | tuple[str, int]:
     return _answer(back, here, said=said.format(company=label, model=model, name=her))
 
 
+@bp.post("/settings/models")
+def save_models() -> Response | tuple[str, int]:
+    """The models page's one form: which model does each thing, how much each thinks, what each
+    company may do, the caps, the daily check and the lineup. Only what the form carried changes."""
+    app = _app()
+    back = auth.setup_return(request.form.get("then"))
+    if (complaint := auth.refused()) is not None:
+        return _answer(back, "model", error=complaint, otherwise="model")
+    stored = _stored()
+    reading = models_page.read_form(request.form, app.settings, app.base_settings, stored)
+    values, problems = reading.values, dict(reading.problems)
+    if not problems:
+        try:
+            candidate = apply_overrides(
+                app.base_settings,
+                {key: value for key, value in {**stored, **values}.items() if value is not None},
+            )
+        except ValidationError as exc:
+            problems = problems_from(exc)
+        else:
+            problems = {
+                **unknown_models(values, stored, candidate),
+                **models_page.unknown_typed(
+                    values.get("model_choices"), stored.get("model_choices"), candidate
+                ),
+            }
+    if problems:
+        return page("model", problems=problems, error=_problems_said(problems), status=400)
+    return _answer(back, "model", said=_said(_save(values)))
+
+
+CHECKED = {
+    "works": "{company}'s key works.",
+    "refused": "{company} refused the key. Replace it under “Every company's key” below.",
+    "unknown_model": "{company}'s key works, but it has no model called {model}.",
+    "unchecked": "{company} could not be asked just now, so the key is not checked yet.",
+    "no_key": "{company} has no key yet. Add one under “Every company's key” below.",
+}
+
+
+@bp.post("/settings/models/check/<slug>")
+def check_key(slug: str) -> Response | tuple[str, int]:
+    """Ask a company whether its saved key works. It asks for the list of models, which costs
+    nothing, and changes nothing."""
+    app = _app()
+    if (complaint := auth.refused()) is not None:
+        return page("model", error=complaint, status=400)
+    company = companies.get(slug, app.settings)
+    if company is None:
+        abort(404)
+    if not company.key(app.settings):
+        verdict = "no_key"
+    else:
+        verdict = providers.build(slug, app.settings).check_key()
+    model = company.chat_model(app.settings)
+    said = CHECKED.get(verdict, CHECKED["unchecked"]).format(company=company.label, model=model)
+    flash(said, NOTICE)
+    return redirect(url_for("settings.section", name="model", _anchor=f"co-{slug}"))
+
+
 # -- other companies (company_forms.py) -------------------------------------------------------
 
 COMPANY_ADDED = (
@@ -924,7 +1008,8 @@ COMPANY_SAVED = "Saved. {label} is as you left it."
 COMPANY_GONE = "{label} was taken away, with its key."
 COMPANY_CHOSEN = "{label} answers the family now, with {model}."
 COMPANY_IN_USE = (
-    "{label} is the company answering now, so it cannot be taken away. Choose another above first."
+    "{label} is chosen for {uses}, so it cannot be taken away. Choose another company for "
+    "{them} under What does what first."
 )
 COMPANY_UNKNOWN = "There is no such company."
 COMPANY_NEEDS_KEY = "{label} needs its key first."
@@ -979,6 +1064,21 @@ def _keep_company(
         "company_keys": keys,
         **(extra or {}),
     }
+    # The latest word wins: what this card says of standing in replaces what the page's panel said.
+    before_def = next((d for d in live.companies if d.slug == one.slug), None)
+    said = live.company_options.get(one.slug)
+    if (
+        before_def is not None
+        and company_forms.stand_in_said(live, before_def) != one.stand_in
+        and said is not None
+        and said.stand_in is not None
+    ):
+        options = {**live.company_options, one.slug: said.model_copy(update={"stand_in": None})}
+        values["company_options"] = {
+            slug: option.model_dump(exclude_defaults=True)
+            for slug, option in options.items()
+            if option != CompanyOptions()
+        } or None
     stored = _stored()
     try:
         candidate = apply_overrides(
@@ -1138,8 +1238,19 @@ def use_company(slug: str) -> Response | tuple[str, int]:
             error=COMPANY_NEEDS_KEY.format(label=company.label),
             otherwise="model",
         )
-    _save({"provider": None if slug == app.base_settings.provider else slug})
+    # The chat's own row says it, as choosing it on the page would; the digest, choosing suggestions
+    # and what else follows the chat follow it there.
     model = providers.model_at(chosen, "chat", live.chat_level)
+    trial = live.model_copy(
+        update={"model_choices": {**live.model_choices, "chat": f"{slug}:{model}"}}
+    )
+    said = (
+        {}
+        if uses.default_choice(trial, "chat") == f"{slug}:{model}"
+        else {"chat": f"{slug}:{model}"}
+    )
+    kept = {key: text for key, text in live.model_choices.items() if key != "chat"}
+    _save({"model_choices": {**kept, **said} or None})
     return _answer(back, here, said=COMPANY_CHOSEN.format(label=company.label, model=model))
 
 
@@ -1155,12 +1266,30 @@ def remove_company(slug: str) -> Response | tuple[str, int]:
     existing = next((one for one in live.companies if one.slug == slug), None)
     if existing is None:
         return _answer(back, here, error=COMPANY_UNKNOWN, status=404, otherwise="model")
-    if slug in (live.provider, live.worker_provider):
+    chosen_for = company_forms.used_by(live, slug)
+    if chosen_for:
         return _answer(
-            back, here, error=COMPANY_IN_USE.format(label=existing.label), otherwise="model"
+            back,
+            here,
+            error=COMPANY_IN_USE.format(
+                label=existing.label,
+                uses=", ".join(chosen_for),
+                them="it" if len(chosen_for) == 1 else "them",
+            ),
+            otherwise="model",
         )
     keys = {name: key for name, key in live.company_keys.items() if name != slug}
-    _save({"companies": _definitions(live, drop=slug), "company_keys": keys})
+    gone: dict[str, Any] = {"companies": _definitions(live, drop=slug), "company_keys": keys}
+    # What named it goes with it: the company the settings fall back to, and what was said of it.
+    stored = _stored()
+    for setting in ("provider", "worker_provider"):
+        if stored.get(setting) == slug:
+            gone[setting] = None
+    if slug in live.company_options:
+        left = {s: o.model_dump(exclude_defaults=True) for s, o in live.company_options.items()}
+        left.pop(slug)
+        gone["company_options"] = left or None
+    _save(gone)
     return _answer(back, here, said=COMPANY_GONE.format(label=existing.label))
 
 
@@ -1263,6 +1392,9 @@ PROFILE_LABELS = {
     "persona_text": "her description",
     "persona_notes": "notes on how she talks",
     "about_family": "about the family",
+    "model_choices": "which model does what",
+    "use_effort": "how much each thinks",
+    "company_options": "what each company may do",
 }
 # A rough count of what a description adds to every message; /status has the real one.
 CHARS_PER_TOKEN = 4
@@ -1362,6 +1494,7 @@ LINE_GROUPS = (
         (
             "kid_limit",
             "limit_reached",
+            "company_limit",
             "kid_share",
             "kid_later",
             "kid_tomorrow",

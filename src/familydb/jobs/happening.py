@@ -446,7 +446,7 @@ def run_happening(
         if happening.WEB_SOURCE in wanted:
             look_due = _look_due(settings, last, now)
             search_due = due(last.get(happening.WEB_SOURCE), SEARCH_GAP, now)
-            if (look_due or search_due) and app.can_ask("worker", api=api):
+            if (look_due or search_due) and app.can_ask("worker", api=api, kind="scout"):
                 if look_due and within_budget(conn, settings, now):
                     counts["proposed"] = propose_feeds(
                         app, conn, feeds, today=today, now=now, api=api

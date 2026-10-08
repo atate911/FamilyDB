@@ -17,6 +17,7 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from familydb import health
+from familydb.agent import uses
 from familydb.alerts import run_alerts
 from familydb.app import App
 from familydb.availability import digest_configured, enrichment_available, happening_available
@@ -137,7 +138,7 @@ def job_specs(app: App) -> list[JobSpec]:
             "weigh changes in the models",
             run_judgements,
             IntervalTrigger(minutes=15),
-            wanted=settings.judgements,
+            wanted=uses.on(settings, "judge"),
         ),
         JobSpec(
             "happening",

@@ -60,7 +60,7 @@ What a stranger leaves by messaging the assistant: it replies with their id, and
 Anthropic, OpenAI or Google, the business whose model answers. The setting that picks one is called `provider`. See [Model companies](/wiki/boundaries/model-companies).
 
 ### Level
-Everyday, better or best: a company's lineup by strength. Everyday is its cheapest model unless the family chooses another. See [How strong a model answers](/wiki/controls/settings/ai-model#how-strong-a-model-answers).
+Everyday, better or best: a company's lineup by strength. Everyday is its cheapest model unless the family chooses another. See [Everyday, better and best](/wiki/controls/settings/ai-model#everyday-better-and-best).
 
 ### Turn
 One message in, the assistant's thinking and any tools it calls, and one reply out. See [From message to reply](/wiki/behavior/message-to-reply).

@@ -53,12 +53,12 @@ Every row has a tag in words, never color alone, and an admin gets a button besi
 | **The assistant** (by its name) | **Can't answer** names the needed steps not done, or says something only an admin can fix is stopping it. **Resting** says the limit is spent. | **Open setup**, or read Needs a look. See [Setup](/wiki/controls/setup). |
 | **Spending** | **Near the limit** from 75% of it, **Limit reached** at 100%, **No limit** when it is 0, which means nothing stops a runaway day. | **Set a limit**, or raise it on [Spending](/wiki/controls/settings/spending). |
 | **Sign-in** | **Needs a look** while everybody still shares one password or it is still the one FamilyDB started with. It is fine once an admin signs in as themselves, or when no password is set at all. | The Password step of [Setup](/wiki/controls/setup). |
-| **Backup** | **Optional** when no second company with a key can answer. It costs money only when used. | **Add a backup key** on [AI model](/wiki/controls/settings/ai-model#a-second-company). |
+| **Backup** | **Optional** when no second company with a key can answer. It costs money only when used. | **Add a backup key** on [AI model](/wiki/controls/settings/ai-model#keys). |
 | **Telegram** | **Needs a look** when a token is saved but Telegram refused it, it is still connecting, or nobody is linked. **Not connected** with no token. | The Telegram step of Setup. Reminders still appear in the chat without it. |
 | **Google Calendar** | **Needs a look** when a calendar is named but its key file is missing. **Not connected**: plans stay inside FamilyDB. | The Calendar step of Setup. |
 | **Looking things up** | **Off**: new ideas get no hours, prices or drive times. | **Turn it on** on [Lookups](/wiki/controls/settings/lookups). |
 
-The **Backup** row (the second company, not your database backup) is what [A second company](/wiki/controls/settings/ai-model#a-second-company) sets up. **Connected to** repeats the facts behind these rows: the calendar and its address, the home position, whether lookups can run, where the weekend ideas go, and how the web page is protected.
+The **Backup** row (the second company, not your database backup) is what each company's **May stand in** on [AI model](/wiki/controls/settings/ai-model#companies) sets up. **Connected to** repeats the facts behind these rows: the calendar and its address, the home position, whether lookups can run, where the weekend ideas go, and how the web page is protected.
 
 ## Waiting and Worth a look
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.4.0 — in progress
+
+### New since v0.3.1
+
+- **The AI model page is rebuilt around what Vera does.** Eight rows (answering the family, the weekend
+  digest, choosing suggestions, looking things up, what's going down, voice notes, photos, weighing
+  changes), each with its own company and model and what it costs a month, priced again from your last
+  30 days of calls so a change shows what it would have cost before you save it. Each company's card says
+  what it answers now and what it has spent, and can be let to answer, let to stand in, and given a
+  monthly limit; a company with no key yet can still be chosen, and the row says who answers instead.
+  Compare models, a daily cost chart with a day-by-day tooltip, thinking for each row, Presets and Use for
+  everything fill the table without saving. Nothing changes for an install that never opens it: each row
+  falls back to the settings the older page drew. It works with scripts off. The recorded design is
+  `docs/MODELS_PAGE.md`; the three decisions it changed (a model for each use, choosing suggestions
+  on a company of its own, a company chosen before it has a key) are in `docs/DESIGN.md` section 16.
+
 ## v0.3.1 — beta (2026-10-08)
 
 A point release: the one change that was merged after v0.3.0 was cut and so missed it.

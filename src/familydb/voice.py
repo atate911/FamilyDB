@@ -346,6 +346,14 @@ EVENTS: dict[str, Event] = {
         ("limit",),
         {"limit": "2.00"},
     ),
+    "company_limit": Event(
+        "A company's monthly limit reached, and nobody else may answer",
+        "The most set for {company} this month ({limit}) is used up, and no other company is let "
+        "to answer, so I can't answer until next month. Ask again then, or raise the limit on "
+        "the settings page.",
+        ("company", "limit"),
+        {"company": "OpenAI", "limit": "$20.00"},
+    ),
     "kid_flagged": Event(
         "To the parents: a kid asked for something inappropriate",
         "{kid} asked me for something that isn't OK, and I said no: {what}.",
@@ -678,6 +686,7 @@ PLAIN: dict[str, str] = {
     "gave_up_partly": "kid_later",
     "limit_partial": "kid_later",
     "limit_reached": "kid_tomorrow",
+    "company_limit": "kid_later",
     "voice_no_ears": "kid_type_it",
     "reminder_late": "reminder",
     "lookups_off": "lookups_wait",

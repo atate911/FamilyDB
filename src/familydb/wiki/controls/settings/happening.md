@@ -32,7 +32,7 @@ A free Ticketmaster key adds shows, concerts and games near home, read once a da
 
 ## Looking on its own
 
-Once a week FamilyDB searches the web for what is on near home over the next 4 weeks. Every so often it also looks for calendars near home to offer you above, and it looks at once when the home area changes. Both are lookups that use the web, so web lookups must be on ([Lookups](/wiki/controls/settings/lookups)) and a key must be saved for the company that does them ([AI model](/wiki/controls/settings/ai-model#a-second-company)).
+Once a week FamilyDB searches the web for what is on near home over the next 4 weeks. Every so often it also looks for calendars near home to offer you above, and it looks at once when the home area changes. Both are lookups that use the web, so web lookups must be on ([Lookups](/wiki/controls/settings/lookups)) and a key must be saved for the company that does them ([AI model](/wiki/controls/settings/ai-model#what-does-what), the row for what is on near home).
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|

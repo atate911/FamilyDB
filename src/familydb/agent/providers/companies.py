@@ -44,12 +44,6 @@ class Company:
     def built_in(self) -> bool:
         return self.defined is None
 
-    @property
-    def stands_in(self) -> bool:
-        """Whether it may answer when the company chosen cannot. A built-in one may, as the
-        family's setting for a spare has always meant; an added one only when its admin says so."""
-        return True if self.defined is None else self.defined.stand_in
-
     def key(self, settings: Any) -> str | None:
         """Its API key, wherever it is kept."""
         if self.defined is None:
@@ -267,3 +261,35 @@ OPENROUTER = Template(
     key_path="/key",
 )
 TEMPLATES: dict[str, Template] = {OPENROUTER.key: OPENROUTER}
+
+
+def options(slug: str | None, settings: Any = None) -> Any:
+    """What the family said of this company on the models page (`config.CompanyOptions`)."""
+    from familydb.config import CompanyOptions
+
+    given = getattr(settings, "company_options", None) or {}
+    return given.get(slug or "", CompanyOptions())
+
+
+def allowed(slug: str | None, settings: Any = None) -> bool:
+    """Whether the company may be asked at all."""
+    return bool(options(slug, settings).allowed)
+
+
+def may_stand_in(slug: str | None, settings: Any = None) -> bool:
+    """Whether it may answer when the company chosen cannot. The family's word on the page; else,
+    for the three built in, the one switch that used to say it for them all; for one added, its own
+    definition, still behind that switch."""
+    said = options(slug, settings).stand_in
+    if said is not None:
+        return bool(said)
+    company = get(slug, settings)
+    if company is None:
+        return False
+    fallback = bool(getattr(settings, "provider_fallback", True))
+    return fallback if company.defined is None else bool(company.defined.stand_in and fallback)
+
+
+def monthly_limit(slug: str | None, settings: Any = None) -> float | None:
+    """The most the family has said to spend on the company in a month, or None."""
+    return options(slug, settings).monthly_limit

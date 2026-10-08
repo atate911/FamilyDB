@@ -5,7 +5,7 @@
   <p class="sgroup__note">
     Any service that speaks the OpenAI chat protocol can answer the family too: OpenRouter, which
     reaches hundreds of models with one key, or a company you have an account with. Nothing is
-    sent to one until you press <b>Answer with</b> or switch on <b>May stand in</b>, because what
+    sent to one until you choose it for a row of the table above, press <b>Answer with</b> (the chat row, and what follows it) or switch on <b>May stand in</b>, because what
     you write goes to that company. None of them can search the web, so lookups stay with a
     company above that can.
   </p>
@@ -91,10 +91,10 @@
           <form method="post" action="{{ url_for('settings.remove_company', slug=one.slug) }}">
             <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
             <input type="hidden" name="section" value="model" />
-            <button class="btn" type="submit"{% if one.answering %} disabled aria-describedby="c-{{ one.slug }}-kept"{% endif %}>Take {{ one.label }} away, with its key</button>
+            <button class="btn" type="submit"{% if one.used_by %} disabled aria-describedby="c-{{ one.slug }}-kept"{% endif %}>Take {{ one.label }} away, with its key</button>
           </form>
         </div>
-        {% if one.answering %}<p class="small muted" id="c-{{ one.slug }}-kept">{{ one.label }} answers now, so it stays until you choose another company above.</p>{% endif %}
+        {% if one.used_by %}<p class="small muted" id="c-{{ one.slug }}-kept">{{ one.label }} is chosen for {{ one.used_by | join(', ') }}, so it stays until you choose another company for {{ 'it' if one.used_by | length == 1 else 'them' }} under What does what.</p>{% endif %}
       </div>
     </details>
   {% endfor %}

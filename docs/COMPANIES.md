@@ -50,7 +50,7 @@ setting, a spare's order, a model's owner are each asked of the registry.
 | `prices` | US dollars per million tokens, typed. They win over what the daily check read, and a model with no price anywhere is counted at `prices.UNLISTED`, dearer than any listed, so the daily limit stops early. An added company's prices are matched by the exact name only: a prefix would price a dearer variant at its cheaper sibling's rate. |
 | `reasoning_fields` | The message field a model's thinking comes back in. Some companies require it sent back unchanged beside a tool call or the next request fails (DeepSeek's `reasoning_content`; OpenRouter's `reasoning_details`). The first one a reply carries is kept in `ModelReply.raw` and replayed; if the company refuses it, it is left out and an admin told (`parts.py`). |
 | `extra_body` | A company's own switches, merged into every request: OpenRouter's `provider` preferences, a `thinking` object. Plain JSON. **Never dropped to get an answer**: one may be the family's protection, and a request that cannot carry it fails instead (a 400 naming it is `refused`). The fields the adapter owns or that would change what a chat may do (`model`, `messages`, `tools`, `max_tokens`, `stop`, `response_format`, `plugins`, `models`, `web_search_options`...) are refused. A person may take a template's protection out of a company's fields; the page says so then, and stops promising it. |
-| `stand_in` | May answer when the company chosen cannot. Off: an added company is asked nothing until an admin chooses it. |
+| `stand_in` | May answer when the company chosen cannot. Off: an added company is asked nothing until an admin chooses it. The family's own word on the AI model page (`Settings.company_options`: let it answer, may stand in, a monthly limit) lays over this and over `provider_fallback`. |
 
 Its key is `Settings.company_keys[slug]`, a secret like every other: stored, never rendered into a
 form, never written to the change log (`store.settings.HIDDEN`), masked in `familydb config`. Taking a
@@ -88,7 +88,7 @@ Does not, and says so:
 ## What the family's words do
 
 An added company is a company between the family and a model, and for OpenRouter a second one behind
-it. So: nothing is sent until an admin chooses it for chat (`Answer with`) or lets it stand in; the
+it. So: nothing is sent until an admin chooses it for a use on the AI model page (or presses `Answer with`, which makes it every use's default) or lets it stand in; the
 page says whose it is; the OpenRouter template asks for only companies that keep and train on nothing
 (`provider.data_collection: deny`) and that take every parameter sent (`require_parameters`), a request
 that cannot be served that way failing and never being served otherwise; a company out of credit or

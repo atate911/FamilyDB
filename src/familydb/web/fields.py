@@ -245,7 +245,10 @@ def _models(company: str, label: str) -> tuple[Field, Field]:
 SECTIONS: tuple[Section, ...] = (
     Section("general", "General", "home", "Where home is, its clock and units, and this page."),
     Section(
-        "model", "AI model", "sparkle", "Which company answers, with which model, and its key."
+        "model",
+        "AI model",
+        "sparkle",
+        "Which model answers what, what it costs, and who stands in when one cannot.",
     ),
     Section("spending", "Spending", "dollar", "The daily limit, and what one message may use."),
     Section("messages", "Messages", "bell", "What is sent without being asked, and when."),
@@ -353,105 +356,25 @@ GROUPS: tuple[Group, ...] = (
             ),
         ),
     ),
+    # The AI model page (web/models_page.py, settings/model.html) draws one choice for each thing
+    # Vera does (`Settings.model_choices`, read by agent/uses.py), not a box for each older setting.
+    # These groups are what its one form still posts as plain settings, then the older ones it
+    # replaced, which are not drawn: they stay what each use falls back to when nothing was chosen.
     Group(
         "model",
-        "who",
-        "Who answers",
-        "The model that reads each message and writes the answer comes from one of three "
-        "companies, and you pay the company for what it uses.",
-        (
-            # A company without a key cannot be chosen: nothing would answer.
-            field(
-                "provider",
-                "Company that answers",
-                # The three with a key of their own here; one the family added is chosen on its
-                # own card, and a value stored for it is kept as a choice there.
-                choices=companies.SPARE_ORDER,
-                words=tuple(COMPANIES.items()),
-            ),
-        ),
-    ),
-    Group(
-        "model",
-        "levels",
-        "How strong a model answers",
-        "How strong a model answers in each situation, whichever company it is: the cheapest by "
-        "default, a stronger one where it is worth paying for.",
-        (
-            field(
-                "chat_level",
-                "Answering the family",
-                "Everyday is the company's own model below; better and best are its stronger "
-                "ones, never cheaper than everyday. Prices are US dollars for a million tokens "
-                "read and written.",
-            ),
-            field(
-                "digest_level",
-                "The weekend digest",
-                "Once a week, so a stronger model adds little to the month.",
-            ),
-            field(
-                "lookup_level",
-                "Looking things up",
-                "Filling in an idea's details and finding what is on: everyday is usually plenty.",
-            ),
-        ),
-    ),
-    Group(
-        "model",
-        "models",
-        "Models",
-        "What everyday means for each company: its cheapest unless you choose another. Pick one, "
-        "least expensive first, or choose Another model to type any the company offers.",
-        (
-            *_models("openai", "OpenAI"),
-            *_models("anthropic", "Claude"),
-            *_models("gemini", "Gemini"),
-        ),
-    ),
-    Group(
-        "model",
-        "watch",
-        "Keeping up with the companies",
-        "Once a day it asks each company you have a key for which models the key can use, and "
-        "reads two public price lists, LiteLLM's and OpenRouter's, taking a price when they "
-        "agree. New models then appear here and new prices are counted, and admins are told on "
-        "Telegram when a model you use is going or its price moves. No model call, and nothing "
-        "about the family is sent.",
+        "uses",
+        "Settings of single uses",
+        "The caps on what a use may spend, the daily check of models and prices, the longest "
+        "voice note, and what a judgement may do by itself.",
         (
             field(
                 "model_watch",
                 "Check models and prices daily",
                 "Off, the prices built into this version are used, and nobody is told.",
             ),
-        ),
-    ),
-    Group(
-        "model",
-        "judgement",
-        "Asking a stronger model to weigh a change",
-        "Some changes need judgment rather than a rule: which model should take the place of one "
-        "that is going, what a refusal nobody can read means, which new models belong at which "
-        "level, and what a price the lists disagree on really is. With this on, the questions "
-        "that come up are asked together once a day, with the evening's lookups, in one call; "
-        "only a refusal is asked at once. The answer is checked and told to admins, and only a "
-        "model at about the same cost may be put in by itself (the choice below); everything "
-        "else waits for an admin. It is sent model names, prices and error messages, never "
-        "the family's messages.",
-        (
-            field(
-                "judgements",
-                "Ask a stronger model when a change needs judgment",
-                "A few cents each time, and nothing on a day with no question.",
-            ),
-            field(
-                "judgement_level",
-                "How strong a model weighs it",
-                "Best by default: rare questions, where a better answer is worth a cent more.",
-            ),
             field(
                 "judgement_acts",
-                "What it may do by itself",
+                "What weighing a change may do by itself",
                 "A better model costing at most about 10% more can be put in by itself, and admins "
                 "are told, with a way to put it back; anything dearer waits for an admin.",
                 words=(
@@ -461,104 +384,83 @@ GROUPS: tuple[Group, ...] = (
             ),
             field(
                 "judgement_budget",
-                "Most to spend on it in a month (US$)",
+                "Most to spend on weighing changes in a month (US$)",
                 "Counted within the daily limit as well. 0 asks nothing.",
-            ),
-        ),
-    ),
-    Group(
-        "model",
-        "choosing",
-        "Choosing the suggestions",
-        'For a question like "what should we do this weekend?" or "where should we eat '
-        'tonight?", and the weekend digest, a stronger model is given everything the family has '
-        "told her and done that bears on it (ratings and notes, what she remembers, the last weeks "
-        "and the next, this chat's last few days) and chooses the picks; she then says them in her "
-        "own words. It goes to the company that answers the chat, nowhere else. Quick questions "
-        "about right now, and the kids' questions, are answered as before, at no extra cost.",
-        (
-            field(
-                "choosing",
-                "Have a stronger model choose the suggestions",
-                "About 3 to 13 cents a planning question, depending on the company.",
-            ),
-            field(
-                "choose_level",
-                "How strong a model chooses",
-                "Best by default: this is the judgement worth paying for.",
             ),
             field(
                 "choose_budget",
-                "Most to spend on it in a month (US$)",
+                "Most to spend on choosing suggestions in a month (US$)",
                 "Counted within the daily limit as well. Once it is spent, suggestions are made as "
                 "before until the month turns. 0 chooses nothing.",
             ),
-        ),
-    ),
-    Group(
-        "model",
-        "stronger",
-        "Better and best models",
-        "The models a company answers with at the better and best levels. Empty uses the ones "
-        "this version knows (shown as the default); a judgment may suggest newer ones.",
-        tuple(
-            field(
-                f"{company}_{level}_model",
-                f"{label} {level} model",
-                suggested=suggestions(company),
-                unset="this version's",
-                company=company,
-            )
-            for company, label in (
-                ("openai", "OpenAI"),
-                ("anthropic", "Claude"),
-                ("gemini", "Gemini"),
-            )
-            for level in ("better", "best")
-        ),
-        folded=True,
-    ),
-    Group(
-        "model",
-        "second",
-        "A second company",
-        "With a key for another company as well, it can do the lookups, or stand in when the "
-        "first cannot answer.",
-        (
-            field(
-                "worker_provider",
-                "Company for lookups",
-                "Who looks ideas up on the web.",
-                # Only a company with hosted web search: an added one has none.
-                choices=companies.SPARE_ORDER,
-                words=tuple(COMPANIES.items()),
-                unset="the company that answers",
-            ),
-            field(
-                "provider_fallback",
-                "Ask another company when the first cannot",
-                "Only one with a key, and only before anything has been done, so nothing "
-                "happens twice. It answers at the same level.",
-            ),
-        ),
-    ),
-    Group(
-        "model",
-        "voice",
-        "Voice notes",
-        "Voice notes sent on Telegram are written down by a speech model, then answered as if "
-        "they had been typed. Claude cannot hear them, so they need an OpenAI or Gemini key.",
-        (
-            field("voice_notes", "Listen to voice notes", "Off asks the family to type instead."),
             field(
                 "voice_max_minutes",
                 "Longest voice note heard (minutes)",
                 "A longer one is not heard at all, since every minute is paid for.",
             ),
+        ),
+    ),
+    Group(
+        "model",
+        "lineup",
+        "Everyday, better and best",
+        "What each company answers with at each strength: its own everyday model unless you "
+        "choose another, and the better and best ones this version knows unless you name newer. "
+        "A stand-in answers at the same strength as the model it replaces.",
+        (
+            *_models("openai", "OpenAI"),
+            *_models("anthropic", "Claude"),
+            *_models("gemini", "Gemini"),
+            *(
+                field(
+                    f"{company}_{level}_model",
+                    f"{label} {level} model",
+                    suggested=suggestions(company),
+                    unset="this version's",
+                    company=company,
+                )
+                for company, label in (
+                    ("openai", "OpenAI"),
+                    ("anthropic", "Claude"),
+                    ("gemini", "Gemini"),
+                )
+                for level in ("better", "best")
+            ),
+        ),
+    ),
+    Group(
+        "model",
+        "legacy",
+        "Replaced by a choice for each use",
+        "An older version drew these. They are still read: each is what a use falls back to when "
+        "nothing was chosen for it, so an install that never opens the page behaves as it always "
+        "did. They are not drawn, because each use now has its own choice.",
+        (
+            field(
+                "provider",
+                "Company that answers",
+                choices=companies.SPARE_ORDER,
+                words=tuple(COMPANIES.items()),
+            ),
+            field("chat_level", "Answering the family"),
+            field("digest_level", "The weekend digest"),
+            field("lookup_level", "Looking things up"),
+            field(
+                "worker_provider",
+                "Company for lookups",
+                choices=companies.SPARE_ORDER,
+                words=tuple(COMPANIES.items()),
+                unset="the company that answers",
+            ),
+            field("provider_fallback", "Ask another company when the first cannot"),
+            field("judgements", "Ask a stronger model when a change needs judgment"),
+            field("judgement_level", "How strong a model weighs it"),
+            field("choosing", "Have a stronger model choose the suggestions"),
+            field("choose_level", "How strong a model chooses"),
+            field("voice_notes", "Listen to voice notes"),
             field(
                 "transcribe_provider",
-                "Who hears them",
-                "Leave it alone to use the chat company when it can, else another with a key.",
+                "Who hears voice notes",
                 words=tuple(COMPANIES.items()),
                 unset="the chat company if it can",
             ),
@@ -571,28 +473,13 @@ GROUPS: tuple[Group, ...] = (
             field(
                 "gemini_transcribe_model",
                 "Gemini hearing model",
-                "Leave it empty to use Gemini's lookup model.",
                 suggested=suggestions("gemini"),
                 unset="Gemini's lookup model",
                 company="gemini",
             ),
+            field("photos", "Look at photos"),
         ),
-    ),
-    Group(
-        "model",
-        "photos",
-        "Photos",
-        "A photo sent on Telegram (a poster, a menu, a ticket) is read by the model that looks "
-        "things up, which writes down what it shows; that is answered as if it had been typed. "
-        "The photo goes to that company, costs about a tenth of a cent, and is not kept.",
-        (
-            field(
-                "photos",
-                "Look at photos",
-                "Off asks for it in words. In a group, a photo is looked at only when it is sent "
-                "to the bot, by a mention in its caption or a reply.",
-            ),
-        ),
+        folded=True,
     ),
     Group(
         "spending",
@@ -1165,6 +1052,11 @@ GROUPS: tuple[Group, ...] = (
 FIELDS: tuple[Field, ...] = tuple(one for group in GROUPS for one in group.fields)
 BY_KEY: dict[str, Field] = {one.key: one for one in FIELDS}
 SECTION_OF: dict[str, str] = {one.key: group.section for group in GROUPS for one in group.fields}
+# What the AI model page no longer draws a box for: agent/uses.py still reads each as the default
+# of the uses nobody chose for, so the page and the environment can set them but nothing shows them.
+LEGACY: frozenset[str] = frozenset(
+    one.key for group in GROUPS if group.name == "legacy" for one in group.fields
+)
 
 
 def groups_in(section: str) -> tuple[Group, ...]:
@@ -1240,6 +1132,7 @@ __all__ = [
     "COMPANIES",
     "FIELDS",
     "GROUPS",
+    "LEGACY",
     "SECTIONS",
     "SECTION_BY_NAME",
     "Field",
