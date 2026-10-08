@@ -354,3 +354,19 @@ def test_lookup_asks_for_every_idea_waiting_to_be_looked_up_now(settings, conn, 
     assert ideas.get(conn, first.id).lookup_wanted_at is not None
     off = _app(settings, web_tools_enabled=False)
     assert _ask(off, "/lookup", update="l3") == say(off.settings, "lookups_off", seed=0)
+
+
+def test_a_kids_lookup_says_it_waits_for_the_evening_and_never_how_it_works(
+    settings, conn, family
+) -> None:
+    from familydb.voice import say
+
+    with db.transaction(conn):
+        members.add(conn, "Maya", "kid", channel="telegram", channel_user_id="1003")
+        ideas.insert(conn, title="Hopscotch", kind="outing")
+    for web in (True, False):
+        app = _app(settings, web_tools_enabled=web)
+        said = _ask(app, "/lookup", update=f"k{web}", user="1003", chat="1003")
+        assert said == say(app.settings, "lookups_wait", seed=0) and "evening" in said
+        assert "settings" not in said and "switched off" not in said
+    assert ideas.get(conn, 1).lookup_wanted_at is None

@@ -216,6 +216,8 @@ older than what is installed. It gets a date when it is released.
   title, or counts in "to rate", for the kids or the grown-up the present is kept from.
 - **Presents stay hidden in /today and /week.** Plans made for a present are left out for the kids
   and the grown-up it is kept from, and out of any group chat a kid is in.
+- **A kid's /lookup answers truthfully.** It says lookups wait for the evening and to ask a parent,
+  instead of "nothing is waiting", and never points a kid to the settings page.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

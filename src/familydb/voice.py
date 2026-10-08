@@ -311,6 +311,11 @@ EVENTS: dict[str, Event] = {
         "Looking ideas up on the web is switched off, on the settings page under Lookups.",
         (),
     ),
+    "lookups_wait": Event(
+        "Answering /lookup for a kid, whose lookups wait for the evening",
+        "Lookups wait for the evening. Ask a parent if one can't wait!",
+        (),
+    ),
     "location_shared": Event(
         "A location shared on Telegram",
         'Got your location{where}. For the next 3 hours, "what\'s near here?" and "open now" '
@@ -652,6 +657,7 @@ PLAIN: dict[str, str] = {
     "limit_reached": "kid_tomorrow",
     "voice_no_ears": "kid_type_it",
     "reminder_late": "reminder",
+    "lookups_off": "lookups_wait",
 }
 
 FOLDABLE = frozenset(

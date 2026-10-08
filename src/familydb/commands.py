@@ -381,7 +381,7 @@ def _under(heading: str, lines: list[str]) -> str:
 
 
 def _lookup(
-    app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
 ) -> str:
     ctx = ToolContext(
         conn=conn,
@@ -393,8 +393,11 @@ def _lookup(
     )
     result = app.registry.dispatch("look_up_now", {}, ctx)
     answered = json.loads(result.content)
+    plain = audience.plain(conn, msg.channel, msg.chat_id, member)
     if answered.get("available") is False:
-        return voice.say(app.settings, "lookups_off", seed=seed)
+        return voice.say(app.settings, "lookups_off", seed=seed, plain=plain)
+    if result.is_error:  # a kid's lookups wait for the evening
+        return voice.say(app.settings, "lookups_wait", seed=seed)
     asked = len(answered.get("asked") or [])
     if not asked:
         return voice.say(app.settings, "lookups_none", seed=seed)
