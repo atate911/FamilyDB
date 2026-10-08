@@ -36,10 +36,6 @@ A request the assistant flagged as Not OK shows a parent no **Yes!** or **Not th
 
 ## Messages and Status
 
-### Status says will try again after the last try
-
-After a message has used all its tries, the Status row can still read "will try again". Compare the row's number of tries with **Retries before giving up** (`retry_max_attempts`) on [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered); when they match, no more tries are coming.
-
 ### A reminder made on the page does not reach Telegram
 
 A reminder made with the page's forms or in its Chat is delivered to the web page only, where it shows on To do. To get it on Telegram, ask for it in Telegram; see [How a reminder is delivered](/wiki/model/tasks-and-reminders#how-a-reminder-is-delivered).
@@ -52,17 +48,13 @@ A plan made with the page's forms belongs to no chat, so the day-after question 
 
 `familydb db retry-failed --reset` gives every failed message new tries, including one that was given up on purpose. Use it only when you want all of them asked again.
 
-### A skipped evening-before check is not retried
+### A skipped evening-before check may never be retried
 
-If the calendar cannot be read at the check time, FamilyDB sends no heads-up for that plan, and the next run looks at the following day. A restart after the check time runs the check once. See [Messages](/wiki/controls/settings/messages#follow-ups-and-notes).
+If nothing can send to the plan's chat, or the calendar cannot be read, the check tries again in each hourly run until 22:00, for a plan of tomorrow or a plan of today that has not begun. A plan that has begun by the next run is not checked, so a daytime plan whose evening was missed gets no heads-up. A restart after the check hour runs the check once more. See [Messages](/wiki/controls/settings/messages#follow-ups-and-notes).
 
-### The day's limit keeps the pill red after midnight
+### An unshared calendar raises an alert only when one event is looked up
 
-When the daily limit is reached, the next day's calls do not clear that alert. The pill can read "Can't answer", and Status keeps a Needs a look row, for up to 7 days after the limit was last reached, even while messages are answered. The row leaves by itself; see [Status](/wiki/controls/status#the-pill-and-the-verdict).
-
-### An unshared calendar raises no alert
-
-If the family calendar is not shared with the service account, or the Calendar API is switched off in Google Cloud, Google answers with an error that the assistant reports in chat. No Needs a look row appears and no admin is told on Telegram. Check the sharing under [Google Calendar](/wiki/controls/settings/connections#google-calendar).
+If the calendar is no longer shared with the service account or was deleted, the **Google Calendar is no longer showing the bot its calendar** row and the Telegram message come only when FamilyDB looks up a single plan's event: moving or canceling a plan, or bringing a plan in line with its event. Listing the calendar or syncing it fails as `Google Calendar error 404` with no alert. A read-only calendar or a switched-off Calendar API fails as `Google Calendar error 403` with none either. See [When Google says no later](/wiki/boundaries/google-calendar#when-google-says-no-later).
 
 ## Server
 

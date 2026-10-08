@@ -46,7 +46,7 @@ A message *failed* when its turn did not finish. The retry job tries it again un
 
 [A message got no reply](/wiki/operations/troubleshooting#a-message-got-no-reply) quotes each reply and gives the fix.
 
-A message gets its first try plus up to 3 retries (the default, set by **Retries before giving up** on [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered)). After the last retry, Telegram hears nothing more and the chat page says the last message was not answered. The message stays failed, not given up, and Status still lists it as `3 tries, will try again`; when the number of tries equals **Retries before giving up**, no more are coming ([known limits](/wiki/reference/known-limits#status-says-will-try-again-after-the-last-try)).
+A message gets its first try plus up to 3 retries (the default, set by **Retries before giving up** on [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered)). After the last retry, Telegram hears nothing more and the chat page says the last message was not answered. Status lists it under **Messages that did not go through** as given up on after its tries, with its words to send again; the retry job does not try it again.
 
 Status lists only failed messages, the newest 10. A message cut off by a restart, or still in the gather pause, is not yet failed, so it appears only on the chat page and [Recent activity](/wiki/controls/status/activity) until the retry job takes it.
 

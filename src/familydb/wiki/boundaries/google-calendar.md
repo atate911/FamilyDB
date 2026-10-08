@@ -11,7 +11,7 @@ FamilyDB signs in as a Google [service account](/wiki/reference/glossary#service
 | What | How |
 |---|---|
 | Events in a window | The calendar tools, the suggestion engine and the nudges job ask Google each time. Recurring events arrive as single events |
-| One event | By its id, before a plan is changed |
+| One event | By its id, before a plan is changed. When Google says it is not found, FamilyDB asks for one event of the calendar to check that the calendar is still there, so each such lookup costs one more request |
 | What changed since last time | One request for all plans, using Google's sync token, which FamilyDB keeps; it pages at 2,500 items |
 | A new event, a change, a removal | When a plan is made, moved, edited or canceled, or when the page's forms do the same |
 
@@ -19,7 +19,7 @@ Which tools ask Google, and what Google then sees, is on [What leaves the house]
 
 ## Keeping plans in step
 
-People move and cancel events in Google without telling FamilyDB, so a plan is checked against its event before anything acts on it, and when the evening-before check and the follow-ups run. A moved or edited event changes the plan. A deleted event cancels the plan and puts its idea back. FamilyDB asks Google what changed since the stored token, and keeps the new token only after the plans are updated, so a failure reads the same changes again. If Google has forgotten the token, FamilyDB starts again from the whole calendar.
+People move and cancel events in Google without telling FamilyDB, so a plan is checked against its event before anything acts on it, and when the evening-before check and the follow-ups run. A moved or edited event changes the plan. An event missing from a calendar Google still shows cancels the plan and puts its idea back. When Google no longer shows the calendar itself, FamilyDB leaves the plan as it is ([When Google says no later](#when-google-says-no-later)). FamilyDB asks Google what changed since the stored token, and keeps the new token only after the plans are updated, so a failure reads the same changes again. If Google has forgotten the token, FamilyDB starts again from the whole calendar.
 
 A retry must not make a second event. Before Google is contacted, FamilyDB records the event id an attempt will use, so after a crash or a lost answer the retry asks for the same event, or fetches it if Google says the id is taken.
 
@@ -39,18 +39,22 @@ The form tries the key and the calendar's id before keeping either: it reads the
 
 ## When Google says no later
 
-> **If you stop sharing the calendar with FamilyDB, asking it to move or cancel a plan cancels the plan in FamilyDB only and puts its idea back on the list,** because a missing calendar looks like a missing event.
+When Google says a plan's event is not found, FamilyDB reads one event of the calendar to tell a deleted event from a calendar it can no longer see. If the calendar is gone, the plan stays as it is and is not canceled. Status shows `Google Calendar is no longer showing the bot its calendar` under Needs a look, and each admin with a Telegram id is told to check that the calendar is still shared with the service account and not deleted. The row clears when a Google request next works. Share the calendar again, or connect another, before you change any plans.
 
-Nothing warns you. Reads fail with `Google Calendar error 404`, the page shows the saved plans, suggestions skip the calendar check and say so, and the evening-before check and follow-ups wait ([known limits](/wiki/reference/known-limits#an-unshared-calendar-raises-no-alert)). Share the calendar again before you change any plans.
+Reading the calendar's events, as the page and the suggestions do, still fails as `Google Calendar error 404` with no alert; suggestions skip the calendar check and say so, and the evening-before check and follow-ups wait ([known limits](/wiki/reference/known-limits#an-unshared-calendar-raises-an-alert-only-when-one-event-is-looked-up)).
 
 | What happened | What follows |
 |---|---|
 | The calendar was made read-only | Reading works. A write fails with `Google Calendar error 403`, so a plan is not made or changed. No alert is raised |
 | The Calendar API was switched off in the key's project | Calls fail as `Google Calendar error 403`, with no alert. Setup recognizes this case, but only when you connect |
-| Google refused the key at sign-in (the key deleted, the service account disabled, or the server's clock far off), or the key file is unreadable | Reads and writes fail, Status shows `Google Calendar stopped letting the bot in`, and each admin with a Telegram id is told. It clears when a Google request next works |
+| Google refused the key at sign-in (the key deleted, the service account disabled, or the server's clock far off), or the key file is unreadable | Reads and writes fail, Status shows `Google Calendar refused the bot's key, or it has none`, and each admin with a Telegram id is told to connect again with a new key. It clears when a Google request next works |
 | The key file was deleted from the server | Status says a calendar is named but not connected. A running FamilyDB that already built its client keeps working, and after the next restart the calendar counts as not connected. New plans are saved in FamilyDB only, and plans still to come are copied to Google once it is connected again, up to 20 a run |
 
-The alert is raised for a refused or unreadable key, so check the key first; its text also mentions the sharing. A plan already on Google cannot be changed while the calendar is not connected. If you connect a different calendar id, the old plans belong to the other calendar and are refused.
+That alert is for the key only. A plan already on Google cannot be changed while the calendar is not connected. If you connect a different calendar id, the old plans belong to the other calendar and are refused.
+
+## Disconnecting
+
+An admin can disconnect the calendar on [Connections](/wiki/controls/settings/connections#disconnect-google-calendar). FamilyDB deletes the key file and forgets the calendar's id, and clears any Needs a look row about the calendar. Plans stay saved in FamilyDB, nothing is taken off Google, and the service account still has the calendar shared with it until you stop sharing in Google.
 
 ## The key
 

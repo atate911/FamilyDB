@@ -16,13 +16,13 @@ The pill is the small state in the sidebar and the phone's top bar for parents a
 |---|---|
 | **Can't answer yet** | A step the assistant cannot work without is not done: an admin on the family list, or a model with a key. |
 | **Resting** | The daily limit is set and today's estimated spend has reached it. It lasts until midnight in the family's time zone. |
-| **Can't answer** | A stopping trouble is listed under Needs a look: a model company out of credit, a model company refusing its key, or a day's limit row still listed. |
+| **Can't answer** | A stopping trouble is listed under Needs a look: a model company out of credit, a model company refusing its key, or today's limit row listed. |
 | **Writing back** | A reply is being written in your own chat. |
 | **Ready** | None of the above. |
 
 The banner says "can't answer right now" for both kinds of Can't answer, "is resting until midnight" for Resting, and "is ready" otherwise; it never says Writing back. A line under it gives what was spent today, what the last 30 days cost, which parts need a look and which are not connected yet. Not connected is a choice, not a fault.
 
-The pill goes by the Needs a look list, not by whether anything is answering: a model company out of credit makes the pill read Can't answer even while the second company is answering. The day's limit row stays listed after midnight, so the pill can keep reading Can't answer ([known limits](/wiki/reference/known-limits#the-days-limit-keeps-the-pill-red-after-midnight)).
+The pill goes by the Needs a look list, not by whether anything is answering: a model company out of credit makes the pill read Can't answer even while the second company is answering. A limit row from an earlier day does not count: the pill goes by today's row only, and the first call let through after midnight forgets every limit row.
 
 ## Needs a look
 
@@ -32,7 +32,7 @@ This lists what only an admin can fix, while it lasts. Each row says since when,
 |---|---|---|---|
 | A company is **out of credit** | The model company said the account has no credit. | The company answers a call. | Add credit with the company. |
 | A company **refused its key** | The key is wrong, revoked or expired. | The company answers a call. | Paste a good key under [Keys](/wiki/controls/settings/ai-model#keys). |
-| The day's **spending limit was used up** | A call was refused for the limit. | A call is let through on the same day, for example after you raise the limit. | Raise the limit on [Spending](/wiki/controls/settings/spending#the-daily-limit). |
+| The day's **spending limit was used up** | A call was refused for the limit. | A call is let through, for example after you raise the limit or once the next day begins. | Raise the limit on [Spending](/wiki/controls/settings/spending#the-daily-limit). |
 
 The other rows (Google Calendar, a model company refusing part of a request or refusing requests, models and prices) are listed with what each means on [Messages](/wiki/controls/settings/messages#when-something-needs-fixing). The model and price rows are explained on [Models and prices](/wiki/controls/status/models-and-prices#needs-a-look-rows-about-models).
 
@@ -62,7 +62,7 @@ The **Backup** row (the second company, not your database backup) is what [A sec
 
 ## Waiting and Worth a look
 
-**Waiting** counts ideas by lookup state and says when they are looked up, by default together in the evening. Below that are the next five ideas due and **Messages that did not go through**: the five most recent messages that failed, with their text, the error, and either "given up on" or "N tries, will try again". A message stays listed until a retry answers it. Parents see that text, from any chat; Recent activity is admin-only. Status can say "will try again" after the last try ([known limits](/wiki/reference/known-limits#status-says-will-try-again-after-the-last-try)); the retry numbers are on [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered).
+**Waiting** counts ideas by lookup state and says when they are looked up, by default together in the evening. Below that are the next five ideas due and **Messages that did not go through**: the five most recent messages that failed, with their text, the error, and a note: "N tries, will try again" while retries remain, or "given up on after N tries; the words above were not answered, so send them again" once none do. A message stays listed until a retry answers it, so a given-up one is the person's cue to send the words again. Parents see that text, from any chat; Recent activity is admin-only. The Troubleshooting settings page lists the same messages and tags a given-up one **Given up**; the retry numbers are on [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered).
 
 **Worth a look** lists the six most recent calls in the last 30 days that ended oddly, and the six most recent lookups that failed.
 

@@ -70,4 +70,8 @@ The key itself is saved as a file on the server (`data/google_key.json`), not in
 
 > **Deleting the old key first shuts FamilyDB out of the calendar until you connect again.** To replace a key, make the new one, paste it here, then delete the old one in Google Cloud.
 
-If Google shuts FamilyDB out later, admins with a Telegram id are told ([Messages](/wiki/controls/settings/messages#when-something-needs-fixing)); check that the calendar is still shared with the service account and that its key was not deleted, then connect again here. What FamilyDB reads and writes on the calendar is on [Google Calendar](/wiki/boundaries/google-calendar).
+If Google refuses the key or none is saved, or no longer shows the calendar, admins with a Telegram id are told ([Messages](/wiki/controls/settings/messages#when-something-needs-fixing)). For a refused key, connect again here with a new key. For a calendar that is gone, check that it is still shared with the service account and not deleted, then share it again or connect another. What FamilyDB reads and writes on the calendar is on [Google Calendar](/wiki/boundaries/google-calendar).
+
+### Disconnect Google Calendar
+
+An admin sees a closed **Disconnect Google Calendar** fold under the form once a key or a calendar id is saved. Open it, read what goes, and press **Yes, disconnect**. FamilyDB deletes the saved key and forgets the calendar's id, and any Needs a look row about the calendar goes with them. Plans stay saved here and nothing is taken off Google. Connect again at any time; the plans still to come are then copied to Google, up to 20 a run. To end Google's side as well, stop sharing the calendar and delete the key in Google Cloud.

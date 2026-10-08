@@ -52,6 +52,7 @@ Each row names the setting and the card it is on.
 | Quiet a noisy group chat | **Answer only when mentioned** (`telegram_require_mention`) on [Connections](/wiki/controls/settings/connections#in-a-telegram-group) |
 | Stop one person's reminders landing in the group | **Send what's for one person to their own chat** (`private_when_personal`) on [Connections](/wiki/controls/settings/connections#in-a-telegram-group) |
 | Get voice notes or photos read | **Listen to voice notes** (`voice_notes`) and **Look at photos** (`photos`) on [AI model](/wiki/controls/settings/ai-model#voice-notes-and-photos) |
+| Disconnect Google Calendar | [Disconnect Google Calendar](/wiki/controls/settings/connections#disconnect-google-calendar) on Connections |
 | Rename Vera or change how the assistant sounds | [Who she is](/wiki/controls/settings/personality#who-she-is) |
 
 ## The server

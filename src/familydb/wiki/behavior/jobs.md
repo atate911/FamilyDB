@@ -13,7 +13,7 @@ The scheduled jobs are what FamilyDB does without being asked: reminders, lookup
 | Lookups job | every 2 minutes | `enrich_interval_minutes`; not scheduled while `web_tools_enabled` is off | Yes, one worker turn per idea due |
 | Weekend ideas job | Thursday 18:00 | `digest_day`, `digest_hour`; not scheduled while `digest_chat_id` is empty | Yes, one chat turn |
 | Follow-ups job | daily 10:00 | `follow_up_hour`; `follow_ups` | No |
-| Evening-before check | daily 19:00 | `plan_check_hour`; `plan_checks` | No |
+| Evening-before check | hourly 19:00 to 22:00 | `plan_check_hour`; `plan_checks` | No |
 | Models and prices check | daily 05:17 | `model_watch` | No |
 | Judgments job | every 15 minutes | `judgements`, off until you turn it on | Only when a question is due |
 | Nudges job | every 15 minutes | `task_nudges` | No |
@@ -52,9 +52,9 @@ It asks once about each confirmed plan that ended before today and started withi
 
 ### Evening-before check
 
-It looks at unchecked plans for an idea, made in a chat, that start tomorrow, and returns before touching Google when there are none. Otherwise it syncs the calendar (and waits if Google cannot be asked), reads tomorrow's forecast (skipped without a home position), and checks rain for an outdoor or dry-weather idea and the place's saved hours against the plan's time. When all is well it says nothing, and the plan is still marked checked. A heads-up goes to the plan's chat, with a backup idea when the engine finds one.
+It looks at unchecked plans for an idea, made in a chat, that start tomorrow, or start today and have not begun, and returns before touching Google when there are none. Otherwise it syncs the calendar (and waits if Google cannot be asked), reads the forecast for each plan's day (skipped without a home position), and checks rain for an outdoor or dry-weather idea and the place's saved hours against the plan's time. When all is well it says nothing, and the plan is still marked checked. A heads-up goes to the plan's chat, with a backup idea when the engine finds one, worded for today when the plan is today.
 
-If nothing can send to the plan's chat when the check runs (for example Telegram is not connected), that plan is not checked. Each run looks only at tomorrow's plans, so only a catch-up on the same day can pick it up ([known limits](/wiki/reference/known-limits#a-skipped-evening-before-check-is-not-retried)).
+If nothing can send to the plan's chat when the check runs (for example Telegram is not connected), that plan is not checked yet. The next hourly run tries it again, and a plan of today is still checked while it has not begun; one that has begun is skipped ([known limits](/wiki/reference/known-limits#a-skipped-evening-before-check-may-never-be-retried)).
 
 ### Models and prices check, and judgments
 
