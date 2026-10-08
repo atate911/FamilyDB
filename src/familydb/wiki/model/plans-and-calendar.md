@@ -44,11 +44,11 @@ Both run with no model call, once per plan, and wait if Google cannot be asked. 
 
 | | Evening before | Day after |
 |---|---|---|
-| Which plans | Not canceled, tied to an idea, made in a chat, starting tomorrow | Confirmed, made in a chat, ended before today, started within the last 7 days |
-| What it does | Checks tomorrow's rain for an outdoor idea or one that needs dry weather, and the place's looked-up hours against the plan's time. All well, or hours unknown: says nothing. Otherwise a heads-up, with a backup idea when one fits | Asks how it went, with buttons when an idea is tied (**Yes, again**, **Not again**, **Didn't go**). Skipped if an outcome is already recorded from that day on |
+| Which plans | Not canceled, tied to an idea, made in a chat, starting tomorrow, or today and not yet begun | Confirmed, made in a chat, ended before today, started within the last 7 days |
+| What it does | Checks the rain for the plan's day for an outdoor idea or one that needs dry weather, and the place's looked-up hours against the plan's time. All well, or hours unknown: says nothing. Otherwise a heads-up, with a backup idea when one fits | Asks how it went, with buttons when an idea is tied (**Yes, again**, **Not again**, **Didn't go**). Skipped if an outcome is already recorded from that day on |
 | Goes to | The chat the plan was made in | The plan maker, in their own chat when it began in a group |
 
-The hours check fires when the plan's time does not overlap the listed hours at all, or the place is listed closed that weekday. An all-day plan needs only the place open. A check that did not run the evening before is not made up later ([A skipped evening-before check is not retried](/wiki/reference/known-limits#a-skipped-evening-before-check-is-not-retried)).
+The hours check fires when the plan's time does not overlap the listed hours at all, or the place is listed closed that weekday. An all-day plan needs only the place open. The check runs every hour from 19:00 to 22:00. One that could not send the evening before is tried again on the plan's day while the plan has not begun, and a plan that has begun is skipped ([A skipped evening-before check may never be retried](/wiki/reference/known-limits#a-skipped-evening-before-check-may-never-be-retried)).
 
 A plan made on the page has no chat, so it gets no follow-up and no evening-before check ([Plans made on the page get no follow-up](/wiki/reference/known-limits#plans-made-on-the-page-get-no-follow-up)). Its only prompt is **How did it go?** on the page. When somebody is taken off the family list, plans made in their chat forget it and stay.
 

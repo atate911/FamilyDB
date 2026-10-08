@@ -473,6 +473,14 @@ def count_words(count: int, one: str, many: str) -> str:
     return f"{number} {one if count == 1 else many}"
 
 
+def stuck_message_note(tries: int, given_up: bool) -> str:
+    """What became of a message that did not go through: tried again, or given up on."""
+    times = f"{tries} {'try' if tries == 1 else 'tries'}"
+    if given_up:
+        return f"given up on after {times}; the words above were not answered, so send them again"
+    return f"{times}, will try again"
+
+
 def greeting(hour: int, name: str | None) -> str:
     """ "Good morning, Sam"; with the family sharing one password there is no name to say."""
     part = "morning" if hour < 12 else "afternoon" if hour < 18 else "evening"
@@ -1456,7 +1464,8 @@ ALERT_TITLES = {
     "credit": "{company} is out of credit",
     "key": "{company} refused its key",
     "limit": "The day's spending limit was used up",
-    "calendar": "Google Calendar stopped letting the bot in",
+    "calendar": "Google Calendar refused the bot's key, or it has none",
+    "calendar_access": "Google Calendar is no longer showing the bot its calendar",
     "model": "A model in use is going, or has gone",
     "price": "The price of a model in use changed",
     "prices": "The price lists need a look",
@@ -1654,7 +1663,7 @@ AUTOMATIC = (
         "others",
         "Tomorrow's plans, checked",
         "free",
-        ("plan_rain", "plan_closed", "plan_backup"),
+        ("plan_rain", "plan_rain_today", "plan_closed", "plan_closed_today", "plan_backup"),
     ),
     ("nudges", "others", "A task brought up", "free", ("nudge",)),
     # The morning message is one message; each part is counted as its own (store/mornings.py).

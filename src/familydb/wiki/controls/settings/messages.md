@@ -26,14 +26,14 @@ FamilyDB words these from the assistant's lines, not a model, so they cost nothi
 |---|---|---|---|
 | Ask how a plan went (`follow_ups`) | on | Asks once for each plan that ended before today (up to a week back), with buttons to answer in one tap, so the ideas list learns what you liked. Off means nobody is asked; how it went can still be told at any time. | on or off |
 | Time to ask how a plan went (`follow_up_hour`) | 10 | The hour of the day after a plan. | 0 to 23 |
-| Check tomorrow's plans the evening before (`plan_checks`) | on | Speaks only when something is off, with another idea for the same time when one fits. | on or off |
-| Time to check tomorrow's plans (`plan_check_hour`) | 19 | The hour of the evening before. The check then repeats each hour until 10 pm, so a plan made later that evening is still checked. | 0 to 23 |
+| Check tomorrow's plans the evening before (`plan_checks`) | on | Speaks only when something is off, with another idea for the same time when one fits. Also covers a plan of today that has not begun. | on or off |
+| Time to check tomorrow's plans (`plan_check_hour`) | 19 | The hour of the evening before. The check runs every hour from then to 22:00, so a plan made later that evening is still checked. | 0 to 23 |
 | Bring up a task kept for "some Saturday morning" (`task_nudges`) | on | Brings a task up when its part of the week comes round and the calendar is free. | on or off |
 | Say in the chat when an idea is filled in (`enrichment_notes`) | on | Sends a short note with what a lookup found. | on or off |
 
 The follow-up goes to the chat the plan was made in, or to the person's own chat when **Send what's for one person to them** (`private_when_personal`) is on.
 
-The evening check names two things that are off: rain for an outdoor plan (needs a home position), or a place whose saved hours show it closed at the plan's time (needs hours from a lookup). It covers only plans for an idea, made in a chat, and checks each once, so a plan made after 10 pm the evening before is not checked.
+The evening check names two things that are off: rain for an outdoor plan (needs a home position), or a place whose saved hours show it closed at the plan's time (needs hours from a lookup). It covers only plans for an idea, made in a chat, and checks each once. It runs every hour from the check's hour to 22:00, so a plan made late in the evening is still checked. It also checks a plan of today that has not begun, worded for today, which catches one whose evening was missed because nothing could send to its chat; a plan of today that has begun is skipped.
 
 Nudges follow the rules in [Preferred windows and nudges](/wiki/model/tasks-and-reminders#preferred-windows-and-nudges); the nudges job looks every 15 minutes. Where a reminder goes is in [How a reminder is delivered](/wiki/model/tasks-and-reminders#how-a-reminder-is-delivered).
 
@@ -73,7 +73,8 @@ FamilyDB tells every admin with a Telegram id within a minute, and again after 1
 - A model company says the account is out of credit.
 - A model company refuses the key.
 - The day's spending limit is used up.
-- Google Calendar shuts FamilyDB out.
+- Google Calendar refuses the key, or none is saved.
+- Google Calendar no longer shows the calendar, for example because it is no longer shared with the service account.
 - A model in use is going away, or its name is unknown to the company.
 - A price moved, or the price lists could not be checked.
 - New models to choose from, or a big move in what the calls cost or do (once a week for each kind of call).

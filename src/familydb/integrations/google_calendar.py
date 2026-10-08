@@ -24,6 +24,11 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 KEY_REFUSED = (
     "Google no longer accepts the saved key; connect the calendar again on the settings page"
 )
+LOST_ACCESS = (
+    "Google answers that the calendar is not there for the bot, so it is no longer shared with "
+    "the service account (or was deleted); share it again, or connect another, on the settings "
+    "page"
+)
 # How long the page may show what Google said rather than ask again (a few hundred ms per view).
 # The bot's own writes forget what was read; an event added on a phone may take this long to show
 # (the family's choice).
@@ -201,6 +206,14 @@ def save_key(key_path: Path, text: str) -> None:
     os.replace(fresh, key_path)
 
 
+def remove_key(key_path: Path) -> bool:
+    """Delete the saved key, and any half-written one beside it; True when a key was there."""
+    found = key_path.exists()
+    key_path.unlink(missing_ok=True)
+    key_path.with_name(key_path.name + ".new").unlink(missing_ok=True)
+    return found
+
+
 # Connecting: the page tries the pasted key and calendar id before keeping either.
 NOT_JSON = "That is not the file Google gave you: it should be JSON, starting with {."
 NOT_A_KEY = (
@@ -318,13 +331,16 @@ class GoogleCalendar:
         self._read_lock = threading.Lock()
         self._writes = 0
         self._now = time.monotonic
-        # Told when Google shuts the bot out (what it said) and when it answers again (None), for
-        # an admin (alerts.py); set by App.
-        self.report: Callable[[str | None], None] | None = None
+        # Told when Google shuts the bot out (what it said; whether the key works but the calendar
+        # is out of reach) and when it answers again (None), for an admin (alerts.py); set by App.
+        self.report: Callable[[str | None, bool], None] | None = None
         # Unknown at first, so the first answer clears a note from before a restart.
         self._troubled = True
 
     def _events(self) -> Any:
+        return self._api().events()
+
+    def _api(self) -> Any:
         with self._lock:
             if self._service is None:
                 try:
@@ -332,12 +348,12 @@ class GoogleCalendar:
                 except ToolUnavailable as exc:
                     self._shut_out(str(exc))
                     raise
-            return self._service.events()
+            return self._service
 
-    def _shut_out(self, said: str) -> None:
+    def _shut_out(self, said: str, *, lost_access: bool = False) -> None:
         self._troubled = True
         if self.report is not None:
-            self.report(said)
+            self.report(said, lost_access)
 
     def _execute(self, request: Any, *, ignore: tuple[int, ...] = ()) -> Any:
         from google.auth.exceptions import RefreshError
@@ -357,7 +373,7 @@ class GoogleCalendar:
         if self._troubled:
             self._troubled = False
             if self.report is not None:
-                self.report(None)
+                self.report(None, False)
         return answer
 
     def list_events(self, start: datetime, end: datetime) -> list[CalendarEvent]:
@@ -433,9 +449,23 @@ class GoogleCalendar:
         item = self._execute(
             self._events().get(calendarId=self.calendar_id, eventId=event_id), ignore=(404, 410)
         )
-        if not item or item.get("status") == "cancelled":
+        if not item:
+            self._require_calendar()  # a 404 may be the calendar's, not the event's
+            return None
+        if item.get("status") == "cancelled":
             return None
         return parse_event(item, self.tz)
+
+    def _require_calendar(self) -> None:
+        """Raise unless Google still shows the calendar itself; read as events.list so that the
+        key's events scope is enough."""
+        found = self._execute(
+            self._events().list(calendarId=self.calendar_id, maxResults=1, fields="items(id)"),
+            ignore=(404,),
+        )
+        if found is None:
+            self._shut_out(LOST_ACCESS, lost_access=True)
+            raise ToolUnavailable(LOST_ACCESS)
 
     def insert_event(
         self,

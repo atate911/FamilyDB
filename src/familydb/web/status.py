@@ -240,8 +240,9 @@ def last_call(conn: sqlite3.Connection, tz: Any) -> dict[str, Any] | None:
     }
 
 
-def waiting(conn: sqlite3.Connection, tz: Any) -> dict[str, Any]:
-    """Ideas not yet looked up and messages that did not go through."""
+def waiting(conn: sqlite3.Connection, tz: Any, max_attempts: int) -> dict[str, Any]:
+    """Ideas not yet looked up and messages that did not go through (given up on once marked so
+    or out of the `max_attempts` retries, as the retry job reckons)."""
     counts = ideas.enrichment_counts(conn)
     pending = ideas.pending_enrichment(conn, limit=WAITING_LIMIT)
     stuck = messages.recent_failures(conn, limit=WAITING_LIMIT)
@@ -259,9 +260,11 @@ def waiting(conn: sqlite3.Connection, tz: Any) -> dict[str, Any]:
                 "text": message.text,
                 "error": message.error,
                 "tries": message.retries,
-                "given_up": bool(message.give_up),
+                "given_up": gave_up,
+                "note": views.stuck_message_note(message.retries, gave_up),
             }
             for message in stuck
+            for gave_up in [bool(message.give_up) or message.retries >= max_attempts]
         ],
     }
 
@@ -328,14 +331,22 @@ def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
 # Alert kinds (familydb/alerts.py) that stop the family being answered, and others worth a look.
 # Price moves, usage shifts, new models and judgements are news and leave the light alone.
 STOPPING = frozenset({"credit", "key", "limit"})
-WORRYING = frozenset({"calendar", "model", "prices", "api", "refused", "happening"})
+WORRYING = frozenset(
+    {"calendar", "calendar_access", "model", "prices", "api", "refused", "happening"}
+)
 
 
 def light(app: App, conn: sqlite3.Connection) -> str | None:
     """The Status tile's light: "bad" while the family cannot be answered, "warn" while something
     else only an admin can fix goes on, else None."""
     since = utc_iso(app.clock.now() - alerts.KEEP)
-    kinds = {one.kind for one in alert_store.current(conn, since=since)}
+    today = app.clock.now().astimezone(app.settings.tzinfo).date().isoformat()
+    # The limit is noted per day and clears when a call is let through: a day gone is not "now".
+    kinds = {
+        one.kind
+        for one in alert_store.current(conn, since=since)
+        if one.kind != "limit" or one.subject == today
+    }
     if kinds & STOPPING:
         return "bad"
     if kinds & WORRYING:
@@ -762,7 +773,7 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "spending": spending(conn, since, app.settings, app.clock.now()),
         "last": last_call(conn, tz),
         "waiting": {
-            **waiting(conn, tz),
+            **waiting(conn, tz, app.settings.retry_max_attempts),
             "when": views.lookups_when(app.settings),
             "can_look_up": enrichment_available(app.settings),
         },

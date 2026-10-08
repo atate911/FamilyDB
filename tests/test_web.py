@@ -932,17 +932,17 @@ def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:
     }
     assert called == {"overrides", "history", "set_many"}
 
-    # Two file writes, and this page is the one place that may make them: signing everyone out
-    # replaces the session key, connecting Google saves a key.
+    # Three file writes, and this page is the one place that may make them: signing everyone out
+    # replaces the session key, connecting Google saves a key and disconnecting deletes it.
     for other in sorted(module.parent.glob("*.py")):
         writes = {
             node.func.attr
             for node in ast.walk(ast.parse(other.read_text("utf-8")))
             if isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
-            and node.func.attr in {"rotate", "save_key"}
+            and node.func.attr in {"rotate", "save_key", "remove_key"}
         }
-        expected = {"rotate", "save_key"} if other.name == "settings.py" else set()
+        expected = {"rotate", "save_key", "remove_key"} if other.name == "settings.py" else set()
         assert writes == expected, other.name
 
 

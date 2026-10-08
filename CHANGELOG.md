@@ -312,6 +312,31 @@ installed.
   map to the developer documents. Its 69 pages are Markdown in `src/familydb/wiki/`. Status
   and each settings page also carry a Guide button to the matching page.
 
+### Fixed since v0.2.0
+
+- **Status no longer says "can't answer" for days after the day's limit.** The note that the
+  limit was reached is now forgotten as soon as a call goes through, and a note from an earlier
+  day no longer counts against today.
+- **Status says plainly when a message was given up on.** A message that had used all its
+  retries still read "will try again"; it now says it was given up on, and that the words
+  are there to send again.
+- **A calendar Google stops showing no longer cancels plans.** If the calendar was unshared or
+  could not be reached, moving a plan read Google's "not found" as the event being deleted and
+  cancelled the plan here. Now only an event missing from a calendar Google still shows counts as
+  deleted; otherwise the plan is left as it is and admins are told the calendar is no longer
+  there for the bot.
+- **The Google Calendar alert says what is wrong.** Admins were told to check that the calendar
+  was still shared when the real trouble was a refused or missing key. That alert now speaks of
+  the key; the sharing advice goes with the new alert for a calendar the bot can no longer see.
+- **A missed heads-up is tried again on the plan's day.** If nothing could send to a plan's chat
+  the evening before, the rain and opening-hours check was dropped for good. It is now tried
+  again on the day itself while the plan has not begun, worded for today, and a plan is still
+  only ever checked once.
+- **Google Calendar can be disconnected from the page.** Under Connections, an admin can open
+  "Disconnect Google Calendar" and confirm: the saved key is deleted and the calendar's id
+  forgotten, any note about the calendar goes with them, and plans stay saved here as they
+  are when no calendar is connected. Nothing is taken off Google.
+
 ### New since v0.1.0
 
 - **The kids have their own place.** Each kid signs in to her own simpler pages

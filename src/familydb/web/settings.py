@@ -1,5 +1,6 @@
 """The settings pages: the only web module that writes settings, through `store.settings`, plus
-two files (the session key via `keys.rotate`, the Google key via `google.save_key`). Every change
+two files (the session key via `keys.rotate`, the Google key via `google.save_key`, taken away
+by `google.remove_key`). Every change
 is logged; a key's value never is.
 
 /settings summarises each part; each has a page, /settings/<name> (`fields.SECTIONS`), and every
@@ -206,6 +207,9 @@ def problems_from(exc: ValidationError) -> dict[str, str]:
 
 
 CALENDAR_CONNECTED = "Connected. The bot now uses {name}."
+CALENDAR_DISCONNECTED = (
+    "Disconnected. The saved key is gone, and plans are kept here until a calendar is connected."
+)
 
 
 def suggested(one: fields.Field) -> list[tuple[str, str]]:
@@ -1022,7 +1026,9 @@ LINE_GROUPS = (
             "morning_deadlines",
             "morning_roundup",
             "plan_rain",
+            "plan_rain_today",
             "plan_closed",
+            "plan_closed_today",
             "plan_backup",
             "follow_up",
         ),
@@ -1121,6 +1127,7 @@ LINE_GROUPS = (
             "alert_key",
             "alert_limit",
             "alert_calendar",
+            "alert_calendar_access",
             "alert_model",
             "alert_price",
             "alert_prices",
@@ -1411,6 +1418,19 @@ def google_connect() -> Response | tuple[str, int]:
     app.forget_calendar()
     log.info("Google Calendar connected from the page by %s", auth.client_address())
     return _google_answer(back, said=CALENDAR_CONNECTED.format(name=calendar_id))
+
+
+@bp.post("/settings/google/disconnect")
+def google_disconnect() -> Response | tuple[str, int]:
+    """Take the key and the calendar id away. Plans stay as they are, kept here."""
+    app = _app()
+    if (complaint := auth.refused()) is not None:
+        return _google_answer(None, error=complaint)
+    google.remove_key(Path(app.settings.google_key_path))
+    _save({"google_calendar_id": None})
+    app.drop_calendar()
+    log.info("Google Calendar disconnected from the page by %s", auth.client_address())
+    return _google_answer(None, said=CALENDAR_DISCONNECTED)
 
 
 def _google_answer(

@@ -41,7 +41,7 @@ def page_data(app: App, conn: Any) -> dict[str, Any]:
     show = request.args.get("show", "")
     show = show if show in PROBLEM_FILTERS else "all"
     seen = problems.counts_since(conn, since=day)
-    stuck = status_page.waiting(conn, tz)
+    stuck = status_page.waiting(conn, tz, app.settings.retry_max_attempts)
     failed = ai_texts.recent(conn, limit=FAILED_CALLS_SHOWN, failed_only=True)
     return {
         "attention": status_page.attention(app, conn),

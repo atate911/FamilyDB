@@ -148,9 +148,25 @@ EVENTS: dict[str, Event] = {
         ("plan", "weather"),
         {"plan": "#4 The falls hike", "weather": "70% chance of rain"},
     ),
+    "plan_rain_today": Event(
+        "An outdoor plan later today, when rain is likely and the evening before was missed",
+        "A heads-up for today: {weather} for {plan}, which is outdoors.",
+        ("plan", "weather"),
+        {"plan": "#4 The falls hike", "weather": "70% chance of rain"},
+    ),
     "plan_closed": Event(
         "The evening before a plan, when the place looks closed then",
         "A heads-up for tomorrow's {plan}: {place} is {hours}.",
+        ("plan", "place", "hours"),
+        {
+            "plan": "#1 Ramen night",
+            "place": "Ramen Ichiban",
+            "hours": "listed as closed on Mondays",
+        },
+    ),
+    "plan_closed_today": Event(
+        "A plan later today, when the place looks closed and the evening before was missed",
+        "A heads-up for today's {plan}: {place} is {hours}.",
         ("plan", "place", "hours"),
         {
             "plan": "#1 Ramen night",
@@ -384,11 +400,18 @@ EVENTS: dict[str, Event] = {
         {"limit": "2.00"},
     ),
     "alert_calendar": Event(
-        "Telling an admin: Google shut me out",
-        "Google Calendar stopped letting me in, so plans aren't reaching the calendar. Check "
-        "that the calendar is still shared with my service account (its address is on the "
-        "settings page, under Connections) and that the key was not deleted in Google Cloud; "
-        "connecting again there puts either right.",
+        "Telling an admin: Google refused my key, or I have none",
+        "Google Calendar won't take my key (it was refused, deleted or can't be read), so plans "
+        "aren't reaching the calendar. Connecting the calendar again with a new key on the "
+        "settings page, under Connections, puts it right.",
+        (),
+    ),
+    "alert_calendar_access": Event(
+        "Telling an admin: the calendar is no longer there for me",
+        "Google Calendar no longer shows me the calendar, so plans aren't reaching it and I "
+        "can't tell a plan moved there from one taken off. Check that it is still shared with "
+        "my service account (its address is on the settings page, under Connections) and not "
+        "deleted; sharing it again, or connecting another there, puts it right.",
         (),
     ),
     "alert_model": Event(
@@ -661,7 +684,17 @@ PLAIN: dict[str, str] = {
 }
 
 FOLDABLE = frozenset(
-    {"reminder", "reminder_late", "nudge", "follow_up", "plan_rain", "plan_closed", "lookup_done"}
+    {
+        "reminder",
+        "reminder_late",
+        "nudge",
+        "follow_up",
+        "plan_rain",
+        "plan_rain_today",
+        "plan_closed",
+        "plan_closed_today",
+        "lookup_done",
+    }
 )
 ACTIVE = timedelta(minutes=5)
 HOLD = timedelta(minutes=2)

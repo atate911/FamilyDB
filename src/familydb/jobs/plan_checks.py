@@ -1,14 +1,16 @@
-"""The evening before a plan, in code (no model call): a dry-needing idea against tomorrow's
+"""The evening before a plan, in code (no model call): a dry-needing idea against that day's
 forecast and the place's last-looked-up hours against the plan's time. All well says nothing;
 otherwise a heads-up in the plan's chat, with a backup from the suggestion engine when one fits
-(indoors for rain, anything open for hours). Each plan is checked once (`plans.checked_at`)."""
+(indoors for rain, anything open for hours). Each plan is checked once (`plans.checked_at`). A
+plan whose evening was missed (nothing could send to its chat) is still checked on its own day
+while it is ahead."""
 
 from __future__ import annotations
 
 import logging
 import sqlite3
 from contextlib import closing
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from familydb import voice
 from familydb.app import App
@@ -34,13 +36,15 @@ ASSUMED_MINUTES = 120
 
 
 def run_plan_checks(app: App) -> int:
-    """Check each unchecked plan starting tomorrow; returns how many heads-ups."""
+    """Check each unchecked plan starting tomorrow, or today and still ahead; returns how many
+    heads-ups."""
     app.refresh()
     if not app.settings.plan_checks:
         return 0
-    tomorrow = app.clock.today() + timedelta(days=1)
+    today = app.clock.today()
+    days = (today.isoformat(), (today + timedelta(days=1)).isoformat())
     with closing(app.connect()) as conn:
-        if not plans.due_for_check(conn, day=tomorrow.isoformat()):
+        if not _due(app, conn, days):
             return 0
         # A heads-up about a plan cancelled in Google is noise; if Google cannot be asked, wait.
         if app.calendar is not None:
@@ -52,14 +56,15 @@ def run_plan_checks(app: App) -> int:
             except Exception:
                 log.exception("plan checks deferred: the calendar could not be checked")
                 return 0
-        forecast = _forecast(app, tomorrow)
+        forecasts = _forecasts(app, today)
         said = 0
-        for plan in plans.due_for_check(conn, day=tomorrow.isoformat()):
+        for plan in _due(app, conn, days):
             if app.senders.get(plan.channel or "") is None or plan.chat_id is None:
                 log.info("plan %s is checked later: nothing here can send to it", plan.id)
                 continue
             idea = ideas.get(conn, plan.idea_id) if plan.idea_id else None
-            heads_up = _heads_up(app, conn, plan, idea, forecast) if idea else None
+            forecast = forecasts.get(date.fromisoformat(plan.start[:10]))
+            heads_up = _heads_up(app, conn, plan, idea, forecast, today) if idea else None
             now = utc_iso(app.clock.now())
             with transaction(conn):
                 # Re-read under the write lock: a manual run can race the scheduler.
@@ -86,24 +91,46 @@ def run_plan_checks(app: App) -> int:
     return said
 
 
-def _forecast(app: App, day: date) -> DayForecast | None:
-    """Tomorrow's forecast at home; None skips the weather check."""
+def _due(app: App, conn: sqlite3.Connection, days: tuple[str, ...]) -> list[Plan]:
+    """Unchecked plans on `days` that are still to come: a plan of today that has begun is past
+    a heads-up."""
+    now = app.clock.now()
+    return [plan for plan in plans.due_for_check(conn, days=days) if _ahead(plan, now, app)]
+
+
+def _ahead(plan: Plan, now: datetime, app: App) -> bool:
+    if plan.all_day or len(plan.start) < 16:
+        return plan.start[:10] >= now.date().isoformat()
+    start = datetime.fromisoformat(plan.start)
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=app.clock.tz)
+    return start > now
+
+
+def _forecasts(app: App, today: date) -> dict[date, DayForecast]:
+    """Today's and tomorrow's forecast at home by day; empty skips the weather check."""
     if app.weather is None:
-        return None
+        return {}
     try:
-        found = forecast_days(app.weather, day, day, app.clock.today())
+        found = forecast_days(app.weather, today, today + timedelta(days=1), today)
     except Exception:
         log.warning("plan checks go without the weather: the forecast failed", exc_info=True)
-        return None
-    return found[0] if found else None
+        return {}
+    return {day.date: day for day in found}
 
 
 def _heads_up(
-    app: App, conn: sqlite3.Connection, plan: Plan, idea: Idea, forecast: DayForecast | None
+    app: App,
+    conn: sqlite3.Connection,
+    plan: Plan,
+    idea: Idea,
+    forecast: DayForecast | None,
+    today: date,
 ) -> tuple[str, str] | None:
     """What to say about this plan as (event, words), or None when all is well."""
     settings = app.settings
     day = date.fromisoformat(plan.start[:10])
+    later = "_today" if day == today else ""
     span = _span(plan)
     label = f"#{idea.id} {plan.title}"
     needs_dry = idea.setting == "outdoor" or idea.weather == "dry"
@@ -112,8 +139,9 @@ def _heads_up(
     if needs_dry and forecast is not None and day_is_dry(forecast) is False:
         chance = forecast.rain_chance
         weather = f"{chance}% chance of rain" if chance else forecast.summary.lower()
-        said = voice.say(settings, "plan_rain", seed=plan.id, plan=label, weather=weather)
-        return "plan_rain", _with_backup(app, conn, plan, said, span, setting="indoor")
+        event = f"plan_rain{later}"
+        said = voice.say(settings, event, seed=plan.id, plan=label, weather=weather)
+        return event, _with_backup(app, conn, plan, said, span, setting="indoor")
     place = places.get(conn, idea.place_id) if idea.place_id else None
     state, ranges = open_on(place, day)
     if place is None or state == "unknown":
@@ -125,10 +153,9 @@ def _heads_up(
         if state == "closed"
         else f"listed as open {format_ranges(ranges, spoken=True)} on {day:%A}s"
     )
-    said = voice.say(
-        settings, "plan_closed", seed=plan.id, plan=label, place=place.name, hours=hours
-    )
-    return "plan_closed", _with_backup(app, conn, plan, said, span, setting=None)
+    event = f"plan_closed{later}"
+    said = voice.say(settings, event, seed=plan.id, plan=label, place=place.name, hours=hours)
+    return event, _with_backup(app, conn, plan, said, span, setting=None)
 
 
 def _span(plan: Plan) -> tuple[int, int]:

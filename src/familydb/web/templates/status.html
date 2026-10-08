@@ -193,7 +193,7 @@
         <ul class="plain">
           {% for row in waiting.messages %}
             <li>{{ row.text }}
-              <div class="small muted">{{ row.when | figs }} · {{ row.error }} · {% if row.given_up %}given up on{% else %}{{ row.tries }} tr{{ "y" if row.tries == 1 else "ies" }}, will try again{% endif %}</div></li>
+              <div class="small muted">{{ row.when | figs }} · {{ row.error }} · {{ row.note }}</div></li>
           {% endfor %}
         </ul>
       {% else %}
