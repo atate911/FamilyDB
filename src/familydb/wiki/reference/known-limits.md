@@ -16,23 +16,9 @@ In chat, the assistant can call every tool for a kid. Only `look_up_now`, changi
 
 The count and list of plans waiting for a rating include a plan made from a present. Only parents and admins see them, so a kid never does, but the grown-up the present is for can. Nothing hides the plan between its day and its rating.
 
-### A place name outlives the coordinates
+### A forgotten place can still show in kept texts
 
-FamilyDB deletes a shared position on its own schedule, but the reply that confirmed it, which names the place, stays in the message history and the activity log. The coordinates go; the town or street name does not. See [Shared location](/wiki/model/location).
-
-## Family and passwords
-
-### A Telegram link clears birthday and gender
-
-Using a one-time Telegram link clears the person's birthday and gender. Enter both again on [Family](/wiki/controls/family#add-or-change-somebody) after the link is used; until you do, a kid's age is unknown to the assistant.
-
-### Knocks and links are cleared late
-
-An expired link stays in the database until the next link is made or used, and an old knock until the next stranger writes. A knock older than 30 days can still be listed on Family. Neither lets anyone in; see [Link a Telegram](/wiki/controls/family#link-a-telegram).
-
-### A Not OK wish has no buttons on the page
-
-A request the assistant flagged as Not OK shows a parent no **Yes!** or **Not this time** buttons on the page. Answer it from the Telegram message the parents were sent; see [Answer a wish as a parent](/wiki/controls/wish-lists#answer-a-wish-as-a-parent).
+When a shared position is forgotten, FamilyDB drops its place name from the confirmation and from the kept model texts, tool calls and suggestions. Coordinates inside kept model texts stay until those texts expire, and so do words of the assistant or the family that name the place. See [Shared location](/wiki/model/location#the-place-name-goes-with-the-position).
 
 ## Messages and Status
 
@@ -48,10 +34,6 @@ A reminder made with the page's forms or in its Chat is delivered to the web pag
 
 A plan made with the page's forms belongs to no chat, so the day-after question and the evening-before check have nowhere to go. Make the plan in Telegram if you want either.
 
-### Reset on retry-failed re-arms every message
-
-`familydb db retry-failed --reset` gives every failed message new tries, including one that was given up on purpose. Use it only when you want all of them asked again.
-
 ### A skipped evening-before check is not retried
 
 If the calendar cannot be read at the check time, FamilyDB sends no heads-up for that plan, and the next run looks at the following day. A restart after the check time runs the check once. See [Messages](/wiki/controls/settings/messages#follow-ups-and-notes).
@@ -65,10 +47,6 @@ When the daily limit is reached, the next day's calls do not clear that alert. T
 If the family calendar is not shared with the service account, or the Calendar API is switched off in Google Cloud, Google answers with an error that the assistant reports in chat. No Needs a look row appears and no admin is told on Telegram. Check the sharing under [Google Calendar](/wiki/controls/settings/connections#google-calendar).
 
 ## Server
-
-### The doctor does not print what it fixed
-
-`familydb doctor --fix` puts right what it safely can, then prints a fresh report without saying what it changed. Run `familydb doctor` once more to see the result; see [Diagnostics](/wiki/operations/diagnostics#running-the-doctor).
 
 ### An upgrade does not rewrite the service file
 

@@ -41,7 +41,7 @@ Work down this list until you find the cause.
    sudo docker compose --project-directory /opt/familydb run --rm -T bot familydb db retry-failed
    ```
 
-> **Adding `--reset` re-arms every failed message, including ones given up on purpose, so old messages can be answered late and billed again.** Check **Messages that did not go through** first. See [Reset on retry-failed re-arms every message](/wiki/reference/known-limits#reset-on-retry-failed-re-arms-every-message).
+> **Adding `--reset` gives failed messages with no tries left new tries, so old messages can be answered late and billed again.** Check **Messages that did not go through** first. A message given up on purpose (a person taken off, a kid over the day's limit, a missing key) stays given up.
 
 | You see | It means | Do this |
 |---|---|---|

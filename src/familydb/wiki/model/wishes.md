@@ -39,7 +39,7 @@ Kids say "we should" when they mean "I want". Code spots a message that opens wi
 
 ## Who may answer, and how
 
-Only somebody with the "decide" permission, a parent or admin, grants or declines a wish. A kid changes only their own list. There are two ways to answer: the form on the page, with an optional note, or a button on Telegram. Both run `update_wish` as the person who answered, so the rules above apply either way, and a tap makes no model call. The kid is told in their own conversation, in the assistant's words, with the note and, for no, the day they may ask again.
+Only somebody with the "decide" permission, a parent or admin, grants or declines a wish. A kid changes only their own list. There are two ways to answer: the form on the page, with an optional note, or a button on Telegram. The page shows the form on a kid's Ask a parent and on a request turned away as inappropriate, to a parent only. Both run `update_wish` as the person who answered, so the rules above apply either way, and a tap makes no model call. The kid is told in their own conversation, in the assistant's words, with the note and, for no, the day they may ask again.
 
 Only two things reach a parent's phone, each sent to every parent and admin with a Telegram id: an inappropriate request, sent straight away, and a kid's Ask a parent. Each has **Yes!**, **Not this time** and **Later**, and Later only leaves it waiting. A new wish sends nothing.
 

@@ -22,10 +22,10 @@ Adding goes through the assistant, so it counts as one of the kid's messages. Mo
 ## Answer a wish as a parent
 
 1. Open **Kids' lists** and choose a kid, or follow the **to decide** badge. It counts kid asks and "Not OK" requests from the last 30 days that no parent has answered.
-2. Tap a wish's line to open it, add an optional note (up to 500 characters), and choose **Yes!** or **Not this time**. On a kid's own page, an ask they sent you also shows under **Flagged** with the same two buttons.
+2. Tap a wish's line to open it, add an optional note (up to 500 characters), and choose **Yes!** or **Not this time**. On a kid's own page, an ask they sent you and a request flagged "Not OK" both show under **Flagged** with the same two buttons.
 3. The kid is told in their own conversation, in the assistant's words with your note and, for no, the day they may ask again. The wish moves to **Answers** for 30 days.
 
-A request the assistant flagged as "Not OK" has no buttons on the page: answer it from the Telegram message ([Known limits](/wiki/reference/known-limits#a-not-ok-wish-has-no-buttons-on-the-page)).
+A kid sees neither these buttons nor "Not OK".
 
 Only two things reach a parent's phone, each sent to every parent and admin with a Telegram id: an inappropriate request, sent straight away, and a kid's Ask a parent. Each carries **Yes!**, **Not this time** and **Later**. A tap answers as the person who tapped, with no model call; Later leaves it on the page. A new wish sends nothing, so look when you choose.
 

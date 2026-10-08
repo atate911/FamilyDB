@@ -36,13 +36,13 @@ There are three ways to connect a person to their Telegram. To create the Telegr
 | A knock | Under **Waiting to be let in**, the stranger's Telegram name, id, where they wrote from and when are listed, newest first. Fill in the name, pick a role (Parent unless changed) and choose **Let them in** |
 | A link | On the person's page choose **Make a link for <name>**. They open it in a private chat on their phone and press Start. It works once, within 24 hours; a new link replaces the last; only a hash of its code is kept |
 
-A knock keeps only who and when, never what the stranger said. Knocks are kept 30 days, at most 200, and the page shows the last 20 ([Known limits](/wiki/reference/known-limits#knocks-and-links-are-cleared-late) says when old ones go).
+A knock keeps only who and when, never what the stranger said. Knocks are kept 30 days, at most 200, and the page shows the last 20. The nightly tidy drops older knocks and links past their 24 hours ([Tidy](/wiki/behavior/jobs)).
 
 ### Before you send a link
 
 - The Telegram bot must be connected and the person switched on, and they must open the link in a private chat with the bot. The link is shown once, like a starting password.
 - A used or old link answers "That link no longer works". A link opened from a Telegram that is already somebody else's changes nothing and says whose it is.
-- Using a link clears the person's birthday and male or female. Enter them again on their page afterwards ([Known limits](/wiki/reference/known-limits#a-telegram-link-clears-birthday-and-gender)).
+- Using a link keeps the person's birthday and male or female.
 
 > **A link works for whoever opens it first, and that person is taken for the one it was made for.** Send it to them alone.
 

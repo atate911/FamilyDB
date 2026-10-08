@@ -37,7 +37,7 @@ The table covers the web page's forms. Chat tools are not checked against a role
 
 ## Why the list is not a tool
 
-A Telegram id on the list is permission to talk to the assistant. If a tool could change the list, one message, or a fetched web page talking the model round, could let somebody in. So no tool touches it. The list changes only on Family, from the command line, or by a one-time link an admin makes for one person. Using that link clears the person's birthday and male or female ([Known limits](/wiki/reference/known-limits#a-telegram-link-clears-birthday-and-gender)).
+A Telegram id on the list is permission to talk to the assistant. If a tool could change the list, one message, or a fetched web page talking the model round, could let somebody in. So no tool touches it. The list changes only on Family, from the command line, or by a one-time link an admin makes for one person. Using that link keeps the person's birthday and male or female.
 
 ## Rules that keep an admin who can sign in
 
