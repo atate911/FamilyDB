@@ -1464,7 +1464,7 @@ ALERT_TITLES = {
     "credit": "{company} is out of credit",
     "key": "{company} refused its key",
     "limit": "The day's spending limit was used up",
-    "calendar": "Google Calendar stopped letting the bot in",
+    "calendar": "Google Calendar refused the bot's key, or it has none",
     "calendar_access": "Google Calendar is no longer showing the bot its calendar",
     "model": "A model in use is going, or has gone",
     "price": "The price of a model in use changed",

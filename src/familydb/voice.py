@@ -379,11 +379,10 @@ EVENTS: dict[str, Event] = {
         {"limit": "2.00"},
     ),
     "alert_calendar": Event(
-        "Telling an admin: Google shut me out",
-        "Google Calendar stopped letting me in, so plans aren't reaching the calendar. Check "
-        "that the calendar is still shared with my service account (its address is on the "
-        "settings page, under Connections) and that the key was not deleted in Google Cloud; "
-        "connecting again there puts either right.",
+        "Telling an admin: Google refused my key, or I have none",
+        "Google Calendar won't take my key (it was refused, deleted or can't be read), so plans "
+        "aren't reaching the calendar. Connecting the calendar again with a new key on the "
+        "settings page, under Connections, puts it right.",
         (),
     ),
     "alert_calendar_access": Event(

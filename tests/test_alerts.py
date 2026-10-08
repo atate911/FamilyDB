@@ -179,6 +179,17 @@ def test_a_calendar_out_of_reach_is_its_own_note_and_forgotten_when_google_answe
     assert _found(conn) == set()
 
 
+def test_each_calendar_trouble_is_worded_for_what_it_is(calendar_settings, clock, conn) -> None:
+    app = App(calendar_settings, clock)
+    app._calendar_said("Google no longer accepts the saved key", False)
+    key = alerts.wording(calendar_settings, alert_store.current(conn, since="2000-01-01")[0])
+    assert "key" in key and "shared" not in key  # the key, not the sharing, is what failed
+    app._calendar_said(None, False)
+    app._calendar_said("not shared", True)
+    shared = alerts.wording(calendar_settings, alert_store.current(conn, since="2000-01-01")[0])
+    assert "shared" in shared and "key" not in shared
+
+
 def test_google_shutting_the_bot_out_is_noted_and_forgotten_when_it_answers(
     calendar_settings, clock, conn
 ) -> None:

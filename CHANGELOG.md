@@ -242,6 +242,9 @@ installed.
   cancelled the plan here. Now only an event missing from a calendar Google still shows counts as
   deleted; otherwise the plan is left as it is and admins are told the calendar is no longer
   there for the bot.
+- **The Google Calendar alert says what is wrong.** Admins were told to check that the calendar
+  was still shared when the real trouble was a refused or missing key. That alert now speaks of
+  the key; the sharing advice goes with the new alert for a calendar the bot can no longer see.
 
 ### New since v0.1.0
 
