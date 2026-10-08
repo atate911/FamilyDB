@@ -281,3 +281,28 @@ def test_a_follow_up_goes_with_its_answers_when_there_is_an_idea(
     assert run_follow_ups(app) == 2
     assert rich == [buttons.for_follow_up(with_idea.id)]
     assert len(plain) == 1 and "Dentist" in plain[0]
+
+
+def test_a_kid_ticks_her_own_task_but_may_not_say_how_a_plan_went(
+    settings, clock, conn, family
+) -> None:
+    from familydb.store import members
+    from familydb.tools.tasks import AddTaskInput, add_task
+
+    with db.transaction(conn):
+        members.add(conn, "Maya", "kid", channel="telegram", channel_user_id="1003", now=NOW_ISO)
+    app = App(settings, clock)
+    ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    task = add_task(ctx, AddTaskInput(title="Feed the fish", owner="Maya"))["task"]
+    assert _tap(app, conn, f"done:{task['id']}", who="1003").note == "Ticked off ✓ (Maya)."
+    assert tasks.get(conn, task["id"]).status == "done"
+
+    idea = _idea(conn)
+    plan = _plan(conn, family, idea_id=idea.id)
+    for number, action in enumerate(("again", "missed")):
+        tapped = _tap(app, conn, f"{action}:{plan.id}", tap_id=f"k{number}", who="1003")
+        assert tapped.toast == "Only a parent can answer that." and not tapped.finished
+    assert outcomes.list_for_idea(conn, idea.id) == []
+    assert ideas.get(conn, idea.id).status == "idea"
+    # The grown-up's tap on the same buttons still goes through.
+    assert _tap(app, conn, f"again:{plan.id}", tap_id="s1").note.startswith("Noted, Sam")

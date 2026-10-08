@@ -218,6 +218,15 @@ older than what is installed. It gets a date when it is released.
   favorite, something new and a wildcard, each with a reason; Vera says them.
   Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
   a kid's question or one about right now.
+- **Presents stay hidden in "How did it go?".** A plan made for a present no longer shows its
+  title, or counts in "to rate", for the kids or the grown-up the present is kept from.
+- **Presents stay hidden in /today and /week.** Plans made for a present are left out for the kids
+  and the grown-up it is kept from, and out of any group chat a kid is in.
+- **A kid's /lookup answers truthfully.** It says lookups wait for the evening and to ask a parent,
+  instead of "nothing is waiting", and never points a kid to the settings page.
+- **What a kid may change in the chat.** A kid can add an idea and have something remembered, as
+  before. Editing an idea, saying how a plan went, and making, moving or cancelling a plan are now
+  a parent's in the chat as on the page, including the buttons under a follow-up.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

@@ -14,7 +14,7 @@ from familydb.channels.base import IncomingMessage
 from familydb.channels.telegram import TelegramChannel
 from familydb.clock import FixedClock
 from familydb.dates import utc_iso
-from familydb.store import db, knocks, messages, tasks
+from familydb.store import db, ideas, knocks, members, messages, plans, tasks
 from tests import fakes
 from tests.conftest import TZ
 from tests.test_telegram import TOKEN, _takers, _telegram
@@ -89,6 +89,40 @@ def test_the_week_names_each_day_and_the_month_where_it_turns(settings, conn, fa
         "Wed 30: nothing on\n"
         "Thu 1 Oct: nothing on"
     )
+
+
+def _plan_for(conn, title, kind):
+    with db.transaction(conn):
+        idea = ideas.insert(
+            conn, title=title, kind=kind, participants=["Alex"], now=utc_iso(FRIDAY)
+        )
+        plans.insert(
+            conn,
+            title=title,
+            start="2026-09-25T18:00",
+            end="2026-09-25T19:00",
+            all_day=False,
+            idea_id=idea.id,
+        )
+
+
+def test_a_plan_made_for_a_present_is_not_said_to_the_one_it_is_kept_from(
+    settings, conn, family
+) -> None:
+    with db.transaction(conn):
+        members.add(conn, "Maya", "kid", channel="telegram", channel_user_id="1003")
+    _plan_for(conn, "Scarf for Alex", "gift")
+    _plan_for(conn, "Pizza night", "outing")
+    app = _app(settings)
+    for command in ("/today", "/week"):
+        sam = _ask(app, command, update=f"s{command}", user="1001", chat="1001")
+        assert "Scarf for Alex" in sam and "Pizza night" in sam
+        for user in ("1002", "1003"):  # whom it is for, and a kid
+            theirs = _ask(app, command, update=f"{user}{command}", user=user, chat=user)
+            assert "Scarf for Alex" not in theirs and "Pizza night" in theirs
+        # A group the kids are in: nobody there is told of it, Sam included.
+        group = _ask(app, command, update=f"g{command}", user="1001", chat="-100")
+        assert "Scarf for Alex" not in group and "Pizza night" in group
 
 
 def test_tasks_are_this_chats_open_ones_and_the_askers_own(settings, conn, family) -> None:
@@ -320,3 +354,19 @@ def test_lookup_asks_for_every_idea_waiting_to_be_looked_up_now(settings, conn, 
     assert ideas.get(conn, first.id).lookup_wanted_at is not None
     off = _app(settings, web_tools_enabled=False)
     assert _ask(off, "/lookup", update="l3") == say(off.settings, "lookups_off", seed=0)
+
+
+def test_a_kids_lookup_says_it_waits_for_the_evening_and_never_how_it_works(
+    settings, conn, family
+) -> None:
+    from familydb.voice import say
+
+    with db.transaction(conn):
+        members.add(conn, "Maya", "kid", channel="telegram", channel_user_id="1003")
+        ideas.insert(conn, title="Hopscotch", kind="outing")
+    for web in (True, False):
+        app = _app(settings, web_tools_enabled=web)
+        said = _ask(app, "/lookup", update=f"k{web}", user="1003", chat="1003")
+        assert said == say(app.settings, "lookups_wait", seed=0) and "evening" in said
+        assert "settings" not in said and "switched off" not in said
+    assert ideas.get(conn, 1).lookup_wanted_at is None

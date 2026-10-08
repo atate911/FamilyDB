@@ -20,6 +20,7 @@ from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import ToolError, ToolUnavailable
+from familydb.roles import Permission, may
 from familydb.store import calls
 from familydb.store.db import transaction
 from familydb.store.members import Member
@@ -111,6 +112,10 @@ class ToolSpec:
     unavailable_reason: str = "not available yet"
     writes: bool = False
     worker_only: bool = False  # declared to its worker turn, never to the chat model
+    # What the member calling it must be allowed (roles.py), asked at dispatch, never in the
+    # declaration, so every turn is sent the same tools. No member (a job, the shared password,
+    # the command line) is not asked.
+    needs: Permission | None = None
 
     def api_definition(self) -> dict[str, Any]:
         return {
@@ -148,6 +153,7 @@ class ToolRegistry:
         unavailable_reason: str = "not available yet",
         writes: bool = False,
         worker_only: bool = False,
+        needs: Permission | None = None,
     ) -> Callable[[Handler], Handler]:
         """Register a handler. The input model comes from its second parameter's annotation."""
 
@@ -162,6 +168,7 @@ class ToolRegistry:
                     unavailable_reason=unavailable_reason,
                     writes=writes,
                     worker_only=worker_only,
+                    needs=needs,
                 )
             )
             return handler
@@ -241,6 +248,12 @@ class ToolRegistry:
         spec = self._specs.get(name)
         if spec is None:
             return _error(name, f"unknown tool {name!r}")
+        if (
+            spec.needs is not None
+            and ctx.member is not None
+            and not may(ctx.member.role, spec.needs)
+        ):
+            return _error(name, NOT_THEIRS)
         # Strict mode sends null for an absent field, at any depth; dropping them applies defaults.
         raw_input = without_nulls(raw_input)
         try:
@@ -294,6 +307,11 @@ def _infer_input_model(handler: Handler) -> type[BaseModel]:
     if not (isinstance(model, type) and issubclass(model, BaseModel)):
         raise TypeError(f"{handler.__name__}: second parameter must be annotated with a BaseModel")
     return model
+
+
+# Said to the model when a kid asks for a change only a grown-up makes. Plain by design: a kid is
+# never told how the bot works (docs/DESIGN.md section 16).
+NOT_THEIRS = "nothing was changed: a parent does that, so suggest asking one"
 
 
 def _error(name: str, message: str) -> ToolResult:
