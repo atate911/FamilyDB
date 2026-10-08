@@ -22,10 +22,9 @@ pytestmark = pytest.mark.skipif(not BASH, reason="bash required for shell integr
 
 HARNESS = r"""
 set -euo pipefail
+. "$ROOT/scripts/lib/common.sh"
 die() { echo "DIED: $*" >&2; exit 1; }
 as_root() { "$@"; }
-head2() { :; }
-say() { echo "$*"; }
 approve() { echo ASKED; return 1; }
 take_backup() { echo TOOK_BACKUP >> "$EFFECTS"; }
 stop_bot() { echo STOPPED >> "$EFFECTS"; }
@@ -60,6 +59,8 @@ def _restore(tmp_path: Path, backup: Path):
     effects = tmp_path / "effects"
     env = {
         **os.environ,
+        "ROOT": ROOT.as_posix(),
+        "NO_COLOR": "1",
         "TARGET": (tmp_path / "target").as_posix(),
         "RESTORE_FILE": backup.as_posix(),
         "BACKUP_DIR": (tmp_path / "backups").as_posix(),

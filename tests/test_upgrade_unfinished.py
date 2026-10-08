@@ -47,7 +47,7 @@ retry() {
 }
 familydb_cmd() {
   case "$1" in
-    doctor) ;;
+    doctor) echo "✓ settings: loaded"; echo; echo "Everything is set up." ;;
     db)
       echo MIGRATE
       [ "${FAIL_MIGRATE:-0}" = 0 ] || return 1

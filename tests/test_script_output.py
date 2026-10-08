@@ -1,0 +1,487 @@
+"""What `maintain.sh` shows a person, and the layout helpers in lib/common.sh behind it.
+
+The look is for the eye and may change, but what a person reads off it may not: a plan numbered
+and said before anything is done, a verdict, the facts a person needs to act, every warning said
+again at the end, a failure that says what to type, and no escape codes in a log or a pipe.
+Runs the real scripts, and cuts functions out of lib/common.sh, with nothing here touching a server.
+"""
+
+# ruff: noqa: E501  (shell snippets, written as a person would type them)
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+from contextlib import closing
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+BASH = shutil.which("bash")
+pytestmark = pytest.mark.skipif(not BASH or os.name == "nt", reason="needs bash")
+
+ESCAPE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")
+LIB = (
+    "set -euo pipefail\n"
+    f'. "{ROOT}/scripts/lib/common.sh"\n'
+    "LOG_FILE=''\n"  # no transcript: nothing here writes outside the test
+)
+
+
+def _lib(code: str, **env: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [BASH, "-c", LIB + code],
+        cwd=ROOT,
+        env={**os.environ, "NO_COLOR": "1", "COLUMNS": "80", **env},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+
+def _fake_server(tmp_path: Path, *, backups: int = 0) -> tuple[Path, dict[str, str]]:
+    """An install the script will take for one: its checkout, a database, and stand-ins for the
+    things that would otherwise reach for root, systemd, cron or the network."""
+    target = tmp_path / "install"
+    (target / "data").mkdir(parents=True)
+    (target / "backups").mkdir()
+    shutil.copytree(ROOT / "scripts", target / "scripts")
+    (target / "pyproject.toml").write_text('[project]\nname = "familydb"\n')
+    with closing(sqlite3.connect(target / "data" / "familydb.sqlite3")) as conn:
+        conn.execute("create table members (id integer primary key)")
+        conn.commit()
+    for number in range(backups):
+        (target / "backups" / f"familydb-2026010{number}.sqlite3").write_text("x")
+    program = target / ".venv" / "bin" / "familydb"
+    program.parent.mkdir(parents=True)
+    program.write_text(
+        f"#!{sys.executable}\n"
+        "import sqlite3, sys\n"
+        "if sys.argv[1:3] == ['db', 'backup']:\n"
+        "    with sqlite3.connect('data/familydb.sqlite3') as source:\n"
+        "        target = sqlite3.connect(sys.argv[3]); source.backup(target); target.close()\n"
+    )
+    program.chmod(0o755)
+    stubs = tmp_path / "stubs"
+    stubs.mkdir()
+    (stubs / "sudo").write_text(
+        '#!/bin/sh\nwhile [ "${1#-}" != "$1" ]; do shift; [ "$1" = root ] && shift; done\nexec "$@"\n'
+    )
+    (stubs / "crontab").write_text("#!/bin/sh\nexit 1\n")
+    (stubs / "curl").write_text("#!/bin/sh\nprintf 'ok\\n200'\n")
+    for stub in stubs.iterdir():
+        stub.chmod(0o755)
+    env = {
+        "PATH": f"{stubs}{os.pathsep}{os.environ['PATH']}",
+        "NO_COLOR": "1",
+        "COLUMNS": "80",
+        # Whatever this machine runs as a service is none of the test's business.
+        "FAMILYDB_SERVICE_UNIT": str(tmp_path / "no-such.service"),
+    }
+    return target, env
+
+
+def _maintain(target: Path, env: dict[str, str], *args: str, tty: bool = False):
+    command = [
+        BASH,
+        str(target / "scripts" / "maintain.sh"),
+        *args,
+        "--target",
+        str(target),
+        "--user",
+        "root",
+    ]
+    return subprocess.run(
+        command,
+        env={**os.environ, **env},
+        capture_output=True,
+        text=True,
+        timeout=60,
+        stdin=subprocess.DEVNULL,
+    )
+
+
+# -- the help
+
+
+def test_the_help_groups_commands_by_what_they_do_to_the_install() -> None:
+    done = subprocess.run(
+        [BASH, "scripts/maintain.sh", "--help"],
+        cwd=ROOT,
+        env={**os.environ, "NO_COLOR": "1"},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert done.returncode == 0, done.stderr
+    text = done.stdout
+    headings = [
+        text.index(h) for h in ("Look at it", "Keep it safe", "Change it", "Options", "Examples")
+    ]
+    assert headings == sorted(headings)
+    look, safe, change = (text[headings[i] : headings[i + 1]] for i in range(3))
+    assert all(f"\n  {name} " in look for name in ("status", "check", "logs"))
+    assert all(f"\n  {name} " in safe for name in ("backup", "restore", "schedule-backups"))
+    assert all(
+        f"\n  {name} " in change for name in ("upgrade", "restart", "https", "port", "password")
+    )
+    assert not ESCAPE.search(text)
+
+
+def test_the_help_has_colour_on_a_terminal_and_none_in_a_pipe() -> None:
+    forced = subprocess.run(
+        [BASH, "scripts/maintain.sh", "--help"],
+        cwd=ROOT,
+        env={**os.environ, "FORCE_COLOR": "1", "NO_COLOR": ""},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    ).stdout
+    assert "\x1b[1mChange it\x1b[0m" in forced  # a heading is bold
+    assert "\x1b[36mupgrade\x1b[0m" in forced  # a command is cyan
+    refused = subprocess.run(
+        [BASH, "scripts/maintain.sh", "--help"],
+        cwd=ROOT,
+        env={**os.environ, "FORCE_COLOR": "1", "NO_COLOR": "1"},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    ).stdout
+    assert not ESCAPE.search(refused)  # NO_COLOR wins
+
+
+# -- status
+
+
+def test_status_leads_with_a_verdict_and_ends_with_what_to_do(tmp_path) -> None:
+    target, env = _fake_server(tmp_path)
+    done = _maintain(target, env, "status")
+    assert done.returncode == 0, done.stdout + done.stderr
+    out = done.stdout
+    assert not ESCAPE.search(out + done.stderr)
+    assert re.search(r"^FamilyDB \W Status$", out, re.M)  # the banner says what this is
+    # No backup and no schedule: not well, and it says how to put that right, command first.
+    assert "Running, with 2 things to look at" in out  # the backup and its schedule
+    assert re.search(r"^  ! Last backup +none yet", out, re.M)
+    attention = out[out.index("Needs attention") :]
+    assert re.search(r"sudo \S*maintain\.sh backup +# take one now", attention)
+    assert "schedule-backups" in attention
+    # The labels line up, whatever their length: every value starts in the same column.
+    starts = {
+        re.match(r"^ {2}(?:[✓!✗] | {2})(?:Version|Database|Last backup|Disk) +", line).end()
+        for line in out.splitlines()
+        if re.match(r"^ {2}(?:[✓!✗] | {2})(?:Version|Database|Last backup|Disk) ", line)
+    }
+    assert len(starts) == 1
+
+
+def test_status_with_a_fresh_backup_and_nothing_wrong_is_all_well(tmp_path) -> None:
+    target, env = _fake_server(tmp_path)
+    fresh = target / "backups" / "familydb-20990101.sqlite3"
+    fresh.write_text("x")
+    # Root's crontab carries the nightly line, as schedule-backups writes it.
+    (tmp_path / "stubs" / "crontab").write_text(
+        "#!/bin/sh\necho '15 3 * * * /bin/true # familydb-maintain-backup'\n"
+    )
+    done = _maintain(target, env, "status")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "Running, and all is well" in done.stdout or "Needs attention" not in done.stdout, (
+        done.stdout
+    )
+    assert re.search(r"✓ Last backup +just now", done.stdout)
+    assert re.search(r"✓ Schedule +nightly at 03:15", done.stdout)
+
+
+def test_a_backup_older_than_the_upkeep_job_tolerates_is_called_stale(tmp_path) -> None:
+    target, env = _fake_server(tmp_path, backups=1)
+    old = target / "backups" / "familydb-20260100.sqlite3"
+    os.utime(old, (1_700_000_000, 1_700_000_000))
+    done = _maintain(target, env, "status")
+    assert re.search(r"! Last backup .*older than 36 hours", done.stdout)
+    assert "nightly one may have stopped" in " ".join(done.stdout.split())
+
+
+# -- a command that changes something says so first, and last
+
+
+def test_a_dry_run_says_it_changed_nothing_and_changes_nothing(tmp_path) -> None:
+    target, env = _fake_server(tmp_path)
+    done = _maintain(target, env, "backup", "--dry-run")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "[ DRY RUN ]" in done.stdout
+    assert "dry run, not done" in done.stdout
+    assert "Dry run finished: nothing was changed" in done.stdout
+    assert list((target / "backups").iterdir()) == []
+
+
+def test_a_backup_ends_with_where_it_is_and_how_to_fetch_it(tmp_path) -> None:
+    if os.geteuid() != 0:
+        pytest.skip("the backup is handed to the service account, which takes root to do")
+    target, env = _fake_server(tmp_path)
+    done = _maintain(target, env, "backup")
+    assert done.returncode == 0, done.stdout + done.stderr
+    out = done.stdout
+    assert [p.suffix for p in (target / "backups").iterdir()] == [".sqlite3"]
+    assert "✓ Backup saved" in out
+    assert re.search(r"File +/.*familydb-\d+\.sqlite3", out)
+    assert "Keep a copy somewhere that is not this machine" in out
+    assert "scp " in out
+    assert not ESCAPE.search(out + done.stderr)
+
+
+def test_a_refused_question_changes_nothing_and_says_so(tmp_path) -> None:
+    target, env = _fake_server(tmp_path)
+    done = _maintain(target, env, "schedule-backups")  # nobody at the terminal to say yes
+    assert done.returncode == 0
+    out = done.stdout
+    asked = done.stdout + done.stderr  # the question itself goes to stderr when nobody can answer
+    assert out.index("What scheduling backups does") < asked.index("Add them to the crontab?")
+    assert "There is no terminal here to answer, so the answer is no." in asked
+    assert "Nothing was changed." in out
+    assert not (target / "backups" / "x").exists()
+
+
+# -- the layout helpers
+
+
+def test_a_plan_is_numbered_with_its_reasons_and_what_protects_and_what_stays() -> None:
+    done = _lib(
+        'plan_item "Fetch the code" "it is what the bot runs"\n'
+        'plan_item "Restart" "so it takes effect"\n'
+        'plan_note "It is down for a minute."\n'
+        'plan_safe "A backup comes first."\n'
+        'plan_untouched ".env"\n'
+        'show_plan "What this does"\n'
+    )
+    assert done.returncode == 0, done.stderr
+    lines = done.stdout.splitlines()
+    assert "What this does" in lines
+    assert any(re.fullmatch(r"  1  Fetch the code", line) for line in lines)
+    assert any(re.fullmatch(r"  2  Restart", line) for line in lines)
+    assert "     it is what the bot runs" in lines
+    assert "  ! It is down for a minute." in lines
+    assert "  ✓ A backup comes first." in lines
+    assert "    · .env" in lines
+
+
+def test_phases_are_numbered_against_the_plan_only_when_there_is_one() -> None:
+    planned = _lib(
+        'plan_item "a" "x"; plan_item "b" "y"; show_plan >/dev/null\n'
+        'phase "First"; ok "did it"; phase "Second"\n'
+    )
+    assert "Step 1 of 2 · First" in planned.stdout
+    assert "Step 2 of 2 · Second" in planned.stdout
+    assert "  ✓ did it" in planned.stdout  # under its heading
+    unplanned = _lib('phase "Only"; ok "did it"\n')
+    assert "Step" not in unplanned.stdout and "\nOnly\n" in unplanned.stdout
+
+
+def test_every_warning_is_said_again_at_the_end_and_counted() -> None:
+    done = _lib(
+        'warn "disk is nearly full"; warn "one step failed, carrying on"\n'
+        'finish ok "Upgraded"\nkv Version "v1"\nrecap\n'
+    )
+    assert done.returncode == 0, done.stderr
+    assert "! Upgraded, with 2 warnings" in done.stdout
+    assert done.stdout.index("Version") < done.stdout.index(
+        "Warnings"
+    )  # facts, then what went wrong
+    recap = done.stdout[done.stdout.index("Warnings") :]
+    assert "disk is nearly full" in recap and "one step failed, carrying on" in recap
+    clean = _lib('finish ok "Upgraded"\nrecap\n')
+    assert "✓ Upgraded" in clean.stdout and "Warnings" not in clean.stdout
+
+
+def test_a_failed_run_is_never_called_a_success_and_a_dry_run_never_one_that_ran() -> None:
+    assert "✗ Stopped" in _lib('finish bad "Stopped"\n').stdout
+    dry = _lib('finish ok "Upgraded"\n', DRY_RUN="1")
+    assert "Dry run finished: nothing was changed" in dry.stdout and "Upgraded" not in dry.stdout
+
+
+def test_facts_are_laid_out_in_a_column_with_a_mark_that_does_not_depend_on_colour() -> None:
+    done = _lib(
+        'kv "Version" "v1"\nkv "Last backup" "3 hours ago" ok\nkv "Disk" "full" bad\nkv "Schedule" "none" warn\n'
+    )
+    lines = done.stdout.splitlines()
+    assert lines == [
+        "    Version      v1",
+        "  ✓ Last backup  3 hours ago",
+        "  ✗ Disk         full",
+        "  ! Schedule     none",
+    ]
+    ascii_only = _lib(
+        'kv "Disk" "full" bad\nkv "Last backup" "3 hours ago" ok\n', FAMILYDB_ASCII="1"
+    )
+    assert ascii_only.stdout.splitlines() == [
+        "  x Disk         full",
+        "  + Last backup  3 hours ago",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("seconds", "said"),
+    [(5, "5s"), (65, "1m 05s"), (7500, "2h 05m"), (183_600, "2d 3h")],
+)
+def test_a_length_of_time_is_said_in_the_shortest_words_that_are_exact(seconds, said) -> None:
+    assert _lib(f"fmt_secs {seconds}").stdout == said
+
+
+@pytest.mark.parametrize(
+    ("seconds", "said"),
+    [(10, "just now"), (600, "10 min ago"), (10_800, "3 hours ago"), (259_200, "3 days ago")],
+)
+def test_how_long_ago_is_said_as_a_person_would(seconds, said) -> None:
+    assert _lib(f"ago {seconds}").stdout == said
+
+
+def test_a_long_reason_is_broken_at_words_and_a_long_path_is_not_cut() -> None:
+    path = "/srv/" + "x" * 90
+    done = _lib(
+        f'plan_item "Step" "copies it over {path} and then sets the owner and mode"; show_plan',
+        COLUMNS="60",
+    )
+    lines = done.stdout.splitlines()
+    assert path in "".join(line.strip() for line in lines)  # whole on one line
+    assert any(path in line for line in lines)
+    assert all(len(line) <= 60 or path in line for line in lines)
+
+
+# -- what a failure says
+
+
+def test_a_failure_names_what_to_type_and_what_it_cost_in_words_a_person_can_follow() -> None:
+    done = _lib(
+        'on_failure_hint "The upgrade stopped part-way."$\'\\n\'"To go back:"$\'\\n\'"  sudo git checkout abc     # v1"\n'
+        'again_hint "finish the upgrade: sudo bash maintain.sh upgrade"\n'
+        'die "could not fetch" "What to try:" "      sudo git fetch origin" "A sentence."\n'
+    )
+    assert done.returncode == 1
+    err = done.stderr
+    assert "✗ could not fetch" in err
+    assert "      sudo git fetch origin" in err
+    assert "To go back:" in err and "sudo git checkout abc" in err
+    assert "When that is sorted, finish the upgrade: sudo bash maintain.sh upgrade" in err
+    assert not ESCAPE.search(err)
+
+
+def test_a_failure_colours_commands_but_only_where_stderr_is_a_terminal() -> None:
+    done = _lib(
+        'die "stopped" "  sudo systemctl status familydb     # why"\n', FORCE_COLOR="1", NO_COLOR=""
+    )
+    assert "\x1b[36m  sudo systemctl status familydb\x1b[0m" in done.stderr
+    assert "\x1b[2m     # why\x1b[0m" in done.stderr  # its comment is dim
+
+
+def test_the_doctors_report_is_counted_and_a_failure_only_view_hides_the_rest() -> None:
+    report = "✓ settings: loaded\n! telegram: no token\n    → set one\n✗ model key: none\n    → add one\n· note: skipped\n\nIt is not set up."
+    done = _lib(
+        f"show_doctor failures '{report}'; echo \"$DOCTOR_FINE $DOCTOR_WARN $DOCTOR_BAD|$DOCTOR_VERDICT\""
+    )
+    assert done.returncode == 0, done.stderr
+    out = done.stdout
+    assert "✗ model key: none" in out and "→ add one" in out
+    assert "telegram" not in out and "settings: loaded" not in out
+    assert out.strip().endswith("1 1 1|It is not set up.")
+    everything = _lib(f"show_doctor all '{report}'")
+    assert "✓ settings: loaded" in everything.stdout and "! telegram: no token" in everything.stdout
+
+
+# -- a step at a terminal shows it is working, and elsewhere says nothing until it is done
+
+
+def test_a_step_at_a_terminal_redraws_one_line_and_leaves_the_tick() -> None:
+    pty = pytest.importorskip("pty")
+    master, slave = pty.openpty()
+    code = LIB + '_live_ok() { return 0; }\nstep "Waiting on something slow" sleep 1\n'
+    process = subprocess.Popen(
+        [BASH, "-c", code],
+        cwd=ROOT,
+        env={**os.environ, "TERM": "xterm", "NO_COLOR": "1", "COLUMNS": "80"},
+        stdout=slave,
+        stderr=slave,
+        stdin=subprocess.DEVNULL,
+        close_fds=True,
+    )
+    os.close(slave)
+    chunks = []
+    while True:
+        try:
+            data = os.read(master, 4096)
+        except OSError:
+            break
+        if not data:
+            break
+        chunks.append(data)
+    process.wait(timeout=30)
+    os.close(master)
+    shown = b"".join(chunks).decode("utf-8", "replace")
+    assert process.returncode == 0
+    assert shown.count("\r") >= 3  # redrawn in place, not a line a time
+    assert "Waiting on something slow" in shown
+    assert (
+        shown.rstrip().splitlines()[-1].endswith("✓ Waiting on something slow")
+    )  # and what is left is the tick
+
+
+def test_interrupting_a_step_stops_the_command_and_leaves_no_line_drawing() -> None:
+    """Ctrl-C reaches what the step runs, as it always did, and nothing is left running behind."""
+    import signal
+    import time
+
+    if not shutil.which("setsid"):
+        pytest.skip("needs setsid, to give the script a terminal of its own to interrupt")
+    code = LIB + (
+        "_live_ok() { return 0; }\n"
+        "enable_failure_reporting\n"
+        'step "Waiting on something very slow" sleep 31.7\n'
+    )
+    master, slave = os.openpty()
+    process = subprocess.Popen(
+        ["setsid", "--ctty", "--wait", BASH, "-c", code],
+        env={**os.environ, "TERM": "xterm", "NO_COLOR": "1", "COLUMNS": "80"},
+        stdin=slave,
+        stdout=slave,
+        stderr=slave,
+        close_fds=True,
+    )
+    os.close(slave)
+    time.sleep(1.0)
+    os.write(master, b"\x03")  # what the terminal turns into an interrupt for what is running
+    shown = b""
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        try:
+            data = os.read(master, 4096)
+        except OSError:
+            break
+        if not data:
+            break
+        shown += data
+    process.wait(timeout=10)
+    os.close(master)
+    assert process.returncode in (128 + signal.SIGINT, -signal.SIGINT)  # as it ended before
+    time.sleep(0.5)
+    running = subprocess.run(["ps", "-eo", "args"], capture_output=True, text=True).stdout
+    assert "sleep 31.7" not in [line.strip() for line in running.splitlines()], (
+        "the command was left running"
+    )
+    assert shown.endswith(b"\r\x1b[K")  # the line that was drawing itself is wiped, not left
+
+
+def test_a_step_in_a_pipe_prints_only_its_result() -> None:
+    done = _lib('step "Waiting on something slow" sleep 0.2', TERM="xterm")
+    assert done.stdout == "✓ Waiting on something slow\n"
+    assert "\r" not in done.stdout
+
+
+def test_a_step_that_failed_says_what_it_ran_and_what_it_said() -> None:
+    done = _lib("step \"Stopping\" bash -c 'echo no space left on device; exit 3'")
+    assert done.returncode == 3
+    assert "✗ Stopping — failed" in done.stderr
+    assert "exit code: 3" in done.stderr and "no space left on device" in done.stderr
+    assert "The disk is full" in done.stderr  # and what that means
