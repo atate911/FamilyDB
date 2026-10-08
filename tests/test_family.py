@@ -132,6 +132,15 @@ def _at(hours: float = 0):
     return datetime(2026, 9, 20, 21, 3, tzinfo=UTC) + timedelta(hours=hours)
 
 
+def test_opening_a_link_keeps_the_birthday_and_gender(conn, family_members) -> None:
+    kid = family.add(conn, "Mia", "kid", telegram_id=None, now=NOW)
+    mia = _change(conn, kid, birth_date="2017-03-14", gender="female")
+    code = family.invite(conn, mia.id, by=family_members["sam"].id, now=_at())
+    linked = family.accept_invite(conn, code, telegram_id="1003", now=_at(1))
+    assert (linked.birth_date, linked.gender) == ("2017-03-14", "female")
+    assert members.get(conn, mia.id).birth_date == "2017-03-14"
+
+
 def test_a_link_links_whoever_opens_it_to_its_person_once(conn, family_members) -> None:
     from familydb.store import invites
 

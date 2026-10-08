@@ -2,7 +2,7 @@
 
 A private family assistant, Vera, who lives in our chat app. She remembers the things we say we'd like to do and the things we have to do, puts confirmed plans on the shared Google Calendar, reminds us when we ask her to, and suggests what to do right now, tonight or this weekend, based on the calendar, the weather, where we are and the ideas we've collected.
 
-**Status:** alpha, v0.2.0. [CHANGELOG.md](CHANGELOG.md) says what it does and its known limits, [docs/DESIGN.md](docs/DESIGN.md) is the design and what comes next, [docs/INSTALL.md](docs/INSTALL.md) installs it on a server, and [RUNBOOK.md](RUNBOOK.md) runs it, including the checks still to make against live Google, Telegram and model accounts.
+**Status:** beta, v0.3.1. [CHANGELOG.md](CHANGELOG.md) says what it does and its known limits, [docs/DESIGN.md](docs/DESIGN.md) is the design and what comes next, [docs/INSTALL.md](docs/INSTALL.md) installs it on a server, and [RUNBOOK.md](RUNBOOK.md) runs it, including the checks still to make against live Google, Telegram and model accounts.
 
 ## How it works
 
@@ -26,7 +26,7 @@ One Python process does all of it. A chat adapter hands each message to a pipeli
 
 **On a server, follow [docs/INSTALL.md](docs/INSTALL.md):** three steps, about twenty minutes, no Linux knowledge needed. Paste one block into the server's terminal; it has the server read this private repository, installs everything, puts the page on HTTPS and prints a link and a password. The page then walks you through the rest: yourself, your password, an AI key, home, Telegram, the family, Google Calendar.
 
-Afterwards: `familydb doctor` checks the install and says what to fix, `scripts/maintain.sh` does backups, restores, upgrades, logs and a forgotten password, and `scripts/uninstall.sh` removes it (`--from-zero` restores the server to before FamilyDB).
+Afterwards: `familydb doctor` checks the install and says what to fix, `scripts/maintain.sh` does backups, restores, upgrades, logs and a forgotten password, `maintain.sh check` looks at everything between the disk and the page, `maintain.sh doctor` works out what is wrong, says why and fixes what it can, `maintain.sh rescue` is the way out when it is badly broken, and `scripts/uninstall.sh` removes it (`--from-zero` restores the server to before FamilyDB).
 
 On your own machine, to try it out:
 

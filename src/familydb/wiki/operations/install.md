@@ -73,7 +73,7 @@ It leaves your SSH configuration, the system Python and every other service alon
 sudo /opt/familydb/scripts/maintain.sh check
 ```
 
-Each line starts with `✓` (fine), `!` (worth reading), `✗` (must be fixed) or `·` (skipped), and a fix follows anything that is not fine. Before the setup is finished the last line reads `It will run. 2 thing(s) are not set up yet, which is normal on a first install.` Afterward it reads `Everything is set up.` A `✗` ends with `thing(s) must be fixed before this will work`. On Docker the report also carries two warnings that mean nothing; see [How to run it](/wiki/operations/command-line#how-to-run-it).
+A section with nothing wrong is one line, and one with something wrong lists it with a fix beneath (`✓` fine, `!` worth reading, `✗` must be fixed, `○` not checked); `--all` lists every row. Before the setup is finished the last line reads `It will run. 2 thing(s) are not set up yet, which is normal on a first install.` Afterward it reads `Everything is set up.` A `✗` ends with `[FAIL]`, names the first thing to fix under **Start here**, and points at [Break glass](/wiki/operations/break-glass). On Docker the report also carries two warnings that mean nothing; see [How to run it](/wiki/operations/command-line#how-to-run-it).
 
 2. Look at the service:
 

@@ -596,16 +596,9 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
           SKIP_UNIT=1
         fi
         tmp_unit="$(mktemp)"
-        sed -e "s#/opt/familydb#${REPO_ROOT}#g" \
-            -e "s#^User=.*#User=${SERVICE_USER}#" -e "s#^Group=.*#Group=${SERVICE_USER}#" \
-            "$unit" > "$tmp_unit"
-        # ProtectHome=true hides /home, so a checkout there would start empty. Read-only keeps the
-        # hardening; ReadWritePaths still lets the data folder through.
+        render_unit "$REPO_ROOT" "$SERVICE_USER" > "$tmp_unit"
         case "$REPO_ROOT" in
-          /home/*|/root/*)
-            sed -i -e 's#^ProtectHome=true#ProtectHome=read-only#' "$tmp_unit"
-            note "A checkout under /home or /root needs ProtectHome=read-only; the unit says so."
-            ;;
+          /home/*|/root/*) note "A checkout under /home or /root needs ProtectHome=read-only; the unit says so." ;;
         esac
         if [ "$SKIP_UNIT" = 1 ]; then
           :

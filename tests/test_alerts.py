@@ -146,6 +146,50 @@ def test_the_day_s_limit_is_noted_and_forgotten_once_a_call_is_let_through(conn,
     assert _found(conn) == set()
 
 
+def test_yesterday_s_limit_note_is_not_today_s_trouble(settings, clock, conn) -> None:
+    from familydb.web import status
+
+    app = App(settings, clock)
+    yesterday = (clock.now() - timedelta(days=1)).date().isoformat()
+    today = clock.now().date().isoformat()
+    alerts.note(conn, "limit", yesterday, "used up", clock.now() - timedelta(days=1))
+    assert status.light(app, conn) is None
+    alerts.note(conn, "limit", today, "used up", clock.now())
+    assert status.light(app, conn) == "bad"
+
+
+def test_a_call_let_through_forgets_every_day_s_limit_note(conn, settings) -> None:
+    now = datetime(2026, 9, 20, 14, 3, tzinfo=TZ)
+    alerts.note(conn, "limit", "2026-09-17", "used up", now - timedelta(days=3))
+    alerts.note(conn, "limit", "2026-09-19", "used up", now - timedelta(days=1))
+    spending.admit(conn, settings.model_copy(update={"daily_spend_limit": 50}), now, 0.001)
+    assert _found(conn) == set()
+
+
+def test_a_calendar_out_of_reach_is_its_own_note_and_forgotten_when_google_answers(
+    calendar_settings, clock, conn
+) -> None:
+    app = App(calendar_settings, clock)
+    app._calendar_said("not shared", True)
+    assert _found(conn) == {("calendar_access", "")}
+    assert "still shared" in alerts.wording(
+        calendar_settings, alert_store.current(conn, since="2000-01-01")[0]
+    )
+    app._calendar_said(None, False)
+    assert _found(conn) == set()
+
+
+def test_each_calendar_trouble_is_worded_for_what_it_is(calendar_settings, clock, conn) -> None:
+    app = App(calendar_settings, clock)
+    app._calendar_said("Google no longer accepts the saved key", False)
+    key = alerts.wording(calendar_settings, alert_store.current(conn, since="2000-01-01")[0])
+    assert "key" in key and "shared" not in key  # the key, not the sharing, is what failed
+    app._calendar_said(None, False)
+    app._calendar_said("not shared", True)
+    shared = alerts.wording(calendar_settings, alert_store.current(conn, since="2000-01-01")[0])
+    assert "shared" in shared and "key" not in shared
+
+
 def test_google_shutting_the_bot_out_is_noted_and_forgotten_when_it_answers(
     calendar_settings, clock, conn
 ) -> None:

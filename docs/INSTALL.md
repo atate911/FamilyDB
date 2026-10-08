@@ -314,7 +314,7 @@ Copy the archive, not a working directory: your own `.env` would carry your keys
 sudo /opt/familydb/scripts/maintain.sh check
 ```
 
-That runs `familydb doctor` (settings, `.env` permissions, disk, database and schema, family, keys, models, Telegram, calendar, weather, lookups, digest, web page, service) and prints a fix under anything wrong. `--online` also asks Telegram whether its token works and asks Claude or Gemini whether key and tools work by counting tokens, which is free. OpenAI, the default, cannot count tokens without answering, so the first real message checks it (the page checks a key with its company, free, when the company is chosen there):
+That looks at the machine first, even when the program will not start (the files and who owns them, git, `.env`, Python and its packages, the database file, the service, the web server, HTTPS and the firewall, the disk, memory and clock, the backups), then runs `familydb doctor` (settings, database and schema, family, keys, models, Telegram, calendar, weather, lookups, digest, web page, jobs, messages). It folds what is fine into a line, lists what is not with a fix beneath, and names the first thing to fix; `--all` lists every row. `--online` also asks Telegram whether its token works and asks Claude or Gemini whether key and tools work by counting tokens, which is free. OpenAI, the default, cannot count tokens without answering, so the first real message checks it (the page checks a key with its company, free, when the company is chosen there):
 
 ```bash
 cd /opt/familydb
@@ -337,6 +337,8 @@ sudo -u familydb .venv/bin/familydb db status
 ```bash
 sudo /opt/familydb/scripts/maintain.sh status             # running? healthy? last backup?
 sudo /opt/familydb/scripts/maintain.sh check              # the full check, with fixes
+sudo /opt/familydb/scripts/maintain.sh doctor             # it is broken: work out why, and fix it
+sudo /opt/familydb/scripts/maintain.sh rescue             # the larger remedies, one at a time
 sudo /opt/familydb/scripts/maintain.sh logs 200           # follow the log
 sudo /opt/familydb/scripts/maintain.sh restart
 sudo /opt/familydb/scripts/maintain.sh backup

@@ -52,6 +52,11 @@ def clear(conn: sqlite3.Connection, kind: str, subject: str = "") -> int:
     ).rowcount
 
 
+def clear_kind(conn: sqlite3.Connection, kind: str) -> int:
+    """It works again: forget every subject of a kind (the day's limit is noted per day)."""
+    return conn.execute("DELETE FROM alerts WHERE kind = ?", (kind,)).rowcount
+
+
 def times(conn: sqlite3.Connection, kind: str, subject: str) -> int:
     """How often a trouble has been seen while it lasts; 0 when not noted."""
     row = conn.execute(

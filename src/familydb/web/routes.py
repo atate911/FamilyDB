@@ -979,7 +979,7 @@ def wish_glance(conn: Any, today: date) -> dict[str, Any] | None:
             {**row, "kid": kid["name"], "kid_id": kid["id"]}
             for kid in kids
             for row in kid["turned"]
-            if row["review"] == "asked" or row["concern"] == views.CONCERN_WORDS["inappropriate"]
+            if row["to_decide"]
         ]
         return {"parent": True, "kids": kids, "waiting": waiting, "top": TOP_WISHES}
     if visitor.member is not None and visitor.may("wish"):

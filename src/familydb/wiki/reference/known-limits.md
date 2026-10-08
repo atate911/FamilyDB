@@ -8,29 +8,11 @@ FamilyDB does the following today. Where a row has a workaround, use it.
 
 In chat, a kid can add an idea, remember something and keep their own wishes and things to do; the family decided that. Code refuses a kid in chat the changes only a parent makes: editing an idea, saying how a plan went, and making, moving or cancelling a plan or calendar event. The assistant is told nothing was changed and to suggest asking a parent. The other tools still do not check who asks, so the assistant's judgment and the kids' daily limits are the brakes on those. See [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions) and [What a sign-in guards](/wiki/security/model#what-a-sign-in-guards).
 
-### A place name outlives the coordinates
+### A forgotten place can still show in kept texts
 
-FamilyDB deletes a shared position on its own schedule, but the reply that confirmed it, which names the place, stays in the message history and the activity log. The coordinates go; the town or street name does not. See [Shared location](/wiki/model/location).
-
-## Family and passwords
-
-### A Telegram link clears birthday and gender
-
-Using a one-time Telegram link clears the person's birthday and gender. Enter both again on [Family](/wiki/controls/family#add-or-change-somebody) after the link is used; until you do, a kid's age is unknown to the assistant.
-
-### Knocks and links are cleared late
-
-An expired link stays in the database until the next link is made or used, and an old knock until the next stranger writes. A knock older than 30 days can still be listed on Family. Neither lets anyone in; see [Link a Telegram](/wiki/controls/family#link-a-telegram).
-
-### A Not OK wish has no buttons on the page
-
-A request the assistant flagged as Not OK shows a parent no **Yes!** or **Not this time** buttons on the page. Answer it from the Telegram message the parents were sent; see [Answer a wish as a parent](/wiki/controls/wish-lists#answer-a-wish-as-a-parent).
+When a shared position is forgotten, FamilyDB drops its place name from the confirmation and from the kept model texts, tool calls and suggestions. Coordinates inside kept model texts stay until those texts expire, and so do words of the assistant or the family that name the place. See [Shared location](/wiki/model/location#the-place-name-goes-with-the-position).
 
 ## Messages and Status
-
-### Status says will try again after the last try
-
-After a message has used all its tries, the Status row can still read "will try again". Compare the row's number of tries with **Retries before giving up** (`retry_max_attempts`) on [Messages](/wiki/controls/settings/messages#when-a-message-cannot-be-answered); when they match, no more tries are coming.
 
 ### A reminder made on the page does not reach Telegram
 
@@ -40,27 +22,15 @@ A reminder made with the page's forms or in its Chat is delivered to the web pag
 
 A plan made with the page's forms belongs to no chat, so the day-after question and the evening-before check have nowhere to go. Make the plan in Telegram if you want either.
 
-### Reset on retry-failed re-arms every message
+### A skipped evening-before check may never be retried
 
-`familydb db retry-failed --reset` gives every failed message new tries, including one that was given up on purpose. Use it only when you want all of them asked again.
+If nothing can send to the plan's chat, or the calendar cannot be read, the check tries again in each hourly run until 22:00, for a plan of tomorrow or a plan of today that has not begun. A plan that has begun by the next run is not checked, so a daytime plan whose evening was missed gets no heads-up. A restart after the check hour runs the check once more. See [Messages](/wiki/controls/settings/messages#follow-ups-and-notes).
 
-### A skipped evening-before check is not retried
+### An unshared calendar raises an alert only when one event is looked up
 
-If the calendar cannot be read at the check time, FamilyDB sends no heads-up for that plan, and the next run looks at the following day. A restart after the check time runs the check once. See [Messages](/wiki/controls/settings/messages#follow-ups-and-notes).
-
-### The day's limit keeps the pill red after midnight
-
-When the daily limit is reached, the next day's calls do not clear that alert. The pill can read "Can't answer", and Status keeps a Needs a look row, for up to 7 days after the limit was last reached, even while messages are answered. The row leaves by itself; see [Status](/wiki/controls/status#the-pill-and-the-verdict).
-
-### An unshared calendar raises no alert
-
-If the family calendar is not shared with the service account, or the Calendar API is switched off in Google Cloud, Google answers with an error that the assistant reports in chat. No Needs a look row appears and no admin is told on Telegram. Check the sharing under [Google Calendar](/wiki/controls/settings/connections#google-calendar).
+If the calendar is no longer shared with the service account or was deleted, the **Google Calendar is no longer showing the bot its calendar** row and the Telegram message come only when FamilyDB looks up a single plan's event: moving or canceling a plan, or bringing a plan in line with its event. Listing the calendar or syncing it fails as `Google Calendar error 404` with no alert. A read-only calendar or a switched-off Calendar API fails as `Google Calendar error 403` with none either. See [When Google says no later](/wiki/boundaries/google-calendar#when-google-says-no-later).
 
 ## Server
-
-### The doctor does not print what it fixed
-
-`familydb doctor --fix` puts right what it safely can, then prints a fresh report without saying what it changed. Run `familydb doctor` once more to see the result; see [Diagnostics](/wiki/operations/diagnostics#running-the-doctor).
 
 ### An upgrade does not rewrite the service file
 

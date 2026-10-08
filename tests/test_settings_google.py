@@ -195,3 +195,57 @@ def test_an_unreadable_key_asks_to_connect_again(tmp_path) -> None:
     path.write_text("{ half a file")
     with pytest.raises(ToolUnavailable, match="connect the calendar again"):
         google.load_credentials(path)
+
+
+# -- disconnecting
+
+
+def _disconnect(client, token=None):
+    return client.post("/settings/google/disconnect", data={"csrf": token or _token(client)})
+
+
+def test_disconnecting_deletes_the_key_and_the_calendar_id_and_says_so(page, conn) -> None:
+    from familydb.store import plans
+
+    _connect(page)
+    assert page.app.settings.google_key_path.exists()
+    kept = plans.insert(
+        conn,
+        title="Museum",
+        start="2026-09-26T10:00",
+        end=None,
+        all_day=False,
+        now="2026-09-20T00:00:00Z",
+    )
+    shown = page.get("/settings/connections").text
+    assert 'id="google-disconnect"' in shown and "Yes, disconnect" in shown
+
+    response = _disconnect(page)
+    assert response.status_code == 302
+    assert not page.app.settings.google_key_path.exists()
+    assert page.app.settings.google_calendar_id is None
+    assert page.app.calendar is None
+    after = page.get("/settings/connections").text
+    assert "Disconnected." in after and "Not connected" in after
+    assert 'id="google-disconnect"' not in after  # nothing left to disconnect
+    assert plans.get(conn, kept.id).status != "cancelled"  # plans stay saved here
+
+
+def test_disconnecting_forgets_what_was_noted_about_the_calendar(page, conn) -> None:
+    from familydb.store import alerts
+
+    _connect(page)
+    page.app._calendar_said("Google no longer accepts the saved key", False)
+    assert [one.kind for one in alerts.current(conn, since="2000-01-01")] == ["calendar"]
+    _disconnect(page)
+    assert alerts.current(conn, since="2000-01-01") == []
+
+
+def test_a_disconnect_without_the_token_changes_nothing(page) -> None:
+    _connect(page)
+    assert _disconnect(page, token="not the token").status_code == 400
+    assert page.app.settings.google_key_path.exists()
+
+
+def test_the_disconnect_button_is_not_offered_when_nothing_is_connected(page) -> None:
+    assert 'id="google-disconnect"' not in page.get("/settings/connections").text

@@ -96,9 +96,31 @@ def test_configuration_errors_are_not_retried(settings, clock, conn, family) -> 
     assert stored.give_up is True and stored.retries == 0
     assert messages.failed(conn, max_retries=settings.retry_max_attempts) == []
     assert retry_message(app, message_id, api=fakes.FakeMessagesAPI(), conn=conn) is None
-    assert messages.reset_retries(conn) == 1
-    assert messages.get(conn, message_id).give_up is False
-    assert messages.failed(conn, max_retries=settings.retry_max_attempts)[0].id == message_id
+    # A reset leaves what was given up on purpose alone.
+    assert messages.reset_retries(conn, max_retries=settings.retry_max_attempts) == 0
+    assert messages.get(conn, message_id).give_up is True
+
+
+def test_a_reset_gives_new_tries_only_to_a_message_that_ran_out(settings, clock, conn, family):
+    app = App(settings, clock)
+    spent = _failed_message(app, conn, fakes.rate_limit_error())
+    deliberate = _failed_message(app, conn, fakes.rate_limit_error())
+    fresh = _failed_message(app, conn, fakes.rate_limit_error())
+    conn.execute("UPDATE messages SET retries = 1 WHERE id = ?", (fresh,))
+    conn.execute(
+        "UPDATE messages SET retries = ? WHERE id = ?", (settings.retry_max_attempts, spent)
+    )
+    conn.execute(
+        "UPDATE messages SET retries = ?, give_up = 1 WHERE id = ?",
+        (settings.retry_max_attempts, deliberate),
+    )
+    assert messages.reset_retries(conn, max_retries=settings.retry_max_attempts) == 1
+    assert (messages.get(conn, spent).retries, messages.get(conn, spent).give_up) == (0, False)
+    assert messages.get(conn, deliberate).give_up is True
+    assert messages.get(conn, deliberate).retries == settings.retry_max_attempts
+    assert messages.get(conn, fresh).retries == 1
+    eligible = {m.id for m in messages.failed(conn, max_retries=settings.retry_max_attempts)}
+    assert eligible == {spent, fresh}
 
 
 def test_run_retries_processes_eligible_messages(settings, clock, conn, family) -> None:

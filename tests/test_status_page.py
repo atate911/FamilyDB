@@ -115,6 +115,27 @@ def test_it_shows_what_is_waiting(status, conn, family) -> None:
     assert "AgentError: overloaded" in text and "1 try, will try again" in text
 
 
+def test_a_message_out_of_retries_is_said_to_be_given_up_on(status, conn, family, settings) -> None:
+    with db.transaction(conn):
+        stuck = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="10",
+            chat_id="c",
+            member_id=family["sam"].id,
+            text="put the dentist on Friday",
+            now=NOW_ISO,
+        )
+        messages.mark_failed(conn, stuck.id, "AgentError: overloaded", now=NOW_ISO)
+        conn.execute(
+            "UPDATE messages SET retries = ? WHERE id = ?", (settings.retry_max_attempts, stuck.id)
+        )
+    text = _flat(status.get("/status"))
+    assert "put the dentist on Friday" in text
+    assert "given up on after" in text and "send them again" in text
+    assert "will try again" not in text
+
+
 def test_it_shows_what_went_wrong(status, conn, family) -> None:
     with db.transaction(conn):
         ideas.insert(conn, title="Ramen place", kind="restaurant", now=NOW_ISO)

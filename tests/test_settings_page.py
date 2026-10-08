@@ -525,6 +525,29 @@ def test_a_home_area_typed_on_the_page_is_found_on_the_map(settings, clock, conn
     assert (app.settings.home_lat, app.settings.home_lon) == (45.5, -122.7)
 
 
+def test_saving_the_same_home_area_again_looks_it_up_again_when_nothing_was_found(
+    settings, clock, conn, family
+) -> None:
+    from familydb.integrations.geocode import GeoPoint
+    from tests.fakes import FakeGeocoder
+
+    geocoder = FakeGeocoder()
+    app = App(settings.model_copy(update={"web_password": PASSWORD}), clock, geocoder=geocoder)
+    client = create_app(app).test_client()
+    client.post("/login", data={"password": PASSWORD})
+    form = {"home_area": "Vancouver, WA", "home_lat": "", "home_lon": ""}
+    missed = client.post("/settings", data=_whole_form(client, **form), follow_redirects=True)
+    assert "Could not find Vancouver, WA" in missed.text
+    assert geocoder.queries == ["Vancouver, WA"]
+    geocoder.default = GeoPoint(45.6387, -122.6615, "Vancouver, Washington", "nominatim")
+    found = client.post("/settings", data=_whole_form(client, **form), follow_redirects=True)
+    assert "Found Vancouver, Washington" in found.text
+    assert (app.settings.home_lat, app.settings.home_lon) == (45.6387, -122.6615)
+    # With coordinates kept, saving it once more asks the map nothing.
+    client.post("/settings", data=_whole_form(client, home_area="Vancouver, WA"))
+    assert len(geocoder.queries) == 2
+
+
 def test_the_digest_chat_is_offered_from_the_chats_it_has_seen(page, conn) -> None:
     from familydb.store import messages
 

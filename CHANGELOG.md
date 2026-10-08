@@ -1,12 +1,10 @@
 # Changelog
 
-## v0.3.0 — in progress
+## v0.3.1 — beta (2026-10-08)
 
-Still being built. While this heading says "in progress", an install follows the
-default branch rather than a release tag, and an upgrade never moves to anything
-older than what is installed. It gets a date when it is released.
+A point release: the one change that was merged after v0.3.0 was cut and so missed it.
 
-### New since v0.2.0
+### New since v0.3.0
 
 - **Any model company can be added, not only the three that ship.** The AI model settings have an
   Other companies card: add OpenRouter with a key and a model (it reaches DeepSeek, Kimi, GLM, Qwen,
@@ -17,6 +15,71 @@ older than what is installed. It gets a date when it is released.
   can. `familydb doctor --online` checks each, and the daily check keeps the prices a company's own
   list gives. Behind it, every label, key and model owner is read from one registry
   (`docs/COMPANIES.md`), so a new company is data and not a change in a dozen files.
+
+## v0.3.0 — first beta (2026-10-08)
+
+The first beta: the alpha is over. Everything the alphas did, and much more, has now run
+against the tests and scripted installs; what a beta still asks is to be lived with, and the
+checks against live Google, Telegram and model accounts in [RUNBOOK.md](RUNBOOK.md) are still
+the family's to make. An install follows the newest release, and an upgrade never moves to
+anything older than what is installed.
+
+### New since v0.2.0
+
+- **`maintain.sh check` looks at everything between the disk and the page, and `maintain.sh rescue`
+  is the way out when it is badly broken.** The check no longer needs the program to run. It first
+  looks at the machine, as the service account where "readable" matters: the files and who owns
+  them (a data folder or database file owned by root is the classic "attempt to write a readonly
+  database"), git (a missing or changed tracked file, "dubious ownership", damaged history, a
+  credential written into the remote, a missing deploy key, an upgrade that stopped part-way),
+  `.env` (a line that is not `NAME=value`, an unclosed quote, a byte-order mark, Windows line ends,
+  an option set twice, a port the service cannot bind), Python (the interpreter, every dependency
+  against `uv.lock`, `familydb --help`), the database file read without the program (owner, journal
+  files, SQLite's own check, the migration against the code's), the service (a unit file that points
+  at things that are gone, a sandbox that leaves the database read-only, a changed unit not
+  reloaded, restarts, killed for memory, "too many failed starts", Docker's daemon, containers and
+  compose file, a second copy running), the web server (who holds the port, `/healthz`, the front
+  page being drawn, its security headers, its styles), HTTPS (DNS, Caddy and its Caddyfile, the
+  certificate's days left, the address answering from this machine, the firewall), and the host (disk
+  and file slots, memory and swap, the clock, a read-only file system, the service's errors in the
+  last day), and the backups. Then it asks the program (`familydb doctor`), which now also checks the
+  time zone, names in `.env` that nothing reads (with the one they are close to), SQLite's
+  integrity check, the modes of the data files, today's spending against the
+  limit, whether the scheduler is ticking, messages waiting, unsent or given up on, the alerts the
+  admins were told of and the errors logged in the last day, and files its findings under `▸`
+  headings. The report folds a section with nothing wrong into one line that names what it looked
+  at, opens the rest with a count and a fix under each row, ends with a bar cut in the colours of how
+  it went, and names the first thing to fix. `--all` lists every row and `--online` adds the checks
+  that need the internet. A check that goes wrong is a row,
+  never the end of the report, and a program that prints no report is a failure with the reason.
+  `rescue` (a menu, or `locked-out`, `wont-start`, `rollback`, `database`, `space`) looks first,
+  says what it found, asks before each change and backs the database up first. It can switch the
+  page back on, clear the "Too many tries" lockout, make a new password, sign everyone out, hand the
+  files back to the service, put back files that are gone, rebuild the Python environment, forget a
+  setting saved on the page that stops it starting, undo an upgrade (the code only when no migration
+  ran, and the database from before it, on a typed yes, when one did; `upgrade` now records what it
+  moved from and to, so this works after it finished), restore the newest sound backup over a damaged
+  database (keeping the damaged one aside) or salvage what can be read into a new file, and free
+  disk space. What loses data needs a typed `yes` at a terminal and is never answered by `--yes`.
+  `check` ends with the ways out that suit what it found. Also fixed: a command that ends in
+  `[FAIL]` no longer also prints "stopped unexpectedly" on stderr.
+
+  **`maintain.sh doctor` answers "it is broken and I do not know why".** It makes the same look,
+  and reads the service's log when the service is unwell, because a traceback often names what no
+  check could. Then it says what is wrong and why, from the root cause up and in plain words
+  ("the service runs as familydb and no such account exists, so it cannot start"), shows what it
+  will do about each thing (which steps download something, which will ask again) and, apart, what
+  only you can do, with the command or the place to do it. On one Enter it does the safe steps in
+  the order a page comes up: it creates the service account, hands files back, puts back program
+  files that are gone, cleans or starts `.env`, rebuilds the Python environment or the image, applies
+  migrations after a backup, writes the service file again, reloads, resets and enables systemd,
+  restarts Caddy or points it at the right port, opens the firewall, turns on time sync, and starts
+  the bot and waits for the page. A damaged database and a full disk are the `rescue` steps, run
+  inside it, and anything that loses data asks for its own typed `yes` that `--yes` never gives. It
+  looks again, says what came right and what is still wrong with what to try next, and ends
+  `[ OK ] Restored` or `[FAIL] Not fully restored`. It makes no model call, sends nothing and changes
+  no setting saved on the page; `--dry-run` shows the plan and stops. `check` stays read-only.
+
 - **`maintain.sh` shows what is different this time, and nothing else.** `upgrade` fetches first
   and shows what it would change as a pull request would: the commits and the pull requests they
   came from, how many files and where, what the changelog says is new and, only when they change,
@@ -258,6 +321,25 @@ older than what is installed. It gets a date when it is released.
   favorite, something new and a wildcard, each with a reason; Vera says them.
   Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
   a kid's question or one about right now.
+- **Fixed: opening a Telegram link no longer wipes a birthday or gender.** Linking a person's
+  Telegram used to clear what the family list held for them.
+- **Fixed: a wish turned away as not OK can be answered from the page.** It was counted under
+  "to decide" but showed no buttons; a parent now gets Yes! and Not this time on a kid's page, as
+  in Telegram. A kid never sees them.
+- **Fixed: `familydb db retry-failed --reset` leaves given-up messages alone.** It used to give
+  every failed message new tries, including ones given up on purpose (a person taken off, a kid
+  over the day's limit). It now resets only those that ran out of tries.
+- **Fixed: `familydb doctor --fix` says what it fixed.** The "fixed:" lines were lost when it
+  checked again after the repair.
+- **Fixed: strangers who messaged the bot, and Telegram links nobody opened, are forgotten on
+  time.** They were dropped only when the next one came; the nightly tidy now drops them.
+- **Fixed: saving the same home town again tries the map again.** If the first lookup found
+  nothing, saving the unchanged text did nothing; it now looks again while no coordinates are kept.
+- **A forgotten location now takes its place name with it.** A shared location was deleted after a
+  day, but the name it was given ("Old Town, Portland") stayed in the "Got it" reply and in the
+  words and results kept for the Troubleshooting pages. When the location is forgotten, or the
+  person taken off, the name is replaced there with "[place forgotten]". Coordinates inside the
+  kept model words still go only with those words, after their own days.
 - **Plainer words in the scripts.** The upgrade no longer says migrations "never
   rewrite" what is there: they can, so it says the backup taken first covers it and
   that going back means restoring that backup. `uninstall.sh --help` now says the
@@ -301,6 +383,31 @@ installed.
   services, and a reference with a "How do I...?" index, a glossary, the known limits and a
   map to the developer documents. Its 69 pages are Markdown in `src/familydb/wiki/`. Status
   and each settings page also carry a Guide button to the matching page.
+
+### Fixed since v0.2.0
+
+- **Status no longer says "can't answer" for days after the day's limit.** The note that the
+  limit was reached is now forgotten as soon as a call goes through, and a note from an earlier
+  day no longer counts against today.
+- **Status says plainly when a message was given up on.** A message that had used all its
+  retries still read "will try again"; it now says it was given up on, and that the words
+  are there to send again.
+- **A calendar Google stops showing no longer cancels plans.** If the calendar was unshared or
+  could not be reached, moving a plan read Google's "not found" as the event being deleted and
+  cancelled the plan here. Now only an event missing from a calendar Google still shows counts as
+  deleted; otherwise the plan is left as it is and admins are told the calendar is no longer
+  there for the bot.
+- **The Google Calendar alert says what is wrong.** Admins were told to check that the calendar
+  was still shared when the real trouble was a refused or missing key. That alert now speaks of
+  the key; the sharing advice goes with the new alert for a calendar the bot can no longer see.
+- **A missed heads-up is tried again on the plan's day.** If nothing could send to a plan's chat
+  the evening before, the rain and opening-hours check was dropped for good. It is now tried
+  again on the day itself while the plan has not begun, worded for today, and a plan is still
+  only ever checked once.
+- **Google Calendar can be disconnected from the page.** Under Connections, an admin can open
+  "Disconnect Google Calendar" and confirm: the saved key is deleted and the calendar's id
+  forgotten, any note about the calendar goes with them, and plans stay saved here as they
+  are when no calendar is connected. Nothing is taken off Google.
 
 ### New since v0.1.0
 

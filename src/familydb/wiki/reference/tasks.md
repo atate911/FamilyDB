@@ -52,6 +52,7 @@ Each row names the setting and the card it is on.
 | Quiet a noisy group chat | **Answer only when mentioned** (`telegram_require_mention`) on [Connections](/wiki/controls/settings/connections#in-a-telegram-group) |
 | Stop one person's reminders landing in the group | **Send what's for one person to them** (`private_when_personal`) on [Connections](/wiki/controls/settings/connections#in-a-telegram-group) |
 | Get voice notes or photos read | **Listen to voice notes** (`voice_notes`) and **Look at photos** (`photos`) on [AI model](/wiki/controls/settings/ai-model#voice-notes-and-photos) |
+| Disconnect Google Calendar | [Disconnect Google Calendar](/wiki/controls/settings/connections#disconnect-google-calendar) on Connections |
 | Rename Vera or change how the assistant sounds | [Who she is](/wiki/controls/settings/personality#who-she-is) |
 
 ## The server
@@ -59,7 +60,7 @@ Each row names the setting and the card it is on.
 | I want to... | Where |
 |---|---|
 | Install FamilyDB | [Install and first run](/wiki/operations/install) |
-| Check the install is healthy | [Running the doctor](/wiki/operations/diagnostics#running-the-doctor) |
+| Check the install is healthy | [Running the check](/wiki/operations/diagnostics#running-the-check) |
 | Take a backup now | [Take a backup by hand](/wiki/operations/backup-and-restore#take-a-backup-by-hand) |
 | Copy a backup off the server | [Keep a copy off the server](/wiki/operations/backup-and-restore#keep-a-copy-off-the-server) |
 | Restore a backup | [Restore a backup](/wiki/operations/backup-and-restore#restore-a-backup) |

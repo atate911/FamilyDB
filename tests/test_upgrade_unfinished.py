@@ -351,7 +351,8 @@ def test_a_problem_that_was_there_before_is_shown_and_not_blamed_on_the_upgrade(
     server = Server(tmp_path)
     result = server.upgrade(DOCTOR_BEFORE=FAILING, DOCTOR_AFTER=FAILING)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "✗ model key: no key" in result.stdout  # it is in front of the person
+    assert re.search(r"✗ model key +no key", result.stdout)  # it is in front of the person
+    assert "→ add one" in result.stdout
     assert "(the same before the upgrade)" in result.stdout
     last = [line for line in result.stdout.splitlines() if "Upgraded " in line]
     assert last and last[0].startswith("[ OK ]")  # and the upgrade is not called a failure for it

@@ -129,13 +129,12 @@ def estimate_looking(provider: str, model: str | None) -> float:
 
 def admit(conn: sqlite3.Connection, settings: Settings, now: datetime, cost: float) -> int:
     """Check the limit and hold this call's estimated cost; raise when the day is used up (noted
-    for an admin after the check's transaction ends; let through, today's note is cleared)."""
+    for an admin after the check's transaction ends; let through, every day's note is cleared)."""
     today = now.astimezone(settings.tzinfo).date().isoformat()
     try:
         with transaction(conn):
             _check(conn, settings, now, other_than=None)
-            if alert_store.any_for(conn, ("limit",), today):
-                alert_store.clear(conn, "limit", today)
+            alert_store.clear_kind(conn, "limit")
             return calls.hold(conn, cost_usd=cost, now=utc_iso(now))
     except SpendingLimitReached as exc:
         from familydb import alerts
