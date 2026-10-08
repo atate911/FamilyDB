@@ -17,7 +17,11 @@ older than what is installed. It gets a date when it is released.
   backup is taken only after that (so none is taken when there is nothing to upgrade), and how to go
   back is printed with this run's commit and backup. A step that goes as expected has no line; what
   is shown is the backup, what was installed and migrated, how long the bot was away, and the check,
-  and the last line says what moved and what it cost, so it reads alone in a log. The page is waited
+  and the last line says where it was and where it is (`v0.2.0+137 → v0.3.0+4`), what moved and what
+  it cost, so it reads alone in a log. The screen opens with Installed and Upgrading one above the
+  other, and git's `++++----` bars for the parts of the code that change most; while it works, a
+  retro block bar counts the steps and the wait for the page fills a bar toward its 30 seconds. It is
+  coloured the way git is (yellow hashes, green `+`, red `-`) and the first word of a step is bold. The page is waited
   for after the restart, so "it came back up" is true. The numbered plan, what stays untouched and
   why each step are gone. `status` is one screen with a verdict, a row for each thing marked `✓ ! ✗`,
   and what to type for anything not well, including a backup older than the 36 hours the upkeep job
