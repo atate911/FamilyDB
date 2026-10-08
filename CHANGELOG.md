@@ -1,10 +1,12 @@
 # Changelog
 
-## v0.3.0 — in progress
+## v0.3.0 — first beta (2026-10-08)
 
-Still being built. While this heading says "in progress", an install follows the
-default branch rather than a release tag, and an upgrade never moves to anything
-older than what is installed. It gets a date when it is released.
+The first beta: the alpha is over. Everything the alphas did, and much more, has now run
+against the tests and scripted installs; what a beta still asks is to be lived with, and the
+checks against live Google, Telegram and model accounts in [RUNBOOK.md](RUNBOOK.md) are still
+the family's to make. An install follows the newest release, and an upgrade never moves to
+anything older than what is installed.
 
 ### New since v0.2.0
 
