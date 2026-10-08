@@ -332,7 +332,7 @@ def _check_price(app: Any, conn: sqlite3.Connection, question: store.Judgement, 
         source="job",
     )
     ctx.scratch["price_of"] = facts["model"]
-    company = alerts.COMPANY_NAMES.get(facts["company"], facts["company"])
+    company = companies.named(facts["company"])
     request = f"What does {company} charge for {facts['model']}? The price lists say: " + to_json(
         facts["lists"]
     )
@@ -380,7 +380,7 @@ def _apply(
 ) -> None:
     now = app.clock.now()
     facts = question.facts
-    company_name = alerts.COMPANY_NAMES.get(facts.get("company", ""), facts.get("company", ""))
+    company_name = companies.named(facts.get("company", ""))
     answer: dict[str, Any]
     if question.kind == "lineup":
         chosen = {level: picks[f"q{question.id}.{level}"] for level in LEVELS_ASKED}
@@ -506,7 +506,7 @@ def _refused(conn: sqlite3.Connection, facts: dict[str, Any], choice: str, now: 
             conn,
             "model",
             f"{company}:{model}",
-            f"{alerts.COMPANY_NAMES.get(company, company)} seems to have no model called "
+            f"{companies.named(company)} seems to have no model called "
             f"{model}, so everything asked of it fails until another is chosen",
             now,
         )

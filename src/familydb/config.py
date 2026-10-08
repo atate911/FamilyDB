@@ -198,12 +198,14 @@ class CompanyDef(BaseModel):
         parts = urlsplit(self.base_url.strip())
         if parts.scheme not in ("http", "https") or not parts.hostname:
             raise ValueError(
-                "base_url needs to be a web address such as https://openrouter.ai/api/v1"
+                "the address needs to be a web address such as https://openrouter.ai/api/v1"
             )
         if parts.username or parts.password or parts.query or parts.fragment:
-            raise ValueError("base_url has no password, query or # in it: the key is kept apart")
+            raise ValueError("the address has no password, query or # in it: the key is kept apart")
         if parts.scheme == "http" and not self.local:
-            raise ValueError("base_url must be https, unless the company runs on your own network")
+            raise ValueError(
+                "the address must be https, unless the company runs on your own network"
+            )
         object.__setattr__(self, "base_url", self.base_url.strip().rstrip("/"))
         return self
 

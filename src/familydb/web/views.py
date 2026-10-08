@@ -1486,13 +1486,10 @@ SAID_IN_DETAIL = frozenset(
         "disk",
     }
 )
-COMPANY_WORDS = {company.slug: company.named for company in companies.BUILT_IN}
 
 
 def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[str, Any]:
-    title = ALERT_TITLES.get(alert.kind, alert.kind).format(
-        company=COMPANY_WORDS.get(alert.subject, alert.subject)
-    )
+    title = ALERT_TITLES.get(alert.kind, alert.kind).format(company=companies.named(alert.subject))
     seen = f"since {local_moment(alert.first_at, tz)}"
     if alert.times > 1:
         seen += f", {alert.times} times, last {local_moment(alert.last_at, tz)}"
@@ -1527,7 +1524,7 @@ CHANGE_WORDS = {
 
 def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
     """Where the daily check reads, as a light: when, and how it went."""
-    company = COMPANY_WORDS.get(source.source)
+    company = companies.named(source.source) if companies.get(source.source) else None
     label = SOURCE_WORDS.get(source.source) or f"{company or source.source}'s list for the key"
     when = local_moment(source.checked_at, tz)
     if source.ok:
@@ -1609,7 +1606,7 @@ def judgement_row(question: Any, tz: ZoneInfo, live: Any) -> dict[str, Any]:
     facts = question.facts
     title = JUDGEMENT_TITLES.get(question.kind, question.kind).format(
         model=facts.get("model", ""),
-        company=COMPANY_WORDS.get(facts.get("company", ""), facts.get("company", "")),
+        company=companies.named(facts.get("company", "")),
     )
     if question.answered_at is None:
         when = "asked with the evening's lookups" if not question.urgent else "being asked"
@@ -1637,7 +1634,7 @@ def model_change_row(change: Any, tz: ZoneInfo) -> dict[str, str]:
     what = CHANGE_WORDS.get(change.what, change.what)
     return {
         "when": local_moment(change.at, tz),
-        "company": COMPANY_WORDS.get(change.provider, change.provider),
+        "company": companies.named(change.provider),
         "model": change.model,
         "what": what.format(before=change.before or "?", after=change.after or "?"),
     }

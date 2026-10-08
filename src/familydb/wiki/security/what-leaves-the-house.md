@@ -2,7 +2,7 @@
 
 Messages go to the model company you chose, and almost nothing else leaves the server. The list below is the one place that says what leaves, to whom, when, and how to stop it.
 
-- Messages go to the model company you chose, with the recent conversation and what the assistant knows about the family.
+- Messages go to the model company you chose, with the recent conversation and what the assistant knows about the family. A company you add yourself, such as OpenRouter, gets them only once you choose it or let it stand in.
 - Voice notes and photos go to the company that hears or looks at them. FamilyDB never keeps the recording or the picture.
 - Telegram sees everything said on Telegram, and Google sees the plans on your calendar.
 - Weather, map and price services get a place name or coordinates, never a message.
@@ -17,6 +17,7 @@ Where a row says "the company", the second company can receive the same content 
 | What leaves | To whom | When | How to stop it |
 |---|---|---|---|
 | Your message, and by default up to 20 earlier messages from the last 6 hours, each cut to 1,500 characters | The company that answers (`provider`) | Every message it answers | Not without stopping the assistant. [Choose the company](/wiki/controls/settings/ai-model#who-answers) or [shorten the history](/wiki/controls/settings/spending#what-one-message-may-use) |
+| The same, when an added company (OpenRouter, or one with its own address) is chosen, or allowed to stand in | That company, and for OpenRouter the company it routes to | Every message it answers, and only then | [Choose another company](/wiki/controls/settings/ai-model#other-companies), or take it away |
 | Names and roles, the home area, the time zone, the family's own words and the persona, the idea list without presents, remembered facts, and what a tool returns | The same company | With each message | The same. [Turn off the second company](/wiki/controls/settings/ai-model#a-second-company) so only one company ever sees it |
 | Calendar entries a tool returns: titles, times and places, plus the descriptions of all-day ones | The same company | When the assistant reads the calendar | Disconnect the calendar (see Google below) |
 | The weekend ideas question and the same context | The chat company, at the weekend ideas level | Once a week | Empty [`digest_chat_id`](/wiki/controls/settings/messages#weekend-ideas) |

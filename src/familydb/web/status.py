@@ -47,8 +47,6 @@ LOOKUP_STATES = {
     "failed": "the lookup failed",
     "skipped": "nothing to look up",
 }
-PROVIDER_LABELS = {company.slug: company.status for company in companies.BUILT_IN}
-KEY_FOR = {company.slug: company.key_setting for company in companies.BUILT_IN}
 
 
 def _row(label: str, on: bool | None, detail: str) -> dict[str, Any]:
@@ -81,7 +79,7 @@ def models(app: App) -> list[dict[str, Any]]:
             _row(
                 what,
                 keyed,
-                f"{PROVIDER_LABELS.get(provider.name, provider.name)}, "
+                f"{companies.status_name(provider.name)}, "
                 f"{views.model_text(provider.name, model, level)}"
                 + ("" if keyed else " — but there is no key for it"),
             )
@@ -92,7 +90,7 @@ def models(app: App) -> list[dict[str, Any]]:
         _row(
             "If that one cannot",
             spare is not None,
-            f"{PROVIDER_LABELS.get(spare.name, spare.name)} answers instead"
+            f"{companies.status_name(spare.name)} answers instead"
             if spare is not None
             else "nowhere else to go: one key, or the fallback is switched off",
         )
@@ -102,14 +100,24 @@ def models(app: App) -> list[dict[str, Any]]:
 
 def keys(app: App, stored: dict[str, Any]) -> list[dict[str, Any]]:
     live = app.settings
-    rows = [
-        _row(
-            PROVIDER_LABELS[name],
-            bool(getattr(live, KEY_FOR[name])),
-            _where(KEY_FOR[name], live, stored),
-        )
-        for name in providers.NAMES
-    ]
+    rows = []
+    for name in companies.slugs(live):
+        company = companies.get(name, live)
+        if company is None:
+            continue
+        if company.built_in:
+            rows.append(
+                _row(
+                    company.status,
+                    bool(company.key(live)),
+                    _where(company.key_setting, live, stored),
+                )
+            )
+        else:
+            kept = bool(company.key(live))
+            local = company.defined is not None and company.defined.local
+            detail = "set on this page" if kept else "needs no key" if local else "no key"
+            rows.append(_row(company.status, bool(kept or local), detail))
     telegram = _where("telegram_bot_token", live, stored)
     state = app.channel_states.get("telegram")
     if live.telegram_bot_token and state:
@@ -231,7 +239,7 @@ def last_call(conn: sqlite3.Connection, tz: Any) -> dict[str, Any] | None:
     return {
         "when": views.local_moment(call["created_at"], tz),
         "model": model,
-        "provider": PROVIDER_LABELS.get(name or "", "an unfamiliar model"),
+        "provider": companies.status_name(name) if name else "an unfamiliar model",
         "stop": call["stop_reason"] or "unknown",
         "seconds": round((call["duration_ms"] or 0) / 1000, 1),
     }
@@ -508,7 +516,7 @@ def health(app: App, conn: sqlite3.Connection, *, name: str) -> list[dict[str, A
                 "sparkle",
                 "ok",
                 "Ready",
-                f"If the first company is down, {PROVIDER_LABELS.get(spare.name, spare.name)} "
+                f"If the first company is down, {companies.status_name(spare.name)} "
                 "answers instead.",
             )
         )
@@ -865,7 +873,7 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
             "needed",
             5,
             app.can_ask("chat"),
-            f"{PROVIDER_LABELS.get(chat.name, chat.name)} answers, with {chat_model}."
+            f"{companies.status_name(chat.name)} answers, with {chat_model}."
             if app.can_ask("chat")
             else "No AI key yet, so it cannot answer.",
             "Give it a model key. Until then it saves what it is told but cannot answer.",

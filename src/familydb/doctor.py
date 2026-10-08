@@ -40,9 +40,6 @@ TODO = "todo"
 MARKS = {OK: "✓", WARN: "!", FAIL: "✗", SKIP: "·", TODO: "→"}
 NEW_INSTALL_STEPS = {"family": "Add yourself", "model key": "Connect an AI model"}
 FREE_MB_WANTED = 500
-KEY_FIELDS = {
-    company.slug: (company.key_setting, company.env_name) for company in companies.SPARE_COMPANIES
-}
 
 
 @dataclass
@@ -252,7 +249,11 @@ def check_family(
 
 def check_provider(app: App, report: Report, *, online: bool) -> None:
     settings = app.settings
-    have = [name for name, (attr, _env) in KEY_FIELDS.items() if getattr(settings, attr)]
+    have = [
+        slug
+        for slug in companies.slugs(settings)
+        if (company := companies.get(slug, settings)) and company.key(settings)
+    ]
     if not have:
         report.add(
             "model key",
@@ -262,13 +263,15 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
         )
         return
     chosen = settings.provider
-    chosen_attr, chosen_env = KEY_FIELDS[chosen]
-    if not getattr(settings, chosen_attr):
+    company = companies.get(chosen, settings)
+    chosen_env = (
+        company.env_name if company else ""
+    ) or f"the key of {chosen} on the settings page"
+    if company is None or not company.key(settings):
         report.add(
             "model key",
             WARN,
-            f"PROVIDER is {chosen} but {chosen_env} is empty; "
-            f"{', '.join(have)} will answer instead",
+            f"PROVIDER is {chosen} but its key is empty; {', '.join(have)} will answer instead",
             f"Set {chosen_env}, or change PROVIDER to one you have a key for",
         )
     else:

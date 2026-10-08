@@ -61,7 +61,6 @@ TOLD_AFTER = {"refused": 2}
 TELL_AGAIN = timedelta(hours=12)
 KEEP = timedelta(days=7)
 TELEGRAM = "telegram"
-COMPANY_NAMES = {company.slug: company.named for company in companies.BUILT_IN}
 
 
 def note(
@@ -113,7 +112,7 @@ def noticed(
             conn,
             "model",
             f"{provider}:{model.lower()}",
-            f"{COMPANY_NAMES.get(provider, provider)} says it has no model called {model}, so "
+            f"{companies.named(provider)} says it has no model called {model}, so "
             "everything asked of it fails until another is chosen",
             now,
         )
@@ -129,7 +128,7 @@ def dropped(
     """A company answered once a refused part was left out: tell an admin once, since it works but
     without something it had.
     """
-    company = COMPANY_NAMES.get(provider, provider)
+    company = companies.named(provider)
     for part in left_out:
         note(
             conn,
@@ -162,7 +161,7 @@ def working(conn: sqlite3.Connection, kind: str, about: str = "") -> None:
 
 
 def wording(settings: Any, alert: alert_store.Alert) -> str:
-    company = COMPANY_NAMES.get(alert.subject, alert.subject)
+    company = companies.named(alert.subject)
     # Only the lines about things near home name its page, so no other line's choice of wording
     # moves (voice.say chooses by its facts).
     page = {"page": happening.NAME} if alert.kind in ("happening", "calendars") else {}

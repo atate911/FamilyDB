@@ -209,6 +209,12 @@ def named(slug: str | None, settings: Any = None) -> str:
     return company.named if company else str(slug or "")
 
 
+def status_name(slug: str | None, settings: Any = None) -> str:
+    """The company as the Status page says it."""
+    company = get(slug, settings)
+    return company.status if company else str(slug or "")
+
+
 def owner(model: str | None, settings: Any = None) -> str | None:
     """Whose model this name is, or None; only to say who answered a logged call. An added
     company owns the names its definition knows."""
@@ -220,3 +226,40 @@ def owner(model: str | None, settings: Any = None) -> str | None:
         if lowered and lowered in (name.lower() for name in company.known_models()):
             return company.slug
     return None
+
+
+@dataclass(frozen=True)
+class Template:
+    """A starting point for adding a company: the values that are the same for everyone who uses
+    that service, so adding it needs only a key and a model."""
+
+    key: str
+    label: str
+    line: str  # what to say of it, including where the family's words go
+    base_url: str
+    key_start: str
+    reasoning_fields: tuple[str, ...]
+    extra_body: dict[str, Any]
+    # Where a person finds the service's models and its keys (names in web/links.py).
+    models_link: str
+    keys_link: str
+
+
+OPENROUTER = Template(
+    key="openrouter",
+    label="OpenRouter",
+    line=(
+        "One key, hundreds of models from many companies (DeepSeek, Kimi, GLM, Qwen, MiniMax and "
+        "more), paid for at OpenRouter. Your messages pass through OpenRouter as well as the "
+        "company that answers; it is asked to use only companies that keep and train on nothing."
+    ),
+    base_url="https://openrouter.ai/api/v1",
+    key_start="sk-or-",
+    reasoning_fields=("reasoning_details", "reasoning"),
+    # Only providers that do not collect what they are sent, and only ones that take every
+    # parameter we send (a model that cannot use tools is refused, not quietly run without).
+    extra_body={"provider": {"data_collection": "deny", "require_parameters": True}},
+    models_link="openrouter_models",
+    keys_link="openrouter_keys",
+)
+TEMPLATES: dict[str, Template] = {OPENROUTER.key: OPENROUTER}

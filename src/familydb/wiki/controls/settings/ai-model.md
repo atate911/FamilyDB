@@ -4,7 +4,7 @@ The AI model card sets which model company answers, with which model, and its ke
 
 ## Who answers
 
-Three model companies are supported: OpenAI, Anthropic (Claude) and Google (Gemini). The default is OpenAI with `gpt-6-luna`, the cheapest model that is good enough. A company can be chosen only with a key.
+Three model companies are built in: OpenAI, Anthropic (Claude) and Google (Gemini); [others can be added](#other-companies). The default is OpenAI with `gpt-6-luna`, the cheapest model that is good enough. A company can be chosen only with a key.
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
@@ -44,6 +44,23 @@ The card shows the models for the company in use, least expensive first, with th
 ### Better and best models
 
 Folded away on the card, one box for each company and level (`anthropic_better_model`, `anthropic_best_model`, `openai_better_model`, `openai_best_model`, `gemini_better_model`, `gemini_best_model`). Empty uses the ones this version knows; a judgment (below) may suggest newer ones.
+
+## Other companies
+
+Any service that speaks the OpenAI chat protocol can answer the family too, without a release: **OpenRouter**, which reaches hundreds of models from many companies (DeepSeek, Kimi, GLM, Qwen, MiniMax and more) with one key, or a company you have an account with and its own address, or a model you run on your own network. The **Other companies** card adds, changes, chooses and takes them away. Nothing is sent to one until you press **Answer with** or switch on **May stand in**; what you write goes to that company, and for OpenRouter to the company it routes to as well.
+
+| What you set | What it does |
+|---|---|
+| Name, address and key | The address is the part before `/chat/completions`. It must be https and out on the internet, unless you tick that it runs on your own network, which also needs no key. The key is checked with the company (a free request) before it is kept, and only a key the company refuses stops the save. |
+| Model for chat, for the rest, better and best | Names as the company writes them (OpenRouter's look like `vendor/model-name`). Empty uses the chat model. A model the company's list does not have is kept with a word about it. |
+| May stand in | Off by default. On, the company answers when the one chosen cannot, as the second company below does, and what was asked then goes to it. |
+| Prices | One model a line: its name, then US dollars per million tokens in, out and (if cheaper) for a cached read. A model with no price here, and none in the company's own list when it gives prices (OpenRouter's does, found by the [daily check](/wiki/controls/status/models-and-prices#what-the-daily-check-does)), is counted at more than any listed model, so the daily limit stops early. |
+| Fields its thinking comes back in | Some companies need a model's thinking sent back unchanged beside a tool call. The first field a reply carries is used. |
+| Extra request fields | A JSON object sent with every request, always: a company's own switches. OpenRouter is added asking only for companies that keep and train on nothing, and refusing a model that cannot use the tools; a request that leaves one out is never sent in its place. |
+
+The keys are kept in the database like the other keys, so they are in every [backup](/wiki/operations/backup-and-restore), and are never shown again or written to the change history. Taking a company away takes its key. A company answering cannot be taken away; choose another above first.
+
+These companies cannot search the web, hear voice notes or look at photos. Lookups and discovery go to a company that can, and when none has a key they wait. They cannot be chosen for lookups, voice notes or photos.
 
 ## A second company
 

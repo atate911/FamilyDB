@@ -19,6 +19,7 @@ import typer
 from familydb import __version__, memory, passwords, privacy, roles
 from familydb import family as family_rules
 from familydb.agent.history import load_history
+from familydb.agent.providers import companies
 from familydb.agent.providers.base import Message, TurnRequest
 from familydb.agent.render import (
     render_audience_line,
@@ -455,7 +456,6 @@ def debug_prompt(
         typer.echo("--kind is one of chat, digest, retry or enrich", err=True)
         raise typer.Exit(code=2)
     application = build_app()
-    call = gateway.spec(kind)
     with closing(_ready(application)) as conn:
         settings = application.settings
         if kind == "enrich":
@@ -488,7 +488,7 @@ def debug_prompt(
             remembered = render_memories(chosen)
             if remembered:
                 current.append(remembered)
-        provider = application.provider(call.surface)
+        provider = gateway.answering(settings, kind)[0]
         request = gateway.build_request(
             kind,
             conn=conn,
@@ -637,11 +637,9 @@ def chat(
         typer.echo(reply.text)
     if reply.status in {"failed", "unknown_sender"}:
         if reply.status == "failed" and not application.can_ask("chat"):
-            name = application.settings.provider.upper()
-            typer.echo(
-                f"hint: no model key: type one on the settings page, or set {name}_API_KEY",
-                err=True,
-            )
+            company = companies.get(application.settings.provider, application.settings)
+            env = f", or set {company.env_name}" if company and company.env_name else ""
+            typer.echo(f"hint: no model key: type one on the settings page{env}", err=True)
         raise typer.Exit(code=1)
 
 

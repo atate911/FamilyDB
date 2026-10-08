@@ -1,0 +1,157 @@
+{# Companies beyond the three: any service that speaks the OpenAI chat protocol. Added, changed, chosen and taken away by plain forms; each posts to its own address (web/settings.py). #}
+{% from "_ui.html" import icon with context %}
+<section class="card sgroup" id="companies" aria-labelledby="g-companies">
+  <h2 class="sgroup__h" id="g-companies">Other companies</h2>
+  <p class="sgroup__note">
+    Any service that speaks the OpenAI chat protocol can answer the family too: OpenRouter, which
+    reaches hundreds of models with one key, or a company you have an account with. Nothing is
+    sent to one until you press <b>Answer with</b> or switch on <b>May stand in</b>, because what
+    you write goes to that company. None of them can search the web, so lookups stay with a
+    company above that can.
+  </p>
+
+  {% for one in added %}
+    <details class="fieldfold mt-4" id="company-{{ one.slug }}"{% if one.answering or not one.has_key and one.needs_key %} open{% endif %}>
+      <summary>{{ one.label }}
+        {% if one.answering %}<span class="tag tag--ok">answers now</span>
+        {% elif one.has_key or not one.needs_key %}<span class="tag tag--off">{{ 'ready' if one.model else 'needs a model' }}</span>
+        {% else %}<span class="tag tag--look">needs a key</span>{% endif %}
+        {{ icon('chev', size='sm', cls='chev') }}</summary>
+      <div class="fieldfold__body">
+        {% if one.template %}<p class="small muted">{{ one.template.line }}</p>{% endif %}
+        <form class="form form--tight" method="post" action="{{ url_for('settings.save_company', slug=one.slug) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <input type="hidden" name="section" value="model" />
+          <div class="sgrid">
+            <div class="field">
+              <label class="field__label" for="c-{{ one.slug }}-label">Name</label>
+              <input id="c-{{ one.slug }}-label" name="label" value="{{ one.label }}" maxlength="40" required />
+            </div>
+            <div class="field">
+              <label class="field__label" for="c-{{ one.slug }}-address">Address of its chat service</label>
+              <input id="c-{{ one.slug }}-address" name="base_url" value="{{ one.address }}" maxlength="300" required spellcheck="false" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="c-{{ one.slug }}-model">Model for chat</label>
+              <input id="c-{{ one.slug }}-model" name="model" value="{{ one.model }}" required spellcheck="false" autocomplete="off" aria-describedby="c-{{ one.slug }}-model-hint" />
+              <p class="field__hint" id="c-{{ one.slug }}-model-hint">As the company writes it{% if one.template %}; <a href="{{ links[one.template.models_link] }}" rel="noopener noreferrer">its list of models</a>{% endif %}.</p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="c-{{ one.slug }}-worker">Model for the rest</label>
+              <input id="c-{{ one.slug }}-worker" name="worker_model" value="{{ one.worker_model }}" spellcheck="false" autocomplete="off" placeholder="the chat model" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="c-{{ one.slug }}-better">Better model</label>
+              <input id="c-{{ one.slug }}-better" name="better_model" value="{{ one.better_model }}" spellcheck="false" autocomplete="off" placeholder="the chat model" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="c-{{ one.slug }}-best">Best model</label>
+              <input id="c-{{ one.slug }}-best" name="best_model" value="{{ one.best_model }}" spellcheck="false" autocomplete="off" placeholder="the chat model" />
+            </div>
+          </div>
+          <div class="field mt-3">
+            <label class="field__label" for="c-{{ one.slug }}-key">{{ one.label }} key</label>
+            <input id="c-{{ one.slug }}-key" name="key" type="password" autocomplete="off" spellcheck="false"
+                   placeholder="{% if one.has_key %}a key is saved: paste a new one to replace it{% elif one.needs_key %}paste the key{% else %}none needed here{% endif %}" />
+            <p class="field__hint">It is checked with {{ one.label }} before it is kept, which costs nothing.{% if one.template %} <a href="{{ links[one.template.keys_link] }}" rel="noopener noreferrer">Where to get one</a>.{% endif %}</p>
+          </div>
+          <label class="check mt-3"><input type="checkbox" name="stand_in" value="1"{% if one.stand_in %} checked{% endif %} />May stand in when the company answering cannot. What was asked then goes to {{ one.label }}.</label>
+          <label class="check"><input type="checkbox" name="local" value="1"{% if one.local %} checked{% endif %} />It runs on this machine or my own network, so it needs no key and no https.</label>
+          <details class="fieldfold mt-3">
+            <summary>What it costs, and how it talks{{ icon('chev', size='sm', cls='chev') }}</summary>
+            <div class="fieldfold__body">
+              <div class="field">
+                <label class="field__label" for="c-{{ one.slug }}-prices">Prices</label>
+                <textarea id="c-{{ one.slug }}-prices" name="prices" rows="3" spellcheck="false" autocomplete="off" aria-describedby="c-{{ one.slug }}-prices-hint" placeholder="vendor/model 0.27 1.10 0.07">{{ one.prices }}</textarea>
+                <p class="field__hint" id="c-{{ one.slug }}-prices-hint">One model a line: its name, then US dollars per million tokens in, out and (if cheaper) for a cached read. The daily limit counts a model not priced here, or in the company’s own list, at more than any listed one, so it stops early.</p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="c-{{ one.slug }}-thinking">Fields its thinking comes back in</label>
+                <input id="c-{{ one.slug }}-thinking" name="reasoning_fields" value="{{ one.reasoning_fields }}" spellcheck="false" autocomplete="off" aria-describedby="c-{{ one.slug }}-thinking-hint" />
+                <p class="field__hint" id="c-{{ one.slug }}-thinking-hint">Some companies need a model’s thinking sent back unchanged beside a tool call. Separate names with commas; the first one a reply carries is used. Empty sends none back.</p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="c-{{ one.slug }}-extra">Extra request fields (JSON)</label>
+                <textarea id="c-{{ one.slug }}-extra" name="extra_body" rows="4" spellcheck="false" autocomplete="off" aria-describedby="c-{{ one.slug }}-extra-hint">{{ one.extra_body }}</textarea>
+                <p class="field__hint" id="c-{{ one.slug }}-extra-hint">The company’s own switches, sent with every request, always: a request that leaves one out is never sent in its place.</p>
+              </div>
+            </div>
+          </details>
+          <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}Save {{ one.label }}</button></div>
+        </form>
+        <div class="actions mt-3">
+          {% if not one.answering %}
+            <form method="post" action="{{ url_for('settings.use_company', slug=one.slug) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              <input type="hidden" name="section" value="model" />
+              <button class="btn" type="submit">Answer with {{ one.label }}</button>
+            </form>
+          {% endif %}
+          <form method="post" action="{{ url_for('settings.remove_company', slug=one.slug) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <input type="hidden" name="section" value="model" />
+            <button class="btn" type="submit"{% if one.answering %} disabled aria-describedby="c-{{ one.slug }}-kept"{% endif %}>Take {{ one.label }} away, with its key</button>
+          </form>
+        </div>
+        {% if one.answering %}<p class="small muted" id="c-{{ one.slug }}-kept">{{ one.label }} answers now, so it stays until you choose another company above.</p>{% endif %}
+      </div>
+    </details>
+  {% endfor %}
+
+  {% if room_for_more %}
+    {% for template in templates %}
+      <form class="form form--tight mt-4" method="post" action="{{ url_for('settings.add_company') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="section" value="model" />
+        <input type="hidden" name="template" value="{{ template.key }}" />
+        <h3 class="sgroup__h">Add {{ template.label }}</h3>
+        <p class="small muted">{{ template.line }}</p>
+        <div class="field">
+          <label class="field__label" for="add-{{ template.key }}-key">{{ template.label }} key</label>
+          <input id="add-{{ template.key }}-key" name="key" type="password" autocomplete="off" spellcheck="false" required placeholder="{{ template.key_start }}…" aria-describedby="add-{{ template.key }}-key-hint" />
+          <p class="field__hint" id="add-{{ template.key }}-key-hint">It is checked with {{ template.label }} before it is kept, which costs nothing. <a href="{{ links[template.keys_link] }}" rel="noopener noreferrer">Where to get one</a>.</p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="add-{{ template.key }}-model">Model for chat</label>
+          <input id="add-{{ template.key }}-model" name="model" required spellcheck="false" autocomplete="off" aria-describedby="add-{{ template.key }}-model-hint" />
+          <p class="field__hint" id="add-{{ template.key }}-model-hint">As {{ template.label }} writes it, such as vendor/model-name. <a href="{{ links[template.models_link] }}" rel="noopener noreferrer">Its list of models</a>. You can add better and best ones afterwards.</p>
+        </div>
+        <div class="actions"><button class="btn" type="submit">{{ icon('plus') }}Add {{ template.label }}</button></div>
+      </form>
+    {% endfor %}
+    <details class="fieldfold mt-4">
+      <summary>Add another company{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <div class="fieldfold__body">
+        <p class="small muted">DeepSeek, Moonshot (Kimi), Z.ai (GLM), MiniMax, Alibaba (Qwen), or a model you run yourself: anything with a chat address that follows the OpenAI protocol. Its own guide gives the address, the key and the model’s name.</p>
+        <form class="form form--tight" method="post" action="{{ url_for('settings.add_company') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <input type="hidden" name="section" value="model" />
+          <div class="sgrid">
+            <div class="field">
+              <label class="field__label" for="add-label">Name</label>
+              <input id="add-label" name="label" maxlength="40" required autocomplete="off" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="add-address">Address of its chat service</label>
+              <input id="add-address" name="base_url" maxlength="300" required spellcheck="false" autocomplete="off" placeholder="https://api.example.com/v1" aria-describedby="add-address-hint" />
+              <p class="field__hint" id="add-address-hint">The part before <code>/chat/completions</code>.</p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="add-model">Model for chat</label>
+              <input id="add-model" name="model" required spellcheck="false" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="add-key">Key</label>
+              <input id="add-key" name="key" type="password" autocomplete="off" spellcheck="false" />
+            </div>
+          </div>
+          <label class="check mt-3"><input type="checkbox" name="local" value="1" />It runs on this machine or my own network, so it needs no key and no https.</label>
+          <input type="hidden" name="reasoning_fields" value="reasoning_content" />
+          <div class="actions"><button class="btn" type="submit">{{ icon('plus') }}Add it</button></div>
+        </form>
+      </div>
+    </details>
+  {% else %}
+    <p class="small muted mt-4">That is as many companies as there is room for. Take one away to add another.</p>
+  {% endif %}
+</section>

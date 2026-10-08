@@ -132,14 +132,21 @@ class App:
         return providers.for_surface(self.settings, surface, api=api)
 
     def can_ask(self, surface: str = "chat", api: Any = None) -> bool:
+        """Whether any model can be asked here. The worker surface is the lookups, which search
+        the web, so it needs a company that can."""
         from familydb.agent import providers
 
-        return providers.ready(self.settings, surface, api=api)  # type: ignore[arg-type]
+        return providers.ready(self.settings, surface, api=api, web=surface == "worker")  # type: ignore[arg-type]
 
     def fallback(self, surface: str, primary: str) -> Any:
         from familydb.agent import providers
 
-        return providers.fallback_for(self.settings, surface, primary)
+        return providers.fallback_for(
+            self.settings,
+            surface,  # type: ignore[arg-type]
+            primary,
+            web=surface == "worker",
+        )
 
     def refresh(self, conn: sqlite3.Connection | None = None) -> bool:
         """Pick up settings changed from the page. True when something moved.
