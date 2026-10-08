@@ -149,7 +149,7 @@ scp you@server:familydb-backups.tar.gz .       # on your own computer
 sudo scripts/maintain.sh restore backups/familydb-XXXX.sqlite3
 ```
 
-It checks the backup is a sound database, stops the bot, backs up the database being replaced (so a restore can be undone), puts the backup in place, clears the old write-ahead files, sets owner and permissions, migrates and starts. By hand, stop the bot first (it has the file open):
+It checks the backup is a sound database and not from a newer version than this code (it refuses one, before touching anything: upgrade first, or use an older backup), stops the bot, backs up the database being replaced (so a restore can be undone), puts the backup in place, clears the old write-ahead files, sets owner and permissions, migrates and starts. By hand, stop the bot first (it has the file open):
 
 ```bash
 sudo systemctl stop familydb                       # or: docker compose stop bot

@@ -457,20 +457,42 @@ cmd_restore() {
   [ -f "$RESTORE_FILE" ] || die "no such file: ${RESTORE_FILE}" \
     "Look in ${BACKUP_DIR}:" "  ls -lh ${BACKUP_DIR}"
   # Validate before stopping or replacing anything. quick_check reports damage in its answer, not
-  # as an error, so the answer itself must be 'ok'; reading members shows it is FamilyDB's.
-  local validate target_owner
-  validate='import sqlite3,sys; from pathlib import Path; c=sqlite3.connect(Path(sys.argv[1]).resolve().as_uri()+"?mode=ro",uri=True); assert c.execute("pragma quick_check").fetchone()[0]=="ok"; c.execute("select id from members limit 1"); c.close()'
+  # as an error, so the answer itself must be 'ok'; reading members shows it is FamilyDB's. A
+  # backup from a newer FamilyDB would run on code that does not know its tables: migrate skips
+  # versions already applied and cannot go back, so it is refused here (exit 3, "have known").
+  local validate target_owner checked=0 said have known
+  validate='import sqlite3,sys
+from pathlib import Path
+from familydb.store import db
+c=sqlite3.connect(Path(sys.argv[1]).resolve().as_uri()+"?mode=ro",uri=True)
+assert c.execute("pragma quick_check").fetchone()[0]=="ok"
+c.execute("select id from members limit 1")
+have=c.execute("select max(version) from schema_version").fetchone()[0] or 0
+c.close()
+known=max(v for v,_,_ in db.list_migrations())
+if have>known:
+    print(have,known)
+    sys.exit(3)'
   target_owner="${SERVICE_USER}:${SERVICE_USER}"
   if [ "$DOCKER_MODE" = 1 ]; then
     RESTORE_FILE="$(cd -- "$(dirname -- "$RESTORE_FILE")" && pwd -P)/$(basename -- "$RESTORE_FILE")"
-    as_root docker compose --project-directory "$TARGET" run --rm -T --no-deps \
-      --user 0:0 -v "${RESTORE_FILE}:/restore.sqlite3:ro" bot python -c "$validate" /restore.sqlite3 \
-      || die "backup validation failed; nothing was restored"
+    said="$(as_root docker compose --project-directory "$TARGET" run --rm -T --no-deps \
+      --user 0:0 -v "${RESTORE_FILE}:/restore.sqlite3:ro" bot python -c "$validate" /restore.sqlite3)" \
+      || checked=$?
     target_owner="$(stat -c '%u:%g' "$DB" 2>/dev/null || echo 1000:1000)"
   else
-    as_root "${TARGET}/.venv/bin/python" -c "$validate" "$RESTORE_FILE" \
-      || die "backup validation failed; nothing was restored"
+    said="$(as_root "${TARGET}/.venv/bin/python" -c "$validate" "$RESTORE_FILE")" || checked=$?
   fi
+  case "$checked" in
+    0) ;;
+    3)
+      read -r have known <<<"$(printf '%s\n' "$said" | tail -1)"
+      die "that backup is from a newer FamilyDB than this code: its database is at version ${have}, and this code knows up to ${known}" \
+          "Nothing was stopped or replaced. Restoring it would run this code on tables it does not know." \
+          "Upgrade the code first:  sudo ${0} upgrade" \
+          "or use a backup taken by this version or an older one:  ls -lh ${BACKUP_DIR}" ;;
+    *) die "backup validation failed; nothing was restored" ;;
+  esac
 
   head2 "Putting a backup back"
   say "From: ${RESTORE_FILE} ($(du -h "$RESTORE_FILE" | cut -f1), $(stat -c '%y' "$RESTORE_FILE" | cut -d. -f1))"

@@ -217,6 +217,10 @@ older than what is installed. It gets a date when it is released.
   that going back means restoring that backup. `uninstall.sh --help` now says the
   one last backup `--purge` takes stays outside the install, instead of "Nothing is
   left".
+- **A restore refuses a backup from a newer version.** `maintain.sh restore` now
+  compares the backup's database version with what this code knows and, if the backup
+  is newer, stops before anything is stopped or replaced and says to upgrade first or
+  use an older backup.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
