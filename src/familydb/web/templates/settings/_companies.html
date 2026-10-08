@@ -18,7 +18,8 @@
         {% else %}<span class="tag tag--look">needs a key</span>{% endif %}
         {{ icon('chev', size='sm', cls='chev') }}</summary>
       <div class="fieldfold__body">
-        {% if one.template %}<p class="small muted">{{ one.template.line }}</p>{% endif %}
+        {% if one.template and one.protected %}<p class="small muted">{{ one.template.line }}</p>
+        {% elif one.template %}<p class="small muted">Added from {{ one.template.label }}'s template, but its extra request fields no longer ask {{ one.template.label }} to use only companies that keep and train on nothing: what you write may go to ones that do.</p>{% endif %}
         <form class="form form--tight" method="post" action="{{ url_for('settings.save_company', slug=one.slug) }}">
           <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
           <input type="hidden" name="section" value="model" />

@@ -173,3 +173,13 @@ def test_a_company_that_is_no_longer_defined_is_not_asked_for(settings):
     assert providers.chosen(gone.model_copy(update={"worker_provider": "nope"}), "worker") == (
         companies.DEFAULT
     )
+
+
+def test_extra_fields_are_plain_json_and_cannot_give_a_chat_tools_or_a_search():
+    for body in ({"x": float("nan")}, {"x": float("inf")}, {"x": object()}):
+        with pytest.raises(ValidationError, match="plain JSON"):
+            defined(extra_body=body)
+    for name in ("plugins", "response_format", "functions", "stop", "models", "web_search_options"):
+        with pytest.raises(ValidationError, match=name):
+            defined(extra_body={name: 1})
+    assert defined(extra_body={"thinking": {"type": "disabled"}, "reasoning": {"effort": "low"}})

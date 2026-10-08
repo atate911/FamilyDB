@@ -356,3 +356,96 @@ def test_an_address_nobody_can_find_is_said_so_and_a_templates_is_not_looked_up(
     # OpenRouter's address is ours, so no lookup of it can stop adding it.
     monkeypatch.setattr(address, "classify", lambda host: 1 / 0)
     assert add_openrouter(page).status_code == 302
+
+
+# -- what a review found: a key goes only where its owner has just said, and nothing is wiped
+
+
+@pytest.fixture
+def checked(page, monkeypatch):
+    """Every key check the page makes, with the key it would have sent."""
+    seen = []
+
+    def check(self):
+        seen.append((self.defined.base_url, self.key))
+        return "works"
+
+    monkeypatch.setattr(ChatProvider, "check_key", check)
+    return seen
+
+
+def test_a_saved_key_is_not_sent_to_a_new_address_unless_the_key_is_typed_again(
+    page, conn, checked
+):
+    add_openrouter(page)
+    checked.clear()
+    refused = edit(page, base_url="https://elsewhere.example/v1")
+    assert refused.status_code == 400 and "type its key again" in refused.text
+    assert checked == []  # the stored key went nowhere, not even to be checked
+    assert stored_companies(conn)[0]["base_url"] == "https://openrouter.ai/api/v1"
+    # Typed again, it is the new key that is checked, with the new address.
+    assert edit(page, base_url="https://elsewhere.example/v1", key="sk-new").status_code == 302
+    assert checked == [("https://elsewhere.example/v1", "sk-new")]
+    assert settings_store.get(conn, "company_keys") == {"openrouter": "sk-new"}
+
+
+def test_moving_a_company_to_the_family_network_drops_its_key_and_sends_it_nowhere(
+    page, conn, checked
+):
+    add_openrouter(page)
+    checked.clear()
+    moved = edit(page, base_url="http://192.168.1.20:11434/v1", local="1")
+    assert moved.status_code == 302
+    assert settings_store.get(conn, "company_keys") == {}
+    assert [key for _, key in checked] == [None]
+
+
+def test_a_company_pointed_somewhere_else_is_no_longer_its_templates(page, conn, checked):
+    add_openrouter(page)
+    assert stored_companies(conn)[0]["template"] == "openrouter"
+    edit(page, base_url="https://elsewhere.example/v1", key="k")
+    assert stored_companies(conn)[0]["template"] == ""
+    text = page.get("/settings/model").text
+    panel = text.split('id="company-openrouter"')[1].split("Add OpenRouter")[0]
+    assert "Added from OpenRouter" not in panel and "keep and train on nothing" not in panel
+    assert "Add OpenRouter" in text  # its template is on offer again, as it is nobody's now
+
+
+def test_a_form_that_leaves_boxes_out_keeps_what_those_boxes_held(page, conn):
+    add_openrouter(page)
+    short = post(
+        page,
+        "/settings/companies/openrouter",
+        label="OpenRouter",
+        base_url="https://openrouter.ai/api/v1",
+        model="another/model",
+    )
+    assert short.status_code == 302
+    (one,) = stored_companies(conn)
+    assert one["model"] == "another/model"
+    assert one["extra_body"]["provider"]["data_collection"] == "deny"
+    assert one["reasoning_fields"] == ["reasoning_details", "reasoning"]
+
+
+def test_taking_away_the_privacy_fields_is_allowed_and_said(page, conn):
+    add_openrouter(page)
+    said = edit(page, extra_body="")
+    assert said.status_code == 302
+    assert stored_companies(conn)[0]["extra_body"] == {}
+    after = page.get("/settings/model").text
+    assert "no longer asks OpenRouter to use only companies that keep and train on nothing" in after
+    assert "no longer ask OpenRouter to use only companies that keep" in after
+
+
+def test_a_service_out_on_the_internet_cannot_be_called_local(page, conn):
+    refused = post(
+        page,
+        "/settings/companies/add",
+        label="Far away",
+        base_url="http://api.example.com/v1",
+        model="m",
+        key="k",
+        local="1",
+    )
+    assert refused.status_code == 400 and "out on the internet" in refused.text
+    assert stored_companies(conn) == []

@@ -949,6 +949,8 @@ def _keep_company(
     adding: bool,
     check: bool,
     extra: dict[str, Any] | None = None,
+    drop_key: bool = False,
+    warn: str = "",
     back: str | None,
     here: str | None,
 ) -> Response | tuple[str, int]:
@@ -959,6 +961,8 @@ def _keep_company(
     keys = dict(live.company_keys)
     if key:
         keys[one.slug] = key
+    elif drop_key:  # moved to the family's own network: the old key goes nowhere
+        keys.pop(one.slug, None)
     values: dict[str, Any] = {
         "companies": _definitions(live, replace=one),
         "company_keys": keys,
@@ -982,7 +986,7 @@ def _keep_company(
     _save(values)
     follow = COMPANY_KEY_VERDICTS.get(verdict, "").format(model=one.model)
     head = COMPANY_ADDED if adding else COMPANY_SAVED
-    return _answer(back, here, said=head.format(label=one.label) + follow)
+    return _answer(back, here, said=head.format(label=one.label) + follow + warn)
 
 
 @bp.post("/settings/companies/add")
@@ -1047,12 +1051,32 @@ def save_company(slug: str) -> Response | tuple[str, int]:
         one = company_forms.from_form(form, taken=set(), existing=existing)
         if company_forms.duplicate_label(one.label, live.companies, skip=slug):
             raise company_forms.FormError(company_forms.TAKEN.format(label=one.label))
-        if one.base_url != existing.base_url or one.local != existing.local:
+        moved_place = one.base_url != existing.base_url or one.local != existing.local
+        if moved_place:
             company_forms.check_address(one.base_url, local=one.local)
     except company_forms.FormError as exc:
         return _answer(back, here, error=str(exc), otherwise="model")
-    moved = bool(key) or one.base_url != existing.base_url
-    return _keep_company(one, key, adding=False, check=moved, back=back, here=here)
+    company = companies.get(slug, live)
+    if moved_place and not key and company is not None and company.key(live) and not one.local:
+        # The saved key is never sent to an address its owner has not just vouched for: it is
+        # typed again, as seeing it is.
+        return _answer(
+            back, here, error=company_forms.KEY_AGAIN.format(label=one.label), otherwise="model"
+        )
+    warn = ""
+    lost = company_forms.protection_lost(one)
+    if lost is not None and company_forms.protection_lost(existing) is None:
+        warn = company_forms.PROTECTION_LOST.format(template=lost.label)
+    return _keep_company(
+        one,
+        key,
+        adding=False,
+        check=bool(key) or moved_place,
+        drop_key=moved_place and not key and one.local,
+        warn=warn,
+        back=back,
+        here=here,
+    )
 
 
 @bp.post("/settings/companies/<slug>/use")

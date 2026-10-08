@@ -114,6 +114,18 @@ RESERVED_BODY = frozenset(
         "max_tokens",
         "max_completion_tokens",
         "n",
+        # Would change what a reply is or what a chat may do: tools and search are declared per kind
+        # (the chat never gets the web), and the loop reads a plain message.
+        "functions",
+        "function_call",
+        "parallel_tool_calls",
+        "response_format",
+        "stop",
+        "logprobs",
+        "top_logprobs",
+        "plugins",
+        "models",
+        "web_search_options",
     }
 )
 SLUG = re.compile(r"^[a-z][a-z0-9-]{1,23}$")
@@ -189,7 +201,13 @@ class CompanyDef(BaseModel):
         reserved = sorted(RESERVED_BODY & set(value))
         if reserved:
             raise ValueError(f"{', '.join(reserved)} is set by FamilyDB, not here")
-        if len(json.dumps(value, sort_keys=True)) > MAX_EXTRA_BODY:
+        try:
+            text = json.dumps(value, sort_keys=True, allow_nan=False)
+        except (TypeError, ValueError):
+            raise ValueError(
+                "must be plain JSON: text, numbers, true, false, null, lists, objects"
+            ) from None
+        if len(text) > MAX_EXTRA_BODY:
             raise ValueError("is longer than a request needs to carry")
         return value
 

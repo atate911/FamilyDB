@@ -27,6 +27,7 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
+import httpx
 import openai
 
 from familydb.agent.providers import parts
@@ -111,7 +112,9 @@ class ChatProvider:
                 base_url=self.defined.base_url,
                 max_retries=self._retries,
                 timeout=TIMEOUT,
-                http_client=self._http,
+                # The SDK's own client follows redirects, which would carry the family's words
+                # to an address nobody checked: a company that moved answers with its new one.
+                http_client=self._http or httpx.Client(follow_redirects=False, timeout=TIMEOUT),
             )
         return self._client
 

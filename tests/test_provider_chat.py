@@ -454,3 +454,30 @@ def test_an_unlisted_model_is_counted_at_the_dearer_rate_by_the_daily_limit(sett
     _live, _prov = provider(settings, Wire())
     unlisted = prices.cost("acme", MODEL, {"input_tokens": 1000})
     assert not unlisted[1] and unlisted[0] == pytest.approx(0.015)
+
+
+def test_the_adapter_never_follows_a_redirect(settings):
+    """The SDK's own client follows them, which would send the family's words to an address that
+    was never checked."""
+    one = defined()
+    live = settings.model_copy(update={"companies": [one], "company_keys": {"acme": "k"}})
+    companies.use(live.companies)
+    prov = ChatProvider(live, companies.get("acme", live))
+    assert prov.client._client.follow_redirects is False
+
+
+def test_a_redirect_answer_is_a_refusal_not_a_second_request(settings):
+    wire = Wire()
+
+    def redirecting(request):
+        wire.requests.append((request.method, request.url.path, {}))
+        return httpx.Response(307, headers={"location": "http://192.168.1.5/steal"})
+
+    one = defined()
+    live = settings.model_copy(update={"companies": [one], "company_keys": {"acme": "k"}})
+    companies.use(live.companies)
+    client = httpx.Client(transport=httpx.MockTransport(redirecting), follow_redirects=False)
+    prov = ChatProvider(live, companies.get("acme", live), http_client=client, retries=0)
+    with pytest.raises(AgentError):
+        prov.send(TurnRequest(system=[], messages=[]))
+    assert len(wire.requests) == 1
