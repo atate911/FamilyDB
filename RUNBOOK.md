@@ -348,7 +348,7 @@ Folded under "What one message may use": longest answer (at most 64,000 tokens),
 
 ## 12. Looking after the server
 
-`scripts/maintain.sh` says what it will change before it does: `status` (running? database size? last backup), `check` (full `familydb doctor`), `backup`, `restore FILE`, `upgrade`, `logs [N]`, `restart`, `schedule-backups`, `https` and `port` (section 10), `password` (a starting password for somebody who forgot). `--help` says more.
+`scripts/maintain.sh` says what it will change before it does: `status` (running? database size? last backup), `check` (the machine first, from the files and git to Caddy and the page, then `familydb doctor`; `--all` lists every row, `--online` asks the internet), `backup`, `restore FILE`, `upgrade`, `logs [N]`, `restart`, `schedule-backups`, `https` and `port` (section 10), `password` (a starting password for somebody who forgot), and `rescue` (break glass: `locked-out`, `wont-start`, `rollback`, `database`, `space`; each looks, says what it found, asks before it changes anything and backs the database up first). `--help` says more.
 
 **Where things live.** One folder, `/opt/familydb`; `data/` and everything in it is readable by the bot's user alone.
 
@@ -386,7 +386,7 @@ docker compose down                 # add -v only if you mean to delete the volu
 
 ## 13. Troubleshooting
 
-Install and server failures (clone, home directory, service starts then stops, permissions, disk, apt lock, out of memory, page does not open, port in use) are in docs/INSTALL.md, Troubleshooting. Log locations are there too.
+When it is badly broken, `sudo scripts/maintain.sh doctor` works out what is wrong, says why, and fixes what it can (it asks before anything that loses data); `check` only reads, and `sudo scripts/maintain.sh rescue` has a way out for a program that will not start, an upgrade that broke it, a damaged database, a full disk and a lockout. Install and server failures (clone, home directory, service starts then stops, permissions, disk, apt lock, out of memory, page does not open, port in use) are in docs/INSTALL.md, Troubleshooting. Log locations are there too.
 
 - **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` twice: the instructions (`instructions` on OpenAI, `system` on Claude, `system_instruction` on Gemini) and the `tools` list must be byte-identical; if they differ, a date, name or per-request id has got in, a bug worth reporting with the diff. On Claude, check `ANTHROPIC_CACHE_TTL` is still `1h`: at `5m` a family's gaps between messages outlast the cache. OpenAI and Gemini cache on their own, and not every repeat is a hit.
 - **`database is locked`.** Two processes writing. Run one `familydb run`; the CLI alongside it is fine (short transactions, busy timeout).

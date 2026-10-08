@@ -67,6 +67,8 @@ Keep the copy on your computer somewhere private.
 
 ## Restore a backup
 
+If the database file is damaged and you do not know which backup is sound, `sudo /opt/familydb/scripts/maintain.sh rescue database` tests each one, keeps the damaged file aside and restores the one you pick; see [Break glass](/wiki/operations/break-glass#the-database-is-damaged).
+
 Restore only a file taken by this version of FamilyDB or an older one. `restore` reads the backup's database version first and refuses one from newer code, before it stops FamilyDB or replaces anything. It says to [upgrade](/wiki/operations/upgrade-and-rollback) first or to use an older backup. If you must go back past an upgrade, follow [Upgrade and rollback](/wiki/operations/upgrade-and-rollback#if-it-goes-wrong).
 
 Restoring is also the only way to bring back what was removed for good. Taking a person off the list, for example, is undone only by restoring an older backup.

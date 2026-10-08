@@ -10,6 +10,8 @@
 > - **The sign-in page has no name box**, because the family still shares one password. With no name, the command replaces the shared password and signs everyone out. See [The family still shares one password](#the-family-still-shares-one-password).
 > - **The only admin forgot theirs:** leave the name out. The command resets the oldest admin who can sign in, meaning the admin who was added to the family list first among those who can sign in.
 
+> **If the page does not open at all, or the program is not running:** `sudo /opt/familydb/scripts/maintain.sh rescue locked-out` shows what it can see, switches the page on if it is off, restarts the bot (which clears "Too many tries"), makes a new password and shows the way in by an SSH tunnel when the address will not open. See [Break glass](/wiki/operations/break-glass#nobody-can-get-in).
+
 This guide needs a sign-in, so a locked-out admin cannot read it. When the page is unreachable, read `/opt/familydb/RUNBOOK.md` on the server.
 
 A new starting password is the whole fix for almost every "I can't get in". The old password stops working at once, and the person is signed out everywhere. Passwords are stored only as hashes, so nobody can look one up, and a new starting password is the only recovery tool there is.

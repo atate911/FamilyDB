@@ -8,6 +8,60 @@ older than what is installed. It gets a date when it is released.
 
 ### New since v0.2.0
 
+- **`maintain.sh check` looks at everything between the disk and the page, and `maintain.sh rescue`
+  is the way out when it is badly broken.** The check no longer needs the program to run. It first
+  looks at the machine, as the service account where "readable" matters: the files and who owns
+  them (a data folder or database file owned by root is the classic "attempt to write a readonly
+  database"), git (a missing or changed tracked file, "dubious ownership", damaged history, a
+  credential written into the remote, a missing deploy key, an upgrade that stopped part-way),
+  `.env` (a line that is not `NAME=value`, an unclosed quote, a byte-order mark, Windows line ends,
+  an option set twice, a port the service cannot bind), Python (the interpreter, every dependency
+  against `uv.lock`, `familydb --help`), the database file read without the program (owner, journal
+  files, SQLite's own check, the migration against the code's), the service (a unit file that points
+  at things that are gone, a sandbox that leaves the database read-only, a changed unit not
+  reloaded, restarts, killed for memory, "too many failed starts", Docker's daemon, containers and
+  compose file, a second copy running), the web server (who holds the port, `/healthz`, the front
+  page being drawn, its security headers, its styles), HTTPS (DNS, Caddy and its Caddyfile, the
+  certificate's days left, the address answering from this machine, the firewall), and the host (disk
+  and file slots, memory and swap, the clock, a read-only file system, the service's errors in the
+  last day), and the backups. Then it asks the program (`familydb doctor`), which now also checks the
+  time zone, names in `.env` that nothing reads (with the one they are close to), SQLite's
+  integrity check, the modes of the data files, today's spending against the
+  limit, whether the scheduler is ticking, messages waiting, unsent or given up on, the alerts the
+  admins were told of and the errors logged in the last day, and files its findings under `▸`
+  headings. The report folds a section with nothing wrong into one line that names what it looked
+  at, opens the rest with a count and a fix under each row, ends with a bar cut in the colours of how
+  it went, and names the first thing to fix. `--all` lists every row and `--online` adds the checks
+  that need the internet. A check that goes wrong is a row,
+  never the end of the report, and a program that prints no report is a failure with the reason.
+  `rescue` (a menu, or `locked-out`, `wont-start`, `rollback`, `database`, `space`) looks first,
+  says what it found, asks before each change and backs the database up first. It can switch the
+  page back on, clear the "Too many tries" lockout, make a new password, sign everyone out, hand the
+  files back to the service, put back files that are gone, rebuild the Python environment, forget a
+  setting saved on the page that stops it starting, undo an upgrade (the code only when no migration
+  ran, and the database from before it, on a typed yes, when one did; `upgrade` now records what it
+  moved from and to, so this works after it finished), restore the newest sound backup over a damaged
+  database (keeping the damaged one aside) or salvage what can be read into a new file, and free
+  disk space. What loses data needs a typed `yes` at a terminal and is never answered by `--yes`.
+  `check` ends with the ways out that suit what it found. Also fixed: a command that ends in
+  `[FAIL]` no longer also prints "stopped unexpectedly" on stderr.
+
+  **`maintain.sh doctor` answers "it is broken and I do not know why".** It makes the same look,
+  and reads the service's log when the service is unwell, because a traceback often names what no
+  check could. Then it says what is wrong and why, from the root cause up and in plain words
+  ("the service runs as familydb and no such account exists, so it cannot start"), shows what it
+  will do about each thing (which steps download something, which will ask again) and, apart, what
+  only you can do, with the command or the place to do it. On one Enter it does the safe steps in
+  the order a page comes up: it creates the service account, hands files back, puts back program
+  files that are gone, cleans or starts `.env`, rebuilds the Python environment or the image, applies
+  migrations after a backup, writes the service file again, reloads, resets and enables systemd,
+  restarts Caddy or points it at the right port, opens the firewall, turns on time sync, and starts
+  the bot and waits for the page. A damaged database and a full disk are the `rescue` steps, run
+  inside it, and anything that loses data asks for its own typed `yes` that `--yes` never gives. It
+  looks again, says what came right and what is still wrong with what to try next, and ends
+  `[ OK ] Restored` or `[FAIL] Not fully restored`. It makes no model call, sends nothing and changes
+  no setting saved on the page; `--dry-run` shows the plan and stops. `check` stays read-only.
+
 - **`maintain.sh` shows what is different this time, and nothing else.** `upgrade` fetches first
   and shows what it would change as a pull request would: the commits and the pull requests they
   came from, how many files and where, what the changelog says is new and, only when they change,

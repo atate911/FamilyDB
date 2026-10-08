@@ -121,6 +121,23 @@ jobs:
           sudo scripts/maintain.sh backup --yes | tee /tmp/backup.log
           grep -q "Backed up the database" /tmp/backup.log
           test -n "$(find /opt/familydb/backups -name 'familydb-*.sqlite3')"
+      - name: maintain.sh check looks at the machine, and rescue lists its ways out
+        run: |
+          cd /opt/familydb
+          # The service was stopped above, so the check has something to report; what matters here
+          # is that every section ran on a real install and the report reached its end.
+          sudo scripts/maintain.sh check --all | tee /tmp/check.log || true
+          for section in Files Git Config Python "Database file" Service Host Backups; do
+            grep -q "^▸ ${section}" /tmp/check.log
+          done
+          grep -q "^  Checked " /tmp/check.log
+          ! grep -q "stopped unexpectedly" /tmp/check.log
+          sudo scripts/maintain.sh rescue | tee /tmp/rescue.log
+          grep -q "rescue locked-out | wont-start | rollback | database | space" /tmp/rescue.log
+          sudo scripts/maintain.sh rescue space --dry-run --yes
+          # The doctor on a real install: it looks, explains and shows its plan, and a dry run changes nothing.
+          sudo scripts/maintain.sh doctor --dry-run | tee /tmp/doctor-run.log
+          grep -q "Dry run finished: nothing was changed" /tmp/doctor-run.log
       - name: A backup can be restored over the database
         run: |
           cd /opt/familydb

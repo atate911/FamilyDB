@@ -60,7 +60,7 @@ If the family calendar is not shared with the service account, or the Calendar A
 
 ### The doctor does not print what it fixed
 
-`familydb doctor --fix` puts right what it safely can, then prints a fresh report without saying what it changed. Run `familydb doctor` once more to see the result; see [Diagnostics](/wiki/operations/diagnostics#running-the-doctor).
+`familydb doctor --fix` puts right what it safely can, then prints a fresh report without saying what it changed. Run `familydb doctor` once more to see the result; see [Diagnostics](/wiki/operations/diagnostics#running-the-check).
 
 ### An upgrade does not rewrite the service file
 
