@@ -137,6 +137,8 @@ UNITS = {"hear": ("note", "notes"), "look": ("photo", "photos")}
 PURPOSES = {gateway.LISTEN: gateway.LISTEN_PURPOSE, gateway.LOOK: gateway.LOOK_PURPOSE}
 
 NOT_A_CHOICE = "That is not a choice."
+MOST_NAME = 120
+NAME_SHAPE = "A model's name has no spaces and is not very long. Check what was pasted."
 NEEDS_NAME = "Type the model's name, exactly as the company writes it."
 CANNOT = "{company} cannot do that: {what}."
 NO_SUCH_MODEL = "{company} says it has no model called {name}. Check the spelling."
@@ -285,9 +287,10 @@ def lineup_of(use: uses.Use, company: companies.Company, settings: Settings) -> 
 class Pricer:
     """What one use costs at any model: its last 30 days, or a typical month when it has none."""
 
-    def __init__(self, use: uses.Use, days: list[Tally]) -> None:
+    def __init__(self, use: uses.Use, days: list[Tally], cache_ttl: str = "1h") -> None:
         self.use = use
         self.days = days
+        self.cache_ttl = cache_ttl  # what Claude charges to write its cache depends on it
         self.total = summed(days)
         self.real = self.total.calls > 0
         self.usual = None if self.real else typical(use.kinds or (gateway.LISTEN,))
@@ -295,7 +298,7 @@ class Pricer:
     def _one(self, company: str, model: str, tally: Tally) -> float:
         if self.use.needs == "hear":
             return tally.calls * spending.estimate_hearing(company, model, NOTE_SECONDS)
-        return prices.cost(company, model, tally.usage())[0]
+        return prices.cost(company, model, tally.usage(), cache_ttl=self.cache_ttl)[0]
 
     def month(self, company: str, model: str) -> float:
         # Cost is a sum over the calls, so the month is the month's tally priced once.
@@ -327,7 +330,10 @@ def _k(n: float) -> str:
 
 def _stored_choice(settings: Settings, key: str) -> str:
     """What is stored for a use, normalised; empty when nothing is."""
-    return str(uses.parse(settings.model_choices.get(key)))
+    choice = uses.parse(settings.model_choices.get(key))
+    if choice.form == "model" and companies.get(choice.company, settings) is None:
+        return ""  # a company taken away: the use is at its default, as `uses.resolve` reads it
+    return str(choice)
 
 
 def _defaults_by_company(
@@ -414,7 +420,7 @@ def _company_row(
     stored: dict[str, Any],
     spent: float,
 ) -> dict[str, Any]:
-    keyed = bool(company.key(settings))
+    keyed = providers.has_credentials(company.slug, settings)
     if not company.built_in:
         source = "saved here" if keyed else "not saved yet"
     elif company.key_setting in stored:
@@ -463,7 +469,7 @@ def _use_view(
     month_since: str,
     set_here: dict[str, Any],
 ) -> dict[str, Any]:
-    pricer = Pricer(use, days)
+    pricer = Pricer(use, days, settings.anthropic_cache_ttl)
     stored = _stored_choice(settings, use.key)
     default = uses.default_choice(settings, use.key)
     resolved = uses.resolve(settings, use.key)
@@ -813,8 +819,8 @@ def _choice(
     if raw == uses.OFF:
         return (raw, None) if use.off else ("", NOT_A_CHOICE)
     if head == uses.SAME:
-        ok = rest in uses.BY_KEY and rest != use.key and use.exact
-        return (raw, None) if ok else ("", NOT_A_CHOICE)
+        # A use may follow the one it follows by default, and no other.
+        return (raw, None) if use.exact and rest == use.anchor else ("", NOT_A_CHOICE)
     company = next((c for c in every if c.slug == head), None)
     if company is None or not rest:
         return "", NOT_A_CHOICE
@@ -822,6 +828,8 @@ def _choice(
         rest = typed.strip()
         if not rest:
             return "", NEEDS_NAME
+        if len(rest) > MOST_NAME or any(character.isspace() for character in rest):
+            return "", NAME_SHAPE
     listed = models_for(use, company, settings)
     if not listed:
         what = {

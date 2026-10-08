@@ -16,6 +16,7 @@ from urllib.parse import urlsplit
 
 from pydantic import ValidationError
 
+from familydb.agent import uses
 from familydb.agent.providers import companies
 from familydb.config import CompanyDef, ModelPrice, Settings
 from familydb.integrations import address
@@ -266,6 +267,25 @@ def duplicate_label(label: str, defined: tuple[CompanyDef, ...], skip: str = "")
     )
 
 
+def stand_in_said(live: Settings, one: CompanyDef) -> bool:
+    """What is said of standing in for this company: the family's word on the AI model page, else
+    its own definition's. (Whether it may also depends on `provider_fallback`.)"""
+    said = live.company_options.get(one.slug)
+    return one.stand_in if said is None or said.stand_in is None else bool(said.stand_in)
+
+
+def used_by(live: Settings, slug: str) -> list[str]:
+    """What the company is chosen for, or answers now: the rows of the AI model page, by name."""
+    found = []
+    for use in uses.USES:
+        said = uses.parse(live.model_choices.get(use.key))
+        if uses.resolve(live, use.key).company == slug or (
+            said.form == "model" and said.company == slug
+        ):
+            found.append(use.label)
+    return found
+
+
 def panel(company: companies.Company, live: Settings) -> dict[str, Any]:
     """What the card draws for one added company."""
     one = company.defined
@@ -281,12 +301,13 @@ def panel(company: companies.Company, live: Settings) -> dict[str, Any]:
         "protected": template is not None and protection_lost(one) is None,
         "has_key": bool(company.key(live)),
         "needs_key": not one.local,
-        "answering": live.provider == one.slug,
+        "answering": uses.resolve(live, "chat").company == one.slug,
+        "used_by": used_by(live, one.slug),
         "model": one.model,
         "worker_model": one.worker_model,
         "better_model": one.better_model,
         "best_model": one.best_model,
-        "stand_in": one.stand_in,
+        "stand_in": stand_in_said(live, one),
         "reasoning_fields": ", ".join(one.reasoning_fields),
         "extra_body": extra_body_text(one.extra_body),
         "prices": prices_text(one.prices),

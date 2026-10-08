@@ -28,7 +28,7 @@ from familydb.agent.providers.base import (
     WebAccess,
 )
 from familydb.config import Settings
-from familydb.errors import ConfigError
+from familydb.errors import AgentError, ConfigError
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +57,23 @@ class Withheld:
     def configured(self) -> bool:
         return False
 
+    def _refuse(self) -> AgentError:
+        return AgentError(
+            f"{companies.label(self.name)} is not let to answer, so nothing was sent to it",
+            retryable=False,
+        )
+
+    # Nothing the family wrote is sent to a company they switched off, whoever forgot to ask
+    # `configured()` first: the three ways a request leaves are closed here.
+    def send(self, request: Any) -> Any:
+        raise self._refuse()
+
+    def transcribe(self, audio: Any, hints: str) -> Any:
+        raise self._refuse()
+
+    def describe(self, picture: Any, ask: str) -> Any:
+        raise self._refuse()
+
     def __getattr__(self, attribute: str) -> Any:
         return getattr(self._inner, attribute)
 
@@ -66,6 +83,12 @@ def build(name: str, settings: Settings, api: Any = None, audio: Any = None) -> 
     let answer (`CompanyOptions.allowed`) comes back unable to be asked."""
     provider = _make(name, settings, api=api, audio=audio)
     return provider if companies.allowed(name, settings) else Withheld(provider)  # type: ignore[return-value]
+
+
+def has_credentials(name: str, settings: Settings) -> bool:
+    """Whether the company has what it needs to be asked (a key, or none for one on this network),
+    whether or not the family has let it answer."""
+    return _make(name, settings).configured()
 
 
 def _make(name: str, settings: Settings, api: Any = None, audio: Any = None) -> Provider:

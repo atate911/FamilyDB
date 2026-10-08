@@ -196,6 +196,8 @@ from `static/style.css`, and the PR that builds the page replaces it.
 
 ## Still open
 
+- A model chosen on a row is not moved by a judgement: `judgement._boxes_naming` finds only settings boxes. A model that has gone is still answered by its replacement while it costs no more than `SWAP_DEARER` times as much (`prices.swapped`); the row's choice stays until a person changes it.
+
 - Should an unsaved row be marked beyond its difference, and how loudly?
 - Are per-call models inside a row worth their cost in controls?
 - Eval results beside a model, when `python -m evals` covers more than chat and choosing.

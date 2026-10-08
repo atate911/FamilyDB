@@ -644,7 +644,8 @@ def chat(
         typer.echo(reply.text)
     if reply.status in {"failed", "unknown_sender"}:
         if reply.status == "failed" and not application.can_ask("chat"):
-            company = companies.get(application.settings.provider, application.settings)
+            answering = uses.resolve(application.settings, "chat").company
+            company = companies.get(answering, application.settings)
             env = f", or set {company.env_name}" if company and company.env_name else ""
             typer.echo(f"hint: no model key: type one on the settings page{env}", err=True)
         raise typer.Exit(code=1)

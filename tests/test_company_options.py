@@ -42,7 +42,7 @@ def spend(conn, clock, company, dollars, *, days_ago=0):
     )
 
 
-# -- reading what the page stored --------------------------------------------------------------
+# -- reading what the page stored ----------------------------------------------------------------
 
 
 def test_options_that_cannot_be_read_are_dropped_not_refused():
@@ -68,7 +68,7 @@ def test_a_company_nobody_said_anything_of_is_allowed_with_no_limit(settings):
     )
 
 
-# -- let it answer -----------------------------------------------------------------------------
+# -- let it answer -------------------------------------------------------------------------------
 
 
 def test_a_company_not_let_answer_cannot_be_asked_and_a_stand_in_answers(settings):
@@ -109,7 +109,7 @@ def test_a_chosen_company_that_is_withheld_is_answered_by_the_stand_in(
     assert seen["level"] == "better"  # at the strength of the model chosen (Sol)
 
 
-# -- stand in ----------------------------------------------------------------------------------
+# -- stand in ------------------------------------------------------------------------------------
 
 
 def test_each_company_says_for_itself_whether_it_stands_in(settings):
@@ -210,3 +210,151 @@ def test_the_use_resolution_is_not_changed_by_a_limit(settings):
     live = keyed(settings, company_options=options(openai={"monthly_limit": 0.0}))
     assert uses.resolve(live, "chat").company == "openai"  # who is chosen is the family's; who
     # answers when it is spent is the stand-in's business, decided at the call.
+
+
+# -- what a company switched off is never sent ---------------------------------------------------
+
+
+def test_a_company_not_let_answer_is_never_sent_the_familys_words(
+    settings, registry, ctx, monkeypatch
+):
+    """Chosen for a row and switched off, with nobody to stand in: the turn fails, and nothing is
+    sent to the company the family said no to."""
+    from familydb.agent.providers.anthropic import AnthropicProvider
+    from familydb.errors import AgentError
+
+    sent = []
+    monkeypatch.setattr(AnthropicProvider, "send", lambda self, request: sent.append(request))
+    live = keyed(
+        settings,
+        gemini_api_key=None,
+        model_choices={"chat": "anthropic:claude-haiku-4-5"},
+        company_options=options(anthropic={"allowed": False}, openai={"stand_in": False}),
+    )
+    with pytest.raises(AgentError) as stopped:
+        gateway.ask("chat", settings=live, registry=registry, ctx=ctx, current=["hi"])
+    assert sent == [] and not stopped.value.retryable
+    assert "not let to answer" in str(stopped.value)
+
+
+def test_a_withheld_company_sends_no_recording_and_no_photo(settings):
+    from familydb.errors import AgentError
+
+    live = keyed(settings, company_options=options(openai={"allowed": False}))
+    withheld = providers.build("openai", live)
+    for send in (
+        lambda: withheld.send(None),
+        lambda: withheld.transcribe(None, ""),
+        lambda: withheld.describe(None, ""),
+    ):
+        with pytest.raises(AgentError):
+            send()
+
+
+# -- the readiness gates read what the family chose ----------------------------------------------
+
+
+def test_a_message_is_answered_by_the_company_chosen_not_the_one_the_old_setting_names(settings):
+    """provider names a company with no key; the chat row names one that has: the app can answer."""
+    from familydb.app import App
+
+    live = settings.model_copy(
+        update={
+            "provider": "openai",
+            "openai_api_key": None,
+            "model_choices": {"chat": "anthropic:claude-haiku-4-5"},
+            "company_options": options(anthropic={"stand_in": False}),
+        }
+    )
+    assert not providers.ready(live, "chat")  # what the gate asked, before
+    assert App(live).can_ask("chat")
+    # And not when what was chosen is the one switched off.
+    off = live.model_copy(update={"company_options": options(anthropic={"allowed": False})})
+    assert not App(off).can_ask("chat")
+
+
+# -- a company's month is not a way to fail a message --------------------------------------------
+
+
+def test_a_company_over_its_month_reports_what_was_written_not_a_failure(
+    settings, registry, ctx, conn, clock, monkeypatch
+):
+    """The company's month runs out between two calls of one turn: what the first wrote is said."""
+    from familydb.agent.providers.base import ModelReply, ToolCall
+    from familydb.agent.providers.openai import OpenAIProvider
+
+    live = keyed(
+        settings,
+        gemini_api_key=None,
+        daily_spend_limit=0,
+        company_options=options(openai={"monthly_limit": 1.0}, anthropic={"stand_in": False}),
+    )
+
+    def reply(self, request):
+        spend(conn, clock, "openai", 2.0)  # the call that used the month up
+        idea = {"title": "Month's end idea", "kind": "outing"}
+        return ModelReply(
+            stop="tool_use",
+            tool_calls=[ToolCall("t1", "add_idea", idea)],
+            usage={"input_tokens": 10, "output_tokens": 10},
+            model="gpt-6-luna",
+        )
+
+    monkeypatch.setattr(OpenAIProvider, "send", reply)
+    result = gateway.ask("chat", settings=live, registry=registry, ctx=ctx, current=["save one"])
+    assert "Saved idea" in result.text and result.actions[0]["tool"] == "add_idea"
+
+
+def test_a_stand_in_over_its_month_is_not_switched_to(
+    settings, registry, ctx, conn, clock, monkeypatch
+):
+    from familydb.agent.providers.anthropic import AnthropicProvider
+    from familydb.agent.providers.openai import OpenAIProvider
+    from familydb.errors import AgentError
+
+    live = keyed(
+        settings,
+        provider="anthropic",
+        gemini_api_key=None,
+        daily_spend_limit=0,
+        company_options=options(openai={"monthly_limit": 1.0}),
+    )
+    spend(conn, clock, "openai", 5.0)  # the stand-in has had its month's worth
+    asked = []
+
+    def down(self, request):
+        raise AgentError("busy", retryable=True)
+
+    monkeypatch.setattr(AnthropicProvider, "send", down)
+    monkeypatch.setattr(OpenAIProvider, "send", lambda self, request: asked.append(request))
+    with pytest.raises(AgentError, match="busy"):
+        gateway.ask("chat", settings=live, registry=registry, ctx=ctx, current=["hi"])
+    assert asked == []
+
+
+def test_a_message_that_meets_a_companys_month_is_told_so_not_that_the_model_is_unreachable(
+    settings, clock, conn, family
+):
+    from familydb.app import App
+    from familydb.channels.base import IncomingMessage
+    from familydb.pipeline import handle_incoming
+    from familydb.store import messages
+    from tests import fakes
+
+    live = settings.model_copy(
+        update={
+            "company_options": options(anthropic={"monthly_limit": 1.0}),
+            "daily_spend_limit": 0,
+        }
+    )
+    spend(conn, clock, "anthropic", 2.0)
+    api = fakes.FakeMessagesAPI()  # asked nothing: any request would fail the test
+    reply = handle_incoming(
+        App(live, clock),
+        IncomingMessage("telegram", "u1", "chat-1", "1001", "hi"),
+        api=api,
+        conn=conn,
+    )
+    assert api.requests == [] and reply is not None and reply.status == "failed"
+    assert "The most set for Anthropic this month ($1.00) is used up" in reply.text
+    assert messages.get(conn, reply.in_message_id).give_up

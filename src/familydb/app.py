@@ -134,12 +134,15 @@ class App:
 
         return providers.for_surface(self.settings, surface, api=api)
 
-    def can_ask(self, surface: str = "chat", api: Any = None) -> bool:
-        """Whether any model can be asked here. The worker surface is the lookups, which search
-        the web, so it needs a company that can."""
-        from familydb.agent import providers
+    def can_ask(self, surface: str = "chat", api: Any = None, kind: str | None = None) -> bool:
+        """Whether any model can be asked for this kind of call (the chat's, or the lookups', which
+        search the web, so need a company that can), by what the family chose for it: the company a
+        row of the AI model page names, or the one it falls back to."""
+        from familydb.agent import gateway
 
-        return providers.ready(self.settings, surface, api=api, web=surface == "worker")  # type: ignore[arg-type]
+        return gateway.can_ask(
+            self.settings, kind or ("chat" if surface == "chat" else "enrich"), api=api
+        )
 
     def fallback(self, surface: str, primary: str) -> Any:
         from familydb.agent import providers

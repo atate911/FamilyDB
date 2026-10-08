@@ -16,6 +16,7 @@
   const OTHER = "__other";
   const SAME = "@same";
   const OFF = "@off";
+  const NONE = "@none"; // a use nothing can do yet: voice notes on an install with only Claude
   const J = D.uses;
   const by = Object.fromEntries(J.map((j) => [j.id, j]));
   const C = Object.fromEntries(D.companies.map((c) => [c.id, c]));
@@ -35,8 +36,9 @@
   const box = (setting, company) => $(`[data-setting="${setting}"][data-vendor="${company}"]`);
 
   // ---- companies: one can answer when it has a key and is let to
+  const cname = (id) => (C[id] ? C[id].name : id);
   const avail = (id) => {
-    if (!C[id].haskey) return { ok: false, reason: "no key" };
+    if (!C[id] || !C[id].haskey) return { ok: false, reason: "no key" };
     const allow = box("allow", id);
     return allow && !allow.checked ? { ok: false, reason: "off" } : { ok: true, reason: "" };
   };
@@ -48,6 +50,9 @@
   const optOf = (j, e) => j.opts.find((o) => o.c + ":" + o.n === e);
   const companyOf = (e) => (e && e !== "off" && !e.startsWith("same:") ? e.slice(0, e.indexOf(":")) : null);
   const modelName = (e) => e.slice(e.indexOf(":") + 1);
+  // A model nobody listed (typed in, or saved before its list dropped it) is one choice,
+  // "<company>:__other", whose name is in the box under the row.
+  const canon = (j, e) => (companyOf(e) && !e.endsWith(":" + OTHER) && !optOf(j, e) ? companyOf(e) + ":" + OTHER : e);
 
   // What each dropdown holds now: what was saved, or what was typed before a complaint (or that the
   // browser kept across a reload), which is then an unsaved change.
@@ -69,23 +74,23 @@
     seen = seen || [];
     if (seen.includes(j.id)) return "off";
     const c = shown(j, map, seen);
-    return c.startsWith("same:") ? eff(by[c.slice(5)], map, [...seen, j.id]) : c;
+    return c.startsWith("same:") ? eff(by[c.slice(5)], map, [...seen, j.id]) : canon(j, c);
   }
   const typed = (id) => (oinp(id) ? oinp(id).value.trim() : "");
   const monthOf = (j, e) => {
-    if (e === "off") return 0;
+    if (e === "off" || e === "") return 0;
     const o = optOf(j, e);
     return o ? o.m : j.unlisted;
   };
   const daysOf = (j, e) => {
-    if (e === "off") return zeros();
+    if (e === "off" || e === "") return zeros();
     const o = optOf(j, e);
     if (o) return o.d && o.d.length ? o.d : zeros();
     const total = sum(j.calls) || 1; // a model nobody priced: the month, spread as the calls fell
     return j.calls.map((c) => (j.unlisted * c) / total);
   };
   const nameOf = (j, e) => {
-    if (e === "off") return "off";
+    if (e === "off" || e === "") return "off";
     const o = optOf(j, e);
     return o ? o.l : e.endsWith(":" + OTHER) ? typed(j.id) || "another model" : modelName(e);
   };
@@ -102,6 +107,7 @@
     if (j.hassame) v.append(new Option("", SAME));
     j.vendors.forEach((id) => v.append(new Option("", id)));
     if (j.hasoff) v.append(new Option("Off", OFF));
+    if (j.default === "") v.append(new Option("Nothing can do this yet", NONE));
   }
   function fillModels(j, vendor, chosen) {
     const m = msel(j.id);
@@ -111,7 +117,7 @@
       m.disabled = true;
       return;
     }
-    if (vendor === OFF) {
+    if (vendor === OFF || vendor === NONE) {
       m.append(new Option("—", "__off"));
       m.disabled = true;
       return;
@@ -128,6 +134,9 @@
     } else if (c === "off") {
       vsel(j.id).value = OFF;
       fillModels(j, OFF);
+    } else if (c === "") {
+      vsel(j.id).value = NONE;
+      fillModels(j, NONE);
     } else {
       const co = companyOf(c);
       vsel(j.id).value = co;
@@ -140,12 +149,13 @@
     const v = vsel(j.id).value;
     if (v === SAME) return "same:" + j.anchor;
     if (v === OFF) return "off";
+    if (v === NONE) return "";
     return v + ":" + msel(j.id).value;
   };
   // Keep the strength when the company changes: the same level of the new company's lineup.
   function onVendor(j) {
     const v = vsel(j.id).value;
-    if (v === SAME || v === OFF) {
+    if (v === SAME || v === OFF || v === NONE) {
       fillModels(j, v);
       return;
     }
@@ -166,6 +176,20 @@
     if (!$$("option", f).some((o) => o.value === value)) f.append(new Option(value, value));
     f.value = value;
   }
+  // Take a choice as the dropdowns now hold it: a typed model's name goes into the box under the row.
+  function adopt(j, c, reset) {
+    if (reset && oinp(j.id)) oinp(j.id).value = "";
+    const co = companyOf(c);
+    if (co && !c.endsWith(":" + OTHER) && !optOf(j, c)) {
+      if (oinp(j.id) && !oinp(j.id).value) oinp(j.id).value = modelName(c);
+      c = co + ":" + OTHER;
+    }
+    raw[j.id] = c;
+    mirror(j);
+    showPair(j, shown(j, raw));
+  }
+  // What a row would store: a typed model by its name.
+  const store = (j) => (raw[j.id].endsWith(":" + OTHER) ? companyOf(raw[j.id]) + ":" + typed(j.id) : raw[j.id]);
   function setRaw(j, c) {
     raw[j.id] = c === dflt(j, raw, []) ? "" : c;
     mirror(j);
@@ -287,8 +311,8 @@
       cur[j.id] = daysOf(j, ec);
     });
     const tot = (m, i) => sum(J.map((j) => m[j.id][i]));
-    const explicit = J.filter((j) => raw[j.id] !== savedMap[j.id] || (raw[j.id].endsWith(":" + OTHER) && typed(j.id)));
-    const followers = J.filter((j) => raw[j.id] === savedMap[j.id] && eff(j, raw) !== eff(j, savedMap));
+    const explicit = J.filter((j) => store(j) !== savedMap[j.id]);
+    const followers = J.filter((j) => store(j) === savedMap[j.id] && eff(j, raw) !== eff(j, savedMap));
     return {
       cur, sav, curM, savM,
       totS: sum(Object.values(savM)),
@@ -315,19 +339,18 @@
     let warn = "";
     if (v && !avail(v).ok) {
       const stand = standFor(j, v);
-      warn = `${C[v].name} ${avail(v).reason === "no key" ? "has no key" : "is turned off"}, so ${stand ? stand.name + " answers instead until that changes" : "nothing can answer this until that changes"}.`;
+      warn = `${cname(v)} ${avail(v).reason === "no key" ? "has no key" : "is turned off"}, so ${stand ? stand.name + " answers instead until that changes" : "nothing can answer this until that changes"}.`;
     }
     set("warn", warn);
     if (warn && v && !avail(v).ok && avail(v).reason === "no key") {
       const a = document.createElement("a");
-      a.href = C[v].added ? `#company-${v}` : `#k-${v}`;
+      a.href = C[v] && C[v].added ? `#company-${v}` : `#k-${v}`;
       a.textContent = " Add a key";
       part("warn").append(a);
     }
     const chatCo = companyOf(eff(by.chat, raw));
-    set("priv", j.family && v && j.id !== "chat" && chatCo && v !== chatCo ? `Sends the family’s words and what she remembers to ${C[v].name} as well as ${C[chatCo].name}.` : "");
-    const other = raw[j.id].endsWith(":" + OTHER);
-    part("other").hidden = !other;
+    set("priv", j.family && v && j.id !== "chat" && chatCo && v !== chatCo ? `Sends the family’s words and what she remembers to ${cname(v)} as well as ${cname(chatCo)}.` : "");
+    part("other").hidden = !(msel(j.id).value === OTHER && !msel(j.id).disabled);
     nb.hidden = $$("[data-n]", nb).every((x) => x.hidden);
     [vsel(j.id), msel(j.id)].forEach((s) => s.classList.toggle("is-unavail", !!(v && !avail(v).ok)));
   }
@@ -359,11 +382,11 @@
       const cell = $(`[data-cost="${j.id}"]`);
       const changed = eff(j, savedMap) !== eff(j, raw);
       $("#row-" + j.id).classList.toggle("is-changed", changed);
-      cell.innerHTML = `<b class="fig">${eff(j, raw) === "off" ? "off" : money(S.curM[j.id])}</b>` + (changed ? `<span class="mp-delta fig">${delta(S.curM[j.id] - S.savM[j.id])}</span>` : "");
+      cell.innerHTML = `<b class="fig">${eff(j, raw) === "off" ? "off" : eff(j, raw) === "" ? "—" : money(S.curM[j.id])}</b>` + (changed ? `<span class="mp-delta fig">${delta(S.curM[j.id] - S.savM[j.id])}</span>` : "");
       const goes = $(`[data-goes="${j.id}"]`);
       if (goes) {
         const co = companyOf(eff(j, raw));
-        goes.textContent = co ? C[co].name : "nobody";
+        goes.textContent = co ? cname(co) : "nobody";
       }
       const st = $(`[data-standin="${j.id}"]`);
       if (st) {
@@ -585,11 +608,7 @@
     }
   });
   $("#revert").addEventListener("click", () => {
-    J.forEach((j) => {
-      raw[j.id] = savedMap[j.id];
-      mirror(j);
-      if (oinp(j.id)) oinp(j.id).value = "";
-    });
+    J.forEach((j) => adopt(j, savedMap[j.id], true));
     genericControls().forEach((c) => {
       if (c.type === "checkbox") c.checked = c.dataset.saved === "1";
       else c.value = c.dataset.saved;
@@ -606,8 +625,7 @@
   $("#revert").hidden = false;
   J.forEach((j) => {
     fillVendors(j);
-    mirror(j);
-    showPair(j, shown(j, raw));
+    adopt(j, raw[j.id], false);
     lastShown[j.id] = shown(j, raw);
   });
   $$(".mp-open").forEach((c) => c.setAttribute("aria-expanded", c.checked));

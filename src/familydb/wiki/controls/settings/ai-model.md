@@ -65,7 +65,7 @@ The companies you can pick are the three built in (OpenAI, Anthropic and Google)
 
 ## Keys
 
-Paste a company's key into **Every company's key** at the bottom of the page. A saved key is never shown again in a form; to see it, use [See a key](/wiki/controls/settings/sign-in#see-a-key). **Check** on the company's card asks the company whether the key works, which costs nothing. Setup's model step still checks a key before keeping it and makes that company the one that answers; the keys saved here are not checked as they are saved and do not change who answers.
+Paste a company's key into **Every company's key** at the bottom of the page. A saved key is never shown again in a form; to see it, use [See a key](/wiki/controls/settings/sign-in#see-a-key). **Check** on the company's card asks the company whether the key works, which costs nothing. A key is also checked with its company before it is kept, here as in setup's model step, and one the company clearly refuses is not saved; one it cannot be asked about is kept, and **Check** or the first message shows whether it works. Setup's model step makes that company the one that answers; the keys saved here do not change who answers.
 
 > **A key saved here is stored in the database as plain text, so it is in every [backup](/wiki/operations/backup-and-restore).** A key kept in `.env` is not. The Technical details fold on [Status](/wiki/controls/status) says which key each company uses and where it came from.
 
@@ -94,7 +94,7 @@ The fold says when the check last ran and what it found in the last week.
 
 ## Other companies
 
-Any service that speaks the OpenAI chat protocol can answer the family too, without a release: **OpenRouter**, which reaches hundreds of models from many companies (DeepSeek, Kimi, GLM, Qwen, MiniMax and more) with one key, or a company you have an account with and its own address, or a model you run on your own network. The **Other companies** card adds, changes, chooses and takes them away. Nothing is sent to one until you choose it for a row, press **Answer with** (it then becomes what every row falls back to) or switch on **May stand in**; what you write goes to that company, and for OpenRouter to the company it routes to as well.
+Any service that speaks the OpenAI chat protocol can answer the family too, without a release: **OpenRouter**, which reaches hundreds of models from many companies (DeepSeek, Kimi, GLM, Qwen, MiniMax and more) with one key, or a company you have an account with and its own address, or a model you run on your own network. The **Other companies** card adds, changes, chooses and takes them away. Nothing is sent to one until you choose it for a row, press **Answer with** (it then answers the chat row, and what follows it) or switch on **May stand in**; what you write goes to that company, and for OpenRouter to the company it routes to as well.
 
 | What you set | What it does |
 |---|---|
@@ -105,7 +105,7 @@ Any service that speaks the OpenAI chat protocol can answer the family too, with
 | Fields its thinking comes back in | Some companies need a model's thinking sent back unchanged beside a tool call. The first field a reply carries is used. |
 | Extra request fields | A JSON object sent with every request, always: a company's own switches. OpenRouter is added asking only for companies that keep and train on nothing, and refusing a model that cannot use the tools; a request that leaves one out is never sent in its place. |
 
-A saved key is not sent to a new address: change a company's address and the key is asked for again. When a company is added, FamilyDB reads its own list for what its models cost (OpenRouter's does) and says which models are still unpriced; type a price under **What it costs** for those, since until then every message to them is counted at more than any listed model and the daily limit is reached early. The keys are kept in the database like the other keys, so they are in every [backup](/wiki/operations/backup-and-restore), and are never shown again or written to the change history. Taking a company away takes its key. A company that is the default for answering cannot be taken away; choose another first.
+A saved key is not sent to a new address: change a company's address and the key is asked for again. When a company is added, FamilyDB reads its own list for what its models cost (OpenRouter's does) and says which models are still unpriced; type a price under **What it costs** for those, since until then every message to them is counted at more than any listed model and the daily limit is reached early. The keys are kept in the database like the other keys, so they are in every [backup](/wiki/operations/backup-and-restore), and are never shown again or written to the change history. Taking a company away takes its key. A company that is chosen for a row, or answers one by default, cannot be taken away; the page names the rows, and you choose another company for them first.
 
 These companies cannot search the web, hear voice notes or look at photos, so they are not offered for those rows. Lookups and discovery go to the cheaper company with a key that can search and may stand in; with none, they wait, since one company is then the only one that sees what you write.
 

@@ -83,7 +83,7 @@ def spend(conn, clock, kind, *, model="gpt-6-luna", provider="openai", days_ago=
     )
 
 
-# -- the numbers --------------------------------------------------------------------------------
+# -- the numbers ---------------------------------------------------------------------------------
 
 
 def test_a_use_is_priced_from_its_own_calls_at_every_model(page, conn, clock):
@@ -183,7 +183,7 @@ def _row(text: str, use: str) -> str:
     return found.group(0)
 
 
-# -- the page without its script ------------------------------------------------------------------
+# -- the page without its script -----------------------------------------------------------------
 
 
 def test_each_row_is_one_dropdown_that_posts_without_the_script(page):
@@ -201,7 +201,7 @@ def test_each_row_is_one_dropdown_that_posts_without_the_script(page):
     assert not re.search(r"<script(?![^>]*\bsrc=)", text) and " style=" not in text
 
 
-# -- saving -------------------------------------------------------------------------------------
+# -- saving --------------------------------------------------------------------------------------
 
 
 def test_a_choice_is_stored_only_when_it_is_not_the_default(page, conn):
@@ -350,7 +350,7 @@ def test_a_save_needs_the_page_s_own_token(page, conn):
     assert settings_store.overrides(conn) == {}
 
 
-# -- a key's check ---------------------------------------------------------------------------------
+# -- a key's check -------------------------------------------------------------------------------
 
 
 def test_a_key_is_checked_from_its_company_card_and_nothing_is_saved(page, conn, monkeypatch):
@@ -375,3 +375,102 @@ def test_a_key_check_that_is_refused_says_so(page, monkeypatch):
     monkeypatch.setattr(OpenAIProvider, "check_key", lambda self: "refused")
     page.post("/settings/models/check/openai", data={"csrf": token(page)})
     assert "OpenAI refused the key." in page.get("/settings/model").text
+
+
+# -- what the independent review found -----------------------------------------------------------
+
+
+def test_a_key_the_company_refuses_is_not_saved_and_one_it_cannot_be_asked_about_is(
+    page, conn, monkeypatch
+):
+    from familydb.agent.providers.gemini import GeminiProvider
+
+    monkeypatch.setattr(GeminiProvider, "check_key", lambda self: "refused")
+    refused = page.post(
+        "/settings/keys",
+        data={"csrf": token(page), "gemini_api_key": "gm-wrong", "section": "model"},
+    )
+    assert refused.status_code == 400 and "Google did not accept that key" in unescape(refused.text)
+    assert settings_store.get(conn, "gemini_api_key") is None
+    monkeypatch.setattr(GeminiProvider, "check_key", lambda self: "unchecked")
+    kept = page.post("/settings/keys", data={"csrf": token(page), "gemini_api_key": "gm-maybe"})
+    assert kept.status_code == 302 and settings_store.get(conn, "gemini_api_key") == "gm-maybe"
+
+
+def test_a_company_chosen_for_a_row_cannot_be_taken_away_and_goes_with_what_named_it(
+    page, conn, monkeypatch
+):
+    from familydb.agent.providers.chat import ChatProvider
+
+    monkeypatch.setattr(ChatProvider, "check_key", lambda self: "works")
+    monkeypatch.setattr(ChatProvider, "listed_models", lambda self: None)
+    monkeypatch.setattr(ChatProvider, "priced_models", lambda self: None)
+    monkeypatch.setattr("familydb.integrations.address.classify", lambda host: "public")
+
+    def form(**more):
+        return {"csrf": token(page), "section": "model", **more}
+
+    page.post(
+        "/settings/companies/add",
+        data=form(template="openrouter", key="sk-or-1", model="deepseek/deepseek-chat"),
+    )
+    post(
+        page,
+        choice_digest="openrouter:deepseek/deepseek-chat",
+        company=["openrouter"],
+        allow_openrouter="1",
+        limit_openrouter="3",
+    )
+    refused = page.post("/settings/companies/openrouter/remove", data=form())
+    assert refused.status_code == 400 and "chosen for The weekend digest" in refused.text
+    post(page, choice_digest="")
+    assert page.post("/settings/companies/openrouter/remove", data=form()).status_code == 302
+    # What was said of it goes too.
+    assert settings_store.get(conn, "company_options") is None
+
+
+def test_a_choice_naming_a_company_that_is_gone_is_the_default(page, conn):
+    settings_store.set_many(conn, {"model_choices": {"digest": "nobody:model"}})
+    page.app.refresh()
+    chat = data_of(page)
+    assert one(chat, "digest")["stored"] == "" and one(chat, "digest")["default"] == "same:chat"
+
+
+def test_a_local_company_that_needs_no_key_is_not_said_to_have_none(page, keyed, conn):
+    from familydb.agent.providers import companies
+
+    local = CompanyDef(
+        slug="box", label="My box", base_url="http://192.168.1.20:1/v1", model="m", local=True
+    )
+    page.app.settings = keyed.model_copy(update={"companies": [local]})
+    companies.use(page.app.settings.companies)
+    cards = {c["id"]: c for c in models_page.build(page.app, conn).data["companies"]}
+    assert cards["box"]["haskey"]
+
+
+def test_a_use_follows_only_the_one_it_follows_and_a_model_name_is_a_name(page, conn):
+    assert post(page, choice_look="same:judge").status_code == 400
+    assert post(page, choice_look="same:lookup").status_code == 302
+    long = post(page, choice_chat="openai:__other", other_chat="x" * 200)
+    assert long.status_code == 400 and "no spaces" in long.text
+    spaced = post(page, choice_chat="openai:__other", other_chat="gpt 9")
+    assert spaced.status_code == 400
+
+
+def test_the_page_prices_a_claudes_cache_as_the_family_set_it(page, keyed, conn, clock):
+    spend(
+        conn,
+        clock,
+        "chat",
+        model="claude-haiku-4-5",
+        provider="anthropic",
+        cache_creation_input_tokens=50000,
+    )
+
+    def haiku():
+        chat = one(models_page.build(page.app, conn).data, "chat")
+        return next(o for o in chat["opts"] if o["n"] == "claude-haiku-4-5")["m"]
+
+    hour = haiku()
+    page.app.settings = keyed.model_copy(update={"anthropic_cache_ttl": "5m"})
+    assert haiku() < hour  # writing the cache for five minutes costs less than for an hour

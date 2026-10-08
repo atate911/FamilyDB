@@ -96,6 +96,11 @@ class CompanyLimitReached(AgentError):
         self.limit = limit
 
 
+# Either stops a call before it is made, and neither is for trying again at once: what a turn
+# already wrote is reported, not repeated (loop.py), and a lookup waits (jobs/enrich.py).
+LIMITS = (SpendingLimitReached, CompanyLimitReached)
+
+
 def month_start(settings: Settings, now: datetime) -> str:
     """When this calendar month began, in the family's time zone, as a UTC timestamp."""
     local = now.astimezone(settings.tzinfo)

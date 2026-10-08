@@ -28,7 +28,7 @@ from familydb import (
 from familydb.agent import gateway, spending, uses
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
-from familydb.agent.providers import Audio, Picture
+from familydb.agent.providers import Audio, Picture, companies
 from familydb.agent.render import (
     render_audience_line,
     render_folded_line,
@@ -38,7 +38,7 @@ from familydb.agent.render import (
     render_retry_note,
     render_user_turn,
 )
-from familydb.agent.spending import SpendingLimitReached
+from familydb.agent.spending import CompanyLimitReached, SpendingLimitReached
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage, PhotoNote
 from familydb.clock import FixedClock
@@ -655,6 +655,15 @@ def _answer(
                 seed=inbound_id,
                 plain=plain,
                 limit=f"{exc.limit:.2f}",
+            )
+        elif isinstance(exc, CompanyLimitReached):
+            reply = voice.say(
+                app.settings,
+                "company_limit",
+                seed=inbound_id,
+                plain=plain,
+                company=companies.label(exc.company, app.settings),
+                limit=f"${exc.limit:.2f}",
             )
         else:
             reply = voice.say(

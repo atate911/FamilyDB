@@ -16,12 +16,19 @@ PASSWORD = "open sesame please"
 
 
 @pytest.fixture
-def page(settings, clock, conn, family):
+def page(settings, clock, conn, family, monkeypatch):
     """A signed-in client on a database the test can also reach through `conn`."""
     app = App(settings.model_copy(update={"web_password": PASSWORD}), clock)
     client = create_app(app).test_client()
     assert client.post("/login", data={"password": PASSWORD}).status_code == 302
     client.app = app  # the test looks at what the page put in force
+    # A key is checked with its company before it is kept; no test asks one.
+    from familydb.agent.providers.anthropic import AnthropicProvider
+    from familydb.agent.providers.gemini import GeminiProvider
+    from familydb.agent.providers.openai import OpenAIProvider
+
+    for company in (AnthropicProvider, GeminiProvider, OpenAIProvider):
+        monkeypatch.setattr(company, "check_key", lambda self: "unchecked")
     return client
 
 
