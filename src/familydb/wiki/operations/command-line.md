@@ -14,7 +14,7 @@ Every command is `sudo /opt/familydb/scripts/maintain.sh <command>`. `--dry-run`
 
 | Command | What it does |
 |---|---|
-| `status` | Shows whether FamilyDB is running, its version, the database size, free disk and the newest backup. Changes nothing |
+| `status` | One screen: a verdict first (running and well, or what needs attention), then the version, the service, whether the page answers, the address, the database, the disk and the newest backup with its schedule, and the commands that put right anything that is not well. Changes nothing |
 | `check` | Runs the doctor and prints every finding with its fix. See [Diagnostics](/wiki/operations/diagnostics) |
 | `backup` | Takes a backup now. See [Backup and restore](/wiki/operations/backup-and-restore) |
 | `restore FILE` | Stops FamilyDB, puts that backup in place, starts it again. Refuses a backup from a newer version before stopping anything |
@@ -25,6 +25,19 @@ Every command is `sudo /opt/familydb/scripts/maintain.sh <command>`. `--dry-run`
 | `https [DOMAIN]` | Puts the web page on HTTPS and gets the certificate. `--port N` or `--port random` moves it. See [HTTPS and the firewall](/wiki/operations/https-and-firewall) |
 | `port N` | Moves FamilyDB's own port (8080 unless moved). See [HTTPS and the firewall](/wiki/operations/https-and-firewall#move-the-public-port) |
 | `password [NAME]` | Makes a new starting password and prints it once. See [Recovery](/wiki/operations/recovery) |
+
+## Reading what it prints
+
+Every command that changes something shows its screen in the same order, so you can read down it and stop where you have what you need:
+
+1. **A banner** with the command, the install it is about and how that install runs (a systemd service or Docker containers). With `--dry-run` a `[ DRY RUN ]` badge follows, and nothing below it is done.
+2. **A numbered plan**: what it will do, one line each with the reason under it; a `!` line for what could hurt (FamilyDB is down from step 3 until step 5); a `✓` line for what protects you (a backup comes first, how to go back is printed before anything is changed); and what it leaves alone. Then it asks, unless you gave `--yes`.
+3. **The steps**, headed `Step 2 of 6`, with a line each. A step that takes time shows a line that redraws itself with the seconds so far, and becomes `✓` with its time when it is done. A failed step stops with the command that ran, its exit code, what it said, what that usually means and what to try, and a failure after the code has moved also says how to go back or finish.
+4. **A last line** that says how it went and how long it took: `✓` it worked, `!` it worked with warnings (the count is in the line, and each one is listed again under **Warnings**, since they scroll past), `✗` it did not. Under it are the facts you need (the version before and after, where the backup is, what the check found) and, for anything that can go wrong, the commands to put it right.
+
+The marks differ in shape as well as colour (`✓` fine, `!` worth a look, `✗` must be fixed, `·` skipped, `○` not done because of `--dry-run`), so a screen with no colour reads the same. Commands you would type are in cyan, and their `# comments` are dim. Colour is for a terminal: nothing is coloured in a pipe or a log, `NO_COLOR=1` turns it off anywhere, and `FORCE_COLOR=1` turns it on for `| less -R`. `FAMILYDB_ASCII=1` draws it in plain characters for a terminal that cannot show the marks. The redrawing line is only drawn at a terminal where nothing can stop to ask for a password over it, never in a dry run, and `FAMILYDB_NO_LIVE=1` turns it off; in a pipe or from cron, each step prints one line when it is done.
+
+Everything a run prints is also kept, without colour, in `/var/log/familydb-maintain.log`: send that file when asking for help.
 
 There is no `maintain.sh` command to stop or start FamilyDB on its own. Use these:
 
