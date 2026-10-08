@@ -20,15 +20,25 @@ older than what is installed. It gets a date when it is released.
   and the last line says where it was and where it is (`v0.2.0+137 → v0.3.0+4`), what moved and what
   it cost, so it reads alone in a log. The screen opens with Installed and Upgrading one above the
   other, and git's `++++----` bars for the parts of the code that change most; while it works, a
-  retro block bar counts the steps and the wait for the page fills a bar toward its 30 seconds. It is
-  coloured the way git is (yellow hashes, green `+`, red `-`) and the first word of a step is bold. The page is waited
+  retro block bar counts the steps and the wait for the page fills a bar toward its 30 seconds. The page is waited
   for after the restart, so "it came back up" is true. The numbered plan, what stays untouched and
   why each step are gone. `status` is one screen with a verdict, a row for each thing marked `✓ ! ✗`,
   and what to type for anything not well, including a backup older than the 36 hours the upkeep job
   tolerates. `--help` is grouped into look, keep safe and change. Warnings are listed again at the
   foot; a failure says what ran, what it said, what that usually means and what to type. Colour is
   for a terminal only (`NO_COLOR=1` turns it off, `FORCE_COLOR=1` on in a pipe, `FAMILYDB_ASCII=1`
-  for plain marks). No command, option or exit status changed.
+  for plain marks).
+
+  The look takes a little from the old command-line tools: a DOS-style title bar and a footer that
+  carries the run's progress bar with its percent, the classic `| / - \` spinner, and `[ OK ]`,
+  `[WARN]` and `[FAIL]` for the verdict. It is coloured the way git is (yellow hashes, green `+`,
+  red `-`), the first word of a step is bold, and pull request numbers and hashes are links on a
+  terminal that can follow them. A terminal whose locale cannot draw it is given plain characters.
+  An upgrade checks the install before it starts, so a problem that was already there is shown and
+  not blamed on it. **The exit status now means something:** 1 when the last line says `[FAIL]` (the
+  bot did not come back after an upgrade, restore or restart; `check` has something to fix; `status`
+  finds it not running or something red), so a cron job or a monitor can read it. No command or
+  option changed.
 - **Wording fixes.** Drive times are called estimates where they were said to be looked up; the
   take-off text says a kid's wish lists go and open to-dos and reminders are canceled; and a few
   help lines now match what happens (a better model up to about 10% dearer may be put in by itself,
