@@ -1858,7 +1858,9 @@ def model_text(provider: str, name: str, level: str) -> str:
     return f"{name} ({', '.join(notes)})" if notes else name
 
 
-LONG_SETTINGS = frozenset({"persona_text", "persona_notes", "about_family", "voice_lines"})
+LONG_SETTINGS = frozenset(
+    {"persona_text", "persona_notes", "about_family", "voice_lines", "companies"}
+)
 # Unchanged lines shown either side of a change. A character is paragraphs one to a line with a
 # blank between, so one line of context would be only the blank.
 CHANGE_CONTEXT = 2

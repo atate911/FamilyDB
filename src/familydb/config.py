@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import unicodedata
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import (
@@ -28,7 +30,9 @@ from familydb.errors import ConfigError
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
 # Strength in the order each company prices them (agent/providers/catalog.py).
 Level = Literal["everyday", "better", "best"]
-ProviderName = Literal["anthropic", "openai", "gemini"]
+# The companies that have a module of their own (agent/providers/companies.py has the facts about
+# each); any other is defined in the settings (`CompanyDef`).
+BUILT_IN_COMPANIES = ("anthropic", "openai", "gemini")
 CacheTTL = Literal["5m", "1h"]
 LookupsWhen = Literal["evening", "asap"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -53,6 +57,7 @@ SECRET_FIELDS = frozenset(
         "anthropic_api_key",
         "gemini_api_key",
         "openai_api_key",
+        "company_keys",
         "telegram_bot_token",
         "ticketmaster_api_key",
         "web_password",
@@ -85,6 +90,129 @@ class PersonaRewrite(BaseModel):
     of: str = Field(default="", max_length=40_000)
 
 
+class ModelPrice(BaseModel):
+    """What one model of an added company costs, in US dollars a million tokens, as its admin
+    typed it or the company's own list gave it (an estimate for the daily limit, never a bill)."""
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    name: str = Field(min_length=1, max_length=120)
+    input: float = Field(ge=0, le=500)
+    output: float = Field(ge=0, le=500)
+    cached: float | None = Field(default=None, ge=0, le=500)  # None: no cheaper than input
+
+
+# Fields of a request the company's `extra_body` may not set, because the adapter owns them.
+RESERVED_BODY = frozenset(
+    {
+        "model",
+        "messages",
+        "tools",
+        "tool_choice",
+        "stream",
+        "stream_options",
+        "max_tokens",
+        "max_completion_tokens",
+        "n",
+    }
+)
+SLUG = re.compile(r"^[a-z][a-z0-9-]{1,23}$")
+MAX_EXTRA_BODY = 2_000
+
+
+class CompanyDef(BaseModel):
+    """A company FamilyDB can ask that has no module of its own: the address of a service that
+    speaks the OpenAI chat protocol and what to know about it. Its key is kept apart
+    (`Settings.company_keys`). Nothing is sent to it until a person chooses it for a use, or
+    switches on `stand_in`."""
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    slug: str
+    label: str = Field(min_length=1, max_length=40)
+    # The service's root, where `/chat/completions` and `/models` live: https://openrouter.ai/api/v1.
+    base_url: str = Field(max_length=300)
+    # Runs on this machine or this network: http is then allowed, and no key may be needed.
+    local: bool = False
+    # Where the starting values came from ("openrouter"); only so the page can say so.
+    template: str = Field(default="", max_length=40)
+    # Everyday chat and lookup models, and the family's own better and best (empty: the everyday).
+    model: str = Field(default="", max_length=120)
+    worker_model: str = Field(default="", max_length=120)
+    better_model: str = Field(default="", max_length=120)
+    best_model: str = Field(default="", max_length=120)
+    # The message field a model's thinking comes back in, which must go back unchanged beside a
+    # tool call ("reasoning_content", "reasoning"); empty if it sends none.
+    reasoning_field: str = Field(default="reasoning_content", max_length=40)
+    # Fields added to every request: a company's own switches (OpenRouter's `provider`, a
+    # `thinking` object). The page shows them; the adapter owns the rest of the request.
+    extra_body: dict[str, Any] = Field(default_factory=dict)
+    # May answer when the company chosen cannot. Off: the family's words go only where they were
+    # sent on purpose.
+    stand_in: bool = False
+    prices: tuple[ModelPrice, ...] = Field(default=(), max_length=200)
+
+    @field_validator("slug")
+    @classmethod
+    def _slug(cls, value: str) -> str:
+        slug = value.strip().lower()
+        if not SLUG.match(slug):
+            raise ValueError(
+                "a short name of letters, digits and hyphens, starting with a letter "
+                "(2 to 24 characters)"
+            )
+        if slug in BUILT_IN_COMPANIES:
+            raise ValueError(f"{slug} is one FamilyDB already has")
+        return slug
+
+    @field_validator("label", "model", "worker_model", "better_model", "best_model")
+    @classmethod
+    def _one_line(cls, value: str) -> str:
+        text = value.strip()
+        if any(unicodedata.category(character) in ("Cc", "Zl", "Zp") for character in text):
+            raise ValueError("goes on one line, with no control characters in it")
+        return text
+
+    @field_validator("reasoning_field")
+    @classmethod
+    def _field_name(cls, value: str) -> str:
+        name = value.strip()
+        if name and not re.fullmatch(r"[a-z][a-z0-9_]{0,39}", name):
+            raise ValueError("a field name: lower case letters, digits and underscores")
+        return name
+
+    @field_validator("extra_body")
+    @classmethod
+    def _extra_body(cls, value: dict[str, Any]) -> dict[str, Any]:
+        reserved = sorted(RESERVED_BODY & set(value))
+        if reserved:
+            raise ValueError(f"{', '.join(reserved)} is set by FamilyDB, not here")
+        if len(json.dumps(value, sort_keys=True)) > MAX_EXTRA_BODY:
+            raise ValueError("is longer than a request needs to carry")
+        return value
+
+    @model_validator(mode="after")
+    def _address(self) -> CompanyDef:
+        parts = urlsplit(self.base_url.strip())
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            raise ValueError(
+                "base_url needs to be a web address such as https://openrouter.ai/api/v1"
+            )
+        if parts.username or parts.password or parts.query or parts.fragment:
+            raise ValueError("base_url has no password, query or # in it: the key is kept apart")
+        if parts.scheme == "http" and not self.local:
+            raise ValueError("base_url must be https, unless the company runs on your own network")
+        object.__setattr__(self, "base_url", self.base_url.strip().rstrip("/"))
+        return self
+
+    @property
+    def models(self) -> tuple[str, ...]:
+        """The model names this definition knows, in the order they are likely wanted."""
+        named = [self.model, self.worker_model, self.better_model, self.best_model]
+        named += [price.name for price in self.prices]
+        return tuple(dict.fromkeys(name for name in named if name))
+
+
 def _field_names(cls: type[BaseSettings]) -> dict[str, str]:
     names: dict[str, str] = {}
     for name, field in cls.model_fields.items():
@@ -104,8 +232,14 @@ class Settings(BaseSettings):
 
     # `worker_provider` empty means lookups and discovery use `provider`. GPT-6 Luna by default: the
     # cheapest capable model of the three.
-    provider: ProviderName = "openai"
-    worker_provider: ProviderName | Literal[""] = ""
+    # A built-in company's name or the slug of one defined in `companies`; checked against both
+    # below.
+    provider: str = "openai"
+    worker_provider: str = ""
+    # Companies without a module of their own, defined here and keyed in `company_keys` (a secret:
+    # slug to key). Checked once the settings are whole, so a removed company cannot stay chosen.
+    companies: list[CompanyDef] = Field(default_factory=list, max_length=12)
+    company_keys: dict[str, str] = Field(default_factory=dict)
     provider_fallback: bool = True
     # Model strength per situation, whichever company: `everyday` is the company's model named
     # below, `better` and `best` its stronger ones (catalog.py).
@@ -449,6 +583,18 @@ class Settings(BaseSettings):
         from familydb.logs import parse_areas
 
         return "\n".join(f"{name}={level}" for name, level in parse_areas(value).items())
+
+    @model_validator(mode="after")
+    def _companies_exist(self) -> Settings:
+        slugs = [company.slug for company in self.companies]
+        if len(set(slugs)) != len(slugs):
+            raise ValueError("two companies have the same name")
+        known = (*BUILT_IN_COMPANIES, *slugs)
+        for name in ("provider", "worker_provider"):
+            value = getattr(self, name)
+            if value and value not in known:
+                raise ValueError(f"{name} is {value!r}; use one of {', '.join(known)}")
+        return self
 
     @model_validator(mode="after")
     def _resolve_timezone(self) -> Settings:

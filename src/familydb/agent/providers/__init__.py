@@ -67,16 +67,23 @@ owner = companies.owner
 
 
 def chosen(settings: Settings, surface: Surface) -> str:
-    """Which provider answers this surface; workers default to the chat choice."""
-    if surface == "worker" and settings.worker_provider:
-        return settings.worker_provider
-    return settings.provider
+    """Which provider answers this surface; workers default to the chat choice. A company no longer
+    defined (its settings changed under a running process) is not asked for: the default is."""
+    name = settings.worker_provider if surface == "worker" else ""
+    name = name or settings.provider
+    return name if companies.get(name, settings) is not None else companies.DEFAULT
+
+
+def can_search(provider: Provider) -> bool:
+    """Whether the company has hosted web search, which a lookup needs (the chat never has it)."""
+    return bool(getattr(provider, "searches", True))
 
 
 def _named(provider: Provider, level: str) -> str:
-    """The model the family named for this company at this level (`<company>_<level>_model`)."""
+    """The model the family named for this company at this level, or ""."""
     settings = getattr(provider, "settings", None)
-    return str(getattr(settings, f"{provider.name}_{level}_model", "") or "")
+    company = companies.get(provider.name, settings)
+    return company.level_model(settings, level) if company and settings else ""
 
 
 def level_model(provider: Provider, level: str) -> str | None:
@@ -105,23 +112,39 @@ def model_at(provider: Provider, surface: Surface, level: str) -> str:
     return prices.swapped(provider.name, chosen)
 
 
-def others(name: str) -> list[str]:
-    """The other providers, in a fixed order so the same spare is chosen every time."""
-    return [candidate for candidate in NAMES if candidate != name]
+def others(name: str, settings: Settings | None = None) -> list[str]:
+    """The other providers, in a fixed order so the same spare is chosen every time: the built-in
+    ones, then those added, in the order they were added."""
+    return [candidate for candidate in companies.slugs(settings) if candidate != name]
 
 
-def for_surface(settings: Settings, surface: Surface, api: Any = None) -> Provider:
-    """The provider to try first; an injected `api` means the configured one."""
-    return build(chosen(settings, surface), settings, api=api)
+def for_surface(
+    settings: Settings, surface: Surface, api: Any = None, *, web: bool = False
+) -> Provider:
+    """The provider to try first; an injected `api` means the configured one. For a call that
+    searches the web (`web`), a chosen company without hosted search is passed over for the first
+    other that has it and a key: the family's lookups do not stop for the chat company's sake."""
+    primary = build(chosen(settings, surface), settings, api=api)
+    if web and api is None and not can_search(primary):
+        for candidate in others(primary.name, settings):
+            spare = build(candidate, settings)
+            if can_search(spare) and spare.configured():
+                return spare
+    return primary
 
 
-def fallback_for(settings: Settings, surface: Surface, primary: str) -> Provider | None:
-    """The other provider, when switched on and keyed; else None."""
+def fallback_for(
+    settings: Settings, surface: Surface, primary: str, *, web: bool = False
+) -> Provider | None:
+    """The other provider, when switched on, keyed and allowed to stand in; else None."""
     if not settings.provider_fallback:
         return None
-    for candidate in others(primary):
+    for candidate in others(primary, settings):
+        company = companies.get(candidate, settings)
+        if company is None or not company.stands_in:
+            continue
         spare = build(candidate, settings)
-        if spare.configured():
+        if spare.configured() and (can_search(spare) or not web):
             return spare
     return None
 
@@ -131,7 +154,7 @@ def hearers(settings: Settings, audio: Any = None) -> list[Provider]:
     other that can hear and has a key; spares only with the fallback on. Claude hears nothing.
     An injected `audio` answers alone for the first that could."""
     first = settings.transcribe_provider or settings.provider
-    order = [first, *others(first)]
+    order = [first, *others(first, settings)]
     if audio is not None:
         for name in order:
             provider = build(name, settings, audio=audio)
@@ -156,17 +179,22 @@ def lookers(settings: Settings, api: Any = None) -> list[Provider]:
         return [build(first, settings, api=api)]
     able = [
         provider
-        for provider in (build(name, settings) for name in [first, *others(first)])
+        for provider in (build(name, settings) for name in [first, *others(first, settings)])
         if provider.viewer() and provider.configured()
     ]
     return able if settings.provider_fallback else able[:1]
 
 
-def ready(settings: Settings, surface: Surface, api: Any = None) -> bool:
+def ready(settings: Settings, surface: Surface, api: Any = None, *, web: bool = False) -> bool:
     """Whether any model can be asked on this surface (a fresh install has none until a key is
-    typed); callers check this before calling."""
-    primary = for_surface(settings, surface, api=api)
-    return primary.configured() or fallback_for(settings, surface, primary.name) is not None
+    typed); callers check this before calling. A call that searches the web needs a company
+    that can."""
+    primary = for_surface(settings, surface, api=api, web=web)
+    if web and api is None and not can_search(primary):
+        return False
+    return (
+        primary.configured() or fallback_for(settings, surface, primary.name, web=web) is not None
+    )
 
 
 __all__ = [

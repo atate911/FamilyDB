@@ -34,6 +34,7 @@ class App:
     ) -> None:
         self.settings = settings
         self._base = settings
+        self._put_companies_in_force()
         self._overrides_stamp: str | None = None
         self._models_stamp: str | None = None
         self._reload = threading.Lock()
@@ -161,6 +162,13 @@ class App:
             finally:
                 self._keep_up_with_models(conn)
 
+    def _put_companies_in_force(self) -> None:
+        """The companies the settings define, for the places that name one without settings to
+        hand (a notice's wording, a price)."""
+        from familydb.agent.providers import companies
+
+        companies.use(self.settings.companies)
+
     def _reload_settings(self, conn: sqlite3.Connection) -> bool:
         from familydb.config import apply_overrides
         from familydb.store import settings as settings_store
@@ -185,6 +193,7 @@ class App:
         if fresh == self.settings:
             return False
         self.settings = fresh
+        self._put_companies_in_force()
         self._forget_built()
         log.info("settings reloaded (%d stored)", len(values))
         return True

@@ -192,9 +192,10 @@ def models_in_use(settings: Any) -> set[tuple[str, str]]:
     for kind in gateway.KINDS:
         call = gateway.spec(kind)
         level = getattr(settings, call.level)
-        primary = providers.for_surface(settings, call.surface)
+        web = call.web_searches is not None
+        primary = providers.for_surface(settings, call.surface, web=web)
         used.add((primary.name, providers.model_at(primary, call.surface, level).lower()))
-        spare = providers.fallback_for(settings, call.surface, primary.name)
+        spare = providers.fallback_for(settings, call.surface, primary.name, web=web)
         if spare is not None:
             used.add((spare.name, providers.model_at(spare, call.surface, level).lower()))
     for hearer in providers.hearers(settings):
