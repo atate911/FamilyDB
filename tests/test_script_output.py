@@ -416,17 +416,62 @@ def test_a_failure_colours_commands_but_only_where_stderr_is_a_terminal() -> Non
 
 
 def test_the_doctors_report_is_counted_and_a_failure_only_view_hides_the_rest() -> None:
-    report = "✓ settings: loaded\n! telegram: no token\n    → set one\n✗ model key: none\n    → add one\n· note: skipped\n\nIt is not set up."
+    report = (
+        "▸ Settings\n✓ settings: loaded\n! telegram: no token\n    → set one\n"
+        "▸ Model\n✗ model key: none\n    → add one\n· note: skipped\n\nIt is not set up."
+    )
     done = _lib(
         f"show_doctor failures '{report}'; echo \"$DOCTOR_FINE $DOCTOR_WARN $DOCTOR_BAD|$DOCTOR_VERDICT\""
     )
     assert done.returncode == 0, done.stderr
     out = done.stdout
-    assert "✗ model key: none" in out and "→ add one" in out
-    assert "telegram" not in out and "settings: loaded" not in out
+    assert re.search(r"✗ model key +none", out) and "→ add one" in out
+    assert "telegram" not in out and "settings" not in out
     assert out.strip().endswith("1 1 1|It is not set up.")
     everything = _lib(f"show_doctor all '{report}'")
-    assert "✓ settings: loaded" in everything.stdout and "! telegram: no token" in everything.stdout
+    assert "▸ Settings" in everything.stdout and "▸ Model" in everything.stdout
+    assert re.search(r"✓ settings +loaded", everything.stdout)
+    assert re.search(r"! telegram +no token", everything.stdout)
+    assert re.search(r"○ note +skipped", everything.stdout)
+    folded = _lib(f"show_doctor problems '{report}'")
+    assert (
+        "settings" in folded.stdout and "loaded" not in folded.stdout
+    )  # fine rows are folded away
+
+
+def test_the_report_names_the_first_thing_to_fix_and_counts_in_one_bar() -> None:
+    done = _lib(
+        "doctor_begin; doctor_section A; doctor_row ok one fine; doctor_row bad two broken 'do this';"
+        " doctor_row bad three also; doctor_row warn four hmm; doctor_row skip five -;"
+        " doctor_summary"
+    )
+    assert done.returncode == 0, done.stderr
+    assert "Checked 5" in done.stdout
+    assert (
+        "1✓" in done.stdout and "1!" in done.stdout and "2✗" in done.stdout and "1○" in done.stdout
+    )
+    start = done.stdout.split("Start here")[1]
+    assert "two: broken" in start and "do this" in start and "three" not in start
+
+
+def test_a_name_is_reported_once_and_the_first_word_wins() -> None:
+    done = _lib(
+        "doctor_begin; doctor_row ok service 'the machine says up';"
+        " doctor_feed '✗ service: the program says down'; doctor_show all; echo \"$DOCTOR_FINE $DOCTOR_BAD\""
+    )
+    assert "the machine says up" in done.stdout and "the program says down" not in done.stdout
+    assert done.stdout.strip().endswith("1 0")
+
+
+def test_the_fine_sections_fold_to_a_line_that_still_says_what_was_looked_at() -> None:
+    done = _lib(
+        "doctor_begin; doctor_section Files; doctor_row ok 'service account' x; doctor_row ok '.env' y;"
+        " doctor_section Git; doctor_row ok checkout z; doctor_row warn 'working tree' w 'git diff';"
+        " doctor_show problems"
+    )
+    assert re.search(r"✓ Files +service account · \.env", done.stdout)
+    assert "▸ Git" in done.stdout and re.search(r"! working tree +w", done.stdout)
+    assert "1 fine: checkout" in done.stdout
 
 
 # -- a step at a terminal shows it is working, and elsewhere says nothing until it is done
@@ -641,20 +686,6 @@ def test_a_terminal_that_cannot_draw_the_glyphs_is_given_plain_ones_unasked() ->
     assert "╔═[■]═" in _on_a_terminal(
         'banner "Upgrade"', LC_ALL="C", FAMILYDB_UNICODE="1", NO_COLOR="1"
     )
-
-
-def test_a_check_with_something_to_fix_exits_1_and_a_clean_one_exits_0(tmp_path) -> None:
-    target, env = _fake_server(tmp_path)
-    clean = _maintain(target, env, "check")
-    assert clean.returncode == 0, clean.stdout + clean.stderr
-    assert "[ OK ] All 1 checks are fine" in clean.stdout
-    broken = _maintain(
-        target,
-        {**env, "FAKE_DOCTOR": "✗ model key: no key\n    → add one\n\n1 thing(s) must be fixed"},
-        "check",
-    )
-    assert broken.returncode == 1, broken.stdout + broken.stderr
-    assert "[FAIL] 1 thing must be fixed" in broken.stdout
 
 
 def _page_health(

@@ -39,12 +39,12 @@ _utf8_locale() {
 }
 # shellcheck disable=SC2034  # some are read only by the scripts that source this file.
 if [ -n "${FAMILYDB_ASCII:-}" ] || { [ -z "${FAMILYDB_UNICODE:-}" ] && [ -t 1 ] && ! _utf8_locale; }; then
-  S_OK='+'; S_WARN='!'; S_BAD='x'; S_GO='>'; S_DOT='-'; S_RULE='-'; S_TODO='[ ]'; S_OFF='o'; S_TO='->'; S_ELLIPSIS='...'
+  S_OK='+'; S_WARN='!'; S_BAD='x'; S_GO='>'; S_DOT='-'; S_RULE='-'; S_TODO='[ ]'; S_OFF='o'; S_TO='->'; S_ELLIPSIS='...'; S_SECTION='>'
   BAR_FULL='#'; BAR_EMPTY='-'; BAR_PULSE_A='='; BAR_PULSE_B='#'
   F_TL='+'; F_TR='+'; F_BL='+'; F_BR='+'; F_H='='; F_BOX='#'
   SPIN_FRAMES=('|' '/' '-' '\')
 else
-  S_OK='✓'; S_WARN='!'; S_BAD='✗'; S_GO='→'; S_DOT='·'; S_RULE='─'; S_TODO='☐'; S_OFF='○'; S_TO='→'; S_ELLIPSIS='…'
+  S_OK='✓'; S_WARN='!'; S_BAD='✗'; S_GO='→'; S_DOT='·'; S_RULE='─'; S_TODO='☐'; S_OFF='○'; S_TO='→'; S_ELLIPSIS='…'; S_SECTION='▸'
   BAR_FULL='█'; BAR_EMPTY='░'; BAR_PULSE_A='▓'; BAR_PULSE_B='▒'
   F_TL='╔'; F_TR='╗'; F_BL='╚'; F_BR='╝'; F_H='═'; F_BOX='■'
   SPIN_FRAMES=('|' '/' '-' '\')
@@ -286,10 +286,19 @@ _verdict_badge() { # _verdict_badge ok|warn|bad - [ OK ], [WARN], [FAIL]: a bloc
 }
 
 FINISH_BAD=0   # set by a last line that says it failed, so the script can exit with it
+FINISH_EMBEDDED=0   # 1 while one command runs inside another: its last word is one line, and the outer one has the last
+FINISH_LAST=""      # how that line went: ok, warn or bad
 # shellcheck disable=SC2034  # FINISH_BAD is read by the scripts that source this file.
 finish() { # finish ok|warn|bad "Headline" - the last word: how it went, with the time it took
   local state="$1" headline="$2" colour count=${#WARNED[@]} took
   INDENT=""
+  if [ "${FINISH_EMBEDDED:-0}" = 1 ]; then
+    FINISH_LAST="$state"
+    case "$state" in ok) colour="$GRN"; took="$S_OK" ;; warn) colour="$YEL"; took="$S_WARN" ;; *) colour="$RED"; took="$S_BAD" ;; esac
+    printf '%s%s%s%s %s\n' "$B" "$colour" "$took" "$OFF" "$headline"
+    log_line "== result: $state: $headline"
+    return 0
+  fi
   if [ "${DRY_RUN:-0}" = 1 ] && [ "$state" != bad ]; then
     state=ok
     headline="Dry run finished: nothing was changed"
@@ -496,7 +505,7 @@ again_hint() { AGAIN="$*"; }
 # `uninstall.sh --from-zero` undoes exactly that (packages it added, files, links, replaced files
 # with a kept copy, users, cron lines, firewall rules). One line per change: KIND, tab, what.
 # Outside /opt/familydb so removing the install cannot lose it; it goes last.
-LEDGER_DIR=/var/lib/familydb-install
+LEDGER_DIR="${FAMILYDB_LEDGER_DIR:-/var/lib/familydb-install}"   # the override is for tests
 LEDGER="${LEDGER_DIR}/ledger"
 # Where the install's SSH keeps GitHub's host key, rather than root's own known_hosts.
 # shellcheck disable=SC2034  # read by bootstrap.sh, which sources this
@@ -812,7 +821,7 @@ retry() {
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-SYSTEM_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+SYSTEM_PATH="${FAMILYDB_SYSTEM_PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"   # the override is for tests
 on_system_path() { # every user has to find it, not just whoever is running this
   # `command` is a shell builtin, so it needs a shell: env cannot exec it.
   env -i PATH="$SYSTEM_PATH" sh -c 'command -v "$1" >/dev/null 2>&1' _ "$1"
@@ -1007,33 +1016,249 @@ confirm() { # confirm "question" yes|no  - honours ASSUME_YES and a missing term
   case "$reply" in [Yy]*|yes) return 0 ;; *) return 1 ;; esac
 }
 
-# `familydb doctor` prints "MARK name: detail" for each finding, "    → fix" under any that is not fine,
-# and its verdict last. This colours that, and counts it. "problems" shows only what is not fine, for
-# a run that has something else to say first, "failures" only what must be fixed, "count" nothing at all; "all" shows the lot. The counts are left in
-# DOCTOR_FINE, DOCTOR_WARN and DOCTOR_BAD, and its own last line in DOCTOR_VERDICT.
-DOCTOR_FINE=0; DOCTOR_WARN=0; DOCTOR_BAD=0; DOCTOR_VERDICT=""
-# shellcheck disable=SC2034  # the counts and the verdict are read by the scripts that source this file.
-show_doctor() { # show_doctor all|problems|failures|count "the report"
-  local mode="$1" report="$2" line showing=0 last=""
-  DOCTOR_FINE=0; DOCTOR_WARN=0; DOCTOR_BAD=0; DOCTOR_VERDICT=""
+# --- the health report ---------------------------------------------------------------------------
+# One report from two sources: what this script can see of the machine (scripts/lib/doctor.sh, which
+# works when the program does not) and `familydb doctor`, which prints
+#   ▸ Heading
+#   MARK name: detail          MARK is ✓ fine, ! worth a look, ✗ must be fixed, · not checked
+#       → what to do
+#   the verdict
+# Rows are gathered first, so the names line up across the whole report, each heading can say how its
+# checks went, and the summary can lead the eye to the first thing to fix.
+#   doctor_begin; doctor_section "Install"; doctor_row bad "venv" "no interpreter" "sudo ... upgrade"
+#   doctor_feed "$(familydb doctor)"; doctor_show all|problems|failures; doctor_summary
+# A name is reported once, the first time: the machine's word on "service" beats the program's.
+DOCTOR_FINE=0; DOCTOR_WARN=0; DOCTOR_BAD=0; DOCTOR_SKIP=0; DOCTOR_VERDICT=""
+DOCTOR_FIRST=""; DOCTOR_FIRST_FIX=""
+_DR_GROUP=(); _DR_STATE=(); _DR_NAME=(); _DR_DETAIL=(); _DR_FIX=()
+_DR_SEEN=$'\n'
+_DR_NOW=""
+
+doctor_begin() {
+  DOCTOR_FINE=0; DOCTOR_WARN=0; DOCTOR_BAD=0; DOCTOR_SKIP=0; DOCTOR_VERDICT=""
+  DOCTOR_FIRST=""; DOCTOR_FIRST_FIX=""
+  _DR_GROUP=(); _DR_STATE=(); _DR_NAME=(); _DR_DETAIL=(); _DR_FIX=()
+  _DR_SEEN=$'\n'; _DR_NOW=""
+}
+
+doctor_section() { _DR_NOW="$1"; }   # doctor_section "Install" - the heading the next rows go under
+
+# shellcheck disable=SC2034  # the counts and the first failure are read by the scripts that source this file.
+doctor_row() { # doctor_row ok|warn|bad|skip NAME DETAIL [FIX]
+  local state="$1" name="$2" detail="$3" fix="${4:-}"
+  case "$_DR_SEEN" in *$'\n'"$name"$'\n'*) return 0 ;; esac
+  _DR_SEEN+="${name}"$'\n'
+  _DR_GROUP+=("$_DR_NOW"); _DR_STATE+=("$state"); _DR_NAME+=("$name"); _DR_DETAIL+=("$detail"); _DR_FIX+=("$fix")
+  case "$state" in
+    ok)   DOCTOR_FINE=$((DOCTOR_FINE + 1)) ;;
+    warn) DOCTOR_WARN=$((DOCTOR_WARN + 1)) ;;
+    bad)  DOCTOR_BAD=$((DOCTOR_BAD + 1))
+          if [ -z "$DOCTOR_FIRST" ]; then DOCTOR_FIRST="${name}: ${detail}"; DOCTOR_FIRST_FIX="$fix"; fi ;;
+    *)    DOCTOR_SKIP=$((DOCTOR_SKIP + 1)) ;;
+  esac
+}
+
+# shellcheck disable=SC2034  # the verdict is read by the scripts that source this file.
+doctor_feed() { # doctor_feed "the report" - rows from what `familydb doctor` printed
+  local line state="" name="" detail="" fix="" last="" mark
+  _doctor_pending() {
+    [ -z "$state" ] || doctor_row "$state" "$name" "$detail" "$fix"
+    state=""; name=""; detail=""; fix=""
+  }
   while IFS= read -r line; do
+    mark=""
     case "$line" in
-      "✓ "*) DOCTOR_FINE=$((DOCTOR_FINE + 1)); showing=0
-             [ "$mode" = all ] && { showing=1; printf '  %s%s%s %s\n' "$GRN" "$S_OK" "$OFF" "${line#✓ }"; } ;;
-      "! "*) DOCTOR_WARN=$((DOCTOR_WARN + 1)); showing=0
-             case "$mode" in all|problems) showing=1; printf '  %s%s%s %s\n' "$YEL" "$S_WARN" "$OFF" "${line#! }" ;; esac ;;
-      "✗ "*) DOCTOR_BAD=$((DOCTOR_BAD + 1)); showing=0
-             [ "$mode" = count ] || { showing=1; printf '  %s%s%s %s%s%s\n' "$RED" "$S_BAD" "$OFF" "$B" "${line#✗ }" "$OFF"; } ;;
-      "· "*) showing=0
-             [ "$mode" = all ] && { showing=1; printf '  %s%s %s%s\n' "$DIM" "$S_DOT" "${line#· }" "$OFF"; } ;;
-      "→ "*|"    →"*) [ "$showing" = 1 ] && printf '      %s%s%s\n' "$CYN" "${line#"${line%%→*}"}" "$OFF" ;;
-      "") ;;
-      *) last="$line"
-         [ "$mode" = all ] && printf '  %s%s%s\n' "$DIM" "$line" "$OFF" ;;
+      "▸ "*) _doctor_pending; doctor_section "${line#▸ }"; continue ;;
+      "✓ "*) mark=ok; line="${line#✓ }" ;;
+      "! "*) mark=warn; line="${line#! }" ;;
+      "✗ "*) mark=bad; line="${line#✗ }" ;;
+      "· "*) mark=skip; line="${line#· }" ;;
+      "→ "*|"    →"*) fix="${line#*→}"; fix="${fix# }"; continue ;;
+      "    fixed:"*) continue ;;
+      "") _doctor_pending; continue ;;
+      *) _doctor_pending; last="$line"; continue ;;
     esac
-    [ "$mode" = count ] || log_line "doctor: $line"
-  done <<<"$report"
+    _doctor_pending
+    state="$mark"
+    case "$line" in
+      *": "*) name="${line%%: *}"; detail="${line#*: }" ;;
+      *) name="${line%:}"; detail="" ;;
+    esac
+  done <<<"$1"
+  _doctor_pending
+  unset -f _doctor_pending
   case "$last" in [0-9]*|*"WARNING"*|*"ERROR"*) ;; *) DOCTOR_VERDICT="$last" ;; esac
+}
+
+_doctor_mark() { # _doctor_mark STATE - the mark in front of a row, in its colour
+  case "$1" in
+    ok)   printf '%s%s%s%s' "$B" "$GRN" "$S_OK" "$OFF" ;;
+    warn) printf '%s%s%s%s' "$B" "$YEL" "$S_WARN" "$OFF" ;;
+    bad)  printf '%s%s%s%s' "$B" "$RED" "$S_BAD" "$OFF" ;;
+    *)    printf '%s%s%s' "$DIM" "$S_OFF" "$OFF" ;;
+  esac
+}
+
+_doctor_width() { # the widest check name, kept between 8 and 24
+  local w=8 i
+  for i in "${!_DR_NAME[@]}"; do [ "${#_DR_NAME[i]}" -le "$w" ] || w="${#_DR_NAME[i]}"; done
+  [ "$w" -le 24 ] || w=24
+  printf '%s' "$w"
+}
+
+_doctor_line() { # _doctor_line INDEX NAMEWIDTH - a row, its detail wrapped under itself, its fix beneath
+  local i="$1" w="$2" state label pad fixpad style=""
+  state="${_DR_STATE[i]}"
+  printf -v label '%-*s' "$w" "${_DR_NAME[i]}"
+  printf -v pad '%*s' $((w + 6)) ''
+  printf -v fixpad '%*s' 6 ''
+  case "$state" in ok|skip) style="$DIM" ;; esac
+  [ "$state" != bad ] || label="${B}${label}${OFF}"
+  if [ -n "${_DR_DETAIL[i]}" ]; then
+    WRAP_FIRST="  $(_doctor_mark "$state") ${label}  " wrap "$pad" "$style" "${_DR_DETAIL[i]}"
+  else
+    printf '  %s %s\n' "$(_doctor_mark "$state")" "$label"
+  fi
+  if [ -n "${_DR_FIX[i]}" ] && [ "$state" != ok ] && [ "$state" != skip ]; then
+    WRAP_FIRST="${fixpad}${CYN}${S_TO}${OFF} " wrap "${fixpad}  " "$CYN" "${_DR_FIX[i]}"
+  fi
+  log_line "doctor: ${state} ${_DR_NAME[i]}: ${_DR_DETAIL[i]}${_DR_FIX[i]:+ -> ${_DR_FIX[i]}}"
+}
+
+_doctor_names() { # _doctor_names START END ROOM - the names of the fine checks in a section, as many as fit
+  local i out="" name
+  for ((i = $1; i < $2; i++)); do
+    [ "${_DR_STATE[i]}" = ok ] || continue
+    name="${_DR_NAME[i]}"
+    [ $((${#out} + ${#name} + 3)) -le "$3" ] || { out="${out}${S_ELLIPSIS}"; break; }
+    out="${out}${out:+ ${S_DOT} }${name}"
+  done
+  printf '%s' "$out"
+}
+
+_doctor_heading() { # _doctor_heading TITLE FINE WARN BAD - the section's name, a rule, and how its checks went
+  local title="$1" fine="$2" warn="$3" bad="$4" total tally colour fill room
+  total=$((fine + warn + bad))
+  if [ "$total" -eq 0 ]; then tally="$S_DOT"; colour="$DIM"
+  else
+    tally="${fine}/${total}"
+    if [ "$bad" -gt 0 ]; then colour="$RED"; elif [ "$warn" -gt 0 ]; then colour="$YEL"; else colour="$GRN"; fi
+  fi
+  room=$(( $(ui_width) - 5 - ${#title} - ${#tally} ))
+  [ "$room" -ge 2 ] || room=2
+  printf -v fill '%*s' "$room" ''
+  printf '%s%s%s %s%s%s %s%s%s %s%s%s\n' "$CYN" "$S_SECTION" "$OFF" "$B" "$title" "$OFF" "$DIM" "${fill// /$S_RULE}" "$OFF" "$colour" "$tally" "$OFF"
+}
+
+_doctor_section() { # _doctor_section MODE START END WIDTH - one heading's rows
+  local mode="$1" start="$2" end="$3" w="$4" i title fine=0 warn=0 bad=0 skip=0 names
+  title="${_DR_GROUP[start]}"
+  for ((i = start; i < end; i++)); do
+    case "${_DR_STATE[i]}" in ok) fine=$((fine + 1)) ;; warn) warn=$((warn + 1)) ;; bad) bad=$((bad + 1)) ;; *) skip=$((skip + 1)) ;; esac
+  done
+  if [ "$mode" = issues ] && [ $((warn + bad)) -eq 0 ]; then
+    for ((i = start; i < end; i++)); do log_line "doctor: ${_DR_STATE[i]} ${_DR_NAME[i]}: ${_DR_DETAIL[i]}"; done
+    return 0
+  fi
+  if [ "$mode" = problems ] && [ $((warn + bad)) -eq 0 ]; then
+    # Everything fine: one line that still says what was looked at.
+    names="$(_doctor_names "$start" "$end" $(( $(ui_width) - 20 )))"
+    if [ "$fine" -gt 0 ]; then
+      printf '%s %s%-14s%s %s%s%s\n' "$(_doctor_mark ok)" "$B" "${title:-Checks}" "$OFF" "$DIM" "$names" "$OFF"
+    else
+      printf '%s %s%-14s%s %snot checked%s\n' "$(_doctor_mark skip)" "$B" "${title:-Checks}" "$OFF" "$DIM" "$OFF"
+    fi
+    for ((i = start; i < end; i++)); do log_line "doctor: ${_DR_STATE[i]} ${_DR_NAME[i]}: ${_DR_DETAIL[i]}"; done
+    return 0
+  fi
+  [ -z "$title" ] || _doctor_heading "$title" "$fine" "$warn" "$bad"
+  for ((i = start; i < end; i++)); do
+    if [ "$mode" = problems ] || [ "$mode" = issues ]; then
+      case "${_DR_STATE[i]}" in
+        ok|skip) log_line "doctor: ${_DR_STATE[i]} ${_DR_NAME[i]}: ${_DR_DETAIL[i]}"; continue ;;
+      esac
+    fi
+    _doctor_line "$i" "$w"
+  done
+  if [ "$mode" = problems ] && [ "$fine" -gt 0 ]; then
+    names="$(_doctor_names "$start" "$end" $(( $(ui_width) - 20 )))"
+    printf '  %s %s%s fine: %s%s\n' "$(_doctor_mark ok)" "$DIM" "$fine" "$names" "$OFF"
+  fi
+}
+
+doctor_show() { # doctor_show all|problems|issues|failures - "problems" folds a section with nothing wrong into one line and shows only what is not fine in the rest; "issues" leaves the sections with nothing wrong out; "failures" only what must be fixed
+  local mode="$1" w i n=${#_DR_STATE[@]} start
+  w="$(_doctor_width)"
+  if [ "$mode" = failures ]; then
+    for i in "${!_DR_STATE[@]}"; do [ "${_DR_STATE[i]}" != bad ] || _doctor_line "$i" "$w"; done
+    return 0
+  fi
+  i=0
+  while [ "$i" -lt "$n" ]; do
+    start=$i
+    while [ "$i" -lt "$n" ] && [ "${_DR_GROUP[i]}" = "${_DR_GROUP[start]}" ]; do i=$((i + 1)); done
+    _doctor_section "$mode" "$start" "$i" "$w"
+  done
+}
+
+_tally_bar() { # _tally_bar VAR WIDTH FINE WARN BAD SKIP - a bar cut in the colours of how the checks went
+  local name="$1" width="$2" f="$3" w="$4" b="$5" s="$6" total cf cw cb cs rest i out=""
+  total=$((f + w + b + s)); [ "$total" -gt 0 ] || total=1
+  cf=$((width * f / total)); cw=$((width * w / total)); cb=$((width * b / total)); cs=$((width * s / total))
+  # What happened shows, however small.
+  [ "$w" -eq 0 ] || [ "$cw" -ge 1 ] || cw=1
+  [ "$b" -eq 0 ] || [ "$cb" -ge 1 ] || cb=1
+  [ "$s" -eq 0 ] || [ "$cs" -ge 1 ] || cs=1
+  rest=$((width - cf - cw - cb - cs))
+  # What is left over (or taken back) goes to the biggest part.
+  if [ "$f" -ge "$w" ] && [ "$f" -ge "$b" ] && [ "$f" -ge "$s" ]; then cf=$((cf + rest))
+  elif [ "$w" -ge "$b" ] && [ "$w" -ge "$s" ]; then cw=$((cw + rest))
+  elif [ "$b" -ge "$s" ]; then cb=$((cb + rest))
+  else cs=$((cs + rest)); fi
+  [ "$cf" -ge 0 ] || cf=0
+  out="${GRN}"; for ((i = 0; i < cf; i++)); do out+="$BAR_FULL"; done
+  out+="${OFF}${YEL}"; for ((i = 0; i < cw; i++)); do out+="$BAR_FULL"; done
+  out+="${OFF}${RED}"; for ((i = 0; i < cb; i++)); do out+="$BAR_FULL"; done
+  out+="${OFF}${DIM}"; for ((i = 0; i < cs; i++)); do out+="$BAR_EMPTY"; done
+  printf -v "$name" '%s%s' "$out" "$OFF"
+}
+
+doctor_summary() { # doctor_summary - how many were checked, in one bar, and where to start
+  local total=$((DOCTOR_FINE + DOCTOR_WARN + DOCTOR_BAD + DOCTOR_SKIP)) meter width=24
+  _tally_bar meter "$width" "$DOCTOR_FINE" "$DOCTOR_WARN" "$DOCTOR_BAD" "$DOCTOR_SKIP"
+  printf '\n'
+  rule
+  printf '  %sChecked %s%s  %s[%s%s]%s  %s%s%s%s' "$B" "$total" "$OFF" "$DIM" "$OFF" "$meter" "$DIM" "$GRN" "$DOCTOR_FINE" "$S_OK" "$OFF"
+  [ "$DOCTOR_WARN" -eq 0 ] || printf '  %s%s%s%s' "$YEL" "$DOCTOR_WARN" "$S_WARN" "$OFF"
+  [ "$DOCTOR_BAD" -eq 0 ] || printf '  %s%s%s%s' "$RED" "$DOCTOR_BAD" "$S_BAD" "$OFF"
+  [ "$DOCTOR_SKIP" -eq 0 ] || printf '  %s%s%s%s' "$DIM" "$DOCTOR_SKIP" "$S_OFF" "$OFF"
+  printf '\n'
+  log_line "doctor: ${total} checked: ${DOCTOR_FINE} fine, ${DOCTOR_WARN} to look at, ${DOCTOR_BAD} to fix, ${DOCTOR_SKIP} not checked"
+  if [ "$DOCTOR_BAD" -gt 0 ]; then
+    printf '\n  %sStart here%s\n' "$B" "$OFF"
+    WRAP_FIRST="  ${RED}${S_BAD}${OFF} " wrap "    " "" "$DOCTOR_FIRST"
+    [ -z "$DOCTOR_FIRST_FIX" ] || WRAP_FIRST="    ${CYN}${S_TO}${OFF} " wrap "      " "$CYN" "$DOCTOR_FIRST_FIX"
+  fi
+}
+
+show_doctor() { # show_doctor all|problems|failures|count "the report" - one report from `familydb doctor`, printed and counted
+  doctor_begin
+  doctor_feed "$2"
+  [ "$1" = count ] || doctor_show "$1"
+}
+
+render_unit() { # render_unit TARGET USER [UNIT] - the service file for an install at TARGET running as USER, on stdout; UNIT is the file to start from
+  local target="$1" user="$2" unit="${3:-$1/deploy/familydb.service}"
+  [ -f "$unit" ] || return 1
+  sed -e "s#/opt/familydb#${target}#g" -e "s#^User=.*#User=${user}#" -e "s#^Group=.*#Group=${user}#" "$unit" \
+    | {
+      # ProtectHome=true hides /home, so a checkout there would start empty; read-only keeps the
+      # hardening, and ReadWritePaths still lets the data folder through.
+      case "$target" in
+        /home/*|/root/*) sed -e 's#^ProtectHome=true#ProtectHome=read-only#' ;;
+        *) cat ;;
+      esac
+    }
 }
 
 # While CHANGELOG.md's newest heading says "in progress" an install follows the default branch;
