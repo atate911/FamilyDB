@@ -100,7 +100,7 @@ rs_set_aside() { # rs_set_aside - copy the database and its journal files into a
   printf '%s' "$dest"
 }
 
-rs_free_mb() { df -Pm "${1:-$TARGET}" 2>/dev/null | awk 'NR==2 {print $4}'; }
+rs_free_mb() { df -Pm "$TARGET" 2>/dev/null | awk 'NR==2 {print $4}'; }   # free megabytes where the install is
 
 # --- the menu ---------------------------------------------------------------------------------------
 
