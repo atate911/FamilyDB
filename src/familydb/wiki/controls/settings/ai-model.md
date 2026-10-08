@@ -68,7 +68,7 @@ Some changes need judgment and not a rule: which model replaces one that is goin
 |---|---|---|---|
 | Ask a stronger model when a change needs judgment (`judgements`) | off | Asks the questions that come up. A few cents each time; nothing on a day with no question. | on or off |
 | How strong a model weighs it (`judgement_level`) | best | The strength for these rare questions. | everyday, better or best |
-| What it may do by itself (`judgement_acts`) | within cost | **Put in a model at the same cost or less** (`within_cost`) saves a chosen model costing no more than about 10% over the one it replaces, tells admins, and lets you put the old one back. **Only suggest** (`suggest`) puts nothing in. | `within_cost` or `suggest` |
+| What it may do by itself (`judgement_acts`) | within cost | **Put in a model at most about 10% dearer** (`within_cost`) saves a chosen model costing no more than about 10% over the one it replaces, tells admins, and lets you put the old one back. **Only suggest** (`suggest`) puts nothing in. | `within_cost` or `suggest` |
 | Most to spend on it in a month (`judgement_budget`) | US$1 | Counted within the daily limit too, over the calendar month in the family's time zone. A budget under about 5 cents, or 0, asks nothing. | 0 to 50 |
 
 A judgment never changes a setting by itself except under "within cost"; a dearer model waits for an admin to press **Put these in** on [Models and prices](/wiki/controls/status/models-and-prices#put-these-in-and-put-back). A judgment must pick one of the options it was given, and a price is accepted only when it matches a price list.
