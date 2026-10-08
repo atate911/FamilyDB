@@ -8,6 +8,12 @@ older than what is installed. It gets a date when it is released.
 
 ### New since v0.2.0
 
+- **Wording fixes.** Drive times are called estimates where they were said to be looked up; the
+  take-off text says a kid's wish lists go and open to-dos and reminders are canceled; and a few
+  help lines now match what happens (a better model up to about 10% dearer may be put in by itself,
+  and a kid at the daily limit is told to come back tomorrow).
+- **No bot token in the journal.** A Telegram token quoted in an error's text or traceback is
+  taken out of the log and the problem log, as it already was in an ordinary line.
 - **Troubleshooting**, for admins, on the settings page. What went wrong in one place: what needs
   an admin, messages that did not go through, lookups that failed, calls to a model that failed
   and why, and a problem log of the warnings and errors the server logged (the same trouble
