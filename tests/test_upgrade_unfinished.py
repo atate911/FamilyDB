@@ -38,7 +38,7 @@ set -euo pipefail
 enable_failure_reporting
 LEDGER_DIR="$WORK/ledger"
 as_root() { "$@"; }
-take_backup() { LAST_BACKUP="$WORK/backups/familydb-1.sqlite3"; }
+take_backup() { echo BACKUP; LAST_BACKUP="$WORK/backups/familydb-1.sqlite3"; }
 stop_bot() { echo STOPPING; }
 start_bot() { echo STARTING; }
 retry() {
@@ -57,6 +57,19 @@ familydb_cmd() {
 """
 
 
+LOCK = """version = 1
+
+[[package]]
+name = "familydb"
+version = "0.3.0"
+
+[[package]]
+name = "anthropic"
+version = "{anthropic}"
+
+{extra}"""
+
+
 def _git(cwd: Path, *args: str) -> str:
     return subprocess.run(
         ["git", *args], cwd=cwd, env=GIT_ENV, check=True, capture_output=True, text=True
@@ -66,16 +79,21 @@ def _git(cwd: Path, *args: str) -> str:
 class Server:
     """A remote with two commits, a checkout one behind it, and a database one migration behind."""
 
-    def __init__(self, tmp: Path):
+    def __init__(self, tmp: Path, *, rich: bool = False):
         self.tmp = tmp
         remote = tmp / "remote.git"
         seed = tmp / "seed"
         _git(tmp, "init", "-q", "--bare", "-b", "main", str(remote))
         _git(tmp, "init", "-q", "-b", "main", str(seed))
-        (seed / "CHANGELOG.md").write_text("# Changelog\n\n## v9.9.9 — in progress\n")
+        (seed / "CHANGELOG.md").write_text("# Changelog\n\n## v9.9.9 — in progress\n\n### New\n\n")
         migrations = seed / "src/familydb/store/migrations"
         migrations.mkdir(parents=True)
         (migrations / "0001_first.sql").write_text("select 1;\n")
+        if rich:
+            (seed / "uv.lock").write_text(LOCK.format(anthropic="1.0.0", extra=""))
+            (seed / ".env.example").write_text("# Notes\nPROVIDER=openai\n# WEB_HOST=\n")
+            (seed / "deploy").mkdir()
+            (seed / "deploy/familydb.service").write_text("[Service]\nUser=familydb\n")
         _git(seed, "add", "-A")
         _git(seed, "commit", "-q", "-m", "one")
         _git(seed, "remote", "add", "origin", str(remote))
@@ -84,8 +102,22 @@ class Server:
         _git(tmp, "clone", "-q", str(remote), str(self.target))
         self.before = _git(self.target, "rev-parse", "HEAD")
         (migrations / "0002_second.sql").write_text("select 2;\n")
+        if rich:
+            (seed / "uv.lock").write_text(
+                LOCK.format(
+                    anthropic="1.1.0", extra='[[package]]\nname = "newthing"\nversion = "2.0.0"\n'
+                )
+            )
+            (seed / ".env.example").write_text(
+                "# Notes\nPROVIDER=openai\n# WEB_HOST=\nDIGEST_SWITCH=true\n"
+            )
+            (seed / "deploy/familydb.service").write_text("[Service]\nUser=familydb\nNice=5\n")
+            changelog = (seed / "CHANGELOG.md").read_text()
+            (seed / "CHANGELOG.md").write_text(
+                changelog + "- **The digest can be switched off.** A setting.\n"
+            )
         _git(seed, "add", "-A")
-        _git(seed, "commit", "-q", "-m", "two")
+        _git(seed, "commit", "-q", "-m", "A switch for the digest (#64)" if rich else "two")
         _git(seed, "push", "-q", "origin", "main")
         self.db = tmp / "live.sqlite3"
         with closing(sqlite3.connect(self.db)) as conn:
@@ -119,6 +151,7 @@ class Server:
                 "BACKUP_DIR": (self.tmp / "backups").as_posix(),
                 "NEWEST": "2",
                 "NO_COLOR": "1",
+                "GITHUB_TOKEN": "",  # one in the environment is a warning of its own
                 **env,
             },
             cwd=self.tmp,
@@ -181,3 +214,73 @@ def test_code_on_the_target_with_an_unmigrated_database_is_not_up_to_date(tmp_pa
     assert "Already up to date" not in result.stdout
     assert "the database is at migration 1" in result.stderr
     assert server.version() == 2
+
+
+def test_the_screen_says_what_this_upgrade_changes_before_it_asks_and_takes_no_backup_before(
+    tmp_path,
+):
+    server = Server(tmp_path, rich=True)
+    result = server.upgrade()
+    assert result.returncode == 0, result.stdout + result.stderr
+    out = result.stdout
+    order = [
+        out.index("1 commit (#64)"),
+        out.index("Database"),
+        out.index("BACKUP"),  # only once it was agreed
+        out.index("To go back:"),
+        out.index("STOPPING"),
+    ]
+    assert order == sorted(order)
+    flat = " ".join(out.split())
+    assert "A switch for the digest (#64)" in out  # the commits, as a pull request lists them
+    assert "The digest can be switched off" in out  # what the changelog says is new
+    assert "1 new migration: 0002_second" in flat
+    assert "1 updated (anthropic 1.0.0 → 1.1.0); 1 added (newthing 2.0.0)" in flat
+    assert "new in .env.example: DIGEST_SWITCH" in flat
+    assert "changed in deploy/familydb.service" in flat
+    assert "some rewrite what is in it" in flat  # said because there is a migration to say it about
+
+
+def test_what_goes_as_expected_is_one_line_and_the_last_line_carries_what_moved(tmp_path):
+    server = Server(tmp_path, rich=True)
+    result = server.upgrade()
+    assert result.returncode == 0, result.stdout + result.stderr
+    out = result.stdout
+    assert "Fetched" not in out and "Checking out" not in out  # nothing a person acts on
+    assert "Stopping" not in out and "Starting" not in out
+    assert "Applying 1 new migration (0002_second)" in out
+    last = [line for line in out.splitlines() if line.startswith("✓ Upgraded to")]
+    assert len(last) == 1
+    assert "· 1 commit · 1 migration · 2 packages · down " in last[0]
+    assert "go back" not in out.split(last[0])[1].lower()  # said again only if it may be needed
+
+
+def test_an_upgrade_with_nothing_to_change_says_so_in_a_line_and_takes_no_backup(tmp_path):
+    server = Server(tmp_path)
+    assert server.upgrade().returncode == 0
+    again = server.upgrade()
+    assert again.returncode == 0, again.stdout + again.stderr
+    assert "Already up to date" in again.stdout
+    assert "BACKUP" not in again.stdout and "commit" not in again.stdout
+
+
+def test_a_change_with_no_migration_or_package_move_says_nothing_about_them(tmp_path):
+    server = Server(tmp_path)
+    (server.tmp / "seed/src/familydb/store/migrations/0002_second.sql").unlink()
+    _git(server.tmp / "seed", "commit", "-q", "-am", "drop it again")
+    _git(server.tmp / "seed", "push", "-q", "origin", "main")
+    result = server.upgrade()
+    assert result.returncode == 0, result.stdout + result.stderr
+    flat = " ".join(result.stdout.split())
+    # Nothing to say about the database or the packages, so nothing is said: no news is the report.
+    assert "Database" not in flat and "Packages" not in flat and "Settings" not in flat
+    assert "some rewrite what is in it" not in flat
+    assert "commit" in flat and "migration" not in flat.split("Upgraded to")[1]
+
+
+def test_a_failed_step_after_the_summary_still_says_how_to_go_back(tmp_path):
+    server = Server(tmp_path, rich=True)
+    result = server.upgrade(FAIL_MIGRATE="1")
+    assert result.returncode != 0
+    assert f"checkout --quiet --detach {server.before}" in result.stderr
+    assert "finish the upgrade: sudo bash" in result.stderr

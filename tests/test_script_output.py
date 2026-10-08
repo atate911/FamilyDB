@@ -164,7 +164,7 @@ def test_status_leads_with_a_verdict_and_ends_with_what_to_do(tmp_path) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     out = done.stdout
     assert not ESCAPE.search(out + done.stderr)
-    assert re.search(r"^FamilyDB \W Status$", out, re.M)  # the banner says what this is
+    assert re.search(r"^FamilyDB \W Status  ", out, re.M)  # the banner says what this is, and where
     # No backup and no schedule: not well, and it says how to put that right, command first.
     assert "Running, with 2 things to look at" in out  # the backup and its schedule
     assert re.search(r"^  ! Last backup +none yet", out, re.M)
@@ -214,7 +214,7 @@ def test_a_dry_run_says_it_changed_nothing_and_changes_nothing(tmp_path) -> None
     done = _maintain(target, env, "backup", "--dry-run")
     assert done.returncode == 0, done.stdout + done.stderr
     assert "[ DRY RUN ]" in done.stdout
-    assert "dry run, not done" in done.stdout
+    assert "[dry run] would back up the database" in done.stdout
     assert "Dry run finished: nothing was changed" in done.stdout
     assert list((target / "backups").iterdir()) == []
 
@@ -227,10 +227,10 @@ def test_a_backup_ends_with_where_it_is_and_how_to_fetch_it(tmp_path) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     out = done.stdout
     assert [p.suffix for p in (target / "backups").iterdir()] == [".sqlite3"]
-    assert "✓ Backup saved" in out
-    assert re.search(r"File +/.*familydb-\d+\.sqlite3", out)
-    assert "Keep a copy somewhere that is not this machine" in out
+    assert re.search(r"✓ Backed up the database \(\S+\) to /.*familydb-\d+\.sqlite3", out)
+    assert "To fetch a copy off this machine" in out
     assert "scp " in out
+    assert "SQLite's online backup" not in out  # how it works is not what this run is about
     assert not ESCAPE.search(out + done.stderr)
 
 
@@ -240,21 +240,67 @@ def test_a_refused_question_changes_nothing_and_says_so(tmp_path) -> None:
     assert done.returncode == 0
     out = done.stdout
     asked = done.stdout + done.stderr  # the question itself goes to stderr when nobody can answer
-    assert out.index("What scheduling backups does") < asked.index("Add them to the crontab?")
+    assert re.search(
+        r"Schedule +every night at 03:15", out
+    )  # what this run would set up, not how cron works
+    assert out.index("Schedule") < asked.index("Add the nightly backup to the crontab?")
     assert "There is no terminal here to answer, so the answer is no." in asked
     assert "Nothing was changed." in out
-    assert not (target / "backups" / "x").exists()
+
+
+def _asked(default: str, answer: bytes) -> tuple[int, str]:
+    """Run approve at a terminal, type ANSWER, and say what it decided (0 yes, 1 no) and showed."""
+    master, slave = os.openpty()
+    process = subprocess.Popen(
+        [BASH, "-c", LIB + f'approve "Go on?" {default} && exit 0 || exit 1'],
+        env={**os.environ, "NO_COLOR": "1"},
+        stdin=slave,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        close_fds=True,
+        text=True,
+    )
+    os.close(slave)
+    os.write(master, answer)
+    _, shown = process.communicate(timeout=30)
+    os.close(master)
+    return process.returncode, shown
+
+
+@pytest.mark.parametrize(
+    ("default", "typed", "decided"),
+    [
+        ("yes", b"\n", 0),  # Enter takes the default: what is done every week is a yes
+        ("yes", b"n\n", 1),
+        ("yes", b"y\n", 0),
+        ("no", b"\n", 1),  # what cannot be undone is a no until somebody says otherwise
+        ("no", b"y\n", 0),
+        ("no", b"maybe\n", 1),  # anything else is not yes
+    ],
+)
+def test_enter_takes_the_default_and_a_default_of_no_is_for_what_cannot_be_undone(
+    default, typed, decided
+) -> None:
+    assert _asked(default, typed)[0] == decided
+
+
+def test_the_question_shows_which_answer_enter_gives() -> None:
+    assert "[Y/n]" in _asked("yes", b"\n")[1]
+    assert "[y/N]" in _asked("no", b"\n")[1]
+
+
+def test_saying_yes_on_the_command_line_does_not_ask_and_does_not_chatter() -> None:
+    done = _lib('ASSUME_YES=1; approve "Go on?" no && echo went')
+    assert done.stdout == "went\n" and done.stderr == ""
 
 
 # -- the layout helpers
 
 
-def test_a_plan_is_numbered_with_its_reasons_and_what_protects_and_what_stays() -> None:
+def test_the_installers_plan_is_numbered_with_its_reasons_and_what_stays() -> None:
     done = _lib(
         'plan_item "Fetch the code" "it is what the bot runs"\n'
         'plan_item "Restart" "so it takes effect"\n'
-        'plan_note "It is down for a minute."\n'
-        'plan_safe "A backup comes first."\n'
         'plan_untouched ".env"\n'
         'show_plan "What this does"\n'
     )
@@ -264,21 +310,7 @@ def test_a_plan_is_numbered_with_its_reasons_and_what_protects_and_what_stays() 
     assert any(re.fullmatch(r"  1  Fetch the code", line) for line in lines)
     assert any(re.fullmatch(r"  2  Restart", line) for line in lines)
     assert "     it is what the bot runs" in lines
-    assert "  ! It is down for a minute." in lines
-    assert "  ✓ A backup comes first." in lines
     assert "    · .env" in lines
-
-
-def test_phases_are_numbered_against_the_plan_only_when_there_is_one() -> None:
-    planned = _lib(
-        'plan_item "a" "x"; plan_item "b" "y"; show_plan >/dev/null\n'
-        'phase "First"; ok "did it"; phase "Second"\n'
-    )
-    assert "Step 1 of 2 · First" in planned.stdout
-    assert "Step 2 of 2 · Second" in planned.stdout
-    assert "  ✓ did it" in planned.stdout  # under its heading
-    unplanned = _lib('phase "Only"; ok "did it"\n')
-    assert "Step" not in unplanned.stdout and "\nOnly\n" in unplanned.stdout
 
 
 def test_every_warning_is_said_again_at_the_end_and_counted() -> None:

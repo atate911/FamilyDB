@@ -40,7 +40,7 @@ else
   SPIN_FRAMES=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
 fi
 
-# What a phase prints is indented under its heading; `head2` and `finish` go back to the margin.
+# What a command prints under a heading can be indented with this; `head2` and `finish` go back to the margin.
 INDENT=""
 WARNED=()   # every warning this run said, for the recap at the end
 SCRIPT_STARTED=$SECONDS
@@ -91,7 +91,7 @@ log_line() { # one line into the transcript, never onto the screen
 
 # --- Layout -------------------------------------------------------------------------------------
 # What a command shows, in the order a person reads it: a banner (what, where, how), a plan (what
-# it is about to do and why), numbered phases with a line per thing done, and a last word that says
+# it is about to do and why, for the installers), a line per thing done, and a last word that says
 # how it went and what to do next. Everything here is for the eye: the transcript in the log file
 # has the same facts, with no colour.
 
@@ -157,38 +157,29 @@ ago() { # ago SECONDS - how long ago, in the words a person would use
   fi
 }
 
-kv() { # kv LABEL VALUE [ok|warn|bad|off] - one fact on a line, the labels lined up; a mark says how it is
-  local mark="  "
+kv() { # kv LABEL VALUE [ok|warn|bad|off] - one fact on a line, the labels lined up; a long value wraps under itself
+  local mark="  " base="${INDENT:-  }" pad
   case "${3:-}" in
     ok)   mark="${GRN}${S_OK}${OFF} " ;;
     warn) mark="${YEL}${S_WARN}${OFF} " ;;
     bad)  mark="${RED}${S_BAD}${OFF} " ;;
     off)  mark="${DIM}${S_OFF}${OFF} " ;;
   esac
-  printf '%s%s%s%-12s%s %s\n' "${INDENT:-  }" "$mark" "$DIM" "$1" "$OFF" "$2"
+  printf -v pad '%*s' $((${#base} + 15)) ''
+  WRAP_FIRST="$(printf '%s%s%s%-12s%s ' "$base" "$mark" "$DIM" "$1" "$OFF")" wrap "$pad" "" "$2"
   log_line "   $1: $2"
 }
 
-banner() { # banner "Upgrade" - the first thing a command shows
+banner() { # banner "Upgrade" ["where, and how it runs"] - the first thing a command shows
   INDENT=""
-  printf '\n%sFamilyDB%s %s%s%s %s%s%s\n' "$B" "$OFF" "$DIM" "$S_SEP" "$OFF" "$B$CYN" "$1" "$OFF"
+  printf '\n%sFamilyDB%s %s%s%s %s%s%s' "$B" "$OFF" "$DIM" "$S_SEP" "$OFF" "$B$CYN" "$1" "$OFF"
+  [ -z "${2:-}" ] || printf '  %s%s%s' "$DIM" "$2" "$OFF"
+  printf '\n'
   rule
-  log_line "== $1"
+  log_line "== $1 ${2:-}"
   if [ "${DRY_RUN:-0}" = 1 ]; then
     printf '  %s[ DRY RUN ]%s %sNothing below is done; it only shows what would be.%s\n' "$BADGE" "$OFF" "$B" "$OFF"
   fi
-}
-
-PHASE_NUMBER=0
-phase() { # phase "Title" - the next step of the plan, numbered against it when there is one
-  local total=${#PLAN_WHAT[@]} label=""
-  PHASE_NUMBER=$((PHASE_NUMBER + 1))
-  if [ "$total" -gt 1 ] && [ "$PHASE_NUMBER" -le "$total" ]; then
-    label="${CYN}Step ${PHASE_NUMBER} of ${total}${OFF} ${DIM}${S_DOT}${OFF} "
-  fi
-  printf '\n%s%s%s%s\n' "$label" "$B" "$1" "$OFF"
-  log_line "== ${PHASE_NUMBER}: $1"
-  INDENT="  "
 }
 
 finish() { # finish ok|warn|bad "Headline" - the last word: how it went, with the time it took
@@ -224,6 +215,11 @@ recap() { # every warning this run said, once more, so none is lost in the scrol
   for line in "${WARNED[@]}"; do
     WRAP_FIRST="  ${YEL}${S_WARN}${OFF} " wrap "    " "" "$line"
   done
+}
+
+caution() { # caution TEXT - something to know before going on; not a warning of the run, so not said again
+  WRAP_FIRST="${INDENT}${YEL}${S_WARN}${OFF} " wrap "${INDENT}  " "" "$*"
+  log_line "caution: $*"
 }
 
 after() { # after "Heading" - what comes next, or what to do if it went wrong
@@ -569,7 +565,7 @@ _run_step() {
     printf '%s\n' "$output" >>"${LOG_FILE:-/dev/null}" 2>/dev/null || true
   fi
   if [ "$status" = 0 ]; then
-    _ok_line "$what" "$(_took $((SECONDS - began)))"
+    _step_done "$what" "$(_took $((SECONDS - began)))"
     FAILED_STEP=""
     return 0
   fi
@@ -589,6 +585,16 @@ _run_step() {
   fi
   FAILED_STEP=""
   return "$status"
+}
+
+# A step that went as expected can say nothing, when a line of the caller's says it better: with
+# STEP_QUIET set, only what went wrong is shown (the log has all of it).
+_step_done() { # _step_done WHAT [SUFFIX]
+  if [ -n "${STEP_QUIET:-}" ]; then
+    log_line "ok: $1${2:+ $2}"
+  else
+    _ok_line "$1" "${2:-}"
+  fi
 }
 
 _dry_line() { # what a step would have done, in a dry run
@@ -626,7 +632,7 @@ retry() {
     output="$_OUT"; status="$_STATUS"
     [ -n "$output" ] && { printf '%s\n' "$output" >>"${LOG_FILE:-/dev/null}" 2>/dev/null || true; }
     if [ "$status" = 0 ]; then
-      _ok_line "$what" "$(_took $((SECONDS - began)))"
+      _step_done "$what" "$(_took $((SECONDS - began)))"
       FAILED_STEP=""
       return 0
     fi
@@ -777,17 +783,13 @@ diagnose() { # diagnose "<the command's output>"
 PLAN_WHAT=()
 PLAN_WHY=()
 PLAN_UNTOUCHED=()
-PLAN_NOTES=()
-PLAN_SAFE=()
 
 plan_item()      { PLAN_WHAT+=("$1"); PLAN_WHY+=("$2"); }
 plan_untouched() { PLAN_UNTOUCHED+=("$1"); }
-plan_note()      { PLAN_NOTES+=("$1"); }   # what could hurt, to know before saying yes
-plan_safe()      { PLAN_SAFE+=("$1"); }    # what protects against it
 
 plan_is_empty() { [ ${#PLAN_WHAT[@]} -eq 0 ]; }
 
-show_plan() { # show_plan "heading" - the numbered steps, why each, what stays alone and what to know
+show_plan() { # show_plan "heading" - the numbered steps, why each, and what stays alone
   plan_is_empty && return 0
   head2 "${1:-What this will change on this machine}"
   local i
@@ -797,19 +799,6 @@ show_plan() { # show_plan "heading" - the numbered steps, why each, what stays a
     log_line "plan: ${PLAN_WHAT[i]} :: ${PLAN_WHY[i]}"
   done
   local item
-  if [ ${#PLAN_NOTES[@]} -gt 0 ] || [ ${#PLAN_SAFE[@]} -gt 0 ]; then printf '\n'; fi
-  if [ ${#PLAN_NOTES[@]} -gt 0 ]; then
-    for item in "${PLAN_NOTES[@]}"; do
-      WRAP_FIRST="  ${YEL}${S_WARN}${OFF} " wrap "    " "" "$item"
-      log_line "plan note: $item"
-    done
-  fi
-  if [ ${#PLAN_SAFE[@]} -gt 0 ]; then
-    for item in "${PLAN_SAFE[@]}"; do
-      WRAP_FIRST="  ${GRN}${S_OK}${OFF} " wrap "    " "" "$item"
-      log_line "plan safeguard: $item"
-    done
-  fi
   if [ ${#PLAN_UNTOUCHED[@]} -gt 0 ]; then
     printf '\n  %sLeft alone:%s\n' "$DIM" "$OFF"
     for item in "${PLAN_UNTOUCHED[@]}"; do
@@ -834,11 +823,13 @@ system_change() { # system_change "what" "why"
 #
 #   confirm  — a preference, where --yes means "take the default you offered".
 #   approve  — an action that needs someone to say so, where --yes means yes. With no terminal
-#              and no --yes there is nobody to ask, so it is a no.
-approve() { # approve "question"
-  local question="$1" reply
+#              and no --yes there is nobody to ask, so it is a no. Enter takes the default, which
+#              is yes for what a person does every week and no for what cannot be undone.
+approve() { # approve "question" [yes|no]
+  local question="$1" default="${2:-no}" reply hint="y/N"
+  [ "$default" != yes ] || hint="Y/n"
   if [ "${ASSUME_YES:-0}" = 1 ]; then
-    note "${question} — yes, because --yes was given."
+    log_line "approved by --yes: ${question}"
     return 0
   fi
   if [ ! -t 0 ]; then
@@ -846,8 +837,13 @@ approve() { # approve "question"
     note "There is no terminal here to answer, so the answer is no. Pass --yes if you mean it."
     return 1
   fi
-  read -r -p "${CYN}?${OFF} ${B}${question}${OFF} [y/N]: " reply || reply=""
-  case "$reply" in [Yy]*|yes) return 0 ;; *) return 1 ;; esac
+  read -r -p "${CYN}?${OFF} ${B}${question}${OFF} [${hint}]: " reply || reply=""
+  case "$reply" in
+    [Yy]*) return 0 ;;
+    [Nn]*) return 1 ;;
+    '') [ "$default" = yes ] ;;
+    *) return 1 ;;
+  esac
 }
 
 confirm() { # confirm "question" yes|no  - honours ASSUME_YES and a missing terminal
@@ -860,11 +856,11 @@ confirm() { # confirm "question" yes|no  - honours ASSUME_YES and a missing term
 
 # `familydb doctor` prints "MARK name: detail" for each finding, "    → fix" under any that is not fine,
 # and its verdict last. This colours that, and counts it. "problems" shows only what is not fine, for
-# a run that has something else to say first, "failures" only what must be fixed; "all" shows the lot. The counts are left in
+# a run that has something else to say first, "failures" only what must be fixed, "count" nothing at all; "all" shows the lot. The counts are left in
 # DOCTOR_FINE, DOCTOR_WARN and DOCTOR_BAD, and its own last line in DOCTOR_VERDICT.
 DOCTOR_FINE=0; DOCTOR_WARN=0; DOCTOR_BAD=0; DOCTOR_VERDICT=""
 # shellcheck disable=SC2034  # the counts and the verdict are read by the scripts that source this file.
-show_doctor() { # show_doctor all|problems|failures "the report"
+show_doctor() { # show_doctor all|problems|failures|count "the report"
   local mode="$1" report="$2" line showing=0 last=""
   DOCTOR_FINE=0; DOCTOR_WARN=0; DOCTOR_BAD=0; DOCTOR_VERDICT=""
   while IFS= read -r line; do
@@ -872,9 +868,9 @@ show_doctor() { # show_doctor all|problems|failures "the report"
       "✓ "*) DOCTOR_FINE=$((DOCTOR_FINE + 1)); showing=0
              [ "$mode" = all ] && { showing=1; printf '  %s%s%s %s\n' "$GRN" "$S_OK" "$OFF" "${line#✓ }"; } ;;
       "! "*) DOCTOR_WARN=$((DOCTOR_WARN + 1)); showing=0
-             [ "$mode" = failures ] || { showing=1; printf '  %s%s%s %s\n' "$YEL" "$S_WARN" "$OFF" "${line#! }"; } ;;
-      "✗ "*) DOCTOR_BAD=$((DOCTOR_BAD + 1)); showing=1
-             printf '  %s%s%s %s%s%s\n' "$RED" "$S_BAD" "$OFF" "$B" "${line#✗ }" "$OFF" ;;
+             case "$mode" in all|problems) showing=1; printf '  %s%s%s %s\n' "$YEL" "$S_WARN" "$OFF" "${line#! }" ;; esac ;;
+      "✗ "*) DOCTOR_BAD=$((DOCTOR_BAD + 1)); showing=0
+             [ "$mode" = count ] || { showing=1; printf '  %s%s%s %s%s%s\n' "$RED" "$S_BAD" "$OFF" "$B" "${line#✗ }" "$OFF"; } ;;
       "· "*) showing=0
              [ "$mode" = all ] && { showing=1; printf '  %s%s %s%s\n' "$DIM" "$S_DOT" "${line#· }" "$OFF"; } ;;
       "→ "*|"    →"*) [ "$showing" = 1 ] && printf '      %s%s%s\n' "$CYN" "${line#"${line%%→*}"}" "$OFF" ;;
@@ -882,7 +878,7 @@ show_doctor() { # show_doctor all|problems|failures "the report"
       *) last="$line"
          [ "$mode" = all ] && printf '  %s%s%s\n' "$DIM" "$line" "$OFF" ;;
     esac
-    log_line "doctor: $line"
+    [ "$mode" = count ] || log_line "doctor: $line"
   done <<<"$report"
   case "$last" in [0-9]*|*"WARNING"*|*"ERROR"*) ;; *) DOCTOR_VERDICT="$last" ;; esac
 }
