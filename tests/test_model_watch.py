@@ -462,3 +462,82 @@ def test_one_press_on_the_status_page_puts_the_suggested_model_in(settings, conn
     assert answer.status_code == 302 and answer.headers["Location"].endswith("/settings/model")
     app.refresh()
     assert app.settings.worker_model == "claude-sonnet-5"
+
+
+# -- a company the settings define
+
+
+def _with_openrouter(settings, **more):
+    from familydb.config import CompanyDef
+
+    one = CompanyDef(
+        slug="openrouter",
+        label="OpenRouter",
+        base_url="https://openrouter.ai/api/v1",
+        model="vendor/chat",
+        better_model="vendor/better",
+        **more,
+    )
+    return settings.model_copy(update={"companies": [one], "company_keys": {"openrouter": "k"}})
+
+
+def test_an_added_companys_models_are_kept_and_priced_by_its_own_list(settings, conn) -> None:
+    from familydb.agent.providers import companies
+
+    live = _with_openrouter(settings)
+    app = _app(live)
+    listed = ["vendor/chat", "vendor/better", "vendor/other"]
+    rates = {"vendor/chat": (0.2, 0.8, 0.05), "vendor/other": (9.0, 9.0, None)}
+    model_watch.check(
+        app,
+        lists=_both(),
+        listers={**_claude("claude-haiku-4-5"), "openrouter": lambda: listed},
+        pricers={"openrouter": lambda: rates},
+    )
+    kept = store.all_seen(conn)
+    # Only the models its definition names are kept, not everything it lists.
+    assert {name for (owner, name) in kept if owner == "openrouter"} == {
+        "vendor/chat",
+        "vendor/better",
+    }
+    chat = kept[("openrouter", "vendor/chat")]
+    assert (chat.input, chat.output, chat.cached) == (0.2, 0.8, 0.05)
+    assert chat.listed is True and chat.priced_by == "its own list"
+    assert kept[("openrouter", "vendor/better")].output is None  # its list gave no price for it
+    assert prices.price("openrouter", "vendor/chat").output == 0.8  # in force, by exact name
+    assert prices.price("openrouter", "vendor/better") is None  # so counted at the dearer rate
+    assert companies.get("openrouter", app.settings) is not None
+
+
+def test_a_price_typed_for_an_added_model_wins_over_its_lists(settings, conn) -> None:
+    from familydb.config import ModelPrice
+
+    live = _with_openrouter(settings, prices=[ModelPrice(name="vendor/chat", input=1, output=2)])
+    app = _app(live)
+    model_watch.check(
+        app,
+        lists=_both(),
+        listers={**_claude("claude-haiku-4-5"), "openrouter": lambda: ["vendor/chat"]},
+        pricers={"openrouter": lambda: {"vendor/chat": (0.2, 0.8, None)}},
+    )
+    assert prices.price("openrouter", "vendor/chat").output == 2  # the family's own word
+
+
+def test_a_company_that_cannot_be_asked_leaves_what_was_known_alone(settings, conn) -> None:
+    live = _with_openrouter(settings)
+    app = _app(live)
+    args = {"lists": _both()}
+    model_watch.check(
+        app,
+        **args,
+        listers={**_claude("claude-haiku-4-5"), "openrouter": lambda: ["vendor/chat"]},
+        pricers={"openrouter": lambda: {"vendor/chat": (0.2, 0.8, None)}},
+    )
+    model_watch.check(
+        app,
+        **args,
+        listers={**_claude("claude-haiku-4-5"), "openrouter": lambda: None},
+        pricers={"openrouter": lambda: None},
+    )
+    kept = store.all_seen(conn)[("openrouter", "vendor/chat")]
+    assert kept.listed is True and kept.output == 0.8  # not read as "no longer listed"

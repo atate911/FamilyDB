@@ -465,3 +465,61 @@ def test_a_name_in_env_that_nothing_reads_is_said_with_the_one_it_is_close_to(
     (tmp_path / ".env").chmod(0o600)
     _app, clean = _report(settings, clock)
     assert "env options" not in [c.name for c in clean.checks]
+
+
+# -- a company the settings define
+
+
+def _with_company(settings, *, key="sk-or-1", **more):
+    from familydb.config import CompanyDef
+
+    one = CompanyDef(
+        slug="openrouter",
+        label="OpenRouter",
+        base_url="https://openrouter.ai/api/v1",
+        model="vendor/chat",
+        **more,
+    )
+    return {"companies": [one], "company_keys": {"openrouter": key} if key else {}}
+
+
+def test_a_company_with_no_key_is_a_warning_that_says_what_is_missing(settings, clock) -> None:
+    _app, report = _report(settings, clock, **_with_company(settings, key=""))
+    check = next(c for c in report.checks if c.name == "company openrouter")
+    assert check.verdict == doctor.WARN and "its key is not set" in check.detail
+
+
+def test_an_unpriced_model_is_said_to_be_counted_dear(settings, clock) -> None:
+    _app, report = _report(settings, clock, **_with_company(settings))
+    assert _verdict_of(report, "company openrouter") == doctor.OK
+    prices = next(c for c in report.checks if c.name == "company openrouter prices")
+    assert prices.verdict == doctor.WARN and "vendor/chat" in prices.detail
+
+
+def test_online_the_company_is_asked_about_its_key_and_its_models(
+    settings, clock, monkeypatch
+) -> None:
+    from familydb.agent.providers.chat import ChatProvider
+
+    for verdict, expected in (
+        ("works", doctor.OK),
+        ("refused", doctor.FAIL),
+        ("unchecked", doctor.WARN),
+    ):
+        monkeypatch.setattr(ChatProvider, "check_key", lambda self, v=verdict: v)
+        monkeypatch.setattr(ChatProvider, "listed_models", lambda self: ["vendor/chat"])
+        app = App(settings.model_copy(update=_with_company(settings)), clock)
+        report = doctor.Report()
+        doctor.check_added_companies(app, report, online=True)
+        assert _verdict_of(report, "company openrouter") == expected, verdict
+    monkeypatch.setattr(ChatProvider, "check_key", lambda self: "works")
+    monkeypatch.setattr(ChatProvider, "listed_models", lambda self: ["vendor/other"])
+    report = doctor.Report()
+    doctor.check_added_companies(app, report, online=True)
+    gone = next(c for c in report.checks if c.name == "company openrouter")
+    assert gone.verdict == doctor.WARN and "not listed: vendor/chat" in gone.detail
+
+
+def test_a_choice_nobody_has_a_key_for_is_still_reported_not_a_crash(settings, clock) -> None:
+    _app, report = _report(settings, clock, **_with_company(settings), provider="openrouter")
+    assert _verdict_of(report, "model key") == doctor.OK

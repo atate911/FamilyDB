@@ -12,6 +12,8 @@ LINKS: dict[str, str] = {
     "anthropic_limits": "https://console.anthropic.com/settings/limits",
     "anthropic_keys": "https://console.anthropic.com/settings/keys",
     "gemini_keys": "https://aistudio.google.com/apikey",
+    "openrouter_keys": "https://openrouter.ai/keys",
+    "openrouter_models": "https://openrouter.ai/models",
     "google_cloud": "https://console.cloud.google.com/",
     "google_project": "https://console.cloud.google.com/projectcreate",
     "google_calendar_api": (

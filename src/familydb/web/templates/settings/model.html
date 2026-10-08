@@ -33,6 +33,8 @@
   </details>
 </section>
 
+{% include "settings/_companies.html" %}
+
 {% set models = groups.models %}
 {% set others = models.boxes | rejectattr('field.key', 'in', in_use) | list %}
 <form class="sform" method="post" action="{{ url_for('settings.save') }}">

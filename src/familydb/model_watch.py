@@ -23,7 +23,7 @@ from typing import Any
 
 from familydb import alerts
 from familydb.agent import gateway, providers
-from familydb.agent.providers import catalog, parts, prices
+from familydb.agent.providers import catalog, companies, parts, prices
 from familydb.agent.providers.prices import Price
 from familydb.dates import utc_iso
 from familydb.integrations.price_lists import Listed, PriceLists, PriceListsAPI, Prices
@@ -34,7 +34,7 @@ from familydb.store.model_watch import Seen
 
 log = logging.getLogger(__name__)
 
-COMPANIES = ("openai", "anthropic", "gemini")
+COMPANIES = tuple(company.slug for company in companies.BUILT_IN)
 SOURCES = {"litellm": "LiteLLM's price list", "openrouter": "OpenRouter's price list"}
 AGREE = 0.05  # two lists agree when within 5% of each other
 MOST = 500.0  # dollars a million tokens: more than any model costs, so a mistake
@@ -80,11 +80,14 @@ def check(
     *,
     lists: PriceListsAPI | None = None,
     listers: dict[str, Callable[[], list[str] | None]] | None = None,
+    pricers: dict[str, Callable[[], dict[str, tuple[float, float, float | None]] | None]]
+    | None = None,
 ) -> dict[str, int]:
     """Read the companies' lists and the price lists, keep what was found, tell admins what matters.
     Returns counts.
 
-    `lists` and `listers` stand in for the price lists and each company's list in tests.
+    `lists` and `listers` stand in for the price lists and each company's list in tests, and
+    `pricers` for the prices an added company's own list carries.
     """
     with closing(app.connect()) as conn:
         app.refresh(conn)
@@ -95,6 +98,7 @@ def check(
         at = utc_iso(now)
         read = _read_price_lists(conn, lists or PriceLists(), now)
         listed = _read_company_lists(conn, settings, listers, at)
+        added = _read_added(conn, settings, listers, pricers, at)
         before = store.all_seen(conn)
         in_use = models_in_use(settings)
         changes: list[tuple[str, str, str, str | None, str | None]] = []
@@ -113,6 +117,7 @@ def check(
                                 conn, company, name, what, before=was, after=now_is, at=at
                             )
                             changes.append((company, name, what, was, now_is))
+            _keep_added(conn, settings, added, before, in_use, at)
         judged = judged_replacements(conn)
         after = store.all_seen(conn)
         _tell(conn, settings, after, changes, doubts, in_use, now, judged)
@@ -184,6 +189,85 @@ def _read_company_lists(
     return listed
 
 
+def _read_added(
+    conn: sqlite3.Connection,
+    settings: Any,
+    listers: dict[str, Callable[[], list[str] | None]] | None,
+    pricers: dict[str, Callable[[], dict[str, tuple[float, float, float | None]] | None]] | None,
+    at: str,
+) -> dict[str, tuple[set[str] | None, dict[str, tuple[float, float, float | None]] | None]]:
+    """For each company the settings define and a key opens: the models it lists for the key and,
+    when its list carries prices (OpenRouter's does), what they cost. None for either when it could
+    not be asked, never read as "none"."""
+    found: dict[str, tuple[set[str] | None, dict[str, tuple[float, float, float | None]] | None]]
+    found = {}
+    for company in companies.added(settings):
+        provider = providers.build(company.slug, settings)
+        if listers is not None and company.slug not in listers:
+            continue
+        if listers is None and not provider.configured():
+            continue
+        names = (listers[company.slug] if listers else provider.listed_models)()
+        priced = (pricers or {}).get(company.slug)
+        if priced is None and listers is None:
+            priced = getattr(provider, "priced_models", None)
+        rates = priced() if priced is not None and names is not None else None
+        with transaction(conn):
+            store.source_answered(
+                conn,
+                company.slug,
+                ok=names is not None,
+                note=f"{len(names)} models for the key" if names is not None else "not answering",
+                at=at,
+            )
+        found[company.slug] = ({n.lower() for n in names} if names is not None else None, rates)
+    return found
+
+
+def _keep_added(
+    conn: sqlite3.Connection,
+    settings: Any,
+    added: dict[str, tuple[set[str] | None, dict[str, tuple[float, float, float | None]] | None]],
+    before: dict[tuple[str, str], Seen],
+    in_use: set[tuple[str, str]],
+    at: str,
+) -> None:
+    """Keep what the check learned of the models an added company's definition names, or that are
+    in use: whether its list still has them and, if the list gives prices, what they cost. Only
+    those, so a company that lists hundreds does not fill the page. Nothing here tells an admin or
+    swaps a model: a price typed for the definition wins over these in any case."""
+    for company in companies.added(settings):
+        if company.slug not in added:
+            continue
+        listed, rates = added[company.slug]
+        wanted = {name.lower() for name in company.known_models()}
+        wanted |= {name for (owner, name) in in_use if owner == company.slug}
+        for name in sorted(wanted):
+            old = before.get((company.slug, name))
+            rate = (rates or {}).get(name)
+            store.save(
+                conn,
+                Seen(
+                    provider=company.slug,
+                    model=name,
+                    listed=(name in listed)
+                    if listed is not None
+                    else (old.listed if old else None),
+                    tools=old.tools if old else None,
+                    input=rate[0] if rate else (old.input if old else None),
+                    output=rate[1] if rate else (old.output if old else None),
+                    cached=rate[2] if rate else (old.cached if old else None),
+                    priced_by="its own list" if rate else (old.priced_by if old else None),
+                    retires_on=None,
+                    released=old.released if old else None,
+                    first_seen=old.first_seen if old else at,
+                    last_seen=at
+                    if listed is None or name in listed
+                    else (old.last_seen if old else None),
+                ),
+            )
+
+
 def models_in_use(settings: Any) -> set[tuple[str, str]]:
     """The models the family's calls go to now: each kind's, its spare's, and those that hear voice
     notes and look at photos.
@@ -192,9 +276,10 @@ def models_in_use(settings: Any) -> set[tuple[str, str]]:
     for kind in gateway.KINDS:
         call = gateway.spec(kind)
         level = getattr(settings, call.level)
-        primary = providers.for_surface(settings, call.surface)
+        web = call.web_searches is not None
+        primary = providers.for_surface(settings, call.surface, web=web)
         used.add((primary.name, providers.model_at(primary, call.surface, level).lower()))
-        spare = providers.fallback_for(settings, call.surface, primary.name)
+        spare = providers.fallback_for(settings, call.surface, primary.name, web=web)
         if spare is not None:
             used.add((spare.name, providers.model_at(spare, call.surface, level).lower()))
     for hearer in providers.hearers(settings):
@@ -368,7 +453,7 @@ def _tell(
     for company, name in sorted(in_use):
         model = seen.get((company, name))
         subject = f"{company}:{name}"
-        company_name = alerts.COMPANY_NAMES.get(company, company)
+        company_name = companies.named(company)
         instead = replacement(seen, company, name, today, judged)
         if model is not None and model.listed is False:
             if instead and swaps_for(model, instead):
@@ -417,7 +502,7 @@ def _tell(
                 conn,
                 "price",
                 f"{company}:{name}:{now_is}",
-                f"{name} ({alerts.COMPANY_NAMES.get(company, company)}) now costs {now_is} a "
+                f"{name} ({companies.named(company)}) now costs {now_is} a "
                 f"million tokens, was {was}",
                 now,
                 once=True,
@@ -437,7 +522,7 @@ def _tell(
                 conn,
                 "new",
                 f"{company}:{today.isoformat()}",
-                f"{alerts.COMPANY_NAMES.get(company, company)}: {shown}{more}",
+                f"{companies.named(company)}: {shown}{more}",
                 now,
                 once=True,
             )

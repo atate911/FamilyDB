@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.1 — beta (2026-10-08)
+
+A point release: the one change that was merged after v0.3.0 was cut and so missed it.
+
+### New since v0.3.0
+
+- **Any model company can be added, not only the three that ship.** The AI model settings have an
+  Other companies card: add OpenRouter with a key and a model (it reaches DeepSeek, Kimi, GLM, Qwen,
+  MiniMax and hundreds more, and is asked to use only companies that keep and train on nothing), or any
+  service with a chat address that follows the OpenAI protocol, including a model on your own network.
+  The key is checked with the company before it is kept. Nothing is sent to one until you press
+  *Answer with* or let it stand in (off); it cannot search the web, so lookups stay with a company that
+  can. `familydb doctor --online` checks each, and the daily check keeps the prices a company's own
+  list gives. Behind it, every label, key and model owner is read from one registry
+  (`docs/COMPANIES.md`), so a new company is data and not a change in a dozen files.
+
 ## v0.3.0 — first beta (2026-10-08)
 
 The first beta: the alpha is over. Everything the alphas did, and much more, has now run
