@@ -243,6 +243,9 @@ class Template:
     # Where a person finds the service's models and its keys (names in web/links.py).
     models_link: str
     keys_link: str
+    # A path that answers only to a key that is good, when the list of models is public and so
+    # proves nothing about the key (OpenRouter's `/key`).
+    key_path: str = ""
 
 
 OPENROUTER = Template(
@@ -261,5 +264,6 @@ OPENROUTER = Template(
     extra_body={"provider": {"data_collection": "deny", "require_parameters": True}},
     models_link="openrouter_models",
     keys_link="openrouter_keys",
+    key_path="/key",
 )
 TEMPLATES: dict[str, Template] = {OPENROUTER.key: OPENROUTER}

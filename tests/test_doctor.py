@@ -520,6 +520,23 @@ def test_online_the_company_is_asked_about_its_key_and_its_models(
     assert gone.verdict == doctor.WARN and "not listed: vendor/chat" in gone.detail
 
 
-def test_a_choice_nobody_has_a_key_for_is_still_reported_not_a_crash(settings, clock) -> None:
+def test_an_added_company_does_not_answer_instead_unless_it_may_stand_in(settings, clock) -> None:
+    only_added = {
+        **_with_company(settings),
+        "provider": "openai",
+        "openai_api_key": None,
+        "anthropic_api_key": None,
+        "gemini_api_key": None,
+    }
+    _app, report = _report(settings, clock, **only_added)
+    check = next(c for c in report.checks if c.name == "model key")
+    assert check.verdict == doctor.FAIL and "no company with a key may stand in" in check.detail
+    allowed = {**only_added, **_with_company(settings, stand_in=True)}
+    _app, report = _report(settings, clock, **allowed)
+    check = next(c for c in report.checks if c.name == "model key")
+    assert check.verdict == doctor.WARN and "openrouter will answer instead" in check.detail
+
+
+def test_a_company_that_answers_with_a_key_is_ok_not_a_crash(settings, clock) -> None:
     _app, report = _report(settings, clock, **_with_company(settings), provider="openrouter")
     assert _verdict_of(report, "model key") == doctor.OK

@@ -541,3 +541,38 @@ def test_a_company_that_cannot_be_asked_leaves_what_was_known_alone(settings, co
     )
     kept = store.all_seen(conn)[("openrouter", "vendor/chat")]
     assert kept.listed is True and kept.output == 0.8  # not read as "no longer listed"
+
+
+def test_nothing_is_told_or_swapped_on_an_added_companys_list(settings, conn) -> None:
+    from familydb.agent import gateway
+    from familydb.config import ModelPrice
+
+    live = _with_openrouter(
+        settings,
+        prices=[
+            ModelPrice(name="vendor/chat", input=1, output=2),
+            ModelPrice(name="vendor/cheap", input=0.5, output=1),
+        ],
+    )
+    live = live.model_copy(update={"provider": "openrouter"})
+    app = _app(live)
+    args = {"lists": _both()}
+    model_watch.check(
+        app,
+        **args,
+        listers={
+            **_claude("claude-haiku-4-5"),
+            "openrouter": lambda: ["vendor/chat", "vendor/cheap"],
+        },
+        pricers={"openrouter": lambda: {}},
+    )
+    # The company's list stops naming the model in use (as one that omits an alias would).
+    model_watch.check(
+        app,
+        **args,
+        listers={**_claude("claude-haiku-4-5"), "openrouter": lambda: ["vendor/cheap"]},
+        pricers={"openrouter": lambda: {}},
+    )
+    assert ("model", "openrouter:vendor/chat") not in _alerts(conn)
+    assert not any("openrouter" in subject for _, subject in _alerts(conn))
+    assert gateway.answering(app.settings, "chat")[1] == "vendor/chat"  # still asked, not swapped

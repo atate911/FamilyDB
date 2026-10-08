@@ -23,10 +23,14 @@ setting, a spare's order, a model's owner are each asked of the registry.
 
 1. **On the page** (AI model settings, Other companies). OpenRouter needs a key and a model; any
    other, a name, the address of its chat service, a key and a model. The key is checked with the
-   company (a free `GET /models`) before it is kept; only a refusal stops the save. This is the
-   whole job for a service that follows the protocol.
-2. **In `.env`**, for an install made by script: `COMPANIES` is a JSON list of definitions and
-   `COMPANY_KEYS` a JSON object of key by name (`COMPANIES='[{"slug": "kimi", "label": "Kimi",
+   company (a free `GET /models`, and for a template that names one a path only a good key opens,
+   since OpenRouter's list of models is public) before it is kept; only a refusal stops the save. The
+   company's own list is then read at once for what its models cost (`model_watch.check_added`), and
+   the page says which are still unpriced. A saved key is never sent to an address its owner has not
+   just vouched for: changing a company's address asks for the key again. This is the whole job for a
+   service that follows the protocol.
+2. **In `.env`**, edited by hand (the installer does not ask for these): `COMPANIES` is a JSON list of
+   definitions and `COMPANY_KEYS` a JSON object of key by name (`COMPANIES='[{"slug": "kimi", "label": "Kimi",
    "base_url": "https://api.moonshot.ai/v1", "model": "..."}]'`). A stored value on the page wins, as
    for every setting.
 3. **A template**, when a service is common enough that its address and switches should not be typed
@@ -41,11 +45,11 @@ setting, a spare's order, a model's owner are each asked of the registry.
 |---|---|
 | `slug`, `label` | The name in the settings and on every page. A slug is lower case letters, digits and hyphens, never a built-in one. |
 | `base_url` | The part before `/chat/completions`. https, unless `local`; a typed address must lead out onto the internet (`integrations/address.py`), because this server is the one that goes there with a key. A template's address is ours and is not looked up. |
-| `local` | Runs on this machine or the family's network: http is allowed and no key is needed. |
+| `local` | Runs on this machine or the family's network: http is allowed and no key is needed. A host that is out on the internet cannot be called local. |
 | `model`, `worker_model`, `better_model`, `best_model` | Names as the company writes them. The lineup (everyday, better, best) has no company-wide answer for a company nobody listed, so the family names them; empty is the everyday model. |
 | `prices` | US dollars per million tokens, typed. They win over what the daily check read, and a model with no price anywhere is counted at `prices.UNLISTED`, dearer than any listed, so the daily limit stops early. An added company's prices are matched by the exact name only: a prefix would price a dearer variant at its cheaper sibling's rate. |
 | `reasoning_fields` | The message field a model's thinking comes back in. Some companies require it sent back unchanged beside a tool call or the next request fails (DeepSeek's `reasoning_content`; OpenRouter's `reasoning_details`). The first one a reply carries is kept in `ModelReply.raw` and replayed; if the company refuses it, it is left out and an admin told (`parts.py`). |
-| `extra_body` | A company's own switches, merged into every request: OpenRouter's `provider` preferences, a `thinking` object. **Never dropped to get an answer**: one may be the family's protection, and a request that cannot carry it fails instead (a 400 naming it is `refused`). The fields the adapter owns (`model`, `messages`, `tools`, `max_tokens`...) are refused. |
+| `extra_body` | A company's own switches, merged into every request: OpenRouter's `provider` preferences, a `thinking` object. Plain JSON. **Never dropped to get an answer**: one may be the family's protection, and a request that cannot carry it fails instead (a 400 naming it is `refused`). The fields the adapter owns or that would change what a chat may do (`model`, `messages`, `tools`, `max_tokens`, `stop`, `response_format`, `plugins`, `models`, `web_search_options`...) are refused. A person may take a template's protection out of a company's fields; the page says so then, and stops promising it. |
 | `stand_in` | May answer when the company chosen cannot. Off: an added company is asked nothing until an admin chooses it. |
 
 Its key is `Settings.company_keys[slug]`, a secret like every other: stored, never rendered into a
@@ -61,14 +65,20 @@ each company's names for the cache (`prompt_tokens_details.cached_tokens`, DeepS
 or a 429 that says quota, is out of credit; 401, or a 403 that names a key, is a refused key; a 404
 naming a model is a model gone; other 4xx is `refused`; 408, 409, 425, 429 and 5xx are retried);
 lists models and, where the company's own list carries prices (OpenRouter's does), what they cost
-(`priced_models`, read by the daily check).
+(`priced_models`, read by the daily check). A reply in a shape it cannot read (content as a list of
+parts is read; a null message, a body cut off or not JSON) is an `AgentError` to ask again, never a bare
+exception. The client never follows a redirect: an address was checked and a redirect would go to one that
+was not.
 
 Does not, and says so:
 
 - **Hosted web search.** Every company has its own, or none, and none is standard. `searches` is False;
   `providers.for_surface(..., web=True)` hands a lookup, discovery, a place search or a price check to
-  the first company with a key that can search, and `ready(..., web=True)` is False when none can, so
-  the kinds that need it wait. The chat never searched, so it can go to an added company.
+  the cheaper of the companies with a key that can search, but only while "ask another company when the
+  first cannot" is on (off, one company sees the family's words, so a lookup waits unless a company for
+  lookups is chosen, which only the built-in ones can be). `ready(..., web=True)` is False when none can,
+  so the kinds that need it wait, and Status and `debug cost` say so. The chat never searched, so it can
+  go to an added company.
 - **Voice notes and photos.** `listener()` and `viewer()` are None, so `hearers` and `lookers` skip it.
 - **Strict tool schemas and cache markers.** Companies disagree on both and the protocol has neither;
   tool inputs are validated by handler checks as everywhere, and a company that caches does so by prefix
@@ -91,8 +101,11 @@ Unchanged in kind: `spending.admit` holds an estimate before every call, from `p
 call is recorded in `llm_calls` under the company's slug with its tokens and `prices.cost`. The daily
 check (`model_watch._read_added`, `_keep_added`) asks each added company's list (free), keeps what it
 says of the models its definition names, and prices them from the company's own list when that carries
-prices; nothing is told to admins and no model is swapped on its word. A model priced nowhere is counted
-dear and the doctor says so.
+prices; nothing is told to admins and no model is swapped on its word (a list that leaves out a working
+alias would raise a false alarm, and a model really gone fails on its own and is told then,
+`alerts.noticed`). A call is priced by the name the company answered with, or by the model asked for when
+that name is a snapshot nobody priced. A model priced nowhere is counted dear, and the page and the
+doctor say so.
 
 ## Proving a company works
 

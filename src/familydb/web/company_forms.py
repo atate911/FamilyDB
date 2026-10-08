@@ -29,6 +29,10 @@ NO_ADDRESS = "Type the web address its chat service lives at, such as https://ap
 NOT_FOUND = (
     "This server could not find {host}. Check how it is spelled, and that this server is online."
 )
+LOCAL_BUT_PUBLIC = (
+    "{host} is out on the internet, not on this machine or your own network, so “It runs on this "
+    "machine or my own network” cannot be ticked for it: untick it, and use an https address."
+)
 NOT_PUBLIC = (
     "{host} is not out on the internet: it is this machine or your own network. If that is where "
     "it runs, tick “It runs on this machine or my own network”."
@@ -41,6 +45,14 @@ BAD_PRICE_LINE = (
 )
 BAD_EXTRA = "The extra request fields are not a JSON object: {why}"
 TAKEN = "There is already a company called {label}."
+PROTECTION_LOST = (
+    " It no longer asks {template} to use only companies that keep and train on nothing, so what "
+    "you write may now go to ones that do."
+)
+KEY_AGAIN = (
+    "You changed where {label} is, so type its key again: a saved key is not sent to a new "
+    "address without you. (An address on your own network needs no key: tick that instead.)"
+)
 
 
 class FormError(Exception):
@@ -118,9 +130,15 @@ def check_address(base_url: str, *, local: bool, trusted: bool = False) -> None:
     is typed by a person, but this server is the one that goes there with a key. A template's
     address is ours (`trusted`), not typed, so it is not looked up."""
     host = urlsplit(base_url.strip()).hostname
-    if not host or local or trusted:
+    if not host or trusted:
         return
     reach = address.classify(host)
+    if local:
+        # A service on the family's network may speak http and need no key; one out on the
+        # internet may not, whatever the box says.
+        if reach == "public":
+            raise FormError(LOCAL_BUT_PUBLIC.format(host=host))
+        return
     if reach == "unresolved":
         raise FormError(NOT_FOUND.format(host=host))
     if reach == "private":
@@ -170,15 +188,22 @@ def from_template(
 def from_form(
     form: Mapping[str, str], *, taken: set[str], existing: CompanyDef | None = None
 ) -> CompanyDef:
-    """A company from what the add form (no `existing`) or an edit form held."""
-    label = form.get("label", existing.label if existing else "").strip()
+    """A company from what the add form (no `existing`) or an edit form held. A box an edit form
+    does not carry at all keeps what the company had, so a short post cannot take away a field
+    that protects the family; a box that is there and empty clears it."""
+
+    def said(name: str, was: str = "") -> str:
+        return form.get(name, was).strip()
+
+    label = said("label", existing.label if existing else "")
     if not label:
         raise FormError(NO_NAME)
-    base_url = form.get("base_url", existing.base_url if existing else "").strip()
+    base_url = said("base_url", existing.base_url if existing else "")
     if not base_url:
         raise FormError(NO_ADDRESS)
-    local = bool(form.get("local"))
-    model = form.get("model", existing.model if existing else "").strip()
+    whole = existing is None or "extra_body" in form  # an edit form that was drawn whole
+    local = bool(form.get("local")) if whole else bool(existing and existing.local)
+    model = said("model", existing.model if existing else "")
     if not model:
         raise FormError(NO_MODEL)
     try:
@@ -187,26 +212,50 @@ def from_form(
             "label": label,
             "base_url": base_url,
             "local": local,
-            "template": existing.template if existing else "",
             "model": model,
-            "worker_model": form.get("worker_model", "").strip(),
-            "better_model": form.get("better_model", "").strip(),
-            "best_model": form.get("best_model", "").strip(),
+            "worker_model": said("worker_model", existing.worker_model if existing else ""),
+            "better_model": said("better_model", existing.better_model if existing else ""),
+            "best_model": said("best_model", existing.best_model if existing else ""),
         }
         if existing is None:
+            fields["template"] = ""
             fields["reasoning_fields"] = field_names_from(
                 form.get("reasoning_fields", "reasoning_content")
             )
             fields["extra_body"] = extra_body_from(form.get("extra_body", ""))
             fields["prices"] = prices_from(form.get("prices", ""))
         else:
-            fields["stand_in"] = bool(form.get("stand_in"))
-            fields["reasoning_fields"] = field_names_from(form.get("reasoning_fields", ""))
-            fields["extra_body"] = extra_body_from(form.get("extra_body", ""))
-            fields["prices"] = prices_from(form.get("prices", ""))
+            # A company that has been pointed somewhere else is no longer its template's.
+            template = companies.TEMPLATES.get(existing.template)
+            same_place = template is not None and template.base_url == base_url
+            fields["template"] = existing.template if same_place else ""
+            fields["stand_in"] = bool(form.get("stand_in")) if whole else existing.stand_in
+            fields["reasoning_fields"] = (
+                field_names_from(form["reasoning_fields"])
+                if "reasoning_fields" in form
+                else existing.reasoning_fields
+            )
+            fields["extra_body"] = (
+                extra_body_from(form["extra_body"]) if "extra_body" in form else existing.extra_body
+            )
+            fields["prices"] = prices_from(form["prices"]) if "prices" in form else existing.prices
         return CompanyDef(**fields)
     except ValidationError as exc:
         raise FormError(complaint(exc)) from exc
+
+
+def protection_lost(one: CompanyDef) -> companies.Template | None:
+    """The template this company was added from, when its extra request fields no longer carry what
+    the template asked for (OpenRouter's refusal of companies that keep what they are sent): the
+    family's protection, which a person may remove but is told of."""
+    template = companies.TEMPLATES.get(one.template)
+    if template is None:
+        return None
+    return (
+        template
+        if any(one.extra_body.get(k) != v for k, v in template.extra_body.items())
+        else None
+    )
 
 
 def duplicate_label(label: str, defined: tuple[CompanyDef, ...], skip: str = "") -> bool:
@@ -228,6 +277,8 @@ def panel(company: companies.Company, live: Settings) -> dict[str, Any]:
         "address": one.base_url,
         "local": one.local,
         "template": template,
+        # What the template promised is said only while it is still true.
+        "protected": template is not None and protection_lost(one) is None,
         "has_key": bool(company.key(live)),
         "needs_key": not one.local,
         "answering": live.provider == one.slug,

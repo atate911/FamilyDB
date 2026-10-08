@@ -618,10 +618,26 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
         company.env_name if company else ""
     ) or f"the key of {chosen} on the settings page"
     if company is None or not company.key(settings):
+        # Only a company that may stand in answers instead: one the family added does not unless
+        # its admin said so.
+        instead = [
+            slug
+            for slug in have
+            if (spare := companies.get(slug, settings)) is not None and spare.stands_in
+        ]
+        if not instead:
+            report.add(
+                "model key",
+                FAIL,
+                f"PROVIDER is {chosen} but its key is empty, and no company with a key may stand "
+                f"in ({', '.join(have)} must be chosen or allowed to)",
+                f"Set {chosen_env}, or choose a company you have a key for",
+            )
+            return
         report.add(
             "model key",
             WARN,
-            f"PROVIDER is {chosen} but its key is empty; {', '.join(have)} will answer instead",
+            f"PROVIDER is {chosen} but its key is empty; {', '.join(instead)} will answer instead",
             f"Set {chosen_env}, or change PROVIDER to one you have a key for",
         )
     else:

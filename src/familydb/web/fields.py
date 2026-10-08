@@ -361,7 +361,14 @@ GROUPS: tuple[Group, ...] = (
         "companies, and you pay the company for what it uses.",
         (
             # A company without a key cannot be chosen: nothing would answer.
-            field("provider", "Company that answers", words=tuple(COMPANIES.items())),
+            field(
+                "provider",
+                "Company that answers",
+                # The three with a key of their own here; one the family added is chosen on its
+                # own card, and a value stored for it is kept as a choice there.
+                choices=companies.SPARE_ORDER,
+                words=tuple(COMPANIES.items()),
+            ),
         ),
     ),
     Group(
@@ -522,6 +529,8 @@ GROUPS: tuple[Group, ...] = (
                 "worker_provider",
                 "Company for lookups",
                 "Who looks ideas up on the web.",
+                # Only a company with hosted web search: an added one has none.
+                choices=companies.SPARE_ORDER,
                 words=tuple(COMPANIES.items()),
                 unset="the company that answers",
             ),
