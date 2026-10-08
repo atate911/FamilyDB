@@ -906,8 +906,8 @@ def save_model() -> Response | tuple[str, int]:
 # -- other companies (company_forms.py) -------------------------------------------------------
 
 COMPANY_ADDED = (
-    "{label} is added and its key works. Nothing is sent to it until you choose it: under "
-    "“Other companies”, press Answer with {label}, or let it stand in for another."
+    "{label} is added. Nothing is sent to it until you choose it: under “Other companies”, "
+    "press Answer with {label}, or let it stand in for another."
 )
 COMPANY_SAVED = "Saved. {label} is as you left it."
 COMPANY_GONE = "{label} was taken away, with its key."
@@ -918,7 +918,7 @@ COMPANY_IN_USE = (
 COMPANY_UNKNOWN = "There is no such company."
 COMPANY_NEEDS_KEY = "{label} needs its key first."
 COMPANY_KEY_VERDICTS = {
-    "works": "",
+    "works": " Its key works.",
     "unknown_model": (
         " It says it has no model called {model}: check the spelling against its own list."
     ),
@@ -1012,7 +1012,7 @@ def add_company() -> Response | tuple[str, int]:
             raise company_forms.FormError(company_forms.NO_MODEL)
         if company_forms.duplicate_label(one.label, live.companies):
             raise company_forms.FormError(company_forms.TAKEN.format(label=one.label))
-        company_forms.check_address(one.base_url, local=one.local)
+        company_forms.check_address(one.base_url, local=one.local, trusted=template is not None)
     except company_forms.FormError as exc:
         return _answer(back, here, error=str(exc), otherwise="model")
     if not key and not one.local:

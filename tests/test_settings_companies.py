@@ -28,7 +28,9 @@ def page(settings, clock, conn, family, monkeypatch):
     client.app = app
     client.verdict = "works"
     monkeypatch.setattr(ChatProvider, "check_key", lambda self: client.verdict)
-    monkeypatch.setattr(address, "is_public", lambda host: not host.startswith("192.168."))
+    monkeypatch.setattr(
+        address, "classify", lambda host: "private" if host.startswith("192.168.") else "public"
+    )
     return client
 
 
@@ -336,3 +338,21 @@ def test_the_daily_check_does_not_break_when_a_company_is_added(page, conn):
     add_openrouter(page)
     post(page, "/settings/companies/openrouter/use")
     assert page.get("/status").status_code == 200
+
+
+def test_an_address_nobody_can_find_is_said_so_and_a_templates_is_not_looked_up(
+    page, conn, monkeypatch
+):
+    monkeypatch.setattr(address, "classify", lambda host: "unresolved")
+    refused = post(
+        page,
+        "/settings/companies/add",
+        label="Nowhere",
+        base_url="https://nowhere.example/v1",
+        model="m",
+        key="k",
+    )
+    assert refused.status_code == 400 and "could not find nowhere.example" in refused.text
+    # OpenRouter's address is ours, so no lookup of it can stop adding it.
+    monkeypatch.setattr(address, "classify", lambda host: 1 / 0)
+    assert add_openrouter(page).status_code == 302

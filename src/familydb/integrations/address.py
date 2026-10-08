@@ -6,16 +6,25 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+from typing import Literal
+
+Reach = Literal["public", "private", "unresolved"]
 
 
-def is_public(host: str) -> bool:
-    """Whether every address a host name resolves to is out on the internet: not this machine,
-    the home network, a link-local or a reserved address."""
+def classify(host: str) -> Reach:
+    """Where a host name leads: out on the internet, to this machine or the home network (a
+    link-local or reserved address too), or nowhere this server can find."""
     try:
         infos = socket.getaddrinfo(host, None)
     except OSError:
-        return False
+        return "unresolved"
     addresses = {info[4][0] for info in infos}
-    return bool(addresses) and all(
-        ipaddress.ip_address(a.split("%")[0]).is_global for a in addresses
-    )
+    if not addresses:
+        return "unresolved"
+    public = all(ipaddress.ip_address(a.split("%")[0]).is_global for a in addresses)
+    return "public" if public else "private"
+
+
+def is_public(host: str) -> bool:
+    """Whether every address a host name resolves to is out on the internet."""
+    return classify(host) == "public"

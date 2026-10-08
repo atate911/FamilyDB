@@ -26,6 +26,9 @@ MOST = 12
 OTHER = "other"
 NO_NAME = "Give the company a name, so you can tell it from the others."
 NO_ADDRESS = "Type the web address its chat service lives at, such as https://api.example.com/v1."
+NOT_FOUND = (
+    "This server could not find {host}. Check how it is spelled, and that this server is online."
+)
 NOT_PUBLIC = (
     "{host} is not out on the internet: it is this machine or your own network. If that is where "
     "it runs, tick “It runs on this machine or my own network”."
@@ -110,11 +113,17 @@ def field_names_from(text: str) -> tuple[str, ...]:
     return tuple(word for word in re.split(r"[\s,]+", text.lower()) if word)
 
 
-def check_address(base_url: str, *, local: bool) -> None:
+def check_address(base_url: str, *, local: bool, trusted: bool = False) -> None:
     """A service not on the family's own network must be out on the internet: a company's address
-    is typed by a person, but this server is the one that goes there with a key."""
+    is typed by a person, but this server is the one that goes there with a key. A template's
+    address is ours (`trusted`), not typed, so it is not looked up."""
     host = urlsplit(base_url.strip()).hostname
-    if host and not local and not address.is_public(host):
+    if not host or local or trusted:
+        return
+    reach = address.classify(host)
+    if reach == "unresolved":
+        raise FormError(NOT_FOUND.format(host=host))
+    if reach == "private":
         raise FormError(NOT_PUBLIC.format(host=host))
 
 
