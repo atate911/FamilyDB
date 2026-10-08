@@ -1085,6 +1085,7 @@ LINE_GROUPS = (
             "lookups_asked",
             "lookups_none",
             "lookups_off",
+            "lookups_wait",
         ),
     ),
     (

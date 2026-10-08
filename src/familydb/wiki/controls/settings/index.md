@@ -4,14 +4,16 @@ Settings is where an admin changes how FamilyDB behaves, one card at a time, wit
 
 | Card | What it holds |
 |---|---|
-| [General](/wiki/controls/settings/general) | Where home is, the time zone and units, the web page's name, dictation, the log level |
-| [AI model](/wiki/controls/settings/ai-model) | Which model company answers, its key, how strong a model each job uses, voice notes and photos |
+| [General](/wiki/controls/settings/general) | Where home is, the time zone and units, the web page's name, dictation |
+| [AI model](/wiki/controls/settings/ai-model) | Which model company answers, its key, how strong a model each job uses, how suggestions are chosen, voice notes and photos |
 | [Spending](/wiki/controls/settings/spending) | The daily limit, each kid's limits, the wish-list limits, thinking and size limits |
-| [Messages](/wiki/controls/settings/messages) | What is sent without being asked, and when |
-| [Lookups](/wiki/controls/settings/lookups) | Filling ideas in from the web |
+| [Messages](/wiki/controls/settings/messages) | What is sent without being asked, and when, including the morning message and notices on phones |
+| [Lookups](/wiki/controls/settings/lookups) | Filling ideas in from the web, places on the web, and taking off what is over |
+| [What is on near home](/wiki/controls/settings/happening) | The calendars, Ticketmaster and weekly search that find what is on near home |
 | [Personality and family](/wiki/controls/settings/personality) | Who the assistant is, and the family's own words about itself |
-| [Connections](/wiki/controls/settings/connections) | Telegram and Google Calendar |
-| [Sign-in and security](/wiki/controls/settings/sign-in) | How long a sign-in lasts, seeing a key, signing everyone out |
+| [Connections](/wiki/controls/settings/connections) | Telegram, the family's chat and Google Calendar |
+| [Sign-in and security](/wiki/controls/settings/sign-in) | How long a sign-in lasts, how long messages are kept, seeing a key, signing everyone out |
+| [Troubleshooting card](/wiki/controls/settings/troubleshooting) | What went wrong lately, how much is logged, and the words of every call to a model |
 | [What has changed](#what-has-changed) | Every change made on these cards (described below) |
 
 ## How a setting gets its value

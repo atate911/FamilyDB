@@ -4,17 +4,9 @@ FamilyDB does the following today. Where a row has a workaround, use it.
 
 ## Privacy and kids
 
-### Chat tools are not checked against a role
+### Chat tools check only some roles
 
-In chat, the assistant can call every tool for a kid. Only `look_up_now`, changing a thing to do that is not their own, adding a wish and turning a wish away check who is asking; adding or changing an idea, a calendar event, a memory, an outcome and a thing to do do not. What holds the line is the assistant's judgment and the kid's daily limits, not a permission check; see [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions) and [What a sign-in guards](/wiki/security/model#what-a-sign-in-guards).
-
-### Telegram commands show presents
-
-`/today` and `/week` list calendar entries and plans as they are, including a plan made from a present, with its title. The web page leaves such plans out for the people the present is kept from, so a kid or the grown-up it is for who types `/today` can see what the page hides. If that matters, wait until the day to make a plan from a present; see [Presents](/wiki/model/ideas-and-places#presents).
-
-### The to-rate list shows presents
-
-The count and list of plans waiting for a rating include a plan made from a present. Only parents and admins see them, so a kid never does, but the grown-up the present is for can. Nothing hides the plan between its day and its rating.
+In chat, a kid can add an idea, remember something and keep their own wishes and things to do; the family decided that. Code refuses a kid in chat the changes only a parent makes: editing an idea, saying how a plan went, and making, moving or cancelling a plan or calendar event. The assistant is told nothing was changed and to suggest asking a parent. The other tools still do not check who asks, so the assistant's judgment and the kids' daily limits are the brakes on those. See [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions) and [What a sign-in guards](/wiki/security/model#what-a-sign-in-guards).
 
 ### A forgotten place can still show in kept texts
 

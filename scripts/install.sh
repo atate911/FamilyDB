@@ -23,7 +23,8 @@ ENV_FILE="${REPO_ROOT}/.env"
 EXAMPLE_FILE="${REPO_ROOT}/.env.example"
 
 MODE=""              # docker | venv
-HAND_OVER_TO_SERVICE=0   # give data/ and .env to the familydb user, once the checks have run
+SERVICE_USER="familydb"  # the account the service runs as (--user)
+HAND_OVER_TO_SERVICE=0   # give data/ and .env to the service user, once the checks have run
 SKIP_UNIT=0          # the service user cannot reach this checkout, so a unit would not start
 SUDO=""              # set when the systemd unit is installed
 ASSUME_YES=0         # --yes: take every default, ask nothing
@@ -53,6 +54,8 @@ Options
   --config-only        Write .env and stop, installing nothing.
   --local-only         Keep the page on this machine, reached from your own computer over an
                        SSH tunnel, instead of on HTTPS at this server's address.
+  --user NAME          The system account the service runs as, made if missing. Default:
+                       familydb. Remembered, so maintain.sh and uninstall.sh find it again.
   --dry-run            Say what would happen; change nothing.
   -h, --help           This text.
 
@@ -85,12 +88,16 @@ while [ $# -gt 0 ]; do
     --non-interactive) NON_INTERACTIVE=1; ASSUME_YES=1; shift ;;
     --config-only) SKIP_INSTALL=1; shift ;;
     --local-only) LOCAL_ONLY=1; shift ;;
+    --user) SERVICE_USER="${2:-}"; shift 2 ;;
+    --user=*) SERVICE_USER="${1#*=}"; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "unknown option: $1" ;;
   esac
 done
 case "$MODE" in ""|docker|venv) ;; *) die "--mode must be docker or venv, not '$MODE'" ;; esac
+valid_user_name "$SERVICE_USER" \
+  || die "--user must be a system account name: lowercase letters, digits, - and _, starting with a letter, not '${SERVICE_USER}'"
 export ASSUME_YES DRY_RUN
 
 log_to "/var/log/familydb-install.log"
@@ -163,12 +170,12 @@ set_env() { # set_env KEY VALUE
   fi
 }
 
-service_can_reach_checkout() { # can the familydb user get to the files it has to run?
+service_can_reach_checkout() { # can the service user get to the files it has to run?
   # A home directory is 0750 on most systems, so the service could not enter it; /opt is the home.
-  [ "$(id -un)" = familydb ] && return 0   # running as that user, from inside it: yes
+  [ "$(id -un)" = "$SERVICE_USER" ] && return 0   # running as that user, from inside it: yes
   have sudo || return 0                    # no way to ask from here; assume the admin knows
   sudo -n true 2>/dev/null || return 0     # sudo would ask for a password; do not hang on it
-  sudo -n -u familydb sh -c 'test -x "$1" && test -r "$1"' _ "$REPO_ROOT" 2>/dev/null
+  sudo -n -u "$SERVICE_USER" sh -c 'test -x "$1" && test -r "$1"' _ "$REPO_ROOT" 2>/dev/null
 }
 
 random_password() {
@@ -287,7 +294,7 @@ else
       "so the page can be opened from any browser without a tunnel, and nothing crosses the network in the clear"
   fi
   if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
-    plan_item "Offer to create the 'familydb' user and write /etc/systemd/system/familydb.service" \
+    plan_item "Offer to create the '${SERVICE_USER}' user and write /etc/systemd/system/familydb.service" \
       "so it starts at boot and restarts if it stops; you are asked before this happens"
   fi
 fi
@@ -563,22 +570,24 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
       unit="${REPO_ROOT}/deploy/familydb.service"
       [ -f "$unit" ] || die "missing ${unit}"
       if [ "$DRY_RUN" = 1 ]; then
-        note "would create the familydb user and install /etc/systemd/system/familydb.service"
+        note "would create the ${SERVICE_USER} user and install /etc/systemd/system/familydb.service"
         note "would give ${REPO_ROOT}/data and .env to that user"
       else
         # The unit runs as its own user, so create it here: a unit naming a missing user cannot start.
-        if id familydb >/dev/null 2>&1; then
-          ok "The familydb user already exists."
-        elif $SUDO useradd --system --home-dir "$REPO_ROOT" --shell /usr/sbin/nologin familydb \
+        if id "$SERVICE_USER" >/dev/null 2>&1; then
+          ok "The ${SERVICE_USER} user already exists."
+        elif $SUDO useradd --system --home-dir "$REPO_ROOT" --shell /usr/sbin/nologin "$SERVICE_USER" \
              2>/dev/null; then
-          noting_user familydb
-          ok "Created the familydb system user."
+          noting_user "$SERVICE_USER"
+          ok "Created the ${SERVICE_USER} system user."
         else
-          warn "Could not create the familydb user. Create it, or edit User= in the unit:"
-          warn "  sudo useradd --system --home-dir ${REPO_ROOT} --shell /usr/sbin/nologin familydb"
+          warn "Could not create the ${SERVICE_USER} user. Create it, or edit User= in the unit:"
+          warn "  sudo useradd --system --home-dir ${REPO_ROOT} --shell /usr/sbin/nologin ${SERVICE_USER}"
         fi
-        if id familydb >/dev/null 2>&1 && ! service_can_reach_checkout; then
-          warn "The familydb user cannot get into ${REPO_ROOT}, which is usually because it is"
+        # maintain.sh and uninstall.sh read the account back from here.
+        id "$SERVICE_USER" >/dev/null 2>&1 && record_service_user "$SERVICE_USER"
+        if id "$SERVICE_USER" >/dev/null 2>&1 && ! service_can_reach_checkout; then
+          warn "The ${SERVICE_USER} user cannot get into ${REPO_ROOT}, which is usually because it is"
           warn "inside somebody's home directory. A service running as its own user could not"
           warn "start there, so the unit has not been installed. Move the checkout and run again:"
           warn "  sudo mkdir -p /opt/familydb && sudo chown \"\$USER\" /opt/familydb"
@@ -587,7 +596,9 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
           SKIP_UNIT=1
         fi
         tmp_unit="$(mktemp)"
-        sed -e "s#/opt/familydb#${REPO_ROOT}#g" "$unit" > "$tmp_unit"
+        sed -e "s#/opt/familydb#${REPO_ROOT}#g" \
+            -e "s#^User=.*#User=${SERVICE_USER}#" -e "s#^Group=.*#Group=${SERVICE_USER}#" \
+            "$unit" > "$tmp_unit"
         # ProtectHome=true hides /home, so a checkout there would start empty. Read-only keeps the
         # hardening; ReadWritePaths still lets the data folder through.
         case "$REPO_ROOT" in
@@ -633,13 +644,13 @@ fi
 
 # Last, because everything above runs as whoever started this script and needs to be able to
 # read .env and write data/. After this, those belong to the service.
-if [ "$HAND_OVER_TO_SERVICE" = 1 ] && [ "$DRY_RUN" = 0 ] && id familydb >/dev/null 2>&1; then
-  if $SUDO chown -R familydb:familydb "${REPO_ROOT}/data" 2>/dev/null \
-     && { [ ! -f "$ENV_FILE" ] || $SUDO chown familydb:familydb "$ENV_FILE"; }; then
-    ok "data/ and .env now belong to the familydb user."
+if [ "$HAND_OVER_TO_SERVICE" = 1 ] && [ "$DRY_RUN" = 0 ] && id "$SERVICE_USER" >/dev/null 2>&1; then
+  if $SUDO chown -R "${SERVICE_USER}:${SERVICE_USER}" "${REPO_ROOT}/data" 2>/dev/null \
+     && { [ ! -f "$ENV_FILE" ] || $SUDO chown "${SERVICE_USER}:${SERVICE_USER}" "$ENV_FILE"; }; then
+    ok "data/ and .env now belong to the ${SERVICE_USER} user."
   else
-    warn "Could not hand data/ and .env to the familydb user. Do it before starting:"
-    warn "  sudo chown -R familydb:familydb ${REPO_ROOT}/data ${REPO_ROOT}/.env"
+    warn "Could not hand data/ and .env to the ${SERVICE_USER} user. Do it before starting:"
+    warn "  sudo chown -R ${SERVICE_USER}:${SERVICE_USER} ${REPO_ROOT}/data ${REPO_ROOT}/.env"
     HAND_OVER_TO_SERVICE=0
   fi
 fi
@@ -695,7 +706,7 @@ else
   LOGS="journalctl -u familydb -f"
   CLI="cd ${REPO_ROOT} && .venv/bin/familydb"
   # data/ and .env belong to the service now, so a command that reads them has to be that user.
-  [ "$HAND_OVER_TO_SERVICE" = 1 ] && CLI="cd ${REPO_ROOT} && sudo -u familydb .venv/bin/familydb"
+  [ "$HAND_OVER_TO_SERVICE" = 1 ] && CLI="cd ${REPO_ROOT} && sudo -u ${SERVICE_USER} .venv/bin/familydb"
 fi
 
 say "Start it:   ${B}${START}${OFF}"

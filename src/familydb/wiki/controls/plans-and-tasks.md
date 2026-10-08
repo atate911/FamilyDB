@@ -10,7 +10,7 @@ The Plans page shows what is on the family calendar and lets a parent add, move 
 | Kid | One list, "What the family is doing next", with no forms. The month opens if they type it | "My to-dos": only their own open ones, to tick off (and undo for a week). They ask the assistant to add or change one |
 | Anyone on the shared password | Everything | Everything |
 
-Who may change what is in [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions). The lists and the month leave out plans for a present hidden from you, and the To do page leaves out things to do about one ([Presents](/wiki/model/ideas-and-places#presents)). The **How did it go?** prompt and its "to rate" count do not apply this ([The to-rate list shows presents](/wiki/reference/known-limits#the-to-rate-list-shows-presents)).
+Who may change what is in [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions). The lists and the month leave out plans for a present hidden from you, and the To do page leaves out things to do about one ([Presents](/wiki/model/ideas-and-places#presents)). So do the **How did it go?** prompt and its "to rate" count.
 
 ## Plans
 

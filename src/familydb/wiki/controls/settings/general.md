@@ -36,11 +36,7 @@ The mic uses the browser's own speech recognition: Safari sends the sound to App
 
 ## The server's log
 
-| Label (`key`) | Default | What it does | Range last |
-|---|---|---|---|
-| Log detail (`log_level`) | INFO | How much the server writes to its log. DEBUG also logs the program's own network traffic, to Telegram and the model companies, and is loud: use it to chase a problem, then put it back. | DEBUG, INFO, WARNING or ERROR |
-
-Reading the log is on [Diagnostics](/wiki/operations/diagnostics#logs).
+How much the server writes to its log is the **What the server writes** (`log_level`) setting on the Troubleshooting card ([how much is logged](/wiki/controls/settings/troubleshooting#how-much-is-logged)). Reading the log is on [Diagnostics](/wiki/operations/diagnostics#logs).
 
 ## Where the web page is served, and a name for it
 

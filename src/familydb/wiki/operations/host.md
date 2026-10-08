@@ -14,13 +14,13 @@ The installer records each change outside `/opt/familydb` in `/var/lib/familydb-
 | `/opt/familydb/data/` | `familydb`, mode 700 | The database, `google_key.json` and `web_secret`: everything the family tells it |
 | `/opt/familydb/backups/` | folder owned by `familydb`; files mode 600 | The nightly and safety backups. [Backup and restore](/wiki/operations/backup-and-restore#what-is-in-a-backup-and-what-is-not) says what a backup holds |
 | `/opt/familydb/caddy/` | Docker with a domain only | Caddy's certificate and private key, kept apart from `data/` so FamilyDB's container cannot read the key |
-| The `familydb` account | system account | No password and no login, home `/opt/familydb`. FamilyDB runs as it, so a mistake cannot reach the rest of the machine |
+| The `familydb` account | system account | No password and no login, home `/opt/familydb`. FamilyDB runs as it, so a mistake cannot reach the rest of the machine. With `--user NAME` at install it has that name instead, in the service file too, and the name is kept in `/var/lib/familydb-install/service-user`. The rest of this guide says `familydb` |
 | `/etc/systemd/system/familydb.service`, and its link in `multi-user.target.wants` | root | The service, so FamilyDB starts at boot and restarts if it stops. Virtualenv installs only |
 | `/etc/caddy/Caddyfile` | root | One site block that passes the web page to FamilyDB. Not written with `--local-only` |
 | `/var/lib/caddy/.local/share/caddy` | `caddy` account | Caddy's certificates, outside the install |
 | Root's crontab | root | One line, tagged `familydb-maintain-backup`: the nightly backup at 03:15 |
 | `/root/familydb_deploy` and `.pub` | root, mode 600 | The deploy key, so upgrades can fetch the code. Deleting it on GitHub ends the server's access |
-| `/var/lib/familydb-install` | root only | The record of each change, a copy of any file the installer replaced, and GitHub's host key |
+| `/var/lib/familydb-install` | root only | The record of each change, the service account's name, a copy of any file the installer replaced, and GitHub's host key. An unfinished upgrade leaves `upgrade-pending` here until the upgrade is finished |
 | `/var/log/familydb-bootstrap.log`, `-install.log`, `-maintain.log`, `-uninstall.log` | root, mode 600 | A transcript of each run, the files to send if you need someone to look. Nothing rotates them |
 | `/var/backups/familydb` | root | Created only by `uninstall.sh --purge`, which leaves one last backup there |
 | Packages and tools | root | `git`, `curl`, `ca-certificates` and `tzdata` if missing, `uv` in `/usr/local/bin`, and `cron`, Caddy or Docker when you need them. For a public address with no domain, a Caddy older than 2.10 is replaced from Caddy's own apt repository |
@@ -99,10 +99,10 @@ After a reboot the service comes back by itself: the installer enables it at boo
 | Command | Removes | Keeps |
 |---|---|---|
 | `uninstall.sh` | The service, the nightly backup line, and the rebuildable virtualenv (on Docker, the containers and image) | The code, `.env`, `data/`, `caddy/` and the backups, so reinstalling picks up where it left off |
-| `uninstall.sh --purge` | All of FamilyDB: the database, the `familydb` account and the backups in `/opt/familydb/backups` | One last backup, written to `/var/backups/familydb` (or `--backup-to DIR`) |
+| `uninstall.sh --purge` | All of FamilyDB: the database, the service account and the backups in `/opt/familydb/backups` | One last backup of the database, written outside the install to `/var/backups/familydb` (or `--backup-to DIR`) and left there. `--no-backup` skips it |
 | `uninstall.sh --from-zero` | All of that, and what the install did around it | Nothing, unless you give `--backup-to DIR` |
 
-Run it as `sudo /opt/familydb/scripts/uninstall.sh <option>`.
+Run it as `sudo /opt/familydb/scripts/uninstall.sh <option>`. It removes the account the install recorded; `--user NAME` names another.
 
 `--from-zero` puts the server back as it was before FamilyDB, for trying the install again from the beginning. It undoes what the installer recorded, plus leftovers an older or by-hand install could leave: Caddy only when it serves nothing but FamilyDB, `uv`, the deploy key and copies of the code. `--purge` and `--from-zero` ask twice: a yes-or-no after listing by name everything they will remove (Enter means no), then you type `remove everything`. `--dry-run` shows the list and removes nothing. `--force` skips both questions and deletes at once, so it is for scripts.
 

@@ -177,7 +177,7 @@ def home() -> Response | str:
             return redirect(url_for("setup.overview"))
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
         kept = presents.kept_ids(conn, visitor.member)
-        on = _no_gifts(seen.entries, kept)
+        on = presents.without(seen.entries, kept)
         everything = [idea for idea in idea_store.list_all(conn) if idea.id not in kept]
         unfinished = status_page.setup_steps(app, conn) if manages else []
         people = member_store.list_all(conn)
@@ -188,7 +188,7 @@ def home() -> Response | str:
         wished = wish_glance(conn, today)
         slots = views.slot_map(people)
         coming = _plan_rows(conn, app, on, today, slots, visitor.member if not browsing else None)
-        rating = _to_rate(conn, today, slots) if visitor.may("change") else None
+        rating = _to_rate(conn, today, slots, visitor.member) if visitor.may("change") else None
         newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
         mini = [_idea_mini(conn, app, idea) for idea in newest]
         today_card = status_page.vera_today(app, conn) if browsing else None
@@ -277,12 +277,18 @@ def _others(coming: list[dict[str, Any]], me: member_store.Member | None) -> str
     return views.names_text([p for p in named if p["initial"]])
 
 
-def _unrated(conn: Any, today: date, slots: dict[str, int]) -> list[dict[str, Any]]:
-    """Every plan of the last two weeks nobody has said how it went, oldest first."""
-    waiting = plan_store.unrated(
-        conn,
-        today=today.isoformat(),
-        since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
+def _unrated(
+    conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
+) -> list[dict[str, Any]]:
+    """Every plan of the last two weeks nobody has said how it went, oldest first, without the
+    ones made from a present kept from `who`."""
+    waiting = presents.without(
+        plan_store.unrated(
+            conn,
+            today=today.isoformat(),
+            since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
+        ),
+        presents.kept_ids(conn, who),
     )
     found = []
     for plan in waiting:
@@ -302,9 +308,11 @@ def _unrated(conn: Any, today: date, slots: dict[str, int]) -> list[dict[str, An
     return found
 
 
-def _to_rate(conn: Any, today: date, slots: dict[str, int]) -> dict[str, Any] | None:
+def _to_rate(
+    conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
+) -> dict[str, Any] | None:
     """The oldest plan nobody has said how it went, for Home's three faces, and how many more."""
-    waiting = _unrated(conn, today, slots)
+    waiting = _unrated(conn, today, slots, who)
     return {**waiting[0], "more": len(waiting) - 1} if waiting else None
 
 
@@ -678,7 +686,7 @@ def plans() -> str:
             today - timedelta(days=PLANS_BEHIND_DAYS),
             today + timedelta(days=PLANS_AHEAD_DAYS),
         )
-        on = _no_gifts(seen.entries, presents.kept_ids(conn, auth.visitor().member))
+        on = presents.without(seen.entries, presents.kept_ids(conn, auth.visitor().member))
         people = member_store.list_all(conn)
         rows = _plan_rows(conn, app, on, today, views.slot_map(people), None, past=True)
         asking = _who(conn)
@@ -733,11 +741,15 @@ def plans_month() -> str:
     weeks_last = last_day + timedelta(days=6 - last_day.weekday())
     with closing(app.connect()) as conn:
         seen = agenda.read(app, conn, weeks_first, weeks_last)
-        on = _no_gifts(seen.entries, presents.kept_ids(conn, auth.visitor().member))
+        on = presents.without(seen.entries, presents.kept_ids(conn, auth.visitor().member))
         people = member_store.list_all(conn)
         slots = views.slot_map(people)
         rows = _plan_rows(conn, app, on, today, slots, None, past=True)
-        rate = _unrated(conn, today, slots) if auth.visitor().may("change") else []
+        rate = (
+            _unrated(conn, today, slots, auth.visitor().member)
+            if auth.visitor().may("change")
+            else []
+        )
     previous = (first - timedelta(days=1)).replace(day=1)
     following = last_day + timedelta(days=1)
     weeks = views.month_calendar(rows, first, today, {row["plan_id"] for row in rate})
@@ -764,11 +776,6 @@ def plans_month() -> str:
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
     )
-
-
-def _no_gifts(entries: list[agenda.Entry], kept: set[int]) -> list[agenda.Entry]:
-    """What is on, without plans made from a present that is hidden from the one looking."""
-    return [entry for entry in entries if entry.idea_id not in kept]
 
 
 def _own_only() -> int | None:

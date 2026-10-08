@@ -12,7 +12,7 @@ sudo journalctl -u familydb -n 100 --no-pager
 
 The doctor prints a fix under each finding: `✗` must be fixed, `!` is worth a look. On Docker the log is `sudo docker compose --project-directory /opt/familydb logs --tail 100 bot`, and `maintain.sh check` runs in a fresh container, so **web page answering** can warn while the page is up (`docker compose ps` is the truth). [Logs](/wiki/operations/diagnostics#logs) says how to follow and read them. To restart on either install, run `sudo /opt/familydb/scripts/maintain.sh restart`.
 
-Jump to: [the page will not open](#the-page-will-not-open), [sign-in](#somebody-cannot-sign-in), [a message got no reply](#a-message-got-no-reply), [Telegram](#telegram-is-silent-or-its-buttons-do-nothing), [calendar](#calendar-problems), [lookups](#lookups-are-not-happening), [reminders and weekend ideas](#reminders-or-weekend-ideas-do-not-arrive), [the server](#the-server). For money, see [Cost](/wiki/operations/cost#if-costs-are-higher-than-expected).
+Jump to: [the page will not open](#the-page-will-not-open), [sign-in](#somebody-cannot-sign-in), [a message got no reply](#a-message-got-no-reply), [Telegram](#telegram-is-silent-or-its-buttons-do-nothing), [calendar](#calendar-problems), [lookups](#lookups-are-not-happening), [reminders and weekend ideas](#reminders-or-weekend-ideas-do-not-arrive), [the server](#the-server). For money, see [Cost](/wiki/operations/cost#if-costs-are-higher-than-expected). The web page keeps its own list of recent warnings and errors and the words of failed model calls on the [Troubleshooting card](/wiki/controls/settings/troubleshooting).
 
 ## A message got no reply
 

@@ -37,14 +37,9 @@ def test_backup_reads_wal_and_fails_closed(conn, settings, tmp_path, docker_mode
     # Feedback/privilege functions are replaced, not the backup implementation.
     harness = r"""
 set -euo pipefail
-system_change() { :; }
-ok() { :; }
-note() { :; }
-warn() { :; }
+. "$ROOT/scripts/lib/common.sh"
 die() { echo "$*" >&2; exit 1; }
 require_free_mb() { :; }
-try_step() { shift; "$@"; }
-step() { shift; "$@"; }
 as_root() { if [ "$1" = chown ]; then return; fi; "$@"; }
 backup() {
   if [ "$FAIL_BACKUP" = 1 ]; then printf 'partial' > "$1"; return 1; fi
@@ -64,11 +59,13 @@ docker() {
 }
 """
     path = tmp_path / "harness.sh"
-    path.write_text(harness + function + '\ntake_backup "$BACKUP_DIR" test\n', newline="\n")
+    path.write_text(harness + function + '\ntake_backup "$BACKUP_DIR"\n', newline="\n")
     directory = tmp_path / "backup with spaces"
     directory.mkdir()
     env = {
         **os.environ,
+        "ROOT": ROOT.as_posix(),
+        "NO_COLOR": "1",
         "DB": settings.familydb_path.name,
         "TARGET": ".",
         "BACKUP_DIR": directory.name,
@@ -93,3 +90,27 @@ docker() {
         with closing(db.connect(backups[0])) as restored:
             assert members.find_by_name(restored, "Only in the WAL") is not None
     assert members.find_by_name(conn, "Only in the WAL") is not None
+
+
+def test_upgrade_does_not_promise_migrations_leave_data_alone():
+    script = (ROOT / "scripts/maintain.sh").read_text()
+    assert "never rewrite what is already there" not in script
+    assert "some rewrite what is in it" in script
+
+
+def test_uninstall_help_says_the_last_backup_stays():
+    if not BASH:
+        pytest.skip("bash required for shell integration")
+    out = subprocess.run(
+        [BASH, (ROOT / "scripts/uninstall.sh").as_posix(), "--help"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert "Nothing is left" not in out
+    assert "one last backup" in out
+    flat = " ".join(out.split())
+    assert "written outside the install" in flat and "and left there" in flat
+    # The words the run prints beside it.
+    script = (ROOT / "scripts/uninstall.sh").read_text()
+    assert "written outside ${TARGET} and left there" in script

@@ -34,9 +34,10 @@ sudo /opt/familydb/scripts/maintain.sh backup
 It checks there is room (the database's size plus 50 MB), takes SQLite's online backup, which is consistent even while FamilyDB answers a message, and checks that the file is not empty. On any failure it removes the incomplete file, so a half-written backup never looks usable. It ends with:
 
 ```text
-✓ Backup written with SQLite's online backup, which is safe while the bot is running.
-Backup: /opt/familydb/backups/familydb-<timestamp>.sqlite3
+✓ Backed up the database (14M) to /opt/familydb/backups/familydb-<timestamp>.sqlite3
 ```
+
+Under it come the two commands that bring a copy to your own computer, with the real file name filled in.
 
 Use this and not `familydb db backup DEST` for a backup you keep: it makes the file owner-only and works on Docker.
 
@@ -66,7 +67,7 @@ Keep the copy on your computer somewhere private.
 
 ## Restore a backup
 
-Restore only a file taken by this version of FamilyDB or an older one. A backup carries no version check: one from newer code is not refused, the [migration](/wiki/reference/glossary#migration) step finds nothing to do, and FamilyDB may then fail on a column it does not know. If you must go back past an upgrade, follow [Upgrade and rollback](/wiki/operations/upgrade-and-rollback#if-it-goes-wrong).
+Restore only a file taken by this version of FamilyDB or an older one. `restore` reads the backup's database version first and refuses one from newer code, before it stops FamilyDB or replaces anything. It says to [upgrade](/wiki/operations/upgrade-and-rollback) first or to use an older backup. If you must go back past an upgrade, follow [Upgrade and rollback](/wiki/operations/upgrade-and-rollback#if-it-goes-wrong).
 
 Restoring is also the only way to bring back what was removed for good. Taking a person off the list, for example, is undone only by restoring an older backup.
 
@@ -82,7 +83,7 @@ sudo ls -lt /opt/familydb/backups/ | head
 sudo /opt/familydb/scripts/maintain.sh restore /opt/familydb/backups/familydb-XXXX.sqlite3
 ```
 
-In order, `restore` checks the file first: it must pass SQLite's quick integrity check and be a FamilyDB database, and if it fails nothing is stopped or replaced. It then asks `Replace the database with that backup?`, and you answer `y`. It takes a safety backup of the database it is about to replace, so the restore can be undone. It stops FamilyDB, which on a virtualenv install can take up to 150 seconds if a model call is in progress (`TimeoutStopSec=150`). It copies the backup into place, clears the old write-ahead files, sets the owner and mode, and applies any migrations the backup lacks. Then it starts FamilyDB again.
+In order, `restore` checks the file first: it must pass SQLite's quick integrity check, be a FamilyDB database and be no newer than this code, and if it fails nothing is stopped or replaced. It then says what it is restoring (its size, when it was taken and how long ago), what it replaces and what will be lost: everything FamilyDB was told since that backup was taken. It asks `Replace the database with that backup? [y/N]`, and you answer `y`: this is the one question whose Enter is no, because it cannot be run again to undo itself. Then it takes a safety backup of the database it is about to replace, so the restore can be undone; stops FamilyDB, which on a virtualenv install can take up to 150 seconds if a model call is in progress (`TimeoutStopSec=150`); copies the backup into place, clears the old write-ahead files and sets the owner and mode; applies any migrations the backup lacks; and starts FamilyDB again.
 
 > **Everything FamilyDB was told since that backup was taken is gone.** The safety backup is the way back.
 
@@ -92,18 +93,22 @@ In order, `restore` checks the file first: it must pass SQLite's quick integrity
 sudo /opt/familydb/scripts/maintain.sh check
 ```
 
-On a virtualenv install the restore ends with these lines, and the check shows no `✗`:
+On a virtualenv install the restore ends like this, and the check shows no `✗`:
 
 ```text
-✓ It came back up.
-Done
-Restored from /opt/familydb/backups/familydb-XXXX.sqlite3.
-What was there before is at /opt/familydb/backups/familydb-YYYY.sqlite3, if you need it back.
+✓ It came back up, and the page answers.
+
+────────────────────────────────────────────────────────
+✓ Restored from 2026-09-14 03:15  (6s)
+    Before       /opt/familydb/backups/familydb-YYYY.sqlite3
+    sudo /opt/familydb/scripts/maintain.sh restore /opt/familydb/backups/familydb-YYYY.sqlite3  # to undo this
 ```
+
+`Before` is the safety backup, the database that was there before.
 
 Settings changed on the web page and the saved keys come back with the database. The calendar key does not. Status then shows what is connected.
 
-If the check warns `database is at migration N, newer than this code's M`, the backup came from newer code: [upgrade](/wiki/operations/upgrade-and-rollback) first, then restore again. If the restore fails partway, FamilyDB is left stopped. The safety backup is the newest `familydb-*.sqlite3` in the folder (`sudo ls -t /opt/familydb/backups | head -1`); restore it the same way to get back to where you were.
+If the restore stops with `that backup is from a newer FamilyDB than this code`, nothing was changed: [upgrade](/wiki/operations/upgrade-and-rollback) first, then restore again, or pick an older backup. If the restore fails partway, FamilyDB is left stopped. The safety backup is the newest `familydb-*.sqlite3` in the folder (`sudo ls -t /opt/familydb/backups | head -1`); restore it the same way to get back to where you were.
 
 ## If the server is gone
 

@@ -27,15 +27,40 @@ FamilyDB words these from the assistant's lines, not a model, so they cost nothi
 | Ask how a plan went (`follow_ups`) | on | Asks once for each plan that ended before today (up to a week back), with buttons to answer in one tap, so the ideas list learns what you liked. Off means nobody is asked; how it went can still be told at any time. | on or off |
 | Time to ask how a plan went (`follow_up_hour`) | 10 | The hour of the day after a plan. | 0 to 23 |
 | Check tomorrow's plans the evening before (`plan_checks`) | on | Speaks only when something is off, with another idea for the same time when one fits. | on or off |
-| Time to check tomorrow's plans (`plan_check_hour`) | 19 | The hour of the evening before. | 0 to 23 |
+| Time to check tomorrow's plans (`plan_check_hour`) | 19 | The hour of the evening before. The check then repeats each hour until 10 pm, so a plan made later that evening is still checked. | 0 to 23 |
 | Bring up a task kept for "some Saturday morning" (`task_nudges`) | on | Brings a task up when its part of the week comes round and the calendar is free. | on or off |
 | Say in the chat when an idea is filled in (`enrichment_notes`) | on | Sends a short note with what a lookup found. | on or off |
 
-The follow-up goes to the chat the plan was made in, or to the person's own chat when **Send what's for one person to their own chat** (`private_when_personal`) is on.
+The follow-up goes to the chat the plan was made in, or to the person's own chat when **Send what's for one person to them** (`private_when_personal`) is on.
 
-The evening check names two things that are off: rain for an outdoor plan (needs a home position), or a place whose saved hours show it closed at the plan's time (needs hours from a lookup). It covers only plans for an idea, made in a chat, and checks each once, so a plan made after the check's hour the evening before is not checked.
+The evening check names two things that are off: rain for an outdoor plan (needs a home position), or a place whose saved hours show it closed at the plan's time (needs hours from a lookup). It covers only plans for an idea, made in a chat, and checks each once, so a plan made after 10 pm the evening before is not checked.
 
 Nudges follow the rules in [Preferred windows and nudges](/wiki/model/tasks-and-reminders#preferred-windows-and-nudges); the nudges job looks every 15 minutes. Where a reminder goes is in [How a reminder is delivered](/wiki/model/tasks-and-reminders#how-a-reminder-is-delivered).
+
+## Each morning
+
+Once a morning FamilyDB sends one message in each chat that has something for it, and none on an empty day. It is written from the lines in code, not by a model, so it costs nothing. A chat gets at most one a day, and it is never held back to ride on a reply.
+
+| Label (`key`) | Default | What it does | Range last |
+|---|---|---|---|
+| Time of the morning message (`morning_hour`) | 7 (7 am) | The hour it goes, in the family's time zone. After a restart it still goes, until noon. | 0 to 23 |
+| The day ahead (`morning_agenda`) | on | Today's plans, reminders and deadlines, and an idea with dates that ends this week when a free day could fit it (said once). | on or off |
+| A reminder nobody acted on, once more (`chase_missed`) | on | The morning after a reminder went and was neither done nor snoozed, once, with a button to tick it off. | on or off |
+| What is due tomorrow (`deadline_heads_up`) | on | The morning before a deadline, so it is not missed for want of a reminder. | on or off |
+| What has waited a week or more (`forgotten_roundup`) | on | Once a week, the things to do a week old or more that have no reminder or time to bring them up, 5 at most. | on or off |
+| Day of the week for that (`roundup_day`) | Sunday | The day the round-up goes, in that day's morning message. | Monday to Sunday |
+
+With all four parts off, no morning message is sent. The plans for the day go to the family's chat ([The family's chat](/wiki/controls/settings/connections#in-a-telegram-group)); each reminder, deadline and forgotten thing goes where that thing's reminders go, so a person's own things reach them and the web page's shared conversation gets one message with all of it. Where a kid reads, it is said plainly and never names a birthday's thing to do or a present's plan. Each part is counted on the card's list, and reminders are described in [Things to do and reminders](/wiki/model/tasks-and-reminders).
+
+## On phones and tablets
+
+| Label (`key`) | Default | What it does | Range last |
+|---|---|---|---|
+| Say when she has written (`web_push`) | on | Lets a person who uses only the web page turn on a notice, for their own device, that the assistant has a message. Off removes the setting from every person's **Your password** page and sends none. | on or off |
+
+Each person turns notices on for their own device under **Your password** ([Look and your password](/wiki/controls/look-and-password#your-password)), in the card **Notifications on this device**. The notice says only that the assistant has a message, never the words. It goes only for a message the assistant sent of her own accord (a reminder, the morning message), once it is delivered, to the devices of the people who read that conversation: a kid's own conversation reaches that kid's devices, and the family's reaches the devices of whoever may decide, parents and admins.
+
+Apple's, Google's or Mozilla's push service carries the notice and sees the device's address and when it was sent, not the words. On an iPhone or iPad the web page must be added to the Home Screen first. A notice that fails is logged and forgotten, and never changes whether the message counts as delivered; a device the browser has let go is taken off.
 
 ## When something needs fixing
 
@@ -53,6 +78,7 @@ FamilyDB tells every admin with a Telegram id within a minute, and again after 1
 - A price moved, or the price lists could not be checked.
 - New models to choose from, or a big move in what the calls cost or do (once a week for each kind of call).
 - A model company stopped taking part of a request, or keeps refusing requests for a reason FamilyDB cannot read (told on the second refusal).
+- A calendar or other source of [what is on near home](/wiki/controls/settings/happening) could not be read for 3 days running, or new calendars were found to tick.
 - A judgment changed the models, when [judgments](/wiki/controls/settings/ai-model#asking-a-stronger-model-to-weigh-a-change) are on.
 
 ## When a message cannot be answered

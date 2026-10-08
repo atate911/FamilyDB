@@ -463,7 +463,7 @@ def _replacement(app: Any, conn: sqlite3.Connection, facts: dict[str, Any], choi
     acts = app.settings.judgement_acts == "within_cost"
     if boxes and acts and _within_cost(conn, company, old, choice):
         undo = _put_in(app, conn, dict.fromkeys(boxes, choice))
-        return Done(f"{choice} put in place of {old}, at the same cost or less", undo=undo)
+        return Done(f"{choice} put in place of {old}, at about the same cost", undo=undo)
     if boxes:
         return Done(
             f"{choice} suggested in place of {old}; it waits for an admin on the Status page",

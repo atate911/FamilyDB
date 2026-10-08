@@ -116,7 +116,7 @@
           <summary><h2>Take {{ person.name }} off the list for good</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
           <form class="fold__body" method="post" action="{{ url_for('family.remove', member_id=person.id) }}">
             <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="revision" value="{{ person.revision }}" />
-            <p class="small">Their name, how they sign in, their Telegram link, where they last were and what {{ assistant }} remembers about them are deleted. What they said stays in the chat without their name, so conversations still read, and the ideas, plans and things to do they added stay, as the family’s. This can’t be undone: to stop {{ assistant }} answering them for now, switch them off instead.</p>
+            <p class="small">Their name, how they sign in, their Telegram link, where they last were, what {{ assistant }} remembers about them and, for a kid, her wish lists are deleted. Their open things to do and reminders are canceled, in their own chat and wherever they asked for one outside a group. What they said stays in the chat without their name, so conversations still read, and the ideas, plans and group things to do they added stay, as the family’s. This can’t be undone: to stop {{ assistant }} answering them for now, switch them off instead.</p>
             <label class="check"><input type="checkbox" name="sure" value="yes" required />I’m sure: take {{ person.name }} off for good</label>
             <div class="actions"><button class="btn btn--danger" type="submit">{{ icon('x') }}Take {{ person.name }} off</button></div>
           </form>

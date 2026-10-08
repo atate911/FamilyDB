@@ -130,7 +130,7 @@ class ProblemLog(logging.Handler):
         if record.name.startswith(("familydb.logs", "familydb.store")) and record.levelno < 40:
             return
         try:
-            detail = None
+            detail = record.exc_text or None  # already formatted, when a filter got there first
             if record.exc_info and record.exc_info[0] is not None:
                 detail = "".join(traceback.format_exception(*record.exc_info))
             self._queue.put_nowait(

@@ -149,7 +149,7 @@ scp you@server:familydb-backups.tar.gz .       # on your own computer
 sudo scripts/maintain.sh restore backups/familydb-XXXX.sqlite3
 ```
 
-It checks the backup is a sound database, stops the bot, backs up the database being replaced (so a restore can be undone), puts the backup in place, clears the old write-ahead files, sets owner and permissions, migrates and starts. By hand, stop the bot first (it has the file open):
+It checks the backup is a sound database and not from a newer version than this code (it refuses one, before touching anything: upgrade first, or use an older backup), stops the bot, backs up the database being replaced (so a restore can be undone), puts the backup in place, clears the old write-ahead files, sets owner and permissions, migrates and starts. By hand, stop the bot first (it has the file open):
 
 ```bash
 sudo systemctl stop familydb                       # or: docker compose stop bot
@@ -185,7 +185,7 @@ writes `plans.ics` (every plan, for any calendar), `ideas.csv` and `tasks.csv` (
 sudo /opt/familydb/scripts/maintain.sh upgrade
 ```
 
-It takes a backup, fetches, moves to the newer code, reinstalls locked dependencies (or rebuilds the image), migrates, restarts, then prints the command to go back. Do not `git pull`: after an upgrade the checkout is on a detached commit, where it fails, and it would skip the backup and dependencies. On a private repository the fetch needs a credential (docs/INSTALL.md, Day to day).
+It fetches, says what this upgrade changes (the commits and pull requests, and any new migrations, packages and settings) and asks, with Enter as yes; then takes a backup, prints the commands to go back, moves to the newer code, reinstalls locked dependencies (or rebuilds the image), migrates and restarts. The commands to go back are printed again only if the upgrade fails after the code has moved (with the command to finish) or the bot does not come back. If it stops part-way, running `upgrade` again finishes it: it says "Already up to date" only when the code is on the newest version and the database is migrated. Do not `git pull`: after an upgrade the checkout is on a detached commit, where it fails, and it would skip the backup and dependencies. On a private repository the fetch needs a credential (docs/INSTALL.md, Day to day).
 
 Which code: while the newest `CHANGELOG.md` heading says "in progress", bootstrap installs the default branch and `upgrade` follows it; once a version heading carries a date, both follow the newest release tag. An upgrade only moves forward: if the target does not contain what is installed, it refuses and changes nothing rather than take the database back past migrations already run. Pin a tag, branch or commit at install with `bootstrap.sh --ref NAME`.
 

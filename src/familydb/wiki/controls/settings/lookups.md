@@ -10,6 +10,7 @@ If looking ideas up is on but there is no key for the model company that does it
 |---|---|---|---|
 | Look ideas up on the web (`web_tools_enabled`) | off in the program; the installer turns it on | Off: the lookups job does not run, no idea is filled in, nothing new is discovered, and `/lookup` says lookups are switched off. With no key for the company that does it, ideas wait and are looked up once a key is added. | on or off |
 | Days before details look old (`place_stale_days`) | 30 | After this, an idea's hours and prices are marked as worth checking again, and looked up again the next time the idea is suggested (within the spending limit). | 1 to 3650 |
+| Look for a place when nothing saved fits (`find_places`) | off | Asked for a kind of place nothing on the list fits ("Thai food, what's open now?"), for now or the next 2 days, one lookup searches nearby and offers a few, said as found on the web. Each search is a small model call within the daily limit, so it stays off until you turn it on, and it needs the row above on. The same ask within the hour is searched once. | on or off |
 
 ## When
 
@@ -21,6 +22,14 @@ An idea asked for now is looked up at the next check (every 2 minutes by default
 |---|---|---|---|
 | Look ideas up (`lookups_when`) | in the evening | Looks ideas up together in the evening, or as soon as each idea is added ("asap"). | evening or asap |
 | Time for the evening's lookups (`lookup_hour`) | 21 | The hour of the evening run, in the family's time zone. | 0 to 23 |
+
+## What is over
+
+| Label (`key`) | Default | What it does | Range last |
+|---|---|---|---|
+| Take an idea off a week after its last day (`tidy_ideas`) | on | Each night at 03:30 an event or a show whose dates ended more than 7 days ago is marked dropped, so it stops coming up and is no longer sent with every message. No model is asked. Off leaves it on the list. | on or off |
+
+A dropped idea is not deleted: its page brings it back. An idea that is planned or done, and any plan made from one, is left alone.
 
 ## How often
 

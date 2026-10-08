@@ -83,3 +83,38 @@ def test_a_telegram_token_never_reaches_the_log() -> None:
     written = stream.getvalue()
     assert "AAH-abcdefghijklmnopqrstuvwxyz012345" not in written
     assert "bot<token>/getUpdates" in written
+
+
+def test_a_telegram_token_in_a_traceback_never_reaches_the_log_or_the_problem_log(
+    settings, conn
+) -> None:
+    from familydb import logs
+    from familydb.store import problems
+
+    secret = "AAH-abcdefghijklmnopqrstuvwxyz012345"
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.addFilter(RedactSecrets())
+    kept = logs.ProblemLog(settings.familydb_path, logging.WARNING)
+    kept.addFilter(RedactSecrets())
+    logger = logging.getLogger("test.redaction.traceback")
+    logger.addHandler(handler)
+    logger.addHandler(kept)
+    logger.setLevel(logging.DEBUG)
+    try:
+        try:
+            raise RuntimeError(
+                f"Client error for url 'https://api.telegram.org/bot123456789:{secret}/getMe'"
+            )
+        except RuntimeError:
+            logger.exception("telegram poll failed")
+    finally:
+        kept.flush_and_stop()
+        logger.removeHandler(handler)
+        logger.removeHandler(kept)
+    written = stream.getvalue()
+    assert "telegram poll failed" in written and "RuntimeError" in written
+    assert secret not in written and "bot<token>/getMe" in written
+    (row,) = problems.recent(conn)
+    assert "RuntimeError" in row["detail"] and "bot<token>/getMe" in row["detail"]
+    assert secret not in row["detail"]
