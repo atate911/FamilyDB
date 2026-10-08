@@ -26,6 +26,7 @@ from familydb.agent.providers import (
     Provider,
     Seen,
     Surface,
+    Withheld,
     fallback_for,
     for_surface,
     hearers,
@@ -292,6 +293,11 @@ def ask(
     spare = fallback
     if spare is None and api is None:
         spare = fallback_for(settings, call.surface, chosen.name, web=web)
+    if spare is not None and spending.company_full(
+        ctx.conn, settings, ctx.clock.now(), chosen.name
+    ):
+        # The company's month is spent: it is not asked, and the loop goes to the stand-in.
+        chosen = Withheld(chosen)
     composed = build_request(
         kind,
         conn=ctx.conn,
@@ -428,7 +434,13 @@ def _written_down(
     failure: AgentError | None = None
     for provider in candidates:
         model = model_of(provider)
-        held = spending.admit(conn, settings, clock.now(), estimate(provider, model))
+        try:
+            held = spending.admit(
+                conn, settings, clock.now(), estimate(provider, model), company=provider.name
+            )
+        except spending.CompanyLimitReached as exc:
+            failure = failure or exc  # the next company that may answer is asked
+            continue
         started = time.monotonic()
         try:
             written = request(provider)

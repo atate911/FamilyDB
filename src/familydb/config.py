@@ -131,6 +131,23 @@ RESERVED_BODY = frozenset(
     }
 )
 SLUG = re.compile(r"^[a-z][a-z0-9-]{1,23}$")
+
+
+class CompanyOptions(BaseModel):
+    """What the family said of one company on the models page, laid over what its settings say."""
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    # Let it answer. Off, it is never asked, and a use chosen to it is answered by a stand-in.
+    allowed: bool = True
+    # May answer when the company chosen cannot. Empty: as `provider_fallback` says for the three
+    # built in, as the definition says for one the family added.
+    stand_in: bool | None = None
+    # The most to spend on it in a calendar month, in US dollars, counted from the calls made;
+    # past it a use chosen to it is answered by a stand-in. Empty: no limit.
+    monthly_limit: float | None = Field(default=None, ge=0, le=100_000)
+
+
 MAX_EXTRA_BODY = 2_000
 
 
@@ -269,6 +286,8 @@ class Settings(BaseSettings):
     model_choices: dict[str, str] = Field(default_factory=dict)
     # How much each use thinks, where the page said; empty uses `effort` and `worker_effort`.
     use_effort: dict[str, Effort] = Field(default_factory=dict)
+    # Each company's own switches from the page, by slug (`CompanyOptions`).
+    company_options: dict[str, CompanyOptions] = Field(default_factory=dict)
     provider_fallback: bool = True
     # Model strength per situation, whichever company: `everyday` is the company's model named
     # below, `better` and `best` its stronger ones (catalog.py).
@@ -625,6 +644,25 @@ class Settings(BaseSettings):
             for key, item in value.items()
             if key in USE_KEYS and isinstance(item, str) and item.strip()
         }
+
+    @field_validator("company_options", mode="before")
+    @classmethod
+    def _readable_options(cls, value: Any) -> Any:
+        """Options that cannot be read are dropped, as a choice for a use this version does not
+        know is: a value from another version must never stop the app."""
+        if not isinstance(value, Mapping):
+            return {}
+        kept: dict[str, Any] = {}
+        for slug, entry in value.items():
+            try:
+                kept[str(slug)] = (
+                    entry
+                    if isinstance(entry, CompanyOptions)
+                    else CompanyOptions.model_validate(entry)
+                )
+            except ValidationError:
+                continue
+        return kept
 
     @model_validator(mode="after")
     def _companies_exist(self) -> Settings:

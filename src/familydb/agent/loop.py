@@ -119,7 +119,11 @@ def run_turn(
     for iteration in range(1, limit + 1):
         try:
             held = spending.admit(
-                ctx.conn, settings, ctx.clock.now(), _estimate(request, active, surface, settings)
+                ctx.conn,
+                settings,
+                ctx.clock.now(),
+                _estimate(request, active, surface, settings),
+                company=active.name,
             )
         except spending.SpendingLimitReached as exc:
             written = {spec.name for spec in registry.specs() if spec.writes}

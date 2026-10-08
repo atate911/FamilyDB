@@ -116,6 +116,16 @@ def spent_on(conn: sqlite3.Connection, kinds: tuple[str, ...], *, since: str) ->
     return float(row["spent"])
 
 
+def spent_by_provider(conn: sqlite3.Connection, provider: str, *, since: str) -> float:
+    """Estimated dollars spent on calls to one company since a UTC timestamp."""
+    row = conn.execute(
+        "SELECT coalesce(sum(cost_usd), 0) AS spent FROM llm_calls "
+        "WHERE provider = ? AND created_at >= ?",
+        (provider, since),
+    ).fetchone()
+    return float(row["spent"])
+
+
 def spent_since(conn: sqlite3.Connection, *, since: str) -> float:
     """Estimated dollars spent on model calls since a UTC timestamp."""
     row = conn.execute(

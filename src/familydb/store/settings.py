@@ -122,7 +122,7 @@ SECRETS = (
 COMPANIES = ("companies", "company_keys")
 # The page's choice of company and model for each use, and how much each thinks
 # (agent/uses.py); written by the models form alone.
-MODELS = ("model_choices", "use_effort")
+MODELS = ("model_choices", "use_effort", "company_options")
 HIDDEN = ("company_keys",)
 # Who the assistant and the family are (/settings/personality); long texts show as "rewritten"
 # in the change list (web/views.py `LONG_SETTINGS`).

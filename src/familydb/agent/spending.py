@@ -12,7 +12,7 @@ import sqlite3
 from datetime import datetime, time, timedelta
 from typing import Any
 
-from familydb.agent.providers import LOOK_TOKENS, prices
+from familydb.agent.providers import LOOK_TOKENS, companies, prices
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
@@ -82,6 +82,39 @@ class SpendingLimitReached(AgentError):
         self.limit = limit
 
 
+class CompanyLimitReached(AgentError):
+    """The most the family said to spend on one company in a month is spent. Not retryable: a use
+    chosen to it is answered by a stand-in, and with none it waits for the month to turn."""
+
+    def __init__(self, company: str, spent: float, limit: float) -> None:
+        super().__init__(
+            f"the monthly limit for {company} is reached: ${spent:.2f} of ${limit:.2f}",
+            retryable=False,
+        )
+        self.company = company
+        self.spent = spent
+        self.limit = limit
+
+
+def month_start(settings: Settings, now: datetime) -> str:
+    """When this calendar month began, in the family's time zone, as a UTC timestamp."""
+    local = now.astimezone(settings.tzinfo)
+    return utc_iso(datetime.combine(local.date().replace(day=1), time(), tzinfo=settings.tzinfo))
+
+
+def company_spent(
+    conn: sqlite3.Connection, settings: Settings, now: datetime, company: str
+) -> float:
+    """Estimated dollars spent on this company so far this month."""
+    return calls.spent_by_provider(conn, company, since=month_start(settings, now))
+
+
+def company_full(conn: sqlite3.Connection, settings: Settings, now: datetime, company: str) -> bool:
+    """Whether the company's monthly limit, if the family set one, is spent."""
+    limit = companies.monthly_limit(company, settings)
+    return limit is not None and company_spent(conn, settings, now, company) >= limit
+
+
 def estimate(
     provider: str,
     model: str | None,
@@ -127,13 +160,26 @@ def estimate_looking(provider: str, model: str | None) -> float:
     return prices.cost(provider, model, usage)[0]
 
 
-def admit(conn: sqlite3.Connection, settings: Settings, now: datetime, cost: float) -> int:
+def admit(
+    conn: sqlite3.Connection,
+    settings: Settings,
+    now: datetime,
+    cost: float,
+    company: str | None = None,
+) -> int:
     """Check the limit and hold this call's estimated cost; raise when the day is used up (noted
-    for an admin after the check's transaction ends; let through, every day's note is cleared)."""
+    for an admin after the check's transaction ends; let through, every day's note is cleared), or
+    when the company it goes to has had its month's worth."""
     today = now.astimezone(settings.tzinfo).date().isoformat()
     try:
         with transaction(conn):
             _check(conn, settings, now, other_than=None)
+            if company is not None and company_full(conn, settings, now, company):
+                raise CompanyLimitReached(
+                    company,
+                    company_spent(conn, settings, now, company),
+                    companies.monthly_limit(company, settings) or 0.0,
+                )
             alert_store.clear_kind(conn, "limit")
             return calls.hold(conn, cost_usd=cost, now=utc_iso(now))
     except SpendingLimitReached as exc:

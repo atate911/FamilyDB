@@ -623,7 +623,7 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
         instead = [
             slug
             for slug in have
-            if (spare := companies.get(slug, settings)) is not None and spare.stands_in
+            if companies.get(slug, settings) is not None and companies.may_stand_in(slug, settings)
         ]
         if not instead:
             report.add(
@@ -719,7 +719,7 @@ def check_added_companies(app: App, report: Report, *, online: bool) -> None:
             "answers the family"
             if settings.provider == company.slug
             else "may stand in"
-            if company.stands_in
+            if companies.may_stand_in(company.slug, settings)
             else "is added and not used"
         )
         unpriced = [
