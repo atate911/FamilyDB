@@ -229,6 +229,12 @@ installed.
   map to the developer documents. Its 69 pages are Markdown in `src/familydb/wiki/`. Status
   and each settings page also carry a Guide button to the matching page.
 
+### Fixed since v0.2.0
+
+- **Status no longer says "can't answer" for days after the day's limit.** The note that the
+  limit was reached is now forgotten as soon as a call goes through, and a note from an earlier
+  day no longer counts against today.
+
 ### New since v0.1.0
 
 - **The kids have their own place.** Each kid signs in to her own simpler pages

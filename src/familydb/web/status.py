@@ -335,7 +335,13 @@ def light(app: App, conn: sqlite3.Connection) -> str | None:
     """The Status tile's light: "bad" while the family cannot be answered, "warn" while something
     else only an admin can fix goes on, else None."""
     since = utc_iso(app.clock.now() - alerts.KEEP)
-    kinds = {one.kind for one in alert_store.current(conn, since=since)}
+    today = app.clock.now().astimezone(app.settings.tzinfo).date().isoformat()
+    # The limit is noted per day and clears when a call is let through: a day gone is not "now".
+    kinds = {
+        one.kind
+        for one in alert_store.current(conn, since=since)
+        if one.kind != "limit" or one.subject == today
+    }
     if kinds & STOPPING:
         return "bad"
     if kinds & WORRYING:
