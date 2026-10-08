@@ -48,7 +48,11 @@ retry() {
 }
 familydb_cmd() {
   case "$1" in
-    doctor) echo "✓ settings: loaded"; echo; echo "Everything is set up." ;;
+    doctor)
+      seen="$(cat "$WORK/doctor-count" 2>/dev/null || echo 0)"
+      echo $((seen + 1)) > "$WORK/doctor-count"
+      if [ "$seen" = 0 ]; then printf '%b' "${DOCTOR_BEFORE-✓ settings: loaded\n\nEverything is set up.\n}"
+      else printf '%b' "${DOCTOR_AFTER-✓ settings: loaded\n\nEverything is set up.\n}"; fi ;;
     db)
       echo MIGRATE
       [ "${FAIL_MIGRATE:-0}" = 0 ] || return 1
@@ -250,7 +254,7 @@ def test_what_goes_as_expected_is_one_line_and_the_last_line_carries_what_moved(
     assert "Fetched" not in out and "Checking out" not in out  # nothing a person acts on
     assert "Stopping" not in out and "Starting" not in out
     assert "Applying 1 new migration (0002_second)" in out
-    last = [line for line in out.splitlines() if line.startswith("✓ Upgraded ")]
+    last = [line for line in out.splitlines() if line.startswith("[ OK ] Upgraded ")]
     assert len(last) == 1
     assert f"Upgraded {server.before[:7]} → " in last[0]  # where it was, and where it is
     assert "· 1 commit · 1 migration · 2 packages · down " in last[0]
@@ -304,12 +308,14 @@ def test_the_screen_says_where_it_stands_and_where_it_is_going_and_how_big_the_m
     assert any(re.fullmatch(r"  \S+ +\d+  \++-* *\s?\+\d+ -\d+", line) for line in lines), out
 
 
-def test_the_run_counts_its_steps_and_the_last_line_is_the_full_bar(tmp_path):
+def test_the_run_counts_its_steps_and_the_foot_of_the_window_is_the_full_bar(tmp_path):
     server = Server(tmp_path)
     result = server.upgrade()
     assert result.returncode == 0, result.stdout + result.stderr
-    bar = next(line for line in result.stdout.splitlines() if line.endswith(" 7/7"))
-    assert set(bar.removesuffix(" 7/7")) == {"█"}  # every step ran: nothing left empty
+    foot = next(line for line in result.stdout.splitlines() if line.startswith("╚═["))
+    assert "] 100%  8/8 " in foot and foot.endswith("╝")
+    bar = foot[foot.index("[") + 1 : foot.index("]")]
+    assert set(bar) == {"█"}  # every step ran: nothing left empty
 
 
 def test_a_run_that_stopped_shows_a_bar_that_stops_where_it_did():
@@ -323,5 +329,45 @@ def test_a_run_that_stopped_shows_a_bar_that_stops_where_it_did():
         capture_output=True,
         text=True,
     )
-    bar = next(line for line in done.stdout.splitlines() if line.endswith(" 3/7"))
+    foot = next(line for line in done.stdout.splitlines() if line.startswith("╚═["))
+    assert " 42%  3/7 " in foot
+    bar = foot[foot.index("[") + 1 : foot.index("]")]
     assert "█" in bar and "░" in bar and bar.index("░") > bar.index("█")
+    assert "[FAIL] Stopped" in done.stdout
+
+
+def test_a_step_that_fails_midway_shows_where_the_run_got_to_above_what_went_wrong(tmp_path):
+    server = Server(tmp_path)
+    result = server.upgrade(FAIL_MIGRATE="1")
+    assert result.returncode != 0
+    assert "62%  5/8" in result.stderr  # the migration is the sixth step: five were done
+    assert result.stderr.index("5/8") < result.stderr.index("failed")
+
+
+FAILING = "✗ model key: no key\n    → add one\n\n1 thing(s) must be fixed\n"
+
+
+def test_a_problem_that_was_there_before_is_shown_and_not_blamed_on_the_upgrade(tmp_path):
+    server = Server(tmp_path)
+    result = server.upgrade(DOCTOR_BEFORE=FAILING, DOCTOR_AFTER=FAILING)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "✗ model key: no key" in result.stdout  # it is in front of the person
+    assert "(the same before the upgrade)" in result.stdout
+    last = [line for line in result.stdout.splitlines() if "Upgraded " in line]
+    assert last and last[0].startswith("[ OK ]")  # and the upgrade is not called a failure for it
+
+
+def test_a_problem_the_upgrade_brought_is_called_the_upgrades(tmp_path):
+    server = Server(tmp_path)
+    result = server.upgrade(DOCTOR_AFTER=FAILING)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "[WARN] Upgraded " in result.stdout and "1 new problem" in result.stdout
+    # the way back is said again, because it may be needed now
+    assert result.stdout.count(f"checkout --quiet --detach {server.before}") == 2
+
+
+def test_the_installed_version_is_shown_even_when_there_is_nothing_to_upgrade(tmp_path):
+    server = Server(tmp_path)
+    assert server.upgrade().returncode == 0
+    again = server.upgrade()
+    assert "Installed" in again.stdout and "Upgrading" not in again.stdout

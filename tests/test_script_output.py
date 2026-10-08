@@ -37,7 +37,7 @@ def _lib(code: str, **env: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [BASH, "-c", LIB + code],
         cwd=ROOT,
-        env={**os.environ, "NO_COLOR": "1", "COLUMNS": "80", **env},
+        env={**os.environ, "NO_COLOR": "1", "COLUMNS": "80", "LC_ALL": "C.UTF-8", **env},
         capture_output=True,
         text=True,
         timeout=60,
@@ -62,6 +62,9 @@ def _fake_server(tmp_path: Path, *, backups: int = 0) -> tuple[Path, dict[str, s
     program.write_text(
         f"#!{sys.executable}\n"
         "import sqlite3, sys\n"
+        "import os\n"
+        "if sys.argv[1:2] == ['doctor']:\n"
+        "    print(os.environ.get('FAKE_DOCTOR', '✓ settings: loaded\\n\\nEverything is set up.'))\n"
         "if sys.argv[1:3] == ['db', 'backup']:\n"
         "    with sqlite3.connect('data/familydb.sqlite3') as source:\n"
         "        target = sqlite3.connect(sys.argv[3]); source.backup(target); target.close()\n"
@@ -164,7 +167,9 @@ def test_status_leads_with_a_verdict_and_ends_with_what_to_do(tmp_path) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     out = done.stdout
     assert not ESCAPE.search(out + done.stderr)
-    assert re.search(r"^ FamilyDB  Status  ", out, re.M)  # the banner says what this is, and where
+    assert re.search(
+        r"^╔═\[■\]═ FamilyDB ═ Status ═+ .+ ═╗$", out, re.M
+    )  # the title bar says what, and where
     # No backup and no schedule: not well, and it says how to put that right, command first.
     assert "Running, with 2 things to look at" in out  # the backup and its schedule
     assert re.search(r"^  ! Last backup +none yet", out, re.M)
@@ -227,7 +232,7 @@ def test_a_backup_ends_with_where_it_is_and_how_to_fetch_it(tmp_path) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     out = done.stdout
     assert [p.suffix for p in (target / "backups").iterdir()] == [".sqlite3"]
-    assert re.search(r"✓ Backed up the database \(\S+\) to \S*familydb-\d+\.sqlite3", out)
+    assert re.search(r"\[ OK \] Backed up the database \(\S+\) to \S*familydb-\d+\.sqlite3", out)
     assert "To fetch a copy off this machine" in out
     assert "scp " in out
     assert "SQLite's online backup" not in out  # how it works is not what this run is about
@@ -253,7 +258,7 @@ def _asked(default: str, answer: bytes) -> tuple[int, str]:
     master, slave = os.openpty()
     process = subprocess.Popen(
         [BASH, "-c", LIB + f'approve "Go on?" {default} && exit 0 || exit 1'],
-        env={**os.environ, "NO_COLOR": "1"},
+        env={**os.environ, "NO_COLOR": "1", "LC_ALL": "C.UTF-8"},
         stdin=slave,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -319,18 +324,18 @@ def test_every_warning_is_said_again_at_the_end_and_counted() -> None:
         'finish ok "Upgraded"\nkv Version "v1"\nrecap\n'
     )
     assert done.returncode == 0, done.stderr
-    assert "! Upgraded, with 2 warnings" in done.stdout
+    assert "[WARN] Upgraded, with 2 warnings" in done.stdout
     assert done.stdout.index("Version") < done.stdout.index(
         "Warnings"
     )  # facts, then what went wrong
     recap = done.stdout[done.stdout.index("Warnings") :]
     assert "disk is nearly full" in recap and "one step failed, carrying on" in recap
     clean = _lib('finish ok "Upgraded"\nrecap\n')
-    assert "✓ Upgraded" in clean.stdout and "Warnings" not in clean.stdout
+    assert "[ OK ] Upgraded" in clean.stdout and "Warnings" not in clean.stdout
 
 
 def test_a_failed_run_is_never_called_a_success_and_a_dry_run_never_one_that_ran() -> None:
-    assert "✗ Stopped" in _lib('finish bad "Stopped"\n').stdout
+    assert "[FAIL] Stopped" in _lib('finish bad "Stopped"\n').stdout
     dry = _lib('finish ok "Upgraded"\n', DRY_RUN="1")
     assert "Dry run finished: nothing was changed" in dry.stdout and "Upgraded" not in dry.stdout
 
@@ -475,7 +480,7 @@ def test_interrupting_a_step_stops_the_command_and_leaves_no_line_drawing() -> N
     master, slave = os.openpty()
     process = subprocess.Popen(
         ["setsid", "--ctty", "--wait", BASH, "-c", code],
-        env={**os.environ, "TERM": "xterm", "NO_COLOR": "1", "COLUMNS": "80"},
+        env={**os.environ, "TERM": "xterm", "NO_COLOR": "1", "COLUMNS": "80", "LC_ALL": "C.UTF-8"},
         stdin=slave,
         stdout=slave,
         stderr=slave,
@@ -517,3 +522,135 @@ def test_a_step_that_failed_says_what_it_ran_and_what_it_said() -> None:
     assert "✗ Stopping — failed" in done.stderr
     assert "exit code: 3" in done.stderr and "no space left on device" in done.stderr
     assert "The disk is full" in done.stderr  # and what that means
+
+
+def test_the_title_bar_fills_the_width_whatever_the_width_and_keeps_the_right_end() -> None:
+    for width in (40, 60, 80, 120):
+        bar = _lib(
+            'banner "Upgrade" "/opt/familydb ${S_DOT} systemd service (familydb)"',
+            COLUMNS=str(width),
+        ).stdout.strip()
+        shown = min(max(width, 40), 88)
+        assert len(bar) == shown, (width, bar)
+        assert bar.startswith("╔═[■]═ FamilyDB ═ Upgrade ═") and bar.endswith("═╗")
+    plain = _lib('banner "Upgrade"', FAMILYDB_ASCII="1", COLUMNS="60").stdout.strip()
+    assert (
+        plain.startswith("+=[#]= FamilyDB = Upgrade =")
+        and plain.endswith("=+")
+        and len(plain) == 60
+    )
+
+
+def test_a_command_exits_with_what_its_last_line_said(tmp_path) -> None:
+    target, env = _fake_server(tmp_path)
+    well = _maintain(target, env, "status")
+    assert well.returncode == 0, well.stdout + well.stderr
+    # The page says it is not well: a monitor reads that from the exit status, not from the words.
+    (tmp_path / "stubs" / "curl").write_text(
+        "#!/bin/sh\nprintf 'the database does not answer\\n503'\n"
+    )
+    sick = _maintain(target, env, "status")
+    assert sick.returncode == 1, sick.stdout + sick.stderr
+    assert "does not answer" in sick.stdout
+    assert _lib('finish bad "x" >/dev/null; exit "$FINISH_BAD"').returncode == 1
+    assert _lib('finish warn "x" >/dev/null; exit "$FINISH_BAD"').returncode == 0
+
+
+def _on_a_terminal(code: str, **env: str) -> str:
+    """What a script prints when its output is a terminal, with nothing else changed."""
+    master, slave = os.openpty()
+    process = subprocess.Popen(
+        [BASH, "-c", LIB + code],
+        env={
+            **os.environ,
+            "TERM": "xterm",
+            "NO_COLOR": "",
+            "COLUMNS": "80",
+            "LC_ALL": "C.UTF-8",
+            **env,
+        },
+        stdin=subprocess.DEVNULL,
+        stdout=slave,
+        stderr=slave,
+        close_fds=True,
+    )
+    os.close(slave)
+    shown = b""
+    while True:
+        try:
+            data = os.read(master, 4096)
+        except OSError:
+            break
+        if not data:
+            break
+        shown += data
+    process.wait(timeout=30)
+    os.close(master)
+    return shown.decode("utf-8", "replace")
+
+
+def test_a_pull_request_number_is_a_link_on_a_terminal_and_plain_text_anywhere_else() -> None:
+    link = 'hyperlink "https://github.com/o/r/pull/64" "#64"'
+    shown = _on_a_terminal(link)
+    assert "\x1b]8;;https://github.com/o/r/pull/64\x07#64\x1b]8;;\x07" in shown
+    assert _on_a_terminal(link, FAMILYDB_NO_LINKS="1").strip() == "#64"
+    assert _lib(link).stdout == "#64"  # a pipe, a log, a mail
+    assert _lib('hyperlink "" "#64"').stdout == "#64"  # no address to link to
+
+
+@pytest.mark.parametrize(
+    ("remote", "web"),
+    [
+        ("git@github.com:atate911/FamilyDB.git", "https://github.com/atate911/FamilyDB"),
+        ("https://github.com/atate911/FamilyDB", "https://github.com/atate911/FamilyDB"),
+        ("https://github.com/atate911/FamilyDB.git/", "https://github.com/atate911/FamilyDB"),
+        ("ssh://git@github.com/atate911/FamilyDB.git", "https://github.com/atate911/FamilyDB"),
+        ("/srv/git/familydb.git", ""),
+        ("https://git.example.org/o/r.git", ""),
+    ],
+)
+def test_where_a_remote_can_be_read_on_the_web_is_worked_out_and_otherwise_left_alone(
+    remote, web
+) -> None:
+    assert _lib(f'repo_web_base "{remote}"').stdout == web
+
+
+def test_the_verdict_is_a_badge_that_reads_without_colour() -> None:
+    colour = _lib(
+        "_verdict_badge warn; _verdict_badge bad; _verdict_badge ok", FORCE_COLOR="1", NO_COLOR=""
+    )
+    assert "\x1b[1;30;43m WARN \x1b[0m" in colour.stdout
+    assert "\x1b[1;37;41m FAIL \x1b[0m" in colour.stdout
+    assert "\x1b[1;30;42m  OK  \x1b[0m" in colour.stdout
+    assert (
+        _lib("_verdict_badge ok; _verdict_badge warn; _verdict_badge bad").stdout
+        == "[ OK ][WARN][FAIL]"
+    )
+
+
+def test_a_terminal_that_cannot_draw_the_glyphs_is_given_plain_ones_unasked() -> None:
+    shown = _on_a_terminal(
+        'banner "Upgrade"; ok "Done"', LC_ALL="C", FAMILYDB_UNICODE="", NO_COLOR="1"
+    )
+    assert "+=[#]= FamilyDB = Upgrade =" in shown and "+ Done" in shown
+    assert "╔" not in shown and "✓" not in shown
+    # A pipe is not asked: it is read somewhere that may well draw them.
+    assert "╔═[■]═" in _lib('banner "Upgrade"', LC_ALL="C").stdout
+    # And anyone can have either, whatever the locale says.
+    assert "╔═[■]═" in _on_a_terminal(
+        'banner "Upgrade"', LC_ALL="C", FAMILYDB_UNICODE="1", NO_COLOR="1"
+    )
+
+
+def test_a_check_with_something_to_fix_exits_1_and_a_clean_one_exits_0(tmp_path) -> None:
+    target, env = _fake_server(tmp_path)
+    clean = _maintain(target, env, "check")
+    assert clean.returncode == 0, clean.stdout + clean.stderr
+    assert "[ OK ] All 1 checks are fine" in clean.stdout
+    broken = _maintain(
+        target,
+        {**env, "FAKE_DOCTOR": "✗ model key: no key\n    → add one\n\n1 thing(s) must be fixed"},
+        "check",
+    )
+    assert broken.returncode == 1, broken.stdout + broken.stderr
+    assert "[FAIL] 1 thing must be fixed" in broken.stdout

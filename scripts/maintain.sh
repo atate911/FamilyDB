@@ -94,6 +94,8 @@ Examples
 Output
   Colour is for a terminal; NO_COLOR=1 turns it off and FAMILYDB_ASCII=1 uses plain characters.
   Everything a run prints is also kept in /var/log/familydb-maintain.log.
+  The exit status is 0, or 1 when the last line says FAIL: the bot did not come back, a check
+  has something to fix, or status finds it not running.
 USAGE
 }
 
@@ -341,7 +343,7 @@ take_backup() { # take_backup DEST_DIR
   [ -z "$_OUT" ] || printf '%s\n' "$_OUT" >>"${LOG_FILE:-/dev/null}"
   [ "$_STATUS" != 0 ] || success=1
   if [ "$success" = 1 ] && [ -s "$dest" ]; then
-    ok "Backed up the database ($(du -h "$dest" | cut -f1)) to ${dest#"${TARGET}/"}"
+    [ -n "${BACKUP_QUIET:-}" ] || ok "Backed up the database ($(du -h "$dest" | cut -f1)) to ${dest#"${TARGET}/"}"
   else
     # An incomplete backup must not look usable to restore, upgrade, or an operator.
     as_root rm -f -- "$dest"
@@ -545,6 +547,10 @@ cmd_status() {
       INDENT="      " show_commands <<<"${ATTENTION_FIX[i]}"
     done
   fi
+  printf '\n'
+  frame_bottom "$([ "$STATUS_RUNNING" = 0 ] || [ "$bad" -gt 0 ] && echo bad || echo ok)" "$colour"
+  # A monitor can ask `maintain.sh status` and read the answer from the exit status.
+  if [ "$STATUS_RUNNING" = 0 ] || [ "$bad" -gt 0 ]; then FINISH_BAD=1; fi
 }
 
 cmd_check() {
@@ -718,8 +724,9 @@ cmd_port() {
 cmd_backup() {
   local earlier
   earlier="$(as_root find "$BACKUP_DIR" -maxdepth 1 -name 'familydb-*.sqlite3' 2>/dev/null | head -1 || true)"
-  take_backup "$BACKUP_DIR"
+  BACKUP_QUIET=1 take_backup "$BACKUP_DIR"
   if [ "$DRY_RUN" = 1 ]; then finish ok "Dry run"; return 0; fi
+  finish ok "Backed up the database ($(du -h "$LAST_BACKUP" | cut -f1)) to ${LAST_BACKUP#"${TARGET}/"}"
   # Said for the first one only: a person who has taken more knows how to get them off the machine.
   [ -z "$earlier" ] || return 0
   hint "To fetch a copy off this machine:"
@@ -887,6 +894,15 @@ more_than() { # more_than N LIMIT - ", and N more" for what a short list left ou
   [ "$1" -le "$2" ] || printf ', and %s more' $(($1 - $2))
 }
 
+link_refs() { # link_refs TEXT WEB - each "(#65)" in TEXT as a cyan pull request number, a link where there is one
+  local text="$1" web="$2" out="" re='\(#([0-9]+)\)'
+  while [[ $text =~ $re ]]; do
+    out="${out}${text%%"${BASH_REMATCH[0]}"*}(${CYN}$(hyperlink "${web:+${web}/pull/${BASH_REMATCH[1]}}" "#${BASH_REMATCH[1]}")${OFF})"
+    text="${text#*"${BASH_REMATCH[0]}"}"
+  done
+  printf '%s%s' "$out" "$text"
+}
+
 version_label() { # version_label REF - v0.2.0+137: the release it is built on and the commits since; a short hash without one
   local d
   d="$(as_root git -C "$TARGET" describe --tags --always "$1" 2>/dev/null || echo "$1")"
@@ -923,6 +939,9 @@ show_versions() { # show_versions FROM TO - what is installed, and what it is go
 # git's own picture of a change: a row for each part of the code that changes most, with its + and -
 # drawn to scale, so a big move reads as big before anyone counts.
 change_bars() { # change_bars FROM TO
+  local bars=$(( $(ui_width) - 40 ))
+  [ "$bars" -le 24 ] || bars=24
+  [ "$bars" -ge 8 ] || bars=8
   as_root git -C "$TARGET" diff --numstat "$1" "$2" 2>/dev/null | awk -F'\t' '
     { area = "other"; n = split($3, p, "/")
       if (p[1] == "src" && p[2] == "familydb") { area = (n > 3) ? p[3] : "core"; if (area == "wiki") area = "guide" }
@@ -936,7 +955,7 @@ change_bars() { # change_bars FROM TO
       files[area]++; add[area] += a; del[area] += r }
     END { for (k in files) printf "%d\t%s\t%d\t%d\t%d\n", add[k] + del[k], k, files[k], add[k], del[k] }' \
     | sort -rn \
-    | awk -F'\t' -v green="$GRN" -v red="$RED" -v dim="$DIM" -v cyan="$CYN" -v off="$OFF" -v width=24 -v limit=5 '
+    | awk -F'\t' -v green="$GRN" -v red="$RED" -v dim="$DIM" -v cyan="$CYN" -v off="$OFF" -v width="$bars" -v limit=5 '
         NR == 1 { max = $1 }
         NR <= limit {
           scale = (max > width) ? width / max : 1
@@ -953,7 +972,8 @@ change_bars() { # change_bars FROM TO
 }
 
 upgrade_changes() { # upgrade_changes FROM TO
-  local from="$1" to="$2" prs stat files added removed hash line
+  local from="$1" to="$2" prs stat files added removed hash line web number numbers=""
+  web="$(repo_web_base "$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || true)")"
   UPGRADE_COMMITS="$(as_root git -C "$TARGET" rev-list --count --no-merges "${from}..${to}" 2>/dev/null || echo 0)"
   prs="$(as_root git -C "$TARGET" log --format=%s "${from}..${to}" 2>/dev/null | grep -oE '(pull request |\()#[0-9]+' | grep -oE '[0-9]+' | sort -un | sed 's/^/#/' | tr '\n' ' ' | sed 's/ $//' || true)"
   stat="$(as_root git -C "$TARGET" diff --shortstat "$from" "$to" 2>/dev/null || true)"
@@ -963,7 +983,10 @@ upgrade_changes() { # upgrade_changes FROM TO
 
   show_versions "$from" "$to"
   local facts
-  facts="${B}${UPGRADE_COMMITS}${OFF} commit$([ "$UPGRADE_COMMITS" = 1 ] || echo s)${prs:+ ${CYN}(${prs})${OFF}}"
+  for number in $prs; do
+    numbers="${numbers}${numbers:+ }${CYN}$(hyperlink "${web:+${web}/pull/${number#\#}}" "$number")${OFF}"
+  done
+  facts="${B}${UPGRADE_COMMITS}${OFF} commit$([ "$UPGRADE_COMMITS" = 1 ] || echo s)${numbers:+ (${numbers})}"
   [ -z "$files" ] || facts="${facts} ${DIM}${S_DOT}${OFF} ${B}${files}${OFF} file$([ "$files" = 1 ] || echo s) ${GRN}+${added:-0}${OFF} ${RED}-${removed:-0}${OFF}"
   printf '\n  %s\n' "$facts"
   log_line "upgrade: ${from} -> ${to}: ${UPGRADE_COMMITS} commits ${prs}"
@@ -975,8 +998,7 @@ upgrade_changes() { # upgrade_changes FROM TO
     while IFS=$'\t' read -r hash subject; do
       [ -n "$hash" ] || continue
       [ "${#subject}" -le "$max" ] || subject="${subject:0:$((max - 3))}${S_ELLIPSIS}"
-      [ -z "$CYN" ] || subject="$(printf '%s' "$subject" | sed -E "s/\(#([0-9]+)\)/(${CYN}#\1${OFF})/g")"
-      printf '%s%s%s  %s\n' "$YEL" "$hash" "$OFF" "$subject"
+      printf '%s%s%s  %s\n' "$YEL" "$(hyperlink "${web:+${web}/commit/${hash}}" "$hash")" "$OFF" "$(link_refs "$subject" "$web")"
       shown=$((shown + 1))
     done < <(as_root git -C "$TARGET" log --no-merges --format='%h%x09%s' -n 5 "${from}..${to}" 2>/dev/null)
     [ "$UPGRADE_COMMITS" -le "$shown" ] || printf '%sand %s more%s\n' "$DIM" $((UPGRADE_COMMITS - shown)) "$OFF"
@@ -1038,6 +1060,10 @@ upgrade_changes() { # upgrade_changes FROM TO
     INDENT="  " hint "They change the database's layout, and some rewrite what is in it; the backup is what goes back."
   fi
   printf '\n'
+}
+
+failing_checks() { # failing_checks REPORT - the name of each check the doctor says must be fixed, one a line
+  printf '%s\n' "$1" | sed -n 's/^✗ \([^:]*\):.*/\1/p' | sort
 }
 
 check_counts() { # the doctor's counts, each in the colour of what it means
@@ -1137,7 +1163,8 @@ cmd_upgrade() {
       unfinished="the database is at migration ${have} and this code has up to ${newest}"
     fi
     if [ -z "$unfinished" ]; then
-      finish ok "Already up to date with ${name} (${current}), and the database is migrated. Nothing to do."
+      show_versions HEAD HEAD
+      finish ok "Already up to date with ${name}, and the database is migrated. Nothing to do."
       return 0
     fi
     warn "The code is already on ${name}, but it is not upgraded: ${unfinished}."
@@ -1165,14 +1192,23 @@ cmd_upgrade() {
 
   approve "Upgrade now?" yes || { say "Nothing was changed."; exit 0; }
 
-  progress_total 7
+  progress_total 8
+  # What is already wrong before anything changes, so that what the check says afterwards is about
+  # the upgrade and not about the install it found.
+  _capture "Checking the install as it is" familydb_cmd doctor
+  show_doctor count "$_OUT"
+  local before_failing before_counts
+  before_failing="$(failing_checks "$_OUT")"
+  before_counts="${DOCTOR_FINE} ${DOCTOR_WARN} ${DOCTOR_BAD}"
+  [ -n "$_OUT" ] || before_counts=""
+  progress_to 1
   take_backup "$BACKUP_DIR"
   local upgrade_backup="${pending_backup:-$LAST_BACKUP}" line
   note "To go back:"
   while IFS= read -r line; do note "$line"; done < <(rollback_lines "$current" "$before" "$upgrade_backup")
   if [ "$fresh" = 1 ]; then
     pending_write "$name" "$before" "$upgrade_backup"
-    progress_to 1
+    progress_to 2
     STEP_QUIET=1 step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
   fi
 
@@ -1188,9 +1224,9 @@ cmd_upgrade() {
   # A step that goes as expected is not worth a line: what is said is what moved, and how long the
   # bot was away.
   local down_from=$SECONDS
-  progress_to 2
-  STEP_QUIET=1 stop_bot
   progress_to 3
+  STEP_QUIET=1 stop_bot
+  progress_to 4
   if [ "$DOCKER_MODE" = 1 ]; then
     step "Rebuilding the image" as_root docker compose --project-directory "$TARGET" build
   elif [ -n "$UPGRADE_PACKAGES" ]; then
@@ -1202,7 +1238,7 @@ cmd_upgrade() {
   fi
   [ "$DRY_RUN" = 1 ] || as_root chmod -R go-w "$TARGET" 2>>"${LOG_FILE:-/dev/null}" \
     || warn "Could not take write access to the code away from everyone but its owner."
-  progress_to 4
+  progress_to 5
   if [ "$UPGRADE_MIGRATIONS" -gt 0 ]; then
     step "Applying ${UPGRADE_MIGRATIONS} new migration$([ "$UPGRADE_MIGRATIONS" = 1 ] || echo s)${UPGRADE_MIGRATION_NAMES:+ (${UPGRADE_MIGRATION_NAMES})}" familydb_cmd db migrate
   else
@@ -1211,10 +1247,10 @@ cmd_upgrade() {
   [ "$DRY_RUN" = 1 ] || as_root rm -f "$UPGRADE_PENDING"
   on_failure_hint ""
   again_hint ""
-  progress_to 5
+  progress_to 6
   STEP_QUIET=1 QUIET_START=1 start_bot
   local down=$((SECONDS - down_from))
-  progress_to 6
+  progress_to 7
   [ "${BOT_STARTED:-}" != 1 ] || ok "Restarted: the page answers (the bot was away for $(fmt_secs "$down"))"
 
   local now_on was_on
@@ -1226,13 +1262,24 @@ cmd_upgrade() {
   fi
   _capture "Running the checks" familydb_cmd doctor
   show_doctor count "$_OUT"
+  local new_failing=""
   if [ -z "$_OUT" ]; then
     warn "The check printed nothing, so it may not have run. Run it yourself: sudo ${0} check"
-  elif [ "$DOCTOR_BAD" -gt 0 ]; then
-    printf '%s%s%s%s %s%s%s %s\n' "$B" "$RED" "$S_BAD" "$OFF" "$B" "Check:" "$OFF" "$(check_counts)"
-    show_doctor failures "$_OUT"
   else
-    ok "Check: $(check_counts)"
+    # A problem that was there before is not the upgrade's: it is shown, and it is not blamed on it.
+    new_failing="$(comm -13 <(printf '%s\n' "$before_failing") <(failing_checks "$_OUT" | sort) | sed '/^$/d')"
+    local was=""
+    if [ -n "$before_counts" ] && [ "$before_counts" != "${DOCTOR_FINE} ${DOCTOR_WARN} ${DOCTOR_BAD}" ]; then
+      was="  ${DIM}(was ${before_counts// / ${S_DOT} })${OFF}"
+    elif [ -n "$before_counts" ] && [ "$DOCTOR_BAD" -gt 0 ]; then
+      was="  ${DIM}(the same before the upgrade)${OFF}"
+    fi
+    if [ "$DOCTOR_BAD" -gt 0 ]; then
+      printf '%s%s%s%s %s%s%s %s%s\n' "$B" "$RED" "$S_BAD" "$OFF" "$B" "Check:" "$OFF" "$(check_counts)" "$was"
+      show_doctor failures "$_OUT"
+    else
+      ok "Check: $(check_counts)${was}"
+    fi
   fi
 
   # The last line stands alone, for a log or a mail: what moved, and what it cost.
@@ -1245,9 +1292,11 @@ cmd_upgrade() {
   if [ "${BOT_STARTED:-}" = 0 ]; then
     trouble=1
     finish bad "${was_on} ${S_TO} ${now_on}, but FamilyDB did not start"
-  elif [ "$DOCTOR_BAD" -gt 0 ]; then
+  elif [ -n "$new_failing" ]; then
     trouble=1
-    finish warn "Upgraded ${was_on} ${S_TO} ${now_on}, but the check found $DOCTOR_BAD thing$([ "$DOCTOR_BAD" -eq 1 ] || echo s) to fix"
+    local fresh_n
+    fresh_n="$(printf '%s\n' "$new_failing" | grep -c .)"
+    finish warn "Upgraded ${was_on} ${S_TO} ${now_on}, but the check found ${fresh_n} new problem$([ "$fresh_n" -eq 1 ] || echo s)"
   else
     finish ok "Upgraded ${OFF}${DIM}${was_on}${OFF} ${CYN}${S_TO}${OFF} ${B}${GRN}${now_on}${OFF}${moved}"
   fi
@@ -1273,10 +1322,18 @@ cmd_logs() {
 }
 
 cmd_restart() {
-  stop_bot
-  start_bot
+  progress_total 2
+  local down_from=$SECONDS
+  STEP_QUIET=1 stop_bot
+  progress_to 1
+  STEP_QUIET=1 QUIET_START=1 start_bot
   if [ "$DRY_RUN" = 1 ]; then finish ok "Dry run"; return 0; fi
-  [ "${BOT_STARTED:-}" != 0 ] || finish bad "FamilyDB did not come back up"
+  progress_to 2
+  case "${BOT_STARTED:-}" in
+    1) finish ok "Restarted: the page answers ${S_DOT} the bot was away for $(fmt_secs $((SECONDS - down_from)))" ;;
+    0) finish bad "FamilyDB did not come back up" ;;
+    *) finish ok "Restarted" ;;
+  esac
 }
 
 cmd_schedule_backups() {
@@ -1344,3 +1401,4 @@ case "$COMMAND" in
   *) usage >&2; die "unknown command: ${COMMAND}" ;;
 esac
 [ "$RECAPPED" = 1 ] || recap
+[ "$FINISH_BAD" = 0 ] || exit 1
