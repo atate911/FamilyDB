@@ -953,7 +953,7 @@ show_plan() { # show_plan "heading" - the numbered steps, why each, and what sta
   done
   local item
   if [ ${#PLAN_UNTOUCHED[@]} -gt 0 ]; then
-    printf '\n  %sLeft alone:%s\n' "$DIM" "$OFF"
+    printf '\n  %sIt does not touch:%s\n' "$DIM" "$OFF"
     for item in "${PLAN_UNTOUCHED[@]}"; do
       WRAP_FIRST="    ${S_DOT} " wrap "      " "$DIM" "$item"
     done

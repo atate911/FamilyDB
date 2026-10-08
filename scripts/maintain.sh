@@ -214,7 +214,12 @@ env_file_set() { # env_file_set KEY VALUE - in place, keeping the file's owner a
 # does not answer or says it is not well, 2 when it cannot be asked at all (no curl, or no page).
 page_health() {
   local host port reply code body
-  if [ "$(env_file_value WEB_ENABLED)" = false ]; then printf 'the web page is switched off'; return 2; fi
+  # The page is off unless .env turns it on (WEB_ENABLED defaults to false), and an install that
+  # keeps it off has nothing to ask.
+  case "$(env_file_value WEB_ENABLED | tr 'A-Z' 'a-z')" in
+    true|1|yes|on|t|y) ;;
+    *) printf 'the web page is switched off'; return 2 ;;
+  esac
   have curl || { printf 'curl is not installed, so the page was not asked'; return 2; }
   host="$(env_file_value WEB_HOST)"; port="$(env_file_value WEB_PORT)"; port="${port:-8080}"
   case "$host" in ''|0.0.0.0|::|'[::]') host=127.0.0.1 ;; esac

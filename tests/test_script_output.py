@@ -50,6 +50,7 @@ def _fake_server(tmp_path: Path, *, backups: int = 0) -> tuple[Path, dict[str, s
     target = tmp_path / "install"
     (target / "data").mkdir(parents=True)
     (target / "backups").mkdir()
+    (target / ".env").write_text("WEB_ENABLED=true\n")
     shutil.copytree(ROOT / "scripts", target / "scripts")
     (target / "pyproject.toml").write_text('[project]\nname = "familydb"\n')
     with closing(sqlite3.connect(target / "data" / "familydb.sqlite3")) as conn:
@@ -654,3 +655,46 @@ def test_a_check_with_something_to_fix_exits_1_and_a_clean_one_exits_0(tmp_path)
     )
     assert broken.returncode == 1, broken.stdout + broken.stderr
     assert "[FAIL] 1 thing must be fixed" in broken.stdout
+
+
+def _page_health(
+    tmp_path: Path, env_file: str, curl: str = "ok\\n200"
+) -> subprocess.CompletedProcess[str]:
+    """maintain.sh's own page_health, cut out and run against an .env and a stand-in for curl."""
+    script = (ROOT / "scripts/maintain.sh").read_text()
+    functions = "".join(
+        script[
+            script.index(f"{name}() {{") : script.index("\n}\n", script.index(f"{name}() {{")) + 3
+        ]
+        for name in ("env_file_value", "page_health")
+    )
+    (tmp_path / ".env").write_text(env_file)
+    stub = tmp_path / "bin"
+    stub.mkdir(exist_ok=True)
+    (stub / "curl").write_text(f"#!/bin/sh\nprintf '{curl}'\n")
+    (stub / "curl").chmod(0o755)
+    return _lib(
+        f'TARGET="{tmp_path}"; as_root() {{ "$@"; }}\n'
+        + functions
+        + "set +e; page_health; printf ' [%s]' \"$?\"",
+        PATH=f"{stub}{os.pathsep}{os.environ['PATH']}",
+    )
+
+
+def test_a_page_that_is_off_is_not_asked_and_so_cannot_fail_an_upgrade(tmp_path) -> None:
+    # WEB_ENABLED defaults to false: an install that never turned it on has no page to wait for.
+    for env_file in ("", "WEB_ENABLED=false\n", "WEB_ENABLED=\n"):
+        done = _page_health(tmp_path, env_file, curl="refused\\n000")
+        assert done.stdout == "the web page is switched off [2]", (env_file, done.stdout)
+
+
+def test_a_page_that_is_on_is_asked_and_what_it_says_is_believed(tmp_path) -> None:
+    assert _page_health(tmp_path, "WEB_ENABLED=true\n").stdout == "ok [0]"
+    assert _page_health(tmp_path, "WEB_ENABLED=True\nWEB_PORT=9090\n").stdout == "ok [0]"
+    sick = _page_health(
+        tmp_path, "WEB_ENABLED=yes\n", curl="the scheduled jobs have not run for 22 minutes\\n503"
+    )
+    assert sick.stdout == "the scheduled jobs have not run for 22 minutes [1]"
+    # An error page of the web server's is markup, which says nothing: say the status instead.
+    page = _page_health(tmp_path, "WEB_ENABLED=true\n", curl="<html>oops</html>\\n500")
+    assert page.stdout == "the page answered with status 500 [1]"
