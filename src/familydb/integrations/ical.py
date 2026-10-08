@@ -14,8 +14,6 @@ followed through redirects, and no more than a calendar could be.
 from __future__ import annotations
 
 import hashlib
-import ipaddress
-import socket
 import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
@@ -26,6 +24,7 @@ from zoneinfo import ZoneInfo
 import icalendar
 import recurring_ical_events
 
+from familydb.integrations import address
 from familydb.integrations.events import FoundEvent
 
 TIMEOUT = 30
@@ -45,16 +44,8 @@ class FeedAPI(Protocol):
 
 
 def _public(host: str) -> bool:
-    """Whether every address a host name resolves to is out on the internet: not this machine,
-    the home network, a link-local or a reserved address. A calendar has no business there."""
-    try:
-        infos = socket.getaddrinfo(host, None)
-    except OSError:
-        return False
-    addresses = {info[4][0] for info in infos}
-    return bool(addresses) and all(
-        ipaddress.ip_address(a.split("%")[0]).is_global for a in addresses
-    )
+    """Whether a host name is out on the internet; a calendar has no business anywhere else."""
+    return address.is_public(host)
 
 
 def check_address(url: str) -> None:

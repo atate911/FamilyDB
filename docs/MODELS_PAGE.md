@@ -90,6 +90,10 @@ Phased so each step ships on its own.
   better and best lineup stays, because stand-ins, presets and switching company use it.
 - **`gateway.KINDS`** gains the row each kind belongs to; `gateway.answering` resolves through it.
 - **Per-row thinking effort**, replacing `effort` and `worker_effort`.
+- **Companies come from the registry.** The cards, the company dropdowns and "Use for everything" list
+  `companies.every(settings)` (`docs/COMPANIES.md`), so a company an admin has added is a card and an
+  option like the three built in, greyed where it cannot do a row (an added company has no hosted
+  search, so it is not offered for the lookup rows).
 - **Per company**: allowed, may stand in, and a monthly limit, checked in `spending.admit` beside the
   existing budgets and counted from `llm_calls`. Stand-in goes to the first allowed company that may,
   which replaces the single `provider_fallback` switch.

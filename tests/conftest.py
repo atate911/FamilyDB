@@ -43,6 +43,16 @@ def built_in_prices() -> Iterator[None]:
 
 
 @pytest.fixture(autouse=True)
+def no_added_companies() -> Iterator[None]:
+    """Only the built-in companies, whatever a test defined (agent/providers/companies.py)."""
+    from familydb.agent.providers import companies
+
+    companies.use(())
+    yield
+    companies.use(())
+
+
+@pytest.fixture(autouse=True)
 def nothing_left_out() -> Iterator[None]:
     """Every request whole, whatever a test taught a provider to leave out (providers/parts.py)."""
     from familydb.agent.providers import parts

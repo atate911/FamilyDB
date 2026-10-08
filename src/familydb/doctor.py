@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from familydb import happening
+from familydb.agent.providers import companies
 from familydb.app import App
 from familydb.availability import (
     calendar_available,
@@ -39,11 +40,6 @@ TODO = "todo"
 MARKS = {OK: "✓", WARN: "!", FAIL: "✗", SKIP: "·", TODO: "→"}
 NEW_INSTALL_STEPS = {"family": "Add yourself", "model key": "Connect an AI model"}
 FREE_MB_WANTED = 500
-KEY_FIELDS = {
-    "anthropic": ("anthropic_api_key", "ANTHROPIC_API_KEY"),
-    "openai": ("openai_api_key", "OPENAI_API_KEY"),
-    "gemini": ("gemini_api_key", "GEMINI_API_KEY"),
-}
 
 
 @dataclass
@@ -253,7 +249,11 @@ def check_family(
 
 def check_provider(app: App, report: Report, *, online: bool) -> None:
     settings = app.settings
-    have = [name for name, (attr, _env) in KEY_FIELDS.items() if getattr(settings, attr)]
+    have = [
+        slug
+        for slug in companies.slugs(settings)
+        if (company := companies.get(slug, settings)) and company.key(settings)
+    ]
     if not have:
         report.add(
             "model key",
@@ -263,13 +263,15 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
         )
         return
     chosen = settings.provider
-    chosen_attr, chosen_env = KEY_FIELDS[chosen]
-    if not getattr(settings, chosen_attr):
+    company = companies.get(chosen, settings)
+    chosen_env = (
+        company.env_name if company else ""
+    ) or f"the key of {chosen} on the settings page"
+    if company is None or not company.key(settings):
         report.add(
             "model key",
             WARN,
-            f"PROVIDER is {chosen} but {chosen_env} is empty; "
-            f"{', '.join(have)} will answer instead",
+            f"PROVIDER is {chosen} but its key is empty; {', '.join(have)} will answer instead",
             f"Set {chosen_env}, or change PROVIDER to one you have a key for",
         )
     else:
@@ -323,6 +325,87 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
             OK,
             f"{len(everything)} tools accepted; every message starts at {tokens} input tokens",
         )
+
+
+def check_added_companies(app: App, report: Report, *, online: bool) -> None:
+    """Each company the settings define: whether it could answer, and with `online`, what it says
+    of the key and the models named for it. No model is asked: a company is tried end to end by
+    choosing it and sending a message (`familydb chat`)."""
+    from familydb.agent import providers
+    from familydb.agent.providers import prices
+
+    settings = app.settings
+    for company in companies.added(settings):
+        name = f"company {company.slug}"
+        one = company.defined
+        assert one is not None
+        provider = providers.build(company.slug, settings)
+        if not provider.configured():
+            missing = "its key" if not company.key(settings) and not one.local else "a model"
+            report.add(
+                name,
+                WARN,
+                f"{company.label} cannot answer: {missing} is not set",
+                "Set it on the AI model settings page, under Other companies",
+            )
+            continue
+        role = (
+            "answers the family"
+            if settings.provider == company.slug
+            else "may stand in"
+            if company.stands_in
+            else "is added and not used"
+        )
+        unpriced = [
+            model for model in company.known_models() if prices.price(company.slug, model) is None
+        ]
+        if unpriced:
+            report.add(
+                f"{name} prices",
+                WARN,
+                f"{', '.join(unpriced)} cost nothing anyone has said, so the daily limit counts "
+                "them at more than any listed model",
+                "Type a price on the settings page, or let the daily check read the company's list",
+            )
+        if not online:
+            report.add(name, OK, f"{company.label} {role}; pass --online to ask it")
+            continue
+        verdict = provider.check_key()
+        if verdict == "refused":
+            report.add(
+                name,
+                FAIL,
+                f"{company.label} refuses the key",
+                "Paste the key again on the AI model settings page",
+            )
+        elif verdict == "unchecked":
+            report.add(name, WARN, f"{company.label} could not be asked just now")
+        elif verdict == "unknown_model":
+            report.add(
+                name,
+                WARN,
+                f"{company.label} accepts the key but its list has no model called {one.model}",
+                "Check the spelling against the company's own list",
+            )
+        else:
+            listed = provider.listed_models()
+            missing_models = [
+                model
+                for model in company.known_models()
+                if listed is not None and model.lower() not in {n.lower() for n in listed}
+            ]
+            detail = f"{company.label} {role}; key accepted"
+            if listed is not None:
+                detail += f", {len(listed)} models listed"
+            if missing_models:
+                report.add(
+                    name,
+                    WARN,
+                    f"{detail}; not listed: {', '.join(missing_models)}",
+                    "Check the spelling, or whether the company has retired them",
+                )
+            else:
+                report.add(name, OK, detail)
 
 
 def check_channels(app: App, report: Report, *, online: bool) -> None:
@@ -660,6 +743,7 @@ def run(app: App, *, online: bool = False) -> Report:
     try:
         check_family(conn, report, telegram=bool(app.settings.telegram_bot_token))
         check_provider(app, report, online=online)
+        check_added_companies(app, report, online=online)
         check_channels(app, report, online=online)
         check_integrations(app, report)
         check_web(app, report, conn)

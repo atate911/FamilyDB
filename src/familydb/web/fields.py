@@ -13,6 +13,7 @@ from typing import Any, Literal
 from zoneinfo import available_timezones
 
 from familydb import happening, logs
+from familydb.agent.providers import companies
 from familydb.agent.providers.prices import hearing_suggestions, suggestions
 from familydb.config import Settings
 from familydb.dates import hour_words
@@ -25,7 +26,7 @@ TOO_LONG = "That is longer than a setting should be."
 MAX_LENGTH = 400
 # A box of lines holds several addresses, so it may be longer; the setting's own limit agrees.
 MAX_LINES_LENGTH = 2000
-COMPANIES = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google"}
+COMPANIES = {company.slug: company.label for company in companies.BUILT_IN}
 # Places, not legacy aliases and offsets, and UTC, which many a server keeps.
 ZONE_PREFIXES = ("Africa/", "America/", "Antarctica/", "Asia/", "Atlantic/", "Australia/")
 ZONE_PREFIXES += ("Europe/", "Indian/", "Pacific/")
@@ -221,9 +222,7 @@ EFFORT = (
 FIXED_OFFERS = frozenset({"openai_transcribe_model"})
 # Each company's chat model and lookup model.
 MODEL_KEYS = {
-    "openai": ("openai_model", "openai_worker_model"),
-    "anthropic": ("anthropic_model", "worker_model"),  # the first, so unprefixed
-    "gemini": ("gemini_model", "gemini_worker_model"),
+    company.slug: (company.chat_setting, company.worker_setting) for company in companies.BUILT_IN
 }
 
 
