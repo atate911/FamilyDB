@@ -141,9 +141,10 @@ class CompanyDef(BaseModel):
     worker_model: str = Field(default="", max_length=120)
     better_model: str = Field(default="", max_length=120)
     best_model: str = Field(default="", max_length=120)
-    # The message field a model's thinking comes back in, which must go back unchanged beside a
-    # tool call ("reasoning_content", "reasoning"); empty if it sends none.
-    reasoning_field: str = Field(default="reasoning_content", max_length=40)
+    # The message fields a model's thinking comes back in ("reasoning_content", "reasoning"), the
+    # first one it sent being kept and sent back unchanged beside a tool call, as some companies
+    # require; empty if it sends none.
+    reasoning_fields: tuple[str, ...] = Field(default=("reasoning_content",), max_length=4)
     # Fields added to every request: a company's own switches (OpenRouter's `provider`, a
     # `thinking` object). The page shows them; the adapter owns the rest of the request.
     extra_body: dict[str, Any] = Field(default_factory=dict)
@@ -173,13 +174,14 @@ class CompanyDef(BaseModel):
             raise ValueError("goes on one line, with no control characters in it")
         return text
 
-    @field_validator("reasoning_field")
+    @field_validator("reasoning_fields")
     @classmethod
-    def _field_name(cls, value: str) -> str:
-        name = value.strip()
-        if name and not re.fullmatch(r"[a-z][a-z0-9_]{0,39}", name):
-            raise ValueError("a field name: lower case letters, digits and underscores")
-        return name
+    def _field_names(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        names = tuple(dict.fromkeys(name.strip() for name in value if name.strip()))
+        for name in names:
+            if not re.fullmatch(r"[a-z][a-z0-9_]{0,39}", name):
+                raise ValueError("field names: lower case letters, digits and underscores")
+        return names
 
     @field_validator("extra_body")
     @classmethod

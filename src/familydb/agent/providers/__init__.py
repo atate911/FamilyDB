@@ -60,7 +60,14 @@ def build(name: str, settings: Settings, api: Any = None, audio: Any = None) -> 
         from familydb.agent.providers.gemini import GeminiProvider
 
         return GeminiProvider(settings, api=api if api is not None else audio)
-    raise ConfigError(f"unknown provider {name!r}; use one of {', '.join(NAMES)}")
+    company = companies.get(name, settings)
+    if company is not None and company.defined is not None:
+        from familydb.agent.providers.chat import ChatProvider
+
+        return ChatProvider(settings, company, api=api)
+    raise ConfigError(
+        f"unknown provider {name!r}; use one of {', '.join(companies.slugs(settings))}"
+    )
 
 
 owner = companies.owner
