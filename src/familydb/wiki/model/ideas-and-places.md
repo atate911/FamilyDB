@@ -76,7 +76,7 @@ Recording one marks the idea done, adds one to its times done, and recomputes th
 
 An idea of kind `gift` is a present. It is hidden from every kid, always. It is also hidden from any grown-up named in its *For* list, matched as a whole word and ignoring capitals, unless a parent or admin chose a different list of grown-ups on the idea's edit form (even an empty one). Things to do about a present go with it and are hidden from the same people. Under the shared password nothing is hidden.
 
-A hidden present is missing from lists, counts, search, the assistant's tools and direct links. FamilyDB never suggests a present as something to do, and never looks one up unless it names a place. Hiding follows the kind: a present saved as another kind is not hidden. Two places still show one: [Telegram commands show presents](/wiki/reference/known-limits#telegram-commands-show-presents) and [The to-rate list shows presents](/wiki/reference/known-limits#the-to-rate-list-shows-presents).
+A hidden present is missing from lists, counts, search, the assistant's tools and direct links. FamilyDB never suggests a present as something to do, and never looks one up unless it names a place. Hiding follows the kind: a present saved as another kind is not hidden.
 
 Birthdays are on [Things to do and reminders](/wiki/model/tasks-and-reminders#birthdays-and-gift-ideas). Wish lists are on [Wish-list rules](/wiki/model/wishes).
 

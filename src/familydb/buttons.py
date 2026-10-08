@@ -47,6 +47,7 @@ FOLLOW_UP = (
 )
 # How each answer to "How was it?" is kept: the rating, out of ten, and whether to do it again
 # (None: not said). The page's three faces keep the same ratings (web/edits.py FACES).
+WENT_ACTIONS = frozenset(action for action, _ in FOLLOW_UP)
 WENT = {"again": (9, True), "ok": (6, None), "not_again": (3, False)}
 WISH = (("wish_yes", "Yes!"), ("wish_no", "Not this time"), ("wish_later", "Later"))
 UNDO = (("undo", "↩ Undo"),)
@@ -143,6 +144,9 @@ def tap(
     update_id = f"tap:{tap_id}"
     if messages.exists_update(conn, channel, update_id):
         return None
+    if action in WENT_ACTIONS and not roles.may(member.role, "change"):
+        # How a plan went, or that it was missed, is a grown-up's to say (as in the chat).
+        return Tapped(voice.say(settings, "tap_parents_only", seed=tap_id))
     if action.startswith("wish_"):
         planned: Any = _wish_job
     elif action in SNOOZES or action == "done":

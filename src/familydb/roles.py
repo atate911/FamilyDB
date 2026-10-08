@@ -20,9 +20,11 @@ ROLES: tuple[Role, ...] = ("admin", "parent", "kid")
 
 Permission = Literal["sign_in", "chat", "change", "own_tasks", "browse", "wish", "decide", "manage"]
 # sign_in: sign in, read ideas and plans. chat: talk to the bot (every message is paid for). change:
-# the forms for ideas, plans, things to do and outcomes. own_tasks: tick off or change your own
-# things to do, on the page and by asking the bot (`change` allows any). browse: the household's
-# pages (memory, connections, cost) and everybody's things to do. wish: keep your own wish lists.
+# the forms for ideas, plans, things to do and outcomes, and the chat tools that edit an idea,
+# record an outcome or make, move or cancel a plan (`ToolSpec.needs`); a kid's chat adds ideas.
+# own_tasks: tick off or change your own things to do, on the page and by asking the bot (`change`
+# allows any). browse: the household's pages (memory, connections, cost) and everybody's things to
+# do. wish: keep your own wish lists.
 # decide: see every kid's wishes and answer them. manage: settings, setup and the family list.
 
 PARENT: frozenset[Permission] = frozenset(

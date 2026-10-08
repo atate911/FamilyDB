@@ -218,6 +218,9 @@ older than what is installed. It gets a date when it is released.
   and the grown-up it is kept from, and out of any group chat a kid is in.
 - **A kid's /lookup answers truthfully.** It says lookups wait for the evening and to ask a parent,
   instead of "nothing is waiting", and never points a kid to the settings page.
+- **What a kid may change in the chat.** A kid can add an idea and have something remembered, as
+  before. Editing an idea, saying how a plan went, and making, moving or cancelling a plan are now
+  a parent's in the chat as on the page, including the buttons under a follow-up.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

@@ -29,6 +29,7 @@ class RecordOutcomeInput(BaseModel):
         "updates its average rating. Returns the outcome and the updated idea."
     ),
     writes=True,
+    needs="change",
 )
 def record_outcome(ctx: ToolContext, args: RecordOutcomeInput) -> dict[str, Any]:
     plan = None

@@ -243,7 +243,7 @@ EVENTS: dict[str, Event] = {
         (),
     ),
     "tap_parents_only": Event(
-        "A kid's ask tapped by somebody who may not answer it",
+        "A button tapped by somebody who may not do what it does (a kid's ask, how a plan went)",
         "Only a parent can answer that.",
         (),
     ),

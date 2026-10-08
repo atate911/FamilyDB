@@ -283,6 +283,7 @@ def _created(ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None) ->
         "afterwards. Returns the plan number."
     ),
     writes=True,
+    needs="change",
 )
 def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
     calendar = _google(ctx)
@@ -499,6 +500,7 @@ def _remove_event(ctx: ToolContext, event: CalendarEvent) -> dict[str, Any]:
         "its event_id."
     ),
     writes=True,
+    needs="change",
 )
 def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
     calendar = _google(ctx)
@@ -677,6 +679,7 @@ def _reminder_brief(ctx: ToolContext, task: tasks.Task) -> dict[str, Any]:
         "hand by its event_id. Prefer cancelling a plan via update_event."
     ),
     writes=True,
+    needs="change",
 )
 def delete_event(ctx: ToolContext, args: DeleteEventInput) -> dict[str, Any]:
     plan, event = _target(ctx, args.plan_id, args.event_id)
