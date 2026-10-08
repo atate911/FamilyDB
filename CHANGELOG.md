@@ -234,6 +234,9 @@ installed.
 - **Status no longer says "can't answer" for days after the day's limit.** The note that the
   limit was reached is now forgotten as soon as a call goes through, and a note from an earlier
   day no longer counts against today.
+- **Status says plainly when a message was given up on.** A message that had used all its
+  retries still read "will try again"; it now says it was given up on, and that the words
+  are there to send again.
 
 ### New since v0.1.0
 

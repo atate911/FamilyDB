@@ -473,6 +473,14 @@ def count_words(count: int, one: str, many: str) -> str:
     return f"{number} {one if count == 1 else many}"
 
 
+def stuck_message_note(tries: int, given_up: bool) -> str:
+    """What became of a message that did not go through: tried again, or given up on."""
+    times = f"{tries} {'try' if tries == 1 else 'tries'}"
+    if given_up:
+        return f"given up on after {times}; the words above were not answered, so send them again"
+    return f"{times}, will try again"
+
+
 def greeting(hour: int, name: str | None) -> str:
     """ "Good morning, Sam"; with the family sharing one password there is no name to say."""
     part = "morning" if hour < 12 else "afternoon" if hour < 18 else "evening"
