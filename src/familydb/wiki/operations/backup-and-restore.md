@@ -34,11 +34,7 @@ sudo /opt/familydb/scripts/maintain.sh backup
 It checks there is room (the database's size plus 50 MB), takes SQLite's online backup, which is consistent even while FamilyDB answers a message, and checks that the file is not empty. On any failure it removes the incomplete file, so a half-written backup never looks usable. It ends with:
 
 ```text
-✓ Backup written (14M), by SQLite's online backup, which is safe while the bot runs.
-...
-✓ Backup saved
-    File         /opt/familydb/backups/familydb-<timestamp>.sqlite3
-    Size         14M, readable only by its owner
+✓ Backed up the database (14M) to /opt/familydb/backups/familydb-<timestamp>.sqlite3
 ```
 
 Under it come the two commands that bring a copy to your own computer, with the real file name filled in.
@@ -87,7 +83,7 @@ sudo ls -lt /opt/familydb/backups/ | head
 sudo /opt/familydb/scripts/maintain.sh restore /opt/familydb/backups/familydb-XXXX.sqlite3
 ```
 
-In order, `restore` checks the file first: it must pass SQLite's quick integrity check, be a FamilyDB database and be no newer than this code, and if it fails nothing is stopped or replaced. It then shows what it is restoring (the file, when it was taken and how long ago, its size) and what it replaces, the plan, and what will be lost: everything FamilyDB was told since that backup was taken. It asks `Replace the database with that backup?`, and you answer `y`. Then, as numbered steps, it takes a safety backup of the database it is about to replace, so the restore can be undone; stops FamilyDB, which on a virtualenv install can take up to 150 seconds if a model call is in progress (`TimeoutStopSec=150`); copies the backup into place, clears the old write-ahead files and sets the owner and mode; applies any migrations the backup lacks; and starts FamilyDB again.
+In order, `restore` checks the file first: it must pass SQLite's quick integrity check, be a FamilyDB database and be no newer than this code, and if it fails nothing is stopped or replaced. It then says what it is restoring (its size, when it was taken and how long ago), what it replaces and what will be lost: everything FamilyDB was told since that backup was taken. It asks `Replace the database with that backup? [y/N]`, and you answer `y`: this is the one question whose Enter is no, because it cannot be run again to undo itself. Then it takes a safety backup of the database it is about to replace, so the restore can be undone; stops FamilyDB, which on a virtualenv install can take up to 150 seconds if a model call is in progress (`TimeoutStopSec=150`); copies the backup into place, clears the old write-ahead files and sets the owner and mode; applies any migrations the backup lacks; and starts FamilyDB again.
 
 > **Everything FamilyDB was told since that backup was taken is gone.** The safety backup is the way back.
 
@@ -101,13 +97,11 @@ On a virtualenv install the restore ends like this, and the check shows no `✗`
 
 ```text
 ✓ It came back up, and the page answers.
-...
-✓ Restored from 2026-09-14 03:15
-    Restored     /opt/familydb/backups/familydb-XXXX.sqlite3
-    Before       /opt/familydb/backups/familydb-YYYY.sqlite3
 
-To undo this restore
-    sudo /opt/familydb/scripts/maintain.sh restore /opt/familydb/backups/familydb-YYYY.sqlite3
+────────────────────────────────────────────────────────
+✓ Restored from 2026-09-14 03:15  (6s)
+    Before       /opt/familydb/backups/familydb-YYYY.sqlite3
+    sudo /opt/familydb/scripts/maintain.sh restore /opt/familydb/backups/familydb-YYYY.sqlite3  # to undo this
 ```
 
 `Before` is the safety backup, the database that was there before.

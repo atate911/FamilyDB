@@ -15,16 +15,21 @@ That is the whole upgrade. It takes a backup first, moves to the newer code, app
 
 ## What an upgrade does
 
-It shows its plan, numbered, with the reason for each step, what could hurt, what protects you and what it leaves alone, and asks `Upgrade now?` before it starts. It needs a terminal to ask, or `--yes`; `--dry-run` shows it all and does none of it. Then, as six steps headed `Step 1 of 6` and so on, it:
+It fetches first, which changes nothing the bot runs, so it can tell you what this upgrade would do. The screen reads like the top of a pull request, and shows only what is not routine:
 
-1. takes a backup, even if it then finds nothing to upgrade to;
-2. fetches the newest code from the git remote, chooses a version (below) and stops with `Already up to date` if you already have it and the upgrade is finished. Otherwise it shows the version it is moving to and how many commits that is, and prints the commands to go back, before it checks that version out;
-3. stops FamilyDB and reinstalls the dependencies at their locked versions. On Docker it rebuilds the image instead, which takes minutes. FamilyDB is down from the stop until step 5;
-4. applies new migrations;
-5. starts FamilyDB, and waits up to 30 seconds for the page to answer;
-6. runs the doctor, and shows only what must be fixed (`✗`), counting the rest.
+- the version you are on and the one it is moving to, then one line of numbers: how many commits and from which pull requests, how many files and lines, and which parts of the code they touch;
+- the newest commits, and what the changelog says is new;
+- **Database**, only when there are new migrations: they are named, with a reminder that some rewrite what is in the database, so the backup is what goes back;
+- **Packages**, only when `uv.lock` moves: each from what to what;
+- **Settings**, only when `.env.example` has new options, and **Service file**, only when `deploy/familydb.service` changed, which an upgrade does not install (see [Known limits](/wiki/reference/known-limits#an-upgrade-does-not-rewrite-the-service-file)).
 
-The last line says how it went: `✓ Upgraded to …`, `! Upgraded to …, with 2 warnings` (each is listed again under **Warnings**), `! … but the check found 2 things to fix`, or `✗ … but FamilyDB did not start`. Under it are the version before and after, where the backup is and the check's counts, and under that the commands to go back. How to read the rest of the screen is in [Reading what it prints](/wiki/operations/command-line#reading-what-it-prints).
+A part that does not change is not mentioned: no `Database` line means no new migrations. Then it asks `Upgrade now? [Y/n]`: Enter says yes. It needs a terminal to ask, or `--yes`; `--dry-run` shows all of it and does none of it.
+
+After a yes it takes a backup and prints the commands to go back, with this run's commit and backup in them. Then it checks the new version out, stops FamilyDB, reinstalls the dependencies at their locked versions (on Docker it rebuilds the image instead, which takes minutes), applies the new migrations, starts FamilyDB and waits up to 30 seconds for the page to answer, and runs the doctor. A step that goes as expected has no line of its own; what is shown is the backup, the packages and migrations it applied, how long FamilyDB was away, and the check, which lists only what must be fixed (`✗`) and counts the rest. A step that fails stops the run with what it said.
+
+If you already have the newest version and the upgrade is finished, it says `Already up to date`, takes no backup and changes nothing.
+
+The last line stands alone, for a log or a mail: `✓ Upgraded to v0.3.0 · 14 commits · 2 migrations · 3 packages · down 14s (48s)`, or `! … but the check found 2 things to fix`, or `✗ … but FamilyDB did not start`; any warnings are listed again under it. The commands to go back are printed again below only when something went wrong. How to read the rest of the screen is in [Reading what it prints](/wiki/operations/command-line#reading-what-it-prints).
 
 Your `.env`, your keys and the family's data are not removed. A migration changes the database's layout, and some rewrite what is in it, so none can be undone. They run in order, once each, and also on every start. The backup taken first covers them, and the only way back past one is restoring it, which is why a rollback does. If a saved setting no longer fits after an upgrade, FamilyDB keeps running on `.env`; see [When a value is wrong](/wiki/operations/configuration#when-a-value-is-wrong).
 
@@ -38,7 +43,7 @@ Your `.env`, your keys and the family's data are not removed. A migration change
 grep -m1 '^## v' /opt/familydb/CHANGELOG.md
 ```
 
-- If the new version is the same as yours, older, or already contained in yours, and no earlier upgrade is unfinished and the database is migrated, `upgrade` says `Already up to date` and changes nothing else. Otherwise it finishes the earlier upgrade; see [If it goes wrong](#if-it-goes-wrong).
+- If the new version is the same as yours, older, or already contained in yours, and no earlier upgrade is unfinished and the database is migrated, `upgrade` says `Already up to date`, takes no backup and changes nothing else. Otherwise it finishes the earlier upgrade; see [If it goes wrong](#if-it-goes-wrong).
 - If the two histories have split, which happens after a force-push, it refuses with `moving to it would go backwards` and changes nothing else.
 
 To see the newest release, fetch and list the tags, then compare with the `Version` row from `status`:

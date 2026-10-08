@@ -8,23 +8,23 @@ older than what is installed. It gets a date when it is released.
 
 ### New since v0.2.0
 
-- **`maintain.sh` says what it is about to do, what it did and what it means.** Every command
-  that changes something now shows its banner (which install, and how it runs), then a numbered plan
-  (each step with its reason, what could hurt, what protects you, what it leaves alone) before it
-  asks, then the steps as `Step 2 of 6`, with a line that redraws itself with the seconds while a
-  slow one (the dependencies, the image, the stop) runs, and at the end one line that says how it
-  went with the facts under it and the commands to go back or fix. Warnings are listed again at the
-  foot because they scroll past; a failure says what ran, what it said, what that usually means and
-  what to type. `upgrade` shows the version it is moving to and how many commits that is, waits for
-  the page to answer after the restart rather than only for the service, and runs the check showing
-  only what must be fixed, so "Done" no longer follows a bot that did not come back. `status` is one
-  screen: a verdict, a row for each thing (marked `✓`, `!` or `✗`, so it reads the same without
-  colour), and what to type for anything that is not well, including a backup older than the 36
-  hours the upkeep job tolerates. `--help` is grouped into look, keep safe and change. Colour is for
-  a terminal only (`NO_COLOR=1` turns it off, `FORCE_COLOR=1` on in a pipe, `FAMILYDB_ASCII=1` for
-  plain marks); a pipe, a log and cron get plain lines. The look is in `scripts/lib/common.sh`,
-  so the installer and uninstaller carry the numbered plan and the clearer failures too. No
-  command, option or exit status changed.
+- **`maintain.sh` shows what is different this time, and nothing else.** `upgrade` fetches first
+  and shows what it would change as a pull request would: the commits and the pull requests they
+  came from, how many files and where, what the changelog says is new and, only when they change,
+  the new migrations by name, the packages that move (from what to what), the options new in
+  `.env.example` and a changed service file. A part that does not change is not mentioned. Then it
+  asks, and Enter is yes (`[Y/n]`); `restore`, which cannot undo itself, still has Enter as no. The
+  backup is taken only after that (so none is taken when there is nothing to upgrade), and how to go
+  back is printed with this run's commit and backup. A step that goes as expected has no line; what
+  is shown is the backup, what was installed and migrated, how long the bot was away, and the check,
+  and the last line says what moved and what it cost, so it reads alone in a log. The page is waited
+  for after the restart, so "it came back up" is true. The numbered plan, what stays untouched and
+  why each step are gone. `status` is one screen with a verdict, a row for each thing marked `✓ ! ✗`,
+  and what to type for anything not well, including a backup older than the 36 hours the upkeep job
+  tolerates. `--help` is grouped into look, keep safe and change. Warnings are listed again at the
+  foot; a failure says what ran, what it said, what that usually means and what to type. Colour is
+  for a terminal only (`NO_COLOR=1` turns it off, `FORCE_COLOR=1` on in a pipe, `FAMILYDB_ASCII=1`
+  for plain marks). No command, option or exit status changed.
 - **Wording fixes.** Drive times are called estimates where they were said to be looked up; the
   take-off text says a kid's wish lists go and open to-dos and reminders are canceled; and a few
   help lines now match what happens (a better model up to about 10% dearer may be put in by itself,
