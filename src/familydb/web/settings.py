@@ -43,7 +43,7 @@ from pydantic import ValidationError
 
 from familydb import export, passwords, personas, voice
 from familydb.agent import gateway, providers
-from familydb.agent.providers import prices
+from familydb.agent.providers import companies, prices
 from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import (
@@ -235,12 +235,8 @@ def google_panel(live: Any) -> dict[str, Any]:
 # -- the three companies, as setup and the AI model page both offer them -------------------------
 
 # What a line says of price follows the company's default model in prices.py.
-COMPANY_LINES = {
-    "openai": "The least expensive by far for what FamilyDB does, so it is the one it starts with.",
-    "anthropic": "Claude. Several times dearer a message with the model it starts on.",
-    "gemini": "Gemini, from Google. In between on price.",
-}
-KEY_STARTS = {"openai": "sk-", "anthropic": "sk-ant-", "gemini": "AIza"}
+COMPANY_LINES = {company.slug: company.line for company in companies.BUILT_IN}
+KEY_STARTS = {company.slug: company.key_start for company in companies.BUILT_IN}
 
 
 def company_choice(live: Settings, asked: str) -> dict[str, Any]:
@@ -260,7 +256,7 @@ def company_choice(live: Settings, asked: str) -> dict[str, Any]:
                 "line": COMPANY_LINES[name],
                 "has_key": bool(getattr(live, f"{name}_api_key")),
             }
-            for name in ("openai", "anthropic", "gemini")
+            for name in COMPANY_LINES
         ],
     }
 

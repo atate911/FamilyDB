@@ -21,7 +21,7 @@ from markupsafe import Markup, escape
 
 from familydb import alerts, happening, presents, windows
 from familydb.agenda import Entry
-from familydb.agent.providers import catalog, prices
+from familydb.agent.providers import catalog, companies, prices
 from familydb.availability import happening_search_available, ticketmaster_available
 from familydb.config import Settings
 from familydb.dates import clock_time, hour_words
@@ -1486,7 +1486,7 @@ SAID_IN_DETAIL = frozenset(
         "disk",
     }
 )
-COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
+COMPANY_WORDS = {company.slug: company.named for company in companies.BUILT_IN}
 
 
 def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[str, Any]:

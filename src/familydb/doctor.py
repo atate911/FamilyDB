@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from familydb import happening
+from familydb.agent.providers import companies
 from familydb.app import App
 from familydb.availability import (
     calendar_available,
@@ -40,9 +41,7 @@ MARKS = {OK: "✓", WARN: "!", FAIL: "✗", SKIP: "·", TODO: "→"}
 NEW_INSTALL_STEPS = {"family": "Add yourself", "model key": "Connect an AI model"}
 FREE_MB_WANTED = 500
 KEY_FIELDS = {
-    "anthropic": ("anthropic_api_key", "ANTHROPIC_API_KEY"),
-    "openai": ("openai_api_key", "OPENAI_API_KEY"),
-    "gemini": ("gemini_api_key", "GEMINI_API_KEY"),
+    company.slug: (company.key_setting, company.env_name) for company in companies.SPARE_COMPANIES
 }
 
 

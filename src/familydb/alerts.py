@@ -26,6 +26,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from familydb import happening, voice
+from familydb.agent.providers import companies
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
 from familydb.store import alerts as alert_store
@@ -60,7 +61,7 @@ TOLD_AFTER = {"refused": 2}
 TELL_AGAIN = timedelta(hours=12)
 KEEP = timedelta(days=7)
 TELEGRAM = "telegram"
-COMPANY_NAMES = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
+COMPANY_NAMES = {company.slug: company.named for company in companies.BUILT_IN}
 
 
 def note(

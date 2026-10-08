@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from familydb.agent.providers import catalog, prices
+from familydb.agent.providers import catalog, companies, prices
 from familydb.agent.providers.base import (
     LOOK_TOKENS,
     Audio,
@@ -32,13 +32,7 @@ from familydb.errors import ConfigError
 
 log = logging.getLogger(__name__)
 
-NAMES = ("anthropic", "openai", "gemini")
-# Which vendor a model name belongs to; only to say who answered a logged call.
-OWNED = (
-    ("anthropic", ("claude",)),
-    ("openai", ("gpt", "o1", "o3", "o4", "chatgpt")),
-    ("gemini", ("gemini",)),
-)
+NAMES = companies.SPARE_ORDER
 
 
 def refusable_parts(name: str) -> tuple[str, ...]:
@@ -69,13 +63,7 @@ def build(name: str, settings: Settings, api: Any = None, audio: Any = None) -> 
     raise ConfigError(f"unknown provider {name!r}; use one of {', '.join(NAMES)}")
 
 
-def owner(model: str | None) -> str | None:
-    """Whose model this name is, or None."""
-    named = (model or "").lower()
-    for name, prefixes in OWNED:
-        if any(named.startswith(prefix) for prefix in prefixes):
-            return name
-    return None
+owner = companies.owner
 
 
 def chosen(settings: Settings, surface: Surface) -> str:

@@ -12,6 +12,7 @@ from typing import Any
 from familydb import alerts, happening, personas, presents, upkeep, whatsnew
 from familydb import model_watch as watch
 from familydb.agent import compose, gateway, providers
+from familydb.agent.providers import companies
 from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import (
@@ -46,12 +47,8 @@ LOOKUP_STATES = {
     "failed": "the lookup failed",
     "skipped": "nothing to look up",
 }
-PROVIDER_LABELS = {"anthropic": "Claude (Anthropic)", "openai": "OpenAI", "gemini": "Google Gemini"}
-KEY_FOR = {
-    "anthropic": "anthropic_api_key",
-    "openai": "openai_api_key",
-    "gemini": "gemini_api_key",
-}
+PROVIDER_LABELS = {company.slug: company.status for company in companies.BUILT_IN}
+KEY_FOR = {company.slug: company.key_setting for company in companies.BUILT_IN}
 
 
 def _row(label: str, on: bool | None, detail: str) -> dict[str, Any]:

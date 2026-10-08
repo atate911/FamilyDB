@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
+from familydb.agent.providers import companies
+
 LITELLM_URL = (
     "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 )
@@ -22,8 +24,8 @@ TIMEOUT = 30
 MAX_BYTES = 40 * 1024 * 1024
 
 # Each list's name for a company, and ours.
-LITELLM_PROVIDERS = {"openai": "openai", "anthropic": "anthropic", "gemini": "gemini"}
-OPENROUTER_PROVIDERS = {"openai": "openai", "anthropic": "anthropic", "google": "gemini"}
+LITELLM_PROVIDERS = {company.litellm: company.slug for company in companies.BUILT_IN}
+OPENROUTER_PROVIDERS = {company.openrouter: company.slug for company in companies.BUILT_IN}
 # What a model is for, in LiteLLM's words: only those that chat are offered.
 CHAT_MODES = frozenset({"chat", "responses"})
 

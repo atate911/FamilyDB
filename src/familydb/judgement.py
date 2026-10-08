@@ -32,7 +32,7 @@ from typing import Any
 from familydb import alerts
 from familydb.agent import gateway, spending
 from familydb.agent.loop import MessagesAPI
-from familydb.agent.providers import catalog, prices
+from familydb.agent.providers import catalog, companies, prices
 from familydb.agent.worker import worker_turn
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
@@ -61,9 +61,8 @@ LEVELS_ASKED = ("everyday", "better", "best")
 MOST_OPTIONS = 8
 MOST_TRIES = 2
 LEVEL_KEYS = {
-    "openai": ("openai_model", "openai_better_model", "openai_best_model"),
-    "anthropic": ("anthropic_model", "anthropic_better_model", "anthropic_best_model"),
-    "gemini": ("gemini_model", "gemini_better_model", "gemini_best_model"),
+    company.slug: (company.chat_setting, company.better_setting, company.best_setting)
+    for company in companies.BUILT_IN
 }
 SOURCE = "judgement"
 

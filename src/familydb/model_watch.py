@@ -23,7 +23,7 @@ from typing import Any
 
 from familydb import alerts
 from familydb.agent import gateway, providers
-from familydb.agent.providers import catalog, parts, prices
+from familydb.agent.providers import catalog, companies, parts, prices
 from familydb.agent.providers.prices import Price
 from familydb.dates import utc_iso
 from familydb.integrations.price_lists import Listed, PriceLists, PriceListsAPI, Prices
@@ -34,7 +34,7 @@ from familydb.store.model_watch import Seen
 
 log = logging.getLogger(__name__)
 
-COMPANIES = ("openai", "anthropic", "gemini")
+COMPANIES = tuple(company.slug for company in companies.BUILT_IN)
 SOURCES = {"litellm": "LiteLLM's price list", "openrouter": "OpenRouter's price list"}
 AGREE = 0.05  # two lists agree when within 5% of each other
 MOST = 500.0  # dollars a million tokens: more than any model costs, so a mistake
