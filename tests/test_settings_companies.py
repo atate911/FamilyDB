@@ -502,3 +502,18 @@ def test_a_company_that_cannot_be_asked_for_prices_still_keeps_what_was_typed(pa
     page.priced = None
     assert add_openrouter(page).status_code == 302
     assert len(stored_companies(conn)) == 1
+
+
+def test_a_save_that_asked_the_company_nothing_does_not_claim_the_key_works(page, conn, checked):
+    add_openrouter(page)
+    checked.clear()
+    saved = edit(page, better_model="vendor/better")
+    assert saved.status_code == 302 and checked == []
+    assert "Its key works" not in page.get("/settings/model").text
+
+
+def test_the_key_is_asked_for_again_before_the_new_address_is_even_looked_up(page, monkeypatch):
+    add_openrouter(page)
+    monkeypatch.setattr(address, "classify", lambda host: 1 / 0)  # a lookup would blow up
+    refused = edit(page, base_url="https://elsewhere.example/v1")
+    assert refused.status_code == 400 and "type its key again" in refused.text

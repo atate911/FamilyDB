@@ -976,7 +976,7 @@ def _keep_company(
         )
     except ValidationError as exc:
         return _answer(back, here, error=" ".join(problems_from(exc).values()), otherwise="model")
-    verdict = "works"
+    verdict = ""  # nothing asked, so nothing claimed
     if check:
         verdict = providers.build(one.slug, candidate).check_key()
         if verdict == "refused":
@@ -1082,17 +1082,15 @@ def save_company(slug: str) -> Response | tuple[str, int]:
         if company_forms.duplicate_label(one.label, live.companies, skip=slug):
             raise company_forms.FormError(company_forms.TAKEN.format(label=one.label))
         moved_place = one.base_url != existing.base_url or one.local != existing.local
+        company = companies.get(slug, live)
+        if moved_place and not key and company is not None and company.key(live) and not one.local:
+            # The saved key is never sent to an address its owner has not just vouched for: it is
+            # typed again, as seeing it is. Said before the address is looked up.
+            raise company_forms.FormError(company_forms.KEY_AGAIN.format(label=one.label))
         if moved_place:
             company_forms.check_address(one.base_url, local=one.local)
     except company_forms.FormError as exc:
         return _answer(back, here, error=str(exc), otherwise="model")
-    company = companies.get(slug, live)
-    if moved_place and not key and company is not None and company.key(live) and not one.local:
-        # The saved key is never sent to an address its owner has not just vouched for: it is
-        # typed again, as seeing it is.
-        return _answer(
-            back, here, error=company_forms.KEY_AGAIN.format(label=one.label), otherwise="model"
-        )
     warn = ""
     lost = company_forms.protection_lost(one)
     if lost is not None and company_forms.protection_lost(existing) is None:
