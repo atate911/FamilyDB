@@ -1,0 +1,26 @@
+{% extends "wiki.html" %}
+{% block title %}Search · Guide · {{ site_title }}{% endblock %}
+{# The results of the guide's search, drawn on the server so it needs no script. Each result links to its page with the hit marked in a snippet. #}
+{% block wiki_content %}
+  <h1>Search the guide</h1>
+  {% if search_state == 'intro' %}
+    <p class="lede">Type a word or two (a setting’s name, an error message, a term) and every page that has them is listed, best match first.</p>
+  {% elif search_state == 'short' %}
+    <p class="lede">Try a word of at least two letters.</p>
+  {% else %}
+    <h2 class="wiki__found" aria-live="polite">{{ search_headline }}</h2>
+    {% if search_state == 'empty' %}
+      <p class="lede">Try a different word, or look through the sections on the left.</p>
+    {% endif %}
+    <ol class="wiki__results plain">
+      {% for found in results %}
+        <li class="wiki__result">
+          {% if found.crumbs %}<p class="wiki__trail">{{ found.crumbs | join(' › ') }}</p>{% endif %}
+          <a class="wiki__result-title" href="{{ found.url }}">{{ found.title }}</a>
+          {% if found.audience_label %}<span class="tag tag--when">{{ found.audience_label }}</span>{% endif %}
+          <p class="wiki__snippet">{{ found.snippet }}</p>
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+{% endblock %}

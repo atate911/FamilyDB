@@ -12,7 +12,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for
 from werkzeug.security import safe_join
 
 from familydb import __version__, happening, personas
@@ -37,6 +37,7 @@ from familydb.web import (
     shell,
     troubleshooting,
     views,
+    wiki,
 )
 from familydb.web import settings as settings_page
 from familydb.web import status as status_page
@@ -192,6 +193,9 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["money"] = views.money_text
     web.jinja_env.filters["figs"] = views.figs
     web.jinja_env.globals["reminders_said"] = views.REMINDERS_SAID
+    web.jinja_env.globals["settings_guide"] = lambda name: url_for(
+        "wiki.page", page=views.GUIDE_FOR_SETTINGS.get(name, f"controls/settings/{name}")
+    )
 
     def every_page() -> dict[str, Any]:
         her = personas.active(app.settings)
@@ -229,6 +233,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.register_blueprint(look.bp)
     web.register_blueprint(settings_page.bp)
     web.register_blueprint(setup.bp)
+    web.register_blueprint(wiki.bp)
     # The gate first: nobody signed out may cost even a query.
     web.before_request(auth.require_login)
     web.before_request(_picking_up_settings(app, web))

@@ -42,6 +42,8 @@
       {% set lead %}{{ tile('pulse', 'ok' if shell.pill and shell.pill.state == 'ready' else '') }}{% endset %}
       {% set trail %}{% if shell.pill %}{{ tag('ok' if shell.pill.state == 'ready' else 'look', shell.pill.short) }}{% endif %}{% endset %}
       {{ srow(url_for('web.status'), 'Status', shell.pill.long if shell.pill else none, lead=lead, trail=trail) }}
+      {% set lead %}{{ tile('info') }}{% endset %}
+      {{ srow(url_for('wiki.home'), 'Guide', 'How it works, and how to run it', lead=lead) }}
       {% if managing %}
         {% set lead %}{{ tile('sliders', 'look' if shell.check else '') }}{% endset %}
         {% set trail %}{% if shell.check %}{{ tag('look', 'Needs a look', 'alert') }}{% endif %}{% endset %}

@@ -96,6 +96,8 @@ NEEDS: dict[str, roles.Permission] = {
     "activity": "manage",
     # What each model was sent and said, and the log: the same private words, in full.
     "troubleshooting": "manage",
+    # How it works and how to run it: not for kids (docs/DESIGN.md section 16).
+    "wiki": "browse",
 }
 # A page that needs something other than its blueprint's, asked before the blueprint is.
 NEEDS_HERE: dict[str, roles.Permission] = {

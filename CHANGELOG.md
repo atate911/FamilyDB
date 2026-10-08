@@ -222,6 +222,12 @@ running against the tests and a scripted install; most of it has not yet been
 lived with for a month, which is what this alpha is for. An install follows the
 newest release, and an upgrade never moves to anything older than what is
 installed.
+- **A guide for grown-ups.** A new Guide page (in the menu for parents and admins, never a
+  kid's) explains how FamilyDB works and how to look after it, with search: using it,
+  running the server, security and trust, the pieces, what it does on its own, the outside
+  services, and a reference with a "How do I...?" index, a glossary, the known limits and a
+  map to the developer documents. Its 69 pages are Markdown in `src/familydb/wiki/`. Status
+  and each settings page also carry a Guide button to the matching page.
 
 ### New since v0.1.0
 
