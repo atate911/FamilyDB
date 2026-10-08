@@ -513,7 +513,7 @@ cmd_upgrade() {
   plan_item "Reinstall the dependencies at their locked versions" \
     "a new release may need a library version this machine does not have"
   plan_item "Apply any new database migrations" \
-    "they are applied in order and never rewrite what is already there"
+    "they are applied in order and change the database's layout; some rewrite what is in it. The backup taken first covers that, and going back means restoring it"
   plan_item "Restart the bot" \
     "the new code only takes effect once the process restarts"
   plan_untouched ".env, your keys, and everything the family has told it"

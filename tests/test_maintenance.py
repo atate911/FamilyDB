@@ -93,3 +93,9 @@ docker() {
         with closing(db.connect(backups[0])) as restored:
             assert members.find_by_name(restored, "Only in the WAL") is not None
     assert members.find_by_name(conn, "Only in the WAL") is not None
+
+
+def test_upgrade_does_not_promise_migrations_leave_data_alone():
+    script = (ROOT / "scripts/maintain.sh").read_text()
+    assert "never rewrite what is already there" not in script
+    assert "some rewrite what is in it" in script
