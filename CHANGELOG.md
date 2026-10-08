@@ -303,6 +303,25 @@ older than what is installed. It gets a date when it is released.
   favorite, something new and a wildcard, each with a reason; Vera says them.
   Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
   a kid's question or one about right now.
+- **Fixed: opening a Telegram link no longer wipes a birthday or gender.** Linking a person's
+  Telegram used to clear what the family list held for them.
+- **Fixed: a wish turned away as not OK can be answered from the page.** It was counted under
+  "to decide" but showed no buttons; a parent now gets Yes! and Not this time on a kid's page, as
+  in Telegram. A kid never sees them.
+- **Fixed: `familydb db retry-failed --reset` leaves given-up messages alone.** It used to give
+  every failed message new tries, including ones given up on purpose (a person taken off, a kid
+  over the day's limit). It now resets only those that ran out of tries.
+- **Fixed: `familydb doctor --fix` says what it fixed.** The "fixed:" lines were lost when it
+  checked again after the repair.
+- **Fixed: strangers who messaged the bot, and Telegram links nobody opened, are forgotten on
+  time.** They were dropped only when the next one came; the nightly tidy now drops them.
+- **Fixed: saving the same home town again tries the map again.** If the first lookup found
+  nothing, saving the unchanged text did nothing; it now looks again while no coordinates are kept.
+- **A forgotten location now takes its place name with it.** A shared location was deleted after a
+  day, but the name it was given ("Old Town, Portland") stayed in the "Got it" reply and in the
+  words and results kept for the Troubleshooting pages. When the location is forgotten, or the
+  person taken off, the name is replaced there with "[place forgotten]". Coordinates inside the
+  kept model words still go only with those words, after their own days.
 - **Plainer words in the scripts.** The upgrade no longer says migrations "never
   rewrite" what is there: they can, so it says the backup taken first covers it and
   that going back means restoring that backup. `uninstall.sh --help` now says the
@@ -346,6 +365,31 @@ installed.
   services, and a reference with a "How do I...?" index, a glossary, the known limits and a
   map to the developer documents. Its 69 pages are Markdown in `src/familydb/wiki/`. Status
   and each settings page also carry a Guide button to the matching page.
+
+### Fixed since v0.2.0
+
+- **Status no longer says "can't answer" for days after the day's limit.** The note that the
+  limit was reached is now forgotten as soon as a call goes through, and a note from an earlier
+  day no longer counts against today.
+- **Status says plainly when a message was given up on.** A message that had used all its
+  retries still read "will try again"; it now says it was given up on, and that the words
+  are there to send again.
+- **A calendar Google stops showing no longer cancels plans.** If the calendar was unshared or
+  could not be reached, moving a plan read Google's "not found" as the event being deleted and
+  cancelled the plan here. Now only an event missing from a calendar Google still shows counts as
+  deleted; otherwise the plan is left as it is and admins are told the calendar is no longer
+  there for the bot.
+- **The Google Calendar alert says what is wrong.** Admins were told to check that the calendar
+  was still shared when the real trouble was a refused or missing key. That alert now speaks of
+  the key; the sharing advice goes with the new alert for a calendar the bot can no longer see.
+- **A missed heads-up is tried again on the plan's day.** If nothing could send to a plan's chat
+  the evening before, the rain and opening-hours check was dropped for good. It is now tried
+  again on the day itself while the plan has not begun, worded for today, and a plan is still
+  only ever checked once.
+- **Google Calendar can be disconnected from the page.** Under Connections, an admin can open
+  "Disconnect Google Calendar" and confirm: the saved key is deleted and the calendar's id
+  forgotten, any note about the calendar goes with them, and plans stay saved here as they
+  are when no calendar is connected. Nothing is taken off Google.
 
 ### New since v0.1.0
 

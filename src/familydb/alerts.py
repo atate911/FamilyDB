@@ -1,9 +1,10 @@
 """Telling an admin what only an admin can fix, on Telegram, with no model call.
 
 Kinds (`KINDS`): credit and key (a company's account or key; about: company), limit (the day's
-spending limit), calendar (Google shut the bot out), model, price, prices, new and shift (from
-the daily check, model_watch.py and usage_watch.py), api (a company refused a part of a request,
-now sent without it; agent/providers/parts.py), refused (a refusal FamilyDB cannot read, told
+spending limit), calendar (Google refused the key, or none is saved), calendar_access (the key
+works but the calendar is not there for it), model, price, prices, new and shift (from the daily
+check, model_watch.py and usage_watch.py), api (a company refused a part of a request, now sent
+without it; agent/providers/parts.py), refused (a refusal FamilyDB cannot read, told
 once it happens twice without an answer between, then a judgement is asked), advice (what a
 judgement answered and what came of it), backup and disk (the hourly upkeep, upkeep.py),
 telegram (the bot token refused; shown on the Status page only, `NOT_ON_TELEGRAM`), happening (a
@@ -39,6 +40,7 @@ KINDS = (
     "key",
     "limit",
     "calendar",
+    "calendar_access",
     "model",
     "price",
     "prices",

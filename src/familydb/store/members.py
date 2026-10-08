@@ -148,6 +148,8 @@ POINTING_AT = {
     ("app_settings", "updated_by"): "unname",
     ("ideas", "suggested_by"): "unname",
     ("member_locations", "member_id"): "delete",
+    # The names their locations were given, taken out of what held them first (place_names.py).
+    ("place_names", "member_id"): "delete",
     ("member_logins", "member_id"): "delete",
     ("member_logins", "set_by"): "unname",
     ("memories", "forgotten_by"): "unname",
@@ -189,6 +191,9 @@ def erase(conn: sqlite3.Connection, member_id: int) -> dict[str, int]:
     from familydb.store import ai_texts
 
     ai_texts.forget_of_messages(conn, member_id)
+    from familydb.store import place_names
+
+    place_names.forget_of_member(conn, member_id)
     for (table, column), how in sorted(POINTING_AT.items(), key=lambda item: item[1] == "delete"):
         if how == "unname":
             sql = f"UPDATE {table} SET {column} = NULL WHERE {column} = ?"

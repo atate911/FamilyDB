@@ -19,7 +19,7 @@ Jump to: [the page will not open](#the-page-will-not-open), [sign-in](#somebody-
 Work down this list until you find the cause.
 
 1. Check that FamilyDB is running with `maintain.sh status`, then open [Status](/wiki/controls/status). The pill and **Needs a look** say when the assistant cannot answer anyone.
-2. **Messages that did not go through**, under Waiting on Status, lists each failed message with its error and either "given up on" or its tries. A failed message is retried; a given-up one is not ([the numbers](/wiki/controls/settings/messages#when-a-message-cannot-be-answered)).
+2. **Messages that did not go through**, under Waiting on Status, lists each failed message with its text, its error and a note: "N tries, will try again", or "given up on after N tries" with the words to send again. A failed message is retried; a given-up one is not ([the numbers](/wiki/controls/settings/messages#when-a-message-cannot-be-answered)).
 3. If it is not listed and the person got nothing, a restart may have interrupted it. Its 5-minute lease must run out, then the retry job picks it up at its next run (every 5 minutes by default), after Telegram's 4-second pause. Allow about 10 minutes.
 4. Find the message in the log. Its lines name it, as in `message 42`:
 
@@ -41,7 +41,7 @@ Work down this list until you find the cause.
    sudo docker compose --project-directory /opt/familydb run --rm -T bot familydb db retry-failed
    ```
 
-> **Adding `--reset` re-arms every failed message, including ones given up on purpose, so old messages can be answered late and billed again.** Check **Messages that did not go through** first. See [Reset on retry-failed re-arms every message](/wiki/reference/known-limits#reset-on-retry-failed-re-arms-every-message).
+> **Adding `--reset` gives failed messages with no tries left new tries, so old messages can be answered late and billed again.** Check **Messages that did not go through** first. A message given up on purpose (a person taken off, a kid over the day's limit, a missing key) stays given up.
 
 | You see | It means | Do this |
 |---|---|---|
@@ -106,9 +106,10 @@ The full failure table is [If Telegram changes or is down](/wiki/boundaries/tele
 | You see | It means | Do this |
 |---|---|---|
 | Status: "A calendar is named but not connected yet." Doctor: "no key at ..." | `data/google_key.json` is missing, and backups do not hold it | Make a new key and connect again on [Connections](/wiki/controls/settings/connections#google-calendar) |
-| Status: "Google Calendar stopped letting the bot in" | Google refuses the key, or the key or its service account was deleted | Make a new key and connect again. The row clears when Google answers |
+| Status: "Google Calendar refused the bot's key, or it has none" | Google refuses the key, or the key or its service account was deleted | Make a new key and connect again. The row clears when Google answers |
+| Status: "Google Calendar is no longer showing the bot its calendar" | The calendar is no longer shared with the service account, or was deleted. A plan you moved was left as it is, not canceled | Share it again with **Make changes to events**, or connect another calendar. The row clears when Google answers |
 | On connecting: "cannot find that calendar", "can see that calendar but not change it", or "not turned on in the project" | The id is wrong, the calendar is not shared with the service account or only read-only, or the Calendar API is off | Share it with **Make changes to events**, or turn the API on and wait a minute |
-| Plans stop reaching the calendar and nothing is flagged | The calendar was unshared or made read-only after connecting; see [An unshared calendar raises no alert](/wiki/reference/known-limits#an-unshared-calendar-raises-no-alert) | Share it again with **Make changes to events** |
+| Plans stop reaching the calendar and nothing is flagged | The calendar was unshared or made read-only after connecting, or its Calendar API was switched off. Only an unshared or deleted calendar, found when one plan's event is looked up, raises a row; see [An unshared calendar raises an alert only when one event is looked up](/wiki/reference/known-limits#an-unshared-calendar-raises-an-alert-only-when-one-event-is-looked-up) | Share it again with **Make changes to events** |
 | An event added on a phone is not on the page | The page keeps Google's answer for up to 1 minute | Wait, then reload |
 
 `familydb google events` lists what the assistant can see on the calendar; run it as in [The command line](/wiki/operations/command-line#how-to-run-it).

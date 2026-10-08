@@ -92,7 +92,7 @@ These show things and send nothing. On a database that has never been opened, or
 
 | Command | What it shows |
 |---|---|
-| `familydb doctor [--online] [--fix] [--json]` | Checks the install end to end and prints a fix under anything wrong; exits with status 1 when something must be fixed. `--online` is free: it asks Telegram whether the token is live, counts tokens on Anthropic or Gemini and checks the setup's links. `--fix` makes `.env` and the login key owner-only and applies pending migrations |
+| `familydb doctor [--online] [--fix] [--json]` | Checks the install end to end and prints a fix under anything wrong; exits with status 1 when something must be fixed. `--online` is free: it asks Telegram whether the token is live, counts tokens on Anthropic or Gemini and checks the setup's links. `--fix` makes `.env` and the login key owner-only and applies pending migrations, and prints `fixed:` for each |
 | `familydb config` | Every setting with secrets masked, and where each value came from: **set on the settings page**, **from the environment**, or no mark for a default |
 | `familydb db status` | The schema version, row counts and the last few model calls |
 | `familydb members list [--all]` | The family list; `--all` includes people switched off |
@@ -129,7 +129,7 @@ Each model call goes through the same daily spending limit as the rest.
 |---|---|
 | `familydb chat TEXT [--as NAME] [--fresh]` | Talks to the assistant in its console chat. Everything it does is real: it saves messages and may add ideas, things to do or calendar events |
 | `familydb repl [--as NAME] [--fresh]` | The same, as an interactive session |
-| `familydb db retry-failed [--reset]` | Asks again about failed messages and sends the replies. `--reset` first makes given-up messages eligible again, including ones given up on purpose |
+| `familydb db retry-failed [--reset]` | Asks again about failed messages and sends the replies. `--reset` first gives failed messages with no tries left new tries; messages given up on purpose stay given up |
 | `familydb digest [--now]` | Shows the weekend ideas schedule; with `--now`, sends them to the chat chosen under Messages, once a day at most |
 | `familydb enrich [--idea N] [--limit N]` | Looks pending ideas up on the web now; `--idea` redoes one. It needs lookups turned on and a model key |
 | `familydb suggest [--window W] [--as NAME] [--discover]` | Runs the suggestion engine for a window (now, today, this-weekend, next-weekend, someday, or START..END as dates). It is free unless you add `--discover`, which searches the web |

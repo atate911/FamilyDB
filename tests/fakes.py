@@ -11,6 +11,7 @@ import anthropic
 import httpx2
 from anthropic.types.beta import BetaMessage
 
+from familydb.errors import ToolUnavailable
 from familydb.integrations.geocode import GeoPoint
 from familydb.integrations.google_calendar import CalendarChanges, CalendarEvent
 from familydb.integrations.open_meteo import DayForecast
@@ -99,6 +100,8 @@ class FakeCalendar:
         self._reported: dict[str, CalendarEvent] = {}
         self._syncs = 0
         self.change_calls = 0
+        # The calendar was unshared (or is unreachable): Google answers 404 for everything in it.
+        self.unreachable = False
 
     def _as_datetime(self, value: datetime | date) -> datetime:
         if isinstance(value, datetime):
@@ -130,6 +133,8 @@ class FakeCalendar:
         return self.list_events(start, end)
 
     def get_event(self, event_id: str) -> CalendarEvent | None:
+        if self.unreachable:
+            raise ToolUnavailable("the calendar is no longer shared with the bot")
         return self.events.get(event_id)
 
     def changes(self, sync_token: str | None) -> CalendarChanges:

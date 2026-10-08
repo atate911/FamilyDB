@@ -149,3 +149,44 @@ def test_after_a_restart_past_the_hour_it_still_checks(settings, conn, family) -
     app, said = _app(settings, at=FRIDAY_EVENING + timedelta(hours=2))
     assert run_catch_up(app)["plan_checks"] == 1
     assert said[0].startswith("Heads-up for tomorrow")
+
+
+def test_a_plan_missed_the_evening_before_is_checked_on_its_day_while_ahead(
+    settings, conn, family
+) -> None:
+    plan = _plan(
+        conn,
+        _idea(conn, "The falls hike", setting="outdoor"),
+        "2026-09-26T21:00",
+        "2026-09-26T22:30",
+        channel="telegram",
+        chat_id="42",
+    )
+    app, said = _app(settings)  # Friday evening: nothing here can send to Telegram
+    assert run_plan_checks(app) == 0 and said == []
+    assert plans.get(conn, plan.id).checked_at is None  # waits for the next run
+
+    app, said = _app(settings, at=datetime(2026, 9, 26, 19, 0, tzinfo=TZ))  # Saturday evening
+    app.senders["telegram"] = lambda chat, text: said.append(text)
+    assert run_plan_checks(app) == 1
+    assert said[0].startswith("Heads-up for today: 80% chance of rain")
+    assert plans.get(conn, plan.id).checked_at is not None
+    assert run_plan_checks(app) == 0 and len(said) == 1  # once
+
+
+def test_a_plan_of_today_that_has_begun_is_not_checked(settings, conn, family) -> None:
+    plan = _plan(conn, _idea(conn, "The falls hike", setting="outdoor"))  # Saturday 10:00
+    app, said = _app(settings, at=datetime(2026, 9, 26, 19, 0, tzinfo=TZ))
+    assert run_plan_checks(app) == 0 and said == []
+    assert plans.get(conn, plan.id).checked_at is None
+
+
+def test_a_plan_checked_the_evening_before_is_not_checked_again_on_its_day(
+    settings, conn, family
+) -> None:
+    plan = _plan(conn, _idea(conn, "Cinema", setting="indoor"), "2026-09-26T21:00", None)
+    app, said = _app(settings, weather=(DRY,))
+    assert run_plan_checks(app) == 0
+    assert plans.get(conn, plan.id).checked_at is not None
+    app, said = _app(settings, weather=(WET,), at=datetime(2026, 9, 26, 19, 0, tzinfo=TZ))
+    assert run_plan_checks(app) == 0 and said == []

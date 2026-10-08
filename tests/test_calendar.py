@@ -775,3 +775,70 @@ def test_another_browser_session_never_takes_over_someone_else_s_attempt(env):
     _with_session(env, "browser-2", "form-9")
     assert not call(env, "create_event", **payload)[0].is_error
     assert len(env.cal.events) == 2
+
+
+def test_moving_a_plan_whose_calendar_is_out_of_reach_changes_nothing(env):
+    plan_id, idea_id = _plan_with_idea(env)
+    env.cal.unreachable = True  # unshared: Google says 404 to everything in it
+    _, data = call(env, "update_event", plan_id=plan_id, start="2026-09-27T20:00")
+    assert data["available"] is False
+    plan = plans.get(env.conn, plan_id)
+    assert plan.status != "cancelled" and plan.start != "2026-09-27T20:00-07:00"
+    assert ideas.get(env.conn, idea_id).status == "planned"
+
+
+def test_moving_a_plan_whose_event_was_deleted_in_google_cancels_it(env):
+    plan_id, idea_id = _plan_with_idea(env)
+    del env.cal.events[plans.get(env.conn, plan_id).google_event_id]
+    call(env, "update_event", plan_id=plan_id, start="2026-09-27T20:00")
+    assert plans.get(env.conn, plan_id).status == "cancelled"
+    assert ideas.get(env.conn, idea_id).status == "idea"
+
+
+def _google_that_answers(statuses: dict[str, int], calendar_settings):
+    """A GoogleCalendar whose requests are each answered with an HTTP status (200: fine)."""
+    import httplib2
+    from googleapiclient.errors import HttpError
+
+    from familydb.integrations.google_calendar import GoogleCalendar
+
+    class Request:
+        def __init__(self, status):
+            self.status = status
+
+        def execute(self):
+            if self.status == 200:
+                return {"items": []}
+            raise HttpError(httplib2.Response({"status": self.status}), b"missing")
+
+    class Events:
+        def get(self, **_kwargs):
+            return Request(statuses["event"])
+
+        def list(self, **_kwargs):
+            return Request(statuses["calendar"])
+
+    client = GoogleCalendar(calendar_settings)
+    client._events = lambda: Events()
+    return client
+
+
+@pytest.mark.parametrize("gone", [404, 410])
+def test_google_reads_a_missing_event_as_deleted_only_while_the_calendar_is_there(
+    calendar_settings, gone
+) -> None:
+    from familydb.errors import ToolUnavailable
+    from familydb.integrations.google_calendar import LOST_ACCESS
+
+    said = []
+    client = _google_that_answers({"event": gone, "calendar": 200}, calendar_settings)
+    client.report = lambda trouble, lost_access: said.append((trouble, lost_access))
+    assert client.get_event("evt1") is None  # the calendar answers: the event is gone
+    assert said == [(None, False)]
+
+    said.clear()
+    client = _google_that_answers({"event": gone, "calendar": 404}, calendar_settings)
+    client.report = lambda trouble, lost_access: said.append((trouble, lost_access))
+    with pytest.raises(ToolUnavailable):
+        client.get_event("evt1")  # the calendar is not there for the bot: nothing is known
+    assert said == [(LOST_ACCESS, True)]

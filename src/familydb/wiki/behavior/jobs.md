@@ -9,11 +9,12 @@ The scheduled jobs are what FamilyDB does without being asked: reminders, lookup
 | Reminders job | every minute | none | No |
 | Alerts job | every minute | `admin_alerts` | No |
 | Forget-locations job | every 10 minutes | none | No |
+| Tidy job | daily 03:30 | none; `tidy_ideas` turns off only taking ideas off | No |
 | Retry job | every 5 minutes | `retry_interval_minutes`; `retry_max_attempts` bounds the retries | Only to answer a failed message |
 | Lookups job | every 2 minutes | `enrich_interval_minutes`; not scheduled while `web_tools_enabled` is off | Yes, one worker turn per idea due |
 | Weekend ideas job | Thursday 18:00 | `digest_day`, `digest_hour`; not scheduled while `digest_chat_id` is empty | Yes, one chat turn |
 | Follow-ups job | daily 10:00 | `follow_up_hour`; `follow_ups` | No |
-| Evening-before check | daily 19:00 | `plan_check_hour`; `plan_checks` | No |
+| Evening-before check | hourly 19:00 to 22:00 | `plan_check_hour`; `plan_checks` | No |
 | Models and prices check | daily 05:17 | `model_watch` | No |
 | Judgments job | every 15 minutes | `judgements`, off until you turn it on | Only when a question is due |
 | Nudges job | every 15 minutes | `task_nudges` | No |
@@ -52,9 +53,9 @@ It asks once about each confirmed plan that ended before today and started withi
 
 ### Evening-before check
 
-It looks at unchecked plans for an idea, made in a chat, that start tomorrow, and returns before touching Google when there are none. Otherwise it syncs the calendar (and waits if Google cannot be asked), reads tomorrow's forecast (skipped without a home position), and checks rain for an outdoor or dry-weather idea and the place's saved hours against the plan's time. When all is well it says nothing, and the plan is still marked checked. A heads-up goes to the plan's chat, with a backup idea when the engine finds one.
+It looks at unchecked plans for an idea, made in a chat, that start tomorrow, or start today and have not begun, and returns before touching Google when there are none. Otherwise it syncs the calendar (and waits if Google cannot be asked), reads the forecast for each plan's day (skipped without a home position), and checks rain for an outdoor or dry-weather idea and the place's saved hours against the plan's time. When all is well it says nothing, and the plan is still marked checked. A heads-up goes to the plan's chat, with a backup idea when the engine finds one, worded for today when the plan is today.
 
-If nothing can send to the plan's chat when the check runs (for example Telegram is not connected), that plan is not checked. Each run looks only at tomorrow's plans, so only a catch-up on the same day can pick it up ([known limits](/wiki/reference/known-limits#a-skipped-evening-before-check-is-not-retried)).
+If nothing can send to the plan's chat when the check runs (for example Telegram is not connected), that plan is not checked yet. The next hourly run tries it again, and a plan of today is still checked while it has not begun; one that has begun is skipped ([known limits](/wiki/reference/known-limits#a-skipped-evening-before-check-may-never-be-retried)).
 
 ### Models and prices check, and judgments
 
@@ -66,9 +67,13 @@ The judgments job asks a stronger model only about a question that code filed. I
 
 It brings up a thing to do kept for a part of the week that code can read, such as "some Saturday morning". It reads the database and returns when nothing is due, and asks the calendar only when a nudge could go. It holds back when the calendar shows the next hour busy, but goes anyway with no calendar or one it cannot reach. The rules for each thing and each chat are in [Preferred windows and nudges](/wiki/model/tasks-and-reminders#preferred-windows-and-nudges).
 
+### Tidy job
+
+The tidy job clears what has passed its time. It drops a stranger's knock after 30 days (and any beyond the newest 200) and a Telegram link after its 24 hours, so neither waits for the next one to be made. It also takes ideas off a week after their last day and empties the words of old messages and model calls.
+
 ### Forget-locations job and settings watch
 
-The forget-locations job deletes a shared position after 24 hours; the assistant uses one for only 3 ([Shared location](/wiki/model/location)). The settings watch re-reads the stored settings and adds, removes or reschedules jobs to match, so a schedule you change on the page moves within 5 minutes. The log says `settings changed` and names what moved.
+The forget-locations job deletes a shared position after 24 hours and takes its place name out of what held it; the assistant uses one for only 3 ([Shared location](/wiki/model/location#what-is-kept-and-for-how-long)). The settings watch re-reads the stored settings and adds, removes or reschedules jobs to match, so a schedule you change on the page moves within 5 minutes. The log says `settings changed` and names what moved.
 
 ## An idle job calls no model
 

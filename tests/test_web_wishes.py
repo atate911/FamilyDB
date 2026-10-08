@@ -127,6 +127,42 @@ def test_a_parent_sees_every_kid_and_answers(app, family, sam, girls) -> None:  
     assert "On your list: A cat." in _said(_add(girls["mine"], "A cat", "christmas"))
 
 
+def test_a_parent_answers_a_not_ok_wish_from_the_page(app, family, sam, girls) -> None:  # noqa: F811
+    """It counts in "to decide" and is told to the parents at once, so the page offers the answer
+    too, as Telegram does; the kid sees where to go next, never the buttons or the grown-ups' word.
+    """
+    from familydb import wish_service
+
+    with closing(app.connect()) as conn:
+        turned = wish_service.turn_away(
+            conn,
+            app.settings,
+            owner=members.get(conn, family["girls"].id),
+            summary="a real crossbow",
+            concern="inappropriate",
+            reviewable=False,
+            now=app.clock.now(),
+        )
+    hers = sam.get(f"/wishes?who={family['girls'].id}").text
+    assert "a real crossbow" in hers and "Not ok" in hers
+    assert f"/wish/{turned.wish.id}/answer" in hers and "Not this time</button>" in hers
+    kid = girls["mine"].get("/wishes").text
+    assert "a real crossbow" in kid and "/answer" not in kid and "Not OK" not in kid
+    assert "Not this time</button>" not in kid and "Yes!</button>" not in kid
+    assert "1 to decide" in sam.get("/").text
+    no = sam.post(
+        f"/wish/{turned.wish.id}/answer",
+        data={
+            **_form(sam, f"/wishes?who={family['girls'].id}"),
+            "status": "declined",
+            "kid": str(family["girls"].id),
+        },
+        follow_redirects=True,
+    )
+    assert "Not this time: a real crossbow." in _said(no)
+    assert "to decide" not in sam.get("/").text
+
+
 def test_ask_a_parent_is_a_button_where_it_was_offered(app, family, girls) -> None:  # noqa: F811
     from familydb import wish_service
 

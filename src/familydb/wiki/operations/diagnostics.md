@@ -72,7 +72,7 @@ Its output is grouped under `▸ Name` headings, each line starting with `✓` f
 | Option | What it does |
 |---|---|
 | `--online` | Also asks Telegram whether the token is live, counts tokens with the company that answers chat (free; OpenAI cannot), and tries each outside page the setup links to |
-| `--fix` | Sets `.env`, the login key and the database files to mode 600 and applies pending database upgrades, then checks again. It touches no key, password or setting, and does not print what it fixed: the line just turns `✓` (see [The doctor does not print what it fixed](/wiki/reference/known-limits#the-doctor-does-not-print-what-it-fixed)) |
+| `--fix` | Sets `.env`, the login key and the database files to mode 600 and applies pending database upgrades, then checks again. Under each line it fixed it prints `fixed:` and what it did. It touches no key, password or setting |
 | `--json` | The findings as JSON, each with `check`, `group`, `verdict` (`ok`, `warn`, `fail` or `skip`), `detail` and `fix` |
 
 The exit status is 1 when any check is `✗`, otherwise 0, warnings included. A bad value in `.env` stops everything before the first check: `maintain.sh check` then shows it as **its own check** with the first lines of what the program said, and [the .env file](/wiki/operations/configuration#when-a-value-is-wrong) explains the rule.
