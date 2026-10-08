@@ -3,7 +3,9 @@
 {% from "_settings.html" import told with context %}
 {% block title %}Settings · {{ site_title }}{% endblock %}
 {% block content %}
-  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it. Only an admin can change these.') }}
+  {% call page_head('Settings', 'Each part, how it stands now, and the way in to change it. Only an admin can change these.') %}
+    <a class="btn btn--quiet" href="{{ url_for('wiki.page', page='controls/settings') }}">{{ icon('info') }}Guide</a>
+  {% endcall %}
   {{ told(said, error) }}
 
   <div class="settings-grid">

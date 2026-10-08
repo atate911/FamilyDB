@@ -78,6 +78,27 @@ def test_somebody_not_signed_in_is_sent_to_the_sign_in(app) -> None:  # noqa: F8
 # -- what it serves
 
 
+def test_status_and_each_settings_page_link_to_their_guide_page(app, sam, family) -> None:  # noqa: F811
+    from familydb.web import fields, views
+
+    slugs = {
+        node["slug"]
+        for node in _nodes(json.loads((wiki.CONTENT_DIR / "_nav.json").read_text("utf-8"))["tree"])
+    }
+    pages = {"/status": "controls/status", "/settings": "controls/settings"}
+    for one in fields.SECTIONS:
+        pages[f"/settings/{one.name}"] = views.GUIDE_FOR_SETTINGS.get(
+            one.name, f"controls/settings/{one.name}"
+        )
+    for path, slug in pages.items():
+        assert slug in slugs, (path, slug)
+        assert f'href="/wiki/{slug}"' in sam.get(path).text, path
+    # A kid is refused those pages, so the way in is never on a kid's screen.
+    girls = _kid(app, sam, family)
+    for path in pages:
+        assert girls.get(path).status_code == 403, path
+
+
 def test_the_nav_and_the_files_agree(app) -> None:  # noqa: F811
     tree = json.loads((wiki.CONTENT_DIR / "_nav.json").read_text("utf-8"))["tree"]
     assert tree and tree[0]["slug"] == "index"

@@ -40,6 +40,7 @@
 {% block content %}
   {% call page_head('Status', 'Is ' ~ assistant ~ ' working, and what is ' ~ ('she' if has_persona else 'it') ~ ' costing? Checked when you opened this page.') %}
     <a class="btn btn--quiet" href="{{ url_for('web.status') }}">{{ icon('refresh') }}Check again</a>
+    <a class="btn btn--quiet" href="{{ url_for('wiki.page', page='controls/status') }}">{{ icon('info') }}Guide</a>
   {% endcall %}
 
   <div class="banner banner--{{ verdict.tone }} banner--hero">

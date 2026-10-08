@@ -12,7 +12,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for
 from werkzeug.security import safe_join
 
 from familydb import __version__, personas
@@ -189,6 +189,9 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["money"] = views.money_text
     web.jinja_env.filters["figs"] = views.figs
     web.jinja_env.globals["reminders_said"] = views.REMINDERS_SAID
+    web.jinja_env.globals["settings_guide"] = lambda name: url_for(
+        "wiki.page", page=views.GUIDE_FOR_SETTINGS.get(name, f"controls/settings/{name}")
+    )
 
     def every_page() -> dict[str, Any]:
         her = personas.active(app.settings)

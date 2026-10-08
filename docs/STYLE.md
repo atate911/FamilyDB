@@ -632,7 +632,10 @@ Kept on a home screen, the page opens full-screen, with the mark as its icon.
   crumbs, two tags (who it is for, how deep), "On this page", the article (`.wiki-prose`, Markdown
   from disk, so every element it can make is styled there) and "See also". Tables are plain,
   never centred by Markdown, whose alignment is an inline style the policy blocks. Results are a
-  card each, with the hit marked. No model is asked.
+  card each, with the hit marked. No model is asked. Status and every settings page carry a quiet
+  **Guide** button in their head, beside any other action, to the guide page for that screen
+  (`views.GUIDE_FOR_SETTINGS` where a settings page's name differs from the guide's); both pages
+  refuse a kid, so the button is never on a kid's screen.
 - **Settings** (admin). A row per page (`.slist` › `.srow`) with how it stands, "Needs a look"
   only when the page would say so. Each page (`.settings-layout`) has the crumb, every other page
   down the side above 1000 pixels, and its groups as cards (`.sgroup`). A box (`.setting`) shows

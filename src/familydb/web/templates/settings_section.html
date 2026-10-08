@@ -3,7 +3,9 @@
 {% from "_settings.html" import told, settings_nav with context %}
 {% block title %}{{ section.title }} · Settings · {{ site_title }}{% endblock %}
 {% block content %}
-  {{ page_head(section.title, section.blurb, crumb=('Settings', url_for('settings.show'))) }}
+  {% call page_head(section.title, section.blurb, crumb=('Settings', url_for('settings.show'))) %}
+    <a class="btn btn--quiet" href="{{ settings_guide(section.name) }}">{{ icon('info') }}Guide</a>
+  {% endcall %}
   {{ told(said, error) }}
 
   <div class="settings-layout">

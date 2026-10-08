@@ -63,6 +63,13 @@ STATUS_LIGHTS = {
     "bad": ("■", "not answering"),
     "warn": ("▲", "needs a look"),
 }
+# The guide page for each settings page (`fields.SECTIONS`), by section name; the guide's own page
+# names differ from two of them, and the change history has no page of its own.
+GUIDE_FOR_SETTINGS = {
+    "model": "controls/settings/ai-model",
+    "security": "controls/settings/sign-in",
+    "history": "controls/settings",
+}
 # Without the version, for a kid.
 FOOTER_PLAIN = "FamilyDB © 2026 by Andrew Tate. All rights reserved."
 # What each may do is decided in familydb/roles.py.
