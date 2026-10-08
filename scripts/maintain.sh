@@ -521,6 +521,47 @@ if have>known:
   [ -n "$safety" ] && say "What was there before is at ${safety}, if you need it back."
 }
 
+# An upgrade that has moved the code writes this, and removes it once dependencies and migrations
+# are done: what a rerun reads to tell a half-finished upgrade from an up-to-date one.
+UPGRADE_PENDING="${LEDGER_DIR}/upgrade-pending"
+
+pending_get() { # pending_get KEY - target, before or backup of an unfinished upgrade; empty if none
+  as_root grep -s "^${1}=" "$UPGRADE_PENDING" 2>/dev/null | tail -1 | cut -d= -f2- || true
+}
+
+pending_write() { # pending_write TARGET BEFORE BACKUP
+  [ "$DRY_RUN" = 1 ] && return 0
+  as_root mkdir -p "$LEDGER_DIR"
+  as_root chmod 700 "$LEDGER_DIR"
+  printf 'target=%s\nbefore=%s\nbackup=%s\n' "$1" "$2" "$3" | as_root tee "$UPGRADE_PENDING" >/dev/null
+}
+
+# The version the database is at, and the newest migration this checkout has; empty when unreadable.
+database_version() {
+  local python="${TARGET}/.venv/bin/python"
+  [ -x "$python" ] || python="python3"
+  as_root "$python" -c 'import sqlite3,sys; from pathlib import Path; c=sqlite3.connect(Path(sys.argv[1]).resolve().as_uri()+"?mode=ro",uri=True); print(c.execute("select max(version) from schema_version").fetchone()[0] or 0)' "$DB" 2>/dev/null || true
+}
+newest_migration() {
+  find "${TARGET}/src/familydb/store/migrations" -maxdepth 1 -name '[0-9][0-9][0-9][0-9]_*.sql' -printf '%f\n' 2>/dev/null \
+    | sort | tail -1 | cut -c1-4 | sed 's/^0*//' || true
+}
+
+# Going back is the code, what it was installed with, and the database from before its
+# migrations, in that order: the restore restarts the bot on the code checked out above it.
+rollback_lines() { # rollback_lines LABEL BEFORE BACKUP - the commands, one a line
+  local label="$1" before="$2" backup="$3"
+  if [ -n "$before" ]; then
+    printf '  sudo git -C %s checkout --quiet --detach %s     # %s\n' "$TARGET" "$before" "$label"
+    if [ "$DOCKER_MODE" = 1 ]; then
+      printf '  sudo docker compose --project-directory %s build\n' "$TARGET"
+    else
+      printf '  sudo uv sync --frozen --no-dev --project %s\n' "$TARGET"
+    fi
+  fi
+  printf '  sudo %s restore %s\n' "$0" "$backup"
+}
+
 cmd_upgrade() {
   head2 "Upgrading"
   [ -d "${TARGET}/.git" ] || die "${TARGET} is not a git checkout, so there is nothing to pull" \
@@ -543,7 +584,7 @@ cmd_upgrade() {
   approve "Upgrade now?" || { say "Nothing was changed."; exit 0; }
 
   take_backup "$BACKUP_DIR" "so a bad upgrade can be undone"
-  local before upgrade_backup="$LAST_BACKUP"
+  local before upgrade_backup="$LAST_BACKUP" unfinished=""
   before="$(as_root git -C "$TARGET" rev-parse HEAD 2>/dev/null || echo unknown)"
 
   # A private repository needs a credential here. bootstrap.sh leaves the deploy key wired up
@@ -597,17 +638,53 @@ cmd_upgrade() {
     tag) target="$name" ;;
     *) die "there is nothing to upgrade to: the remote has no default branch and no release" ;;
   esac
-  if as_root git -C "$TARGET" merge-base --is-ancestor "$target" HEAD; then
-    ok "Already up to date with ${name}. Nothing to do."
-    return 0
+  # An earlier upgrade that stopped part-way remembers what to go back to: that, not the state
+  # this run found.
+  if [ -n "$(pending_get before)" ]; then
+    before="$(pending_get before)"
+    upgrade_backup="$(pending_get backup)"
+    current="$(as_root git -C "$TARGET" describe --tags --always "$before" 2>/dev/null || echo "$before")"
   fi
-  # Only forward. A release tag older than what is installed would take the database back past
-  # migrations it has already run; a branch that lacks what is here would lose it.
-  moves_forward "$TARGET" "$target" \
-    || die "${name} does not contain what is installed now (${current}), so moving to it would go backwards" \
-           "Nothing was changed. To choose a version yourself: sudo git -C ${TARGET} checkout NAME"
-  say "Upgrading to: ${name}"
-  step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
+  if as_root git -C "$TARGET" merge-base --is-ancestor "$target" HEAD; then
+    # On the code is not the same as upgraded: a stop after the checkout leaves the code here and
+    # the dependencies, the migrations or the restart undone.
+    local have newest
+    have="$(database_version)"
+    newest="$(newest_migration)"
+    if [ -n "$(pending_get target)" ]; then
+      unfinished="an earlier upgrade to $(pending_get target) stopped after moving the code; its dependencies, migrations or restart may not have run"
+    elif [ -n "$have" ] && [ -n "$newest" ] && [ "$have" -lt "$newest" ]; then
+      unfinished="the database is at migration ${have} and this code has up to ${newest}"
+    fi
+    if [ -z "$unfinished" ]; then
+      ok "Already up to date with ${name}, and the database is migrated. Nothing to do."
+      return 0
+    fi
+    warn "The code is already on ${name}, but it is not upgraded: ${unfinished}."
+    say "Finishing it now."
+    # Nothing recorded the code it came from, so only the database can be put back.
+    [ -n "$(pending_get before)" ] || before=""
+  else
+    # Only forward. A release tag older than what is installed would take the database back past
+    # migrations it has already run; a branch that lacks what is here would lose it.
+    moves_forward "$TARGET" "$target" \
+      || die "${name} does not contain what is installed now (${current}), so moving to it would go backwards" \
+             "Nothing was changed. To choose a version yourself: sudo git -C ${TARGET} checkout NAME"
+    say "Upgrading to: ${name}"
+    say "If anything goes wrong from here, this puts it back (it is printed again then):"
+    rollback_lines "$current" "$before" "$upgrade_backup"
+    pending_write "$name" "$before" "$upgrade_backup"
+    step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
+  fi
+
+  # From here the code is the new one, so a failure is not "nothing was half-done": say what is,
+  # and how to go back or finish. lib/common.sh prints both at the foot of every failure.
+  local nl=$'\n   ' undo
+  undo="$(rollback_lines "$current" "$before" "$upgrade_backup" | sed 's/^/   /')"
+  local back="To go back to ${current} instead, database and all:"
+  [ -n "$before" ] || back="To put the database from before the upgrade back instead:"
+  on_failure_hint "The upgrade stopped part-way: the code is on ${name}, and the steps after it (dependencies, migrations, restart) are not all done. The bot may be stopped.${nl}${back}"$'\n'"${undo}"
+  again_hint "finish the upgrade: sudo bash ${0} upgrade"
 
   stop_bot
   if [ "$DOCKER_MODE" = 1 ]; then
@@ -618,20 +695,19 @@ cmd_upgrade() {
     try_step "Keeping the code owned by root" as_root chmod -R go-w "$TARGET"
   fi
   step "Applying any new migrations" familydb_cmd db migrate
+  [ "$DRY_RUN" = 1 ] || as_root rm -f "$UPGRADE_PENDING"
+  on_failure_hint ""
+  again_hint ""
   start_bot
 
   head2 "Done"
   say "Now on $(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo unknown)."
-  # Going back is the code, what it was installed with, and the database from before its
-  # migrations, in that order: the restore restarts the bot on the code checked out above it.
-  say "If something is wrong, go back to what was installed (${current}), database and all:"
-  say "  sudo git -C ${TARGET} checkout --quiet --detach ${before}"
-  if [ "$DOCKER_MODE" = 1 ]; then
-    say "  sudo docker compose --project-directory ${TARGET} build"
+  if [ -n "$before" ]; then
+    say "If something is wrong, go back to what was installed (${current}), database and all:"
   else
-    say "  sudo uv sync --frozen --no-dev --project ${TARGET}"
+    say "If something is wrong, the database from before the upgrade can be put back:"
   fi
-  say "  sudo ${0} restore ${upgrade_backup}"
+  rollback_lines "$current" "$before" "$upgrade_backup"
   familydb_cmd doctor || true
 }
 

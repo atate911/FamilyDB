@@ -185,7 +185,7 @@ writes `plans.ics` (every plan, for any calendar), `ideas.csv` and `tasks.csv` (
 sudo /opt/familydb/scripts/maintain.sh upgrade
 ```
 
-It takes a backup, fetches, moves to the newer code, reinstalls locked dependencies (or rebuilds the image), migrates, restarts, then prints the command to go back. Do not `git pull`: after an upgrade the checkout is on a detached commit, where it fails, and it would skip the backup and dependencies. On a private repository the fetch needs a credential (docs/INSTALL.md, Day to day).
+It takes a backup, fetches, moves to the newer code, reinstalls locked dependencies (or rebuilds the image), migrates, restarts, and prints the commands to go back before it stops the bot and again at the end (and at the foot of any failure after the code has moved, with the command to finish). If it stops part-way, running `upgrade` again finishes it: it says "Already up to date" only when the code is on the newest version and the database is migrated. Do not `git pull`: after an upgrade the checkout is on a detached commit, where it fails, and it would skip the backup and dependencies. On a private repository the fetch needs a credential (docs/INSTALL.md, Day to day).
 
 Which code: while the newest `CHANGELOG.md` heading says "in progress", bootstrap installs the default branch and `upgrade` follows it; once a version heading carries a date, both follow the newest release tag. An upgrade only moves forward: if the target does not contain what is installed, it refuses and changes nothing rather than take the database back past migrations already run. Pin a tag, branch or commit at install with `bootstrap.sh --ref NAME`.
 

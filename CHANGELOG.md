@@ -221,6 +221,11 @@ older than what is installed. It gets a date when it is released.
   compares the backup's database version with what this code knows and, if the backup
   is newer, stops before anything is stopped or replaced and says to upgrade first or
   use an older backup.
+- **An upgrade that stops part-way says so.** The commands to go back (the earlier
+  version and the backup) are printed before the bot is stopped, and again at the foot
+  of any failure after the code has moved, with the command to finish. Running the
+  upgrade again no longer says "Already up to date" when the code moved but the
+  dependencies or migrations did not finish: it says what is unfinished and finishes it.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
