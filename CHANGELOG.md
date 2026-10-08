@@ -217,6 +217,9 @@ older than what is installed. It gets a date when it is released.
 - **Fixed: a wish turned away as not OK can be answered from the page.** It was counted under
   "to decide" but showed no buttons; a parent now gets Yes! and Not this time on a kid's page, as
   in Telegram. A kid never sees them.
+- **Fixed: `familydb db retry-failed --reset` leaves given-up messages alone.** It used to give
+  every failed message new tries, including ones given up on purpose (a person taken off, a kid
+  over the day's limit). It now resets only those that ran out of tries.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
