@@ -52,7 +52,7 @@ A `!` on the optional parts is normal on a new install; [Setup](/wiki/controls/s
 | `env file` `!` | No `.env` in the folder you ran from, or group or others can read it | Run from the install folder. For the mode, make `.env` owner-only (`--fix` does) |
 | `disk space` `!` | Under 500 MB free where the database lives | Free some space: see [The server](/wiki/operations/host#disk-and-memory) |
 | `database` `✗` | The data folder or file cannot be created or opened | Check the owner of `data/` and `FAMILYDB_PATH` |
-| `schema` `✗` or `!` | The database is older (`✗`) or newer (`!`) than the code | Older: apply the pending upgrades (`--fix` does). Newer, which a restore can cause: [upgrade the code](/wiki/operations/upgrade-and-rollback) first |
+| `schema` `✗` or `!` | The database is older (`✗`) or newer (`!`) than the code | Older: apply the pending upgrades (`--fix` does). Newer, which copying a file in by hand can cause (`restore` refuses a newer backup): [upgrade the code](/wiki/operations/upgrade-and-rollback) first |
 | `database writable` `✗` | A test write failed | Another user owns the data, for example after a command run as root. Give it back with the first command below the table |
 | `family` `✗` or `!` | Nobody on the family list, or no admin | Nobody: add yourself on [Family](/wiki/controls/family); setup opens on it. No admin: make a member one there |
 | `family on a channel` `!` | A Telegram token is set but nobody has a Telegram id | Each person messages the Telegram bot; its reply gives the id to type on Family |

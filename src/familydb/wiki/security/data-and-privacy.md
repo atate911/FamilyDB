@@ -45,7 +45,7 @@ Switching a person off deletes nothing. Taking them off for good deletes what wa
 
 There is no setting, job or command that removes messages one at a time or by age. You can take a person off the family list, or remove the whole install and its database.
 
-> **Removing the install deletes the database, which is the only copy of what the family said.** `--purge` first writes one backup to `/var/backups/familydb` (or the folder you give with `--backup-to`), and that backup stays until you delete it. `--from-zero` keeps no backup unless you give `--backup-to`. The steps are on [Taking it off again](/wiki/operations/host#taking-it-off-again).
+> **Removing the install deletes the database, which is the only copy of what the family said.** `--purge` first writes one last backup, outside the install, to `/var/backups/familydb` (or the folder you give with `--backup-to`), and that backup stays until you delete it. `--from-zero` keeps no backup unless you give `--backup-to`. The steps are on [Taking it off again](/wiki/operations/host#taking-it-off-again).
 
 Things outside the server stay: that `--purge` backup, which nothing prunes, Telegram's copy of every chat, the events written to your Google calendar, whatever each model company keeps, and the keys, which work until you revoke them.
 

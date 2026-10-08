@@ -17,7 +17,7 @@ Every command is `sudo /opt/familydb/scripts/maintain.sh <command>`. `--dry-run`
 | `status` | Shows whether FamilyDB is running, its version, the database size, free disk and the newest backup. Changes nothing |
 | `check` | Runs the doctor and prints every finding with its fix. See [Diagnostics](/wiki/operations/diagnostics) |
 | `backup` | Takes a backup now. See [Backup and restore](/wiki/operations/backup-and-restore) |
-| `restore FILE` | Stops FamilyDB, puts that backup in place, starts it again |
+| `restore FILE` | Stops FamilyDB, puts that backup in place, starts it again. Refuses a backup from a newer version before stopping anything |
 | `upgrade` | Takes a backup, moves to the newer code, migrates, restarts. See [Upgrade and rollback](/wiki/operations/upgrade-and-rollback) |
 | `logs [N]` | Shows the last N lines (50 by default) and then follows the log until you press Ctrl-C |
 | `restart` | Restarts FamilyDB and says whether it came back |
@@ -46,7 +46,7 @@ On Docker, `https` only moves the port of a web page that is already on HTTPS; t
 
 ## How to run it
 
-The `familydb` program must run as the `familydb` account from the install folder, so it reads the same `.env` and database as the service. On a virtualenv install:
+The `familydb` program must run as the `familydb` account (or the name given with `--user` at install) from the install folder, so it reads the same `.env` and database as the service. On a virtualenv install:
 
 ```bash
 cd /opt/familydb && sudo -u familydb env HOME=/opt/familydb .venv/bin/familydb <command>

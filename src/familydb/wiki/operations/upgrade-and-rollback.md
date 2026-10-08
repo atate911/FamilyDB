@@ -4,7 +4,7 @@
 sudo /opt/familydb/scripts/maintain.sh upgrade
 ```
 
-That is the whole upgrade. It takes a backup first, moves to the newer code, applies any new database [migrations](/wiki/reference/glossary#migration), restarts FamilyDB and prints the commands to go back. Do not use `git pull`: after an upgrade the checkout sits on a [detached commit](/wiki/reference/glossary#detached-commit), where it fails, and it would skip the backup and the dependency install.
+That is the whole upgrade. It takes a backup first, moves to the newer code, applies any new database [migrations](/wiki/reference/glossary#migration), restarts FamilyDB. It prints the commands to go back before it changes anything. Do not use `git pull`: after an upgrade the checkout sits on a [detached commit](/wiki/reference/glossary#detached-commit), where it fails, and it would skip the backup and the dependency install.
 
 ## Before you upgrade
 
@@ -19,14 +19,14 @@ It tells you its plan and asks `Upgrade now?` before it starts. It needs a termi
 
 1. takes a backup, even if it then finds nothing to upgrade to;
 2. fetches the newest code from the git remote;
-3. chooses a version (below) and stops if you already have it;
-4. checks out that version, stops FamilyDB and reinstalls the dependencies at their locked versions. On Docker it rebuilds the image instead, which takes minutes. FamilyDB is down from the stop until the start;
+3. chooses a version (below) and stops if you already have it and the upgrade is finished;
+4. prints the commands to go back, checks out that version, stops FamilyDB and reinstalls the dependencies at their locked versions. On Docker it rebuilds the image instead, which takes minutes. FamilyDB is down from the stop until the start;
 5. applies new migrations and starts FamilyDB;
-6. prints how to go back, then runs the doctor.
+6. prints the commands to go back again, then runs the doctor.
 
-Read to the bottom. The three rollback commands are printed above the doctor's report, and `Done` does not prove FamilyDB is running: look for `It came back up.`
+Read to the bottom. The rollback commands are printed above the doctor's report, and `Done` does not prove FamilyDB is running: look for `It came back up.`
 
-Your `.env`, your keys and the family's data are not removed. A migration changes the database's layout, and some rewrite rows, so none can be undone. They run in order, once each, and also on every start. The only way back past one is the backup, which is why a rollback restores it. If a saved setting no longer fits after an upgrade, FamilyDB keeps running on `.env`; see [When a value is wrong](/wiki/operations/configuration#when-a-value-is-wrong).
+Your `.env`, your keys and the family's data are not removed. A migration changes the database's layout, and some rewrite what is in it, so none can be undone. They run in order, once each, and also on every start. The backup taken first covers them, and the only way back past one is restoring it, which is why a rollback does. If a saved setting no longer fits after an upgrade, FamilyDB keeps running on `.env`; see [When a value is wrong](/wiki/operations/configuration#when-a-value-is-wrong).
 
 ## Which version it moves to
 
@@ -38,7 +38,7 @@ Your `.env`, your keys and the family's data are not removed. A migration change
 grep -m1 '^## v' /opt/familydb/CHANGELOG.md
 ```
 
-- If the new version is the same as yours, older, or already contained in yours, `upgrade` says `Already up to date` and changes nothing else.
+- If the new version is the same as yours, older, or already contained in yours, and no earlier upgrade is unfinished and the database is migrated, `upgrade` says `Already up to date` and changes nothing else. Otherwise it finishes the earlier upgrade; see [If it goes wrong](#if-it-goes-wrong).
 - If the two histories have split, which happens after a force-push, it refuses with `moving to it would go backwards` and changes nothing else.
 
 To see the newest release, fetch and list the tags, then compare with the `Version:` line from `status`:
@@ -87,49 +87,19 @@ To stop needing a token, make a deploy key and point the checkout at it once; `d
 
 ## If it goes wrong
 
-If `upgrade` failed before it checked out the new code, as a failed fetch does, nothing changed: fix the cause and run it again. If it stopped after that, stop FamilyDB, then roll back or finish by hand, and do not run `upgrade` again: the new code is already in place, so a second run says `Already up to date` and does nothing. A failed upgrade also prints no rollback commands, so you find the two values yourself.
+The upgrade prints the commands to go back before it checks out the new code, and prints them again at the foot of any failure after that, together with the command to finish. Copy them from the terminal. A failure before the checkout, such as a failed fetch, changes nothing: fix the cause and run `upgrade` again.
 
-1. Find the backup the upgrade took. The log lists every past upgrade, so take the last line:
+If it stops after the checkout, the code is new but the dependencies, migrations or restart may not all be done, and FamilyDB may be stopped. You have two ways out.
 
-```bash
-sudo grep 'so a bad upgrade can be undone' /var/log/familydb-maintain.log | tail -1
-```
-
-The line looks like this, and the path follows `Write a backup to`:
-
-```text
-03:15:07 change: Write a backup to /opt/familydb/backups/familydb-20261007031507123456789.sqlite3 :: so a bad upgrade can be undone
-```
-
-2. Find the commit that was installed:
+To finish, fix what the error names and run `upgrade` again:
 
 ```bash
-sudo git -C /opt/familydb reflog | grep 'moving from' | head -3
+sudo /opt/familydb/scripts/maintain.sh upgrade
 ```
 
-The newest line is the upgrade. Copy the word after `moving from`, here `3b2a1c0`:
+An upgrade writes `/var/lib/familydb-install/upgrade-pending` when it moves the code and removes it once the dependencies and migrations are done. While that file exists, or the database is behind the code's newest migration, a second run says what is unfinished and finishes it instead of saying `Already up to date`. It keeps the first run's rollback point, the commit and backup from before the upgrade.
 
-```text
-9d8e7f6 HEAD@{0}: checkout: moving from 3b2a1c0 to origin/main
-```
-
-3. Stop FamilyDB. On a virtualenv install:
-
-```bash
-sudo systemctl stop familydb
-```
-
-On Docker:
-
-```bash
-sudo docker compose --project-directory /opt/familydb stop bot
-```
-
-4. Finish the upgrade or go back, as below.
-
-To finish it, fix what the error names, reinstall the dependencies (the `uv sync` or `build` line above) and run `sudo /opt/familydb/scripts/maintain.sh restart`. A migration that failed leaves FamilyDB stopped, with the migrations before it already applied.
-
-To go back, database and all, run these three commands in this order, with your two values. A successful upgrade prints the same three with the values filled in.
+To go back, database and all, run the three commands the upgrade printed, in that order:
 
 ```bash
 sudo git -C /opt/familydb checkout --quiet --detach <the commit that was installed>
@@ -148,6 +118,18 @@ The order matters. The old code goes back first, then its dependencies, because 
 > **Everything told to FamilyDB since the upgrade's backup is lost.** The database you replaced is kept as a [safety backup](/wiki/reference/glossary#safety-backup), named at the end of the restore. It is in the new layout and is pruned after about two weeks like any other backup.
 
 Use the backup the upgrade took, not just the newest file in the folder: a nightly backup or a second `upgrade` may be newer and already hold the new layout.
+
+If you have lost the printed commands, find them again. The maintain log names the backup; take the last line:
+
+```bash
+sudo grep 'so a bad upgrade can be undone' /var/log/familydb-maintain.log | tail -1
+```
+
+The path follows `Write a backup to`. The commit is the word after `moving from` in the newest line of:
+
+```bash
+sudo git -C /opt/familydb reflog | grep 'moving from' | head -3
+```
 
 ## After an upgrade
 
