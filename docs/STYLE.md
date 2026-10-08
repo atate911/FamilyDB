@@ -418,6 +418,9 @@ builds one by hand. Person classes are slots (`.p0` to `.p8`), never names.
 - **Health pill** (`.pill-health`, `--busy`, `--rest`, `--down`): Vera's state, for grown-ups.
 - **Buttons** (`.btn`, `--primary`, `--quiet`, `--sm`, `--danger`) and **text buttons**
   (`.textbtn`, `.linkbtn`, `.more`, "All plans ›").
+  An undoing that is not instant (disconnecting Google Calendar) is a closed `details.fieldfold`
+  that says what goes and what stays, with the red small button inside it: opening the fold is
+  the first step and the button the second, with no script.
 - **Badges** (`.badge`): a count with a word in the nav. Loud only for what needs someone now:
   `--late` ("3 late", red) and `--act` ("1 to decide", an ink outline). "2 to rate" is `--quiet`.
 - **State tags** (`.tag`), one vocabulary: `--ok` Working, Connected, Yes!; `--better` Could be

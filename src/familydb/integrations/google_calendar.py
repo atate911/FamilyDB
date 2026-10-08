@@ -206,6 +206,14 @@ def save_key(key_path: Path, text: str) -> None:
     os.replace(fresh, key_path)
 
 
+def remove_key(key_path: Path) -> bool:
+    """Delete the saved key, and any half-written one beside it; True when a key was there."""
+    found = key_path.exists()
+    key_path.unlink(missing_ok=True)
+    key_path.with_name(key_path.name + ".new").unlink(missing_ok=True)
+    return found
+
+
 # Connecting: the page tries the pasted key and calendar id before keeping either.
 NOT_JSON = "That is not the file Google gave you: it should be JSON, starting with {."
 NOT_A_KEY = (

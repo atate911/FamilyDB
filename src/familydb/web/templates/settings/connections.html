@@ -69,6 +69,16 @@
       {% include "_google_connect.html" %}
     </div>
   </details>
+  {% if google.connected or google.calendar %}
+    <details class="fieldfold mt-3" id="google-disconnect">
+      <summary>{{ icon('x', size='sm') }}Disconnect Google Calendar{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <form class="fieldfold__body" method="post" action="{{ url_for('settings.google_disconnect') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <p class="small">This deletes the saved key and forgets the calendar’s id, so the bot stops reading and writing the calendar. Plans stay saved here, and nothing is taken off Google. The calendar can be connected again at any time, and the key may be deleted in Google Cloud as well.</p>
+        <div><button class="btn btn--danger btn--sm" type="submit">{{ icon('x', size='sm') }}Yes, disconnect</button></div>
+      </form>
+    </details>
+  {% endif %}
   {% set calendar = groups.calendar %}
   <details class="fieldfold mt-3"{% if calendar.open %} open{% endif %}>
     <summary>Use a calendar by its id{{ icon('chev', size='sm', cls='chev') }}</summary>

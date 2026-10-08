@@ -221,6 +221,11 @@ class App:
         if "calendar" not in self._given:
             self._calendar = None
 
+    def drop_calendar(self) -> None:
+        """The calendar was disconnected: forget it, and any trouble noted about it."""
+        self.forget_calendar()
+        self._calendar_said(None)
+
     def _forget_built(self) -> None:
         """Drop what was built from the changed settings so it is built again (coordinates, units
         and the timezone are baked in). Anything handed to the constructor stays.

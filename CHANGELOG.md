@@ -249,6 +249,10 @@ installed.
   the evening before, the rain and opening-hours check was dropped for good. It is now tried
   again on the day itself while the plan has not begun, worded for today, and a plan is still
   only ever checked once.
+- **Google Calendar can be disconnected from the page.** Under Connections, an admin can open
+  "Disconnect Google Calendar" and confirm: the saved key is deleted and the calendar's id
+  forgotten, any note about the calendar goes with them, and plans stay saved here as they
+  are when no calendar is connected. Nothing is taken off Google.
 
 ### New since v0.1.0
 
