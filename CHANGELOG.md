@@ -214,6 +214,9 @@ older than what is installed. It gets a date when it is released.
   a kid's question or one about right now.
 - **Fixed: opening a Telegram link no longer wipes a birthday or gender.** Linking a person's
   Telegram used to clear what the family list held for them.
+- **Fixed: a wish turned away as not OK can be answered from the page.** It was counted under
+  "to decide" but showed no buttons; a parent now gets Yes! and Not this time on a kid's page, as
+  in Telegram. A kid never sees them.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

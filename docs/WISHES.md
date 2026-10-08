@@ -162,6 +162,9 @@ card, the kids' lists: each girl's open wishes, anything flagged, requests waiti
 for a kid, on one big box to tell Vera anything (her conversation; no separate form to add, so each
 addition is a chat message, within her daily count), then the lists, one line to a wish, reordered by
 buttons and, where scripts run, by dragging (`static/wishes.js`).
+A parent answers from a kid's page, as from Telegram, with Yes! and Not this time under anything
+waiting on them: her Ask a parent, or something turned away as not OK (`views.wish_row` `to_decide`,
+what the "to decide" count counts). A kid never sees those buttons.
 
 ## Settings
 

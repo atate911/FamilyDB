@@ -2034,6 +2034,9 @@ def wish_row(wish: Any, today: date) -> dict[str, Any]:
         "concern": CONCERN_WORDS.get(wish.concern or ""),
         "concern_kid": KID_CONCERN_WORDS.get(wish.concern or ""),
         "review": wish.parent_review,
+        # Waits on a parent: she asked, or it was turned away as not OK (told them at once).
+        "to_decide": wish.status == "turned_away"
+        and (wish.parent_review == "asked" or wish.concern == "inappropriate"),
         "answered_by": wish.answered_by,
         "answered_at": wish.answered_at,
     }
