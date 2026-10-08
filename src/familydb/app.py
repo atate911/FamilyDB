@@ -4,6 +4,7 @@ import logging
 import re
 import sqlite3
 import threading
+import traceback
 from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
@@ -286,8 +287,8 @@ TELEGRAM_TOKEN = re.compile(r"bot\d{5,}:[A-Za-z0-9_-]{20,}")
 
 
 class RedactSecrets(logging.Filter):
-    """Replaces a bot token in a log line with a marker; attached to handlers so it sees every
-    record.
+    """Replaces a bot token in a log line, and in the traceback under it, with a marker; attached
+    to handlers so it sees every record.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -295,6 +296,17 @@ class RedactSecrets(logging.Filter):
         if TELEGRAM_TOKEN.search(text):
             record.msg = TELEGRAM_TOKEN.sub("bot<token>", text)
             record.args = None
+        # An exception's text (an httpx error quotes its URL) is formatted here, scrubbed, and left
+        # as exc_text with exc_info cleared, so no formatter or handler formats the raw one again.
+        if record.exc_info and record.exc_info[0] is not None:
+            record.exc_text = logs.redact(
+                "".join(traceback.format_exception(*record.exc_info)).rstrip("\n")
+            )
+            record.exc_info = None
+        elif record.exc_text:
+            record.exc_text = logs.redact(record.exc_text)
+        if record.stack_info:
+            record.stack_info = logs.redact(record.stack_info)
         return True
 
 

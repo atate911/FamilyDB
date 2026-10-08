@@ -117,9 +117,9 @@ jobs:
         run: |
           cd /opt/familydb
           sudo scripts/maintain.sh status | tee /tmp/status.log
-          grep -q "Database:" /tmp/status.log
+          grep -q "Database" /tmp/status.log
           sudo scripts/maintain.sh backup --yes | tee /tmp/backup.log
-          grep -q "Backup:" /tmp/backup.log
+          grep -q "Backed up the database" /tmp/backup.log
           test -n "$(find /opt/familydb/backups -name 'familydb-*.sqlite3')"
       - name: A backup can be restored over the database
         run: |

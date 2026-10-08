@@ -34,7 +34,8 @@ Connecting the Telegram bot does not tell it who anyone is. Each person has to b
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
 | Answer only when mentioned (`telegram_require_mention`) | off | On: only a message that @mentions the bot or replies to it is answered, which suits a busy group used for other things too. Off suits a group kept for planning. | on or off |
-| Send what's for one person to their own chat (`private_when_personal`) | on | Sends a reminder for somebody's own thing to do, a note on their idea, or how their plan went to their own chat with the bot, once they have written to it there. What is for everyone stays in the group. | on or off |
+| Send what's for one person to them (`private_when_personal`) | on | Sends a reminder for somebody's own thing to do, a note on their idea, or how their plan went to their own chat with the bot on Telegram once they have written to it there, and otherwise to their own conversation on the web page. What is for everyone stays in the group. | on or off |
+| The family's chat (`family_chat_id`) | where the weekend ideas go | Where a reminder for everyone goes when it was asked for on the web page or in somebody's own chat; one asked for in a group stays in that group. The morning message's plans for the day go there too. Choose the web page's chat or a Telegram chat FamilyDB has seen, or choose **Another Telegram chat** and give its id. With none set and no weekend ideas chat, it goes where it was asked for. | A chat from the list, or a Telegram chat id |
 
 A plain "saved" in the group is a 👌 on the message, which buzzes nobody (a silent ✓ reply where reactions are off).
 

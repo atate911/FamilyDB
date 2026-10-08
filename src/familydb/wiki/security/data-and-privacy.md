@@ -17,9 +17,9 @@ FamilyDB keeps everything the family says in one SQLite file on your server, and
 | Settings, and model and Telegram keys as plain text | The database | Until changed or removed | Admins. A key is shown only after you retype your password, if the page has one |
 | The shared password, the Google key and the session signing key | `.env` (and its `.env.*.bak` copies), `data/google_key.json` and `data/web_secret`: plain text, owner-only | Until you change or delete them | Whoever can read the server. None is in a backup |
 | The change log: who, from where, old and new values, except keys and the shared password | The database | No removal | Admins on Settings |
-| Where somebody is: coordinates and a place name | The database | Deleted within a day. See [Shared location](/wiki/model/location) | No page shows the row; admins can read the place name on Recent activity |
-| Strangers who wrote to the assistant: name, id, chat, count, never the words | The database | Pruned when the next stranger writes. See [Link a Telegram](/wiki/controls/family#link-a-telegram) | Admins on Family |
-| A Telegram link | A hash of its code | Expires, and goes when somebody makes or uses a link | Nobody |
+| Where somebody is: coordinates and a place name | The database | Deleted within a day, and the name with it. See [Shared location](/wiki/model/location) | No page shows the row; admins can read the place name on Recent activity until it is forgotten |
+| Strangers who wrote to the assistant: name, id, chat, count, never the words | The database | Pruned by the nightly tidy after 30 days. See [Link a Telegram](/wiki/controls/family#link-a-telegram) | Admins on Family |
+| A Telegram link | A hash of its code | Expires after 24 hours, and goes in the nightly tidy, or when somebody makes or uses a link | Nobody |
 | Troubles for admins | The database | Until the trouble clears; rows unseen for 7 days go when the next is noted | Parents and admins on Status |
 | Questions asked of a stronger model | The database | 60 days, pruned only while **Ask a stronger model when a change needs judgment** is on; a refusal question filed while it is off stays | Parents and admins on Status |
 | A voice recording or a photo | Not stored. It is in memory while it is sent, then dropped; the words stay as a message | None | Not applicable |
@@ -27,7 +27,7 @@ FamilyDB keeps everything the family says in one SQLite file on your server, and
 
 A stolen backup holds every message, every key you saved on the Settings page in plain text, and every password hash; see [What is not protected](/wiki/security/model#what-is-not-protected).
 
-The place name outlives the coordinates: the confirmation message for a shared position is an ordinary message, and the suggestion tool's "travel from" line is in the tool log. See [A place name outlives the coordinates](/wiki/reference/known-limits#a-place-name-outlives-the-coordinates).
+When a shared position is forgotten, its place name is taken out of the confirmation message and replaced with "[place forgotten]" in the kept model texts, tool calls and suggestions. Coordinates inside kept model texts, and words that name the place, are not scrubbed; see [The place name goes with the position](/wiki/model/location#the-place-name-goes-with-the-position).
 
 A present is hidden on the pages and in chat, not in the data. Recent activity, the database and a backup do not hide it. See [Presents](/wiki/model/ideas-and-places#presents).
 
@@ -45,7 +45,7 @@ Switching a person off deletes nothing. Taking them off for good deletes what wa
 
 There is no setting, job or command that removes messages one at a time or by age. You can take a person off the family list, or remove the whole install and its database.
 
-> **Removing the install deletes the database, which is the only copy of what the family said.** `--purge` first writes one backup to `/var/backups/familydb` (or the folder you give with `--backup-to`), and that backup stays until you delete it. `--from-zero` keeps no backup unless you give `--backup-to`. The steps are on [Taking it off again](/wiki/operations/host#taking-it-off-again).
+> **Removing the install deletes the database, which is the only copy of what the family said.** `--purge` first writes one last backup, outside the install, to `/var/backups/familydb` (or the folder you give with `--backup-to`), and that backup stays until you delete it. `--from-zero` keeps no backup unless you give `--backup-to`. The steps are on [Taking it off again](/wiki/operations/host#taking-it-off-again).
 
 Things outside the server stay: that `--purge` backup, which nothing prunes, Telegram's copy of every chat, the events written to your Google calendar, whatever each model company keeps, and the keys, which work until you revoke them.
 

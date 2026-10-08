@@ -6,7 +6,7 @@ The General card sets where home is, the family's clock and units, and how the w
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
-| Home town or area (`home_area`) | empty | Where home is, as you would say it. When it changes FamilyDB looks it up on the map and the card says what it found; if the town is not found, or the box is emptied, the previous position is kept. | A town and a state or country; no street address |
+| Home town or area (`home_area`) | empty | Where home is, as you would say it. When it changes, or you save it again while no position is kept, FamilyDB looks it up on the map and the card says what it found; if the town is not found, or the box is emptied, the previous position is kept. | A town and a state or country; no street address |
 | Time zone (`family_tz`) | the server's, set by the installer | Decides what "tonight" and "this weekend" mean, and when the messages that go out on their own are sent. | The nearest city in the same zone |
 | Units (`weather_units`) | metric | The units for the forecast and for distances. | metric or imperial |
 
@@ -36,11 +36,7 @@ The mic uses the browser's own speech recognition: Safari sends the sound to App
 
 ## The server's log
 
-| Label (`key`) | Default | What it does | Range last |
-|---|---|---|---|
-| Log detail (`log_level`) | INFO | How much the server writes to its log. DEBUG also logs the program's own network traffic, to Telegram and the model companies, and is loud: use it to chase a problem, then put it back. | DEBUG, INFO, WARNING or ERROR |
-
-Reading the log is on [Diagnostics](/wiki/operations/diagnostics#logs).
+How much the server writes to its log is the **What the server writes** (`log_level`) setting on the Troubleshooting card ([how much is logged](/wiki/controls/settings/troubleshooting#how-much-is-logged)). Reading the log is on [Diagnostics](/wiki/operations/diagnostics#logs).
 
 ## Where the web page is served, and a name for it
 

@@ -105,6 +105,21 @@ def test_fix_tightens_a_readable_env_file(settings, clock, conn, family, tmp_pat
     assert _verdict_of(doctor.run(app), "env file") == doctor.OK
 
 
+@pytest.mark.skipif(os.name != "posix", reason="file modes are a POSIX idea")
+def test_fix_reports_what_it_put_right(settings, clock, conn, family, tmp_path, monkeypatch):
+    """The second look is clean, so the note of what was done rides over to the check it was for."""
+    monkeypatch.chdir(tmp_path)
+    env = tmp_path / ".env"
+    env.write_text("ANTHROPIC_API_KEY=secret\n")
+    env.chmod(0o644)
+
+    report = doctor.fix(App(settings, clock))
+    check = next(c for c in report.checks if c.name == "env file")
+    assert check.verdict == doctor.OK
+    assert check.corrected == "made .env readable only by its owner"
+    assert {c["check"]: c for c in report.as_dict()["checks"]}["env file"]["corrected"]
+
+
 def test_fix_applies_a_migration_that_has_not_been_run(settings, clock, tmp_path) -> None:
     """A database from an older version is the one failure a script can safely put right."""
     from familydb.store import db

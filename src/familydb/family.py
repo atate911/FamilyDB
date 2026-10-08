@@ -480,6 +480,8 @@ def accept_invite(
                 active=person.active,
                 channel=TELEGRAM,
                 channel_user_id=telegram,
+                birth_date=person.birth_date,
+                gender=person.gender,
             )
             invites.remove(conn, found.code_hash)
     except sqlite3.IntegrityError as exc:

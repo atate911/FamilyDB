@@ -167,10 +167,14 @@ FOUND_HOME = "Found {label}, at {lat}, {lon}."
 
 
 def locate_home(values: dict[str, Any], stored: dict[str, Any]) -> tuple[dict[str, Any], str]:
-    """Coordinates for a changed home area, unless some were typed with it (those win). Returns
-    them and a sentence saying what happened."""
+    """Coordinates for a changed home area, unless some were typed with it (those win), or for an
+    unchanged one the last lookup found nothing for. Returns them and a sentence saying what
+    happened."""
     area = values.get("home_area")
-    if not area or area == stored.get("home_area"):
+    if not area:
+        return {}, ""
+    unchanged = area == stored.get("home_area")
+    if unchanged and stored.get("home_lat") is not None and stored.get("home_lon") is not None:
         return {}, ""
     typed = any(
         values.get(key) is not None and values.get(key) != stored.get(key)
@@ -179,7 +183,10 @@ def locate_home(values: dict[str, Any], stored: dict[str, Any]) -> tuple[dict[st
     if typed:
         return {}, ""
     try:
-        found = _app().geocoder.geocode(area)
+        geocoder = _app().geocoder
+        if unchanged and hasattr(geocoder, "forget"):
+            geocoder.forget(area)  # it remembers a miss until the settings move
+        found = geocoder.geocode(area)
     except Exception as exc:  # a map service that is down is not a reason to refuse the save
         log.warning("could not look up %s: %s", area, exc)
         found = None
@@ -1084,6 +1091,7 @@ LINE_GROUPS = (
             "lookups_asked",
             "lookups_none",
             "lookups_off",
+            "lookups_wait",
         ),
     ),
     (

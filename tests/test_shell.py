@@ -11,7 +11,7 @@ import pytest
 
 from familydb import family as rules
 from familydb.app import App
-from familydb.store import db, members, tasks
+from familydb.store import db, ideas, members, plans, tasks
 from familydb.web import create_app
 from tests.conftest import NOW_ISO
 
@@ -223,3 +223,30 @@ def test_the_page_you_are_on_is_marked_in_the_menu_and_the_tab_bar(sam, girl) ->
     # A kid's Home marks hers.
     kid = girl.get("/").text
     assert re.search(r'<a href="/" aria-current="page">', kid)
+
+
+def test_a_plan_made_for_a_present_is_not_asked_about_where_the_present_is_hidden(
+    app, conn, sam, alex, girl
+) -> None:
+    with db.transaction(conn):
+        scarf = ideas.insert(
+            conn, title="Scarf for Alex", kind="gift", participants=["Alex"], now=NOW_ISO
+        )
+        hike = ideas.insert(conn, title="Silver Falls hike", kind="outing", now=NOW_ISO)
+        for idea in (scarf, hike):
+            plans.insert(
+                conn,
+                title=idea.title,
+                start="2026-09-17T10:00",
+                end="2026-09-17T14:00",
+                all_day=False,
+                idea_id=idea.id,
+            )
+    # Sam may know of it; Alex, whom it is for, sees neither the title nor the count of it.
+    assert "How did Scarf for Alex go?" in sam.get("/").text
+    assert 'badge--quiet">2 to rate' in _sidebar(sam)
+    assert "Scarf for Alex" in sam.get("/plans/month?month=2026-09").text
+    for page in ("/", "/plans/month?month=2026-09"):
+        assert "Scarf for Alex" not in alex.get(page).text
+    assert "How did Silver Falls hike go?" in alex.get("/").text
+    assert 'badge--quiet">1 to rate' in _sidebar(alex)

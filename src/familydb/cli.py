@@ -685,10 +685,9 @@ def doctor(
     application = build_app()
     with suppress(Exception):
         application.refresh()
-    report = checks.run(application, online=online)
-    if fix:
-        checks.correct(application, report)
-        report = checks.run(application, online=online)
+    report = (
+        checks.fix(application, online=online) if fix else checks.run(application, online=online)
+    )
     if new_install:
         checks.as_new_install(report)
     if as_json:
@@ -811,7 +810,10 @@ def _wait_for_stop(*, quiet: bool = False) -> None:
 @db_app.command("retry-failed")
 def db_retry_failed(
     reset: bool = typer.Option(
-        False, "--reset", help="Make exhausted messages eligible again first."
+        False,
+        "--reset",
+        help="Give messages that ran out of tries new ones first. Ones given up on purpose "
+        "(a person taken off, a kid over the day's limit, no key) stay given up.",
     ),
 ) -> None:
     """Retry failed messages now (the running bot also does this on a schedule)."""
@@ -822,7 +824,9 @@ def db_retry_failed(
     _cli_senders(application)
     if reset:
         with closing(application.connect()) as conn, db.transaction(conn):
-            count = messages.reset_retries(conn)
+            count = messages.reset_retries(
+                conn, max_retries=application.settings.retry_max_attempts
+            )
         typer.echo(f"reset {count} message(s)")
     recovered = run_retries(application)
     typer.echo(f"recovered {recovered} message(s)")

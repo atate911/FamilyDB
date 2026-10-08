@@ -82,6 +82,6 @@ To change anything, use the page, or `familydb tool` ([The command line](/wiki/o
 - Never copy over, move or delete the file or its `-wal` and `-shm` files while FamilyDB runs.
 - Never run a second copy of the service on the same file: it would repeat the jobs.
 - When somebody is taken off for good, FamilyDB removes what was theirs alone and blanks their name wherever else it is stored. A test checks this against the database layout, so a new table cannot forget.
-- Keep the file owner-only, and restore only a backup no newer than the code it is restored onto.
+- Keep the file owner-only. `maintain.sh restore` refuses a backup newer than the code it would be restored onto.
 
 Developer docs: src/familydb/store/db.py, src/familydb/store/migrations/, src/familydb/store/members.py, src/familydb/privacy.py; docs/DESIGN.md, "Data model".

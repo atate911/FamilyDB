@@ -318,19 +318,18 @@ setup_https() { # setup_https SITE PORT - Caddy in front of 127.0.0.1:PORT for S
   return 0
 }
 
-say_how_to_open() { # the lines a person needs to get to the page
+say_how_to_open() { # what is left for a person to do, outside this machine
   if [ "$HTTPS_BLOCKED" = 1 ]; then
     warn "Nothing outside seems able to reach this server on ports 80 and ${PUBLIC_PORT}."
-    note "Most providers have a firewall of their own, in their control panel (it may be called a"
-    note "firewall, a security group or networking). Allow TCP ports 80 and ${PUBLIC_PORT} there, then run:"
-    note "  sudo ${TARGET:-${REPO_ROOT:-/opt/familydb}}/scripts/maintain.sh https"
+    after "Still to do, outside this machine"
+    todo "Most providers have a firewall of their own, in their control panel (it may be called a firewall, a security group or networking). Allow TCP ports 80 and ${PUBLIC_PORT} there, then run this again:"
+    cmdline "sudo ${TARGET:-${REPO_ROOT:-/opt/familydb}}/scripts/maintain.sh https"
   elif [ "$PUBLIC_PORT" != 443 ]; then
-    note "If the provider has a firewall of its own, in its control panel, allow TCP port"
-    note "${PUBLIC_PORT} there, and 80 too, which a certificate authority uses to check this machine."
+    after "Still to do, if the provider has a firewall of its own"
+    todo "In its control panel, allow TCP port ${PUBLIC_PORT}, and 80 too, which a certificate authority uses to check this machine."
   fi
   if [ "$HTTPS_KIND" = internal ]; then
-    note "The browser warns the first time that the connection is not private: the certificate is"
-    note "this server's own rather than a public authority's. Choose Advanced, then continue. The"
-    note "connection is still encrypted, and a domain name later removes the warning."
+    after "The browser will warn once"
+    hint "It says the connection is not private: the certificate is this server's own rather than a public authority's. Choose Advanced, then continue. The connection is still encrypted, and a domain name later removes the warning."
   fi
 }

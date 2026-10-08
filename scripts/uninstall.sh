@@ -20,7 +20,7 @@ else
 fi
 
 TARGET=""
-SERVICE_USER="familydb"
+SERVICE_USER=""   # --user, else the account the install recorded, else familydb
 PURGE=0
 FORCE=0
 DRY_RUN=0
@@ -42,7 +42,10 @@ What is removed
                        Kept: .env, data/ (the database, the Google key, the login key),
                        backups/ and caddy/. Reinstalling over this picks up where it left off.
   --purge              All of the above, and everything that was kept: the database, the
-                       configuration, the backups and the service user. Nothing is left.
+                       configuration, the backups inside the install and the service user.
+                       It first takes one last backup of the database, written outside the
+                       install (in /var/backups/familydb, or --backup-to DIR) and left there;
+                       backups kept anywhere else are not touched. --no-backup skips it.
   --from-zero          All of --purge, and everything the install did around it, so the server is
                        as it was before FamilyDB: what its ledger in /var/lib/familydb-install
                        recorded (packages it added, files, links, accounts, cron lines, firewall
@@ -53,7 +56,8 @@ What is removed
 
 Options
   --target DIR         The install to remove. Default: the checkout this script is in.
-  --user NAME          The system user to remove on --purge. Default: familydb.
+  --user NAME          The system user to remove on --purge. Default: the one the install
+                       recorded, else familydb.
   --keep-user          Leave the system user alone on --purge.
   --backup-to DIR      Where --purge writes its backup. Default: /var/backups/familydb. With
                        --from-zero, the only way to keep one.
@@ -473,6 +477,9 @@ else
     die "${TARGET} does not look like a FamilyDB install (no familydb pyproject.toml). Use --target."
   fi
 fi
+[ -n "$SERVICE_USER" ] || SERVICE_USER="$(recorded_service_user "$TARGET")"
+valid_user_name "$SERVICE_USER" \
+  || die "--user must be a system account name: lowercase letters, digits, - and _, starting with a letter, not '${SERVICE_USER}'"
 
 # What the installer set up around the install, read now, while the checkout still says where.
 DEPLOY_KEY_FILE=""

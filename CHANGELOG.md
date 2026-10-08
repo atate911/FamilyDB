@@ -8,6 +8,43 @@ older than what is installed. It gets a date when it is released.
 
 ### New since v0.2.0
 
+- **`maintain.sh` shows what is different this time, and nothing else.** `upgrade` fetches first
+  and shows what it would change as a pull request would: the commits and the pull requests they
+  came from, how many files and where, what the changelog says is new and, only when they change,
+  the new migrations by name, the packages that move (from what to what), the options new in
+  `.env.example` and a changed service file. A part that does not change is not mentioned. Then it
+  asks, and Enter is yes (`[Y/n]`); `restore`, which cannot undo itself, still has Enter as no. The
+  backup is taken only after that (so none is taken when there is nothing to upgrade), and how to go
+  back is printed with this run's commit and backup. A step that goes as expected has no line; what
+  is shown is the backup, what was installed and migrated, how long the bot was away, and the check,
+  and the last line says where it was and where it is (`v0.2.0+137 → v0.3.0+4`), what moved and what
+  it cost, so it reads alone in a log. The screen opens with Installed and Upgrading one above the
+  other, and git's `++++----` bars for the parts of the code that change most; while it works, a
+  retro block bar counts the steps and the wait for the page fills a bar toward its 30 seconds. The page is waited
+  for after the restart, so "it came back up" is true. The numbered plan, what stays untouched and
+  why each step are gone. `status` is one screen with a verdict, a row for each thing marked `✓ ! ✗`,
+  and what to type for anything not well, including a backup older than the 36 hours the upkeep job
+  tolerates. `--help` is grouped into look, keep safe and change. Warnings are listed again at the
+  foot; a failure says what ran, what it said, what that usually means and what to type. Colour is
+  for a terminal only (`NO_COLOR=1` turns it off, `FORCE_COLOR=1` on in a pipe, `FAMILYDB_ASCII=1`
+  for plain marks).
+
+  The look takes a little from the old command-line tools: a DOS-style title bar and a footer that
+  carries the run's progress bar with its percent, the classic `| / - \` spinner, and `[ OK ]`,
+  `[WARN]` and `[FAIL]` for the verdict. It is coloured the way git is (yellow hashes, green `+`,
+  red `-`), the first word of a step is bold, and pull request numbers and hashes are links on a
+  terminal that can follow them. A terminal whose locale cannot draw it is given plain characters.
+  An upgrade checks the install before it starts, so a problem that was already there is shown and
+  not blamed on it. **The exit status now means something:** 1 when the last line says `[FAIL]` (the
+  bot did not come back after an upgrade, restore or restart; `check` has something to fix; `status`
+  finds it not running or something red), so a cron job or a monitor can read it. No command or
+  option changed.
+- **Wording fixes.** Drive times are called estimates where they were said to be looked up; the
+  take-off text says a kid's wish lists go and open to-dos and reminders are canceled; and a few
+  help lines now match what happens (a better model up to about 10% dearer may be put in by itself,
+  and a kid at the daily limit is told to come back tomorrow).
+- **No bot token in the journal.** A Telegram token quoted in an error's text or traceback is
+  taken out of the log and the problem log, as it already was in an ordinary line.
 - **Troubleshooting**, for admins, on the settings page. What went wrong in one place: what needs
   an admin, messages that did not go through, lookups that failed, calls to a model that failed
   and why, and a problem log of the warnings and errors the server logged (the same trouble
@@ -212,6 +249,52 @@ older than what is installed. It gets a date when it is released.
   favorite, something new and a wildcard, each with a reason; Vera says them.
   Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
   a kid's question or one about right now.
+- **Fixed: opening a Telegram link no longer wipes a birthday or gender.** Linking a person's
+  Telegram used to clear what the family list held for them.
+- **Fixed: a wish turned away as not OK can be answered from the page.** It was counted under
+  "to decide" but showed no buttons; a parent now gets Yes! and Not this time on a kid's page, as
+  in Telegram. A kid never sees them.
+- **Fixed: `familydb db retry-failed --reset` leaves given-up messages alone.** It used to give
+  every failed message new tries, including ones given up on purpose (a person taken off, a kid
+  over the day's limit). It now resets only those that ran out of tries.
+- **Fixed: `familydb doctor --fix` says what it fixed.** The "fixed:" lines were lost when it
+  checked again after the repair.
+- **Fixed: strangers who messaged the bot, and Telegram links nobody opened, are forgotten on
+  time.** They were dropped only when the next one came; the nightly tidy now drops them.
+- **Fixed: saving the same home town again tries the map again.** If the first lookup found
+  nothing, saving the unchanged text did nothing; it now looks again while no coordinates are kept.
+- **A forgotten location now takes its place name with it.** A shared location was deleted after a
+  day, but the name it was given ("Old Town, Portland") stayed in the "Got it" reply and in the
+  words and results kept for the Troubleshooting pages. When the location is forgotten, or the
+  person taken off, the name is replaced there with "[place forgotten]". Coordinates inside the
+  kept model words still go only with those words, after their own days.
+- **Plainer words in the scripts.** The upgrade no longer says migrations "never
+  rewrite" what is there: they can, so it says the backup taken first covers it and
+  that going back means restoring that backup. `uninstall.sh --help` now says the
+  one last backup `--purge` takes stays outside the install, instead of "Nothing is
+  left".
+- **A restore refuses a backup from a newer version.** `maintain.sh restore` now
+  compares the backup's database version with what this code knows and, if the backup
+  is newer, stops before anything is stopped or replaced and says to upgrade first or
+  use an older backup.
+- **An upgrade that stops part-way says so.** The commands to go back (the earlier
+  version and the backup) are printed before the bot is stopped, and again at the foot
+  of any failure after the code has moved, with the command to finish. Running the
+  upgrade again no longer says "Already up to date" when the code moved but the
+  dependencies or migrations did not finish: it says what is unfinished and finishes it.
+- **`bootstrap.sh --user NAME` works all the way.** The name chosen for the account that
+  runs the bot now reaches the installer, the account, the files it owns and the service
+  unit, and is remembered, so `maintain.sh` and `uninstall.sh` use the same account
+  without being told. Installs made before this still use `familydb`.
+- **Presents stay hidden in "How did it go?".** A plan made for a present no longer shows its
+  title, or counts in "to rate", for the kids or the grown-up the present is kept from.
+- **Presents stay hidden in /today and /week.** Plans made for a present are left out for the kids
+  and the grown-up it is kept from, and out of any group chat a kid is in.
+- **A kid's /lookup answers truthfully.** It says lookups wait for the evening and to ask a parent,
+  instead of "nothing is waiting", and never points a kid to the settings page.
+- **What a kid may change in the chat.** A kid can add an idea and have something remembered, as
+  before. Editing an idea, saying how a plan went, and making, moving or cancelling a plan are now
+  a parent's in the chat as on the page, including the buttons under a follow-up.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

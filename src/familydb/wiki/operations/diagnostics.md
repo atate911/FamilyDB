@@ -12,6 +12,7 @@ The doctor checks an install from its files to its keys and prints a fix under a
 | Which value is in force, and where it came from | `familydb config` |
 | What it has cost, who answers, which messages failed | [Status](/wiki/controls/status) |
 | Why one message went wrong | [Recent activity](/wiki/controls/status/activity) |
+| Recent warnings and errors, and what a model was sent and said | The [Troubleshooting card](/wiki/controls/settings/troubleshooting) on the Settings page |
 | What the server did, or why it would not start | The log, below |
 | Whether it is down right now | [Know when it is down](#know-when-it-is-down) |
 
@@ -38,7 +39,7 @@ Each line starts with `✓` fine, `!` worth a look, `✗` must be fixed or `·` 
 | Option | What it does |
 |---|---|
 | `--online` | Also asks Telegram whether the token is live, counts tokens with the company that answers chat (free; OpenAI cannot), and tries each outside page the setup links to |
-| `--fix` | Sets `.env` and the login key to mode 600 and applies pending database upgrades, then checks again. It touches no key, password or setting, and does not print what it fixed: the line just turns `✓` (see [The doctor does not print what it fixed](/wiki/reference/known-limits#the-doctor-does-not-print-what-it-fixed)) |
+| `--fix` | Sets `.env` and the login key to mode 600 and applies pending database upgrades, then checks again. Under each line it fixed it prints `fixed:` and what it did. It touches no key, password or setting |
 | `--json` | The findings as JSON, each with `check`, `verdict` (`ok`, `warn`, `fail` or `skip`), `detail` and `fix` |
 
 The exit status is 1 when any check is `✗`, otherwise 0, warnings included. A bad value in `.env` stops everything before the first check: see [the .env file](/wiki/operations/configuration#when-a-value-is-wrong).
@@ -52,7 +53,7 @@ A `!` on the optional parts is normal on a new install; [Setup](/wiki/controls/s
 | `env file` `!` | No `.env` in the folder you ran from, or group or others can read it | Run from the install folder. For the mode, make `.env` owner-only (`--fix` does) |
 | `disk space` `!` | Under 500 MB free where the database lives | Free some space: see [The server](/wiki/operations/host#disk-and-memory) |
 | `database` `✗` | The data folder or file cannot be created or opened | Check the owner of `data/` and `FAMILYDB_PATH` |
-| `schema` `✗` or `!` | The database is older (`✗`) or newer (`!`) than the code | Older: apply the pending upgrades (`--fix` does). Newer, which a restore can cause: [upgrade the code](/wiki/operations/upgrade-and-rollback) first |
+| `schema` `✗` or `!` | The database is older (`✗`) or newer (`!`) than the code | Older: apply the pending upgrades (`--fix` does). Newer, which copying a file in by hand can cause (`restore` refuses a newer backup): [upgrade the code](/wiki/operations/upgrade-and-rollback) first |
 | `database writable` `✗` | A test write failed | Another user owns the data, for example after a command run as root. Give it back with the first command below the table |
 | `family` `✗` or `!` | Nobody on the family list, or no admin | Nobody: add yourself on [Family](/wiki/controls/family); setup opens on it. No admin: make a member one there |
 | `family on a channel` `!` | A Telegram token is set but nobody has a Telegram id | Each person messages the Telegram bot; its reply gives the id to type on Family |
@@ -103,7 +104,7 @@ sudo journalctl -u familydb -n 100 --no-pager
 sudo docker compose --project-directory /opt/familydb logs --tail 100 bot
 ```
 
-The first is systemd, the second Docker. `sudo /opt/familydb/scripts/maintain.sh logs 200` shows the last 200 lines and then follows the log until you press Ctrl-C. A line reads `2026-10-07 10:04:24,207 WARNING familydb.app: message`: time, severity, part of the program, message. The log detail on [General](/wiki/controls/settings/general) sets the lowest severity.
+The first is systemd, the second Docker. `sudo /opt/familydb/scripts/maintain.sh logs 200` shows the last 200 lines and then follows the log until you press Ctrl-C. A line reads `2026-10-07 10:04:24,207 WARNING familydb.app: message`: time, severity, part of the program, message. **What the server writes** on the [Troubleshooting card](/wiki/controls/settings/troubleshooting#how-much-is-logged) sets the lowest severity.
 
 FamilyDB replaces a Telegram token in a log message with `bot<token>`. It does not do so inside a traceback, so read a log before you paste it anywhere.
 

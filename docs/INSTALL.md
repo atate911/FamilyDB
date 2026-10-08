@@ -175,7 +175,7 @@ The bot runs as its own account, which on Debian and Ubuntu cannot enter anyone'
 - `--dry-run` says what would happen and changes nothing.
 - `--local-only` keeps the page off the internet ([below](#keeping-the-page-off-the-internet)).
 - `--mode docker` runs it in Docker instead of a virtualenv.
-- `--target DIR` and `--user NAME` move the install and rename its account.
+- `--target DIR` and `--user NAME` move the install and rename its account. The name is used for the account, the files it owns and the service unit, and is kept in `/var/lib/familydb-install/service-user`, so `maintain.sh` and `uninstall.sh` find it later (pass `--user` to them if that file is gone).
 - `--ref NAME` installs a particular tag, branch or commit.
 - `--yes` takes every default, for a scripted build.
 

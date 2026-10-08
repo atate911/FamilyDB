@@ -428,8 +428,9 @@ GROUPS: tuple[Group, ...] = (
         "that is going, what a refusal nobody can read means, which new models belong at which "
         "level, and what a price the lists disagree on really is. With this on, the questions "
         "that come up are asked together once a day, with the evening's lookups, in one call; "
-        "only a refusal is asked at once. The answer is checked, told to admins, and never "
-        "changes a setting by itself. It is sent model names, prices and error messages, never "
+        "only a refusal is asked at once. The answer is checked and told to admins, and only a "
+        "model at about the same cost may be put in by itself (the choice below); everything "
+        "else waits for an admin. It is sent model names, prices and error messages, never "
         "the family's messages.",
         (
             field(
@@ -445,10 +446,10 @@ GROUPS: tuple[Group, ...] = (
             field(
                 "judgement_acts",
                 "What it may do by itself",
-                "A better model at the same cost or less can be put in by itself, and admins are "
-                "told, with a way to put it back; anything dearer waits for an admin.",
+                "A better model costing at most about 10% more can be put in by itself, and admins "
+                "are told, with a way to put it back; anything dearer waits for an admin.",
                 words=(
-                    ("within_cost", "Put in a model at the same cost or less"),
+                    ("within_cost", "Put in a model at most about 10% dearer"),
                     ("suggest", "Only suggest"),
                 ),
             ),
@@ -595,8 +596,8 @@ GROUPS: tuple[Group, ...] = (
                 "daily_spend_limit",
                 "Daily spending limit (US$)",
                 "Estimated across every model call. Once it is reached nothing more is asked of "
-                "a model until midnight, and whoever writes is told why. 0 means no limit. Set a "
-                "limit with the company too.",
+                "a model until midnight. A grown-up who writes is told why; a kid is told to come "
+                "back tomorrow. 0 means no limit. Set a limit with the company too.",
             ),
             field(
                 "kid_daily_messages",

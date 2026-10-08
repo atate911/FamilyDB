@@ -137,7 +137,7 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         for table in ("finds", "find_sources", "feed_proposals"):
             conn.execute(f"DROP TABLE {table}")
         conn.execute("ALTER TABLE suggestions DROP COLUMN picks")
-        for table in ("ai_texts", "ai_blobs", "problems"):
+        for table in ("ai_texts", "ai_blobs", "problems", "place_names"):
             conn.execute(f"DROP TABLE {table}")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
@@ -404,3 +404,21 @@ def test_a_plan_made_on_the_page_before_0044_gets_the_pages_chat(tmp_path, monke
             for row in conn.execute("SELECT title, channel, chat_id FROM plans")
         }
         assert chats == {"Page": ("web", "web"), "Gone": (None, None), "X": (None, None)}
+
+
+def test_place_names_arrive_empty_with_0058(tmp_path, monkeypatch):
+    """0058 only adds the table that lets a forgotten place name be taken out of what held it."""
+    from contextlib import closing
+
+    with closing(db.connect(tmp_path / "old.sqlite3")) as conn:
+        _up_to(monkeypatch, conn, 57)
+        assert not conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'place_names'").fetchone()
+        conn.execute(
+            "INSERT INTO members (display_name, role, active, created_at) "
+            "VALUES ('Sam', 'admin', 1, '2026-01-01T00:00:00Z')"
+        )
+        assert 58 in db.migrate(conn)
+        assert conn.execute("SELECT count(*) FROM place_names").fetchone()[0] == 0
+        conn.execute(
+            "INSERT INTO place_names (member_id, label, named_at) VALUES (1, 'Old Town', 'x')"
+        )

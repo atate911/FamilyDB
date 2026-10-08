@@ -259,7 +259,7 @@ EVENTS: dict[str, Event] = {
         (),
     ),
     "tap_parents_only": Event(
-        "A kid's ask tapped by somebody who may not answer it",
+        "A button tapped by somebody who may not do what it does (a kid's ask, how a plan went)",
         "Only a parent can answer that.",
         (),
     ),
@@ -325,6 +325,11 @@ EVENTS: dict[str, Event] = {
     "lookups_off": Event(
         "Answering /lookup with lookups switched off",
         "Looking ideas up on the web is switched off, on the settings page under Lookups.",
+        (),
+    ),
+    "lookups_wait": Event(
+        "Answering /lookup for a kid, whose lookups wait for the evening",
+        "Lookups wait for the evening. Ask a parent if one can't wait!",
         (),
     ),
     "location_shared": Event(
@@ -507,8 +512,8 @@ EVENTS: dict[str, Event] = {
         "put it back or put it in.",
         ("detail",),
         {
-            "detail": "claude-sonnet-5 put in place of claude-haiku-4-5, at the same cost or "
-            "less (Anthropic): the nearest in price that handles tools well"
+            "detail": "claude-sonnet-5 put in place of claude-haiku-4-5, at about the same "
+            "cost (Anthropic): the nearest in price that handles tools well"
         },
     ),
     "kid_limit": Event(
@@ -675,6 +680,7 @@ PLAIN: dict[str, str] = {
     "limit_reached": "kid_tomorrow",
     "voice_no_ears": "kid_type_it",
     "reminder_late": "reminder",
+    "lookups_off": "lookups_wait",
 }
 
 FOLDABLE = frozenset(

@@ -9,6 +9,7 @@ The scheduled jobs are what FamilyDB does without being asked: reminders, lookup
 | Reminders job | every minute | none | No |
 | Alerts job | every minute | `admin_alerts` | No |
 | Forget-locations job | every 10 minutes | none | No |
+| Tidy job | daily 03:30 | none; `tidy_ideas` turns off only taking ideas off | No |
 | Retry job | every 5 minutes | `retry_interval_minutes`; `retry_max_attempts` bounds the retries | Only to answer a failed message |
 | Lookups job | every 2 minutes | `enrich_interval_minutes`; not scheduled while `web_tools_enabled` is off | Yes, one worker turn per idea due |
 | Weekend ideas job | Thursday 18:00 | `digest_day`, `digest_hour`; not scheduled while `digest_chat_id` is empty | Yes, one chat turn |
@@ -66,9 +67,13 @@ The judgments job asks a stronger model only about a question that code filed. I
 
 It brings up a thing to do kept for a part of the week that code can read, such as "some Saturday morning". It reads the database and returns when nothing is due, and asks the calendar only when a nudge could go. It holds back when the calendar shows the next hour busy, but goes anyway with no calendar or one it cannot reach. The rules for each thing and each chat are in [Preferred windows and nudges](/wiki/model/tasks-and-reminders#preferred-windows-and-nudges).
 
+### Tidy job
+
+The tidy job clears what has passed its time. It drops a stranger's knock after 30 days (and any beyond the newest 200) and a Telegram link after its 24 hours, so neither waits for the next one to be made. It also takes ideas off a week after their last day and empties the words of old messages and model calls.
+
 ### Forget-locations job and settings watch
 
-The forget-locations job deletes a shared position after 24 hours; the assistant uses one for only 3 ([Shared location](/wiki/model/location)). The settings watch re-reads the stored settings and adds, removes or reschedules jobs to match, so a schedule you change on the page moves within 5 minutes. The log says `settings changed` and names what moved.
+The forget-locations job deletes a shared position after 24 hours and takes its place name out of what held it; the assistant uses one for only 3 ([Shared location](/wiki/model/location#what-is-kept-and-for-how-long)). The settings watch re-reads the stored settings and adds, removes or reschedules jobs to match, so a schedule you change on the page moves within 5 minutes. The log says `settings changed` and names what moved.
 
 ## An idle job calls no model
 

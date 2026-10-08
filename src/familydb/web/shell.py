@@ -142,7 +142,8 @@ def _to_rate(conn: sqlite3.Connection, visitor: auth.Visitor, today: Any) -> int
     if not visitor.may("change"):
         return 0
     since = today - timedelta(days=RATE_DAYS)
-    return len(plan_store.unrated(conn, today=today.isoformat(), since=since.isoformat()))
+    waiting = plan_store.unrated(conn, today=today.isoformat(), since=since.isoformat())
+    return len(presents.without(waiting, presents.kept_ids(conn, visitor.member)))
 
 
 def _pill(app: App, conn: sqlite3.Connection, visitor: auth.Visitor) -> status_page.Pill:

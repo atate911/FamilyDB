@@ -605,7 +605,7 @@ def health(app: App, conn: sqlite3.Connection, *, name: str) -> list[dict[str, A
                 "compass",
                 "ok",
                 "On",
-                "New ideas get hours, prices and drive times.",
+                "New ideas get hours, prices and estimated drive times.",
             )
         )
     else:
@@ -615,7 +615,7 @@ def health(app: App, conn: sqlite3.Connection, *, name: str) -> list[dict[str, A
                 "compass",
                 "off",
                 "Off",
-                "New ideas don\u2019t get hours, prices or drive times.",
+                "New ideas don\u2019t get hours, prices or estimated drive times.",
                 _action("Turn it on", "settings.section", name="lookups"),
             )
         )

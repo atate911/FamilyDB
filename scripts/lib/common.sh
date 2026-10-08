@@ -9,17 +9,77 @@
 [ -n "${FAMILYDB_COMMON_SOURCED:-}" ] && return 0
 FAMILYDB_COMMON_SOURCED=1
 
-if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-  B=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; YEL=$'\033[33m'; GRN=$'\033[32m'; OFF=$'\033[0m'
+# Colour is for a person at a terminal. NO_COLOR turns it off (https://no-color.org); FORCE_COLOR
+# turns it on in a pipe, for `| less -R`. Each stream is decided on its own, so a failure sent to a
+# file carries no escape codes even when the screen does.
+_wants_colour() { # _wants_colour FD
+  [ -z "${NO_COLOR:-}" ] || return 1
+  [ -z "${FORCE_COLOR:-}" ] || return 0
+  [ -t "$1" ] && [ "${TERM:-dumb}" != dumb ]
+}
+if _wants_colour 1; then
+  B=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; YEL=$'\033[33m'; GRN=$'\033[32m'; CYN=$'\033[36m'
+  BADGE=$'\033[1;30;43m'; BADGE_G=$'\033[1;30;42m'; BADGE_R=$'\033[1;37;41m'; OFF=$'\033[0m'
 else
-  B=""; DIM=""; RED=""; YEL=""; GRN=""; OFF=""
+  B=""; DIM=""; RED=""; YEL=""; GRN=""; CYN=""; BADGE=""; BADGE_G=""; BADGE_R=""; OFF=""
+fi
+if _wants_colour 2; then
+  E_B=$'\033[1m'; E_DIM=$'\033[2m'; E_RED=$'\033[31m'; E_YEL=$'\033[33m'; E_CYN=$'\033[36m'; E_OFF=$'\033[0m'
+else
+  E_B=""; E_DIM=""; E_RED=""; E_YEL=""; E_CYN=""; E_OFF=""
 fi
 
+# The marks that say how a line went. They differ in shape as well as colour, so a screen with no
+# colour reads the same. FAMILYDB_ASCII=1 is for a terminal that cannot draw the others.
+# Locale decides whether the glyphs below can be drawn: a person at a terminal whose locale is not
+# UTF-8 would be shown the bytes of them. A pipe or a log is not asked, since it is read elsewhere.
+_utf8_locale() {
+  case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in *[Uu][Tt][Ff]-8*|*[Uu][Tt][Ff]8*) return 0 ;; esac
+  return 1
+}
+# shellcheck disable=SC2034  # some are read only by the scripts that source this file.
+if [ -n "${FAMILYDB_ASCII:-}" ] || { [ -z "${FAMILYDB_UNICODE:-}" ] && [ -t 1 ] && ! _utf8_locale; }; then
+  S_OK='+'; S_WARN='!'; S_BAD='x'; S_GO='>'; S_DOT='-'; S_RULE='-'; S_TODO='[ ]'; S_OFF='o'; S_TO='->'; S_ELLIPSIS='...'
+  BAR_FULL='#'; BAR_EMPTY='-'; BAR_PULSE_A='='; BAR_PULSE_B='#'
+  F_TL='+'; F_TR='+'; F_BL='+'; F_BR='+'; F_H='='; F_BOX='#'
+  SPIN_FRAMES=('|' '/' '-' '\')
+else
+  S_OK='✓'; S_WARN='!'; S_BAD='✗'; S_GO='→'; S_DOT='·'; S_RULE='─'; S_TODO='☐'; S_OFF='○'; S_TO='→'; S_ELLIPSIS='…'
+  BAR_FULL='█'; BAR_EMPTY='░'; BAR_PULSE_A='▓'; BAR_PULSE_B='▒'
+  F_TL='╔'; F_TR='╗'; F_BL='╚'; F_BR='╝'; F_H='═'; F_BOX='■'
+  SPIN_FRAMES=('|' '/' '-' '\')
+fi
+
+# What a command prints under a heading can be indented with this; `head2` and `finish` go back to the margin.
+INDENT=""
+WARNED=()   # every warning this run said, for the recap at the end
+SCRIPT_STARTED=$SECONDS
+
 say()   { printf '%s\n' "$*"; }
-head2() { printf '\n%s%s%s\n' "$B" "$*" "$OFF"; log_line "== $*"; }
-note()  { printf '%s%s%s\n' "$DIM" "$*" "$OFF"; log_line "-- $*"; }
-ok()    { printf '%s✓%s %s\n' "$GRN" "$OFF" "$*"; log_line "ok: $*"; }
-warn()  { printf '%s!%s %s\n' "$YEL" "$OFF" "$*" >&2; log_line "warn: $*"; WARNINGS=$((WARNINGS + 1)); }
+head2() { INDENT=""; printf '\n%s%s%s\n' "$B" "$*" "$OFF"; log_line "== $*"; }
+note()  { printf '%s%s%s%s\n' "$INDENT" "$DIM" "$*" "$OFF"; log_line "-- $*"; }
+ok()    { _ok_line "$*" ""; }
+_ok_line() { # _ok_line TEXT [TIME] - a tick, what was done with its first word bold, and how long it took at the right edge
+  local text="$1" took="${2:-}" first rest="" pad=" " used width
+  first="${text%% *}"
+  [ "$first" = "$text" ] || rest=" ${text#* }"
+  # "Backed up" is one verb.
+  case "$rest" in " up "*) first="$first up"; rest="${rest# up}" ;; esac
+  if [ -n "$took" ]; then
+    width="$(ui_width)"
+    used=$((${#INDENT} + 2 + ${#text} + ${#took}))
+    [ "$used" -ge $((width - 1)) ] || printf -v pad '%*s' $((width - used)) ''
+  fi
+  printf '%s%s%s%s%s %s%s%s%s%s%s%s%s\n' "$INDENT" "$B" "$GRN" "$S_OK" "$OFF" "$B" "$first" "$OFF" "$rest" \
+    "${took:+$pad}" "${took:+$DIM}" "$took" "${took:+$OFF}"
+  log_line "ok: ${text}${took:+ ($took)}"
+}
+warn()  {
+  printf '%s%s%s%s%s %s\n' "$INDENT" "$E_B" "$E_YEL" "$S_WARN" "$E_OFF" "$*" >&2
+  log_line "warn: $*"
+  WARNINGS=$((WARNINGS + 1))
+  WARNED+=("$*")
+}
 
 WARNINGS=0
 LOG_FILE=""
@@ -47,7 +107,383 @@ log_to() { # log_to PATH - start writing a transcript. Falls back to a temp file
 
 log_line() { # one line into the transcript, never onto the screen
   [ -n "$LOG_FILE" ] || return 0
-  printf '%s %s\n' "$(date -u '+%H:%M:%S')" "$*" >>"$LOG_FILE" 2>/dev/null || true
+  local line="$*"
+  case "$line" in *$'\033'*) line="$(printf '%s' "$line" | sed $'s/\033\\[[0-9;]*m//g')" ;; esac
+  printf '%s %s\n' "$(date -u '+%H:%M:%S')" "$line" >>"$LOG_FILE" 2>/dev/null || true
+}
+
+# --- Layout -------------------------------------------------------------------------------------
+# What a command shows, in the order a person reads it: a banner (what, where, how), a plan (what
+# it is about to do and why, for the installers), a line per thing done, and a last word that says
+# how it went and what to do next. Everything here is for the eye: the transcript in the log file
+# has the same facts, with no colour.
+
+# The steps of a run, counted, so a bar can say how far along it is. A command that has a fixed
+# list of steps says how many (progress_total) and how many are done before each (progress_to).
+PROGRESS_TOTAL=0
+PROGRESS_DONE=0
+LIVE_LIMIT=""   # seconds a step is given, for a bar that fills toward it instead
+progress_total() { PROGRESS_TOTAL="$1"; PROGRESS_DONE=0; }
+progress_to() { PROGRESS_DONE="$1"; }
+
+_bar() { # _bar VAR WIDTH DONE TOTAL FRAME COLOUR PULSE [DIM OFF] - [█████▓▒▓░░░░]: done, the one under way (pulsing), the rest
+  local name="$1" width="$2" done_n="$3" total="$4" frame="$5" colour="$6" pulse="$7" dim="${8-$DIM}" off="${9-$OFF}"
+  local cells active i filled="" rest=""
+  [ "$total" -gt 0 ] || total=1
+  [ "$done_n" -le "$total" ] || done_n=$total
+  cells=$((width * done_n / total))
+  active=0
+  if [ "$pulse" = 1 ] && [ "$done_n" -lt "$total" ]; then
+    active=$((width / total))
+    [ "$active" -ge 1 ] || active=1
+    [ $((cells + active)) -le "$width" ] || active=$((width - cells))
+  fi
+  for ((i = 0; i < cells; i++)); do filled+="$BAR_FULL"; done
+  for ((i = 0; i < active; i++)); do
+    if (((i + frame) % 2)); then filled+="$BAR_PULSE_A"; else filled+="$BAR_PULSE_B"; fi
+  done
+  for ((i = cells + active; i < width; i++)); do rest+="$BAR_EMPTY"; done
+  printf -v "$name" '%s%s%s%s%s%s' "$colour" "$filled" "$off" "$dim" "$rest" "$off"
+}
+
+ui_width() { # the columns to lay out in: the terminal's, kept between 40 and 88
+  local w="${COLUMNS:-}"
+  case "$w" in ''|*[!0-9]*) w=""; if [ -t 1 ]; then w="$(tput cols 2>/dev/null || true)"; fi ;; esac
+  case "$w" in ''|*[!0-9]*) w=80 ;; esac
+  [ "$w" -le 88 ] || w=88
+  [ "$w" -ge 40 ] || w=40
+  printf '%s' "$w"
+}
+
+rule() { # a thin line across the layout
+  local line
+  printf -v line '%*s' "$(ui_width)" ''
+  printf '%s%s%s\n' "$DIM" "${line// /$S_RULE}" "$OFF"
+}
+
+wrap() { # wrap PAD STYLE TEXT... - TEXT broken at word ends to fit; WRAP_FIRST, if set, starts line one
+  local pad="$1" style="$2" off="" width first
+  shift 2
+  first="${WRAP_FIRST:-$pad}"
+  [ -z "$style" ] || off=$'\033[0m'
+  width=$(( $(ui_width) - ${#pad} ))
+  # fmt keeps a word longer than the line whole, as a path should be; fold would cut it.
+  printf '%s\n' "$*" | { fmt -w "$width" 2>/dev/null || fold -s -w "$width"; } \
+    | sed -e 's/[[:space:]]*$//' -e "1s/^/${first}${style}/" -e "1!s/^/${pad}${style}/" -e "s/\$/${off}/"
+}
+
+para() { # para TEXT... - a sentence or two, wrapped, under the current indent
+  wrap "$INDENT" "" "$*"
+  log_line "   $*"
+}
+
+hint() { # hint TEXT... - the same, dim: the reason behind something, not the thing itself
+  wrap "$INDENT" "$DIM" "$*"
+  log_line "-- $*"
+}
+
+fmt_secs() { # fmt_secs N - 5s, 1m 05s, 2h 03m, 3d 4h
+  local n="$1"
+  if [ "$n" -lt 60 ]; then
+    printf '%ss' "$n"
+  elif [ "$n" -lt 3600 ]; then
+    printf '%sm %02ds' $((n / 60)) $((n % 60))
+  elif [ "$n" -lt 86400 ]; then
+    printf '%sh %02dm' $((n / 3600)) $((n % 3600 / 60))
+  else
+    printf '%sd %sh' $((n / 86400)) $((n % 86400 / 3600))
+  fi
+}
+
+ago() { # ago SECONDS - how long ago, in the words a person would use
+  local n="$1"
+  if [ "$n" -lt 90 ]; then
+    printf 'just now'
+  elif [ "$n" -lt 5400 ]; then
+    printf '%s min ago' $(((n + 30) / 60))
+  elif [ "$n" -lt 172800 ]; then
+    printf '%s hours ago' $(((n + 1800) / 3600))
+  else
+    printf '%s days ago' $((n / 86400))
+  fi
+}
+
+kv() { # kv LABEL VALUE [ok|warn|bad|off] - one fact on a line, the labels lined up; a long value wraps under itself
+  local mark="  " base="${INDENT:-  }" pad
+  case "${3:-}" in
+    ok)   mark="${B}${GRN}${S_OK}${OFF} " ;;
+    warn) mark="${B}${YEL}${S_WARN}${OFF} " ;;
+    bad)  mark="${B}${RED}${S_BAD}${OFF} " ;;
+    off)  mark="${DIM}${S_OFF}${OFF} " ;;
+  esac
+  printf -v pad '%*s' $((${#base} + 15)) ''
+  WRAP_FIRST="$(printf '%s%s%s%-12s%s ' "$base" "$mark" "$DIM" "$1" "$OFF")" wrap "$pad" "" "$2"
+  log_line "   $1: $2"
+}
+
+# One line, like the title bar of an old DOS window, with where it is on the right: it replaces the
+# heading and the rule under it, so it costs nothing in height.
+banner() { # banner "Upgrade" ["where, and how it runs"]
+  INDENT=""
+  local width detail="${2:-}" base right fill bar="" i out frame="${DIM}${CYN}"
+  width="$(ui_width)"
+  base=$((19 + ${#1}))                      # "╔═[■]═ FamilyDB ═ <name> " before the fill
+  if [ -n "$detail" ]; then
+    [ $((base + ${#detail} + 6)) -le "$width" ] \
+      || detail="${S_ELLIPSIS}${detail: -$((width - base - 6 - ${#S_ELLIPSIS}))}"
+    right=$((${#detail} + 4))               # " <detail> ═╗"
+  else
+    right=2
+  fi
+  fill=$((width - base - right))
+  [ "$fill" -ge 1 ] || fill=1
+  for ((i = 0; i < fill; i++)); do bar+="$F_H"; done
+  out="${frame}${F_TL}${F_H}[${F_BOX}]${F_H}${OFF} ${B}FamilyDB${OFF} ${frame}${F_H}${OFF} ${B}${CYN}${1}${OFF} ${frame}${bar}${OFF}"
+  if [ -n "$detail" ]; then
+    out="${out} ${DIM}${detail}${OFF} ${frame}${F_H}${F_TR}${OFF}"
+  else
+    out="${out}${frame}${F_H}${F_TR}${OFF}"
+  fi
+  printf '\n%s\n' "$out"
+  log_line "== $1 ${2:-}"
+  if [ "${DRY_RUN:-0}" = 1 ]; then
+    printf '  %s[ DRY RUN ]%s %sNothing below is done; it only shows what would be.%s\n' "$BADGE" "$OFF" "$B" "$OFF"
+  fi
+}
+
+# The foot of the window: the run's bar when it had steps to count, full when every one ran and short,
+# and in the colour of what went wrong, where a run that stopped got to. FRAME, DIM and OFF are the
+# colours of the stream it is for, so a copy on stderr follows stderr's rules.
+frame_bottom() { # frame_bottom STATE COLOUR [FRAME DIM OFF]
+  local state="$1" colour="$2" frame="${3-${DIM}${CYN}}" dim="${4-$DIM}" off="${5-$OFF}"
+  local width i fill="" meter="" done_n pct barw label
+  width="$(ui_width)"
+  if [ "$PROGRESS_TOTAL" -gt 0 ]; then
+    done_n="$PROGRESS_TOTAL"
+    [ "$state" != bad ] || done_n="$PROGRESS_DONE"
+    pct=$((100 * done_n / PROGRESS_TOTAL))
+    label=" ${pct}%  ${done_n}/${PROGRESS_TOTAL} "
+    barw=$((width - ${#label} - 5))
+    [ "$barw" -le 40 ] || barw=40
+    [ "$barw" -ge 8 ] || barw=8
+    _bar meter "$barw" "$done_n" "$PROGRESS_TOTAL" 0 "$colour" 0 "$dim" "$off"
+    for ((i = 0; i < width - barw - ${#label} - 5; i++)); do fill+="$F_H"; done
+    printf '%s%s%s[%s%s%s]%s%s%s%s%s%s%s\n' "$frame" "$F_BL" "$F_H" "$off" "$meter" "$frame" "$off" "$dim" "$label" "$off" "$frame" "${fill}${F_BR}" "$off"
+  else
+    for ((i = 0; i < width - 2; i++)); do fill+="$F_H"; done
+    printf '%s%s%s%s\n' "$frame" "$F_BL" "${fill}${F_BR}" "$off"
+  fi
+}
+
+_verdict_badge() { # _verdict_badge ok|warn|bad - [ OK ], [WARN], [FAIL]: a block of colour on a terminal, brackets without one
+  local text colour
+  case "$1" in
+    ok)   text=" OK "; colour="$BADGE_G" ;;
+    warn) text="WARN"; colour="$BADGE" ;;
+    *)    text="FAIL"; colour="$BADGE_R" ;;
+  esac
+  if [ -n "$colour" ]; then printf '%s %s %s' "$colour" "$text" "$OFF"; else printf '[%s]' "$text"; fi
+}
+
+FINISH_BAD=0   # set by a last line that says it failed, so the script can exit with it
+# shellcheck disable=SC2034  # FINISH_BAD is read by the scripts that source this file.
+finish() { # finish ok|warn|bad "Headline" - the last word: how it went, with the time it took
+  local state="$1" headline="$2" colour count=${#WARNED[@]} took
+  INDENT=""
+  if [ "${DRY_RUN:-0}" = 1 ] && [ "$state" != bad ]; then
+    state=ok
+    headline="Dry run finished: nothing was changed"
+  fi
+  [ "$state" != ok ] || [ "$count" -eq 0 ] || state=warn
+  case "$state" in
+    ok)   colour="$GRN" ;;
+    warn) colour="$YEL"
+          [ "$count" -eq 0 ] || headline="${headline}, with ${count} warning$([ "$count" -eq 1 ] || echo s)" ;;
+    *)    colour="$RED"; FINISH_BAD=1 ;;
+  esac
+  took=$((SECONDS - SCRIPT_STARTED))
+  printf '\n'
+  frame_bottom "$state" "$colour"
+  printf '%s %s%s%s' "$(_verdict_badge "$state")" "$B" "$headline" "$OFF"
+  [ "$took" -lt 3 ] || printf '  %s(%s)%s' "$DIM" "$(fmt_secs "$took")" "$OFF"
+  printf '\n'
+  log_line "== result: $state: $headline"
+}
+
+RECAPPED=0   # read by the script that sources this, which calls recap itself when a command did not
+# shellcheck disable=SC2034  # RECAPPED is read by the scripts that source this file.
+recap() { # every warning this run said, once more, so none is lost in the scroll
+  RECAPPED=1
+  local line
+  [ ${#WARNED[@]} -gt 0 ] || return 0
+  printf '\n%sWarnings%s\n' "$B" "$OFF"
+  for line in "${WARNED[@]}"; do
+    WRAP_FIRST="  ${YEL}${S_WARN}${OFF} " wrap "    " "" "$line"
+  done
+}
+
+caution() { # caution TEXT - something to know before going on; not a warning of the run, so not said again
+  WRAP_FIRST="${INDENT}${YEL}${S_WARN}${OFF} " wrap "${INDENT}  " "" "$*"
+  log_line "caution: $*"
+}
+
+repo_web_base() { # repo_web_base REMOTE - https://github.com/owner/repo for a GitHub remote, else nothing
+  local rest
+  case "$1" in
+    git@github.com:*) rest="${1#git@github.com:}" ;;
+    ssh://git@github.com/*) rest="${1#ssh://git@github.com/}" ;;
+    https://github.com/*) rest="${1#https://github.com/}" ;;
+    *) return 0 ;;
+  esac
+  rest="${rest%/}"
+  printf 'https://github.com/%s' "${rest%.git}"
+}
+
+# TEXT as a link a terminal can click (the escape sequence most of them understand, and the rest
+# ignore), only where a person is looking at one: never in a pipe, a log or a mail.
+hyperlink() { # hyperlink URL TEXT
+  if [ -n "$1" ] && [ -n "$CYN" ] && [ -t 1 ] && [ -z "${FAMILYDB_NO_LINKS:-}" ]; then
+    printf '\033]8;;%s\a%s\033]8;;\a' "$1" "$2"
+  else
+    printf '%s' "$2"
+  fi
+}
+
+after() { # after "Heading" - what comes next, or what to do if it went wrong
+  printf '\n%s%s%s\n' "$B" "$1" "$OFF"
+  log_line "== $1"
+}
+
+todo() { # todo TEXT... - a thing left for the person, outside what this could do
+  local pad
+  printf -v pad '%*s' $((3 + ${#S_TODO})) ''
+  WRAP_FIRST="  ${S_TODO} " wrap "$pad" "" "$*"
+  log_line "todo: $*"
+}
+
+# A line a person would type is cyan, and its trailing "  # comment" dim. The first word decides.
+_looks_like_command() {
+  local word="${1#"${1%%[![:space:]]*}"}"
+  word="${word%%[[:space:]]*}"
+  case "$word" in
+    sudo|cd|docker|systemctl|journalctl|ssh|scp|git|ls|df|du|curl|ping|cat|ps|free|command|apt|apt-get|ufw|ss|fuser|\
+    dpkg|uv|crontab|bash|read|export|fallocate|mkswap|date|echo|id|install|caddy|tail|grep|chown|chmod|nano|vi|\
+    cp|mv|rm|mkdir|tar|unzip|wget|FAMILYDB_*|WEB_*|COMPOSE_*|GITHUB_*) return 0 ;;
+  esac
+  return 1
+}
+
+_style_command() { # _style_command CYAN DIM OFF TEXT - TEXT with its command and its comment coloured
+  local cyan="$1" dim="$2" off="$3" text="$4"
+  local re='^(.*[^[:space:]])([[:space:]]{2,}#[[:space:]].*)$'
+  if [[ $text =~ $re ]]; then
+    printf '%s%s%s%s%s%s' "$cyan" "${BASH_REMATCH[1]}" "$off" "$dim" "${BASH_REMATCH[2]}" "$off"
+  else
+    printf '%s%s%s' "$cyan" "$text" "$off"
+  fi
+}
+
+align_comments() { # commands on stdin with their "  # comment" lined up in one column
+  awk '{
+    i = index($0, "  # ")
+    if (i > 0) { c = substr($0, 1, i - 1); sub(/ +$/, "", c); cmd[NR] = c; note[NR] = substr($0, i + 2); if (length(c) > w) w = length(c) }
+    else { cmd[NR] = $0; note[NR] = "" }
+  } END {
+    for (n = 1; n <= NR; n++) {
+      if (note[n] == "") print cmd[n]
+      else printf "%s%*s  %s\n", cmd[n], w - length(cmd[n]), "", note[n]
+    }
+  }'
+}
+
+show_commands() { # show_commands - commands on stdin, one a line, as they are to be typed
+  local line
+  while IFS= read -r line; do
+    printf '%s' "$INDENT"
+    _style_command "$CYN" "$DIM" "$OFF" "$line"
+    printf '\n'
+    log_line "   $line"
+  done < <(align_comments)
+}
+
+cmdline() { # cmdline "command" ["why"] - one command to copy, set apart from the words around it
+  local text="$1"
+  [ -z "${2:-}" ] || text="$1  # $2"
+  printf '%s    ' "$INDENT"
+  _style_command "$CYN" "$DIM" "$OFF" "$text"
+  printf '\n'
+  log_line "   $1"
+}
+
+# While a step runs, one line shows what it is and how long it has been going, then becomes the
+# tick. Only at a terminal where nothing can ask for a password over it: root, or sudo that has
+# its password already, and never in a dry run.
+_LIVE=""
+_live_ok() {
+  if [ -z "$_LIVE" ]; then
+    _LIVE=0
+    if [ -t 1 ] && [ "${TERM:-dumb}" != dumb ] && [ "${DRY_RUN:-0}" != 1 ] && [ -z "${FAMILYDB_NO_LIVE:-}" ]; then
+      if [ "$(id -u)" = 0 ] || sudo -n true 2>/dev/null; then _LIVE=1; fi
+    fi
+  fi
+  [ "$_LIVE" = 1 ]
+}
+
+_spin() { # _spin WHAT PARENT - redraw one line, with the time so far, for as long as PARENT lives
+  local what="$1" parent="$2" i=0 start=$SECONDS max elapsed meter="" counter="" room
+  # Beside the words: the run's bar when it has steps to count, a bar filling toward the time a step
+  # is given when there is one, and otherwise only the seconds.
+  room=$(( $(ui_width) - ${#INDENT} - 14 ))
+  if [ -n "$LIVE_LIMIT" ]; then room=$((room - 28)); elif [ "$PROGRESS_TOTAL" -gt 0 ]; then room=$((room - 34)); fi
+  max=$room
+  [ "${#what}" -le "$max" ] || what="${what:0:$((max - 3))}${S_ELLIPSIS}"
+  while kill -0 "$parent" 2>/dev/null; do
+    elapsed=$((SECONDS - start))
+    if [ -n "$LIVE_LIMIT" ]; then
+      _bar meter 14 "$elapsed" "$LIVE_LIMIT" "$i" "$CYN" 0
+      counter="${elapsed}s/${LIVE_LIMIT}s"
+      printf '\r%s%s%s%s [%s] %s%-8s%s %s\033[K' "$INDENT" "$CYN" "${SPIN_FRAMES[i % ${#SPIN_FRAMES[@]}]}" "$OFF" \
+        "$meter" "$DIM" "$counter" "$OFF" "$what"
+    elif [ "$PROGRESS_TOTAL" -gt 0 ]; then
+      _bar meter 20 "$PROGRESS_DONE" "$PROGRESS_TOTAL" "$i" "$CYN" 1
+      counter="$((PROGRESS_DONE + 1))/${PROGRESS_TOTAL}"
+      printf '\r%s%s%s%s [%s] %s%3d%%  %-4s%s %s %s%s%s\033[K' "$INDENT" "$CYN" "${SPIN_FRAMES[i % ${#SPIN_FRAMES[@]}]}" "$OFF" \
+        "$meter" "$DIM" $((100 * PROGRESS_DONE / PROGRESS_TOTAL)) "$counter" "$OFF" "$what" "$DIM" "$(fmt_secs "$elapsed")" "$OFF"
+    else
+      printf '\r%s%s%s%s %s %s%s%s\033[K' "$INDENT" "$CYN" "${SPIN_FRAMES[i % ${#SPIN_FRAMES[@]}]}" "$OFF" \
+        "$what" "$DIM" "$(fmt_secs "$elapsed")" "$OFF"
+    fi
+    i=$((i + 1))
+    sleep 0.15
+  done
+}
+
+_spin_stop() { # _spin_stop PID - stop the line drawing itself, and leave the screen clean for what follows
+  kill "$1" 2>/dev/null || true
+  wait "$1" 2>/dev/null || true
+  printf '\r\033[K'
+}
+
+_OUT=""
+_STATUS=0
+# The command runs where it always did, in the foreground, so Ctrl-C reaches it; only the line that
+# shows it working is a background process, and it goes when the command does.
+_capture() { # _capture WHAT CMD... - run CMD; its output is left in _OUT and its exit status in _STATUS
+  local what="$1" spinner
+  shift
+  _OUT=""
+  _STATUS=0
+  if _live_ok; then
+    _spin "$what" "$$" &
+    spinner=$!
+    # shellcheck disable=SC2064  # the spinner's number is wanted now, not when the trap runs
+    trap "_spin_stop $spinner; trap - INT; kill -INT $$" INT
+    _OUT="$("$@" 2>&1)" || _STATUS=$?
+    trap - INT
+    _spin_stop "$spinner"
+    return 0
+  fi
+  _OUT="$("$@" 2>&1)" || _STATUS=$?
 }
 
 on_failure_hint() { HINT="$*"; }  # what to say at the bottom of any failure from here on
@@ -97,6 +533,37 @@ noting_replaced() { # noting_replaced PATH - before overwriting PATH: keep the o
   mkdir -p "$(dirname "$saved")" && cp -a "$1" "$saved" && ledger replaced "$1"
 }
 
+# The account the bot runs as, written down beside the ledger so maintain.sh and uninstall.sh find
+# it again. An install that never wrote it ran as familydb.
+SERVICE_USER_FILE="${LEDGER_DIR}/service-user"
+DEFAULT_SERVICE_USER="familydb"
+
+valid_user_name() { # a lowercase system account name, as useradd takes without fuss
+  case "$1" in ''|[!a-z_]*|*[!a-z0-9_-]*) return 1 ;; esac
+  [ "${#1}" -le 32 ]
+}
+
+record_service_user() { # record_service_user NAME
+  _ledger_on || return 0
+  mkdir -p "$LEDGER_DIR" 2>/dev/null && chmod 700 "$LEDGER_DIR" 2>/dev/null || return 0
+  printf '%s\n' "$1" >"$SERVICE_USER_FILE" 2>/dev/null || true
+}
+
+recorded_service_user() { # recorded_service_user [TARGET] - the recorded account, else who owns TARGET/data, else familydb
+  local name="" owner=""
+  if [ -r "$SERVICE_USER_FILE" ]; then
+    name="$(head -n1 "$SERVICE_USER_FILE" 2>/dev/null || true)"
+  elif [ "$(id -u)" != 0 ] && have sudo; then
+    name="$(sudo -n cat "$SERVICE_USER_FILE" 2>/dev/null | head -n1 || true)"
+  fi
+  if ! valid_user_name "$name" && [ -n "${1:-}" ]; then
+    owner="$(stat -c %U "${1}/data" 2>/dev/null || true)"
+    [ "$owner" != root ] && name="$owner"
+  fi
+  valid_user_name "$name" || name="$DEFAULT_SERVICE_USER"
+  printf '%s\n' "$name"
+}
+
 installed_packages() { # every package dpkg has fully installed, one per line, sorted
   dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 2>/dev/null | awk '$1 == "ii" {print $2}' | sort
 }
@@ -125,27 +592,51 @@ forget_undo() { UNDO=(); }
 
 _run_undo() {
   [ ${#UNDO[@]} -gt 0 ] || return 0
-  printf '\n%sPutting things back%s\n' "$B" "$OFF" >&2
+  printf '\n%sPutting things back%s\n' "$E_B" "$E_OFF" >&2
   local i
   for (( i=${#UNDO[@]}-1 ; i>=0 ; i-- )); do
     log_line "undo: ${UNDO[i]}"
     if eval "${UNDO[i]}" >>"${LOG_FILE:-/dev/null}" 2>&1; then
       printf '  undone: %s\n' "${UNDO[i]}" >&2
     else
-      printf '  %scould not undo:%s %s\n' "$YEL" "$OFF" "${UNDO[i]}" >&2
+      printf '  %scould not undo:%s %s\n' "$E_YEL" "$E_OFF" "${UNDO[i]}" >&2
     fi
   done
   UNDO=()
 }
 
+# One line of a failure's explanation, on stderr: prose is wrapped, and a command is cyan.
+_detail() {
+  if [ -z "$1" ]; then
+    printf '\n'
+  elif _looks_like_command "$1"; then
+    printf '   '
+    _style_command "$E_CYN" "$E_DIM" "$E_OFF" "$1"
+    printf '\n'
+  elif [ "${1# }" = "$1" ]; then
+    wrap "   " "" "$1"
+  else
+    printf '   %s\n' "$1"
+  fi
+}
+
+# Where a run that did not finish got to, drawn before the words on what went wrong.
+_where_it_stopped() {
+  [ "$PROGRESS_TOTAL" -gt 0 ] || return 0
+  printf '\n' >&2
+  frame_bottom bad "$E_RED" "${E_DIM}${E_CYN}" "$E_DIM" "$E_OFF" >&2
+}
+
 die() { # die MESSAGE [MORE...] - a failure we diagnosed ourselves
   EXPLAINED=1
-  printf '\n%s✗ %s%s\n' "$RED" "$1" "$OFF" >&2
+  INDENT=""
+  _where_it_stopped
+  printf '\n%s%s %s%s\n' "$E_B$E_RED" "$S_BAD" "$1" "$E_OFF" >&2
   log_line "FAIL: $1"
   shift
   local line
   for line in "$@"; do
-    printf '   %s\n' "$line" >&2
+    _detail "$line" >&2
     log_line "   $line"
   done
   _report_tail
@@ -154,16 +645,20 @@ die() { # die MESSAGE [MORE...] - a failure we diagnosed ourselves
 }
 
 _report_tail() {
-  [ -n "$HINT" ] && printf '\n   %s\n' "$HINT" >&2
+  if [ -n "$HINT" ]; then
+    local line
+    printf '\n' >&2
+    while IFS= read -r line; do _detail "$line" >&2; done <<<"$HINT"
+  fi
   local again="${FAMILYDB_AGAIN:-$AGAIN}"
   if [ -n "$again" ]; then
-    printf '\n   %sWhen that is sorted, %s.%s It keeps everything that already worked\n' \
-      "$B" "$again" "$OFF" >&2
-    printf '   and carries on from where it stopped.\n' >&2
+    printf '\n' >&2
+    printf '   %sWhen that is sorted, %s%s\n' "$E_B" "$again" "$E_OFF" >&2
+    wrap "   " "" "It keeps everything that already worked and carries on from where it stopped." >&2
   fi
   if [ -n "$LOG_FILE" ]; then
-    printf '\n   The full transcript is at %s%s%s\n' "$B" "$LOG_FILE" "$OFF" >&2
-    printf '   Send that file if you need someone to look.\n' >&2
+    printf '\n   %sThe full transcript is at%s %s%s%s\n' "$E_DIM" "$E_OFF" "$E_B" "$LOG_FILE" "$E_OFF" >&2
+    printf '   %sSend that file if you need someone to look.%s\n' "$E_DIM" "$E_OFF" >&2
   fi
 }
 
@@ -173,7 +668,7 @@ FAILED_STEP=""
 _exit_trap() {
   local status=$?
   if [ "$status" -ne 0 ] && [ "$EXPLAINED" = 0 ]; then
-    printf '\n%s✗ stopped unexpectedly%s\n' "$RED" "$OFF" >&2
+    printf '\n%s%s stopped unexpectedly%s\n' "$E_B$E_RED" "$S_BAD" "$E_OFF" >&2
     [ -n "$FAILED_STEP" ] && printf '   while: %s\n' "$FAILED_STEP" >&2
     printf '   exit code %s\n' "$status" >&2
     _report_tail
@@ -206,36 +701,30 @@ try_step() {
 }
 
 _run_step() {
-  local what="$1" fatal="$2"; shift 2
+  local what="$1" fatal="$2" began=$SECONDS; shift 2
   if [ "$DRY_RUN" = 1 ]; then
-    note "[dry run] ${what}"
+    _dry_line "$what"
     log_line "would run: $*"
     return 0
   fi
   FAILED_STEP="$what"
   log_line "step: $what :: $*"
-  # `|| status=$?`: under `set -e` a bare failing substitution would exit before the report runs,
-  # and `if ! ...` would make $? the negation, always 0.
-  local output status=0
-  output="$("$@" 2>&1)" || status=$?
+  # `|| status=$?` inside _capture: under `set -e` a bare failing substitution would exit before the
+  # report runs, and `if ! ...` would make $? the negation, always 0.
+  _capture "$what" "$@"
+  local output="$_OUT" status="$_STATUS"
   if [ -n "$output" ]; then
     printf '%s\n' "$output" >>"${LOG_FILE:-/dev/null}" 2>/dev/null || true
   fi
   if [ "$status" = 0 ]; then
-    ok "$what"
+    _step_done "$what" "$(_took $((SECONDS - began)))"
     FAILED_STEP=""
     return 0
   fi
   if [ "$fatal" = 1 ]; then
     EXPLAINED=1
-    printf '\n%s✗ %s%s\n' "$RED" "$what — failed" "$OFF" >&2
-    printf '   command: %s\n' "$*" >&2
-    printf '   exit code: %s\n' "$status" >&2
-    if [ -n "$output" ]; then
-      printf '   what it said:\n' >&2
-      printf '%s\n' "$output" | tail -12 | sed 's/^/     /' >&2
-      diagnose "$output" || true
-    fi
+    _failure "$what — failed" "$status" "$output" "$*" 12 "what it said:"
+    diagnose "$output" || true
     log_line "FAIL: $what (exit $status)"
     _report_tail
     _run_undo
@@ -250,11 +739,41 @@ _run_step() {
   return "$status"
 }
 
+# A step that went as expected can say nothing, when a line of the caller's says it better: with
+# STEP_QUIET set, only what went wrong is shown (the log has all of it).
+_step_done() { # _step_done WHAT [SUFFIX]
+  if [ -n "${STEP_QUIET:-}" ]; then
+    log_line "ok: $1${2:+ $2}"
+  else
+    _ok_line "$1" "${2:-}"
+  fi
+}
+
+_dry_line() { # what a step would have done, in a dry run
+  printf '%s%s%s %s — dry run, not done%s\n' "$INDENT" "$DIM" "$S_OFF" "$1" "$OFF"
+}
+
+_took() { # _took SECONDS - how long a step took, said only when it was long enough to notice
+  [ "$1" -lt 3 ] || fmt_secs "$1"
+}
+
+_failure() { # _failure HEADLINE STATUS OUTPUT COMMAND LINES LABEL - what stopped, and what it said
+  INDENT=""
+  _where_it_stopped
+  printf '\n%s%s %s%s\n' "$E_B$E_RED" "$S_BAD" "$1" "$E_OFF" >&2
+  printf '   %scommand:%s %s\n' "$E_DIM" "$E_OFF" "$4" >&2
+  printf '   %sexit code:%s %s\n' "$E_DIM" "$E_OFF" "$2" >&2
+  if [ -n "$3" ]; then
+    printf '   %s%s%s\n' "$E_DIM" "$6" "$E_OFF" >&2
+    printf '%s\n' "$3" | tail -n "$5" | sed 's/^/     /' >&2
+  fi
+}
+
 # `retry N "What" cmd...` for the network. Waits 2, 4, 8... s: a VPS just booted may lack DNS.
 retry() {
-  local tries="$1" what="$2"; shift 2
+  local tries="$1" what="$2" began=$SECONDS; shift 2
   if [ "$DRY_RUN" = 1 ]; then
-    note "[dry run] ${what}"
+    _dry_line "$what"
     log_line "would run: $*"
     return 0
   fi
@@ -262,28 +781,22 @@ retry() {
   while : ; do
     FAILED_STEP="$what (attempt ${attempt})"
     log_line "try ${attempt}/${tries}: $what :: $*"
-    status=0
-    output="$("$@" 2>&1)" || status=$?
+    _capture "$what" "$@"
+    output="$_OUT"; status="$_STATUS"
     [ -n "$output" ] && { printf '%s\n' "$output" >>"${LOG_FILE:-/dev/null}" 2>/dev/null || true; }
     if [ "$status" = 0 ]; then
-      ok "$what"
+      _step_done "$what" "$(_took $((SECONDS - began)))"
       FAILED_STEP=""
       return 0
     fi
     if [ "$attempt" -ge "$tries" ]; then
       EXPLAINED=1
-      printf '\n%s✗ %s — failed %s times%s\n' "$RED" "$what" "$tries" "$OFF" >&2
-      printf '   command: %s\n' "$*" >&2
-      printf '   exit code: %s\n' "$status" >&2
-      if [ -n "$output" ]; then
-        printf '   what it said the last time:\n' >&2
-        printf '%s\n' "$output" | tail -12 | sed 's/^/     /' >&2
-      fi
+      _failure "$what — failed ${tries} times" "$status" "$output" "$*" 12 "what it said the last time:"
       if ! diagnose "${output:-}"; then
-        printf '\n   %sWhat this means:%s it needs the network and could not get there.\n' "$B" "$OFF" >&2
-        printf '   %sWhat to try:%s\n' "$B" "$OFF" >&2
-        printf '     curl -fsS https://pypi.org/simple/ >/dev/null && echo reachable\n' >&2
-        printf '     ping -c1 1.1.1.1\n' >&2
+        printf '\n   %sWhat this means:%s it needs the network and could not get there.\n' "$E_B" "$E_OFF" >&2
+        printf '   %sWhat to try:%s\n' "$E_B" "$E_OFF" >&2
+        _detail "  curl -fsS https://pypi.org/simple/ >/dev/null && echo reachable" >&2
+        _detail "  ping -c1 1.1.1.1" >&2
       fi
       log_line "FAIL: $what after ${tries} attempts (exit $status)"
       _report_tail
@@ -341,11 +854,11 @@ diagnose() { # diagnose "<the command's output>"
   local text="$1" matched=0
   _explain() { # _explain "meaning" "how to check" "how to fix"...
     matched=1
-    printf '\n   %sWhat this means:%s %s\n' "$B" "$OFF" "$1" >&2
+    printf '\n   %sWhat this means:%s %s\n' "$E_B" "$E_OFF" "$1" >&2
     shift
-    printf '   %sWhat to try:%s\n' "$B" "$OFF" >&2
+    printf '   %sWhat to try:%s\n' "$E_B" "$E_OFF" >&2
     local line
-    for line in "$@"; do printf '     %s\n' "$line" >&2; done
+    for line in "$@"; do _detail "  $line" >&2; done
   }
 
   case "$text" in
@@ -383,6 +896,11 @@ diagnose() { # diagnose "<the command's output>"
         "For a deploy key: ssh -T git@github.com -i <the key>   # should name the repository" \
         "For a token: it needs read access to this repository and must not have expired." \
         "docs/INSTALL.md, 'Other ways to get the code onto the server', has the whole flow." ;;
+    *"No such file or directory"*)
+      _explain "A program or file this step needs is not there." \
+        "ls -ld <the path it named>    # does it exist, and who can see it?" \
+        "command -v <the program>      # is it installed where the service account looks?" \
+        "A tool installed into one person's home directory cannot be seen by anyone else." ;;
     *"Permission denied"*|*"Operation not permitted"*)
       _explain "The account running this may not touch that file or directory." \
         "ls -ld <the path it named>    # who owns it, and what the mode is" \
@@ -424,20 +942,20 @@ plan_untouched() { PLAN_UNTOUCHED+=("$1"); }
 
 plan_is_empty() { [ ${#PLAN_WHAT[@]} -eq 0 ]; }
 
-show_plan() { # show_plan "heading"
+show_plan() { # show_plan "heading" - the numbered steps, why each, and what stays alone
   plan_is_empty && return 0
   head2 "${1:-What this will change on this machine}"
   local i
   for i in "${!PLAN_WHAT[@]}"; do
-    printf '  %s%s%s\n' "$B" "${PLAN_WHAT[i]}" "$OFF"
-    printf '      %swhy: %s%s\n' "$DIM" "${PLAN_WHY[i]}" "$OFF"
+    printf '  %s%d%s  %s%s%s\n' "$CYN" $((i + 1)) "$OFF" "$B" "${PLAN_WHAT[i]}" "$OFF"
+    wrap "     " "$DIM" "${PLAN_WHY[i]}"
     log_line "plan: ${PLAN_WHAT[i]} :: ${PLAN_WHY[i]}"
   done
+  local item
   if [ ${#PLAN_UNTOUCHED[@]} -gt 0 ]; then
     printf '\n  %sIt does not touch:%s\n' "$DIM" "$OFF"
-    local item
     for item in "${PLAN_UNTOUCHED[@]}"; do
-      printf '      %s· %s%s\n' "$DIM" "$item" "$OFF"
+      WRAP_FIRST="    ${S_DOT} " wrap "      " "$DIM" "$item"
     done
   fi
   printf '\n'
@@ -445,8 +963,12 @@ show_plan() { # show_plan "heading"
 
 # Announce one system-level change as it happens: what, and why, in a sentence.
 system_change() { # system_change "what" "why"
-  printf '  %s→%s %s\n' "$B" "$OFF" "$1"
-  printf '    %s%s%s\n' "$DIM" "$2" "$OFF"
+  if [ "${DRY_RUN:-0}" = 1 ]; then
+    _dry_line "$1"
+  else
+    printf '%s%s%s%s %s%s%s\n' "$INDENT" "$CYN" "$S_GO" "$OFF" "$B" "$1" "$OFF"
+  fi
+  wrap "${INDENT}  " "$DIM" "$2"
   log_line "change: $1 :: $2"
 }
 
@@ -454,11 +976,13 @@ system_change() { # system_change "what" "why"
 #
 #   confirm  — a preference, where --yes means "take the default you offered".
 #   approve  — an action that needs someone to say so, where --yes means yes. With no terminal
-#              and no --yes there is nobody to ask, so it is a no.
-approve() { # approve "question"
-  local question="$1" reply
+#              and no --yes there is nobody to ask, so it is a no. Enter takes the default, which
+#              is yes for what a person does every week and no for what cannot be undone.
+approve() { # approve "question" [yes|no]
+  local question="$1" default="${2:-no}" reply hint="y/N"
+  [ "$default" != yes ] || hint="Y/n"
   if [ "${ASSUME_YES:-0}" = 1 ]; then
-    note "${question} — yes, because --yes was given."
+    log_line "approved by --yes: ${question}"
     return 0
   fi
   if [ ! -t 0 ]; then
@@ -466,8 +990,13 @@ approve() { # approve "question"
     note "There is no terminal here to answer, so the answer is no. Pass --yes if you mean it."
     return 1
   fi
-  read -r -p "${question} [y/N]: " reply || reply=""
-  case "$reply" in [Yy]*|yes) return 0 ;; *) return 1 ;; esac
+  read -r -p "${CYN}?${OFF} ${B}${question}${OFF} [${hint}]: " reply || reply=""
+  case "$reply" in
+    [Yy]*) return 0 ;;
+    [Nn]*) return 1 ;;
+    '') [ "$default" = yes ] ;;
+    *) return 1 ;;
+  esac
 }
 
 confirm() { # confirm "question" yes|no  - honours ASSUME_YES and a missing terminal
@@ -476,6 +1005,35 @@ confirm() { # confirm "question" yes|no  - honours ASSUME_YES and a missing term
   read -r -p "$question [$([ "$default" = yes ] && echo 'Y/n' || echo 'y/N')]: " reply || reply=""
   reply="${reply:-$default}"
   case "$reply" in [Yy]*|yes) return 0 ;; *) return 1 ;; esac
+}
+
+# `familydb doctor` prints "MARK name: detail" for each finding, "    → fix" under any that is not fine,
+# and its verdict last. This colours that, and counts it. "problems" shows only what is not fine, for
+# a run that has something else to say first, "failures" only what must be fixed, "count" nothing at all; "all" shows the lot. The counts are left in
+# DOCTOR_FINE, DOCTOR_WARN and DOCTOR_BAD, and its own last line in DOCTOR_VERDICT.
+DOCTOR_FINE=0; DOCTOR_WARN=0; DOCTOR_BAD=0; DOCTOR_VERDICT=""
+# shellcheck disable=SC2034  # the counts and the verdict are read by the scripts that source this file.
+show_doctor() { # show_doctor all|problems|failures|count "the report"
+  local mode="$1" report="$2" line showing=0 last=""
+  DOCTOR_FINE=0; DOCTOR_WARN=0; DOCTOR_BAD=0; DOCTOR_VERDICT=""
+  while IFS= read -r line; do
+    case "$line" in
+      "✓ "*) DOCTOR_FINE=$((DOCTOR_FINE + 1)); showing=0
+             [ "$mode" = all ] && { showing=1; printf '  %s%s%s %s\n' "$GRN" "$S_OK" "$OFF" "${line#✓ }"; } ;;
+      "! "*) DOCTOR_WARN=$((DOCTOR_WARN + 1)); showing=0
+             case "$mode" in all|problems) showing=1; printf '  %s%s%s %s\n' "$YEL" "$S_WARN" "$OFF" "${line#! }" ;; esac ;;
+      "✗ "*) DOCTOR_BAD=$((DOCTOR_BAD + 1)); showing=0
+             [ "$mode" = count ] || { showing=1; printf '  %s%s%s %s%s%s\n' "$RED" "$S_BAD" "$OFF" "$B" "${line#✗ }" "$OFF"; } ;;
+      "· "*) showing=0
+             [ "$mode" = all ] && { showing=1; printf '  %s%s %s%s\n' "$DIM" "$S_DOT" "${line#· }" "$OFF"; } ;;
+      "→ "*|"    →"*) [ "$showing" = 1 ] && printf '      %s%s%s\n' "$CYN" "${line#"${line%%→*}"}" "$OFF" ;;
+      "") ;;
+      *) last="$line"
+         [ "$mode" = all ] && printf '  %s%s%s\n' "$DIM" "$line" "$OFF" ;;
+    esac
+    [ "$mode" = count ] || log_line "doctor: $line"
+  done <<<"$report"
+  case "$last" in [0-9]*|*"WARNING"*|*"ERROR"*) ;; *) DOCTOR_VERDICT="$last" ;; esac
 }
 
 # While CHANGELOG.md's newest heading says "in progress" an install follows the default branch;

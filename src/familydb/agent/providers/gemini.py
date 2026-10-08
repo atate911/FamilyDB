@@ -121,6 +121,7 @@ class GeminiProvider:
     def __init__(self, settings: Settings, api: Any = None) -> None:
         self.settings = settings
         self._api = api
+        self._client: Any = None
 
     def configured(self) -> bool:
         return self._api is not None or bool(self.settings.gemini_api_key)
@@ -128,7 +129,10 @@ class GeminiProvider:
     @property
     def api(self) -> Any:
         if self._api is None:
-            self._api = make_client(self.settings).models
+            # Keep the Client itself: its finalizer closes the HTTP client that `.models` shares,
+            # so letting it go leaves every later request failing with "client has been closed".
+            self._client = make_client(self.settings)
+            self._api = self._client.models
         return self._api
 
     def model_for(self, surface: Surface) -> str:
@@ -201,6 +205,8 @@ class GeminiProvider:
             config["tool_config"] = {"include_server_side_tool_invocations": True}
         if tools:
             config["tools"] = tools
+            # Our loop runs the tools; the SDK's own would only warn about non-callables.
+            config["automatic_function_calling"] = {"disable": True}
         return {key: value for key, value in config.items() if value is not None}
 
     def payload(self, request: TurnRequest) -> dict[str, Any]:

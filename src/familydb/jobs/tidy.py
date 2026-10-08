@@ -9,7 +9,8 @@ security; 0, for good, unless they choose), the words of every message older tha
 emptied (`messages.forget_words`): the row stays, since replies, reminders, memories, wishes and
 calls point at it. The words of model calls kept for the Troubleshooting pages go after
 `keep_ai_text_days`, or with the messages' words if those go sooner, and so does the problem log
-past its month. Nothing to do costs a query or two."""
+past its month. Knocks from strangers past their month and Telegram links past their day go too.
+Nothing to do costs a query or two."""
 
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ from datetime import timedelta
 
 from familydb.app import App
 from familydb.dates import utc_iso
-from familydb.store import ai_texts, ideas, messages, problems
+from familydb.store import ai_texts, ideas, invites, knocks, messages, problems
 from familydb.store.db import transaction
 from familydb.tools import ToolContext
 
@@ -40,6 +41,7 @@ def run_tidy(app: App) -> int:
     if settings.keep_messages_days:
         forget_old_words(app, settings.keep_messages_days)
     forget_old_texts(app)
+    forget_stale_callers(app)
     if not settings.tidy_ideas:
         return 0
     before = (app.clock.today() - timedelta(days=GRACE_DAYS)).isoformat()
@@ -57,6 +59,15 @@ def run_tidy(app: App) -> int:
     if taken_off:
         log.info("tidy: took %d idea(s) off the list, their dates past", taken_off)
     return taken_off
+
+
+def forget_stale_callers(app: App) -> int:
+    """Drop strangers' knocks past their month and Telegram links past their day, which are
+    otherwise only dropped when the next one is made."""
+    with closing(app.connect()) as conn, transaction(conn):
+        gone = knocks.forget_old(conn, app.clock.now())
+        gone += invites.forget_expired(conn, utc_iso(app.clock.now()))
+    return gone
 
 
 def forget_old_texts(app: App) -> int:

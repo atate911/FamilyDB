@@ -436,10 +436,12 @@ def give_up(conn: sqlite3.Connection, message_id: int) -> None:
     conn.execute("UPDATE messages SET give_up = 1 WHERE id = ?", (message_id,))
 
 
-def reset_retries(conn: sqlite3.Connection) -> int:
-    """Make every failed message eligible for retry again."""
+def reset_retries(conn: sqlite3.Connection, *, max_retries: int) -> int:
+    """New tries for a failed message that ran out of them; one given up on purpose stays so."""
     cur = conn.execute(
-        "UPDATE messages SET retries = 0, give_up = 0 WHERE status = 'failed' AND direction = 'in'"
+        "UPDATE messages SET retries = 0 WHERE status = 'failed' AND direction = 'in' "
+        "AND give_up = 0 AND retries >= ?",
+        (max_retries,),
     )
     return int(cur.rowcount)
 

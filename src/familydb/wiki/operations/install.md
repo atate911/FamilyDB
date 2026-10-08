@@ -47,6 +47,7 @@ The web page opens on [Setup](/wiki/controls/setup): seven short steps, each say
 - A domain name: Add an A record at your registrar pointing at the server, then type the name when the installer asks, or later run `sudo /opt/familydb/scripts/maintain.sh https family.example.com`.
 - Keep the web page off the internet: Add `--local-only` to the `bootstrap.sh` line. You then reach the web page through an SSH tunnel, opened from your own computer and not the server: `ssh -L 8080:127.0.0.1:8080 you@server`, then `http://127.0.0.1:8080/` in a browser on that computer. `maintain.sh https` moves you to a public link later.
 - Docker instead of a virtualenv: Add `--mode docker`. Docker is installed for you, and FamilyDB and Caddy run as containers instead of a [systemd](/wiki/reference/glossary#systemd) service. Without a domain the web page is reachable from the server only. [The server](/wiki/operations/host#docker-instead) lists what runs.
+- Another account name: Add `--user NAME` (lowercase letters, digits, `-` and `_`, starting with a letter) to the `bootstrap.sh` line. The installer makes that account if it is missing and uses it for the service, `data/` and `.env`. It writes the name to `/var/lib/familydb-install/service-user`, which `maintain.sh` and `uninstall.sh` read back; without that file they use the owner of `data/`, then `familydb`.
 - Other options: `--dry-run` changes nothing and says what would happen. `--ref` installs a particular tag, branch or commit. `--yes` takes every default. `bootstrap.sh --help` lists them all.
 
 Without `--ref`, the version depends on `CHANGELOG.md`; see [Which version it moves to](/wiki/operations/upgrade-and-rollback#which-version-it-moves-to).
@@ -56,7 +57,7 @@ Without `--ref`, the version depends on `CHANGELOG.md`; see [Which version it mo
 It lists every change and asks before it makes any, apart from the key and `git` in step 1. In short, it:
 
 - installs the packages it needs (git, curl, ca-certificates, tzdata, and uv, Caddy, cron or Docker when you need them);
-- creates a `familydb` account with no password and no login, so FamilyDB runs without root;
+- creates a `familydb` account (or the one you name with `--user`) with no password and no login, so FamilyDB runs without root;
 - puts the program, `.env` and the database in `/opt/familydb`;
 - writes and enables the systemd service, so FamilyDB starts at boot;
 - adds a nightly backup at 03:15 to root's crontab;
@@ -80,7 +81,7 @@ Each line starts with `✓` (fine), `!` (worth reading), `✗` (must be fixed) o
 sudo /opt/familydb/scripts/maintain.sh status
 ```
 
-A virtualenv install shows `Service: active, enabled at boot` and `Scheduled: a nightly backup is in root's crontab`; Docker shows `Runs as: Docker containers`. `Last backup` reads `No backups` until the first run at 03:15; `maintain.sh backup` takes one now.
+The top line says whether it is running and well. A virtualenv install shows `Service` as running and starting at boot, and `Schedule` as nightly at 03:15 in root's crontab; Docker shows `Runs as` Docker containers and a row for each container. `Last backup` reads `none yet` (with a command to take one) until the first run at 03:15; `maintain.sh backup` takes one now. What is not well is listed under **Needs attention**, with the commands that fix it.
 
 3. After setup steps 1 and 3 (you, and a model), open Chat on the web page and send `hello`. The assistant answers. If nothing comes back, see [A message got no reply](/wiki/operations/troubleshooting#a-message-got-no-reply).
 
