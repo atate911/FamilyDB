@@ -212,9 +212,11 @@ older than what is installed. It gets a date when it is released.
   favorite, something new and a wildcard, each with a reason; Vera says them.
   Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
   a kid's question or one about right now.
-- **Plainer words in the upgrade.** The upgrade no longer says migrations "never
+- **Plainer words in the scripts.** The upgrade no longer says migrations "never
   rewrite" what is there: they can, so it says the backup taken first covers it and
-  that going back means restoring that backup.
+  that going back means restoring that backup. `uninstall.sh --help` now says the
+  one last backup `--purge` takes stays outside the install, instead of "Nothing is
+  left".
 
 
 ## v0.2.0 — second alpha (2026-10-05)

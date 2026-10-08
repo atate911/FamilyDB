@@ -42,7 +42,10 @@ What is removed
                        Kept: .env, data/ (the database, the Google key, the login key),
                        backups/ and caddy/. Reinstalling over this picks up where it left off.
   --purge              All of the above, and everything that was kept: the database, the
-                       configuration, the backups and the service user. Nothing is left.
+                       configuration, the backups inside the install and the service user.
+                       It first takes one last backup of the database, written outside the
+                       install (in /var/backups/familydb, or --backup-to DIR) and left there;
+                       backups kept anywhere else are not touched. --no-backup skips it.
   --from-zero          All of --purge, and everything the install did around it, so the server is
                        as it was before FamilyDB: what its ledger in /var/lib/familydb-install
                        recorded (packages it added, files, links, accounts, cron lines, firewall

@@ -99,3 +99,21 @@ def test_upgrade_does_not_promise_migrations_leave_data_alone():
     script = (ROOT / "scripts/maintain.sh").read_text()
     assert "never rewrite what is already there" not in script
     assert "some rewrite what is in it" in script
+
+
+def test_uninstall_help_says_the_last_backup_stays():
+    if not BASH:
+        pytest.skip("bash required for shell integration")
+    out = subprocess.run(
+        [BASH, (ROOT / "scripts/uninstall.sh").as_posix(), "--help"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert "Nothing is left" not in out
+    assert "one last backup" in out
+    flat = " ".join(out.split())
+    assert "written outside the install" in flat and "and left there" in flat
+    # The words the run prints beside it.
+    script = (ROOT / "scripts/uninstall.sh").read_text()
+    assert "written outside ${TARGET} and left there" in script
