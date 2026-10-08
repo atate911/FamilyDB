@@ -1,10 +1,11 @@
 # The models page, redesigned
 
-A proposal for the settings page where an admin decides which model does what. **Nothing here is
-built.** What exists is an interactive mockup (`docs/models-page/mockup.html`, three screenshots
-beside it) that was operated by script and by hand, and this document: why, what, which of the
-family's decisions it touches, and what would have to change in the code. `docs/AI_CALLS.md` says
-how every model call is framed; this is about how an admin sees and steers them.
+The settings page where an admin decides which model does what. **It is built** (`/settings/model`;
+`web/models_page.py`, `web/templates/settings/model.html`, `static/models.css`, `static/models.js`,
+`agent/uses.py`). It was designed as an interactive mockup (`docs/models-page/mockup.html`, three
+screenshots beside it, a snapshot that is no longer kept in step) and put to the family, who chose it;
+this document is why, what, which of the family's decisions it touched, and how it is built.
+`docs/AI_CALLS.md` says how every model call is framed; this is about how an admin sees and steers them.
 
 ## Why
 
@@ -78,41 +79,55 @@ chosen on the row, and everything else a click away.
 
 ![A row opened, with Compare](models-page/row-open.png)
 
-## What it would take
+## How it is built
 
-Phased so each step ships on its own.
-
-### 1. Resolution (no new page)
+### 1. Resolution (`agent/uses.py`)
 
 - **One choice per row**, stored as `same:<row>`, `off` or `<company>:<model>`, replacing `chat_level`,
   `digest_level`, `lookup_level`, `judgement_level`, `choose_level` and the everyday boxes. Existing
   installs are read forward from their old settings, so nothing changes on upgrade. The everyday,
   better and best lineup stays, because stand-ins, presets and switching company use it.
 - **`gateway.KINDS`** gains the row each kind belongs to; `gateway.answering` resolves through it.
-- **Per-row thinking effort**, replacing `effort` and `worker_effort`.
+- **Per-row thinking effort** (`Settings.use_effort`), laid over `effort` and `worker_effort`, which
+  stay on Spending as what a row uses when it says nothing.
 - **Companies come from the registry.** The cards, the company dropdowns and "Use for everything" list
   `companies.every(settings)` (`docs/COMPANIES.md`), so a company an admin has added is a card and an
   option like the three built in, greyed where it cannot do a row (an added company has no hosted
   search, so it is not offered for the lookup rows).
-- **Per company**: allowed, may stand in, and a monthly limit, checked in `spending.admit` beside the
-  existing budgets and counted from `llm_calls`. Stand-in goes to the first allowed company that may,
-  which replaces the single `provider_fallback` switch.
-- **An unavailable company can be chosen.** Today `fields.py` says a company without a key cannot be
-  chosen. That rule changes: a call to one goes to the stand-in, or is kept and retried when none
-  may. `ready()`, `worth_switching` and their tests change with it.
+- **Per company** (`Settings.company_options`): allowed, may stand in, and a monthly limit, checked in
+  `spending.admit(company=)` beside the existing budgets and counted from `llm_calls`. Stand-in goes
+  to the first company, in the order a spare is looked for, that has a key, is allowed and may, and
+  can do the use; where a company has not been told, `provider_fallback` still says for the three
+  built in. A stand-in is per company, not per row: the mockup's per-row "If it cannot answer" box is
+  a line saying who stands in.
+- **An unavailable company can be chosen.** A call to one goes to the stand-in (`providers.Withheld`
+  stands in the chosen company's place, so the loop's one-move-before-any-tool rule is unchanged), or
+  waits for the retry job when none may.
 
-### 2. The page
+### 2. The page (`web/models_page.py`)
 
-Server-rendered rows and dropdowns; the cost series is local (`store/calls.py`, a query per kind per
-day, then `prices.cost` at each candidate). No page view calls a model.
+Server-rendered rows and dropdowns; the cost series is local (`store/calls.py` `usage_rows`, the last
+30 days by the family's day, then `prices.cost` at every candidate model). A use with no calls in the
+window is priced at `TYPICAL_MONTH`, a family of four's, and says so. No page view calls a model.
 
-- **Without scripts** every form still posts. Seeing a change's cost before saving would be a
-  **Show cost** button that re-renders with the choices applied; with scripts it is live.
-- **Under the content policy** the mockup's `<style>` and `<script>` move to `static/` files, bars
-  are SVG attributes, and tooltips are plain elements.
-- The sticky bar is the existing `.save-bar`. The model page used `still` only because it had two
-  forms; here one form covers the rows, and a key is saved from its own fold because the company
-  checks it first.
+- **Without scripts** every form still posts: each row is one dropdown of every model, grouped by
+  company (the field a script fills from the company and model pair, so Save sends the same
+  thing), and costs are the saved ones. The mockup's **Show cost** button was left out: costs show
+  after Save. **Presets** and **Use for everything** only fill the form, so they are the script's.
+- **The browser gets one JSON document** (`data-models`, a data attribute, not a script block, since
+  the content policy and `tests/test_static.py` allow no inline script): every option's cost for each
+  of the 30 days. `models.js` adds and subtracts, so the page and the daily limit never disagree.
+- **A default is stored as nothing.** A choice equal to what the older settings say (`uses.default_choice`)
+  is not stored, so the row keeps following whatever it follows; a default that follows another
+  use's company (choosing suggestions follows chat's) is also sent as its value for each company, so
+  the page can move it before anything is saved.
+- **Settings the page replaced** (`fields.LEGACY`: `provider`, `worker_provider`, `provider_fallback`,
+  the `*_level`s, the on-off toggles, the hearing models) are still read, are drawn nowhere, and
+  `tests/test_settings_page.py` holds every other setting to exactly one page. A cap that is on another
+  page's setting (`happening_budget`) is shown here with a link, not drawn twice.
+- The sticky bar is the existing `.save-bar`; one form covers the rows, and a key is saved from its
+  own fold, as before. **Check** on a company's card (`POST /settings/models/check/<slug>`) asks the
+  company whether the saved key works and saves nothing.
 
 ### 3. Later, each on evidence
 
@@ -120,9 +135,10 @@ The model list from what each company's key may use (the daily check's `listed_m
 models inside a row; eval results beside a model (`python -m evals` exists, but covers only chat and
 choosing today).
 
-## Decisions it touches
+## Decisions it touched
 
 `CLAUDE.md` says a family decision changes only by asking the family and saying what it costs or gains.
+These were put to the family with the mockup and chosen; `docs/DESIGN.md` section 16 records them.
 
 | Decision (`docs/DESIGN.md` §16) | Change | Cost or gain |
 |---|---|---|
@@ -143,8 +159,8 @@ choosing today).
 
 ## Conventions this departs from
 
-`docs/STYLE.md` is a record, not a fence, and these are chosen for the page. `STYLE.md` would be
-updated in the PR that builds it.
+`docs/STYLE.md` is a record, not a fence, and these are chosen for the page. `STYLE.md` records
+them under Settings.
 
 - Controls in the table are about 40 pixels, not 44, because eight rows of two dropdowns need the
   density (WCAG 2.2's minimum target is 24).
@@ -170,20 +186,23 @@ from `static/style.css`, and the PR that builds the page replaces it.
   empty fold; no sideways scrolling at 400 pixels.
 - **Not checked:** a screen reader, touch hardware, other browsers.
 
-## Open questions
+## Settled while building it
 
-- Is a per-company monthly limit wanted? The app has a daily limit and budgets for choosing, weighing
-  and looking for what is on, but none per company.
-- Should **Use for everything** also move the rows that follow another, or only those set on their own?
-  The mockup leaves followers following.
-- Where do the lineup of everyday, better and best and the daily check live once the page is rows:
-  here, or on Status beside Models and prices?
+- A per-company monthly limit is built (`CompanyOptions.monthly_limit`).
+- **Use for everything** leaves rows that follow another following, and rows the company cannot do as
+  they were; it says which.
+- The lineup and the daily check live on this page, folded under **More settings**, with Status
+  linking to them.
+
+## Still open
+
 - Should an unsaved row be marked beyond its difference, and how loudly?
 - Are per-call models inside a row worth their cost in controls?
+- Eval results beside a model, when `python -m evals` covers more than chat and choosing.
 
-## Documents to update when it is built
+## Where it is written down
 
-`src/familydb/wiki/controls/settings/ai-model.md` and `controls/status/models-and-prices.md`;
-`docs/AI_CALLS.md` ("Choosing models"); `docs/DESIGN.md` §16; `docs/STYLE.md`; `CLAUDE.md`
-(the `gateway`, `providers` and `web/` lines); and the tests that hold the catalog, the settings page
-(every setting on exactly one page), and the gateway.
+`src/familydb/wiki/controls/settings/ai-model.md`; `docs/AI_CALLS.md` ("Choosing models");
+`docs/DESIGN.md` section 16; `docs/STYLE.md` (the conventions it departs from); `CLAUDE.md` (the
+`agent/` and `web/` lines); `docs/COMPANIES.md`. Held by `tests/test_uses.py`,
+`tests/test_company_options.py`, `tests/test_models_page.py` and the settings page tests.

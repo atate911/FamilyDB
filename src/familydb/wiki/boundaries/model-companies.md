@@ -12,17 +12,22 @@ What each kind of call carries is on [What leaves the house](/wiki/security/what
 
 ## Which company does which job
 
-| Job | Company | Setting |
+Each of eight things the assistant does has a company and a model of its own, chosen on the rows of [AI model](/wiki/controls/settings/ai-model#what-does-what). With nothing chosen a row answers as the older settings say, shown in the table.
+
+| Job (row) | When nothing is chosen | Older setting it falls back to |
 |---|---|---|
-| Chat, answering again after a failure, the weekend ideas | The one you chose | `provider` (OpenAI by default) |
-| Looking ideas up, searching for what is on, checking a disputed price | The lookup company | `worker_provider`; empty means `provider` |
-| Weighing a change in the models (off unless `judgements` is on) | The lookup company, at `judgement_level` (best by default) | `worker_provider` |
-| Voice notes | The one you chose, else the chat company if it can hear | `transcribe_provider`; Claude cannot hear, so another company with a key is asked |
-| Photos | The lookup company, with its lookup model | none |
+| Chat, answering again after a failure (**Answering the family**) | The company you chose at setup, OpenAI by default | `provider`, `chat_level` |
+| The weekend ideas (**The weekend digest**) | The same model as chat while the strengths agree | `digest_level` |
+| Choosing what to suggest (**Choosing suggestions**) | The chat company, at best, while choosing is on | `choosing`, `choose_level` |
+| Looking ideas up, checking a disputed price (**Looking things up**) | The lookup company | `worker_provider` (empty means `provider`), `lookup_level` |
+| Searching for what is on near home (its row, under the family's own name for it) | The same as looking things up | |
+| Voice notes (**Voice notes**) | The chat company if it can hear, else another with a key | `transcribe_provider`, `voice_notes`; Claude cannot hear |
+| Photos (**Photos**) | The same as looking things up | `photos` |
+| Weighing a change in the models (**Weighing changes**) | Off until a model is chosen | `judgements`, `judgement_level` |
 
 ## A second company
 
-With `provider_fallback` on (the default), a second company answers when the first cannot. It is the first of Anthropic, OpenAI and Gemini, in that order, that is not the one that failed and has a key. It answers at the same [level](/wiki/reference/glossary#level), and the spending limit is reserved again at its price.
+A second company answers when the first cannot: the first of Anthropic, OpenAI and Gemini (then any [added company](/wiki/controls/settings/ai-model#other-companies), in the order added), in that order, that is not the one that failed, has a key, is let to answer and may stand in. Each company's **May stand in** is on [AI model](/wiki/controls/settings/ai-model#companies); where a company has not said, `provider_fallback` (on by default) says for the three built in. It answers at the same [level](/wiki/reference/glossary#level) as the model chosen (everyday for one the lineup has no place for), and the spending limit is reserved again at its price. A company over its monthly limit is passed over the same way.
 
 A turn moves only on its first call, before any tool has run. After that a tool may already have saved an idea or written to the calendar, and starting again elsewhere would do it twice, so the turn stays failed for the retry job. It moves when the first company is busy, unreachable, out of credit, refusing the key or missing the model, or has no key. It does not move for a request refused as written, which would fail the same way. A voice note or photo is one request, and the next company able to take it is tried for the same failures. Neither is retried later, since the recording and picture are not kept.
 
@@ -60,12 +65,12 @@ When a 400's text names a part of the request that FamilyDB sent (a thinking set
 
 ## Voice notes and photos
 
-OpenAI hears with `gpt-4o-mini-transcribe` unless you change `openai_transcribe_model`. Gemini hears with `gemini_transcribe_model`, else its lookup model. Claude hears nothing. All three look at a photo with their lookup model. The limits on size and length are on [AI model](/wiki/controls/settings/ai-model#voice-notes-and-photos).
+OpenAI hears with `gpt-4o-mini-transcribe` unless you choose another model on the **Voice notes** row (or set `openai_transcribe_model`). Gemini hears with `gemini_transcribe_model`, else its lookup model. Claude hears nothing. All three look at a photo with the model chosen on the **Photos** row, by default their lookup model. The limits on size and length are on [AI model](/wiki/controls/settings/ai-model#voice-notes-and-photos).
 
 ## The daily check
 
 Each day at 05:17 FamilyDB asks every company with a key which models the key may use, and reads two public price lists. Neither request carries anything of the family. [Models and prices](/wiki/controls/status/models-and-prices#what-the-daily-check-does) says what the check does with them, and [Weather, maps and price lists](/wiki/boundaries/weather-and-maps#the-price-lists) says where the lists come from.
 
-Adding a company is developer work, described in the developer docs.
+A company beyond these three, such as OpenRouter, is added on the AI model page ([Other companies](/wiki/controls/settings/ai-model#other-companies)) and spoken to by one adapter for the OpenAI chat protocol. It cannot search the web, hear or look at photos.
 
 Developer docs: src/familydb/agent/providers/, src/familydb/agent/gateway.py, src/familydb/agent/loop.py, src/familydb/model_watch.py, src/familydb/alerts.py; docs/AI_CALLS.md; docs/DESIGN.md, "Decisions"; CLAUDE.md, "Layout".

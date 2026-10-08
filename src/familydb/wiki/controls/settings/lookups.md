@@ -2,7 +2,7 @@
 
 The Lookups card sets whether FamilyDB fills ideas in from the web: an idea's address, opening hours and prices, and what is on nearby. A separate, smaller [turn](/wiki/reference/glossary#turn) reads the web, and each lookup is a model call within the daily limit. The chat itself never gets the web.
 
-If looking ideas up is on but there is no key for the model company that does it, the card warns that nothing is looked up until there is one. Which company and which model do it is on [AI model](/wiki/controls/settings/ai-model#a-second-company).
+If looking ideas up is on but there is no key for the model company that does it, the card warns that nothing is looked up until there is one. Which company and which model do it is the **Looking things up** row on [AI model](/wiki/controls/settings/ai-model#what-does-what).
 
 ## Looking ideas up
 

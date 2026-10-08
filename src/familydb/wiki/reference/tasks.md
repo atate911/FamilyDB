@@ -40,7 +40,7 @@ Each row names the setting and the card it is on.
 | I want to... | Where |
 |---|---|
 | Spend less each day | **Daily spending limit (US$)** (`daily_spend_limit`) on [Spending](/wiki/controls/settings/spending#the-daily-limit) |
-| Use a cheaper model | **Answering the family** (`chat_level`) on [AI model](/wiki/controls/settings/ai-model#how-strong-a-model-answers) |
+| Use a cheaper model, or see what a dearer one would cost | The row for it under **What does what** on [AI model](/wiki/controls/settings/ai-model#what-does-what) |
 | Make it think less, or more | **Chat thinking** (`effort`) on [Spending](/wiki/controls/settings/spending#thinking) |
 | Send less of the chat with each message | **Messages of chat remembered** (`history_limit`) on [Spending](/wiki/controls/settings/spending#what-one-message-may-use) |
 | Get longer or shorter answers | **Longest answer (tokens)** (`max_output_tokens`) on [Spending](/wiki/controls/settings/spending#what-one-message-may-use) |
@@ -51,7 +51,7 @@ Each row names the setting and the card it is on.
 | Fix times that are wrong | **Time zone** (`family_tz`) on [General](/wiki/controls/settings/general#where-home-is) |
 | Quiet a noisy group chat | **Answer only when mentioned** (`telegram_require_mention`) on [Connections](/wiki/controls/settings/connections#in-a-telegram-group) |
 | Stop one person's reminders landing in the group | **Send what's for one person to them** (`private_when_personal`) on [Connections](/wiki/controls/settings/connections#in-a-telegram-group) |
-| Get voice notes or photos read | **Listen to voice notes** (`voice_notes`) and **Look at photos** (`photos`) on [AI model](/wiki/controls/settings/ai-model#voice-notes-and-photos) |
+| Get voice notes or photos read, or stop them | The **Voice notes** and **Photos** rows on [AI model](/wiki/controls/settings/ai-model#voice-notes-and-photos) |
 | Disconnect Google Calendar | [Disconnect Google Calendar](/wiki/controls/settings/connections#disconnect-google-calendar) on Connections |
 | Rename Vera or change how the assistant sounds | [Who she is](/wiki/controls/settings/personality#who-she-is) |
 
