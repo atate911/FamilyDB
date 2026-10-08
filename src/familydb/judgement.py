@@ -30,7 +30,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 
 from familydb import alerts
-from familydb.agent import gateway, spending
+from familydb.agent import gateway, spending, uses
 from familydb.agent.loop import MessagesAPI
 from familydb.agent.providers import catalog, companies, prices
 from familydb.agent.worker import worker_turn
@@ -233,7 +233,7 @@ def run_judgements(app: Any, *, api: MessagesAPI | None = None) -> dict[str, int
     with closing(app.connect()) as conn:
         app.refresh(conn)
         settings = app.settings
-        if not settings.judgements:
+        if not uses.on(settings, "judge"):
             return counts
         now = app.clock.now()
         waiting = [

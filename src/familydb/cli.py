@@ -18,6 +18,7 @@ import typer
 
 from familydb import __version__, memory, passwords, privacy, roles
 from familydb import family as family_rules
+from familydb.agent import uses
 from familydb.agent.history import load_history
 from familydb.agent.providers import companies
 from familydb.agent.providers.base import Message, TurnRequest
@@ -492,7 +493,7 @@ def debug_prompt(
         request = gateway.build_request(
             kind,
             conn=conn,
-            settings=settings,
+            settings=uses.overlay(settings, kind).settings,
             registry=application.registry,
             provider=provider,
             current=current,
@@ -531,15 +532,16 @@ def debug_cost(
     typer.echo(f"  system prompt and family context  ~{system_tokens:>6,d} tokens")
     typer.echo(f"  {len(tools)} tool definitions               ~{tool_tokens:>6,d} tokens")
     typer.echo(f"  {'in total':<33}~{system_tokens + tool_tokens:>6,d} tokens")
-    typer.echo(f"  chat runs on {chat_model} via {chat_provider.name} ({settings.chat_level})")
+    levels = {key: uses.resolve(settings, key).level for key in ("chat", "digest", "lookup")}
+    typer.echo(f"  chat runs on {chat_model} via {chat_provider.name} ({levels['chat']})")
     if (digest_provider.name, digest_model) != (chat_provider.name, chat_model):
         typer.echo(
             f"  the weekend digest runs on {digest_model} via {digest_provider.name} "
-            f"({settings.digest_level}), with a prompt cache of its own"
+            f"({levels['digest']}), with a prompt cache of its own"
         )
     typer.echo(
         f"  lookups and discovery run on {worker_model} via {worker_provider.name} "
-        f"({settings.lookup_level})"
+        f"({levels['lookup']})"
     )
     if not gateway.can_ask(settings, "enrich"):
         typer.echo(

@@ -33,6 +33,8 @@ Level = Literal["everyday", "better", "best"]
 # The companies that have a module of their own (agent/providers/companies.py has the facts about
 # each); any other is defined in the settings (`CompanyDef`).
 BUILT_IN_COMPANIES = ("anthropic", "openai", "gemini")
+# What the family has Vera do, each with one choice of company and model (agent/uses.py).
+USE_KEYS = ("chat", "digest", "choose", "lookup", "onnear", "hear", "look", "judge")
 CacheTTL = Literal["5m", "1h"]
 LookupsWhen = Literal["evening", "asap"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -262,6 +264,11 @@ class Settings(BaseSettings):
     # slug to key). Checked once the settings are whole, so a removed company cannot stay chosen.
     companies: list[CompanyDef] = Field(default_factory=list, max_length=12)
     company_keys: dict[str, str] = Field(default_factory=dict)
+    # The page's choice for each use (agent/uses.py): `<company>:<model>`, `same:<use>` or `off`;
+    # a use with none is answered as the older settings below say. Written by the models form.
+    model_choices: dict[str, str] = Field(default_factory=dict)
+    # How much each use thinks, where the page said; empty uses `effort` and `worker_effort`.
+    use_effort: dict[str, Effort] = Field(default_factory=dict)
     provider_fallback: bool = True
     # Model strength per situation, whichever company: `everyday` is the company's model named
     # below, `better` and `best` its stronger ones (catalog.py).
@@ -605,6 +612,19 @@ class Settings(BaseSettings):
         from familydb.logs import parse_areas
 
         return "\n".join(f"{name}={level}" for name, level in parse_areas(value).items())
+
+    @field_validator("model_choices", "use_effort", mode="before")
+    @classmethod
+    def _only_known_uses(cls, value: Any) -> Any:
+        """A choice for a use this version does not know, or not a string, is dropped, not
+        refused: a value stored by another version must never stop the app."""
+        if not isinstance(value, Mapping):
+            return {}
+        return {
+            str(key): item
+            for key, item in value.items()
+            if key in USE_KEYS and isinstance(item, str) and item.strip()
+        }
 
     @model_validator(mode="after")
     def _companies_exist(self) -> Settings:

@@ -28,7 +28,7 @@ from datetime import datetime, time
 from typing import Any
 
 from familydb import roles
-from familydb.agent import gateway, providers, spending
+from familydb.agent import gateway, spending, uses
 from familydb.agent.prompt import load_prompt
 from familydb.agent.worker import worker_turn
 from familydb.dates import utc_iso
@@ -49,7 +49,7 @@ TOOL_CHARS = 3000
 def reason_not_to(ctx: ToolContext, args: SuggestInput) -> str | None:
     """Why no choice is made for this question, or None when one may be."""
     settings = ctx.settings
-    if not settings.choosing:
+    if not uses.on(settings, "choose"):
         return "off"
     if args.window == "now":
         return "a question about right now"
@@ -74,8 +74,7 @@ def spent_this_month(conn: sqlite3.Connection, settings: Any, now: datetime) -> 
 
 def _estimate(ctx: ToolContext, made: dossiers.Dossier) -> float:
     """The most this call could cost, at the model it would be asked of."""
-    provider = providers.for_surface(ctx.settings, "chat", api=ctx.api)
-    model = providers.model_at(provider, "chat", ctx.settings.choose_level)
+    provider, model = gateway.answering(ctx.settings, KIND, api=ctx.api)
     spec = gateway.spec(KIND)
     return spending.estimate(
         provider.name,

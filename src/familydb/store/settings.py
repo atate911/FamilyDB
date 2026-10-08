@@ -120,6 +120,9 @@ SECRETS = (
 # Companies without a module of their own, and their keys (config.CompanyDef); written by the
 # companies form alone. The keys never reach the change log.
 COMPANIES = ("companies", "company_keys")
+# The page's choice of company and model for each use, and how much each thinks
+# (agent/uses.py); written by the models form alone.
+MODELS = ("model_choices", "use_effort")
 HIDDEN = ("company_keys",)
 # Who the assistant and the family are (/settings/personality); long texts show as "rewritten"
 # in the change list (web/views.py `LONG_SETTINGS`).
@@ -140,6 +143,7 @@ EDITABLE = (
     | frozenset(PROFILE)
     | frozenset(LOCK)
     | frozenset(COMPANIES)
+    | frozenset(MODELS)
 )
 
 
