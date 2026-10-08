@@ -6,8 +6,9 @@ from types import SimpleNamespace
 from familydb import whereabouts
 from familydb.app import App
 from familydb.channels.telegram import location_from_update
+from familydb.dates import utc_iso
 from familydb.integrations.geocode import GeoPoint
-from familydb.store import db, ideas, locations, messages, places
+from familydb.store import db, ideas, locations, members, messages, places
 from familydb.suggest.engine import run
 from familydb.suggest.types import SuggestInput
 from tests.conftest import NOW_ISO
@@ -173,3 +174,133 @@ def test_a_position_is_deleted_after_a_day_even_if_nobody_shares_again(
     assert locations.get(conn, family["sam"].id) is None
     # and the scheduler runs it on its own, without anyone sharing
     assert any(spec.func is whereabouts.forget_old for spec in job_specs(app))
+
+
+# -- a forgotten place name goes from what still held it
+
+NAME = "Old Town, Portland"
+
+
+def _where_the_name_went(conn, when):
+    """A kept turn, a tool result and a logged suggestion that carry the place name, as a turn
+    made while the location was fresh would have left them."""
+    from familydb.store import ai_texts, calls, suggestions
+
+    stamp = utc_iso(when)
+    line = f"Sam's location, from their phone 4 min ago: {NAME} (45.5190, -122.6790)."
+    with db.transaction(conn):
+        text = ai_texts.record(
+            conn,
+            call_id=None,
+            message_id=None,
+            turn="t1",
+            iteration=1,
+            kind="chat",
+            about=None,
+            provider="anthropic",
+            model="m",
+            error=None,
+            system=None,
+            tools=None,
+            request=f"[user]\n{line}",
+            reply=f"Near {NAME}, then.",
+            now=when,
+        )
+        tool = calls.log_tool_call(
+            conn,
+            message_id=None,
+            iteration=1,
+            tool_use_id="x",
+            tool_name="suggest",
+            input={"near": "here"},
+            output=f'{{"travel_from":"Sam\'s location ({NAME}), 4 min ago"}}',
+            is_error=False,
+            duration_ms=1,
+            now=stamp,
+        )
+        suggestion = suggestions.insert(
+            conn,
+            asked_by=None,
+            window_start=None,
+            window_end=None,
+            candidates=[{"reasons": [f"under 5 min from {NAME} (estimate)"]}],
+            web_finds=[],
+            now=stamp,
+        ).id
+    return text, tool, suggestion
+
+
+def _everything_kept(conn, text, tool, suggestion):
+    return (
+        *conn.execute("SELECT request, reply FROM ai_texts WHERE id = ?", (text,)).fetchone(),
+        conn.execute("SELECT output FROM tool_calls WHERE id = ?", (tool,)).fetchone()[0],
+        conn.execute("SELECT candidates FROM suggestions WHERE id = ?", (suggestion,)).fetchone()[
+            0
+        ],
+    )
+
+
+def test_a_forgotten_place_name_is_taken_out_of_the_reply_and_the_kept_texts(
+    full_settings, clock, conn, family
+):
+    from familydb.store import place_names
+
+    app = App(full_settings, clock, geocoder=Places())
+    reply = _share(app, conn)
+    assert NAME in reply.text
+    kept = _where_the_name_went(conn, clock.now())
+    clock.advance(timedelta(hours=23))
+    assert whereabouts.forget_old(app) == 0  # its day is not over: the name is still in use
+    assert NAME in messages.get(conn, reply.out_message_id).text
+    assert all(NAME in words for words in _everything_kept(conn, *kept))
+    clock.advance(timedelta(hours=2))
+    assert whereabouts.forget_old(app) == 1
+    said = messages.get(conn, reply.out_message_id).text
+    assert NAME not in said and said == reply.text.replace(f" ({NAME})", "")
+    for words in _everything_kept(conn, *kept):
+        assert NAME not in words and place_names.GONE in words
+    assert conn.execute("SELECT count(*) FROM place_names").fetchone()[0] == 0
+    assert whereabouts.forget_old(app) == 0  # once
+
+
+def test_a_name_somebody_else_s_location_still_carries_stays_for_now(
+    full_settings, clock, conn, family
+):
+    app = App(full_settings, clock, geocoder=Places())
+    sam = _share(app, conn)
+    clock.advance(timedelta(hours=23))
+    _share(app, conn, user="1002")  # the same place, an hour before Sam's is forgotten
+    clock.advance(timedelta(hours=2))
+    assert whereabouts.forget_old(app) == 1  # Sam's location goes
+    assert NAME in messages.get(conn, sam.out_message_id).text  # Alex's still carries the name
+    clock.advance(timedelta(hours=23))
+    assert whereabouts.forget_old(app) == 1
+    assert NAME not in messages.get(conn, sam.out_message_id).text
+
+
+def test_a_moving_live_location_names_each_new_place_once_and_forgets_them_all(
+    full_settings, clock, conn, family
+):
+    app = App(full_settings, clock, geocoder=Places())
+    _share(app, conn, live=True)
+    _share(app, conn, live=True)  # the same place: no second note
+    assert conn.execute("SELECT count(*) FROM place_names").fetchone()[0] == 1
+    app.geocoder.reverse = lambda lat, lon: "Pearl District, Portland"
+    whereabouts.note(app, conn, family["sam"].id, 45.53, -122.68)  # the page's position
+    assert conn.execute("SELECT count(*) FROM place_names").fetchone()[0] == 2
+    clock.advance(timedelta(days=2))
+    whereabouts.forget_old(app)
+    assert conn.execute("SELECT count(*) FROM place_names").fetchone()[0] == 0
+
+
+def test_taking_somebody_off_takes_the_names_of_their_places_out_too(
+    full_settings, clock, conn, family
+):
+    app = App(full_settings, clock, geocoder=Places())
+    reply = _share(app, conn)
+    kept = _where_the_name_went(conn, clock.now())
+    with db.transaction(conn):
+        members.erase(conn, family["sam"].id)
+    assert NAME not in messages.get(conn, reply.out_message_id).text
+    assert all(NAME not in words for words in _everything_kept(conn, *kept))
+    assert conn.execute("SELECT count(*) FROM place_names").fetchone()[0] == 0

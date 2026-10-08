@@ -18,7 +18,7 @@ from familydb.app import App
 from familydb.channels.base import OutgoingMessage
 from familydb.dates import utc_iso
 from familydb.integrations.geocode import haversine_km
-from familydb.store import locations, members, messages
+from familydb.store import locations, members, messages, place_names
 from familydb.store.db import transaction
 from familydb.store.locations import SharedLocation
 
@@ -49,11 +49,14 @@ def share(
     with transaction(conn):
         _keep(conn, member.id, lat, lon, live, label, now)
         if live and before is not None and before.live and _fresh(before, now):
+            _name_given(conn, member.id, before, label, now)
             return None
         text = shared_text(label, app.settings)
         out = messages.insert_out(
             conn, channel=channel, chat_id=chat_id, text=text, now=utc_iso(now)
         )
+        if label:  # so the name can be taken out of the reply once the location is forgotten
+            place_names.note(conn, member.id, label, at=utc_iso(now), message_id=out.id)
     return OutgoingMessage(chat_id, text, "ok", out_message_id=out.id)
 
 
@@ -61,12 +64,16 @@ def note(app: App, conn: sqlite3.Connection, member_id: int, lat: float, lon: fl
     now = app.clock.now()
     label = _name(app, locations.get(conn, member_id), lat, lon)
     with transaction(conn):
+        before = locations.get(conn, member_id)
         _keep(conn, member_id, lat, lon, True, label, now)
+        _name_given(conn, member_id, before, label, now)
 
 
 def forget_old(app: App) -> int:
+    """Delete locations past their day, and take their names out of the reply and the kept texts
+    that carried them; returns how many locations went."""
     with closing(app.connect()) as conn, transaction(conn):
-        return locations.forget_before(conn, utc_iso(app.clock.now() - KEEP))
+        return _forget_before(conn, app.clock.now() - KEEP)
 
 
 def shared_text(label: str | None, settings: Any) -> str:
@@ -75,7 +82,20 @@ def shared_text(label: str | None, settings: Any) -> str:
 
 def _keep(conn, member_id, lat, lon, live, label, now) -> None:
     locations.record(conn, member_id, lat=lat, lon=lon, live=live, now=utc_iso(now), label=label)
-    locations.forget_before(conn, utc_iso(now - KEEP))
+    _forget_before(conn, now - KEEP)
+
+
+def _forget_before(conn: sqlite3.Connection, before: datetime) -> int:
+    gone = locations.forget_before(conn, utc_iso(before))
+    place_names.forget_names(conn, utc_iso(before))
+    return gone
+
+
+def _name_given(conn, member_id, before: SharedLocation | None, label, now) -> None:
+    """A place name no reply said (a live location moving, the page's position) is kept to be
+    taken out later too, when it is a name the person's last location did not have."""
+    if label and (before is None or before.label != label):
+        place_names.note(conn, member_id, label, at=utc_iso(now))
 
 
 def _name(app: App, before: SharedLocation | None, lat: float, lon: float) -> str | None:

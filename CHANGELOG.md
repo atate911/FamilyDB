@@ -226,6 +226,11 @@ older than what is installed. It gets a date when it is released.
   time.** They were dropped only when the next one came; the nightly tidy now drops them.
 - **Fixed: saving the same home town again tries the map again.** If the first lookup found
   nothing, saving the unchanged text did nothing; it now looks again while no coordinates are kept.
+- **A forgotten location now takes its place name with it.** A shared location was deleted after a
+  day, but the name it was given ("Old Town, Portland") stayed in the "Got it" reply and in the
+  words and results kept for the Troubleshooting pages. When the location is forgotten, or the
+  person taken off, the name is replaced there with "[place forgotten]". Coordinates inside the
+  kept model words still go only with those words, after their own days.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
