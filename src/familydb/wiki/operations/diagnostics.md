@@ -12,6 +12,7 @@ The doctor checks an install from its files to its keys and prints a fix under a
 | Which value is in force, and where it came from | `familydb config` |
 | What it has cost, who answers, which messages failed | [Status](/wiki/controls/status) |
 | Why one message went wrong | [Recent activity](/wiki/controls/status/activity) |
+| Recent warnings and errors, and what a model was sent and said | The [Troubleshooting card](/wiki/controls/settings/troubleshooting) on the Settings page |
 | What the server did, or why it would not start | The log, below |
 | Whether it is down right now | [Know when it is down](#know-when-it-is-down) |
 
@@ -103,7 +104,7 @@ sudo journalctl -u familydb -n 100 --no-pager
 sudo docker compose --project-directory /opt/familydb logs --tail 100 bot
 ```
 
-The first is systemd, the second Docker. `sudo /opt/familydb/scripts/maintain.sh logs 200` shows the last 200 lines and then follows the log until you press Ctrl-C. A line reads `2026-10-07 10:04:24,207 WARNING familydb.app: message`: time, severity, part of the program, message. The log detail on [General](/wiki/controls/settings/general) sets the lowest severity.
+The first is systemd, the second Docker. `sudo /opt/familydb/scripts/maintain.sh logs 200` shows the last 200 lines and then follows the log until you press Ctrl-C. A line reads `2026-10-07 10:04:24,207 WARNING familydb.app: message`: time, severity, part of the program, message. **What the server writes** on the [Troubleshooting card](/wiki/controls/settings/troubleshooting#how-much-is-logged) sets the lowest severity.
 
 FamilyDB replaces a Telegram token in a log message with `bot<token>`. It does not do so inside a traceback, so read a log before you paste it anywhere.
 

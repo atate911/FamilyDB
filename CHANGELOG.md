@@ -8,6 +8,12 @@ older than what is installed. It gets a date when it is released.
 
 ### New since v0.2.0
 
+- **Wording fixes.** Drive times are called estimates where they were said to be looked up; the
+  take-off text says a kid's wish lists go and open to-dos and reminders are canceled; and a few
+  help lines now match what happens (a better model up to about 10% dearer may be put in by itself,
+  and a kid at the daily limit is told to come back tomorrow).
+- **No bot token in the journal.** A Telegram token quoted in an error's text or traceback is
+  taken out of the log and the problem log, as it already was in an ordinary line.
 - **Troubleshooting**, for admins, on the settings page. What went wrong in one place: what needs
   an admin, messages that did not go through, lookups that failed, calls to a model that failed
   and why, and a problem log of the warnings and errors the server logged (the same trouble
@@ -230,6 +236,15 @@ older than what is installed. It gets a date when it is released.
   runs the bot now reaches the installer, the account, the files it owns and the service
   unit, and is remembered, so `maintain.sh` and `uninstall.sh` use the same account
   without being told. Installs made before this still use `familydb`.
+- **Presents stay hidden in "How did it go?".** A plan made for a present no longer shows its
+  title, or counts in "to rate", for the kids or the grown-up the present is kept from.
+- **Presents stay hidden in /today and /week.** Plans made for a present are left out for the kids
+  and the grown-up it is kept from, and out of any group chat a kid is in.
+- **A kid's /lookup answers truthfully.** It says lookups wait for the evening and to ask a parent,
+  instead of "nothing is waiting", and never points a kid to the settings page.
+- **What a kid may change in the chat.** A kid can add an idea and have something remembered, as
+  before. Editing an idea, saying how a plan went, and making, moving or cancelling a plan are now
+  a parent's in the chat as on the page, including the buttons under a follow-up.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

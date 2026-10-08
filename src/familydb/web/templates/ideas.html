@@ -79,7 +79,7 @@
         <h2 id="h-far">How far each idea is from home</h2>
         <details class="mapband__fold">
           <summary>{{ icon('compass') }}Show the map <span class="val">how far each idea is from home</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
-          <p class="small muted mapband__cap">Drive times {{ assistant }} looked up. Home is in the middle and north is up; each name is one of the idea cards above. Ideas in the same direction are spread a little so each shows.
+          <p class="small muted mapband__cap">Estimated drive times. Home is in the middle and north is up; each name is one of the idea cards above. Ideas in the same direction are spread a little so each shows.
             {%- if off_map %} {{ off_map }} idea{{ ' has' if off_map == 1 else 's have' }} no drive time yet, so {{ 'it isn’t' if off_map == 1 else 'they aren’t' }} on the map.{% endif %}</p>
           <div class="instrument__pane">{{ map_plot(on_map.wide, 'wide') }}{{ map_plot(on_map.narrow, 'narrow') }}</div>
         </details>
@@ -87,7 +87,7 @@
     {% endif %}
 
     {% if not looking_up %}
-      <p class="note mt-4">{{ icon('compass') }}Looking things up is off, so new ideas won’t get hours, prices or drive times.{% if managing %} <a href="{{ url_for('settings.section', name='lookups') }}">Turn it on in Settings</a>{% endif %}</p>
+      <p class="note mt-4">{{ icon('compass') }}Looking things up is off, so new ideas won’t get hours, prices or estimated drive times.{% if managing %} <a href="{{ url_for('settings.section', name='lookups') }}">Turn it on in Settings</a>{% endif %}</p>
     {% endif %}
   {% endif %}
   {% if grownup %}<p class="page-foot mt-6"><a href="{{ url_for('web.export_ideas') }}">{{ icon('arrowdown', size='sm') }}Download the ideas as a spreadsheet</a></p>{% endif %}

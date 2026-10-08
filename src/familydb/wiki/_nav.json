@@ -232,6 +232,17 @@
               ]
             },
             {
+              "slug": "controls/settings/happening",
+              "title": "What is on near home",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "controls/settings/lookups",
+                "security/what-leaves-the-house",
+                "controls/status"
+              ]
+            },
+            {
               "slug": "controls/settings/personality",
               "title": "Personality and family",
               "audience": "admin",
@@ -258,6 +269,17 @@
               "depth": "howto",
               "see_also": [
                 "controls/family"
+              ]
+            },
+            {
+              "slug": "controls/settings/troubleshooting",
+              "title": "Troubleshooting card",
+              "audience": "admin",
+              "depth": "howto",
+              "see_also": [
+                "operations/troubleshooting",
+                "operations/diagnostics",
+                "controls/status/activity"
               ]
             }
           ]

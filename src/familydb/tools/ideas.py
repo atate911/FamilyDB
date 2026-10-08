@@ -265,6 +265,7 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
         "given are changed. Returns the updated record."
     ),
     writes=True,
+    needs="change",
 )
 def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
     changes = {k: v for k, v in args.model_dump(exclude={"id", *DATES}).items() if v is not None}

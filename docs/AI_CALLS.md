@@ -181,7 +181,7 @@ evening's lookups and go together in one call; only a refusal, which may be stop
 asked at once; a question with no answer is asked once more the next evening, then let go, the
 rule's choice standing. It sees what code knows about the models, never a message, and may only hand
 back a choice among the options code gave, which the tool checks. Code decides what follows: under
-"within_cost" a model at the same cost or less (a tenth either way) is put in and told to admins with
+"within_cost" a model costing at most a tenth more (`SAME_COST`) is put in and told to admins with
 a Put back button on the Status page; anything dearer waits there for an admin's press; a refusal
 read as out of credit, a wrong key or a gone model is noted as that, and a part of a request named is
 left out for that model in every process. A few cents on the best level, recorded as `judge`.

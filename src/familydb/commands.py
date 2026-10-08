@@ -28,7 +28,7 @@ from contextlib import closing
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from familydb import agenda, buttons, family, presents, roles, task_service, voice
+from familydb import agenda, audience, buttons, family, presents, roles, task_service, voice
 from familydb.agenda import Agenda
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
@@ -225,7 +225,7 @@ def _today(
     app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
 ) -> str:
     today = app.clock.today()
-    seen = agenda.read(app, conn, today, today)
+    seen = _no_presents(conn, msg, member, agenda.read(app, conn, today, today))
     timed = [
         (agenda.entry_key(entry, today), agenda.entry_text(entry, today))
         for entry in agenda.on(seen, today)
@@ -236,10 +236,12 @@ def _today(
     return _with_source(_under(said, lines), seen)
 
 
-def _week(app: App, conn: sqlite3.Connection, _msg: IncomingMessage, _: Member, seed: int) -> str:
+def _week(
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
+) -> str:
     today = app.clock.today()
     last = today + timedelta(days=6)
-    seen = agenda.read(app, conn, today, last)
+    seen = _no_presents(conn, msg, member, agenda.read(app, conn, today, last))
     lines = []
     for offset in range(7):
         day = today + timedelta(days=offset)
@@ -249,6 +251,17 @@ def _week(app: App, conn: sqlite3.Connection, _msg: IncomingMessage, _: Member, 
         lines.append(f"{day:%a} {day.day}{month}: {things}")
     said = voice.say(app.settings, "cmd_week", seed=seed)
     return _with_source(_under(said, lines), seen)
+
+
+def _no_presents(
+    conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seen: Agenda
+) -> Agenda:
+    """What is on without plans made for a present kept from the asker, and in a chat where
+    somebody may not decide (a group with a kid in it) without any plan made for a present."""
+    kept = presents.kept_ids(conn, member)
+    if not audience.everyone_may(conn, msg.channel, msg.chat_id, "decide", member):
+        kept |= presents.gift_ids(conn)
+    return Agenda(presents.without(seen.entries, kept), seen.source)
 
 
 def _tasks_today(
@@ -368,7 +381,7 @@ def _under(heading: str, lines: list[str]) -> str:
 
 
 def _lookup(
-    app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
 ) -> str:
     ctx = ToolContext(
         conn=conn,
@@ -380,8 +393,11 @@ def _lookup(
     )
     result = app.registry.dispatch("look_up_now", {}, ctx)
     answered = json.loads(result.content)
+    plain = audience.plain(conn, msg.channel, msg.chat_id, member)
     if answered.get("available") is False:
-        return voice.say(app.settings, "lookups_off", seed=seed)
+        return voice.say(app.settings, "lookups_off", seed=seed, plain=plain)
+    if result.is_error:  # a kid's lookups wait for the evening
+        return voice.say(app.settings, "lookups_wait", seed=seed)
     asked = len(answered.get("asked") or [])
     if not asked:
         return voice.say(app.settings, "lookups_none", seed=seed)

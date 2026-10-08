@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from dataclasses import dataclass
+from typing import Any
 
 from familydb import roles
 from familydb.store import ideas as idea_store
@@ -113,6 +114,21 @@ def kept_ids(conn: sqlite3.Connection, who: Member | None) -> set[int]:
     everything = idea_store.list_all(conn, include_dropped=True)
     kept = of_presents(conn, everything, member_store.list_all(conn))
     return {idea_id for idea_id, one in kept.items() if who.id in one.ids}
+
+
+def gift_ids(conn: sqlite3.Connection) -> set[int]:
+    """Every present, for a chat where not everyone there may know of them."""
+    return {
+        idea.id
+        for idea in idea_store.list_all(conn, include_dropped=True)
+        if idea_store.is_gift(idea)
+    }
+
+
+def without(items: list[Any], kept: set[int]) -> list[Any]:
+    """These plans or agenda entries (anything with an `idea_id`) minus the ones made from an idea
+    in `kept`, the present a plan is for being the idea it was made from."""
+    return [item for item in items if getattr(item, "idea_id", None) not in kept]
 
 
 def is_kept_from(conn: sqlite3.Connection, idea: Idea | None, who: Member | None) -> bool:
