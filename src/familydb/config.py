@@ -124,7 +124,7 @@ class Settings(BaseSettings):
     # `judgement_budget` US$ a month, within the daily limit.
     judgements: bool = False
     judgement_level: Level = "best"
-    # `within_cost` puts in a model that costs no more than the one it replaces
+    # `within_cost` puts in a model that costs at most about 10% more than the one it replaces
     # (judgement.SAME_COST); anything dearer, and everything under `suggest`, waits for an admin's
     # press.
     judgement_acts: Literal["within_cost", "suggest"] = "within_cost"

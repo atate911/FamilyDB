@@ -484,8 +484,8 @@ EVENTS: dict[str, Event] = {
         "put it back or put it in.",
         ("detail",),
         {
-            "detail": "claude-sonnet-5 put in place of claude-haiku-4-5, at the same cost or "
-            "less (Anthropic): the nearest in price that handles tools well"
+            "detail": "claude-sonnet-5 put in place of claude-haiku-4-5, at about the same "
+            "cost (Anthropic): the nearest in price that handles tools well"
         },
     ),
     "kid_limit": Event(
