@@ -37,14 +37,9 @@ def test_backup_reads_wal_and_fails_closed(conn, settings, tmp_path, docker_mode
     # Feedback/privilege functions are replaced, not the backup implementation.
     harness = r"""
 set -euo pipefail
-system_change() { :; }
-ok() { :; }
-note() { :; }
-warn() { :; }
+. "$ROOT/scripts/lib/common.sh"
 die() { echo "$*" >&2; exit 1; }
 require_free_mb() { :; }
-try_step() { shift; "$@"; }
-step() { shift; "$@"; }
 as_root() { if [ "$1" = chown ]; then return; fi; "$@"; }
 backup() {
   if [ "$FAIL_BACKUP" = 1 ]; then printf 'partial' > "$1"; return 1; fi
@@ -64,11 +59,13 @@ docker() {
 }
 """
     path = tmp_path / "harness.sh"
-    path.write_text(harness + function + '\ntake_backup "$BACKUP_DIR" test\n', newline="\n")
+    path.write_text(harness + function + '\ntake_backup "$BACKUP_DIR"\n', newline="\n")
     directory = tmp_path / "backup with spaces"
     directory.mkdir()
     env = {
         **os.environ,
+        "ROOT": ROOT.as_posix(),
+        "NO_COLOR": "1",
         "DB": settings.familydb_path.name,
         "TARGET": ".",
         "BACKUP_DIR": directory.name,

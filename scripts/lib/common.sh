@@ -19,9 +19,9 @@ _wants_colour() { # _wants_colour FD
 }
 if _wants_colour 1; then
   B=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; YEL=$'\033[33m'; GRN=$'\033[32m'; CYN=$'\033[36m'
-  BADGE=$'\033[1;30;43m'; OFF=$'\033[0m'
+  BADGE=$'\033[1;30;43m'; BADGE_C=$'\033[1;30;46m'; OFF=$'\033[0m'
 else
-  B=""; DIM=""; RED=""; YEL=""; GRN=""; CYN=""; BADGE=""; OFF=""
+  B=""; DIM=""; RED=""; YEL=""; GRN=""; CYN=""; BADGE=""; BADGE_C=""; OFF=""
 fi
 if _wants_colour 2; then
   E_B=$'\033[1m'; E_DIM=$'\033[2m'; E_RED=$'\033[31m'; E_YEL=$'\033[33m'; E_CYN=$'\033[36m'; E_OFF=$'\033[0m'
@@ -34,9 +34,11 @@ fi
 # colour reads the same. FAMILYDB_ASCII=1 is for a terminal that cannot draw the others.
 if [ -n "${FAMILYDB_ASCII:-}" ]; then
   S_OK='+'; S_WARN='!'; S_BAD='x'; S_GO='>'; S_DOT='-'; S_RULE='-'; S_TODO='[ ]'; S_OFF='o'; S_TO='->'; S_ELLIPSIS='...'; S_SEP='>'
+  BAR_FULL='#'; BAR_EMPTY='-'; BAR_PULSE_A='='; BAR_PULSE_B='#'
   SPIN_FRAMES=('|' '/' '-' '\')
 else
   S_OK='✓'; S_WARN='!'; S_BAD='✗'; S_GO='→'; S_DOT='·'; S_RULE='─'; S_TODO='☐'; S_OFF='○'; S_TO='→'; S_ELLIPSIS='…'; S_SEP='›'
+  BAR_FULL='█'; BAR_EMPTY='░'; BAR_PULSE_A='▓'; BAR_PULSE_B='▒'
   SPIN_FRAMES=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
 fi
 
@@ -49,12 +51,21 @@ say()   { printf '%s\n' "$*"; }
 head2() { INDENT=""; printf '\n%s%s%s\n' "$B" "$*" "$OFF"; log_line "== $*"; }
 note()  { printf '%s%s%s%s\n' "$INDENT" "$DIM" "$*" "$OFF"; log_line "-- $*"; }
 ok()    { _ok_line "$*" ""; }
-_ok_line() { # _ok_line TEXT [SUFFIX] - a tick, what was done, and in dim how long it took
-  printf '%s%s%s%s %s%s%s%s\n' "$INDENT" "$GRN" "$S_OK" "$OFF" "$1" "${2:+ $DIM}" "$2" "${2:+$OFF}"
-  log_line "ok: $1${2:+ $2}"
+_ok_line() { # _ok_line TEXT [TIME] - a tick, what was done with its first word bold, and how long it took at the right edge
+  local text="$1" took="${2:-}" first rest="" pad=" " used width
+  first="${text%% *}"
+  [ "$first" = "$text" ] || rest=" ${text#* }"
+  if [ -n "$took" ]; then
+    width="$(ui_width)"
+    used=$((${#INDENT} + 2 + ${#text} + ${#took}))
+    [ "$used" -ge $((width - 1)) ] || printf -v pad '%*s' $((width - used)) ''
+  fi
+  printf '%s%s%s%s%s %s%s%s%s%s%s%s%s\n' "$INDENT" "$B" "$GRN" "$S_OK" "$OFF" "$B" "$first" "$OFF" "$rest" \
+    "${took:+$pad}" "${took:+$DIM}" "$took" "${took:+$OFF}"
+  log_line "ok: ${text}${took:+ ($took)}"
 }
 warn()  {
-  printf '%s%s%s%s %s\n' "$INDENT" "$E_YEL" "$S_WARN" "$E_OFF" "$*" >&2
+  printf '%s%s%s%s%s %s\n' "$INDENT" "$E_B" "$E_YEL" "$S_WARN" "$E_OFF" "$*" >&2
   log_line "warn: $*"
   WARNINGS=$((WARNINGS + 1))
   WARNED+=("$*")
@@ -86,7 +97,9 @@ log_to() { # log_to PATH - start writing a transcript. Falls back to a temp file
 
 log_line() { # one line into the transcript, never onto the screen
   [ -n "$LOG_FILE" ] || return 0
-  printf '%s %s\n' "$(date -u '+%H:%M:%S')" "$*" >>"$LOG_FILE" 2>/dev/null || true
+  local line="$*"
+  case "$line" in *$'\033'*) line="$(printf '%s' "$line" | sed $'s/\033\\[[0-9;]*m//g')" ;; esac
+  printf '%s %s\n' "$(date -u '+%H:%M:%S')" "$line" >>"$LOG_FILE" 2>/dev/null || true
 }
 
 # --- Layout -------------------------------------------------------------------------------------
@@ -94,6 +107,33 @@ log_line() { # one line into the transcript, never onto the screen
 # it is about to do and why, for the installers), a line per thing done, and a last word that says
 # how it went and what to do next. Everything here is for the eye: the transcript in the log file
 # has the same facts, with no colour.
+
+# The steps of a run, counted, so a bar can say how far along it is. A command that has a fixed
+# list of steps says how many (progress_total) and how many are done before each (progress_to).
+PROGRESS_TOTAL=0
+PROGRESS_DONE=0
+LIVE_LIMIT=""   # seconds a step is given, for a bar that fills toward it instead
+progress_total() { PROGRESS_TOTAL="$1"; PROGRESS_DONE=0; }
+progress_to() { PROGRESS_DONE="$1"; }
+
+_bar() { # _bar VAR WIDTH DONE TOTAL FRAME COLOUR PULSE - [█████▓▒▓░░░░]: done, the one under way (pulsing), the rest
+  local name="$1" width="$2" done_n="$3" total="$4" frame="$5" colour="$6" pulse="$7" cells active i filled="" rest=""
+  [ "$total" -gt 0 ] || total=1
+  [ "$done_n" -le "$total" ] || done_n=$total
+  cells=$((width * done_n / total))
+  active=0
+  if [ "$pulse" = 1 ] && [ "$done_n" -lt "$total" ]; then
+    active=$((width / total))
+    [ "$active" -ge 1 ] || active=1
+    [ $((cells + active)) -le "$width" ] || active=$((width - cells))
+  fi
+  for ((i = 0; i < cells; i++)); do filled+="$BAR_FULL"; done
+  for ((i = 0; i < active; i++)); do
+    if (((i + frame) % 2)); then filled+="$BAR_PULSE_A"; else filled+="$BAR_PULSE_B"; fi
+  done
+  for ((i = cells + active; i < width; i++)); do rest+="$BAR_EMPTY"; done
+  printf -v "$name" '%s%s%s%s%s%s' "$colour" "$filled" "$OFF" "$DIM" "$rest" "$OFF"
+}
 
 ui_width() { # the columns to lay out in: the terminal's, kept between 40 and 88
   local w="${COLUMNS:-}"
@@ -160,9 +200,9 @@ ago() { # ago SECONDS - how long ago, in the words a person would use
 kv() { # kv LABEL VALUE [ok|warn|bad|off] - one fact on a line, the labels lined up; a long value wraps under itself
   local mark="  " base="${INDENT:-  }" pad
   case "${3:-}" in
-    ok)   mark="${GRN}${S_OK}${OFF} " ;;
-    warn) mark="${YEL}${S_WARN}${OFF} " ;;
-    bad)  mark="${RED}${S_BAD}${OFF} " ;;
+    ok)   mark="${B}${GRN}${S_OK}${OFF} " ;;
+    warn) mark="${B}${YEL}${S_WARN}${OFF} " ;;
+    bad)  mark="${B}${RED}${S_BAD}${OFF} " ;;
     off)  mark="${DIM}${S_OFF}${OFF} " ;;
   esac
   printf -v pad '%*s' $((${#base} + 15)) ''
@@ -172,7 +212,7 @@ kv() { # kv LABEL VALUE [ok|warn|bad|off] - one fact on a line, the labels lined
 
 banner() { # banner "Upgrade" ["where, and how it runs"] - the first thing a command shows
   INDENT=""
-  printf '\n%sFamilyDB%s %s%s%s %s%s%s' "$B" "$OFF" "$DIM" "$S_SEP" "$OFF" "$B$CYN" "$1" "$OFF"
+  printf '\n%s FamilyDB %s %s%s%s' "$BADGE_C" "$OFF" "$B" "$1" "$OFF"
   [ -z "${2:-}" ] || printf '  %s%s%s' "$DIM" "$2" "$OFF"
   printf '\n'
   rule
@@ -198,8 +238,16 @@ finish() { # finish ok|warn|bad "Headline" - the last word: how it went, with th
   esac
   took=$((SECONDS - SCRIPT_STARTED))
   printf '\n'
-  rule
-  printf '%s%s %s%s%s' "$colour" "$mark" "$B" "$headline" "$OFF"
+  if [ "$PROGRESS_TOTAL" -gt 0 ]; then
+    # Full when every step ran; short, and red, where a run that did not finish got to.
+    local meter done_n="$PROGRESS_TOTAL"
+    [ "$state" != bad ] || done_n="$PROGRESS_DONE"
+    _bar meter $(( $(ui_width) - 6 )) "$done_n" "$PROGRESS_TOTAL" 0 "$colour" 0
+    printf '%s %s%d/%d%s\n' "$meter" "$DIM" "$done_n" "$PROGRESS_TOTAL" "$OFF"
+  else
+    rule
+  fi
+  printf '%s%s%s %s%s%s' "$B" "$colour" "$mark" "$B" "$headline" "$OFF"
   [ "$took" -lt 3 ] || printf '  %s(%s)%s' "$DIM" "$(fmt_secs "$took")" "$OFF"
   printf '\n'
   log_line "== result: $state: $headline"
@@ -303,12 +351,29 @@ _live_ok() {
 }
 
 _spin() { # _spin WHAT PARENT - redraw one line, with the time so far, for as long as PARENT lives
-  local what="$1" parent="$2" i=0 start=$SECONDS max
-  max=$(( $(ui_width) - ${#INDENT} - 14 ))
+  local what="$1" parent="$2" i=0 start=$SECONDS max elapsed meter="" counter="" room
+  # Beside the words: the run's bar when it has steps to count, a bar filling toward the time a step
+  # is given when there is one, and otherwise only the seconds.
+  room=$(( $(ui_width) - ${#INDENT} - 14 ))
+  if [ -n "$LIVE_LIMIT" ]; then room=$((room - 28)); elif [ "$PROGRESS_TOTAL" -gt 0 ]; then room=$((room - 28)); fi
+  max=$room
   [ "${#what}" -le "$max" ] || what="${what:0:$((max - 3))}${S_ELLIPSIS}"
   while kill -0 "$parent" 2>/dev/null; do
-    printf '\r%s%s%s%s %s %s%s%s\033[K' "$INDENT" "$CYN" "${SPIN_FRAMES[i % ${#SPIN_FRAMES[@]}]}" "$OFF" \
-      "$what" "$DIM" "$(fmt_secs $((SECONDS - start)))" "$OFF"
+    elapsed=$((SECONDS - start))
+    if [ -n "$LIVE_LIMIT" ]; then
+      _bar meter 14 "$elapsed" "$LIVE_LIMIT" "$i" "$CYN" 0
+      counter="${elapsed}s/${LIVE_LIMIT}s"
+      printf '\r%s%s%s%s [%s] %s%-8s%s %s\033[K' "$INDENT" "$CYN" "${SPIN_FRAMES[i % ${#SPIN_FRAMES[@]}]}" "$OFF" \
+        "$meter" "$DIM" "$counter" "$OFF" "$what"
+    elif [ "$PROGRESS_TOTAL" -gt 0 ]; then
+      _bar meter 20 "$PROGRESS_DONE" "$PROGRESS_TOTAL" "$i" "$CYN" 1
+      counter="$((PROGRESS_DONE + 1))/${PROGRESS_TOTAL}"
+      printf '\r%s%s%s%s [%s] %s%-4s%s %s %s%s%s\033[K' "$INDENT" "$CYN" "${SPIN_FRAMES[i % ${#SPIN_FRAMES[@]}]}" "$OFF" \
+        "$meter" "$DIM" "$counter" "$OFF" "$what" "$DIM" "$(fmt_secs "$elapsed")" "$OFF"
+    else
+      printf '\r%s%s%s%s %s %s%s%s\033[K' "$INDENT" "$CYN" "${SPIN_FRAMES[i % ${#SPIN_FRAMES[@]}]}" "$OFF" \
+        "$what" "$DIM" "$(fmt_secs "$elapsed")" "$OFF"
+    fi
     i=$((i + 1))
     sleep 0.15
   done
@@ -602,7 +667,7 @@ _dry_line() { # what a step would have done, in a dry run
 }
 
 _took() { # _took SECONDS - how long a step took, said only when it was long enough to notice
-  [ "$1" -lt 3 ] || printf '(%s)' "$(fmt_secs "$1")"
+  [ "$1" -lt 3 ] || fmt_secs "$1"
 }
 
 _failure() { # _failure HEADLINE STATUS OUTPUT COMMAND LINES LABEL - what stopped, and what it said

@@ -164,7 +164,7 @@ def test_status_leads_with_a_verdict_and_ends_with_what_to_do(tmp_path) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     out = done.stdout
     assert not ESCAPE.search(out + done.stderr)
-    assert re.search(r"^FamilyDB \W Status  ", out, re.M)  # the banner says what this is, and where
+    assert re.search(r"^ FamilyDB  Status  ", out, re.M)  # the banner says what this is, and where
     # No backup and no schedule: not well, and it says how to put that right, command first.
     assert "Running, with 2 things to look at" in out  # the backup and its schedule
     assert re.search(r"^  ! Last backup +none yet", out, re.M)
@@ -227,7 +227,7 @@ def test_a_backup_ends_with_where_it_is_and_how_to_fetch_it(tmp_path) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     out = done.stdout
     assert [p.suffix for p in (target / "backups").iterdir()] == [".sqlite3"]
-    assert re.search(r"✓ Backed up the database \(\S+\) to /.*familydb-\d+\.sqlite3", out)
+    assert re.search(r"✓ Backed up the database \(\S+\) to \S*familydb-\d+\.sqlite3", out)
     assert "To fetch a copy off this machine" in out
     assert "scp " in out
     assert "SQLite's online backup" not in out  # how it works is not what this run is about

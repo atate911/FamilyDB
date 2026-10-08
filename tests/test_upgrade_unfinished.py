@@ -9,6 +9,7 @@ stubs that succeed or fail on request.
 # ruff: noqa: E501  (the harness is a shell script, written as a person would type it)
 
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -249,8 +250,9 @@ def test_what_goes_as_expected_is_one_line_and_the_last_line_carries_what_moved(
     assert "Fetched" not in out and "Checking out" not in out  # nothing a person acts on
     assert "Stopping" not in out and "Starting" not in out
     assert "Applying 1 new migration (0002_second)" in out
-    last = [line for line in out.splitlines() if line.startswith("✓ Upgraded to")]
+    last = [line for line in out.splitlines() if line.startswith("✓ Upgraded ")]
     assert len(last) == 1
+    assert f"Upgraded {server.before[:7]} → " in last[0]  # where it was, and where it is
     assert "· 1 commit · 1 migration · 2 packages · down " in last[0]
     assert "go back" not in out.split(last[0])[1].lower()  # said again only if it may be needed
 
@@ -275,7 +277,7 @@ def test_a_change_with_no_migration_or_package_move_says_nothing_about_them(tmp_
     # Nothing to say about the database or the packages, so nothing is said: no news is the report.
     assert "Database" not in flat and "Packages" not in flat and "Settings" not in flat
     assert "some rewrite what is in it" not in flat
-    assert "commit" in flat and "migration" not in flat.split("Upgraded to")[1]
+    assert "commit" in flat and "migration" not in flat.split("Upgraded ")[1]
 
 
 def test_a_failed_step_after_the_summary_still_says_how_to_go_back(tmp_path):
@@ -284,3 +286,42 @@ def test_a_failed_step_after_the_summary_still_says_how_to_go_back(tmp_path):
     assert result.returncode != 0
     assert f"checkout --quiet --detach {server.before}" in result.stderr
     assert "finish the upgrade: sudo bash" in result.stderr
+
+
+def test_the_screen_says_where_it_stands_and_where_it_is_going_and_how_big_the_move_is(tmp_path):
+    server = Server(tmp_path, rich=True)
+    result = server.upgrade()
+    assert result.returncode == 0, result.stdout + result.stderr
+    out = result.stdout
+    lines = out.splitlines()
+    installed = next(line for line in lines if line.lstrip().startswith("Installed"))
+    going = next(line for line in lines if line.lstrip().startswith("Upgrading"))
+    assert server.before[:7] in installed
+    assert server.before[:7] not in going and installed != going
+    assert lines.index(installed) + 1 == lines.index(going)  # one above the other
+    assert "on main, where v9.9.9 is in progress" in going  # what it follows, and what is coming
+    # git's own picture: a row for each part that changes, + and - to scale, with the counts.
+    assert any(re.fullmatch(r"  \S+ +\d+  \++-* *\s?\+\d+ -\d+", line) for line in lines), out
+
+
+def test_the_run_counts_its_steps_and_the_last_line_is_the_full_bar(tmp_path):
+    server = Server(tmp_path)
+    result = server.upgrade()
+    assert result.returncode == 0, result.stdout + result.stderr
+    bar = next(line for line in result.stdout.splitlines() if line.endswith(" 7/7"))
+    assert set(bar.removesuffix(" 7/7")) == {"█"}  # every step ran: nothing left empty
+
+
+def test_a_run_that_stopped_shows_a_bar_that_stops_where_it_did():
+    done = subprocess.run(
+        [
+            BASH,
+            "-c",
+            'set -euo pipefail; . "$ROOT/scripts/lib/common.sh"; progress_total 7; progress_to 3; finish bad "Stopped"',
+        ],
+        env={**os.environ, "ROOT": ROOT.as_posix(), "NO_COLOR": "1", "COLUMNS": "60"},
+        capture_output=True,
+        text=True,
+    )
+    bar = next(line for line in done.stdout.splitlines() if line.endswith(" 3/7"))
+    assert "█" in bar and "░" in bar and bar.index("░") > bar.index("█")

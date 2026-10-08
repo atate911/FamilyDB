@@ -270,7 +270,7 @@ start_bot() {
     return 0
   fi
   [ "$DRY_RUN" = 1 ] && return 0
-  _capture "Waiting for FamilyDB to answer" wait_for_page
+  LIVE_LIMIT=30 _capture "Waiting for FamilyDB to answer" wait_for_page
   case "$_STATUS" in
     0)
       BOT_STARTED=1
@@ -333,14 +333,15 @@ take_backup() { # take_backup DEST_DIR
     "$(( $(stat -c %s "$DB" 2>/dev/null || echo 10000000) / 1000000 + 50 ))" "this backup"
   local success=0
   if [ "$DOCKER_MODE" = 1 ]; then
-    if as_root docker compose --project-directory "$TARGET" run --rm -T --no-deps \
-      --user "$owner" -v "${dir}:/backup" bot familydb db backup \
-      "/backup/$(basename "$dest")" >>"${LOG_FILE:-/dev/null}" 2>&1; then success=1; fi
-  elif familydb_cmd db backup "$dest" >>"${LOG_FILE:-/dev/null}" 2>&1; then
-    success=1
+    _capture "Backing up the database" as_root docker compose --project-directory "$TARGET" run --rm -T --no-deps \
+      --user "$owner" -v "${dir}:/backup" bot familydb db backup "/backup/$(basename "$dest")"
+  else
+    _capture "Backing up the database" familydb_cmd db backup "$dest"
   fi
+  [ -z "$_OUT" ] || printf '%s\n' "$_OUT" >>"${LOG_FILE:-/dev/null}"
+  [ "$_STATUS" != 0 ] || success=1
   if [ "$success" = 1 ] && [ -s "$dest" ]; then
-    ok "Backed up the database ($(du -h "$dest" | cut -f1)) to ${dest}"
+    ok "Backed up the database ($(du -h "$dest" | cut -f1)) to ${dest#"${TARGET}/"}"
   else
     # An incomplete backup must not look usable to restore, upgrade, or an operator.
     as_root rm -f -- "$dest"
@@ -791,13 +792,18 @@ if have>known:
   approve "Replace the database with that backup?" no || { say "Nothing was changed."; exit 0; }
 
   local safety=""
+  progress_total 5
   if [ -f "$DB" ]; then
     take_backup "$BACKUP_DIR"
     safety="$LAST_BACKUP"
   fi
+  progress_to 1
   stop_bot
+  progress_to 2
   step "Putting the backup in place" put_backup_in_place "$RESTORE_FILE" "$target_owner"
+  progress_to 3
   step "Bringing the schema up to date" familydb_cmd db migrate
+  progress_to 4
   start_bot
 
   if [ "$DRY_RUN" = 1 ]; then finish ok "Dry run"; return 0; fi
@@ -881,38 +887,87 @@ more_than() { # more_than N LIMIT - ", and N more" for what a short list left ou
   [ "$1" -le "$2" ] || printf ', and %s more' $(($1 - $2))
 }
 
-upgrade_changes() { # upgrade_changes FROM TO "what it is leaving" "what it is arriving at"
-  local from="$1" to="$2" leaving="$3" arriving="$4" prs first last stat files added removed areas hash line
+version_label() { # version_label REF - v0.2.0+137: the release it is built on and the commits since; a short hash without one
+  local d
+  d="$(as_root git -C "$TARGET" describe --tags --always "$1" 2>/dev/null || echo "$1")"
+  if [[ $d =~ ^(.+)-([0-9]+)-g[0-9a-f]+$ ]]; then printf '%s+%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"; else printf '%s' "$d"; fi
+}
+
+_version_row() { # _version_row LABEL REF COLOUR [NOTE]
+  local hash day label
+  hash="$(as_root git -C "$TARGET" rev-parse --short "$2" 2>/dev/null || echo '?')"
+  day="$(as_root git -C "$TARGET" log -1 --format=%cs "$2" 2>/dev/null || true)"
+  label="$(version_label "$2")"
+  # A checkout with no release behind it is named by its hash already: say it once.
+  [ "$label" != "$hash" ] || hash=""
+  printf '  %s%-10s%s %s%-14s%s %s%s%s%s%s%s%s\n' "$DIM" "$1" "$OFF" "$3" "$label" "$OFF" \
+    "$YEL" "${hash:+$hash  }" "$OFF" "$DIM" "$day" "${4:+  $4}" "$OFF"
+}
+
+show_versions() { # show_versions FROM TO - what is installed, and what it is going to, one above the other
+  local from="$1" to="$2" note=""
+  printf '\n'
+  if [ "$(as_root git -C "$TARGET" rev-parse "$from" 2>/dev/null)" = "$(as_root git -C "$TARGET" rev-parse "$to" 2>/dev/null)" ]; then
+    _version_row "Installed" "$from" "$B"
+    return 0
+  fi
+  _version_row "Installed" "$from" "$B"
+  if [ -n "$UPGRADE_FOLLOWING" ]; then
+    local coming
+    coming="$(as_root git -C "$TARGET" show "${to}:CHANGELOG.md" 2>/dev/null | sed -nE 's/^## (v[0-9][^ ]*) .*in progress.*/\1/p' | head -1 || true)"
+    note="on ${UPGRADE_FOLLOWING}${coming:+, where ${coming} is in progress}"
+  fi
+  _version_row "Upgrading" "$to" "$B$GRN" "$note"
+}
+
+# git's own picture of a change: a row for each part of the code that changes most, with its + and -
+# drawn to scale, so a big move reads as big before anyone counts.
+change_bars() { # change_bars FROM TO
+  as_root git -C "$TARGET" diff --numstat "$1" "$2" 2>/dev/null | awk -F'\t' '
+    { area = "other"; n = split($3, p, "/")
+      if (p[1] == "src" && p[2] == "familydb") { area = (n > 3) ? p[3] : "core"; if (area == "wiki") area = "guide" }
+      else if (p[1] == "tests") area = "tests"
+      else if (p[1] == "docs" || p[1] ~ /\.md$/) area = "docs"
+      else if (p[1] == "scripts") area = "scripts"
+      else if (p[1] == "deploy" || p[1] == "Dockerfile" || p[1] == "docker-compose.yml") area = "deploy"
+      else if (p[1] == "pyproject.toml" || p[1] == "uv.lock") area = "packages"
+      else if (p[1] == ".env.example") area = "settings"
+      a = ($1 == "-") ? 0 : $1; r = ($2 == "-") ? 0 : $2
+      files[area]++; add[area] += a; del[area] += r }
+    END { for (k in files) printf "%d\t%s\t%d\t%d\t%d\n", add[k] + del[k], k, files[k], add[k], del[k] }' \
+    | sort -rn \
+    | awk -F'\t' -v green="$GRN" -v red="$RED" -v dim="$DIM" -v cyan="$CYN" -v off="$OFF" -v width=24 -v limit=5 '
+        NR == 1 { max = $1 }
+        NR <= limit {
+          scale = (max > width) ? width / max : 1
+          p = int($4 * scale + 0.5); m = int($5 * scale + 0.5)
+          if ($4 > 0 && p == 0) p = 1
+          if ($5 > 0 && m == 0) m = 1
+          bar = green; for (i = 0; i < p; i++) bar = bar "+"
+          bar = bar red; for (i = 0; i < m; i++) bar = bar "-"
+          pad = ""; for (i = p + m; i < width; i++) pad = pad " "
+          printf "  %s%-9s%s %s%3d%s  %s%s%s %s+%d%s %s-%d%s\n", cyan, $2, off, dim, $3, off, bar, off, pad, green, $4, off, red, $5, off
+        }
+        NR > limit { rest++ }
+        END { if (rest) printf "  %sand %d more parts%s\n", dim, rest, off }'
+}
+
+upgrade_changes() { # upgrade_changes FROM TO
+  local from="$1" to="$2" prs stat files added removed hash line
   UPGRADE_COMMITS="$(as_root git -C "$TARGET" rev-list --count --no-merges "${from}..${to}" 2>/dev/null || echo 0)"
   prs="$(as_root git -C "$TARGET" log --format=%s "${from}..${to}" 2>/dev/null | grep -oE '(pull request |\()#[0-9]+' | grep -oE '[0-9]+' | sort -un | sed 's/^/#/' | tr '\n' ' ' | sed 's/ $//' || true)"
-  first="$(as_root git -C "$TARGET" log -1 --format=%cs "$from" 2>/dev/null || true)"
-  last="$(as_root git -C "$TARGET" log -1 --format=%cs "$to" 2>/dev/null || true)"
   stat="$(as_root git -C "$TARGET" diff --shortstat "$from" "$to" 2>/dev/null || true)"
   files="$(printf '%s' "$stat" | sed -nE 's/^ *([0-9]+) files? changed.*/\1/p')"
   added="$(printf '%s' "$stat" | sed -nE 's/.* ([0-9]+) insertions?\(\+\).*/\1/p')"
   removed="$(printf '%s' "$stat" | sed -nE 's/.* ([0-9]+) deletions?\(-\).*/\1/p')"
-  areas="$(as_root git -C "$TARGET" diff --name-only "$from" "$to" 2>/dev/null | awk -F/ '
-    { area = "other"
-      if ($1 == "src" && $2 == "familydb") { area = (NF > 3) ? $3 : "core"; if (area == "wiki") area = "guide" }
-      else if ($1 == "tests") area = "tests"
-      else if ($1 == "docs" || $1 ~ /\.md$/) area = "docs"
-      else if ($1 == "scripts") area = "scripts"
-      else if ($1 == "deploy" || $1 == "Dockerfile" || $1 == "docker-compose.yml") area = "deploy"
-      else if ($1 == "pyproject.toml" || $1 == "uv.lock") area = "packages"
-      else if ($1 == ".env.example") area = "settings"
-      count[area]++ }
-    END { for (a in count) print count[a], a }' | sort -rn | head -4 | awk -v sep=" ${S_DOT} " '{printf "%s%s %s", (NR > 1 ? sep : ""), $2, $1}' || true)"
 
-  # One line of numbers under the versions: what a person scans for a change that is out of the ordinary.
+  show_versions "$from" "$to"
   local facts
-  facts="${UPGRADE_COMMITS} commit$([ "$UPGRADE_COMMITS" = 1 ] || echo s)${prs:+ (${prs})}"
-  [ -z "$UPGRADE_FOLLOWING" ] || facts="${facts} on ${UPGRADE_FOLLOWING}"
-  [ -z "$files" ] || facts="${facts} ${S_DOT} ${files} file$([ "$files" = 1 ] || echo s) ${GRN}+${added:-0}${OFF} ${RED}-${removed:-0}${OFF}"
-  [ -z "$areas" ] || facts="${facts} ${S_DOT} ${DIM}${areas}${OFF}"
-  printf '\n%s%s %s %s%s' "$B" "$leaving" "$S_TO" "$arriving" "$OFF"
-  [ -z "$first" ] || [ "$first" = "$last" ] || printf '  %s%s %s %s%s' "$DIM" "$first" "$S_TO" "$last" "$OFF"
-  printf '\n%s\n' "$facts"
+  facts="${B}${UPGRADE_COMMITS}${OFF} commit$([ "$UPGRADE_COMMITS" = 1 ] || echo s)${prs:+ ${CYN}(${prs})${OFF}}"
+  [ -z "$files" ] || facts="${facts} ${DIM}${S_DOT}${OFF} ${B}${files}${OFF} file$([ "$files" = 1 ] || echo s) ${GRN}+${added:-0}${OFF} ${RED}-${removed:-0}${OFF}"
+  printf '\n  %s\n' "$facts"
   log_line "upgrade: ${from} -> ${to}: ${UPGRADE_COMMITS} commits ${prs}"
+  change_bars "$from" "$to"
 
   local shown=0 subject max=$(( $(ui_width) - 12 ))
   if [ "$UPGRADE_COMMITS" -gt 0 ]; then
@@ -920,7 +975,8 @@ upgrade_changes() { # upgrade_changes FROM TO "what it is leaving" "what it is a
     while IFS=$'\t' read -r hash subject; do
       [ -n "$hash" ] || continue
       [ "${#subject}" -le "$max" ] || subject="${subject:0:$((max - 3))}${S_ELLIPSIS}"
-      printf '%s%s%s  %s\n' "$DIM" "$hash" "$OFF" "$subject"
+      [ -z "$CYN" ] || subject="$(printf '%s' "$subject" | sed -E "s/\(#([0-9]+)\)/(${CYN}#\1${OFF})/g")"
+      printf '%s%s%s  %s\n' "$YEL" "$hash" "$OFF" "$subject"
       shown=$((shown + 1))
     done < <(as_root git -C "$TARGET" log --no-merges --format='%h%x09%s' -n 5 "${from}..${to}" 2>/dev/null)
     [ "$UPGRADE_COMMITS" -le "$shown" ] || printf '%sand %s more%s\n' "$DIM" $((UPGRADE_COMMITS - shown)) "$OFF"
@@ -932,7 +988,7 @@ upgrade_changes() { # upgrade_changes FROM TO "what it is leaving" "what it is a
   if [ -n "$news" ]; then
     printf '\n'
     while IFS= read -r line; do
-      WRAP_FIRST="${S_DOT} " wrap "  " "" "$line"
+      WRAP_FIRST="${DIM}${S_DOT}${OFF} " wrap "  " "" "$line"
     done <<<"$news"
   fi
 
@@ -979,9 +1035,15 @@ upgrade_changes() { # upgrade_changes FROM TO "what it is leaving" "what it is a
   [ -z "$options" ] || kv "Settings" "new in .env.example: ${options}" warn
   [ "$service" = 0 ] || kv "Service file" "changed in deploy/familydb.service; an upgrade does not rewrite the installed one" warn
   if [ "$count" -gt 0 ]; then
-    hint "They change the database's layout, and some rewrite what is in it; the backup is what goes back."
+    INDENT="  " hint "They change the database's layout, and some rewrite what is in it; the backup is what goes back."
   fi
   printf '\n'
+}
+
+check_counts() { # the doctor's counts, each in the colour of what it means
+  printf '%s%s%s fine %s%s%s %s%s%s worth a look %s%s%s %s%s%s to fix' \
+    "$GRN" "$DOCTOR_FINE" "$OFF" "$DIM" "$S_DOT" "$OFF" "$YEL" "$DOCTOR_WARN" "$OFF" "$DIM" "$S_DOT" "$OFF" \
+    "$([ "$DOCTOR_BAD" -eq 0 ] && printf '%s' "$GRN" || printf '%s' "$RED")" "$DOCTOR_BAD" "$OFF"
 }
 
 describe_ref() { # describe_ref REF - the name a person would say it by
@@ -1062,7 +1124,7 @@ cmd_upgrade() {
     current="$(describe_ref "$before")"
   fi
 
-  local unfinished="" arriving fresh=0
+  local unfinished="" fresh=0
   if as_root git -C "$TARGET" merge-base --is-ancestor "$target" HEAD; then
     # On the code is not the same as upgraded: a stop after the checkout leaves the code here and
     # the dependencies, the migrations or the restart undone.
@@ -1082,11 +1144,13 @@ cmd_upgrade() {
     say "Finishing it now."
     # Nothing recorded the code it came from, so only the database can be put back.
     [ -n "$(pending_get before)" ] || before=""
-    arriving="$(describe_ref HEAD)"
+    UPGRADE_FOLLOWING=""
+    show_versions "${before:-HEAD}" HEAD
     UPGRADE_MIGRATIONS=0
     UPGRADE_PACKAGES=""
     [ -z "$have" ] || [ -z "$newest" ] || UPGRADE_MIGRATIONS=$((newest - have))
     [ "$UPGRADE_MIGRATIONS" -ge 0 ] || UPGRADE_MIGRATIONS=0
+    printf '\n'
   else
     # Only forward. A release tag older than what is installed would take the database back past
     # migrations it has already run; a branch that lacks what is here would lose it.
@@ -1094,20 +1158,21 @@ cmd_upgrade() {
       || die "${name} does not contain what is installed now (${current}), so moving to it would go backwards" \
              "Nothing was changed. To choose a version yourself: sudo git -C ${TARGET} checkout NAME"
     fresh=1
-    arriving="$(describe_ref "$target")"
     UPGRADE_FOLLOWING=""
     [ "$kind" != branch ] || UPGRADE_FOLLOWING="$name"
-    upgrade_changes HEAD "$target" "$current" "$arriving"
+    upgrade_changes HEAD "$target"
   fi
 
   approve "Upgrade now?" yes || { say "Nothing was changed."; exit 0; }
 
+  progress_total 7
   take_backup "$BACKUP_DIR"
   local upgrade_backup="${pending_backup:-$LAST_BACKUP}" line
   note "To go back:"
   while IFS= read -r line; do note "$line"; done < <(rollback_lines "$current" "$before" "$upgrade_backup")
   if [ "$fresh" = 1 ]; then
     pending_write "$name" "$before" "$upgrade_backup"
+    progress_to 1
     STEP_QUIET=1 step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
   fi
 
@@ -1123,7 +1188,9 @@ cmd_upgrade() {
   # A step that goes as expected is not worth a line: what is said is what moved, and how long the
   # bot was away.
   local down_from=$SECONDS
+  progress_to 2
   STEP_QUIET=1 stop_bot
+  progress_to 3
   if [ "$DOCKER_MODE" = 1 ]; then
     step "Rebuilding the image" as_root docker compose --project-directory "$TARGET" build
   elif [ -n "$UPGRADE_PACKAGES" ]; then
@@ -1135,6 +1202,7 @@ cmd_upgrade() {
   fi
   [ "$DRY_RUN" = 1 ] || as_root chmod -R go-w "$TARGET" 2>>"${LOG_FILE:-/dev/null}" \
     || warn "Could not take write access to the code away from everyone but its owner."
+  progress_to 4
   if [ "$UPGRADE_MIGRATIONS" -gt 0 ]; then
     step "Applying ${UPGRADE_MIGRATIONS} new migration$([ "$UPGRADE_MIGRATIONS" = 1 ] || echo s)${UPGRADE_MIGRATION_NAMES:+ (${UPGRADE_MIGRATION_NAMES})}" familydb_cmd db migrate
   else
@@ -1143,12 +1211,15 @@ cmd_upgrade() {
   [ "$DRY_RUN" = 1 ] || as_root rm -f "$UPGRADE_PENDING"
   on_failure_hint ""
   again_hint ""
+  progress_to 5
   STEP_QUIET=1 QUIET_START=1 start_bot
   local down=$((SECONDS - down_from))
+  progress_to 6
   [ "${BOT_STARTED:-}" != 1 ] || ok "Restarted: the page answers (the bot was away for $(fmt_secs "$down"))"
 
-  local now_on
-  now_on="$(describe_ref HEAD)"
+  local now_on was_on
+  now_on="$(version_label HEAD)"
+  was_on="$(version_label "${before:-HEAD}")"
   if [ "$DRY_RUN" = 1 ]; then
     finish ok "Dry run"
     return 0
@@ -1158,10 +1229,10 @@ cmd_upgrade() {
   if [ -z "$_OUT" ]; then
     warn "The check printed nothing, so it may not have run. Run it yourself: sudo ${0} check"
   elif [ "$DOCTOR_BAD" -gt 0 ]; then
-    printf '%s%s%s %s\n' "$RED" "$S_BAD" "$OFF" "Check: ${DOCTOR_FINE} fine ${S_DOT} ${DOCTOR_WARN} worth a look ${S_DOT} ${DOCTOR_BAD} to fix"
+    printf '%s%s%s%s %s%s%s %s\n' "$B" "$RED" "$S_BAD" "$OFF" "$B" "Check:" "$OFF" "$(check_counts)"
     show_doctor failures "$_OUT"
   else
-    ok "Check: ${DOCTOR_FINE} fine ${S_DOT} ${DOCTOR_WARN} worth a look ${S_DOT} ${DOCTOR_BAD} to fix"
+    ok "Check: $(check_counts)"
   fi
 
   # The last line stands alone, for a log or a mail: what moved, and what it cost.
@@ -1169,16 +1240,16 @@ cmd_upgrade() {
   [ "$UPGRADE_COMMITS" -eq 0 ] || moved=" ${S_DOT} ${UPGRADE_COMMITS} commit$([ "$UPGRADE_COMMITS" = 1 ] || echo s)"
   [ "$UPGRADE_MIGRATIONS" -eq 0 ] || moved="${moved} ${S_DOT} ${UPGRADE_MIGRATIONS} migration$([ "$UPGRADE_MIGRATIONS" = 1 ] || echo s)"
   [ "$UPGRADE_PACKAGE_COUNT" -eq 0 ] || moved="${moved} ${S_DOT} ${UPGRADE_PACKAGE_COUNT} package$([ "$UPGRADE_PACKAGE_COUNT" = 1 ] || echo s)"
-  moved="${moved} ${S_DOT} down $(fmt_secs "$down")"
+  moved="${OFF}${DIM}${moved} ${S_DOT} down $(fmt_secs "$down")${OFF}"
   local trouble=0
   if [ "${BOT_STARTED:-}" = 0 ]; then
     trouble=1
-    finish bad "Upgraded to ${now_on}, but FamilyDB did not start"
+    finish bad "${was_on} ${S_TO} ${now_on}, but FamilyDB did not start"
   elif [ "$DOCTOR_BAD" -gt 0 ]; then
     trouble=1
-    finish warn "Upgraded to ${now_on}, but the check found $DOCTOR_BAD thing$([ "$DOCTOR_BAD" -eq 1 ] || echo s) to fix"
+    finish warn "Upgraded ${was_on} ${S_TO} ${now_on}, but the check found $DOCTOR_BAD thing$([ "$DOCTOR_BAD" -eq 1 ] || echo s) to fix"
   else
-    finish ok "Upgraded to ${now_on}${moved}"
+    finish ok "Upgraded ${OFF}${DIM}${was_on}${OFF} ${CYN}${S_TO}${OFF} ${B}${GRN}${now_on}${OFF}${moved}"
   fi
   recap
   # What puts it back was printed before anything changed; it is said again only when it may be needed.
