@@ -26,7 +26,7 @@ One Python process does all of it. A chat adapter hands each message to a pipeli
 
 **On a server, follow [docs/INSTALL.md](docs/INSTALL.md):** three steps, about twenty minutes, no Linux knowledge needed. Paste one block into the server's terminal; it has the server read this private repository, installs everything, puts the page on HTTPS and prints a link and a password. The page then walks you through the rest: yourself, your password, an AI key, home, Telegram, the family, Google Calendar.
 
-Afterwards: `familydb doctor` checks the install and says what to fix, `scripts/maintain.sh` does backups, restores, upgrades, logs and a forgotten password, and `scripts/uninstall.sh` removes it (`--from-zero` restores the server to before FamilyDB).
+Afterwards: `familydb doctor` checks the install and says what to fix, `scripts/maintain.sh` does backups, restores, upgrades, logs and a forgotten password, `maintain.sh check` looks at everything between the disk and the page, `maintain.sh doctor` works out what is wrong, says why and fixes what it can, `maintain.sh rescue` is the way out when it is badly broken, and `scripts/uninstall.sh` removes it (`--from-zero` restores the server to before FamilyDB).
 
 On your own machine, to try it out:
 

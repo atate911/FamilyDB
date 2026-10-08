@@ -8,6 +8,7 @@ hangs on a firewall is worse than none.
 
 from __future__ import annotations
 
+import os
 import shutil
 import socket
 import sqlite3
@@ -15,10 +16,11 @@ import stat
 import subprocess
 from contextlib import closing
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from familydb import happening
+from familydb import happening, health, privacy
 from familydb.app import App
 from familydb.availability import (
     calendar_available,
@@ -28,7 +30,9 @@ from familydb.availability import (
     web_is_public,
     web_tools_available,
 )
-from familydb.store import db, members
+from familydb.dates import utc_iso
+from familydb.store import alerts as alert_store
+from familydb.store import db, members, problems
 
 OK = "ok"
 WARN = "warn"
@@ -39,6 +43,15 @@ TODO = "todo"
 MARKS = {OK: "✓", WARN: "!", FAIL: "✗", SKIP: "·", TODO: "→"}
 NEW_INSTALL_STEPS = {"family": "Add yourself", "model key": "Connect an AI model"}
 FREE_MB_WANTED = 500
+# A message that has waited this long for an answer is not being answered: the retry job comes
+# round every few minutes.
+WAITING = timedelta(minutes=10)
+UNSENT = timedelta(minutes=15)
+GAVE_UP = timedelta(days=7)
+_RESTORE = "Put the newest backup back: sudo scripts/maintain.sh restore FILE (RUNBOOK section 7)"
+# Troubles the hourly upkeep notes that the doctor reads for itself, and ones that are news, not
+# trouble.
+NOT_TROUBLE = frozenset({"new", "advice", "calendars", "backup", "disk"})
 KEY_FIELDS = {
     "anthropic": ("anthropic_api_key", "ANTHROPIC_API_KEY"),
     "openai": ("openai_api_key", "OPENAI_API_KEY"),
@@ -53,9 +66,12 @@ class Check:
     detail: str
     fix: str = ""
     corrected: str = ""
+    group: str = ""
 
     def as_dict(self) -> dict[str, Any]:
         out = {"check": self.name, "verdict": self.verdict, "detail": self.detail}
+        if self.group:
+            out["group"] = self.group
         if self.fix:
             out["fix"] = self.fix
         if self.corrected:
@@ -66,9 +82,10 @@ class Check:
 @dataclass
 class Report:
     checks: list[Check] = field(default_factory=list)
+    group: str = ""  # what the next checks are filed under: the headings of the printed report
 
     def add(self, name: str, verdict: str, detail: str, fix: str = "") -> Check:
-        check = Check(name, verdict, detail, fix)
+        check = Check(name, verdict, detail, fix, group=self.group)
         self.checks.append(check)
         return check
 
@@ -117,6 +134,64 @@ def _port_answers(host: str, port: int, timeout: float = 1.0) -> bool:
         return False
 
 
+# Read by the shell scripts or by Docker, not by the settings: still names in .env that are meant.
+OTHER_OPTIONS = frozenset({"COMPOSE_PROFILES", "TZ", "WEB_DOMAIN", "WEB_PUBLIC_PORT"})
+
+
+def _option_names() -> set[str]:
+    """Every name .env may set that FamilyDB reads, from the settings themselves and from the
+    example that ships beside them."""
+    import re
+
+    from pydantic import AliasChoices
+
+    from familydb.config import Settings
+
+    names = set(OTHER_OPTIONS)
+    for setting, info in Settings.model_fields.items():
+        alias = info.validation_alias
+        if isinstance(alias, AliasChoices):
+            names.update(str(choice).upper() for choice in alias.choices)
+        elif isinstance(alias, str):
+            names.add(alias.upper())
+        names.add(setting.upper())
+    example = Path(".env.example")
+    if example.exists():
+        names.update(re.findall(r"^#?\s*([A-Za-z][A-Za-z0-9_]+)=", example.read_text(), re.M))
+    return {name.upper() for name in names}
+
+
+def check_env_options(env_file: Path, report: Report) -> None:
+    """A name in .env that FamilyDB does not read is silently ignored, so a typo means the value
+    never takes effect: the commonest reason a setting "does nothing"."""
+    import difflib
+    import re
+
+    try:
+        text = env_file.read_text(encoding="utf-8-sig")
+    except OSError:
+        return
+    known = _option_names()
+    unknown: list[str] = []
+    for line in text.splitlines():
+        match = re.match(r"\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=", line)
+        if match and match.group(1).upper() not in known and match.group(1) not in unknown:
+            unknown.append(match.group(1))
+    if not unknown:
+        return
+    said = []
+    for name in unknown[:5]:
+        close = difflib.get_close_matches(name.upper(), sorted(known), n=1, cutoff=0.75)
+        said.append(f"{name} (did you mean {close[0]}?)" if close else name)
+    report.add(
+        "env options",
+        WARN,
+        f"{', '.join(said)}{' and more' if len(unknown) > 5 else ''}: not options FamilyDB reads, "
+        "so a value set under that name never takes effect",
+        "Correct the name in .env (the list is in .env.example), or delete the line",
+    )
+
+
 def check_settings(app: App, report: Report) -> None:
     settings = app.settings
     report.add(
@@ -144,6 +219,7 @@ def check_settings(app: App, report: Report) -> None:
         )
     else:
         report.add("env file", OK, ".env is readable only by its owner")
+    check_env_options(env_file, report)
 
 
 def check_database(app: App, report: Report) -> sqlite3.Connection | None:
@@ -170,10 +246,22 @@ def check_database(app: App, report: Report) -> sqlite3.Connection | None:
     try:
         conn = app.connect()
     except sqlite3.Error as exc:
-        report.add("database", FAIL, f"could not open {path}: {exc}", "Check the file's owner")
+        unreadable = "not a database" in str(exc) or "malformed" in str(exc)
+        report.add(
+            "database",
+            FAIL,
+            f"could not open {path}: {exc}",
+            _RESTORE if unreadable else "Check the file's owner",
+        )
         return None
 
-    current = db.schema_version(conn)
+    try:
+        current = db.schema_version(conn)
+    except sqlite3.Error as exc:
+        # A file SQLite opens but cannot read: the case the doctor is most wanted for.
+        conn.close()
+        report.add("database", FAIL, f"could not read {path}: {exc}", _RESTORE)
+        return None
     latest = max((version for version, _n, _s in db.list_migrations()), default=0)
     if current < latest:
         report.add(
@@ -206,6 +294,268 @@ def check_database(app: App, report: Report) -> sqlite3.Connection | None:
             f"sudo chown -R familydb:familydb {path.parent}",
         )
     return conn
+
+
+def _when(stamp: str) -> datetime:
+    return datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+
+
+def _size(path: Path) -> str:
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return "?"
+    return f"{size / 1024 / 1024:.1f} MB" if size >= 1024 * 1024 else f"{max(size // 1024, 1)} KB"
+
+
+def _span(delta: timedelta) -> str:
+    minutes = int(delta.total_seconds() // 60)
+    if minutes < 90:
+        return f"{max(minutes, 1)} min"
+    if minutes < 48 * 60:
+        return f"{round(minutes / 60)} hours"
+    return f"{minutes // (24 * 60)} days"
+
+
+def check_time_zone(app: App, report: Report) -> None:
+    """The family's clock, which every reminder, the digest and "this weekend" follow. A rented
+    server starts out on UTC, so a family that never chose one gets its messages at the wrong hour.
+    """
+    settings = app.settings
+    there = app.clock.now().astimezone(settings.tzinfo)
+    if settings.family_tz is None and settings.tz == "UTC":
+        report.add(
+            "time zone",
+            WARN,
+            "none chosen, so the server's UTC is used: reminders, the digest and 'this weekend' "
+            "follow that clock, not the family's",
+            "Choose it on the settings page (General), or set FAMILYDB_TZ=Area/City",
+        )
+    else:
+        whose = "" if settings.family_tz else " (the server's)"
+        report.add("time zone", OK, f"{settings.tz}{whose}; it is {there:%H:%M} there now")
+
+
+def check_integrity(app: App, conn: sqlite3.Connection, report: Report) -> None:
+    """SQLite's own quick check of the file: a page it cannot read is found here, not by the
+    message that happens to need it."""
+    path = Path(app.settings.familydb_path)
+    try:
+        found = [row[0] for row in conn.execute("PRAGMA quick_check").fetchall()]
+    except sqlite3.Error as exc:
+        report.add("integrity", FAIL, f"the check itself failed: {exc}", _RESTORE)
+        return
+    if found == ["ok"]:
+        report.add("integrity", OK, f"the file is sound ({_size(path)})")
+    else:
+        report.add(
+            "integrity",
+            FAIL,
+            f"SQLite found {len(found)} problem(s), the first: {found[0] if found else '?'}",
+            _RESTORE,
+        )
+
+
+def check_data_files(app: App, report: Report) -> None:
+    """The database holds every message and any key typed on the settings page, so only its owner
+    reads it (privacy.py makes them so; an older version left some 0644).
+    """
+    if os.name != "posix":
+        return
+    files = [
+        path
+        for path in privacy.sensitive_files(app.settings)
+        if path.name != "web_secret" and path.exists()  # the login key has its own check
+    ]
+    loose = [path for path in files if (_mode(path) or 0) & privacy.OWNER_ONLY]
+    if loose:
+        report.add(
+            "data files",
+            WARN,
+            f"{', '.join(path.name for path in loose)} can be read by other users on this machine",
+            f"chmod 600 {' '.join(str(path) for path in loose)}  (or: familydb doctor --fix)",
+        )
+    elif files:
+        report.add("data files", OK, "the database and its keys are readable only by their owner")
+
+
+def check_spending(app: App, conn: sqlite3.Connection | None, report: Report) -> None:
+    from familydb.agent import spending
+
+    if conn is None:
+        return
+    settings = app.settings
+    try:
+        spent = spending.spent_today(conn, settings, app.clock.now())
+    except sqlite3.Error:
+        report.add("spending today", SKIP, "the database is not up to date yet")
+        return
+    limit = settings.daily_spend_limit
+    if not limit:
+        report.add("spending today", OK, f"${spent:.2f} so far (estimated); no daily limit is set")
+    elif spent >= limit:
+        report.add(
+            "spending today",
+            WARN,
+            f"${spent:.2f} of ${limit:.2f} (estimated): the limit is used up, so the model "
+            "answers nothing more until midnight",
+            "Raise 'Daily spending limit' on the settings page if that was not meant",
+        )
+    else:
+        report.add(
+            "spending today",
+            OK,
+            f"${spent:.2f} of ${limit:.2f} (estimated), {round(100 * spent / limit)}% of the limit",
+        )
+
+
+def check_jobs(app: App, conn: sqlite3.Connection | None, report: Report) -> None:
+    """Whether the scheduler is ticking: it sends the reminders, the digest and the retry of a
+    message that failed, so a bot that is up while it is quiet looks well and does none of it.
+    """
+    from familydb.store import heartbeat
+
+    if conn is None:
+        return
+    try:
+        beat = heartbeat.read(conn)
+    except sqlite3.Error:
+        report.add("scheduled jobs", SKIP, "the database is not up to date yet")
+        return
+    if beat is None:
+        report.add("scheduled jobs", SKIP, "none has run on this database; it was never started")
+    elif beat.stopped_at is not None:
+        report.add(
+            "scheduled jobs",
+            SKIP,
+            f"stopped on purpose at {beat.stopped_at[:16].replace('T', ' ')} UTC",
+        )
+    else:
+        quiet = app.clock.now() - _when(beat.jobs_at)
+        if quiet > health.QUIET:
+            report.add(
+                "scheduled jobs",
+                FAIL,
+                f"last ticked {_span(quiet)} ago, so no reminder, digest or retry of a failed "
+                "message is going out",
+                "Is it running? sudo systemctl restart familydb, then journalctl -u familydb -n 50",
+            )
+        else:
+            report.add("scheduled jobs", OK, f"ticking; the last was {_span(quiet)} ago")
+
+
+def check_messages(app: App, conn: sqlite3.Connection | None, report: Report) -> None:
+    """Messages that went in and got no answer, answers that never went out, and the ones the bot
+    gave up on: the three ways a family notices it is broken before any log does.
+    """
+    if conn is None:
+        return
+    now = app.clock.now()
+    attempts = app.settings.retry_max_attempts
+    try:
+        waiting = conn.execute(
+            "SELECT count(*) AS n FROM messages WHERE direction = 'in' "
+            "AND status IN ('received', 'failed') AND give_up = 0 AND retries < ? "
+            "AND received_at < ?",
+            (attempts, utc_iso(now - WAITING)),
+        ).fetchone()["n"]
+        unsent = conn.execute(
+            "SELECT count(*) AS n FROM messages WHERE direction = 'out' AND delivered_at IS NULL "
+            "AND cancelled_at IS NULL AND received_at < ?",
+            (utc_iso(now - UNSENT),),
+        ).fetchone()["n"]
+        gave_up = conn.execute(
+            "SELECT count(*) AS n, max(id) AS newest FROM messages WHERE direction = 'in' "
+            "AND status = 'failed' AND (give_up = 1 OR retries >= ?) "
+            "AND coalesce(error, '') != 'member_inactive' AND processed_at >= ?",
+            (attempts, utc_iso(now - GAVE_UP)),
+        ).fetchone()
+        why = (
+            conn.execute("SELECT error FROM messages WHERE id = ?", (gave_up["newest"],)).fetchone()
+            if gave_up["newest"]
+            else None
+        )
+    except sqlite3.Error:
+        report.add("messages", SKIP, "the database is not up to date yet")
+        return
+    if waiting:
+        report.add(
+            "waiting messages",
+            WARN,
+            f"{waiting} message(s) have waited over {_span(WAITING)} for an answer; the retry job "
+            f"tries again every {app.settings.retry_interval_minutes} min while the bot runs",
+            "familydb db retry-failed, and journalctl -u familydb -n 50 for why they fail",
+        )
+    if unsent:
+        report.add(
+            "unsent replies",
+            WARN,
+            f"{unsent} reply(ies) are stored but were never delivered; the channel is refusing "
+            "them or is not connected",
+            "Check the Telegram token on the settings page; the retry job resends once it works",
+        )
+    if gave_up["n"]:
+        error = ((why["error"] if why else "") or "no reason kept").strip().splitlines()[0][:100]
+        report.add(
+            "given-up messages",
+            WARN,
+            f"{gave_up['n']} message(s) in the last week were given up on, the newest because: "
+            f"{error}",
+            "Fix the cause, then: familydb db retry-failed --reset (the Status page lists them)",
+        )
+    if not (waiting or unsent or gave_up["n"]):
+        report.add("messages", OK, "none waiting, no reply unsent, none given up on this week")
+
+
+def check_trouble(app: App, conn: sqlite3.Connection | None, report: Report) -> None:
+    """What the bot has told the admins it cannot fix, and what it logged at ERROR in the last
+    day (the same two lists the Status and Troubleshooting pages show)."""
+    from familydb import alerts
+
+    if conn is None:
+        return
+    now = app.clock.now()
+    try:
+        standing = [
+            one
+            for one in alert_store.current(conn, since=utc_iso(now - alerts.KEEP))
+            if one.kind not in NOT_TROUBLE
+        ]
+        counts = problems.counts_since(conn, since=utc_iso(now - timedelta(days=1)))
+        latest = [
+            row for row in problems.recent(conn, limit=25) if row["level"] in ("ERROR", "CRITICAL")
+        ][:1]
+    except sqlite3.Error:
+        report.add("alerts", SKIP, "the database is not up to date yet")
+        return
+    if standing:
+        named = "; ".join(
+            f"{one.kind}{f' ({one.subject})' if one.subject else ''}: {one.detail}"[:90]
+            for one in standing[:3]
+        )
+        more = f", and {len(standing) - 3} more" if len(standing) > 3 else ""
+        report.add(
+            "alerts",
+            WARN,
+            f"{len(standing)} standing: {named}{more}",
+            "The Status page lists each with what to do about it",
+        )
+    else:
+        report.add("alerts", OK, "nothing the admins were told about is still standing")
+    errors = counts.get("ERROR", 0) + counts.get("CRITICAL", 0)
+    quiet = counts.get("WARNING", 0)
+    if errors:
+        newest = ""
+        if latest:
+            newest = f"; the latest: {latest[0]['source']}: {str(latest[0]['message'])[:90]}"
+        report.add(
+            "logged errors",
+            WARN,
+            f"{errors} error(s) and {quiet} warning(s) in the last day{newest}",
+            "Settings, Troubleshooting lists each with its detail; or: scripts/maintain.sh logs",
+        )
+    else:
+        report.add("logged errors", OK, f"none in the last day ({quiet} warning(s))")
 
 
 def check_family(
@@ -642,6 +992,13 @@ def correct(app: App, report: Report) -> None:
                 check.corrected = (
                     f"applied migration(s) {applied}" if applied else "nothing to apply"
                 )
+        elif check.name == "data files" and check.verdict == WARN:
+            changed = privacy.tighten(app.settings)
+            check.corrected = (
+                f"made {', '.join(path.name for path in changed)} readable only by its owner"
+                if changed
+                else "nothing to change (the files are not owned by this user)"
+            )
         elif check.name == "login key" and "mode" in check.detail:
             from familydb.web.keys import secret_path
 
@@ -667,22 +1024,54 @@ def fix(app: App, *, online: bool = False) -> Report:
 
 def run(app: App, *, online: bool = False) -> Report:
     report = Report()
+    report.group = "Settings"
     check_settings(app, report)
+    check_time_zone(app, report)
+    report.group = "Database"
     conn = check_database(app, report)
     try:
+        if conn is not None:
+            check_integrity(app, conn, report)
+        check_data_files(app, report)
+        check_backups(app, report, conn)
+        report.group = "Family"
         check_family(conn, report, telegram=bool(app.settings.telegram_bot_token))
+        report.group = "Model"
         check_provider(app, report, online=online)
+        check_spending(app, conn, report)
+        report.group = "Connections"
         check_channels(app, report, online=online)
         check_integrations(app, report)
-        check_web(app, report, conn)
-        check_backups(app, report, conn)
         if online:
             check_links(report)
+        report.group = "Web page"
+        check_web(app, report, conn)
+        report.group = "Running"
         check_service(report)
+        check_jobs(app, conn, report)
+        check_messages(app, conn, report)
+        check_trouble(app, conn, report)
     finally:
         if conn is not None:
             conn.close()
     return report
+
+
+def text(report: Report) -> list[str]:
+    """The report as printed: a heading for each group (`▸ Name`), a line for each check, its fix
+    under it, and the verdict last. scripts/lib/common.sh `show_doctor` reads exactly this."""
+    lines: list[str] = []
+    group = None
+    for check in report.checks:
+        if check.group and check.group != group:
+            group = check.group
+            lines.append(f"▸ {group}")
+        lines.append(f"{MARKS[check.verdict]} {check.name}: {check.detail}")
+        if check.corrected:
+            lines.append(f"    fixed: {check.corrected}")
+        elif check.fix and check.verdict in (FAIL, WARN, TODO):
+            lines.append(f"    → {check.fix}")
+    return [*lines, "", verdict(report)]
 
 
 def as_new_install(report: Report) -> Report:

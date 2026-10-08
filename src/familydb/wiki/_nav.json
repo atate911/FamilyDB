@@ -344,6 +344,17 @@
           ]
         },
         {
+          "slug": "operations/break-glass",
+          "title": "Break glass: when the usual fixes are not enough",
+          "audience": "admin",
+          "depth": "howto",
+          "see_also": [
+            "operations/diagnostics",
+            "operations/recovery",
+            "operations/backup-and-restore"
+          ]
+        },
+        {
           "slug": "operations/host",
           "title": "The server",
           "audience": "admin",

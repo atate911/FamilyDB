@@ -9,13 +9,19 @@ set -euo pipefail
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
 SCRIPT_ARGS="$*"
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-if [ -r "${HERE}/lib/common.sh" ] && [ -r "${HERE}/lib/https.sh" ]; then
+if [ -r "${HERE}/lib/common.sh" ] && [ -r "${HERE}/lib/https.sh" ] && [ -r "${HERE}/lib/doctor.sh" ] && [ -r "${HERE}/lib/rescue.sh" ] && [ -r "${HERE}/lib/repair.sh" ]; then
   # shellcheck source=lib/common.sh
   . "${HERE}/lib/common.sh"
   # shellcheck source=lib/https.sh
   . "${HERE}/lib/https.sh"
+  # shellcheck source=lib/doctor.sh
+  . "${HERE}/lib/doctor.sh"
+  # shellcheck source=lib/rescue.sh
+  . "${HERE}/lib/rescue.sh"
+  # shellcheck source=lib/repair.sh
+  . "${HERE}/lib/repair.sh"
 else
-  printf 'This script needs scripts/lib/common.sh and scripts/lib/https.sh beside it.\n' >&2
+  printf 'This script needs scripts/lib/common.sh, https.sh, doctor.sh, rescue.sh and repair.sh beside it.\n' >&2
   exit 1
 fi
 
@@ -26,6 +32,8 @@ KEEP_DAYS=14
 ASSUME_YES=0
 DRY_RUN=0
 COMMAND=""
+CHECK_VIEW=problems   # check: what to list; --all lists every row
+CHECK_ONLINE=0        # check: also the things that need the internet
 
 usage() {
   _style_usage <<'USAGE'
@@ -36,7 +44,12 @@ Look after a running FamilyDB.
 Look at it (these change nothing)
   status               Is it running, is it healthy, how big is the database, when was the
                        last backup. One screen, with what needs attention at the foot.
-  check                The full check (familydb doctor), with every finding and its fix.
+  check                Everything that has to be right for the page to come up, read and never
+                       changed: the files and who owns them, git, .env, Python and its packages,
+                       the database file, the service, the web server and HTTPS, the disk and
+                       memory, and then the program's own check (familydb doctor). Sections with
+                       nothing wrong fold into a line; what is wrong says what to do. --all lists
+                       every row, --online also asks the internet.
   logs [N]             Follow the log, starting with the last N lines (default 50).
 
 Keep it safe
@@ -71,6 +84,22 @@ Change it
                        NAME, or for the first admin: they sign in with it and choose their
                        own. Until then it is a new family password that everyone signs in with.
 
+Fix what is wrong
+  doctor               For "it is broken and I do not know why". It looks at everything, says what
+                       is wrong and why (root cause first, in plain words), shows what it will do
+                       about each thing and what only you can do, does the safe steps on one Enter,
+                       looks again, and says what came right and what did not. Anything that can
+                       lose data asks for a typed yes of its own, and --yes never gives it.
+                       --dry-run shows the plan and changes nothing.
+  rescue [WHAT]        The larger remedies one at a time, for when the doctor is not enough. With
+                       no WHAT, a menu. Each looks first, asks before it changes anything, and backs
+                       the database up first.
+                         locked-out    nobody can sign in, or the page does not open
+                         wont-start    it will not start, or keeps stopping
+                         rollback      an upgrade broke it: put the code, and if need be the data, back
+                         database      the database is damaged: check it, restore or salvage
+                         space         the disk is full: free what can safely be freed
+
 Options
   --target DIR         Which install. Default: the checkout this script lives in.
   --user NAME          The account that owns the data. Default: the one the install recorded,
@@ -78,6 +107,8 @@ Options
   --backup-dir DIR     Where backups go. Default: <target>/backups.
   --keep-days N        How long scheduled backups are kept. Default: 14.
   --port N|random      With https: the port the page is served on. Default: as it was, else 443.
+  --all                With check: every row, not only what is not fine.
+  --online             With check: also ask the internet (the git remote, the model keys, Telegram).
   --yes                Do not ask.
   --dry-run            Say what would happen; change nothing.
   -h, --help           This text.
@@ -123,14 +154,17 @@ HTTPS_SITE=""
 HTTPS_PORT=""
 APP_PORT=""
 PASSWORD_FOR=""
+# shellcheck disable=SC2034  # RESCUE_WHAT is read by lib/rescue.sh.
 case "$COMMAND" in
   https) case "${1:-}" in ''|-*) ;; *) HTTPS_SITE="$1"; shift ;; esac ;;
   port) case "${1:-}" in ''|-*) ;; *) APP_PORT="$1"; shift ;; esac ;;
   password) case "${1:-}" in ''|-*) ;; *) PASSWORD_FOR="$1"; shift ;; esac ;;
   restore) RESTORE_FILE="${1:-}"; [ -n "$RESTORE_FILE" ] && shift ;;
   logs) case "${1:-}" in ''|-*) ;; *) LOG_LINES="$1"; shift ;; esac ;;
+  rescue) case "${1:-}" in ''|-*) ;; *) RESCUE_WHAT="$1"; shift ;; esac ;;
 esac
 
+# shellcheck disable=SC2034  # CHECK_ONLINE is read by lib/repair.sh
 while [ $# -gt 0 ]; do
   case "$1" in
     --target) TARGET="${2:-}"; shift 2 ;;
@@ -143,6 +177,9 @@ while [ $# -gt 0 ]; do
     --keep-days=*) KEEP_DAYS="${1#*=}"; shift ;;
     --port) HTTPS_PORT="${2:-}"; shift 2 ;;
     --port=*) HTTPS_PORT="${1#*=}"; shift ;;
+    --all|-v) CHECK_VIEW=all; shift ;;
+    --problems|-q) CHECK_VIEW=problems; shift ;;
+    --online) CHECK_ONLINE=1; shift ;;
     --yes|-y) ASSUME_YES=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -199,7 +236,7 @@ intro() { # intro "Upgrade" - which install, and how it runs, beside the heading
   banner "$1" "${TARGET} ${S_DOT} $(how_it_runs)"
 }
 
-env_file_value() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
+env_file_value() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"\r" || true; }
 
 env_file_set() { # env_file_set KEY VALUE - in place, keeping the file's owner and mode
   local file="${TARGET}/.env"
@@ -558,20 +595,48 @@ cmd_status() {
   if [ "$STATUS_RUNNING" = 0 ] || [ "$bad" -gt 0 ]; then FINISH_BAD=1; fi
 }
 
+# Which ways out of `rescue` suit what the check found, said only when something must be fixed.
+breakglass_hint() {
+  local i wont=0 login=0 data=0 space=0 back=0 state group name last_at now
+  for i in "${!_DR_STATE[@]}"; do
+    state="${_DR_STATE[i]}"; group="${_DR_GROUP[i]}"; name="${_DR_NAME[i]}"
+    [ "$state" = bad ] || continue
+    case "$group" in
+      Files|Git|Config|Python|Service|Program|"Web server") wont=1 ;;
+      HTTPS|"Web page") login=1 ;;
+      "Database file") data=1 ;;
+      Host) space=1 ;;
+    esac
+    case "$name" in "disk space"|inodes) space=1 ;; esac
+  done
+  last_at="$(last_upgrade_get at)"; now="$(date +%s)"
+  if [ -n "$(pending_get target)" ] || { [ -n "$last_at" ] && [ "$last_at" -gt 0 ] 2>/dev/null && [ $((now - last_at)) -lt 1209600 ]; }; then back=1; fi
+  [ $((wont + login + data + space)) -gt 0 ] || [ "$DOCTOR_BAD" -eq 0 ] || wont=1
+  after "Break glass (when the usual fixes are not enough)"
+  {
+    [ "$wont" = 0 ] || printf '  sudo %s rescue wont-start     # it will not start\n' "$0"
+    [ "$login" = 0 ] || printf '  sudo %s rescue locked-out     # nobody can get in\n' "$0"
+    [ "$data" = 0 ] || printf '  sudo %s rescue database       # damaged database\n' "$0"
+    [ "$space" = 0 ] || printf '  sudo %s rescue space          # disk full\n' "$0"
+    [ "$back" = 0 ] || printf '  sudo %s rescue rollback       # undo an upgrade\n' "$0"
+  } | show_commands
+}
+
 cmd_check() {
-  hint "$S_OK fine   $S_WARN worth a look   $S_BAD must be fixed   $S_DOT skipped"
+  sweep
   printf '\n'
-  _capture "Running the checks" familydb_cmd doctor
-  show_doctor all "$_OUT"
-  [ -n "$_OUT" ] || warn "The check printed nothing, so it may not have run. Run it by hand: cd ${TARGET} && sudo -u ${SERVICE_USER} ${FAMILYDB} doctor"
+  doctor_show "$CHECK_VIEW"
+  doctor_summary
   if [ "$DOCTOR_BAD" -gt 0 ]; then
+    breakglass_hint
     finish bad "$DOCTOR_BAD thing$([ "$DOCTOR_BAD" -eq 1 ] || echo s) must be fixed, $DOCTOR_WARN worth a look"
   elif [ "$DOCTOR_WARN" -gt 0 ]; then
     finish warn "Nothing is broken; $DOCTOR_WARN thing$([ "$DOCTOR_WARN" -eq 1 ] || echo s) worth a look"
   else
     finish ok "All $DOCTOR_FINE checks are fine"
   fi
-  [ -z "$DOCTOR_VERDICT" ] || hint "$DOCTOR_VERDICT"
+  # The program's own verdict is about the program, so it is not said beside a failure it did not see.
+  [ -z "$DOCTOR_VERDICT" ] || [ "$DOCTOR_BAD" -gt 0 ] || hint "$DOCTOR_VERDICT"
 }
 
 cmd_password() {
@@ -843,6 +908,23 @@ pending_write() { # pending_write TARGET BEFORE BACKUP
   as_root mkdir -p "$LEDGER_DIR"
   as_root chmod 700 "$LEDGER_DIR"
   printf 'target=%s\nbefore=%s\nbackup=%s\n' "$1" "$2" "$3" | as_root tee "$UPGRADE_PENDING" >/dev/null
+}
+
+# What the last finished upgrade moved from and to, kept so `rescue rollback` can undo one that
+# turned out badly after it had finished (the pending file above only outlives a half-done one).
+LAST_UPGRADE="${LEDGER_DIR}/last-upgrade"
+
+last_upgrade_get() { # last_upgrade_get KEY - at, from, from_label, to, to_label or backup; empty if none
+  as_root grep -s "^${1}=" "$LAST_UPGRADE" 2>/dev/null | tail -1 | cut -d= -f2- || true
+}
+
+last_upgrade_write() { # last_upgrade_write BEFORE BACKUP
+  [ "$DRY_RUN" = 1 ] && return 0
+  case "$1" in ''|unknown) return 0 ;; esac
+  as_root mkdir -p "$LEDGER_DIR"
+  as_root chmod 700 "$LEDGER_DIR"
+  printf 'at=%s\nfrom=%s\nfrom_label=%s\nto=%s\nto_label=%s\nbackup=%s\n' "$(date +%s)" "$1" "$(version_label "$1")" \
+    "$(as_root git -C "$TARGET" rev-parse HEAD 2>/dev/null || true)" "$(version_label HEAD)" "$2" | as_root tee "$LAST_UPGRADE" >/dev/null
 }
 
 # The version the database is at, and the newest migration this checkout has; empty when unreadable.
@@ -1249,6 +1331,7 @@ cmd_upgrade() {
   else
     STEP_QUIET=1 step "Checking the database is up to date" familydb_cmd db migrate
   fi
+  last_upgrade_write "$before" "$upgrade_backup"
   [ "$DRY_RUN" = 1 ] || as_root rm -f "$UPGRADE_PENDING"
   on_failure_hint ""
   again_hint ""
@@ -1393,6 +1476,7 @@ cmd_schedule_backups() {
 case "$COMMAND" in
   status)           cmd_status ;;
   check)            intro "Check"; cmd_check ;;
+  doctor)           intro "Doctor"; cmd_doctor ;;
   password)         intro "New password"; cmd_password ;;
   https)            intro "HTTPS"; cmd_https ;;
   port)             intro "Port"; cmd_port ;;
@@ -1401,9 +1485,12 @@ case "$COMMAND" in
   upgrade)          intro "Upgrade"; cmd_upgrade ;;
   logs)             cmd_logs ;;
   restart)          intro "Restart"; cmd_restart ;;
+  rescue)           intro "Rescue"; cmd_rescue ;;
   schedule-backups) intro "Nightly backups"; cmd_schedule_backups ;;
   -h|--help|help)   usage ;;
   *) usage >&2; die "unknown command: ${COMMAND}" ;;
 esac
 [ "$RECAPPED" = 1 ] || recap
-[ "$FINISH_BAD" = 0 ] || exit 1
+# A last line that said FAIL has already told what went wrong; the exit status is for what ran it.
+# shellcheck disable=SC2034  # read by the exit trap in lib/common.sh
+[ "$FINISH_BAD" = 0 ] || { EXPLAINED=1; exit 1; }

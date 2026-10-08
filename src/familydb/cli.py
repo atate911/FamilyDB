@@ -693,15 +693,7 @@ def doctor(
     if as_json:
         typer.echo(json.dumps(report.as_dict(), indent=2, sort_keys=True))
     else:
-        for check in report.checks:
-            mark = checks.MARKS[check.verdict]
-            typer.echo(f"{mark} {check.name}: {check.detail}")
-            if check.corrected:
-                typer.echo(f"    fixed: {check.corrected}")
-            elif check.fix and check.verdict in (checks.FAIL, checks.WARN, checks.TODO):
-                typer.echo(f"    → {check.fix}")
-        typer.echo("")
-        typer.echo(checks.verdict(report))
+        typer.echo("\n".join(checks.text(report)))
     if not report.healthy:
         raise typer.Exit(code=1)
 

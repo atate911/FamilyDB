@@ -47,17 +47,36 @@ def test_bootstrap_forwards_a_chosen_user_and_only_a_chosen_one():
     assert default.stdout.split() == ["--mode", "venv"], default.stderr
 
 
-def test_the_installed_unit_runs_as_the_chosen_user():
-    snippet = _between("scripts/install.sh", 'sed -e "s#/opt/familydb#', '"$unit" > "$tmp_unit"')
-    unit = ROOT / "deploy/familydb.service"
+def _install_with_unit(tmp_path: Path, name: str = "fam") -> Path:
+    target = tmp_path / name
+    (target / "deploy").mkdir(parents=True)
+    shutil.copy(ROOT / "deploy/familydb.service", target / "deploy/familydb.service")
+    return target
+
+
+def test_the_installed_unit_runs_as_the_chosen_user(tmp_path):
+    """install.sh and `maintain.sh doctor` write the unit with the same function."""
+    target = _install_with_unit(tmp_path)
     result = _bash(
-        f"set -euo pipefail; REPO_ROOT=/srv/fam; SERVICE_USER=alice; unit={unit.as_posix()}; "
-        f'tmp_unit="$(mktemp)"; {snippet}; cat "$tmp_unit"; rm -f "$tmp_unit"'
+        f'set -euo pipefail; . "$ROOT/scripts/lib/common.sh"; render_unit {target.as_posix()} alice'
     )
     assert result.returncode == 0, result.stderr
     assert "\nUser=alice\n" in result.stdout and "\nGroup=alice\n" in result.stdout
     assert "familydb\n" not in result.stdout.split("User=alice")[1].split("WorkingDirectory")[0]
-    assert "WorkingDirectory=/srv/fam" in result.stdout
+    assert f"WorkingDirectory={target.as_posix()}" in result.stdout
+    assert "ProtectHome=true" in result.stdout  # an install outside /home keeps the strict setting
+
+
+def test_a_checkout_under_home_is_given_a_unit_that_can_read_it():
+    unit = (ROOT / "deploy/familydb.service").as_posix()
+    result = _bash(
+        'set -euo pipefail; . "$ROOT/scripts/lib/common.sh"; '
+        f"render_unit /home/someone/familydb alice {unit}"
+    )
+    assert result.returncode == 0, result.stderr
+    assert "ProtectHome=read-only" in result.stdout and "ProtectHome=true" not in result.stdout
+    assert "WorkingDirectory=/home/someone/familydb" in result.stdout
+    assert "ReadWritePaths=/home/someone/familydb/data" in result.stdout
 
 
 def test_the_scripts_read_back_the_recorded_user(tmp_path):

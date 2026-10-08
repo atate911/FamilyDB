@@ -107,7 +107,13 @@ sudo /opt/familydb/scripts/maintain.sh upgrade
 
 An upgrade writes `/var/lib/familydb-install/upgrade-pending` when it moves the code and removes it once the dependencies and migrations are done. While that file exists, or the database is behind the code's newest migration, a second run says what is unfinished and finishes it instead of saying `Already up to date`. It keeps the first run's rollback point, the commit and backup from before the upgrade.
 
-To go back, database and all, run the three commands the upgrade printed, in that order:
+The simplest way back, whether the upgrade stopped or finished and turned out badly, is one command that does those steps for you:
+
+```bash
+sudo /opt/familydb/scripts/maintain.sh rescue rollback
+```
+
+`upgrade` records what it moved from and to, so this works after the upgrade finished too. It puts only the code back when no migration ran (nothing saved is lost), and the database from before the upgrade too when one did, after a typed `yes`. [Break glass](/wiki/operations/break-glass#an-upgrade-broke-it) describes it. To do it by hand instead, run the three commands the upgrade printed, in that order:
 
 ```bash
 sudo git -C /opt/familydb checkout --quiet --detach <the commit that was installed>

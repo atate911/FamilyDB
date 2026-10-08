@@ -60,7 +60,7 @@ Each row names the setting and the card it is on.
 | I want to... | Where |
 |---|---|
 | Install FamilyDB | [Install and first run](/wiki/operations/install) |
-| Check the install is healthy | [Running the doctor](/wiki/operations/diagnostics#running-the-doctor) |
+| Check the install is healthy | [Running the check](/wiki/operations/diagnostics#running-the-check) |
 | Take a backup now | [Take a backup by hand](/wiki/operations/backup-and-restore#take-a-backup-by-hand) |
 | Copy a backup off the server | [Keep a copy off the server](/wiki/operations/backup-and-restore#keep-a-copy-off-the-server) |
 | Restore a backup | [Restore a backup](/wiki/operations/backup-and-restore#restore-a-backup) |
