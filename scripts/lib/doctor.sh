@@ -353,8 +353,9 @@ dc_config() {
   doctor_section "Config"
   local env="${TARGET}/.env" report issues="" worst=ok value bom crlf odd spaced quote dup
   as_root test -f "$env" || return 0
-  report="$(as_root awk '
-    NR == 1 && substr($0, 1, 3) == "\357\273\277" { bom = 1; $0 = substr($0, 4) }
+  # Bytes, not characters: gawk in a UTF-8 locale would count the byte-order mark as one.
+  report="$(as_root env LC_ALL=C awk '
+    NR == 1 && substr($0, 1, 3) == "\357\273\277" { $0 = substr($0, 4) }
     { if (sub(/\r$/, "")) crlf++ }
     /^[[:space:]]*(#|$)/ { next }
     {
@@ -369,9 +370,11 @@ dc_config() {
       if (key in seen && seen[key] != val) dup = dup (dup == "" ? "" : ", ") key
       seen[key] = val
     }
-    END { print "bom=" bom + 0; print "crlf=" crlf + 0; print "odd=" odd; print "spaced=" spaced; print "quote=" quote; print "dup=" dup }
+    END { print "crlf=" crlf + 0; print "odd=" odd; print "spaced=" spaced; print "quote=" quote; print "dup=" dup }
   ' "$env" 2>/dev/null || true)"
-  bom="$(printf '%s\n' "$report" | sed -n 's/^bom=//p')"; crlf="$(printf '%s\n' "$report" | sed -n 's/^crlf=//p')"
+  bom=0
+  [ "$(as_root head -c3 "$env" 2>/dev/null | od -An -tx1 | tr -d ' \n')" != efbbbf ] || bom=1
+  crlf="$(printf '%s\n' "$report" | sed -n 's/^crlf=//p')"
   odd="$(printf '%s\n' "$report" | sed -n 's/^odd=//p')"; spaced="$(printf '%s\n' "$report" | sed -n 's/^spaced=//p')"
   quote="$(printf '%s\n' "$report" | sed -n 's/^quote=//p')"; dup="$(printf '%s\n' "$report" | sed -n 's/^dup=//p')"
   [ "${bom:-0}" = 0 ] || { issues="${issues}${issues:+; }a byte-order mark at the start hides the first option's name"; worst=bad; }

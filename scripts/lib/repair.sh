@@ -142,7 +142,7 @@ fix_env_text() { # a byte-order mark and Windows line ends, with the file kept b
   saved="${TARGET}/.env.before-doctor-$(date +%Y%m%d%H%M%S)"
   as_root cp -p "${TARGET}/.env" "$saved"
   as_root chmod 600 "$saved"
-  as_root sed -i -e '1s/^\xEF\xBB\xBF//' -e 's/\r$//' "${TARGET}/.env"
+  as_root env LC_ALL=C sed -i -e '1s/^\xEF\xBB\xBF//' -e 's/\r$//' "${TARGET}/.env"
 }
 
 fix_uv() {
