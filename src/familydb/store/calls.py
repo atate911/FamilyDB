@@ -402,6 +402,23 @@ def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any
     return [dict(row) for row in rows]
 
 
+def usage_rows(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
+    """Every call since a timestamp as its tokens and searches, oldest first, for re-pricing at
+    another model (the models page). A call with no kind (one from before kinds were kept) is
+    left out: no use owns it."""
+    rows = conn.execute(
+        "SELECT kind, created_at, "
+        "coalesce(input_tokens, 0) AS input_tokens, "
+        "coalesce(cache_read_input_tokens, 0) AS cache_read_input_tokens, "
+        "coalesce(cache_creation_input_tokens, 0) AS cache_creation_input_tokens, "
+        "coalesce(output_tokens, 0) AS output_tokens, "
+        "coalesce(web_searches, 0) AS web_searches "
+        "FROM llm_calls WHERE kind IS NOT NULL AND created_at >= ? ORDER BY id",
+        (since,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def sections_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
     """Each call's kind, section sizes and input tokens."""
     rows = conn.execute(

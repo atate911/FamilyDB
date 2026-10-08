@@ -429,7 +429,7 @@ def test_the_status_page_says_where_it_read_and_what_changed(settings, conn, fam
 
     # And the box to choose one says which is new.
     page = client.get("/settings/model").text
-    assert re.search(r'<option value="claude-sonnet-6">[^<]*· new</option>', page)
+    assert re.search(r'<option value="anthropic:claude-sonnet-6">[^<]*· new</option>', page)
 
 
 def test_the_status_page_says_when_the_check_is_off(settings, clock, conn) -> None:

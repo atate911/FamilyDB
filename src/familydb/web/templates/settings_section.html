@@ -2,6 +2,13 @@
 {% from "_ui.html" import icon, page_head with context %}
 {% from "_settings.html" import told, settings_nav with context %}
 {% block title %}{{ section.title }} · Settings · {{ site_title }}{% endblock %}
+{% block head %}
+  {# The models page draws its table and charts with a stylesheet and a script of its own; the form works without the script. #}
+  {% if section.name == 'model' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='models.css') }}" />
+    <script src="{{ url_for('static', filename='models.js') }}" defer></script>
+  {% endif %}
+{% endblock %}
 {% block content %}
   {% call page_head(section.title, section.blurb, crumb=('Settings', url_for('settings.show'))) %}
     <a class="btn btn--quiet" href="{{ settings_guide(section.name) }}">{{ icon('info') }}Guide</a>

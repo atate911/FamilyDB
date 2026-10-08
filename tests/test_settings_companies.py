@@ -464,8 +464,13 @@ def test_the_company_boxes_stay_dropdowns_and_offer_no_added_company_for_lookups
         assert one.choices == companies.SPARE_ORDER, key
     add_openrouter(page)
     text = page.get("/settings/model").text
-    lookups = text.split('<select id="f-worker_provider"')[1].split("</select>")[0]
-    assert "openrouter" not in lookups  # it has no hosted search, so it is not offered for lookups
+
+    def row(use):
+        return re.search(rf'id="row-{use}".*?</select>', text, re.S).group(0)
+
+    assert '<optgroup label="OpenRouter">' in row("chat")
+    # It has no hosted search, so it is not offered for the lookups.
+    assert "OpenRouter" not in row("lookup")
 
 
 # -- a new company is priced at once, or said to be unpriced

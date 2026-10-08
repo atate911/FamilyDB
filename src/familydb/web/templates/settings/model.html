@@ -1,104 +1,319 @@
 {% from "_ui.html" import icon with context %}
-{% from "_settings.html" import setting, group, save_bar with context %}
-{% set who = groups.who.group %}
-<section class="card sgroup" id="who" aria-labelledby="g-who">
-  <h2 class="sgroup__h" id="g-who">{{ who.title }}</h2>
-  <p class="sgroup__note">{{ who.note }}</p>
-  {% include "_company_cards.html" %}
-  {# The company's key, checked with it before anything is kept. Saved here, it also makes that
-     company the one that answers: a company can only be chosen with a key it has not refused. #}
-  <form class="form form--tight mt-4" method="post" action="{{ url_for('settings.save_model') }}">
+{# The AI model page (docs/MODELS_PAGE.md). One form holds every choice; static/models.js lays the
+   cost of a change over it as it is made. With scripts off the form still posts: each row is one
+   dropdown of every model, grouped by company, and costs are the saved ones. The numbers come from
+   web/models_page.py: the last 30 days of calls, re-priced at each model. #}
+{% set b = built %}
+{% macro money(v) -%}{% if 0 < v < 0.005 %}&lt;$0.01{% else %}${{ '{:,.2f}'.format(v) }}{% endif %}{%- endmacro %}
+{% macro delta(v) -%}{{ '+' if v >= 0 else '−' }}${{ '%.2f' % (v | abs) }}{%- endmacro %}
+
+<div class="mp" id="mp" data-models='{{ b.data | tojson }}'>
+
+  <section class="card sgroup mp-head" aria-labelledby="g-co">
+    <h2 class="sgroup__h sr" id="g-co">Companies and spend</h2>
+    <div class="mp-head__grid">
+      <ul class="mp-cos" aria-label="Companies">
+        {% for c in b.companies %}
+          {% set ok = c.haskey and c.allowed %}
+          <li class="mp-co{{ '' if ok else ' mp-co--none' }}" id="co-{{ c.id }}" data-vendor="{{ c.id }}">
+            <details class="mp-co__d"{% if problems.get('limit_' ~ c.id) %} open{% endif %}>
+              <summary class="mp-co__row">
+                <span class="mp-co__text">
+                  <span class="mp-co__top"><span class="mp-co__dot{{ ' mp-co__dot--ok' if ok }}" aria-hidden="true"></span><b>{{ c.name }}</b></span>
+                  <span class="mp-co__use small muted" data-use="{{ c.id }}">
+                    {%- if not c.haskey %}no key{% if c.answers %} · chosen for {{ c.answers | length }}{% endif %}
+                    {%- elif not c.allowed %}turned off{% if c.answers %} · chosen for {{ c.answers | length }}{% endif %}
+                    {%- elif c.answers %}{{ c.answers | length }} of {{ b.uses | length }} · {{ money(c.cost) }}/mo
+                    {%- else %}{{ 'stands in' if c.standin else 'not used' }}{% endif -%}
+                  </span>
+                </span>
+                <span class="btn btn--quiet btn--sm mp-co__btn">Settings{{ icon('chev', size='sm', cls='chev') }}</span>
+              </summary>
+              <div class="mp-co__panel">
+                <input type="hidden" name="company" value="{{ c.id }}" form="mp-form" />
+                {% if not c.haskey %}
+                  <p class="small muted">{{ c.name }} has no key yet, so none of its models can answer, and it cannot stand in. Choosing one of its models still works: the page says who answers instead.</p>
+                {% endif %}
+                <label class="mp-switch"><input type="checkbox" form="mp-form" name="allow_{{ c.id }}" value="1" data-setting="allow" data-vendor="{{ c.id }}" data-saved="{{ 1 if c.allowed else 0 }}"{{ ' checked' if c.allowed_now }} /> <span>Let {{ c.name }} answer</span></label>
+                <label class="mp-switch"><input type="checkbox" form="mp-form" name="standin_{{ c.id }}" value="1" data-setting="standin-co" data-vendor="{{ c.id }}" data-saved="{{ 1 if c.standin else 0 }}"{{ ' checked' if c.standin_now }} /> <span>May stand in when another company cannot</span></label>
+                <label class="mp-set__f"><span class="mp-k">Most to spend a month</span>
+                  <span class="mp-money"><span class="fig">$</span><input type="number" min="0" max="100000" step="any" inputmode="decimal" form="mp-form" name="limit_{{ c.id }}" data-setting="limit" data-vendor="{{ c.id }}" data-saved="{{ c.limit if c.limit is not none }}" value="{{ c.limit_now }}" placeholder="no limit" aria-label="Most to spend on {{ c.name }} in a month" /></span>
+                  <span class="small muted">{{ money(c.spent) }} spent this month</span>
+                  {% if problems.get('limit_' ~ c.id) %}<span class="field__error" role="alert">{{ problems['limit_' ~ c.id] }}</span>{% endif %}</label>
+                <div class="mp-co__acts">
+                  <button type="button" class="btn btn--quiet btn--sm" data-useall="{{ c.id }}" hidden>Use for everything</button>
+                </div>
+                <p class="small muted mp-co__msg" data-usedmsg="{{ c.id }}" role="status"></p>
+                <p class="small mp-co__key"><span class="mp-k">Key</span>
+                  {% if c.added %}<span class="muted">{{ c.keysource }}</span> · <a href="#company-{{ c.id }}">Change or remove it</a>
+                  {% else %}
+                    {% if c.haskey %}<button type="submit" class="mp-link" form="check-{{ c.id }}">Check</button> · <a href="#k-{{ c.id }}">Replace</a> · <a href="#k-{{ c.id }}">Remove</a>
+                    {% else %}<a href="#k-{{ c.id }}">Add a key</a>{% endif %}
+                    <span class="muted">{{ c.keysource }}</span>
+                  {% endif %}</p>
+                {% if not c.added %}<p class="small"><a href="#lineup">Which models count as everyday, better and best</a></p>{% endif %}
+              </div>
+            </details>
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="mp-spend">
+        <p class="mp-lede" id="t-lede">
+          <span class="mp-k">{{ 'A month at today’s choices' if b.head.real else 'A typical month at today’s choices' }}</span>
+          <span class="mp-figs"><b class="fig mp-big">{{ money(b.head.month) }}</b></span>
+        </p>
+        <div class="mp-chartbox" id="head-chart"></div>
+        <p class="small muted mp-line" id="t-facts">
+          {%- if b.head.real %}The last 30 days of calls, priced at the models chosen below: busiest day {{ money(b.head.busiest) }}{% if b.head.limit %}, {{ ((b.head.busiest / b.head.limit) * 100) | round | int }}% of the {{ money(b.head.limit) }} daily limit{% endif %}.
+          {%- else %}There are no calls to price yet, so each figure is a family of four’s typical month. An estimate, never a bill.{% endif -%}
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <form id="mp-form" class="sform" method="post" action="{{ url_for('settings.save_models') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="section" value="model" />
-    <input type="hidden" name="provider" value="{{ company }}" />
-    <div class="field">
-      <label class="field__label" for="model-key">{{ label }} key</label>
-      <input id="model-key" name="key" type="password" autocomplete="off" spellcheck="false" aria-describedby="model-key-said" {% if not has_key %}required{% endif %}
-             placeholder="{% if has_key %}a key is saved: paste a new one to replace it{% else %}{{ prefix }}…{% endif %}" />
-      <p class="field__hint" id="model-key-said">
-        It is checked with {{ label }} before it is kept, which costs nothing.
-        {% if company == answering and has_key %}{{ label }} answers now, with {{ model }}.
-        {%- elif company == answering %}Until there is one, nothing can be answered.
-        {%- else %}Saving makes {{ label }} the company that answers, with {{ model }}.{% endif %}
-      </p>
-    </div>
-    <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}
-      {%- if company == answering %}Save and check the key
-      {%- elif has_key %}Answer with {{ label }}
-      {%- else %}Check the key and answer with {{ label }}{% endif -%}</button></div>
-  </form>
-  <details class="fieldfold mt-4">
-    <summary>How to get a key from {{ label }}{{ icon('chev', size='sm', cls='chev') }}</summary>
-    <div class="fieldfold__body">{% include "_key_steps.html" %}</div>
-  </details>
-</section>
-
-{% include "settings/_companies.html" %}
-
-{% set models = groups.models %}
-{% set others = models.boxes | rejectattr('field.key', 'in', in_use) | list %}
-<form class="sform" method="post" action="{{ url_for('settings.save') }}">
-  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-  <input type="hidden" name="section" value="model" />
-  {{ group(groups.levels) }}
-  <section class="card sgroup" id="models" aria-labelledby="g-models">
-    <h2 class="sgroup__h" id="g-models">{{ models.group.title }}</h2>
-    <p class="sgroup__note">{{ models.group.note }}</p>
-    <div class="sgrid">
-      {% for key in in_use %}{% for one in models.boxes if one.field.key == key %}{{ setting(one) }}{% endfor %}{% endfor %}
-    </div>
-    <details class="fieldfold mt-4"{% if others | selectattr('problem') | list %} open{% endif %}>
-      <summary>Other models{% set changed = others | selectattr('stored') | list | length %}{% if changed %} <span class="changed">{{ changed }} changed</span>{% endif %}{{ icon('chev', size='sm', cls='chev') }}</summary>
-      <div class="fieldfold__body">
-        <p class="small muted">Each company’s own, used whenever that company answers, looks things up, or stands in.</p>
-        <div class="sgrid">{% for one in others %}{{ setting(one) }}{% endfor %}</div>
-      </div>
-    </details>
-  </section>
-  {{ group(groups.second) }}
-  {{ group(groups.watch) }}
-  {{ group(groups.judgement) }}
-  {{ group(groups.choosing) }}
-  {{ group(groups.stronger) }}
-  {# Not floating here: it would float beside the key box above, which it does not save. #}
-  {{ save_bar('Save models', still=true) }}
-</form>
-
-{# Who hears a voice note and whether photos are looked at, with their own Save: floating, it would sit beside the models above, which it does not save. #}
-<form class="sform" method="post" action="{{ url_for('settings.save') }}">
-  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-  <input type="hidden" name="section" value="model" />
-  {{ group(groups.voice) }}
-  {{ group(groups.photos) }}
-  {{ save_bar('Save voice notes and photos', still=true) }}
-</form>
-
-{# Every key at once, folded: for a second company's key and for taking one away. #}
-{% set ai_keys = keys.values() | rejectattr('key', 'in', ['telegram_bot_token', 'ticketmaster_api_key']) | list %}
-{# The form inside carries the address "Change a key" leads to, so a browser opens the fold. #}
-<details class="card fold sgroup" id="all-keys"{% if ai_keys | selectattr('problem') | list %} open{% endif %}>
-  <summary><h2>Every company’s key</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
-  <div class="fold__body">
-    <p class="sgroup__note">A second company’s key lets it look things up, or stand in when the first cannot answer. Keys saved here are kept in the database, so they are in your backups. They are not checked with the company as they are saved; the status page says whether each works.</p>
-    <form id="keys" class="form form--tight" method="post" action="{{ url_for('settings.save_keys') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-      <input type="hidden" name="section" value="model" />
-      <div class="sgrid">
-        {% for row in ai_keys %}
-          <div class="setting{{ ' setting--bad' if row.problem }}">
-            <div class="setting__head">
-              <label class="field__label" for="k-{{ row.key }}">{{ row.label }}</label>
-              <span class="keystate">{% if row.stored %}saved here{% elif row.set %}from the server’s .env file{% else %}not saved yet{% endif %}</span>
-            </div>
-            <input id="k-{{ row.key }}" name="{{ row.key }}" type="password" autocomplete="off" spellcheck="false"
-                   placeholder="{% if row.set %}paste a new one to replace it{% else %}paste one here{% endif %}" />
-            {% if row.problem %}<p class="field__error" role="alert">{{ row.problem }}</p>{% endif %}
-            {% if row.stored %}<label class="check"><input type="checkbox" name="remove_{{ row.key }}" value="1" />Remove it</label>{% endif %}
+    <div class="mp-master">
+      <section class="card sgroup mp-tablecard" id="jobs" aria-labelledby="g-jobs">
+        <div class="mp-tablehead">
+          <h2 class="sgroup__h" id="g-jobs">What does what</h2>
+          <div class="mp-preset" hidden>
+            <label class="sr" for="preset">Fill every choice from a preset</label>
+            <select id="preset" aria-label="Fill every choice from a preset">
+              <option value="">Presets</option>
+              <option value="thrifty">Thrifty</option>
+              <option value="balanced">Balanced, the defaults</option>
+              <option value="quality">Quality first</option>
+            </select>
           </div>
-        {% endfor %}
-      </div>
-      <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}Save keys</button></div>
+        </div>
+        <p class="small muted mp-hint">Open a row for its usage, settings and a comparison. Nothing changes until you save.</p>
+        <ol class="mp-list">
+          {% for heading, rows in b.groups %}
+            <li class="mp-group" role="presentation"><span>{{ heading }}</span>{% if loop.first %}<span>Last 30 days</span>{% endif %}</li>
+            {% for j in rows %}
+              <li class="mp-job" id="row-{{ j.id }}" data-job="{{ j.id }}">
+                {% set bad = problems.get('choice_' ~ j.id) or problems.get('effort_' ~ j.id) or (j.cap and problems.get(j.cap.setting)) or (j.extras | selectattr('key', 'in', problems) | list) %}
+                <input type="checkbox" class="sr mp-open" id="open-{{ j.id }}" aria-controls="panel-{{ j.id }}" aria-label="Show details for {{ j.name }}"{{ ' checked' if bad }} />
+                <div class="mp-row">
+                  <label class="mp-chev" for="open-{{ j.id }}" aria-hidden="true"><svg class="icon icon--sm" focusable="false"><use href="{{ url_for('static', filename='icons.svg') }}#i-chev"></use></svg></label>
+                  <label class="mp-row__name" for="open-{{ j.id }}"><b>{{ j.name }}</b></label>
+                  <div class="mp-row__pick">
+                    <select name="choice_{{ j.id }}" id="choice-{{ j.id }}" data-setting="choice" data-job="{{ j.id }}" aria-label="Model for {{ j.name | lower }}">
+                      <option value=""{{ ' selected' if not j.picked }}>Default: {{ j.default_text }}</option>
+                      {% if j.hassame %}<option value="same:{{ j.anchor }}"{{ ' selected' if j.picked == 'same:' ~ j.anchor }}>Same as {{ b.uses | selectattr('id', 'equalto', j.anchor) | map(attribute='short') | first }}</option>{% endif %}
+                      {% if j.hasoff %}<option value="off"{{ ' selected' if j.picked == 'off' }}>Off</option>{% endif %}
+                      {% for cid in j.vendors %}
+                        <optgroup label="{{ b.names[cid] }}">
+                          {% for o in j.opts if o.c == cid %}<option value="{{ cid }}:{{ o.n }}"{{ ' selected' if j.picked == cid ~ ':' ~ o.n }}>{{ o.l }}{% if o.note %} · {{ o.note }}{% endif %}</option>{% endfor %}
+                          <option value="{{ cid }}:__other"{{ ' selected' if j.picked == cid ~ ':__other' }}>Another model…</option>
+                        </optgroup>
+                      {% endfor %}
+                      {% if not j.picked_listed %}<option value="{{ j.picked }}" selected>{{ j.picked_label }}</option>{% endif %}
+                    </select>
+                  </div>
+                  <div class="mp-row__vendor" hidden><select data-setting="vendor" data-job="{{ j.id }}" aria-label="Company for {{ j.name | lower }}"></select></div>
+                  <div class="mp-row__model" hidden><select data-setting="model" data-job="{{ j.id }}" aria-label="Model for {{ j.name | lower }}"></select></div>
+                  <div class="mp-row__cost mp-r" data-cost="{{ j.id }}"><b class="fig">{{ 'off' if j.now.off else money(j.now.month) }}</b></div>
+                  <p class="mp-row__blurb small muted">{{ j.blurb }} · {{ j.usage_label }}</p>
+                  {% if problems.get('choice_' ~ j.id) %}<div class="mp-row__err"><p class="field__error" role="alert">{{ problems['choice_' ~ j.id] }}</p></div>{% endif %}
+                  <div class="mp-row__note small" data-note="{{ j.id }}">
+                    <p class="mp-n muted" data-n="off" hidden></p>
+                    <p class="mp-n mp-n--warn" data-n="warn" hidden></p>
+                    <p class="mp-n muted" data-n="priv" hidden></p>
+                    <label class="mp-n mp-other" data-n="other"><span class="mp-k">Model name</span>
+                      <input type="text" name="other_{{ j.id }}" value="{{ j.other }}" data-setting="another" data-job="{{ j.id }}" data-saved="" autocomplete="off" spellcheck="false" maxlength="120" placeholder="only if you chose Another model" aria-label="Model name for {{ j.name | lower }}" />
+                      <span class="muted mp-other__why">Not in the price list, so it is counted at $15 / $75 per million: dearer than any listed, until the daily check knows it.</span></label>
+                  </div>
+                </div>
+                <div class="mp-panel" id="panel-{{ j.id }}">
+                  <div class="mp-panel__head">
+                    <p class="mp-defline"><b>Default: {{ j.default_text }}</b><button type="button" class="mp-link" data-usedefault="{{ j.id }}" hidden>Use default</button></p>
+                    {% if j.advice %}<p class="small mp-advice">{{ j.advice }}</p>{% endif %}
+                    {% if j.typical %}<p class="small muted">No calls in the last 30 days, so costs here are a typical month’s.</p>{% endif %}
+                    <p class="small muted"><b>Sees</b> {{ j.sees }} · <b>goes to</b> <span data-goes="{{ j.id }}">{{ b.names.get(j.now.company, 'nobody') if j.now.company else 'nobody' }}</span></p>
+                  </div>
+
+                  <div class="mp-set">
+                    {% if j.effort %}
+                      <label class="mp-set__f"><span class="mp-k">Thinking</span>
+                        <select name="effort_{{ j.id }}" data-setting="effort" data-job="{{ j.id }}" data-saved="{{ j.effort.stored }}" aria-label="Thinking for {{ j.name | lower }}">
+                          <option value=""{{ ' selected' if not j.effort.picked }}>{{ dict(b.efforts)[j.effort.default] }} · default</option>
+                          {% for key, words in b.efforts if key != j.effort.default %}<option value="{{ key }}"{{ ' selected' if j.effort.picked == key }}>{{ words }}</option>{% endfor %}
+                        </select></label>
+                    {% endif %}
+                    <p class="mp-set__f"><span class="mp-k">If it cannot answer</span>
+                      <span class="small" data-standin="{{ j.id }}">The company that may stand in, at the same strength.</span></p>
+                    {% if j.cap and j.cap.elsewhere %}
+                      <p class="mp-set__f"><span class="mp-k">Monthly cap</span>
+                        <span class="small">{{ money(j.cap.value) }}, <a href="{{ url_for('settings.section', name=j.cap.elsewhere) }}">set on its own page</a></span>
+                        <span class="small muted">{{ money(j.cap.used) }} used this month</span></p>
+                    {% elif j.cap %}
+                      <label class="mp-set__f"><span class="mp-k">Monthly cap</span>
+                        <span class="mp-money"><span class="fig">$</span><input type="number" min="0" max="50" step="any" inputmode="decimal" name="{{ j.cap.setting }}" data-setting="cap" data-job="{{ j.id }}" data-saved="{{ j.cap.value }}" value="{{ j.cap.picked }}" aria-label="Monthly cap for {{ j.name | lower }}" /></span>
+                        {% if problems.get(j.cap.setting) %}<span class="field__error" role="alert">{{ problems[j.cap.setting] }}</span>{% endif %}
+                        <span class="small muted">{{ money(j.cap.used) }} used this month</span></label>
+                    {% endif %}
+                    {% for x in j.extras %}
+                      <label class="mp-set__f"><span class="mp-k">{{ x.label }}</span>
+                        {% if x.choices %}
+                          <select name="{{ x.key }}" data-setting="extra" data-job="{{ j.id }}" data-saved="{{ x.value }}">
+                            <option value=""{{ ' selected' if not x.picked }}>Default ({{ x.default }})</option>
+                            {% for value, words in x.choices %}<option value="{{ value }}"{{ ' selected' if x.picked == value }}>{{ words }}</option>{% endfor %}
+                          </select>
+                        {% else %}
+                          <input type="text" inputmode="numeric" name="{{ x.key }}" data-setting="extra" data-job="{{ j.id }}" data-saved="{{ x.value }}" value="{{ x.picked }}" placeholder="{{ x.default }}" />
+                        {% endif %}
+                        {% if x.note %}<span class="small muted">{{ x.note }}</span>{% endif %}
+                        {% if problems.get(x.key) %}<span class="field__error" role="alert">{{ problems[x.key] }}</span>{% endif %}</label>
+                    {% endfor %}
+                  </div>
+
+                  <div class="mp-data">
+                    <div class="mp-usage">
+                      <div><h4 class="mp-k">Cost a day · last 30 days</h4>
+                        <div class="mp-chartbox mp-chartbox--job" data-chart="{{ j.id }}"></div></div>
+                      <dl class="mp-kv">{% for k, v in j.stats %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
+                    </div>
+                  </div>
+
+                  <details class="mp-more mp-compare">
+                    <summary>{{ icon('chev', size='sm', cls='chev') }}<span>Compare models</span><span class="mp-more__meta small muted">{{ j.opts | length }} to choose from{% if j.search %} · a search is about a cent whichever one{% endif %}</span></summary>
+                    <div class="mp-more__body">
+                      <input type="checkbox" class="sr mp-all" id="all-{{ j.id }}" aria-label="Show every model" />
+                      <div class="mp-scroll"><table class="mp-tbl" data-compare="{{ j.id }}">
+                        <thead><tr><th>Model</th><th class="mp-r">{% if j.hearing %}$ a minute{% else %}$/M in / out / cached{% endif %}</th><th class="mp-r">A month</th><th class="mp-r">vs now</th></tr></thead>
+                        {% for part in ('tiered', 'rest') %}
+                          <tbody{{ ' class="mp-rest"' | safe if part == 'rest' }}>
+                            {% for o in j.opts if (o.t != '') == (part == 'tiered') %}
+                              {% set row_ok = (b.companies | selectattr('id', 'equalto', o.c) | first) %}
+                              <tr data-model="{{ o.c }}:{{ o.n }}"{{ ' class="is-unavail"' | safe if not (row_ok.haskey and row_ok.allowed) }}>
+                                <th scope="row">{{ o.l }}{% if o.fixed %}<sup title="Takes a fixed thinking budget">†</sup>{% endif %}<small>{{ b.names[o.c] }}{% if o.t %} · {{ o.t }}{% endif %}{% if j.default == o.c ~ ':' ~ o.n %} · <span class="mp-default">default</span>{% endif %}{% if not row_ok.haskey %} · no key{% endif %}{% if not o.listed %} · not priced{% endif %}{% if o.note %} · {{ o.note }}{% endif %}</small></th>
+                                <td class="mp-r fig">{% if j.hearing %}${{ '%.3f' % o.pm }}{% else %}{{ '%.2f' % o.pr[0] }} / {{ '%.2f' % o.pr[1] }} / {{ '%.2f' % o.pr[2] }}{% endif %}</td>
+                                <td class="mp-r fig">{{ money(o.m) }}</td>
+                                <td class="mp-r fig" data-vs>{% if j.now.company == o.c and j.now.model == o.n %}now{% else %}{{ delta(o.m - j.now.month) }}{% endif %}</td>
+                              </tr>
+                            {% endfor %}
+                          </tbody>
+                        {% endfor %}
+                      </table></div>
+                      {% if j.opts | rejectattr('t', 'equalto', '') | list | length < j.opts | length %}
+                        <label class="mp-allbtn small" for="all-{{ j.id }}"><span class="mp-allbtn__more">Show all {{ j.opts | length }} models</span><span class="mp-allbtn__less">Show fewer</span></label>
+                      {% endif %}
+                      {% if not j.hearing %}<p class="small muted mp-foot2">† Takes a fixed thinking budget, so the Thinking setting does nothing for it. Costs are estimates re-priced from the calls above, never a bill.</p>{% endif %}
+                    </div>
+                  </details>
+
+                  <details class="mp-more">
+                    <summary>{{ icon('chev', size='sm', cls='chev') }}<span>Calls, notes and how to measure it</span></summary>
+                    <div class="mp-more__body">
+                      <div class="mp-scroll"><table class="mp-tbl mp-tbl--calls"><tbody>
+                        {% for k in j.kinds %}<tr class="{{ 'is-dim' if k.n == 0 }}"><th scope="row">{{ k.label }}</th><td class="mp-r fig">{{ k.n }} {{ 'notes' if j.hearing else 'calls' }}</td></tr>{% endfor %}
+                      </tbody></table></div>
+                      <ul class="mp-know small">{% for line in j.know %}<li>{{ line }}</li>{% endfor %}{% if j.offnote %}<li>Off: {{ j.offnote | lower }}</li>{% endif %}</ul>
+                      <p class="small"><span class="mp-k">Measure it on your own requests</span>
+                        <span class="muted">{{ j.evals }}</span>
+                        {% if j.id in ('chat', 'digest', 'choose') %}<code>uv run python -m evals --provider {{ j.now.company or 'openai' }}{% if j.now.model %} --model {{ j.now.model }}{% endif %}</code>{% endif %}</p>
+                    </div>
+                  </details>
+                </div>
+              </li>
+            {% endfor %}
+          {% endfor %}
+        </ol>
+      </section>
+    </div>
+
+    <section class="card sgroup mp-more-settings" aria-labelledby="g-more">
+      <h2 class="sgroup__h" id="g-more">More settings</h2>
+      <details class="mp-fold" id="keeping"{% if problems.get('model_watch') %} open{% endif %}>
+        <summary>{{ icon('chev', size='sm', cls='chev') }}<span class="mp-fold__t">Keeping up with the companies</span><span class="small muted">{{ 'daily check on' if b.checked.on else 'daily check off' }}{% if b.checked.last %} · last {{ b.checked.last }}{% endif %}</span></summary>
+        <div class="mp-fold__body">
+          <input type="hidden" name="model_watch_seen" value="1" />
+          <label class="mp-switch"><input type="checkbox" name="model_watch" value="true" data-setting="watch" data-saved="{{ 1 if b.checked.on else 0 }}"{{ ' checked' if b.checked.picked }} /> <span>Check models and prices daily</span></label>
+          <p class="small muted">Once a day it asks each company with a key which models it may use and reads two public price lists, LiteLLM’s and OpenRouter’s, taking a price when they agree. New models then appear here and new prices are counted, and admins are told on Telegram when a model in use is going or its price moves. No model call, and nothing about the family is sent. Off, the prices built into this version are used.</p>
+          <p class="small muted">{% if b.checked.last %}Last check {{ b.checked.last }}; {{ b.checked.changes }} change{{ '' if b.checked.changes == 1 else 's' }} in the last week.{% else %}It has not run yet.{% endif %} <a href="{{ url_for('web.status', _anchor='models') }}">Models and prices on Status</a></p>
+        </div>
+      </details>
+
+      {% set lineup_bad = b.lineup | map(attribute='cells') | sum(start=[]) | selectattr('setting', 'in', problems) | list %}
+      <details class="mp-fold" id="lineup"{{ ' open' if lineup_bad }}>
+        <summary>{{ icon('chev', size='sm', cls='chev') }}<span class="mp-fold__t">Everyday, better and best for each company</span><span class="small muted">used by presets and stand-ins</span></summary>
+        <div class="mp-fold__body">
+          <p class="small muted">Which model counts at each strength. A stand-in answers at the same strength as the model it replaces, and presets fill the table from these. Everyday for lookups is the model that looks things up and reads photos when nothing else was chosen.</p>
+          <div class="mp-scroll"><table class="mp-tbl mp-tbl--lineup">
+            <thead><tr><th></th>{% for cell in b.lineup[0].cells %}<th>{{ cell.head }}</th>{% endfor %}</tr></thead>
+            <tbody>
+              {% for row in b.lineup %}
+                <tr><th scope="row">{{ row.name }}</th>
+                  {% for cell in row.cells %}
+                    <td><select name="{{ cell.setting }}" data-setting="lineup" data-saved="{{ cell.value }}" aria-label="{{ row.name }} {{ cell.head | lower }} model">
+                      <option value=""{{ ' selected' if not cell.picked }}>{{ cell.default_label }} · default</option>
+                      {% for name, label in cell.offers if name != cell.default %}<option value="{{ name }}"{{ ' selected' if cell.picked == name }}>{{ label }}</option>{% endfor %}
+                      {# What was typed under an older page's box, or came back after a complaint, is kept as a choice of its own. #}
+                      {% if cell.picked and cell.picked != cell.default and cell.picked not in cell.offers | map('first') | list %}<option value="{{ cell.picked }}" selected>{{ cell.picked }}</option>{% endif %}
+                    </select>
+                    {% if problems.get(cell.setting) %}<p class="field__error" role="alert">{{ problems[cell.setting] }}</p>{% endif %}</td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table></div>
+        </div>
+      </details>
+    </section>
+
+    <div class="save-bar" role="region" aria-label="Save or reset">
+      <p class="small" id="save-msg" role="status" aria-live="polite">{{ 'Nothing changes until you save.' }}</p>
+      <div class="mp-bar__acts"><button class="btn btn--quiet" type="button" id="revert" title="Discard the unsaved changes" hidden>Reset</button> <button class="btn btn--primary" type="submit" id="save">{{ icon('check') }}Save</button></div>
+    </div>
+  </form>
+
+  {# A key's check is its own small form, so pressing Check does not save the page. #}
+  {% for c in b.companies if not c.added and c.haskey %}
+    <form id="check-{{ c.id }}" method="post" action="{{ url_for('settings.check_key', slug=c.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="model" />
     </form>
-    <p class="small muted mt-3">A key already saved can be seen again under <a href="{{ url_for('settings.section', name='security', _anchor='reveal') }}">Sign-in and security</a>.</p>
-  </div>
-</details>
+  {% endfor %}
+
+  {% include "settings/_companies.html" %}
+
+  {# Every key at once, folded: for a second company's key and for taking one away. #}
+  {% set ai_keys = keys.values() | rejectattr('key', 'in', ['telegram_bot_token', 'ticketmaster_api_key']) | list %}
+  <details class="card fold sgroup" id="all-keys"{% if ai_keys | selectattr('problem') | list %} open{% endif %}>
+    <summary><h2>Every company’s key</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+    <div class="fold__body">
+      <p class="sgroup__note">A second company’s key lets it look things up, or stand in when the first cannot answer. Keys saved here are kept in the database, so they are in your backups. They are not checked with the company as they are saved; press Check beside a company above, or the status page says whether each works.</p>
+      <form id="keys" class="form form--tight" method="post" action="{{ url_for('settings.save_keys') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="section" value="model" />
+        <div class="sgrid">
+          {% for row in ai_keys %}
+            <div class="setting{{ ' setting--bad' if row.problem }}">
+              <div class="setting__head">
+                <label class="field__label" for="k-{{ row.key | replace('_api_key', '') }}">{{ row.label }}</label>
+                <span class="keystate">{% if row.stored %}saved here{% elif row.set %}from the server’s .env file{% else %}not saved yet{% endif %}</span>
+              </div>
+              <input id="k-{{ row.key | replace('_api_key', '') }}" name="{{ row.key }}" type="password" autocomplete="off" spellcheck="false"
+                     placeholder="{% if row.set %}paste a new one to replace it{% else %}paste one here{% endif %}" />
+              {% if row.problem %}<p class="field__error" role="alert">{{ row.problem }}</p>{% endif %}
+              {% if row.stored %}<label class="check"><input type="checkbox" name="remove_{{ row.key }}" value="1" />Remove it</label>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}Save keys</button></div>
+      </form>
+      <p class="small muted mt-3">A key already saved can be seen again under <a href="{{ url_for('settings.section', name='security', _anchor='reveal') }}">Sign-in and security</a>.</p>
+      <details class="fieldfold mt-4">
+        <summary>How to get a key{{ icon('chev', size='sm', cls='chev') }}</summary>
+        <div class="fieldfold__body">
+          {% for company in ['openai', 'anthropic', 'gemini'] %}
+            <h3 class="small">{{ b.names[company] }}</h3>
+            {% include "_key_steps.html" %}
+          {% endfor %}
+        </div>
+      </details>
+    </div>
+  </details>
+</div>

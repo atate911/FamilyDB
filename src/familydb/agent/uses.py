@@ -307,6 +307,28 @@ def _default(settings: Settings, use: Use, seen: tuple[str, ...]) -> Resolution:
     )
 
 
+def default_choice(settings: Settings, use_key: str) -> str:
+    """The choice a use has when none is stored for it, in the form the page stores one: what the
+    older settings say. `same:<use>` where it follows another exactly, `off`, or
+    `<company>:<model>`; empty when nothing can do it. Stored choices of the other uses stay, so a
+    default that follows a use the family moved follows it there."""
+    use = BY_KEY[use_key]
+    alone = settings.model_copy(
+        update={"model_choices": {k: v for k, v in settings.model_choices.items() if k != use_key}}
+    )
+    res = _default(alone, use, ())
+    if res.off:
+        return OFF
+    anchor_level = getattr(alone, BY_KEY[use.anchor].level_setting) if use.anchor else None
+    if (
+        use.exact
+        and res.followed == use.anchor
+        and str(getattr(alone, use.level_setting)) == str(anchor_level)
+    ):
+        return f"{SAME}:{use.anchor}"
+    return f"{res.company}:{res.model}" if res.company and res.model else ""
+
+
 def _hearing(settings: Settings) -> Resolution:
     for provider in providers.hearers(settings):
         model = provider.listener()

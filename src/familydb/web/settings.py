@@ -62,7 +62,15 @@ from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
-from familydb.web import auth, company_forms, fields, keys, troubleshooting, views
+from familydb.web import (
+    auth,
+    company_forms,
+    fields,
+    keys,
+    models_page,
+    troubleshooting,
+    views,
+)
 from familydb.web import status as status_page
 
 log = logging.getLogger(__name__)
@@ -385,6 +393,7 @@ def page(
             section=fields.SECTION_BY_NAME[section],
             sections=fields.SECTIONS,
             groups=groups,
+            problems=problems,
             keys=_key_rows(live, overrides, problems, revealed),
             said=said,
             error=error,
@@ -459,6 +468,8 @@ def _model(app: App, conn: Any) -> dict[str, Any]:
     added = [company_forms.panel(company, live) for company in companies.added(live)]
     return {
         **company_choice(live, request.args.get("company", "")),
+        # Drawn again after a complaint, it shows what was typed, so nothing else is lost.
+        "built": models_page.build(app, conn, request.form if request.method == "POST" else None),
         "in_use": in_use,
         "added": added,
         "templates": [
@@ -914,6 +925,66 @@ def save_model() -> Response | tuple[str, int]:
     return _answer(back, here, said=said.format(company=label, model=model, name=her))
 
 
+@bp.post("/settings/models")
+def save_models() -> Response | tuple[str, int]:
+    """The models page's one form: which model does each thing, how much each thinks, what each
+    company may do, the caps, the daily check and the lineup. Only what the form carried changes."""
+    app = _app()
+    back = auth.setup_return(request.form.get("then"))
+    if (complaint := auth.refused()) is not None:
+        return _answer(back, "model", error=complaint, otherwise="model")
+    stored = _stored()
+    reading = models_page.read_form(request.form, app.settings, app.base_settings, stored)
+    values, problems = reading.values, dict(reading.problems)
+    if not problems:
+        try:
+            candidate = apply_overrides(
+                app.base_settings,
+                {key: value for key, value in {**stored, **values}.items() if value is not None},
+            )
+        except ValidationError as exc:
+            problems = problems_from(exc)
+        else:
+            problems = {
+                **unknown_models(values, stored, candidate),
+                **models_page.unknown_typed(
+                    values.get("model_choices"), stored.get("model_choices"), candidate
+                ),
+            }
+    if problems:
+        return page("model", problems=problems, error=_problems_said(problems), status=400)
+    return _answer(back, "model", said=_said(_save(values)))
+
+
+CHECKED = {
+    "works": "{company}'s key works.",
+    "refused": "{company} refused the key. Replace it under “Every company's key” below.",
+    "unknown_model": "{company}'s key works, but it has no model called {model}.",
+    "unchecked": "{company} could not be asked just now, so the key is not checked yet.",
+    "no_key": "{company} has no key yet. Add one under “Every company's key” below.",
+}
+
+
+@bp.post("/settings/models/check/<slug>")
+def check_key(slug: str) -> Response | tuple[str, int]:
+    """Ask a company whether its saved key works. It asks for the list of models, which costs
+    nothing, and changes nothing."""
+    app = _app()
+    if (complaint := auth.refused()) is not None:
+        return page("model", error=complaint, status=400)
+    company = companies.get(slug, app.settings)
+    if company is None:
+        abort(404)
+    if not company.key(app.settings):
+        verdict = "no_key"
+    else:
+        verdict = providers.build(slug, app.settings).check_key()
+    model = company.chat_model(app.settings)
+    said = CHECKED.get(verdict, CHECKED["unchecked"]).format(company=company.label, model=model)
+    flash(said, NOTICE)
+    return redirect(url_for("settings.section", name="model", _anchor=f"co-{slug}"))
+
+
 # -- other companies (company_forms.py) -------------------------------------------------------
 
 COMPANY_ADDED = (
@@ -1263,6 +1334,9 @@ PROFILE_LABELS = {
     "persona_text": "her description",
     "persona_notes": "notes on how she talks",
     "about_family": "about the family",
+    "model_choices": "which model does what",
+    "use_effort": "how much each thinks",
+    "company_options": "what each company may do",
 }
 # A rough count of what a description adds to every message; /status has the real one.
 CHARS_PER_TOKEN = 4
