@@ -212,6 +212,8 @@ older than what is installed. It gets a date when it is released.
   favorite, something new and a wildcard, each with a reason; Vera says them.
   Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
   a kid's question or one about right now.
+- **Presents stay hidden in "How did it go?".** A plan made for a present no longer shows its
+  title, or counts in "to rate", for the kids or the grown-up the present is kept from.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

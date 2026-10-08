@@ -188,7 +188,7 @@ def home() -> Response | str:
         wished = wish_glance(conn, today)
         slots = views.slot_map(people)
         coming = _plan_rows(conn, app, on, today, slots, visitor.member if not browsing else None)
-        rating = _to_rate(conn, today, slots) if visitor.may("change") else None
+        rating = _to_rate(conn, today, slots, visitor.member) if visitor.may("change") else None
         newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
         mini = [_idea_mini(conn, app, idea) for idea in newest]
         today_card = status_page.vera_today(app, conn) if browsing else None
@@ -277,12 +277,18 @@ def _others(coming: list[dict[str, Any]], me: member_store.Member | None) -> str
     return views.names_text([p for p in named if p["initial"]])
 
 
-def _unrated(conn: Any, today: date, slots: dict[str, int]) -> list[dict[str, Any]]:
-    """Every plan of the last two weeks nobody has said how it went, oldest first."""
-    waiting = plan_store.unrated(
-        conn,
-        today=today.isoformat(),
-        since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
+def _unrated(
+    conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
+) -> list[dict[str, Any]]:
+    """Every plan of the last two weeks nobody has said how it went, oldest first, without the
+    ones made from a present kept from `who`."""
+    waiting = presents.without(
+        plan_store.unrated(
+            conn,
+            today=today.isoformat(),
+            since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
+        ),
+        presents.kept_ids(conn, who),
     )
     found = []
     for plan in waiting:
@@ -302,9 +308,11 @@ def _unrated(conn: Any, today: date, slots: dict[str, int]) -> list[dict[str, An
     return found
 
 
-def _to_rate(conn: Any, today: date, slots: dict[str, int]) -> dict[str, Any] | None:
+def _to_rate(
+    conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
+) -> dict[str, Any] | None:
     """The oldest plan nobody has said how it went, for Home's three faces, and how many more."""
-    waiting = _unrated(conn, today, slots)
+    waiting = _unrated(conn, today, slots, who)
     return {**waiting[0], "more": len(waiting) - 1} if waiting else None
 
 
@@ -737,7 +745,11 @@ def plans_month() -> str:
         people = member_store.list_all(conn)
         slots = views.slot_map(people)
         rows = _plan_rows(conn, app, on, today, slots, None, past=True)
-        rate = _unrated(conn, today, slots) if auth.visitor().may("change") else []
+        rate = (
+            _unrated(conn, today, slots, auth.visitor().member)
+            if auth.visitor().may("change")
+            else []
+        )
     previous = (first - timedelta(days=1)).replace(day=1)
     following = last_day + timedelta(days=1)
     weeks = views.month_calendar(rows, first, today, {row["plan_id"] for row in rate})
