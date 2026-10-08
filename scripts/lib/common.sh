@@ -97,6 +97,37 @@ noting_replaced() { # noting_replaced PATH - before overwriting PATH: keep the o
   mkdir -p "$(dirname "$saved")" && cp -a "$1" "$saved" && ledger replaced "$1"
 }
 
+# The account the bot runs as, written down beside the ledger so maintain.sh and uninstall.sh find
+# it again. An install that never wrote it ran as familydb.
+SERVICE_USER_FILE="${LEDGER_DIR}/service-user"
+DEFAULT_SERVICE_USER="familydb"
+
+valid_user_name() { # a lowercase system account name, as useradd takes without fuss
+  case "$1" in ''|[!a-z_]*|*[!a-z0-9_-]*) return 1 ;; esac
+  [ "${#1}" -le 32 ]
+}
+
+record_service_user() { # record_service_user NAME
+  _ledger_on || return 0
+  mkdir -p "$LEDGER_DIR" 2>/dev/null && chmod 700 "$LEDGER_DIR" 2>/dev/null || return 0
+  printf '%s\n' "$1" >"$SERVICE_USER_FILE" 2>/dev/null || true
+}
+
+recorded_service_user() { # recorded_service_user [TARGET] - the recorded account, else who owns TARGET/data, else familydb
+  local name="" owner=""
+  if [ -r "$SERVICE_USER_FILE" ]; then
+    name="$(head -n1 "$SERVICE_USER_FILE" 2>/dev/null || true)"
+  elif [ "$(id -u)" != 0 ] && have sudo; then
+    name="$(sudo -n cat "$SERVICE_USER_FILE" 2>/dev/null | head -n1 || true)"
+  fi
+  if ! valid_user_name "$name" && [ -n "${1:-}" ]; then
+    owner="$(stat -c %U "${1}/data" 2>/dev/null || true)"
+    [ "$owner" != root ] && name="$owner"
+  fi
+  valid_user_name "$name" || name="$DEFAULT_SERVICE_USER"
+  printf '%s\n' "$name"
+}
+
 installed_packages() { # every package dpkg has fully installed, one per line, sorted
   dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 2>/dev/null | awk '$1 == "ii" {print $2}' | sort
 }

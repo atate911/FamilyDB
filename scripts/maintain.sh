@@ -20,7 +20,7 @@ else
 fi
 
 TARGET="$(cd -- "${HERE}/.." && pwd -P)"
-SERVICE_USER="familydb"
+SERVICE_USER=""   # --user, else the account the install recorded, else familydb
 BACKUP_DIR=""
 KEEP_DAYS=14
 ASSUME_YES=0
@@ -66,7 +66,8 @@ Commands
 
 Options
   --target DIR         Which install. Default: the checkout this script lives in.
-  --user NAME          The account that owns the data. Default: familydb.
+  --user NAME          The account that owns the data. Default: the one the install recorded,
+                       else familydb.
   --backup-dir DIR     Where backups go. Default: <target>/backups.
   --keep-days N        How long scheduled backups are kept. Default: 14.
   --port N|random      With https: the port the page is served on. Default: as it was, else 443.
@@ -124,6 +125,10 @@ TARGET="$(cd -- "$TARGET" 2>/dev/null && pwd -P || echo "$TARGET")"
 [ -f "${TARGET}/pyproject.toml" ] && grep -q 'name = "familydb"' "${TARGET}/pyproject.toml" 2>/dev/null \
   || die "${TARGET} is not a FamilyDB install" \
          "Point at one with --target, or run this from inside the checkout."
+
+[ -n "$SERVICE_USER" ] || SERVICE_USER="$(recorded_service_user "$TARGET")"
+valid_user_name "$SERVICE_USER" \
+  || die "--user must be a system account name: lowercase letters, digits, - and _, starting with a letter, not '${SERVICE_USER}'"
 
 BACKUP_DIR="${BACKUP_DIR:-${TARGET}/backups}"
 DB="${TARGET}/data/familydb.sqlite3"

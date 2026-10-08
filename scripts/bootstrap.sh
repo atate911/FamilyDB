@@ -112,6 +112,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$MODE" in ""|docker|venv) ;; *) die "--mode must be docker or venv, not '${MODE}'" ;; esac
+valid_user_name "$SERVICE_USER" \
+  || die "--user must be a system account name: lowercase letters, digits, - and _, starting with a letter, not '${SERVICE_USER}'"
 [ -n "$MODE" ] || MODE=venv
 export ASSUME_YES DRY_RUN
 
@@ -461,6 +463,8 @@ if ! id "$SERVICE_USER" >/dev/null 2>&1; then
 else
   ok "The ${SERVICE_USER} account already exists."
 fi
+# maintain.sh and uninstall.sh read the account back from here.
+record_service_user "$SERVICE_USER"
 # The code stays owned by root and world readable, so the bot can run it but cannot rewrite it.
 try_step "Making sure the code is not writable by anyone but root" as_root chmod -R go-w "$TARGET"
 checkpoint "user"
@@ -479,6 +483,8 @@ say "writes ${TARGET}/.env, installs, and puts HTTPS in front of the page."
 say ""
 
 INSTALL_ARGS=("--mode" "$MODE")
+# Only a chosen name is passed on: the default needs no flag, and an older ref's installer has none.
+[ "$SERVICE_USER" = "$DEFAULT_SERVICE_USER" ] || INSTALL_ARGS+=("--user" "$SERVICE_USER")
 [ ${#PASS_THROUGH[@]} -gt 0 ] && INSTALL_ARGS+=("${PASS_THROUGH[@]}")
 
 # sudo scrubs the environment, so anything the installer should see has to be named: the answers

@@ -226,6 +226,10 @@ older than what is installed. It gets a date when it is released.
   of any failure after the code has moved, with the command to finish. Running the
   upgrade again no longer says "Already up to date" when the code moved but the
   dependencies or migrations did not finish: it says what is unfinished and finishes it.
+- **`bootstrap.sh --user NAME` works all the way.** The name chosen for the account that
+  runs the bot now reaches the installer, the account, the files it owns and the service
+  unit, and is remembered, so `maintain.sh` and `uninstall.sh` use the same account
+  without being told. Installs made before this still use `familydb`.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
