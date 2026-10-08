@@ -81,7 +81,7 @@ Each line starts with `✓` (fine), `!` (worth reading), `✗` (must be fixed) o
 sudo /opt/familydb/scripts/maintain.sh status
 ```
 
-A virtualenv install shows `Service: active, enabled at boot` and `Scheduled: a nightly backup is in root's crontab`; Docker shows `Runs as: Docker containers`. `Last backup` reads `No backups` until the first run at 03:15; `maintain.sh backup` takes one now.
+The top line says whether it is running and well. A virtualenv install shows `Service` as running and starting at boot, and `Schedule` as nightly at 03:15 in root's crontab; Docker shows `Runs as` Docker containers and a row for each container. `Last backup` reads `none yet` (with a command to take one) until the first run at 03:15; `maintain.sh backup` takes one now. What is not well is listed under **Needs attention**, with the commands that fix it.
 
 3. After setup steps 1 and 3 (you, and a model), open Chat on the web page and send `hello`. The assistant answers. If nothing comes back, see [A message got no reply](/wiki/operations/troubleshooting#a-message-got-no-reply).
 

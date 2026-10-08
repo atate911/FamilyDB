@@ -28,19 +28,32 @@ DRY_RUN=0
 COMMAND=""
 
 usage() {
-  cat <<'USAGE'
+  _style_usage <<'USAGE'
 Look after a running FamilyDB.
 
   scripts/maintain.sh COMMAND [options]
 
-Commands
+Look at it (these change nothing)
   status               Is it running, is it healthy, how big is the database, when was the
-                       last backup. Changes nothing.
+                       last backup. One screen, with what needs attention at the foot.
   check                The full check (familydb doctor), with every finding and its fix.
-  password [NAME]      A new password for the web page, for one nobody remembers. Printed
-                       once. Once people sign in as themselves it is a starting password for
-                       NAME, or for the first admin: they sign in with it and choose their
-                       own. Until then it is a new family password that everyone signs in with.
+  logs [N]             Follow the log, starting with the last N lines (default 50).
+
+Keep it safe
+  backup               Take a backup now, using SQLite's online backup, safe while it runs.
+  restore FILE         Stop the bot, put that backup in place, start it again. The database
+                       being replaced is itself backed up first.
+  schedule-backups     Add a nightly backup to cron, and prune ones older than --keep-days.
+
+Change it
+  upgrade              Move to the newest version, reinstall the dependencies, migrate and
+                       restart. Fetches first and says what this upgrade changes: the commits
+                       and pull requests, new migrations, packages and settings. Then asks
+                       (Enter is yes), takes a backup, and prints how to go back before it
+                       changes anything. That is the default branch while CHANGELOG.md says
+                       the next version is in progress, else the newest release; it never
+                       moves to anything older than what is installed.
+  restart              Restart it, and say whether it came back.
   https [DOMAIN] [--port N|random|443]
                        Put the page on HTTPS: at DOMAIN if one is given, else at this server's
                        own address, with a real certificate where it can get one. Opens ports
@@ -53,16 +66,10 @@ Commands
                        it: in .env, in Caddy's configuration and in Docker's, then restart. Behind
                        Caddy the address people open stays as it was; with nothing in front, it
                        is the port people open. A number from 1025 to 65535, or random.
-  backup               Take a backup now, using SQLite's online backup, safe while it runs.
-  restore FILE         Stop the bot, put that backup in place, start it again. The database
-                       being replaced is itself backed up first.
-  upgrade              Move to the newest version, reinstall the dependencies, migrate and
-                       restart. Takes a backup first. That is the default branch while
-                       CHANGELOG.md says the next version is in progress, else the newest
-                       release; it never moves to anything older than what is installed.
-  logs [N]             Follow the log, starting with the last N lines (default 50).
-  restart              Restart it, and say whether it came back.
-  schedule-backups     Add a nightly backup to cron, and prune ones older than --keep-days.
+  password [NAME]      A new password for the web page, for one nobody remembers. Printed
+                       once. Once people sign in as themselves it is a starting password for
+                       NAME, or for the first admin: they sign in with it and choose their
+                       own. Until then it is a new family password that everyone signs in with.
 
 Options
   --target DIR         Which install. Default: the checkout this script lives in.
@@ -79,10 +86,33 @@ Examples
   scripts/maintain.sh status
   sudo scripts/maintain.sh backup --backup-dir /mnt/backups
   sudo scripts/maintain.sh restore /mnt/backups/familydb-2026-09-14.sqlite3
+  sudo scripts/maintain.sh upgrade --dry-run
   sudo scripts/maintain.sh upgrade
   sudo scripts/maintain.sh https --port random
   sudo scripts/maintain.sh port 9090
+
+Output
+  Colour is for a terminal; NO_COLOR=1 turns it off and FAMILYDB_ASCII=1 uses plain characters.
+  Everything a run prints is also kept in /var/log/familydb-maintain.log.
+  The exit status is 0, or 1 when the last line says FAIL: the bot did not come back, a check
+  has something to fix, or status finds it not running.
 USAGE
+}
+
+# The help text with its section headings in bold and each command or option in cyan.
+_style_usage() {
+  local line name rest
+  local entry='^  ([a-z-][^ ]*( [^ ]+)*)( {2,}(.*))?$'
+  while IFS= read -r line; do
+    if [[ $line =~ ^[A-Z][^.]*$ ]]; then
+      printf '%s%s%s\n' "$B" "$line" "$OFF"
+    elif [[ $line =~ $entry ]]; then
+      name="${BASH_REMATCH[1]}"; rest="${line#"  ${name}"}"
+      printf '  %s%s%s%s\n' "$CYN" "$name" "$OFF" "$rest"
+    else
+      printf '%s\n' "$line"
+    fi
+  done
 }
 
 [ $# -gt 0 ] || { usage; exit 0; }
@@ -151,150 +181,22 @@ familydb_cmd() {
   fi
 }
 
-service_installed() { [ -f /etc/systemd/system/familydb.service ]; }
+SERVICE_UNIT="${FAMILYDB_SERVICE_UNIT:-/etc/systemd/system/familydb.service}"   # the override is for tests
+service_installed() { [ -f "$SERVICE_UNIT" ]; }
 service_active() { have systemctl && systemctl is-active --quiet familydb; }
 
-stop_bot() {
+how_it_runs() { # how the bot is run on this machine, in a few words
   if [ "$DOCKER_MODE" = 1 ]; then
-    step "Stopping the containers" as_root docker compose --project-directory "$TARGET" stop bot
+    printf 'Docker'
   elif service_installed; then
-    step "Stopping the service" as_root systemctl stop familydb
+    printf 'systemd service (%s)' "$SERVICE_USER"
   else
-    note "Nothing to stop: no service and no containers."
+    printf 'no service installed'
   fi
 }
 
-start_bot() {
-  if [ "$DOCKER_MODE" = 1 ]; then
-    step "Starting the containers" as_root docker compose --project-directory "$TARGET" up -d
-  elif service_installed; then
-    step "Starting the service" as_root systemctl start familydb
-    sleep 3
-    if service_active; then
-      ok "It came back up."
-    else
-      warn "It did not come back up. The last 20 lines:"
-      as_root journalctl -u familydb -n 20 --no-pager >&2 || true
-      note ""
-      note "What to try, in order:"
-      note "  cd ${TARGET} && sudo -u ${SERVICE_USER} ${FAMILYDB} doctor     # names what is wrong"
-      note "  sudo systemctl status familydb"
-      note "  sudo journalctl -u familydb -n 100 --no-pager"
-    fi
-  else
-    note "No service to start. Run it in the foreground: cd ${TARGET} && sudo -u ${SERVICE_USER} ${FAMILYDB} run"
-  fi
-}
-
-# Sets LAST_BACKUP to the file it wrote (stdout is for the person reading).
-LAST_BACKUP=""
-take_backup() { # take_backup DEST_DIR "why"
-  local dir="$1" why="$2" dest stamp owner
-  stamp="$(date +%Y%m%d%H%M%S%N)"
-  dest="${dir}/familydb-${stamp}.sqlite3"
-  LAST_BACKUP="$dest"
-  [ -f "$DB" ] || die "there is no database at ${DB}, so there is nothing to back up" \
-    "If the bot has never run, that is expected. Otherwise check FAMILYDB_PATH in .env."
-  system_change "Write a backup to ${dest}" "$why"
-  if [ "$DRY_RUN" = 1 ]; then return 0; fi
-  as_root mkdir -p "$dir"
-  dir="$(cd -- "$dir" && pwd -P)"
-  dest="${dir}/familydb-${stamp}.sqlite3"
-  LAST_BACKUP="$dest"
-  owner="${SERVICE_USER}:${SERVICE_USER}"
-  if [ "$DOCKER_MODE" = 1 ]; then owner="$(stat -c '%u:%g' "$DB")"; fi
-  # The online backup runs as the service account, so the folder has to be its to write.
-  try_step "Making sure ${SERVICE_USER} can write to ${dir}" \
-    as_root chown "$owner" "$dir"
-  require_free_mb "$dir" \
-    "$(( $(stat -c %s "$DB" 2>/dev/null || echo 10000000) / 1000000 + 50 ))" "this backup"
-  local success=0
-  if [ "$DOCKER_MODE" = 1 ]; then
-    if as_root docker compose --project-directory "$TARGET" run --rm -T --no-deps \
-      --user "$owner" -v "${dir}:/backup" bot familydb db backup \
-      "/backup/$(basename "$dest")" >>"${LOG_FILE:-/dev/null}" 2>&1; then success=1; fi
-  elif familydb_cmd db backup "$dest" >>"${LOG_FILE:-/dev/null}" 2>&1; then
-    success=1
-  fi
-  if [ "$success" = 1 ] && [ -s "$dest" ]; then
-    ok "Backup written with SQLite's online backup, which is safe while the bot is running."
-  else
-    # An incomplete backup must not look usable to restore, upgrade, or an operator.
-    as_root rm -f -- "$dest"
-    die "SQLite online backup failed; no backup was created" \
-      "The database was not copied or replaced. See ${LOG_FILE:-the transcript} and fix the error before continuing."
-  fi
-  as_root chmod 600 "$dest"
-  as_root chown "$owner" "$dest"
-}
-
-cmd_status() {
-  head2 "FamilyDB at ${TARGET}"
-
-  local version="unknown"
-  if [ -d "${TARGET}/.git" ]; then
-    version="$(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo 'unknown')"
-  fi
-  say "Version:    ${version}"
-
-  if [ "$DOCKER_MODE" = 1 ]; then
-    say "Runs as:    Docker containers"
-    as_root docker compose --project-directory "$TARGET" ps 2>/dev/null | tail -n +1 || true
-  elif service_installed; then
-    local active enabled
-    active="$(systemctl is-active familydb 2>/dev/null || true)"
-    enabled="$(systemctl is-enabled familydb 2>/dev/null || true)"
-    active="${active:-unknown}"
-    enabled="${enabled:-unknown}"
-    say "Service:    ${active}, ${enabled} at boot"
-    if [ "$active" = active ]; then
-      say "Since:      $(systemctl show familydb -p ActiveEnterTimestamp --value 2>/dev/null || echo '?')"
-      say "Memory:     $(systemctl show familydb -p MemoryCurrent --value 2>/dev/null | awk '{if ($1 ~ /^[0-9]+$/) printf "%.0f MB", $1/1048576; else print "?"}')"
-    fi
-  else
-    say "Service:    not installed; started by hand"
-  fi
-
-  if [ -f "$DB" ]; then
-    say "Database:   ${DB} ($(du -h "$DB" 2>/dev/null | cut -f1))"
-  else
-    warn "No database at ${DB} yet."
-  fi
-  local free
-  free="$(df -Ph "$TARGET" 2>/dev/null | awk 'NR==2 {print $4 " free of " $2}')"
-  say "Disk:       ${free:-unknown}"
-
-  local newest
-  newest="$(as_root find "$BACKUP_DIR" -maxdepth 1 -name 'familydb-*.sqlite3' -printf '%T@ %p\n' 2>/dev/null \
-            | sort -rn | head -1 | cut -d' ' -f2- || true)"
-  if [ -n "$newest" ]; then
-    say "Last backup: $(as_root stat -c '%y' "$newest" 2>/dev/null | cut -d. -f1) — ${newest}"
-  else
-    warn "No backups in ${BACKUP_DIR}."
-    note "Take one now:  sudo ${0} backup"
-    note "Or nightly:    sudo ${0} schedule-backups"
-  fi
-  if as_root crontab -u root -l 2>/dev/null | grep -q 'familydb-maintain-backup'; then
-    say "Scheduled:  a nightly backup is in root's crontab"
-  elif as_root crontab -u "$SERVICE_USER" -l 2>/dev/null | grep -q 'familydb db backup'; then
-    say "Scheduled:  a nightly backup is in ${SERVICE_USER}'s crontab"
-  fi
-  say ""
-  note "For the full check, with every finding and its fix:  ${0} check"
-}
-
-cmd_check() {
-  head2 "Checking the install"
-  familydb_cmd doctor || true
-}
-
-cmd_password() {
-  head2 "A new password for the web page"
-  if [ -n "$PASSWORD_FOR" ]; then
-    familydb_cmd password "$PASSWORD_FOR"
-  else
-    familydb_cmd password
-  fi
+intro() { # intro "Upgrade" - which install, and how it runs, beside the heading
+  banner "$1" "${TARGET} ${S_DOT} $(how_it_runs)"
 }
 
 env_file_value() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
@@ -308,8 +210,379 @@ env_file_set() { # env_file_set KEY VALUE - in place, keeping the file's owner a
   fi
 }
 
+# What the page says of itself at /healthz: "ok", or why not. Status 0 for ok, 1 for a page that
+# does not answer or says it is not well, 2 when it cannot be asked at all (no curl, or no page).
+page_health() {
+  local host port reply code body
+  # The page is off unless .env turns it on (WEB_ENABLED defaults to false), and an install that
+  # keeps it off has nothing to ask.
+  case "$(env_file_value WEB_ENABLED | tr 'A-Z' 'a-z')" in
+    true|1|yes|on|t|y) ;;
+    *) printf 'the web page is switched off'; return 2 ;;
+  esac
+  have curl || { printf 'curl is not installed, so the page was not asked'; return 2; }
+  host="$(env_file_value WEB_HOST)"; port="$(env_file_value WEB_PORT)"; port="${port:-8080}"
+  case "$host" in ''|0.0.0.0|::|'[::]') host=127.0.0.1 ;; esac
+  case "$host" in *:*) case "$host" in '['*) ;; *) host="[${host}]" ;; esac ;; esac
+  reply="$(curl -sS --max-time 3 -w '\n%{http_code}' "http://${host}:${port}/healthz" 2>/dev/null)" \
+    || { printf 'nothing answers at %s:%s' "$host" "$port"; return 1; }
+  code="${reply##*$'\n'}"
+  body="${reply%$'\n'*}"
+  if [ "$code" = 200 ]; then printf 'ok'; return 0; fi
+  # Its own reason is a sentence; an error page of the web server's is markup, which says nothing.
+  case "$body" in '<'*) body="" ;; esac
+  printf '%s' "${body:-the page answered with status ${code}}" | tr '\n' ' '
+  return 1
+}
+
+# After a start: give it up to 30 seconds to answer. Run under _capture, so the line shows the time.
+wait_for_page() {
+  local waited=0 said status=0
+  while :; do
+    status=0
+    said="$(page_health)" || status=$?
+    [ "$status" = 0 ] && break
+    [ "$status" = 2 ] && break
+    [ "$waited" -lt 30 ] || break
+    # A service that has stopped again is not going to answer; no need to wait out the rest.
+    if [ "$DOCKER_MODE" = 0 ] && [ "$waited" -ge 3 ] && ! service_active; then break; fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  printf '%s' "$said"
+  return "$status"
+}
+
+stop_bot() {
+  if [ "$DOCKER_MODE" = 1 ]; then
+    step "Stopping the containers" as_root docker compose --project-directory "$TARGET" stop bot
+  elif service_installed; then
+    step "Stopping the service" as_root systemctl stop familydb
+  else
+    note "Nothing to stop: no service and no containers."
+  fi
+}
+
+# BOT_STARTED is 1 when it came back and answers, 0 when it did not, empty when nothing was started
+# or nobody could tell. The last word of a command reads it.
+BOT_STARTED=""
+start_bot() {
+  BOT_STARTED=""
+  if [ "$DOCKER_MODE" = 1 ]; then
+    step "Starting the containers" as_root docker compose --project-directory "$TARGET" up -d
+  elif service_installed; then
+    step "Starting the service" as_root systemctl start familydb
+  else
+    note "No service to start. Run it in the foreground: cd ${TARGET} && sudo -u ${SERVICE_USER} ${FAMILYDB} run"
+    return 0
+  fi
+  [ "$DRY_RUN" = 1 ] && return 0
+  LIVE_LIMIT=30 _capture "Waiting for FamilyDB to answer" wait_for_page
+  case "$_STATUS" in
+    0)
+      BOT_STARTED=1
+      [ -n "${QUIET_START:-}" ] || ok "It came back up, and the page answers." ;;
+    2)
+      sleep 3
+      if [ "$DOCKER_MODE" = 1 ] || service_active; then
+        BOT_STARTED=1
+        [ -n "${QUIET_START:-}" ] || { ok "It came back up."; note "${_OUT}."; }
+      else
+        BOT_STARTED=0
+      fi ;;
+    *)
+      BOT_STARTED=0 ;;
+  esac
+  [ "$BOT_STARTED" = 0 ] || return 0
+  if [ "$DOCKER_MODE" = 0 ] && ! service_active; then
+    warn "It did not come back up."
+  else
+    warn "It is running, but the page does not answer yet: ${_OUT:-no reason given}."
+  fi
+  if [ "$DOCKER_MODE" = 1 ]; then
+    note "What to try: sudo docker compose --project-directory ${TARGET} logs --tail 50 bot"
+  else
+    note "The last 20 lines of its log:"
+    as_root journalctl -u familydb -n 20 --no-pager >&2 || true
+    note ""
+    note "What to try, in order:"
+    show_commands <<EOF
+  cd ${TARGET} && sudo -u ${SERVICE_USER} ${FAMILYDB} doctor     # names what is wrong
+  sudo systemctl status familydb
+  sudo journalctl -u familydb -n 100 --no-pager
+EOF
+  fi
+}
+
+# Sets LAST_BACKUP to the file it wrote (stdout is for the person reading).
+LAST_BACKUP=""
+take_backup() { # take_backup DEST_DIR
+  local dir="$1" dest stamp owner
+  stamp="$(date +%Y%m%d%H%M%S%N)"
+  dest="${dir}/familydb-${stamp}.sqlite3"
+  LAST_BACKUP="$dest"
+  [ -f "$DB" ] || die "there is no database at ${DB}, so there is nothing to back up" \
+    "If the bot has never run, that is expected. Otherwise check FAMILYDB_PATH in .env."
+  if [ "$DRY_RUN" = 1 ]; then
+    note "[dry run] would back up the database to ${dest}"
+    return 0
+  fi
+  as_root mkdir -p "$dir"
+  dir="$(cd -- "$dir" && pwd -P)"
+  dest="${dir}/familydb-${stamp}.sqlite3"
+  LAST_BACKUP="$dest"
+  owner="${SERVICE_USER}:${SERVICE_USER}"
+  if [ "$DOCKER_MODE" = 1 ]; then owner="$(stat -c '%u:%g' "$DB")"; fi
+  # The online backup runs as the service account, so the folder has to be its to write.
+  as_root chown "$owner" "$dir" 2>>"${LOG_FILE:-/dev/null}" \
+    || warn "Could not give ${SERVICE_USER} the folder ${dir}, so the backup may fail."
+  require_free_mb "$dir" \
+    "$(( $(stat -c %s "$DB" 2>/dev/null || echo 10000000) / 1000000 + 50 ))" "this backup"
+  local success=0
+  if [ "$DOCKER_MODE" = 1 ]; then
+    _capture "Backing up the database" as_root docker compose --project-directory "$TARGET" run --rm -T --no-deps \
+      --user "$owner" -v "${dir}:/backup" bot familydb db backup "/backup/$(basename "$dest")"
+  else
+    _capture "Backing up the database" familydb_cmd db backup "$dest"
+  fi
+  [ -z "$_OUT" ] || printf '%s\n' "$_OUT" >>"${LOG_FILE:-/dev/null}"
+  [ "$_STATUS" != 0 ] || success=1
+  if [ "$success" = 1 ] && [ -s "$dest" ]; then
+    [ -n "${BACKUP_QUIET:-}" ] || ok "Backed up the database ($(du -h "$dest" | cut -f1)) to ${dest#"${TARGET}/"}"
+  else
+    # An incomplete backup must not look usable to restore, upgrade, or an operator.
+    as_root rm -f -- "$dest"
+    die "SQLite online backup failed; no backup was created" \
+      "The database was not copied or replaced. See ${LOG_FILE:-the transcript} and fix the error before continuing."
+  fi
+  as_root chmod 600 "$dest"
+  as_root chown "$owner" "$dest"
+}
+
+# --- status -------------------------------------------------------------------------------------
+# One screen: a verdict, a row for each thing worth knowing, and what to do about any that is not
+# well. The rows are gathered first so the verdict can lead.
+
+ROW_LABEL=(); ROW_VALUE=(); ROW_STATE=()
+ATTENTION=(); ATTENTION_FIX=()
+row()    { ROW_LABEL+=("$1"); ROW_VALUE+=("$2"); ROW_STATE+=("${3:-}"); }
+attend() { ATTENTION+=("$1"); ATTENTION_FIX+=("$2"); }   # what is wrong, then the commands for it
+
+BACKUP_STALE_SECONDS=129600   # 36 hours: the same line the bot's own upkeep job draws
+
+status_service() { # the service or containers: sets STATUS_RUNNING to 1, 0 or empty when unknown
+  STATUS_RUNNING=""
+  if [ "$DOCKER_MODE" = 1 ]; then
+    local listing svc state detail
+    listing="$(as_root docker compose --project-directory "$TARGET" ps --format '{{.Service}}|{{.State}}|{{.Status}}' 2>/dev/null)" || listing=""
+    if [ -z "$listing" ]; then
+      row "Containers" "could not be listed: is Docker running?" warn
+      return 0
+    fi
+    while IFS='|' read -r svc state detail; do
+      [ -n "$svc" ] || continue
+      if [ "$state" = running ]; then
+        row "$svc" "${state}, ${detail}" ok
+        [ "$svc" != bot ] || STATUS_RUNNING=1
+      else
+        row "$svc" "${state}, ${detail}" bad
+        [ "$svc" != bot ] || STATUS_RUNNING=0
+        attend "The ${svc} container is not running" "sudo docker compose --project-directory ${TARGET} up -d
+sudo docker compose --project-directory ${TARGET} logs --tail 50 ${svc}   # why it stopped"
+      fi
+    done <<<"$listing"
+    return 0
+  fi
+  if ! service_installed; then
+    row "Service" "not installed; it is started by hand" off
+    return 0
+  fi
+  local active enabled since started up memory
+  active="$(systemctl is-active familydb 2>/dev/null || true)"; active="${active:-unknown}"
+  enabled="$(systemctl is-enabled familydb 2>/dev/null || true)"; enabled="${enabled:-unknown}"
+  if [ "$active" = active ]; then
+    STATUS_RUNNING=1
+    since="$(systemctl show familydb -p ActiveEnterTimestamp --value 2>/dev/null || true)"
+    started="$(date -d "$since" +%s 2>/dev/null || true)"
+    up=""; [ -z "$started" ] || up=", up $(fmt_secs $(( $(date +%s) - started )))"
+    if [ "$enabled" = enabled ]; then
+      row "Service" "running, starts at boot${up}" ok
+    else
+      row "Service" "running${up}, but it ${enabled} at boot" warn
+      attend "FamilyDB will not come back by itself after a reboot" "sudo systemctl enable familydb"
+    fi
+    memory="$(systemctl show familydb -p MemoryCurrent --value 2>/dev/null | awk '{if ($1 ~ /^[0-9]+$/) printf "%.0f MB", $1/1048576}')"
+    [ -z "$memory" ] || row "Memory" "$memory"
+  else
+    STATUS_RUNNING=0
+    row "Service" "${active}, ${enabled} at boot" bad
+    attend "FamilyDB is not running" "sudo ${0} restart   # start it again
+sudo ${0} logs   # why it stopped"
+  fi
+}
+
+status_page() { # whether the page answers, and where people open it
+  local said code=0 site host port
+  if [ "$STATUS_RUNNING" != 0 ]; then
+    said="$(page_health)" || code=$?
+    case "$code" in
+      0) row "Page" "answers, and the scheduled jobs are running" ok
+         [ -n "$STATUS_RUNNING" ] || STATUS_RUNNING=1 ;;
+      1) row "Page" "$said" bad
+         attend "The page does not answer: ${said}" "sudo ${0} logs   # what it says
+sudo ${0} check   # what is misconfigured" ;;
+      *) row "Page" "not asked: ${said}" off ;;
+    esac
+  fi
+  site="$(env_file_value WEB_DOMAIN)"; host="$(env_file_value WEB_HOST)"; port="$(env_file_value WEB_PORT)"; port="${port:-8080}"
+  if [ -n "$site" ]; then
+    PUBLIC_PORT="$(env_file_value WEB_PUBLIC_PORT)"; PUBLIC_PORT="${PUBLIC_PORT:-443}"
+    row "Address" "$(public_url "$site")"
+    if [ "$DOCKER_MODE" = 0 ] && have systemctl; then
+      if systemctl is-active --quiet caddy 2>/dev/null; then
+        row "HTTPS" "Caddy is serving it" ok
+      else
+        row "HTTPS" "Caddy is not running, so nobody can open the page from outside" bad
+        attend "Caddy, which serves the page over HTTPS, is not running" "sudo systemctl restart caddy
+sudo journalctl -u caddy -n 30 --no-pager   # why"
+      fi
+    fi
+  else
+    case "${host:-127.0.0.1}" in
+      127.0.0.1|localhost|::1) row "Address" "this machine only: reach it through an SSH tunnel to port ${port}" ;;
+      *) row "Address" "http://$(this_address):${port}/ (no HTTPS)" warn
+         attend "The page is open to the network without HTTPS" "sudo ${0} https   # a certificate and a closed side door" ;;
+    esac
+  fi
+}
+
+status_data() { # the database, the disk, and the backups
+  local free_mb free_human percent newest epoch age line cronline at
+  if [ -f "$DB" ]; then
+    row "Database" "$(du -h "$DB" 2>/dev/null | cut -f1), ${DB#"${TARGET}/"}"
+  else
+    row "Database" "none at ${DB} yet" bad
+    attend "There is no database yet" "sudo ${0} restart   # a first start makes one"
+  fi
+  free_mb="$(df -Pm "$TARGET" 2>/dev/null | awk 'NR==2 {print $4}')"
+  free_human="$(df -Ph "$TARGET" 2>/dev/null | awk 'NR==2 {print $4 " free of " $2}')"
+  percent="$(df -Ph "$TARGET" 2>/dev/null | awk 'NR==2 {print $5}')"
+  if [ -z "$free_mb" ]; then
+    row "Disk" "unknown"
+  elif [ "$free_mb" -lt 500 ]; then
+    row "Disk" "${free_human} (${percent} used): nearly full" bad
+    attend "The disk is nearly full" "sudo journalctl --vacuum-size=200M
+sudo apt-get clean
+docker system prune -af   # if Docker is installed"
+  elif [ "$free_mb" -lt 2000 ]; then
+    row "Disk" "${free_human} (${percent} used): getting full" warn
+  else
+    row "Disk" "${free_human} (${percent} used)" ok
+  fi
+
+  newest="$(as_root find "$BACKUP_DIR" -maxdepth 1 -name 'familydb-*.sqlite3' -printf '%T@ %p\n' 2>/dev/null \
+            | sort -rn | head -1 | cut -d' ' -f2- || true)"
+  if [ -n "$newest" ]; then
+    epoch="$(as_root stat -c %Y "$newest" 2>/dev/null || echo 0)"
+    age=$(( $(date +%s) - epoch ))
+    line="$(ago "$age"), $(date -d "@${epoch}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo '?'), $(as_root du -h "$newest" 2>/dev/null | cut -f1)"
+    if [ "$age" -gt "$BACKUP_STALE_SECONDS" ]; then
+      row "Last backup" "${line}: older than 36 hours" warn
+      attend "The newest backup is more than 36 hours old; the nightly one may have stopped" "sudo ${0} backup   # take one now
+sudo ${0} schedule-backups   # put the nightly one back"
+    else
+      row "Last backup" "$line" ok
+    fi
+    row "" "$newest"
+  else
+    row "Last backup" "none yet in ${BACKUP_DIR}" warn
+    attend "No backup has been taken yet" "sudo ${0} backup   # take one now
+sudo ${0} schedule-backups   # and one every night"
+  fi
+  cronline="$(as_root crontab -u root -l 2>/dev/null | grep 'familydb-maintain-backup' | head -1 || true)"
+  if [ -n "$cronline" ]; then
+    at="$(printf '%s\n' "$cronline" | awk '$1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ {printf "%02d:%02d", $2, $1}')"
+    row "Schedule" "nightly${at:+ at ${at}}, in root's crontab" ok
+  elif as_root crontab -u "$SERVICE_USER" -l 2>/dev/null | grep -q 'familydb db backup'; then
+    row "Schedule" "nightly, in ${SERVICE_USER}'s crontab (an older setup)" ok
+  else
+    row "Schedule" "no nightly backup is scheduled" warn
+    [ -z "$newest" ] || attend "Backups only happen when someone takes one" "sudo ${0} schedule-backups"
+  fi
+}
+
+cmd_status() {
+  banner "Status" "${TARGET} ${S_DOT} $(how_it_runs)"
+  local version="unknown" i bad=0 warns=0 headline mark colour
+  if [ -d "${TARGET}/.git" ]; then
+    version="$(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo 'unknown')"
+  fi
+  row "Version" "$version"
+  status_service
+  status_page
+  status_data
+
+  for i in "${!ROW_STATE[@]}"; do
+    case "${ROW_STATE[i]}" in bad) bad=$((bad + 1)) ;; warn) warns=$((warns + 1)) ;; esac
+  done
+  if [ "$STATUS_RUNNING" = 0 ]; then
+    mark="$S_BAD"; colour="$RED"; headline="FamilyDB is not running"
+  elif [ "$bad" -gt 0 ]; then
+    mark="$S_BAD"; colour="$RED"
+    if [ "$bad" -eq 1 ]; then headline="1 thing needs attention now"; else headline="$bad things need attention now"; fi
+  elif [ "$warns" -gt 0 ]; then
+    mark="$S_WARN"; colour="$YEL"; headline="Running, with $warns thing$([ "$warns" -eq 1 ] || echo s) to look at"
+  else
+    mark="$S_OK"; colour="$GRN"; headline="Running, and all is well"
+  fi
+  printf '\n%s%s %s%s%s\n\n' "$colour" "$mark" "$B" "$headline" "$OFF"
+  log_line "== status: $headline"
+  for i in "${!ROW_LABEL[@]}"; do
+    if [ -z "${ROW_LABEL[i]}" ]; then
+      printf '    %-12s %s%s%s\n' "" "$DIM" "${ROW_VALUE[i]}" "$OFF"
+    else
+      kv "${ROW_LABEL[i]}" "${ROW_VALUE[i]}" "${ROW_STATE[i]}"
+    fi
+  done
+
+  if [ "${#ATTENTION[@]}" -gt 0 ]; then
+    after "Needs attention"
+    for i in "${!ATTENTION[@]}"; do
+      WRAP_FIRST="  ${YEL}${S_WARN}${OFF} " wrap "    " "" "${ATTENTION[i]}"
+      INDENT="      " show_commands <<<"${ATTENTION_FIX[i]}"
+    done
+  fi
+  printf '\n'
+  frame_bottom "$([ "$STATUS_RUNNING" = 0 ] || [ "$bad" -gt 0 ] && echo bad || echo ok)" "$colour"
+  # A monitor can ask `maintain.sh status` and read the answer from the exit status.
+  if [ "$STATUS_RUNNING" = 0 ] || [ "$bad" -gt 0 ]; then FINISH_BAD=1; fi
+}
+
+cmd_check() {
+  hint "$S_OK fine   $S_WARN worth a look   $S_BAD must be fixed   $S_DOT skipped"
+  printf '\n'
+  _capture "Running the checks" familydb_cmd doctor
+  show_doctor all "$_OUT"
+  [ -n "$_OUT" ] || warn "The check printed nothing, so it may not have run. Run it by hand: cd ${TARGET} && sudo -u ${SERVICE_USER} ${FAMILYDB} doctor"
+  if [ "$DOCTOR_BAD" -gt 0 ]; then
+    finish bad "$DOCTOR_BAD thing$([ "$DOCTOR_BAD" -eq 1 ] || echo s) must be fixed, $DOCTOR_WARN worth a look"
+  elif [ "$DOCTOR_WARN" -gt 0 ]; then
+    finish warn "Nothing is broken; $DOCTOR_WARN thing$([ "$DOCTOR_WARN" -eq 1 ] || echo s) worth a look"
+  else
+    finish ok "All $DOCTOR_FINE checks are fine"
+  fi
+  [ -z "$DOCTOR_VERDICT" ] || hint "$DOCTOR_VERDICT"
+}
+
+cmd_password() {
+  if [ -n "$PASSWORD_FOR" ]; then
+    familydb_cmd password "$PASSWORD_FOR"
+  else
+    familydb_cmd password
+  fi
+}
+
 cmd_https() {
-  head2 "HTTPS for the page"
   as_root test -f "${TARGET}/.env" || die "there is no ${TARGET}/.env" "Run the installer first."
   if [ "$DOCKER_MODE" = 1 ]; then
     https_port_in_docker
@@ -326,21 +599,31 @@ cmd_https() {
   chosen="$(choose_public_port "${HTTPS_PORT:-$previous}" "$port")" \
     || die "that port will not do" "Give --port a number from 1024 to 65535, or random, or 443."
   PUBLIC_PORT="$chosen"
+  kv "Page" "$(public_url "$site")"
+  [ "$chosen" = "$previous" ] || kv "Port" "${previous} ${S_TO} ${chosen}"
+
   setup_https "$site" "$port" || die "the page could not be put on HTTPS" "What went wrong is above."
-  # The page has to believe Caddy about who is visiting, and listen for nobody but Caddy.
   env_file_set WEB_DOMAIN "$site"
   env_file_set WEB_TRUST_PROXY true
   env_file_set WEB_HOST 127.0.0.1
   env_file_set WEB_PUBLIC_PORT "$PUBLIC_PORT"
+  ok "Pointed FamilyDB at Caddy in ${TARGET}/.env"
   close_old_web_ports "$previous"
   if service_installed; then
     step "Restarting FamilyDB so the page knows it is behind HTTPS" as_root systemctl restart familydb
   fi
-  say ""
+  if [ "$HTTPS_BLOCKED" = 1 ]; then
+    finish warn "The page is on HTTPS, but nothing outside seems able to reach it yet"
+  else
+    finish ok "The page is on HTTPS"
+  fi
   say "The page: ${B}$(public_url "$site")${OFF}"
+  case "$HTTPS_KIND" in
+    public) kv "Certificate" "a real one: no browser will warn" ;;
+    internal) kv "Certificate" "Caddy's own, so the browser warns once" ;;
+  esac
   if [ "$PUBLIC_PORT" != "$previous" ]; then
-    note "It moved from port ${previous}: open it at the address above from now on. A bookmark to"
-    note "the old address finds nothing."
+    hint "A bookmark to the old address, port ${previous}, finds nothing now."
   fi
   say_how_to_open
 }
@@ -365,26 +648,24 @@ https_port_in_docker() {
   fi
   PUBLIC_PORT="$chosen"
   if [ "$chosen" = "$previous" ]; then
-    ok "The page is already served on port ${chosen}. Nothing to do."
+    finish ok "The page is already served on port ${chosen}: nothing to do"
   else
-    system_change "Serve the page on port ${chosen} instead of ${previous}" \
-      "WEB_PUBLIC_PORT in ${TARGET}/.env, then the containers are started again with it"
+    kv "Port" "${previous} ${S_TO} ${chosen}"
     if [ "$DRY_RUN" = 0 ]; then
       env_file_set WEB_PUBLIC_PORT "$chosen"
-      step "Starting the containers again" as_root docker compose --project-directory "$TARGET" up -d
+      ok "WEB_PUBLIC_PORT is ${chosen} in ${TARGET}/.env"
     fi
+    step "Starting the containers again" as_root docker compose --project-directory "$TARGET" up -d
+    finish ok "The page is on port ${chosen}"
   fi
-  say ""
   say "The page: ${B}$(public_url "$site")${OFF}"
   if [ "$chosen" != "$previous" ]; then
-    note "It moved from port ${previous}: open it at the address above from now on. A bookmark to"
-    note "the old address finds nothing."
+    hint "A bookmark to the old address, port ${previous}, finds nothing now."
   fi
   say_how_to_open
 }
 
 cmd_port() {
-  head2 "FamilyDB's own port"
   [ -n "$APP_PORT" ] || die "which port?" "Usage: ${0} port N, with N from 1025 to 65535, or random"
   as_root test -f "${TARGET}/.env" || die "there is no ${TARGET}/.env" "Run the installer first."
   local now served chosen followed=0 site host
@@ -393,21 +674,21 @@ cmd_port() {
   chosen="$(choose_app_port "$APP_PORT" "$served" "$now")" \
     || die "that port will not do" "Give it a number from 1025 to 65535, or random."
   if [ "$chosen" = "$now" ]; then
-    ok "FamilyDB already listens on port ${now}. Nothing to do."
+    finish ok "Nothing to do: FamilyDB already listens on port ${now}"
     return 0
   fi
-  if [ "$DOCKER_MODE" = 1 ]; then
-    system_change "Move FamilyDB from port ${now} to port ${chosen}" \
-      "WEB_PORT in ${TARGET}/.env, which the compose file publishes and Caddy passes the page on to"
-  else
-    system_change "Move FamilyDB from port ${now} to port ${chosen}" \
-      "WEB_PORT in ${TARGET}/.env, and Caddy's configuration where it passes the page on to ${now}"
-  fi
+  kv "Port" "${now} ${S_TO} ${chosen}"
   if [ "$DRY_RUN" = 1 ]; then
-    note "[dry run] nothing was changed"
+    if [ "$DOCKER_MODE" = 1 ]; then
+      note "[dry run] would set WEB_PORT in ${TARGET}/.env and start the containers again"
+    else
+      note "[dry run] would set WEB_PORT in ${TARGET}/.env, point Caddy at it and restart FamilyDB"
+    fi
+    finish ok "Dry run"
     return 0
   fi
   env_file_set WEB_PORT "$chosen"
+  ok "WEB_PORT is ${chosen} in ${TARGET}/.env"
   if [ "$DOCKER_MODE" = 1 ]; then
     step "Starting the containers again on port ${chosen}" \
       as_root docker compose --project-directory "$TARGET" up -d
@@ -425,36 +706,46 @@ cmd_port() {
       note "No service here to restart: start FamilyDB again yourself, and it listens on ${chosen}."
     fi
   fi
-  say ""
   site="$(env_file_value WEB_DOMAIN)"
   host="$(env_file_value WEB_HOST)"; host="${host:-127.0.0.1}"
+  if [ -n "$site" ] && [ "$followed" = 2 ] && [ "$DOCKER_MODE" = 0 ]; then
+    warn "No Caddyfile here passed the page on to port ${now}, so none was changed. Point whatever serves ${site} at 127.0.0.1:${chosen} instead."
+  fi
+  finish ok "FamilyDB now listens on port ${chosen}"
   if [ -n "$site" ]; then
     PUBLIC_PORT="$served"
     say "The page is still at ${B}$(public_url "$site")${OFF}: only the port behind Caddy moved."
-    if [ "$followed" = 2 ] && [ "$DOCKER_MODE" = 0 ]; then
-      warn "No Caddyfile here passed the page on to port ${now}, so none was changed."
-      note "Point whatever serves ${site} at 127.0.0.1:${chosen} instead."
-    fi
   elif [ "$DOCKER_MODE" = 1 ] || [ "$host" = 127.0.0.1 ] || [ "$host" = localhost ] || [ "$host" = ::1 ]; then
     say "It is on this machine alone. From your own computer, open a tunnel to it:"
-    say "  ssh -L ${chosen}:127.0.0.1:${chosen} ${SUDO_USER:-$(id -un)}@$(this_address)"
-    say "  and, while it is connected, open ${B}http://127.0.0.1:${chosen}/${OFF} on that computer."
+    cmdline "ssh -L ${chosen}:127.0.0.1:${chosen} ${SUDO_USER:-$(id -un)}@$(this_address)"
+    say "and, while it is connected, open ${B}http://127.0.0.1:${chosen}/${OFF} on that computer."
   else
     say "The page: ${B}http://$(this_address):${chosen}/${OFF}. A bookmark to port ${now} finds nothing."
-    note "If a firewall let port ${now} in, let ${chosen} in instead, and close ${now}:"
-    note "  sudo ufw allow ${chosen}/tcp && sudo ufw delete allow ${now}/tcp"
+    hint "If a firewall let port ${now} in, let ${chosen} in instead, and close ${now}:"
+    cmdline "sudo ufw allow ${chosen}/tcp && sudo ufw delete allow ${now}/tcp"
   fi
 }
 
 cmd_backup() {
-  head2 "Taking a backup"
-  take_backup "$BACKUP_DIR" "so today's state can be put back if something goes wrong"
-  say ""
-  say "Backup: ${B}${LAST_BACKUP}${OFF}"
-  say "Copy it somewhere that is not this machine. A backup on the same disk is not a backup."
-  say "It is readable by root only, so hand yourself a copy here, then fetch it:"
-  say "  sudo install -m 600 -o ${SUDO_USER:-\$USER} ${LAST_BACKUP} ~/"
-  say "  scp ${SUDO_USER:-you}@$(hostname -I 2>/dev/null | awk '{print $1}'):$(basename "$LAST_BACKUP") .    # on your own computer"
+  local earlier
+  earlier="$(as_root find "$BACKUP_DIR" -maxdepth 1 -name 'familydb-*.sqlite3' 2>/dev/null | head -1 || true)"
+  BACKUP_QUIET=1 take_backup "$BACKUP_DIR"
+  if [ "$DRY_RUN" = 1 ]; then finish ok "Dry run"; return 0; fi
+  finish ok "Backed up the database ($(du -h "$LAST_BACKUP" | cut -f1)) to ${LAST_BACKUP#"${TARGET}/"}"
+  # Said for the first one only: a person who has taken more knows how to get them off the machine.
+  [ -z "$earlier" ] || return 0
+  hint "To fetch a copy off this machine:"
+  cmdline "sudo install -m 600 -o ${SUDO_USER:-\$USER} ${LAST_BACKUP} ~/"
+  cmdline "scp ${SUDO_USER:-you}@$(hostname -I 2>/dev/null | awk '{print $1}'):$(basename "$LAST_BACKUP") ." "on your own computer"
+}
+
+# The backup copied over the database, with the owner and mode the bot needs. The write-ahead
+# files belong to the database that was just replaced, so they go.
+put_backup_in_place() { # put_backup_in_place FILE OWNER
+  as_root cp "$1" "$DB" \
+    && as_root rm -f "${DB}-wal" "${DB}-shm" \
+    && as_root chown "$2" "$DB" \
+    && as_root chmod 600 "$DB"
 }
 
 cmd_restore() {
@@ -499,31 +790,44 @@ if have>known:
     *) die "backup validation failed; nothing was restored" ;;
   esac
 
-  head2 "Putting a backup back"
-  say "From: ${RESTORE_FILE} ($(du -h "$RESTORE_FILE" | cut -f1), $(stat -c '%y' "$RESTORE_FILE" | cut -d. -f1))"
-  say "Over: ${DB}"
-  say ""
-  say "The bot stops while this happens. Everything it has been told since that backup was"
-  say "taken will be gone. The database being replaced is itself backed up first, so this"
-  say "can be undone."
-  approve "Replace the database with that backup?" || { say "Nothing was changed."; exit 0; }
+  local taken taken_text
+  taken="$(stat -c %Y "$RESTORE_FILE")"
+  taken_text="$(date -d "@${taken}" '+%Y-%m-%d %H:%M' 2>/dev/null || stat -c '%y' "$RESTORE_FILE" | cut -d. -f1)"
+  ok "A sound FamilyDB backup: $(du -h "$RESTORE_FILE" | cut -f1), taken ${taken_text} ($(ago $(( $(date +%s) - taken ))))"
+  if [ -f "$DB" ]; then
+    kv "Replaces" "${DB#"${TARGET}/"}, $(du -h "$DB" | cut -f1), last written $(date -d "@$(stat -c %Y "$DB")" '+%Y-%m-%d %H:%M' 2>/dev/null || echo '?')"
+  else
+    kv "Replaces" "nothing: there is no database at ${DB} yet"
+  fi
+  caution "Everything the bot has been told since ${taken_text} will be gone from the live database."
+  # What cannot be undone by running it again is asked with no as the default.
+  approve "Replace the database with that backup?" no || { say "Nothing was changed."; exit 0; }
 
   local safety=""
+  progress_total 5
   if [ -f "$DB" ]; then
-    take_backup "$BACKUP_DIR" "so this restore itself can be undone"
+    take_backup "$BACKUP_DIR"
     safety="$LAST_BACKUP"
   fi
+  progress_to 1
   stop_bot
-  step "Putting ${RESTORE_FILE} in place" as_root cp "$RESTORE_FILE" "$DB"
-  # The write-ahead files belong to the database that was just replaced.
-  try_step "Clearing the write-ahead files" as_root rm -f "${DB}-wal" "${DB}-shm"
-  step "Restoring database ownership" as_root chown "$target_owner" "$DB"
-  step "Protecting the restored database" as_root chmod 600 "$DB"
+  progress_to 2
+  step "Putting the backup in place" put_backup_in_place "$RESTORE_FILE" "$target_owner"
+  progress_to 3
   step "Bringing the schema up to date" familydb_cmd db migrate
+  progress_to 4
   start_bot
-  head2 "Done"
-  say "Restored from ${RESTORE_FILE}."
-  [ -n "$safety" ] && say "What was there before is at ${safety}, if you need it back."
+
+  if [ "$DRY_RUN" = 1 ]; then finish ok "Dry run"; return 0; fi
+  if [ "${BOT_STARTED:-}" = 0 ]; then
+    finish bad "Restored, but FamilyDB did not start"
+  else
+    finish ok "Restored from ${taken_text}"
+  fi
+  if [ -n "$safety" ]; then
+    kv "Before" "$safety"
+    cmdline "sudo ${0} restore ${safety}" "to undo this"
+  fi
 }
 
 # An upgrade that has moved the code writes this, and removes it once dependencies and migrations
@@ -567,33 +871,227 @@ rollback_lines() { # rollback_lines LABEL BEFORE BACKUP - the commands, one a li
   printf '  sudo %s restore %s\n' "$0" "$backup"
 }
 
+# --- what an upgrade changes ---------------------------------------------------------------------
+# Said the way a pull request says it, and only what is not routine: the commits, then the parts
+# that need a look before saying yes (new migrations, packages that move, new settings, a changed
+# service file). A part that does not change is not mentioned: its absence is the news. All of it is
+# read from git between two refs, so it is about this run and no other. The globals are left for
+# the steps that apply it, and for the last line.
+
+UPGRADE_COMMITS=0
+UPGRADE_MIGRATIONS=0
+UPGRADE_MIGRATION_NAMES=""
+UPGRADE_PACKAGES=""      # "2 updated, 1 added", empty when none moves
+UPGRADE_PACKAGE_COUNT=0
+UPGRADE_FOLLOWING=""     # the branch it follows while the next version is still being built
+
+lock_packages() { # lock_packages REF - "name version" for each package uv.lock pins at REF
+  as_root git -C "$TARGET" show "${1}:uv.lock" 2>/dev/null \
+    | awk '/^\[\[package\]\]/ {name = ""} /^name = / {gsub(/"/, "", $3); name = $3} /^version = / && name != "" && name != "familydb" {gsub(/"/, "", $3); print name, $3}' \
+    | sort || true
+}
+
+env_options() { # env_options REF - every option .env.example offers at REF, set or commented out
+  as_root git -C "$TARGET" show "${1}:.env.example" 2>/dev/null | grep -oE '^#? ?[A-Z][A-Z0-9_]+=' | tr -d '# =' | sort -u || true
+}
+
+more_than() { # more_than N LIMIT - ", and N more" for what a short list left out
+  [ "$1" -le "$2" ] || printf ', and %s more' $(($1 - $2))
+}
+
+link_refs() { # link_refs TEXT WEB - each "(#65)" in TEXT as a cyan pull request number, a link where there is one
+  local text="$1" web="$2" out="" re='\(#([0-9]+)\)'
+  while [[ $text =~ $re ]]; do
+    out="${out}${text%%"${BASH_REMATCH[0]}"*}(${CYN}$(hyperlink "${web:+${web}/pull/${BASH_REMATCH[1]}}" "#${BASH_REMATCH[1]}")${OFF})"
+    text="${text#*"${BASH_REMATCH[0]}"}"
+  done
+  printf '%s%s' "$out" "$text"
+}
+
+version_label() { # version_label REF - v0.2.0+137: the release it is built on and the commits since; a short hash without one
+  local d
+  d="$(as_root git -C "$TARGET" describe --tags --always "$1" 2>/dev/null || echo "$1")"
+  if [[ $d =~ ^(.+)-([0-9]+)-g[0-9a-f]+$ ]]; then printf '%s+%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"; else printf '%s' "$d"; fi
+}
+
+_version_row() { # _version_row LABEL REF COLOUR [NOTE]
+  local hash day label
+  hash="$(as_root git -C "$TARGET" rev-parse --short "$2" 2>/dev/null || echo '?')"
+  day="$(as_root git -C "$TARGET" log -1 --format=%cs "$2" 2>/dev/null || true)"
+  label="$(version_label "$2")"
+  # A checkout with no release behind it is named by its hash already: say it once.
+  [ "$label" != "$hash" ] || hash=""
+  printf '  %s%-10s%s %s%-14s%s %s%s%s%s%s%s%s\n' "$DIM" "$1" "$OFF" "$3" "$label" "$OFF" \
+    "$YEL" "${hash:+$hash  }" "$OFF" "$DIM" "$day" "${4:+  $4}" "$OFF"
+}
+
+show_versions() { # show_versions FROM TO - what is installed, and what it is going to, one above the other
+  local from="$1" to="$2" note=""
+  printf '\n'
+  if [ "$(as_root git -C "$TARGET" rev-parse "$from" 2>/dev/null)" = "$(as_root git -C "$TARGET" rev-parse "$to" 2>/dev/null)" ]; then
+    _version_row "Installed" "$from" "$B"
+    return 0
+  fi
+  _version_row "Installed" "$from" "$B"
+  if [ -n "$UPGRADE_FOLLOWING" ]; then
+    local coming
+    coming="$(as_root git -C "$TARGET" show "${to}:CHANGELOG.md" 2>/dev/null | sed -nE 's/^## (v[0-9][^ ]*) .*in progress.*/\1/p' | head -1 || true)"
+    note="on ${UPGRADE_FOLLOWING}${coming:+, where ${coming} is in progress}"
+  fi
+  _version_row "Upgrading" "$to" "$B$GRN" "$note"
+}
+
+# git's own picture of a change: a row for each part of the code that changes most, with its + and -
+# drawn to scale, so a big move reads as big before anyone counts.
+change_bars() { # change_bars FROM TO
+  local bars=$(( $(ui_width) - 40 ))
+  [ "$bars" -le 24 ] || bars=24
+  [ "$bars" -ge 8 ] || bars=8
+  as_root git -C "$TARGET" diff --numstat "$1" "$2" 2>/dev/null | awk -F'\t' '
+    { area = "other"; n = split($3, p, "/")
+      if (p[1] == "src" && p[2] == "familydb") { area = (n > 3) ? p[3] : "core"; if (area == "wiki") area = "guide" }
+      else if (p[1] == "tests") area = "tests"
+      else if (p[1] == "docs" || p[1] ~ /\.md$/) area = "docs"
+      else if (p[1] == "scripts") area = "scripts"
+      else if (p[1] == "deploy" || p[1] == "Dockerfile" || p[1] == "docker-compose.yml") area = "deploy"
+      else if (p[1] == "pyproject.toml" || p[1] == "uv.lock") area = "packages"
+      else if (p[1] == ".env.example") area = "settings"
+      a = ($1 == "-") ? 0 : $1; r = ($2 == "-") ? 0 : $2
+      files[area]++; add[area] += a; del[area] += r }
+    END { for (k in files) printf "%d\t%s\t%d\t%d\t%d\n", add[k] + del[k], k, files[k], add[k], del[k] }' \
+    | sort -rn \
+    | awk -F'\t' -v green="$GRN" -v red="$RED" -v dim="$DIM" -v cyan="$CYN" -v off="$OFF" -v width="$bars" -v limit=5 '
+        NR == 1 { max = $1 }
+        NR <= limit {
+          scale = (max > width) ? width / max : 1
+          p = int($4 * scale + 0.5); m = int($5 * scale + 0.5)
+          if ($4 > 0 && p == 0) p = 1
+          if ($5 > 0 && m == 0) m = 1
+          bar = green; for (i = 0; i < p; i++) bar = bar "+"
+          bar = bar red; for (i = 0; i < m; i++) bar = bar "-"
+          pad = ""; for (i = p + m; i < width; i++) pad = pad " "
+          printf "  %s%-9s%s %s%3d%s  %s%s%s %s+%d%s %s-%d%s\n", cyan, $2, off, dim, $3, off, bar, off, pad, green, $4, off, red, $5, off
+        }
+        NR > limit { rest++ }
+        END { if (rest) printf "  %sand %d more parts%s\n", dim, rest, off }'
+}
+
+upgrade_changes() { # upgrade_changes FROM TO
+  local from="$1" to="$2" prs stat files added removed hash line web number numbers=""
+  web="$(repo_web_base "$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || true)")"
+  UPGRADE_COMMITS="$(as_root git -C "$TARGET" rev-list --count --no-merges "${from}..${to}" 2>/dev/null || echo 0)"
+  prs="$(as_root git -C "$TARGET" log --format=%s "${from}..${to}" 2>/dev/null | grep -oE '(pull request |\()#[0-9]+' | grep -oE '[0-9]+' | sort -un | sed 's/^/#/' | tr '\n' ' ' | sed 's/ $//' || true)"
+  stat="$(as_root git -C "$TARGET" diff --shortstat "$from" "$to" 2>/dev/null || true)"
+  files="$(printf '%s' "$stat" | sed -nE 's/^ *([0-9]+) files? changed.*/\1/p')"
+  added="$(printf '%s' "$stat" | sed -nE 's/.* ([0-9]+) insertions?\(\+\).*/\1/p')"
+  removed="$(printf '%s' "$stat" | sed -nE 's/.* ([0-9]+) deletions?\(-\).*/\1/p')"
+
+  show_versions "$from" "$to"
+  local facts
+  for number in $prs; do
+    numbers="${numbers}${numbers:+ }${CYN}$(hyperlink "${web:+${web}/pull/${number#\#}}" "$number")${OFF}"
+  done
+  facts="${B}${UPGRADE_COMMITS}${OFF} commit$([ "$UPGRADE_COMMITS" = 1 ] || echo s)${numbers:+ (${numbers})}"
+  [ -z "$files" ] || facts="${facts} ${DIM}${S_DOT}${OFF} ${B}${files}${OFF} file$([ "$files" = 1 ] || echo s) ${GRN}+${added:-0}${OFF} ${RED}-${removed:-0}${OFF}"
+  printf '\n  %s\n' "$facts"
+  log_line "upgrade: ${from} -> ${to}: ${UPGRADE_COMMITS} commits ${prs}"
+  change_bars "$from" "$to"
+
+  local shown=0 subject max=$(( $(ui_width) - 12 ))
+  if [ "$UPGRADE_COMMITS" -gt 0 ]; then
+    printf '\n'
+    while IFS=$'\t' read -r hash subject; do
+      [ -n "$hash" ] || continue
+      [ "${#subject}" -le "$max" ] || subject="${subject:0:$((max - 3))}${S_ELLIPSIS}"
+      printf '%s%s%s  %s\n' "$YEL" "$(hyperlink "${web:+${web}/commit/${hash}}" "$hash")" "$OFF" "$(link_refs "$subject" "$web")"
+      shown=$((shown + 1))
+    done < <(as_root git -C "$TARGET" log --no-merges --format='%h%x09%s' -n 5 "${from}..${to}" 2>/dev/null)
+    [ "$UPGRADE_COMMITS" -le "$shown" ] || printf '%sand %s more%s\n' "$DIM" $((UPGRADE_COMMITS - shown)) "$OFF"
+  fi
+
+  # What the changelog says is new, for a person who wants the reason and not only the files.
+  local news
+  news="$(as_root git -C "$TARGET" diff "$from" "$to" -- CHANGELOG.md 2>/dev/null | sed -nE 's/^\+- \*\*([^*]*)\*\*.*/\1/p' | sed 's/\.$//' | head -4 || true)"
+  if [ -n "$news" ]; then
+    printf '\n'
+    while IFS= read -r line; do
+      WRAP_FIRST="${DIM}${S_DOT}${OFF} " wrap "  " "" "$line"
+    done <<<"$news"
+  fi
+
+  # Only what is not routine, each with a mark: the absence of a line is the report that there is none.
+  local migrations count=0 names="" name rows=0
+  migrations="$(as_root git -C "$TARGET" diff --name-only --diff-filter=A "$from" "$to" -- src/familydb/store/migrations 2>/dev/null | sed 's|.*/||; s|\.sql$||' | sort || true)"
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    count=$((count + 1))
+    [ "$count" -gt 3 ] || names="${names}${names:+, }${name}"
+  done <<<"$migrations"
+  UPGRADE_MIGRATIONS=$count
+  UPGRADE_MIGRATION_NAMES="${names}$(more_than "$count" 3)"
+  [ "$count" -eq 0 ] || rows=1
+
+  local sym pkg old new nu=0 na=0 nr=0 updated="" new_ones="" gone=""
+  while read -r sym pkg old new; do
+    case "$sym" in
+      '~') nu=$((nu + 1)); [ "$nu" -gt 4 ] || updated="${updated}${updated:+, }${pkg} ${old} ${S_TO} ${new}" ;;
+      '+') na=$((na + 1)); [ "$na" -gt 4 ] || new_ones="${new_ones}${new_ones:+, }${pkg} ${old}" ;;
+      '-') nr=$((nr + 1)); [ "$nr" -gt 4 ] || gone="${gone}${gone:+, }${pkg}" ;;
+    esac
+  done < <(awk 'NR == FNR {old[$1] = $2; next} {new[$1] = $2} END {
+                  for (n in new) { if (!(n in old)) print "+", n, new[n]; else if (old[n] != new[n]) print "~", n, old[n], new[n] }
+                  for (n in old) if (!(n in new)) print "-", n, old[n] }' <(lock_packages "$from") <(lock_packages "$to") | sort -k2)
+  UPGRADE_PACKAGES=""
+  UPGRADE_PACKAGE_COUNT=$((nu + na + nr))
+  local text=""
+  [ "$nu" -eq 0 ] || { text="${nu} updated (${updated}$(more_than "$nu" 4))"; UPGRADE_PACKAGES="${nu} updated"; }
+  [ "$na" -eq 0 ] || { text="${text}${text:+; }${na} added (${new_ones}$(more_than "$na" 4))"; UPGRADE_PACKAGES="${UPGRADE_PACKAGES}${UPGRADE_PACKAGES:+, }${na} added"; }
+  [ "$nr" -eq 0 ] || { text="${text}${text:+; }${nr} removed (${gone}$(more_than "$nr" 4))"; UPGRADE_PACKAGES="${UPGRADE_PACKAGES}${UPGRADE_PACKAGES:+, }${nr} removed"; }
+  [ -z "$text" ] || rows=1
+
+  local options service=0
+  options="$(comm -13 <(env_options "$from") <(env_options "$to") | tr '\n' ' ' | sed 's/ $//' || true)"
+  as_root git -C "$TARGET" diff --quiet "$from" "$to" -- deploy/familydb.service 2>/dev/null || service=1
+  [ -z "$options" ] && [ "$service" = 0 ] || rows=1
+
+  [ "$rows" = 0 ] || printf '\n'
+  if [ "$count" -gt 0 ]; then
+    kv "Database" "${count} new migration$([ "$count" = 1 ] || echo s): ${UPGRADE_MIGRATION_NAMES}" warn
+  fi
+  [ -z "$text" ] || kv "Packages" "$text"
+  [ -z "$options" ] || kv "Settings" "new in .env.example: ${options}" warn
+  [ "$service" = 0 ] || kv "Service file" "changed in deploy/familydb.service; an upgrade does not rewrite the installed one" warn
+  if [ "$count" -gt 0 ]; then
+    INDENT="  " hint "They change the database's layout, and some rewrite what is in it; the backup is what goes back."
+  fi
+  printf '\n'
+}
+
+failing_checks() { # failing_checks REPORT - the name of each check the doctor says must be fixed, one a line
+  printf '%s\n' "$1" | sed -n 's/^✗ \([^:]*\):.*/\1/p' | sort
+}
+
+check_counts() { # the doctor's counts, each in the colour of what it means
+  printf '%s%s%s fine %s%s%s %s%s%s worth a look %s%s%s %s%s%s to fix' \
+    "$GRN" "$DOCTOR_FINE" "$OFF" "$DIM" "$S_DOT" "$OFF" "$YEL" "$DOCTOR_WARN" "$OFF" "$DIM" "$S_DOT" "$OFF" \
+    "$([ "$DOCTOR_BAD" -eq 0 ] && printf '%s' "$GRN" || printf '%s' "$RED")" "$DOCTOR_BAD" "$OFF"
+}
+
+describe_ref() { # describe_ref REF - the name a person would say it by
+  as_root git -C "$TARGET" describe --tags --always "$1" 2>/dev/null || echo "$1"
+}
+
 cmd_upgrade() {
-  head2 "Upgrading"
   [ -d "${TARGET}/.git" ] || die "${TARGET} is not a git checkout, so there is nothing to pull" \
     "Upgrade by unpacking a new copy over it, keeping .env and data/."
 
   local current
-  current="$(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo unknown)"
-  say "Currently on: ${current}"
-
-  plan_item "Fetch the newest version from the git remote" \
-    "this is the code the bot runs; nothing about your configuration or data changes"
-  plan_item "Reinstall the dependencies at their locked versions" \
-    "a new release may need a library version this machine does not have"
-  plan_item "Apply any new database migrations" \
-    "they are applied in order and change the database's layout; some rewrite what is in it. The backup taken first covers that, and going back means restoring it"
-  plan_item "Restart the bot" \
-    "the new code only takes effect once the process restarts"
-  plan_untouched ".env, your keys, and everything the family has told it"
-  show_plan "What upgrading does"
-  approve "Upgrade now?" || { say "Nothing was changed."; exit 0; }
-
-  take_backup "$BACKUP_DIR" "so a bad upgrade can be undone"
-  local before upgrade_backup="$LAST_BACKUP" unfinished=""
-  before="$(as_root git -C "$TARGET" rev-parse HEAD 2>/dev/null || echo unknown)"
+  current="$(describe_ref HEAD)"
 
   # A private repository needs a credential here. bootstrap.sh leaves the deploy key wired up
   # when one was used, and deliberately does not write a token down, so say which case this is.
+  # Fetching only moves the remote's branches in the checkout: nothing the bot runs changes yet,
+  # and it is what lets the screen say what this upgrade would change before it is asked.
   # shellcheck disable=SC2034  # lib/common.sh names this in its failure report.
   FAILED_STEP="fetching the newest code"
   local -a fetch_from=(origin)
@@ -609,7 +1107,10 @@ cmd_upgrade() {
       *) warn "GITHUB_TOKEN only helps with an https://github.com/... remote; this one is ${origin_url}" ;;
     esac
   fi
-  if ! as_root git -C "$TARGET" fetch --tags --quiet "${fetch_from[@]}" 2>>"${LOG_FILE:-/dev/null}"; then
+  _capture "Fetching the newest code from ${origin_url:-the git remote}" \
+    as_root git -C "$TARGET" fetch --tags --quiet "${fetch_from[@]}"
+  [ -z "$_OUT" ] || printf '%s\n' "$_OUT" >>"${LOG_FILE:-/dev/null}"
+  if [ "$_STATUS" != 0 ]; then
     local remote sshcmd
     remote="$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || echo unknown)"
     sshcmd="$(as_root git -C "$TARGET" config core.sshCommand 2>/dev/null || true)"
@@ -627,29 +1128,34 @@ cmd_upgrade() {
         "      sudo --preserve-env=GITHUB_TOKEN bash ${0} upgrade" \
         "    (a token that has expired needs a new one; a deploy key never expires)" \
         "  · with a copy you made yourself — there is nothing to fetch from. Unpack the new" \
-        "    version over ${TARGET} (.env and data/ are not in it, so they stay) and run" \
-        "    sudo bash ${TARGET}/scripts/install.sh; docs/INSTALL.md, 'Day to day', has the steps." \
+        "    version over ${TARGET} (.env and data/ are not in it, so they stay) and run:" \
+        "      sudo bash ${TARGET}/scripts/install.sh" \
+        "    docs/INSTALL.md, 'Day to day', has the steps." \
         "" \
         "Currently configured: ${sshcmd:-no core.sshCommand set}" \
         "docs/INSTALL.md, 'Other ways to get the code onto the server', covers all three."
   fi
   # shellcheck disable=SC2034  # cleared so a later failure does not name this step.
   FAILED_STEP=""
-  ok "Fetched the newest code"
-  local kind name target
+  log_line "fetched ${origin_url:-the git remote}"
+
+  local kind name target before pending_backup
   read -r kind name <<<"$(wanted_version "$TARGET")"
   case "$kind" in
-    branch) target="origin/${name}"; note "The newest version is still being built, so this follows ${name}." ;;
+    branch) target="origin/${name}" ;;
     tag) target="$name" ;;
     *) die "there is nothing to upgrade to: the remote has no default branch and no release" ;;
   esac
+  before="$(as_root git -C "$TARGET" rev-parse HEAD 2>/dev/null || echo unknown)"
   # An earlier upgrade that stopped part-way remembers what to go back to: that, not the state
   # this run found.
+  pending_backup="$(pending_get backup)"
   if [ -n "$(pending_get before)" ]; then
     before="$(pending_get before)"
-    upgrade_backup="$(pending_get backup)"
-    current="$(as_root git -C "$TARGET" describe --tags --always "$before" 2>/dev/null || echo "$before")"
+    current="$(describe_ref "$before")"
   fi
+
+  local unfinished="" fresh=0
   if as_root git -C "$TARGET" merge-base --is-ancestor "$target" HEAD; then
     # On the code is not the same as upgraded: a stop after the checkout leaves the code here and
     # the dependencies, the migrations or the restart undone.
@@ -662,64 +1168,157 @@ cmd_upgrade() {
       unfinished="the database is at migration ${have} and this code has up to ${newest}"
     fi
     if [ -z "$unfinished" ]; then
-      ok "Already up to date with ${name}, and the database is migrated. Nothing to do."
+      show_versions HEAD HEAD
+      finish ok "Already up to date with ${name}, and the database is migrated. Nothing to do."
       return 0
     fi
     warn "The code is already on ${name}, but it is not upgraded: ${unfinished}."
     say "Finishing it now."
     # Nothing recorded the code it came from, so only the database can be put back.
     [ -n "$(pending_get before)" ] || before=""
+    UPGRADE_FOLLOWING=""
+    show_versions "${before:-HEAD}" HEAD
+    UPGRADE_MIGRATIONS=0
+    UPGRADE_PACKAGES=""
+    [ -z "$have" ] || [ -z "$newest" ] || UPGRADE_MIGRATIONS=$((newest - have))
+    [ "$UPGRADE_MIGRATIONS" -ge 0 ] || UPGRADE_MIGRATIONS=0
+    printf '\n'
   else
     # Only forward. A release tag older than what is installed would take the database back past
     # migrations it has already run; a branch that lacks what is here would lose it.
     moves_forward "$TARGET" "$target" \
       || die "${name} does not contain what is installed now (${current}), so moving to it would go backwards" \
              "Nothing was changed. To choose a version yourself: sudo git -C ${TARGET} checkout NAME"
-    say "Upgrading to: ${name}"
-    say "If anything goes wrong from here, this puts it back (it is printed again then):"
-    rollback_lines "$current" "$before" "$upgrade_backup"
+    fresh=1
+    UPGRADE_FOLLOWING=""
+    [ "$kind" != branch ] || UPGRADE_FOLLOWING="$name"
+    upgrade_changes HEAD "$target"
+  fi
+
+  approve "Upgrade now?" yes || { say "Nothing was changed."; exit 0; }
+
+  progress_total 8
+  # What is already wrong before anything changes, so that what the check says afterwards is about
+  # the upgrade and not about the install it found.
+  _capture "Checking the install as it is" familydb_cmd doctor
+  show_doctor count "$_OUT"
+  local before_failing before_counts
+  before_failing="$(failing_checks "$_OUT")"
+  before_counts="${DOCTOR_FINE} ${DOCTOR_WARN} ${DOCTOR_BAD}"
+  [ -n "$_OUT" ] || before_counts=""
+  progress_to 1
+  take_backup "$BACKUP_DIR"
+  local upgrade_backup="${pending_backup:-$LAST_BACKUP}" line
+  note "To go back:"
+  while IFS= read -r line; do note "$line"; done < <(rollback_lines "$current" "$before" "$upgrade_backup")
+  if [ "$fresh" = 1 ]; then
     pending_write "$name" "$before" "$upgrade_backup"
-    step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
+    progress_to 2
+    STEP_QUIET=1 step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
   fi
 
   # From here the code is the new one, so a failure is not "nothing was half-done": say what is,
   # and how to go back or finish. lib/common.sh prints both at the foot of every failure.
-  local nl=$'\n   ' undo
-  undo="$(rollback_lines "$current" "$before" "$upgrade_backup" | sed 's/^/   /')"
-  local back="To go back to ${current} instead, database and all:"
+  local undo back
+  undo="$(rollback_lines "$current" "$before" "$upgrade_backup")"
+  back="To go back to ${current} instead, database and all:"
   [ -n "$before" ] || back="To put the database from before the upgrade back instead:"
-  on_failure_hint "The upgrade stopped part-way: the code is on ${name}, and the steps after it (dependencies, migrations, restart) are not all done. The bot may be stopped.${nl}${back}"$'\n'"${undo}"
+  on_failure_hint "The upgrade stopped part-way: the code is on ${name}, and the steps after it (dependencies, migrations, restart) are not all done. The bot may be stopped."$'\n'"${back}"$'\n'"${undo}"
   again_hint "finish the upgrade: sudo bash ${0} upgrade"
 
-  stop_bot
+  # A step that goes as expected is not worth a line: what is said is what moved, and how long the
+  # bot was away.
+  local down_from=$SECONDS
+  progress_to 3
+  STEP_QUIET=1 stop_bot
+  progress_to 4
   if [ "$DOCKER_MODE" = 1 ]; then
     step "Rebuilding the image" as_root docker compose --project-directory "$TARGET" build
-  else
-    retry 2 "Installing the dependencies" \
+  elif [ -n "$UPGRADE_PACKAGES" ]; then
+    retry 2 "Installing packages: ${UPGRADE_PACKAGES}" \
       as_root env PATH="$SYSTEM_PATH" uv sync --frozen --no-dev --project "$TARGET"
-    try_step "Keeping the code owned by root" as_root chmod -R go-w "$TARGET"
+  else
+    STEP_QUIET=1 retry 2 "Checking the installed packages" \
+      as_root env PATH="$SYSTEM_PATH" uv sync --frozen --no-dev --project "$TARGET"
   fi
-  step "Applying any new migrations" familydb_cmd db migrate
+  [ "$DRY_RUN" = 1 ] || as_root chmod -R go-w "$TARGET" 2>>"${LOG_FILE:-/dev/null}" \
+    || warn "Could not take write access to the code away from everyone but its owner."
+  progress_to 5
+  if [ "$UPGRADE_MIGRATIONS" -gt 0 ]; then
+    step "Applying ${UPGRADE_MIGRATIONS} new migration$([ "$UPGRADE_MIGRATIONS" = 1 ] || echo s)${UPGRADE_MIGRATION_NAMES:+ (${UPGRADE_MIGRATION_NAMES})}" familydb_cmd db migrate
+  else
+    STEP_QUIET=1 step "Checking the database is up to date" familydb_cmd db migrate
+  fi
   [ "$DRY_RUN" = 1 ] || as_root rm -f "$UPGRADE_PENDING"
   on_failure_hint ""
   again_hint ""
-  start_bot
+  progress_to 6
+  STEP_QUIET=1 QUIET_START=1 start_bot
+  local down=$((SECONDS - down_from))
+  progress_to 7
+  [ "${BOT_STARTED:-}" != 1 ] || ok "Restarted: the page answers (the bot was away for $(fmt_secs "$down"))"
 
-  head2 "Done"
-  say "Now on $(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo unknown)."
-  if [ -n "$before" ]; then
-    say "If something is wrong, go back to what was installed (${current}), database and all:"
-  else
-    say "If something is wrong, the database from before the upgrade can be put back:"
+  local now_on was_on
+  now_on="$(version_label HEAD)"
+  was_on="$(version_label "${before:-HEAD}")"
+  if [ "$DRY_RUN" = 1 ]; then
+    finish ok "Dry run"
+    return 0
   fi
-  rollback_lines "$current" "$before" "$upgrade_backup"
-  familydb_cmd doctor || true
+  _capture "Running the checks" familydb_cmd doctor
+  show_doctor count "$_OUT"
+  local new_failing=""
+  if [ -z "$_OUT" ]; then
+    warn "The check printed nothing, so it may not have run. Run it yourself: sudo ${0} check"
+  else
+    # A problem that was there before is not the upgrade's: it is shown, and it is not blamed on it.
+    new_failing="$(comm -13 <(printf '%s\n' "$before_failing") <(failing_checks "$_OUT" | sort) | sed '/^$/d')"
+    local was=""
+    if [ -n "$before_counts" ] && [ "$before_counts" != "${DOCTOR_FINE} ${DOCTOR_WARN} ${DOCTOR_BAD}" ]; then
+      was="  ${DIM}(was ${before_counts// / ${S_DOT} })${OFF}"
+    elif [ -n "$before_counts" ] && [ "$DOCTOR_BAD" -gt 0 ]; then
+      was="  ${DIM}(the same before the upgrade)${OFF}"
+    fi
+    if [ "$DOCTOR_BAD" -gt 0 ]; then
+      printf '%s%s%s%s %s%s%s %s%s\n' "$B" "$RED" "$S_BAD" "$OFF" "$B" "Check:" "$OFF" "$(check_counts)" "$was"
+      show_doctor failures "$_OUT"
+    else
+      ok "Check: $(check_counts)${was}"
+    fi
+  fi
+
+  # The last line stands alone, for a log or a mail: what moved, and what it cost.
+  local moved=""
+  [ "$UPGRADE_COMMITS" -eq 0 ] || moved=" ${S_DOT} ${UPGRADE_COMMITS} commit$([ "$UPGRADE_COMMITS" = 1 ] || echo s)"
+  [ "$UPGRADE_MIGRATIONS" -eq 0 ] || moved="${moved} ${S_DOT} ${UPGRADE_MIGRATIONS} migration$([ "$UPGRADE_MIGRATIONS" = 1 ] || echo s)"
+  [ "$UPGRADE_PACKAGE_COUNT" -eq 0 ] || moved="${moved} ${S_DOT} ${UPGRADE_PACKAGE_COUNT} package$([ "$UPGRADE_PACKAGE_COUNT" = 1 ] || echo s)"
+  moved="${OFF}${DIM}${moved} ${S_DOT} down $(fmt_secs "$down")${OFF}"
+  local trouble=0
+  if [ "${BOT_STARTED:-}" = 0 ]; then
+    trouble=1
+    finish bad "${was_on} ${S_TO} ${now_on}, but FamilyDB did not start"
+  elif [ -n "$new_failing" ]; then
+    trouble=1
+    local fresh_n
+    fresh_n="$(printf '%s\n' "$new_failing" | grep -c .)"
+    finish warn "Upgraded ${was_on} ${S_TO} ${now_on}, but the check found ${fresh_n} new problem$([ "$fresh_n" -eq 1 ] || echo s)"
+  else
+    finish ok "Upgraded ${OFF}${DIM}${was_on}${OFF} ${CYN}${S_TO}${OFF} ${B}${GRN}${now_on}${OFF}${moved}"
+  fi
+  recap
+  # What puts it back was printed before anything changed; it is said again only when it may be needed.
+  if [ "$trouble" = 1 ]; then
+    after "To go back to ${current}"
+    rollback_lines "$current" "$before" "$upgrade_backup" | show_commands
+  fi
 }
 
 cmd_logs() {
   if [ "$DOCKER_MODE" = 1 ]; then
+    [ ! -t 2 ] || printf '%sFollowing the bot'"'"'s log. Press Ctrl-C to stop.%s\n' "$E_DIM" "$E_OFF" >&2
     as_root docker compose --project-directory "$TARGET" logs -f --tail "$LOG_LINES" bot
   elif service_installed; then
+    [ ! -t 2 ] || printf '%sFollowing the bot'"'"'s log. Press Ctrl-C to stop.%s\n' "$E_DIM" "$E_OFF" >&2
     as_root journalctl -u familydb -n "$LOG_LINES" -f
   else
     die "there is no service and no container here, so there is no log to follow" \
@@ -728,13 +1327,21 @@ cmd_logs() {
 }
 
 cmd_restart() {
-  head2 "Restarting"
-  stop_bot
-  start_bot
+  progress_total 2
+  local down_from=$SECONDS
+  STEP_QUIET=1 stop_bot
+  progress_to 1
+  STEP_QUIET=1 QUIET_START=1 start_bot
+  if [ "$DRY_RUN" = 1 ]; then finish ok "Dry run"; return 0; fi
+  progress_to 2
+  case "${BOT_STARTED:-}" in
+    1) finish ok "Restarted: the page answers ${S_DOT} the bot was away for $(fmt_secs $((SECONDS - down_from)))" ;;
+    0) finish bad "FamilyDB did not come back up" ;;
+    *) finish ok "Restarted" ;;
+  esac
 }
 
 cmd_schedule_backups() {
-  head2 "Nightly backups"
   case "$KEEP_DAYS" in ''|*[!0-9]*) die "--keep-days must be a nonnegative integer" ;; esac
   case "${TARGET}${BACKUP_DIR}" in *$'\n'*|*%*) die "cron paths cannot contain newlines or percent signs" ;; esac
   local line command quoted target_q dir_q
@@ -743,23 +1350,16 @@ cmd_schedule_backups() {
   command="/bin/bash ${target_q}/scripts/maintain.sh backup --target ${target_q} --backup-dir ${dir_q} --yes && find ${dir_q} -maxdepth 1 -name 'familydb-*.sqlite3' -mtime +${KEEP_DAYS} -delete"
   printf -v quoted '%q' "$command"
   line="15 3 * * * /bin/bash -c ${quoted} # familydb-maintain-backup"
-  plan_item "Add a line to root's crontab" \
-    "takes a backup at 03:15 and prunes old backups only after a successful backup; supports Docker and systemd"
-  plan_item "Create ${BACKUP_DIR}" \
-    "where those backups are written"
-  plan_item "Remove the older schedule from ${SERVICE_USER}'s crontab, if it is there" \
-    "the two lines earlier versions added; this one line replaces them"
-  plan_untouched "any backup that already exists"
-  show_plan "What scheduling backups does"
-  say "The lines themselves:"
-  say "  ${line}"
-  say ""
-  note "It runs this script rather than familydb itself, so a Docker install and a systemd one"
-  note "back up the same way, and a backup that fails is never followed by the prune."
-  say ""
-  approve "Add them to the crontab?" || { say "Nothing was changed."; exit 0; }
+  kv "Schedule" "every night at 03:15, in root's crontab"
+  kv "Folder" "$BACKUP_DIR"
+  kv "Keeps" "${KEEP_DAYS} days; old ones are pruned only after a backup has succeeded"
+  if [ "$DRY_RUN" = 1 ]; then
+    printf '  %s%s%s\n' "$DIM" "$line" "$OFF"
+    finish ok "Dry run"
+    return 0
+  fi
+  approve "Add the nightly backup to the crontab?" yes || { say "Nothing was changed."; exit 0; }
 
-  if [ "$DRY_RUN" = 1 ]; then note "[dry run] would install the crontab"; return 0; fi
   case "$BACKUP_DIR" in "${TARGET}"/*) ;; *) noting_new "$BACKUP_DIR" dir ;; esac
   as_root mkdir -p "$BACKUP_DIR"
   local existing
@@ -772,6 +1372,7 @@ cmd_schedule_backups() {
     | as_root crontab -u root - \
     || die "could not write root's crontab" \
            "Check that cron is installed: sudo apt-get install cron"
+  ok "Added the nightly backup to root's crontab."
   # An older install has backup and prune lines in the service account's crontab, which would
   # keep pruning whether or not the backup worked.
   local older
@@ -784,24 +1385,25 @@ cmd_schedule_backups() {
       && ok "Removed the older schedule from ${SERVICE_USER}'s crontab." \
       || warn "Could not remove the older schedule; see: sudo crontab -u ${SERVICE_USER} -l"
   fi
-  ok "Scheduled. Check it with: sudo crontab -u root -l"
-  say ""
-  say "A backup on the same disk is only half a backup. Copy them off the machine now and then:"
-  say "  sudo ${0} backup      # takes one and prints how to fetch it to your own computer"
+  finish ok "A backup will be taken every night at 03:15"
+  hint "Check it any time with:"
+  cmdline "sudo crontab -u root -l"
 }
 
 case "$COMMAND" in
   status)           cmd_status ;;
-  check)            cmd_check ;;
-  password)         cmd_password ;;
-  https)            cmd_https ;;
-  port)             cmd_port ;;
-  backup)           cmd_backup ;;
-  restore)          cmd_restore ;;
-  upgrade)          cmd_upgrade ;;
+  check)            intro "Check"; cmd_check ;;
+  password)         intro "New password"; cmd_password ;;
+  https)            intro "HTTPS"; cmd_https ;;
+  port)             intro "Port"; cmd_port ;;
+  backup)           intro "Backup"; cmd_backup ;;
+  restore)          intro "Restore"; cmd_restore ;;
+  upgrade)          intro "Upgrade"; cmd_upgrade ;;
   logs)             cmd_logs ;;
-  restart)          cmd_restart ;;
-  schedule-backups) cmd_schedule_backups ;;
+  restart)          intro "Restart"; cmd_restart ;;
+  schedule-backups) intro "Nightly backups"; cmd_schedule_backups ;;
   -h|--help|help)   usage ;;
   *) usage >&2; die "unknown command: ${COMMAND}" ;;
 esac
+[ "$RECAPPED" = 1 ] || recap
+[ "$FINISH_BAD" = 0 ] || exit 1

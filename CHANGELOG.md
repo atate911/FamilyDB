@@ -8,6 +8,37 @@ older than what is installed. It gets a date when it is released.
 
 ### New since v0.2.0
 
+- **`maintain.sh` shows what is different this time, and nothing else.** `upgrade` fetches first
+  and shows what it would change as a pull request would: the commits and the pull requests they
+  came from, how many files and where, what the changelog says is new and, only when they change,
+  the new migrations by name, the packages that move (from what to what), the options new in
+  `.env.example` and a changed service file. A part that does not change is not mentioned. Then it
+  asks, and Enter is yes (`[Y/n]`); `restore`, which cannot undo itself, still has Enter as no. The
+  backup is taken only after that (so none is taken when there is nothing to upgrade), and how to go
+  back is printed with this run's commit and backup. A step that goes as expected has no line; what
+  is shown is the backup, what was installed and migrated, how long the bot was away, and the check,
+  and the last line says where it was and where it is (`v0.2.0+137 → v0.3.0+4`), what moved and what
+  it cost, so it reads alone in a log. The screen opens with Installed and Upgrading one above the
+  other, and git's `++++----` bars for the parts of the code that change most; while it works, a
+  retro block bar counts the steps and the wait for the page fills a bar toward its 30 seconds. The page is waited
+  for after the restart, so "it came back up" is true. The numbered plan, what stays untouched and
+  why each step are gone. `status` is one screen with a verdict, a row for each thing marked `✓ ! ✗`,
+  and what to type for anything not well, including a backup older than the 36 hours the upkeep job
+  tolerates. `--help` is grouped into look, keep safe and change. Warnings are listed again at the
+  foot; a failure says what ran, what it said, what that usually means and what to type. Colour is
+  for a terminal only (`NO_COLOR=1` turns it off, `FORCE_COLOR=1` on in a pipe, `FAMILYDB_ASCII=1`
+  for plain marks).
+
+  The look takes a little from the old command-line tools: a DOS-style title bar and a footer that
+  carries the run's progress bar with its percent, the classic `| / - \` spinner, and `[ OK ]`,
+  `[WARN]` and `[FAIL]` for the verdict. It is coloured the way git is (yellow hashes, green `+`,
+  red `-`), the first word of a step is bold, and pull request numbers and hashes are links on a
+  terminal that can follow them. A terminal whose locale cannot draw it is given plain characters.
+  An upgrade checks the install before it starts, so a problem that was already there is shown and
+  not blamed on it. **The exit status now means something:** 1 when the last line says `[FAIL]` (the
+  bot did not come back after an upgrade, restore or restart; `check` has something to fix; `status`
+  finds it not running or something red), so a cron job or a monitor can read it. No command or
+  option changed.
 - **Wording fixes.** Drive times are called estimates where they were said to be looked up; the
   take-off text says a kid's wish lists go and open to-dos and reminders are canceled; and a few
   help lines now match what happens (a better model up to about 10% dearer may be put in by itself,
