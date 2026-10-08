@@ -1,6 +1,6 @@
 # What is on near home
 
-The What's going down? card sets how FamilyDB finds what is on near home over the next 4 weeks: shows, markets, library and park events. It reads calendars you give it or tick, Ticketmaster with a free key, and a weekly web search. "What's going down?" is the family's name for the feature. The finds are listed on the tab of that name beside Plans, which parents and admins see, shown on [Status](/wiki/controls/status), and offered when somebody asks what to do.
+The card for what is on near home sets how FamilyDB finds what is on near home over the next 4 weeks: shows, markets, library and park events. It reads calendars you give it or tick, Ticketmaster with a free key, and a weekly web search. The finds are listed on their own tab beside Plans, which parents and admins see, shown on [Status](/wiki/controls/status), and offered when somebody asks what to do.
 
 A job checks every hour and reads each source only when it is due: calendars and Ticketmaster about once a day, the search about once a week. It needs home to be set on [General](/wiki/controls/settings/general). A source that cannot be read is tried again the next day.
 

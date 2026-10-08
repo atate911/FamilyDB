@@ -218,6 +218,24 @@ older than what is installed. It gets a date when it is released.
   favorite, something new and a wildcard, each with a reason; Vera says them.
   Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
   a kid's question or one about right now.
+- **Plainer words in the scripts.** The upgrade no longer says migrations "never
+  rewrite" what is there: they can, so it says the backup taken first covers it and
+  that going back means restoring that backup. `uninstall.sh --help` now says the
+  one last backup `--purge` takes stays outside the install, instead of "Nothing is
+  left".
+- **A restore refuses a backup from a newer version.** `maintain.sh restore` now
+  compares the backup's database version with what this code knows and, if the backup
+  is newer, stops before anything is stopped or replaced and says to upgrade first or
+  use an older backup.
+- **An upgrade that stops part-way says so.** The commands to go back (the earlier
+  version and the backup) are printed before the bot is stopped, and again at the foot
+  of any failure after the code has moved, with the command to finish. Running the
+  upgrade again no longer says "Already up to date" when the code moved but the
+  dependencies or migrations did not finish: it says what is unfinished and finishes it.
+- **`bootstrap.sh --user NAME` works all the way.** The name chosen for the account that
+  runs the bot now reaches the installer, the account, the files it owns and the service
+  unit, and is remembered, so `maintain.sh` and `uninstall.sh` use the same account
+  without being told. Installs made before this still use `familydb`.
 - **Presents stay hidden in "How did it go?".** A plan made for a present no longer shows its
   title, or counts in "to rate", for the kids or the grown-up the present is kept from.
 - **Presents stay hidden in /today and /week.** Plans made for a present are left out for the kids
