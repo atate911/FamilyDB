@@ -212,6 +212,8 @@ older than what is installed. It gets a date when it is released.
   favorite, something new and a wildcard, each with a reason; Vera says them.
   Within US$5 a month (AI model settings, "Choosing the suggestions"); never for
   a kid's question or one about right now.
+- **Fixed: opening a Telegram link no longer wipes a birthday or gender.** Linking a person's
+  Telegram used to clear what the family list held for them.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
