@@ -13,6 +13,7 @@ from contextlib import closing
 
 import pytest
 
+from familydb.store.db import list_migrations
 from tests.install_fixture import (
     age_file,
     corrupt,
@@ -245,7 +246,8 @@ def test_an_upgrade_that_migrated_the_data_puts_the_old_database_back_only_on_a_
     assert "Everything saved since then is lost" in shown
     assert git(target, "rev-parse", "HEAD") == older
     with closing(sqlite3.connect(db)) as conn:
-        assert conn.execute("select max(version) from schema_version").fetchone()[0] < 57
+        newest = list_migrations()[-1][0]
+        assert conn.execute("select max(version) from schema_version").fetchone()[0] < newest
     assert "restore" in shown  # and the copy of the database as it was is named, to undo this
 
 

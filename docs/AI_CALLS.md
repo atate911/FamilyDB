@@ -304,6 +304,10 @@ everything.
   there. A level up never answers with a cheaper model than everyday, so an everyday model set above
   the lineup's, or one the price table does not list, stays. The family chooses; the model never
   does.
+- **A company nobody listed has no lineup.** One an admin adds (`docs/COMPANIES.md`) names its own
+  everyday, better and best models, and an unpriced model is counted at `prices.UNLISTED`, dearer
+  than any listed. It is asked nothing until chosen or allowed to stand in, and it has no hosted web
+  search, so the kinds that search (`web_searches` in `gateway.KINDS`) go to a company that has it.
 - **Escalate on evidence, not guesswork.** A cheaper model may hand a task up to a stronger one when
   code can see it failed (a validation error, a hand-back that did not happen, an empty answer), not
   because the question sounded hard. Choosing what to suggest is not an escalation: it is a

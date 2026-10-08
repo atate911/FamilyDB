@@ -83,7 +83,7 @@ def discover(
     """Finds for the window, plus a `skipped_checks` note when discovery did not run."""
     if not web_tools_available(ctx.settings):
         return [], NOTE_OFF
-    if not providers.ready(ctx.settings, "worker", api=ctx.api):
+    if not providers.ready(ctx.settings, "worker", api=ctx.api, web=True):
         return [], NOTE_NO_KEY
     request = render_discover_request(context, constraints, ctx.settings)
     window = cache_key(context.window)

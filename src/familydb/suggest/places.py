@@ -86,7 +86,7 @@ def find_places(
     ctx: ToolContext, context: Context, constraints: Constraints
 ) -> tuple[list[WebFind], str | None]:
     """Places found for the topic, each marked when already saved; a note when none could be."""
-    if not providers.ready(ctx.settings, "worker", api=ctx.api):
+    if not providers.ready(ctx.settings, "worker", api=ctx.api, web=True):
         return [], "place search waits for a model key"
     request = render_places_request(context, constraints, ctx.settings)
     found, note = search(

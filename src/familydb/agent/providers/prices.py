@@ -80,6 +80,15 @@ _LIVE: dict[str, dict[str, Price]] = {}
 _OFFERED: dict[str, tuple[str, ...]] = {}
 _NOTES: dict[tuple[str, str], str] = {}
 _SWAPS: dict[tuple[str, str], str] = {}
+# What the admin of a company the settings define typed for its models (companies.use); it wins
+# over what the daily check found, since it is the family's own word.
+_OWN: dict[str, dict[str, Price]] = {}
+
+
+def own(table: dict[str, dict[str, Price]]) -> None:
+    """Put in force the prices typed for added companies' models, by company then model name."""
+    global _OWN
+    _OWN = table
 
 
 def use(
@@ -105,10 +114,17 @@ def note(provider: str, model: str) -> str | None:
 
 
 def price(provider: str | None, model: str | None) -> Price | None:
-    """The price as the daily check found it, else built in; None when neither knows it."""
+    """The price as the daily check found it, else built in; None when neither knows it. A
+    company the settings define is matched by the exact name only: a prefix would price a dearer
+    variant at its cheaper sibling's rate."""
     named = (model or "").lower()
-    for tables in (_LIVE, PRICES, HEARING):
+    exact_only = (provider or "") not in PRICES
+    for tables in (_OWN, _LIVE, PRICES, HEARING):
         table = tables.get(provider or "", {})
+        if exact_only:
+            if named in table:
+                return table[named]
+            continue
         for prefix in sorted(table, key=len, reverse=True):
             if named == prefix or named.startswith(prefix + "-"):
                 return table[prefix]
@@ -119,7 +135,7 @@ def suggestions(provider: str) -> tuple[str, ...]:
     """Models to offer on the settings page, cheapest first: the daily check's, else built in."""
     if _OFFERED.get(provider):
         return _OFFERED[provider]
-    table = PRICES.get(provider, {})
+    table = PRICES.get(provider) or _OWN.get(provider, {})
     return tuple(sorted(table, key=lambda name: (table[name].output, name)))
 
 

@@ -117,6 +117,10 @@ SECRETS = (
     "telegram_bot_token",
     "ticketmaster_api_key",
 )
+# Companies without a module of their own, and their keys (config.CompanyDef); written by the
+# companies form alone. The keys never reach the change log.
+COMPANIES = ("companies", "company_keys")
+HIDDEN = ("company_keys",)
 # Who the assistant and the family are (/settings/personality); long texts show as "rewritten"
 # in the change list (web/views.py `LONG_SETTINGS`).
 PROFILE = (
@@ -130,7 +134,13 @@ PROFILE = (
 # The shared family password hash: set only by its own form and `familydb password`, never a
 # settings form; it opens nothing once an admin has their own (store/logins.py).
 LOCK = ("web_password_hash",)
-EDITABLE = frozenset(BEHAVIOUR) | frozenset(SECRETS) | frozenset(PROFILE) | frozenset(LOCK)
+EDITABLE = (
+    frozenset(BEHAVIOUR)
+    | frozenset(SECRETS)
+    | frozenset(PROFILE)
+    | frozenset(LOCK)
+    | frozenset(COMPANIES)
+)
 
 
 def overrides(conn: sqlite3.Connection) -> dict[str, Any]:
@@ -181,7 +191,7 @@ def set_many(
                 "updated_at = excluded.updated_at, updated_by = excluded.updated_by",
                 (key, to_json(value), stamped, changed_by),
             )
-        secret = key in SECRETS or key in LOCK
+        secret = key in SECRETS or key in LOCK or key in HIDDEN
         conn.execute(
             "INSERT INTO settings_log (key, old_value, new_value, secret, changed_at, changed_by, "
             "source) VALUES (?, ?, ?, ?, ?, ?, ?)",

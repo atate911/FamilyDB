@@ -44,7 +44,7 @@ from pydantic import ValidationError
 
 from familydb import export, passwords, personas, voice
 from familydb.agent import gateway, providers
-from familydb.agent.providers import prices
+from familydb.agent.providers import companies, prices
 from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import (
@@ -56,13 +56,13 @@ from familydb.availability import (
     web_is_public,
     web_tools_available,
 )
-from familydb.config import PersonaRewrite, Settings, apply_overrides
+from familydb.config import CompanyDef, PersonaRewrite, Settings, apply_overrides
 from familydb.dates import hour_words
 from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
-from familydb.web import auth, fields, keys, troubleshooting, views
+from familydb.web import auth, company_forms, fields, keys, troubleshooting, views
 from familydb.web import status as status_page
 
 log = logging.getLogger(__name__)
@@ -246,17 +246,15 @@ def google_panel(live: Any) -> dict[str, Any]:
 # -- the three companies, as setup and the AI model page both offer them -------------------------
 
 # What a line says of price follows the company's default model in prices.py.
-COMPANY_LINES = {
-    "openai": "The least expensive by far for what FamilyDB does, so it is the one it starts with.",
-    "anthropic": "Claude. Several times dearer a message with the model it starts on.",
-    "gemini": "Gemini, from Google. In between on price.",
-}
-KEY_STARTS = {"openai": "sk-", "anthropic": "sk-ant-", "gemini": "AIza"}
+COMPANY_LINES = {company.slug: company.line for company in companies.BUILT_IN}
+KEY_STARTS = {company.slug: company.key_start for company in companies.BUILT_IN}
 
 
 def company_choice(live: Settings, asked: str) -> dict[str, Any]:
     """The three companies, and the one whose key is shown: the one asked for, else answering."""
-    company = asked if asked in providers.NAMES else live.provider
+    company = asked if asked in COMPANY_LINES else live.provider
+    if company not in COMPANY_LINES:  # an added company answers: the cards show the default
+        company = companies.DEFAULT
     return {
         "company": company,
         "label": COMPANIES[company],
@@ -271,7 +269,7 @@ def company_choice(live: Settings, asked: str) -> dict[str, Any]:
                 "line": COMPANY_LINES[name],
                 "has_key": bool(getattr(live, f"{name}_api_key")),
             }
-            for name in ("openai", "anthropic", "gemini")
+            for name in COMPANY_LINES
         ],
     }
 
@@ -453,9 +451,23 @@ def reached_by(host: str) -> str:
 
 def _model(app: App, conn: Any) -> dict[str, Any]:
     live = app.settings
-    chat = fields.MODEL_KEYS[live.provider][0]
-    looking = fields.MODEL_KEYS[live.worker_provider or live.provider][1]
-    return {**company_choice(live, request.args.get("company", "")), "in_use": (chat, looking)}
+    # The model boxes of the companies that answer chat and that look things up; an added company
+    # keeps its models in its own panel.
+    chat = fields.MODEL_KEYS.get(live.provider)
+    looking = fields.MODEL_KEYS.get(providers.for_surface(live, "worker", web=True).name)
+    in_use = tuple(box for box in (chat and chat[0], looking and looking[1]) if box)
+    added = [company_forms.panel(company, live) for company in companies.added(live)]
+    return {
+        **company_choice(live, request.args.get("company", "")),
+        "in_use": in_use,
+        "added": added,
+        "templates": [
+            template
+            for template in companies.TEMPLATES.values()
+            if all(one["template"] is None or one["template"].key != template.key for one in added)
+        ],
+        "room_for_more": len(added) < company_forms.MOST,
+    }
 
 
 def _spending(app: App, conn: Any) -> dict[str, Any]:
@@ -900,6 +912,204 @@ def save_model() -> Response | tuple[str, int]:
     answers = providers.model_at(chosen, "chat", candidate.chat_level)
     model = asked if verdict == "unknown_model" else answers
     return _answer(back, here, said=said.format(company=label, model=model, name=her))
+
+
+# -- other companies (company_forms.py) -------------------------------------------------------
+
+COMPANY_ADDED = (
+    "{label} is added. Nothing is sent to it until you choose it: under “Other companies”, "
+    "press Answer with {label}, or let it stand in for another."
+)
+COMPANY_SAVED = "Saved. {label} is as you left it."
+COMPANY_GONE = "{label} was taken away, with its key."
+COMPANY_CHOSEN = "{label} answers the family now, with {model}."
+COMPANY_IN_USE = (
+    "{label} is the company answering now, so it cannot be taken away. Choose another above first."
+)
+COMPANY_UNKNOWN = "There is no such company."
+COMPANY_NEEDS_KEY = "{label} needs its key first."
+COMPANY_KEY_VERDICTS = {
+    "works": " Its key works.",
+    "unknown_model": (
+        " It says it has no model called {model}: check the spelling against its own list."
+    ),
+    "unchecked": (
+        " It could not be asked just now, so the key is not checked yet; the first message "
+        "will show whether it works."
+    ),
+    "no_key": "",
+}
+
+
+def _definitions(live: Settings, replace: CompanyDef | None = None, drop: str = "") -> list[dict]:
+    """The companies as stored, one changed or taken away."""
+    out = []
+    for one in live.companies:
+        if one.slug == drop:
+            continue
+        out.append(replace if replace is not None and replace.slug == one.slug else one)
+    if replace is not None and all(one.slug != replace.slug for one in live.companies):
+        out.append(replace)
+    return [one.model_dump(mode="json") for one in out]
+
+
+def _keep_company(
+    one: CompanyDef,
+    key: str,
+    *,
+    adding: bool,
+    check: bool,
+    extra: dict[str, Any] | None = None,
+    back: str | None,
+    here: str | None,
+) -> Response | tuple[str, int]:
+    """Keep a company's definition and key once the company has said the key is not wrong. Only a
+    definite refusal stops it: an unreachable service is no reason to lose what was typed."""
+    app = _app()
+    live = app.settings
+    keys = dict(live.company_keys)
+    if key:
+        keys[one.slug] = key
+    values: dict[str, Any] = {
+        "companies": _definitions(live, replace=one),
+        "company_keys": keys,
+        **(extra or {}),
+    }
+    stored = _stored()
+    try:
+        candidate = apply_overrides(
+            app.base_settings,
+            {k: v for k, v in {**stored, **values}.items() if v is not None},
+        )
+    except ValidationError as exc:
+        return _answer(back, here, error=" ".join(problems_from(exc).values()), otherwise="model")
+    verdict = "works"
+    if check:
+        verdict = providers.build(one.slug, candidate).check_key()
+        if verdict == "refused":
+            return _answer(
+                back, here, error=KEY_REFUSED.format(company=one.label), otherwise="model"
+            )
+    _save(values)
+    follow = COMPANY_KEY_VERDICTS.get(verdict, "").format(model=one.model)
+    head = COMPANY_ADDED if adding else COMPANY_SAVED
+    return _answer(back, here, said=head.format(label=one.label) + follow)
+
+
+@bp.post("/settings/companies/add")
+def add_company() -> Response | tuple[str, int]:
+    """Add a company: a template (OpenRouter) needs only a key and a model; any other, a name and
+    the address of its chat service as well."""
+    app = _app()
+    back = auth.setup_return(request.form.get("then"))
+    here = _section(request.form.get("section")) or "model"
+    if (complaint := auth.refused()) is not None:
+        return _answer(back, here, error=complaint, otherwise="model")
+    live = app.settings
+    form = request.form
+    if len(live.companies) >= company_forms.MOST:
+        return _answer(back, here, error=company_forms.TOO_MANY, otherwise="model")
+    taken = {one.slug for one in live.companies}
+    key = form.get("key", "").strip()
+    try:
+        template = companies.TEMPLATES.get(form.get("template", ""))
+        if template is not None:
+            one = company_forms.from_template(
+                template, model=form.get("model", "").strip(), taken=taken
+            )
+        else:
+            one = company_forms.from_form(form, taken=taken)
+        if not one.model:
+            raise company_forms.FormError(company_forms.NO_MODEL)
+        if company_forms.duplicate_label(one.label, live.companies):
+            raise company_forms.FormError(company_forms.TAKEN.format(label=one.label))
+        company_forms.check_address(one.base_url, local=one.local, trusted=template is not None)
+    except company_forms.FormError as exc:
+        return _answer(back, here, error=str(exc), otherwise="model")
+    if not key and not one.local:
+        return _answer(back, here, error=NO_KEY_GIVEN, otherwise="model")
+    if any(character.isspace() for character in key):
+        return _answer(back, here, error=KEY_HAS_SPACES, otherwise="model")
+    if len(key) > fields.MAX_LENGTH:
+        return _answer(back, here, error=fields.TOO_LONG, otherwise="model")
+    return _keep_company(one, key, adding=True, check=True, back=back, here=here)
+
+
+@bp.post("/settings/companies/<slug>")
+def save_company(slug: str) -> Response | tuple[str, int]:
+    """Change an added company: its models, whether it may stand in, its thinking fields, extra
+    request fields and prices, and with a new key or address, check it again."""
+    app = _app()
+    back = auth.setup_return(request.form.get("then"))
+    here = _section(request.form.get("section")) or "model"
+    if (complaint := auth.refused()) is not None:
+        return _answer(back, here, error=complaint, otherwise="model")
+    live = app.settings
+    existing = next((one for one in live.companies if one.slug == slug), None)
+    if existing is None:
+        return _answer(back, here, error=COMPANY_UNKNOWN, status=404, otherwise="model")
+    form = request.form
+    key = form.get("key", "").strip()
+    if any(character.isspace() for character in key):
+        return _answer(back, here, error=KEY_HAS_SPACES, otherwise="model")
+    if len(key) > fields.MAX_LENGTH:
+        return _answer(back, here, error=fields.TOO_LONG, otherwise="model")
+    try:
+        one = company_forms.from_form(form, taken=set(), existing=existing)
+        if company_forms.duplicate_label(one.label, live.companies, skip=slug):
+            raise company_forms.FormError(company_forms.TAKEN.format(label=one.label))
+        if one.base_url != existing.base_url or one.local != existing.local:
+            company_forms.check_address(one.base_url, local=one.local)
+    except company_forms.FormError as exc:
+        return _answer(back, here, error=str(exc), otherwise="model")
+    moved = bool(key) or one.base_url != existing.base_url
+    return _keep_company(one, key, adding=False, check=moved, back=back, here=here)
+
+
+@bp.post("/settings/companies/<slug>/use")
+def use_company(slug: str) -> Response | tuple[str, int]:
+    """Have this company answer the family's messages."""
+    app = _app()
+    back = auth.setup_return(request.form.get("then"))
+    here = _section(request.form.get("section")) or "model"
+    if (complaint := auth.refused()) is not None:
+        return _answer(back, here, error=complaint, otherwise="model")
+    live = app.settings
+    company = companies.get(slug, live)
+    if company is None or company.built_in:
+        return _answer(back, here, error=COMPANY_UNKNOWN, status=404, otherwise="model")
+    chosen = providers.build(slug, live)
+    if not chosen.configured():
+        return _answer(
+            back,
+            here,
+            error=COMPANY_NEEDS_KEY.format(label=company.label),
+            otherwise="model",
+        )
+    _save({"provider": None if slug == app.base_settings.provider else slug})
+    model = providers.model_at(chosen, "chat", live.chat_level)
+    return _answer(back, here, said=COMPANY_CHOSEN.format(label=company.label, model=model))
+
+
+@bp.post("/settings/companies/<slug>/remove")
+def remove_company(slug: str) -> Response | tuple[str, int]:
+    """Take an added company away, with its key, unless it is answering."""
+    app = _app()
+    back = auth.setup_return(request.form.get("then"))
+    here = _section(request.form.get("section")) or "model"
+    if (complaint := auth.refused()) is not None:
+        return _answer(back, here, error=complaint, otherwise="model")
+    live = app.settings
+    existing = next((one for one in live.companies if one.slug == slug), None)
+    if existing is None:
+        return _answer(back, here, error=COMPANY_UNKNOWN, status=404, otherwise="model")
+    if slug in (live.provider, live.worker_provider):
+        return _answer(
+            back, here, error=COMPANY_IN_USE.format(label=existing.label), otherwise="model"
+        )
+    keys = {name: key for name, key in live.company_keys.items() if name != slug}
+    _save({"companies": _definitions(live, drop=slug), "company_keys": keys})
+    return _answer(back, here, said=COMPANY_GONE.format(label=existing.label))
 
 
 # -- the family password ----------------------------------------------------------------------

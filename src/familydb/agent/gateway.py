@@ -222,13 +222,14 @@ def answering(
 ) -> tuple[Provider, str]:
     """Who answers this kind of call first, and with which model, without asking a model."""
     call = spec(kind)
-    provider = for_surface(settings, call.surface, api=api)
+    provider = for_surface(settings, call.surface, api=api, web=call.web_searches is not None)
     return provider, model_at(provider, call.surface, getattr(settings, call.level))
 
 
 def can_ask(settings: Settings, kind: str, api: MessagesAPI | None = None) -> bool:
     """Whether any model can take this kind of call: a key for the chosen one or for the spare."""
-    return ready(settings, spec(kind).surface, api=api)
+    call = spec(kind)
+    return ready(settings, call.surface, api=api, web=call.web_searches is not None)
 
 
 def build_request(
@@ -275,10 +276,11 @@ def ask(
     """One turn of `kind`, run to its answer, every call recorded. `current` is the uncached turn
     (date, sender, message). An injected `api` (a test's fake) means no spare provider."""
     call = spec(kind)
-    chosen = provider or for_surface(settings, call.surface, api=api)
+    web = call.web_searches is not None
+    chosen = provider or for_surface(settings, call.surface, api=api, web=web)
     spare = fallback
     if spare is None and api is None:
-        spare = fallback_for(settings, call.surface, chosen.name)
+        spare = fallback_for(settings, call.surface, chosen.name, web=web)
     composed = build_request(
         kind,
         conn=ctx.conn,

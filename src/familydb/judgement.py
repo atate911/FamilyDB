@@ -32,7 +32,7 @@ from typing import Any
 from familydb import alerts
 from familydb.agent import gateway, spending
 from familydb.agent.loop import MessagesAPI
-from familydb.agent.providers import catalog, prices
+from familydb.agent.providers import catalog, companies, prices
 from familydb.agent.worker import worker_turn
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
@@ -61,9 +61,8 @@ LEVELS_ASKED = ("everyday", "better", "best")
 MOST_OPTIONS = 8
 MOST_TRIES = 2
 LEVEL_KEYS = {
-    "openai": ("openai_model", "openai_better_model", "openai_best_model"),
-    "anthropic": ("anthropic_model", "anthropic_better_model", "anthropic_best_model"),
-    "gemini": ("gemini_model", "gemini_better_model", "gemini_best_model"),
+    company.slug: (company.chat_setting, company.better_setting, company.best_setting)
+    for company in companies.BUILT_IN
 }
 SOURCE = "judgement"
 
@@ -333,7 +332,7 @@ def _check_price(app: Any, conn: sqlite3.Connection, question: store.Judgement, 
         source="job",
     )
     ctx.scratch["price_of"] = facts["model"]
-    company = alerts.COMPANY_NAMES.get(facts["company"], facts["company"])
+    company = companies.named(facts["company"])
     request = f"What does {company} charge for {facts['model']}? The price lists say: " + to_json(
         facts["lists"]
     )
@@ -381,7 +380,7 @@ def _apply(
 ) -> None:
     now = app.clock.now()
     facts = question.facts
-    company_name = alerts.COMPANY_NAMES.get(facts.get("company", ""), facts.get("company", ""))
+    company_name = companies.named(facts.get("company", ""))
     answer: dict[str, Any]
     if question.kind == "lineup":
         chosen = {level: picks[f"q{question.id}.{level}"] for level in LEVELS_ASKED}
@@ -507,7 +506,7 @@ def _refused(conn: sqlite3.Connection, facts: dict[str, Any], choice: str, now: 
             conn,
             "model",
             f"{company}:{model}",
-            f"{alerts.COMPANY_NAMES.get(company, company)} seems to have no model called "
+            f"{companies.named(company)} seems to have no model called "
             f"{model}, so everything asked of it fails until another is chosen",
             now,
         )

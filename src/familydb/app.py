@@ -34,6 +34,7 @@ class App:
     ) -> None:
         self.settings = settings
         self._base = settings
+        self._put_companies_in_force()
         self._overrides_stamp: str | None = None
         self._models_stamp: str | None = None
         self._reload = threading.Lock()
@@ -134,14 +135,21 @@ class App:
         return providers.for_surface(self.settings, surface, api=api)
 
     def can_ask(self, surface: str = "chat", api: Any = None) -> bool:
+        """Whether any model can be asked here. The worker surface is the lookups, which search
+        the web, so it needs a company that can."""
         from familydb.agent import providers
 
-        return providers.ready(self.settings, surface, api=api)  # type: ignore[arg-type]
+        return providers.ready(self.settings, surface, api=api, web=surface == "worker")  # type: ignore[arg-type]
 
     def fallback(self, surface: str, primary: str) -> Any:
         from familydb.agent import providers
 
-        return providers.fallback_for(self.settings, surface, primary)
+        return providers.fallback_for(
+            self.settings,
+            surface,  # type: ignore[arg-type]
+            primary,
+            web=surface == "worker",
+        )
 
     def refresh(self, conn: sqlite3.Connection | None = None) -> bool:
         """Pick up settings changed from the page. True when something moved.
@@ -163,6 +171,13 @@ class App:
                 return self._reload_settings(conn)
             finally:
                 self._keep_up_with_models(conn)
+
+    def _put_companies_in_force(self) -> None:
+        """The companies the settings define, for the places that name one without settings to
+        hand (a notice's wording, a price)."""
+        from familydb.agent.providers import companies
+
+        companies.use(self.settings.companies)
 
     def _reload_settings(self, conn: sqlite3.Connection) -> bool:
         from familydb.config import apply_overrides
@@ -188,6 +203,7 @@ class App:
         if fresh == self.settings:
             return False
         self.settings = fresh
+        self._put_companies_in_force()
         self._forget_built()
         log.info("settings reloaded (%d stored)", len(values))
         return True
