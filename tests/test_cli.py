@@ -418,3 +418,14 @@ def test_a_command_reports_the_settings_in_force_not_the_file_s(env: Path) -> No
     result = runner.invoke(app, ["debug", "cost"])
     assert result.exit_code == 0, result.output
     assert "chat runs on gemini-2.5-flash via gemini" in result.output
+
+
+@pytest.mark.skipif(os.name != "posix", reason="file modes are a POSIX idea")
+def test_doctor_fix_says_what_it_fixed(env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(env)
+    dotenv = env / ".env"
+    dotenv.write_text("ANTHROPIC_API_KEY=secret\n")
+    dotenv.chmod(0o644)
+    result = runner.invoke(app, ["doctor", "--fix"])
+    assert "fixed: made .env readable only by its owner" in result.output, result.output
+    assert dotenv.stat().st_mode & 0o777 == 0o600

@@ -653,6 +653,18 @@ def correct(app: App, report: Report) -> None:
                 check.corrected = "made the login key readable only by its owner"
 
 
+def fix(app: App, *, online: bool = False) -> Report:
+    """Check, put right what `correct` can, and check again: the new report, with what was done."""
+    first = run(app, online=online)
+    correct(app, first)
+    done = {c.name: c.corrected for c in first.checks if c.corrected}
+    report = run(app, online=online)
+    for check in report.checks:
+        if not check.corrected and check.name in done:
+            check.corrected = done[check.name]
+    return report
+
+
 def run(app: App, *, online: bool = False) -> Report:
     report = Report()
     check_settings(app, report)

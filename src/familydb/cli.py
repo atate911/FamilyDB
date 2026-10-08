@@ -685,10 +685,9 @@ def doctor(
     application = build_app()
     with suppress(Exception):
         application.refresh()
-    report = checks.run(application, online=online)
-    if fix:
-        checks.correct(application, report)
-        report = checks.run(application, online=online)
+    report = (
+        checks.fix(application, online=online) if fix else checks.run(application, online=online)
+    )
     if new_install:
         checks.as_new_install(report)
     if as_json:

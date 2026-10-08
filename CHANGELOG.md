@@ -220,6 +220,8 @@ older than what is installed. It gets a date when it is released.
 - **Fixed: `familydb db retry-failed --reset` leaves given-up messages alone.** It used to give
   every failed message new tries, including ones given up on purpose (a person taken off, a kid
   over the day's limit). It now resets only those that ran out of tries.
+- **Fixed: `familydb doctor --fix` says what it fixed.** The "fixed:" lines were lost when it
+  checked again after the repair.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
