@@ -288,7 +288,8 @@ class Pricer:
     def __init__(self, use: uses.Use, days: list[Tally]) -> None:
         self.use = use
         self.days = days
-        self.real = sum(day.calls for day in days) > 0
+        self.total = summed(days)
+        self.real = self.total.calls > 0
         self.usual = None if self.real else typical(use.kinds or (gateway.LISTEN,))
 
     def _one(self, company: str, model: str, tally: Tally) -> float:
@@ -297,9 +298,8 @@ class Pricer:
         return prices.cost(company, model, tally.usage())[0]
 
     def month(self, company: str, model: str) -> float:
-        if self.usual is not None:
-            return self._one(company, model, self.usual)
-        return sum(self._one(company, model, day) for day in self.days)
+        # Cost is a sum over the calls, so the month is the month's tally priced once.
+        return self._one(company, model, self.usual if self.usual is not None else self.total)
 
     def daily(self, company: str, model: str) -> list[float]:
         if not self.real:
@@ -316,7 +316,7 @@ def money(v: float) -> str:
 
 def calls_said(use: uses.Use, n: int) -> str:
     if n == 0:
-        return "none this month"
+        return "none in 30 days"
     one, many = UNITS.get(use.key, ("call", "calls"))
     return f"{n} {one if n == 1 else many}"
 
