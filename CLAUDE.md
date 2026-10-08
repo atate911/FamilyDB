@@ -87,4 +87,4 @@ Rules here exist so a change does not quietly cost money, break the prompt cache
 - Web wording lives in `web/views.py`, never `agent/render.py` (which feeds the cached prefix). No page view is a model call: Home and the chat read the log and word their own lines; only a sent message is a call (`test_browsing_asks_nothing_of_a_model`).
 - Vera is who the family talks to; the page names her via `personas.active(settings).name` (`assistant` in every template). How she appears is design: today never drawn, and where she appears it is her screen of unreadable glyphs (`presence` in `_ui.html`); the smiling mark is FamilyDB's. `docs/STYLE.md` (principle 9, "Her screen") says why; weigh it before changing.
 - Keep replies short. A change in behaviour is often cheapest as a line in `prompts/system.md`; when code is the better place (anything code can know), change the code.
-- Every PR is reviewed before merge, however large; separate concerns in separate commits. @@NL@@
+- Every PR is reviewed before merge, however large; separate concerns in separate commits.
