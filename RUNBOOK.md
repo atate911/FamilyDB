@@ -118,7 +118,7 @@ Settings, General: type the home town as you would say it ("Vancouver, WA") and 
 
 ## 7. Backups
 
-The database is one file holding everything the family said. The installer scheduled a nightly backup; by hand:
+The database is one file holding everything the family said (and, for an admin to read when something is wrong, the words of recent calls to a model, for the days set on the settings page's Troubleshooting). The installer scheduled a nightly backup; by hand:
 
 ```bash
 sudo scripts/maintain.sh schedule-backups --keep-days 14

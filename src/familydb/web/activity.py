@@ -12,7 +12,7 @@ from flask import Blueprint, abort, current_app, render_template
 
 from familydb.agent import gateway
 from familydb.app import App
-from familydb.store import calls, members, messages
+from familydb.store import ai_texts, calls, members, messages
 from familydb.web import views
 
 bp = Blueprint("activity", __name__)
@@ -40,10 +40,13 @@ def show(key: str) -> str:
             model_calls = calls.calls_in(conn, message_id=message_id)
             tool_calls = calls.tools_in(conn, message_id=message_id)
             replies = messages.replies_to(conn, message_id)
+            failed = ai_texts.failed_in(conn, message_id=message_id)
         else:
             asked, replies = None, []
             model_calls = calls.calls_in(conn, turn=key[1:])
             tool_calls = calls.tools_in(conn, turn=key[1:])
+            failed = ai_texts.failed_in(conn, turn=key[1:])
+        words = ai_texts.for_calls(conn, [row["id"] for row in model_calls])
     if asked is None and not model_calls:
         abort(404)
     kinds = list(dict.fromkeys(row["kind"] for row in model_calls if row["kind"]))
@@ -61,15 +64,25 @@ def show(key: str) -> str:
         asked=asked,
         said=messages.as_said(asked.text) if asked is not None else None,
         replies=[reply.text for reply in replies],
-        model_calls=[_call_row(row, tz) for row in model_calls],
+        model_calls=[_call_row(row, tz, words.get(row["id"])) for row in model_calls],
+        failed_calls=[
+            {
+                "id": row["id"],
+                "when": views.local_moment(row["created_at"], tz),
+                "model": row["model"],
+                "error": row["error"] or "",
+            }
+            for row in failed
+        ],
         tool_calls=[_tool_row(row) for row in tool_calls],
         found=[found for found in (views.found_by_lookup(row) for row in tool_calls) if found],
         totals=_totals(model_calls),
     )
 
 
-def _call_row(row: dict[str, Any], tz: Any) -> dict[str, Any]:
+def _call_row(row: dict[str, Any], tz: Any, words: int | None = None) -> dict[str, Any]:
     return {
+        "words": words,
         "when": views.local_moment(row["created_at"], tz),
         "what": gateway.purpose(row["kind"]),
         "about": row.get("about"),

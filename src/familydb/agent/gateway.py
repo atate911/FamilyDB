@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from familydb import alerts
-from familydb.agent import compose, spending
+from familydb.agent import compose, spending, transcript
 from familydb.agent.compose import Composed
 from familydb.agent.history import HistoryTurn
 from familydb.agent.loop import MessagesAPI, TurnResult, run_turn, worth_switching
@@ -345,6 +345,8 @@ def listen(
         clock=clock,
         message_id=message_id,
         kind=LISTEN,
+        sent=f"[a voice note, {audio.seconds} seconds, {audio.mime}; the recording is not kept]"
+        + (f"\n[hints] {hints}" if hints else ""),
         doing="hear a voice note",
         model_of=lambda provider: provider.listener(),
         estimate=lambda provider, model: spending.estimate_hearing(
@@ -382,6 +384,7 @@ def look(
         clock=clock,
         message_id=message_id,
         kind=LOOK,
+        sent=f"[a photo, {picture.mime}; the picture is not kept]\n[asked] {ask}",
         doing="look at a photo",
         model_of=lambda provider: provider.viewer(),
         estimate=lambda provider, model: spending.estimate_looking(provider.name, model),
@@ -397,6 +400,7 @@ def _written_down(
     clock: Clock,
     message_id: int | None,
     kind: str,
+    sent: str,
     doing: str,
     model_of: Callable[[Provider], str | None],
     estimate: Callable[[Provider, str | None], float],
@@ -414,6 +418,20 @@ def _written_down(
         except AgentError as exc:
             _let_go(conn, held, clock.now())
             alerts.noticed(conn, exc, provider=provider.name, now=clock.now(), model=model)
+            transcript.keep_failure(
+                conn,
+                settings,
+                None,
+                exc,
+                message_id=message_id,
+                turn=None,
+                iteration=1,
+                kind=kind,
+                about=None,
+                provider=provider.name,
+                model=model or provider.name,
+                now=clock.now(),
+            )
             if not worth_switching(exc):
                 raise
             log.warning("%s could not %s (%s)", provider.name, doing, exc)
@@ -423,8 +441,9 @@ def _written_down(
             _let_go(conn, held, clock.now())
             raise
         dollars, listed = prices.cost(provider.name, written.model or model, written.usage)
+        turn = uuid.uuid4().hex[:16]
         with transaction(conn):
-            calls.log_llm_call(
+            call_id = calls.log_llm_call(
                 conn,
                 message_id=message_id,
                 iteration=1,
@@ -439,10 +458,23 @@ def _written_down(
                 cost_usd=dollars,
                 cost_estimated=not listed,
                 kind=kind,
-                turn=uuid.uuid4().hex[:16],
+                turn=turn,
             )
             spending.settle(conn, held, clock.now())
             alerts.answered(conn, provider.name, model)
+        transcript.keep_heard(
+            conn,
+            settings,
+            call_id=call_id,
+            message_id=message_id,
+            turn=turn,
+            kind=kind,
+            provider=provider.name,
+            model=written.model or model or provider.name,
+            sent=sent,
+            heard=written.text,
+            now=clock.now(),
+        )
         if written.dropped:
             alerts.dropped(conn, provider.name, model, written.dropped, clock.now())
         if written.stop == "refusal":

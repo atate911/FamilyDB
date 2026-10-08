@@ -9,6 +9,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any
 
+from familydb import logs
 from familydb.availability import calendar_available, weather_available
 from familydb.clock import Clock, SystemClock
 from familydb.config import Settings, load_settings
@@ -233,9 +234,13 @@ class App:
                 self.settings.tzinfo, southern=self.settings.southern_hemisphere
             )
         wanted = getattr(logging, self.settings.log_level, logging.INFO)
-        if logging.getLogger().level != wanted:
+        moved = logging.getLogger().level != wanted
+        if moved:
             set_log_level(wanted)
             log.info("log level is now %s", self.settings.log_level)
+        # Areas go after the whole server's level, which would otherwise put them back.
+        logs.apply_areas(self.settings.log_areas)
+        logs.set_capture(self.settings.problem_log_level)
 
     def connect(self) -> sqlite3.Connection:
         """A fresh connection: SQLite connections are per thread, do not share them."""
@@ -297,4 +302,6 @@ def configure_logging(level: str) -> None:
 def build_app(env_file: str | Path | None = ".env", **overrides: Any) -> App:
     settings = load_settings(env_file, **overrides)
     configure_logging(settings.log_level)
+    logs.install(settings.familydb_path, settings.problem_log_level)
+    logs.apply_areas(settings.log_areas)
     return App(settings)

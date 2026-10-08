@@ -584,6 +584,12 @@ Kept on a home screen, the page opens full-screen, with the mark as its icon.
   scenes**: Status, Settings, Family; a parent's has Status alone, since Status is for every
   grown-up and Settings and Family are an admin's. At the foot (`.me`), who is signed in, then
   **Look** (theirs, on every device), **Your password** and Sign out, a POST button.
+- **Troubleshooting** (a settings page, admins only). What went wrong, as sentences first: the
+  last day's counts, what needs an admin, calls to a model that failed; then the problem log, a
+  fold per trouble (level tag, the words, where, when, how many times) opening to its traceback in
+  the code pane; then the log-level boxes. The models' words are two plain pages behind it, a
+  table and one call in full (what it started from and could use folded, the conversation and the
+  answer in the code pane). Words are escaped like every other page; no script, no model call.
 - **Home.** A small greeting and the day, then the big line, what is coming and what is late,
   with links. Then the Ask card. Beside it **Next up** (the next plan with a large date tile, its
   time, drive and who, then "After that") and To do; under them what was just added to Ideas and

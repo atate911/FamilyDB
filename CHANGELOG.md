@@ -8,6 +8,17 @@ older than what is installed. It gets a date when it is released.
 
 ### New since v0.2.0
 
+- **Troubleshooting**, for admins, on the settings page. What went wrong in one place: what needs
+  an admin, messages that did not go through, lookups that failed, calls to a model that failed
+  and why, and a problem log of the warnings and errors the server logged (the same trouble
+  again is one line with a count). Beside it, the words of every call to a model, as sent and as
+  answered, with the instructions and tools it started from, and a link to them from each model
+  call on a message's history. Log levels are on the page too: what the server writes, how much
+  of it is kept to read, and a different level for one part (models, Telegram, jobs, the web
+  page...), so chasing one problem needs no flood from the rest. The models' words are kept for
+  14 days unless the family says otherwise (0 keeps none), go sooner with the messages if those
+  are set to be forgotten sooner, and go for good with a person taken off. They hold the
+  family's own words, which an admin can read; a backup keeps what it held.
 - **Looks.** Each browser can choose how the page looks on a new Look page, in
   the bar's menu for anybody signed in: Phosphor, as before, or Midnight, Home
   Computer, Ink, Enamel, Rail yellow or Fjord, each by day and by night, and

@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
 from familydb import alerts
-from familydb.agent import spending
+from familydb.agent import spending, transcript
 from familydb.agent.compose import exchange_chars
 from familydb.agent.providers import model_at, prices
 from familydb.agent.providers.base import (
@@ -147,6 +147,7 @@ def run_turn(
                     now=ctx.clock.now(),
                     model=request.model or active.model_for(surface),  # type: ignore[arg-type]
                 )
+                _failed(ctx, settings, request, active, surface, exc, iteration, kind)
                 switchable = fallback is not None and active is not fallback
                 if not (switchable and first_call_only(request) and worth_switching(exc)):
                     raise
@@ -172,6 +173,7 @@ def run_turn(
                         now=ctx.clock.now(),
                         model=request.model or active.model_for(surface),  # type: ignore[arg-type]
                     )
+                    _failed(ctx, settings, request, active, surface, spare_exc, iteration, kind)
                     # Keep the primary's (possibly retryable) failure even if the spare says 400.
                     log.warning("%s could not take it either: %s", active.name, spare_exc)
                     raise exc from spare_exc
@@ -191,7 +193,7 @@ def run_turn(
             cache_ttl=settings.anthropic_cache_ttl,
         )
         with transaction(ctx.conn):
-            calls.log_llm_call(
+            call_id = calls.log_llm_call(
                 ctx.conn,
                 message_id=ctx.message_id,
                 iteration=iteration,
@@ -212,6 +214,21 @@ def run_turn(
             )
             spending.settle(ctx.conn, held, ctx.clock.now())
             alerts.answered(ctx.conn, active.name, asked)
+        transcript.keep_answer(
+            ctx.conn,
+            settings,
+            request,
+            reply,
+            call_id=call_id,
+            message_id=ctx.message_id,
+            turn=ctx.turn,
+            iteration=iteration,
+            kind=kind,
+            about=ctx.about,
+            provider=active.name,
+            model=asked,
+            now=ctx.clock.now(),
+        )
         if reply.dropped:
             alerts.dropped(ctx.conn, active.name, asked, reply.dropped, ctx.clock.now())
 
@@ -260,6 +277,33 @@ def run_turn(
 
     return TurnResult(
         "failed", "", actions, limit, totals, error="max_iterations", provider=active.name
+    )
+
+
+def _failed(
+    ctx: ToolContext,
+    settings: Settings,
+    request: TurnRequest,
+    provider: Provider,
+    surface: str,
+    exc: AgentError,
+    iteration: int,
+    kind: str | None,
+) -> None:
+    """Write down a call that got no answer, with what it was sent (Troubleshooting)."""
+    transcript.keep_failure(
+        ctx.conn,
+        settings,
+        request,
+        exc,
+        message_id=ctx.message_id,
+        turn=ctx.turn,
+        iteration=iteration,
+        kind=kind,
+        about=ctx.about,
+        provider=provider.name,
+        model=request.model or provider.model_for(surface),  # type: ignore[arg-type]
+        now=ctx.clock.now(),
     )
 
 
