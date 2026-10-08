@@ -204,6 +204,7 @@ def _read_added(
     listers: dict[str, Callable[[], list[str] | None]] | None,
     pricers: dict[str, Callable[[], dict[str, tuple[float, float, float | None]] | None]] | None,
     at: str,
+    only: str | None = None,
 ) -> dict[str, tuple[set[str] | None, dict[str, tuple[float, float, float | None]] | None]]:
     """For each company the settings define and a key opens: the models it lists for the key and,
     when its list carries prices (OpenRouter's does), what they cost. None for either when it could
@@ -211,6 +212,8 @@ def _read_added(
     found: dict[str, tuple[set[str] | None, dict[str, tuple[float, float, float | None]] | None]]
     found = {}
     for company in companies.added(settings):
+        if only is not None and company.slug != only:
+            continue
         provider = providers.build(company.slug, settings)
         if listers is not None and company.slug not in listers:
             continue
@@ -275,6 +278,28 @@ def _keep_added(
                     else (old.last_seen if old else None),
                 ),
             )
+
+
+def check_added(app: Any, slug: str) -> bool:
+    """Read one added company's list and prices now, as the daily check would, because a person has
+    just added or changed it: until then every model it names is counted at the dearer unlisted
+    rate, which would use up the day's limit in a few messages. Returns whether it was asked."""
+    with closing(app.connect()) as conn:
+        app.refresh(conn)
+        settings = app.settings
+        company = companies.get(slug, settings)
+        if not settings.model_watch or company is None or company.built_in:
+            return False
+        now = app.clock.now()
+        at = utc_iso(now)
+        added = _read_added(conn, settings, None, None, at, only=slug)
+        if slug not in added:
+            return False
+        before = store.all_seen(conn)
+        with transaction(conn):
+            _keep_added(conn, settings, added, before, models_in_use(settings), at)
+        load(conn, today=now.date())
+        return True
 
 
 def models_in_use(settings: Any) -> set[tuple[str, str]]:

@@ -390,12 +390,15 @@ def test_a_service_on_the_family_network_needs_no_key(settings):
     one = defined(base_url="http://192.168.1.20:11434/v1", local=True)
     live = settings.model_copy(update={"companies": [one]})
     companies.use(live.companies)
-    local = ChatProvider(live, companies.get("acme", live))
-    assert local.configured() and local.check_key() != "no_key"
-    remote = ChatProvider(
-        live.model_copy(update={"companies": [defined()]}),
-        companies.get("acme", live.model_copy(update={"companies": [defined()]})),
-    )
+    wire = Wire()
+    client = httpx.Client(transport=httpx.MockTransport(wire))
+    local = ChatProvider(live, companies.get("acme", live), http_client=client, retries=0)
+    assert local.configured() and local.check_key() == "works"
+    assert wire.headers[0]["authorization"] == "Bearer none"  # the SDK's placeholder, never a key
+    # The same service out on the internet needs one.
+    remote_live = live.model_copy(update={"companies": [defined()]})
+    companies.use(remote_live.companies)
+    remote = ChatProvider(remote_live, companies.get("acme", remote_live))
     assert not remote.configured() and remote.check_key() == "no_key"
 
 

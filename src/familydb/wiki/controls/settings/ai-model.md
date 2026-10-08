@@ -58,9 +58,9 @@ Any service that speaks the OpenAI chat protocol can answer the family too, with
 | Fields its thinking comes back in | Some companies need a model's thinking sent back unchanged beside a tool call. The first field a reply carries is used. |
 | Extra request fields | A JSON object sent with every request, always: a company's own switches. OpenRouter is added asking only for companies that keep and train on nothing, and refusing a model that cannot use the tools; a request that leaves one out is never sent in its place. |
 
-The keys are kept in the database like the other keys, so they are in every [backup](/wiki/operations/backup-and-restore), and are never shown again or written to the change history. Taking a company away takes its key. A company answering cannot be taken away; choose another above first.
+A saved key is not sent to a new address: change a company's address and the key is asked for again. When a company is added, FamilyDB reads its own list for what its models cost (OpenRouter's does) and says which models are still unpriced; type a price under **What it costs** for those, since until then every message to them is counted at more than any listed model and the daily limit is reached early. The keys are kept in the database like the other keys, so they are in every [backup](/wiki/operations/backup-and-restore), and are never shown again or written to the change history. Taking a company away takes its key. A company answering cannot be taken away; choose another above first.
 
-These companies cannot search the web, hear voice notes or look at photos. Lookups and discovery go to a company that can, and when none has a key they wait. They cannot be chosen for lookups, voice notes or photos.
+These companies cannot search the web, hear voice notes or look at photos. Lookups and discovery go to the cheaper company with a key that can, as long as **Ask another company when the first cannot** (below) is on; with it off they wait, since one company is then the only one that sees what you write, unless you choose a company for lookups yourself. They cannot be chosen for lookups, voice notes or photos.
 
 ## A second company
 

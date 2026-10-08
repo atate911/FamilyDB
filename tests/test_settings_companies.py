@@ -22,12 +22,17 @@ KEY = "sk-or-very-secret-1234"
 def page(settings, clock, conn, family, monkeypatch):
     """A signed-in client; a company's key checks as accepted unless a test says otherwise, and no
     address is looked up on the network."""
-    app = App(settings.model_copy(update={"web_password": PASSWORD}), clock)
+    app = App(settings.model_copy(update={"web_password": PASSWORD, "model_watch": True}), clock)
     client = create_app(app).test_client()
     assert client.post("/login", data={"password": PASSWORD}).status_code == 302
     client.app = app
     client.verdict = "works"
     monkeypatch.setattr(ChatProvider, "check_key", lambda self: client.verdict)
+    # What the company lists and what it says things cost: nothing here reaches a network.
+    client.listed = None
+    client.priced = None
+    monkeypatch.setattr(ChatProvider, "listed_models", lambda self: client.listed)
+    monkeypatch.setattr(ChatProvider, "priced_models", lambda self: client.priced)
     monkeypatch.setattr(
         address, "classify", lambda host: "private" if host.startswith("192.168.") else "public"
     )
@@ -461,3 +466,39 @@ def test_the_company_boxes_stay_dropdowns_and_offer_no_added_company_for_lookups
     text = page.get("/settings/model").text
     lookups = text.split('<select id="f-worker_provider"')[1].split("</select>")[0]
     assert "openrouter" not in lookups  # it has no hosted search, so it is not offered for lookups
+
+
+# -- a new company is priced at once, or said to be unpriced
+
+
+def test_a_new_company_is_priced_from_its_own_list_at_once(page, conn):
+    from familydb.agent.providers import prices
+
+    page.listed = ["deepseek/deepseek-chat"]
+    page.priced = {"deepseek/deepseek-chat": (0.27, 1.10, 0.07)}
+    add_openrouter(page)
+    rate = prices.price("openrouter", "deepseek/deepseek-chat")
+    assert rate is not None and (rate.input, rate.output) == (0.27, 1.10)
+    assert "no price yet" not in page.get("/settings/model").text
+
+
+def test_a_new_company_that_gives_no_prices_is_said_to_be_counted_dear(page, conn):
+    from familydb.agent.providers import prices
+
+    page.listed = ["deepseek/deepseek-chat"]
+    page.priced = {}  # its list names the model but carries no price
+    add_openrouter(page)
+    assert prices.price("openrouter", "deepseek/deepseek-chat") is None
+    text = page.get("/settings/model").text
+    assert "no price yet for deepseek/deepseek-chat" in text and "counted at more than any" in text
+    # Typing one is the way out, and the warning goes.
+    saved = edit(page, prices="deepseek/deepseek-chat 0.27 1.10")
+    assert saved.status_code == 302
+    assert "no price yet" not in page.get("/settings/model").text
+
+
+def test_a_company_that_cannot_be_asked_for_prices_still_keeps_what_was_typed(page, conn):
+    page.listed = None  # unreachable
+    page.priced = None
+    assert add_openrouter(page).status_code == 302
+    assert len(stored_companies(conn)) == 1

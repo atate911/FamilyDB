@@ -41,7 +41,7 @@ from flask import (
 )
 from pydantic import ValidationError
 
-from familydb import export, passwords, personas, voice
+from familydb import export, model_watch, passwords, personas, voice
 from familydb.agent import gateway, providers
 from familydb.agent.providers import companies, prices
 from familydb.agent.spending import spent_today
@@ -983,10 +983,40 @@ def _keep_company(
             return _answer(
                 back, here, error=KEY_REFUSED.format(company=one.label), otherwise="model"
             )
+    before = companies.get(one.slug, live)
     _save(values)
     follow = COMPANY_KEY_VERDICTS.get(verdict, "").format(model=one.model)
     head = COMPANY_ADDED if adding else COMPANY_SAVED
-    return _answer(back, here, said=head.format(label=one.label) + follow + warn)
+    return _answer(
+        back,
+        here,
+        said=head.format(label=one.label)
+        + follow
+        + _prices_said(
+            one,
+            read=adding or check or set(before.known_models() if before else ()) != set(one.models),
+        )
+        + warn,
+    )
+
+
+NO_PRICE = (
+    " It has no price yet for {names}, so every message to it is counted at more than any listed "
+    "model and the day's limit will be reached early: type one under “What it costs”."
+)
+
+
+def _prices_said(one: CompanyDef, *, read: bool) -> str:
+    """Read the company's own list of prices now (a new company is otherwise counted at the dearer
+    unlisted rate until the next daily check), then say which of its models are still unpriced."""
+    app = _app()
+    if read:
+        try:
+            model_watch.check_added(app, one.slug)
+        except Exception as exc:  # not being able to price it is no reason to lose what was typed
+            log.warning("could not read prices for %s: %s", one.slug, exc)
+    unpriced = [name for name in one.models if prices.price(one.slug, name) is None]
+    return NO_PRICE.format(names=", ".join(unpriced)) if unpriced else ""
 
 
 @bp.post("/settings/companies/add")
