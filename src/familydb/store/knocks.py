@@ -42,12 +42,20 @@ def record(
         "last_at = excluded.last_at, times = knocks.times + 1",
         (channel, channel_user_id, (name or "")[:MAX_NAME] or None, chat_id, stamp, stamp),
     )
-    conn.execute("DELETE FROM knocks WHERE last_at < ?", (utc_iso(now - timedelta(KEEP_DAYS)),))
-    conn.execute(
+    forget_old(conn, now)
+
+
+def forget_old(conn: sqlite3.Connection, now: datetime) -> int:
+    """Drop knocks past `KEEP_DAYS` and any beyond the newest `KEEP`; returns how many."""
+    old = conn.execute(
+        "DELETE FROM knocks WHERE last_at < ?", (utc_iso(now - timedelta(KEEP_DAYS)),)
+    ).rowcount
+    extra = conn.execute(
         "DELETE FROM knocks WHERE rowid NOT IN "
         "(SELECT rowid FROM knocks ORDER BY last_at DESC LIMIT ?)",
         (KEEP,),
-    )
+    ).rowcount
+    return old + extra
 
 
 def recent(conn: sqlite3.Connection, *, channel: str, limit: int = 20) -> list[Knock]:

@@ -222,6 +222,8 @@ older than what is installed. It gets a date when it is released.
   over the day's limit). It now resets only those that ran out of tries.
 - **Fixed: `familydb doctor --fix` says what it fixed.** The "fixed:" lines were lost when it
   checked again after the repair.
+- **Fixed: strangers who messaged the bot, and Telegram links nobody opened, are forgotten on
+  time.** They were dropped only when the next one came; the nightly tidy now drops them.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

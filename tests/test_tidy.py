@@ -87,3 +87,26 @@ def test_old_messages_lose_their_words_when_the_family_says_so(settings, clock, 
         conn.execute("UPDATE messages SET text = 'back' WHERE id = ?", (old.id,))
     run_tidy(App(settings, clock))
     assert messages.get(conn, old.id).text == "back"
+
+
+def test_old_knocks_and_spent_links_go_in_the_night(settings, clock, conn, family) -> None:
+    """Both were only dropped when the next of their kind came, which may be never."""
+    from datetime import timedelta
+
+    from familydb.store import invites, knocks
+
+    app = App(settings, clock)
+    now = clock.now()
+    with db.transaction(conn):
+        knocks.record(
+            conn, channel="telegram", channel_user_id="old", name="X", chat_id="1",
+            now=now - timedelta(days=knocks.KEEP_DAYS + 2),
+        )  # fmt: skip
+        invites.put(
+            conn, family["sam"].id, invites.digest("a-code"), made_by=None,
+            now="2026-09-01T10:00:00Z", expires="2026-09-02T10:00:00Z",
+        )  # fmt: skip
+    run_tidy(app)
+    assert conn.execute("SELECT count(*) FROM knocks").fetchone()[0] == 0
+    assert conn.execute("SELECT count(*) FROM telegram_invites").fetchone()[0] == 0
+    assert conn.execute("SELECT count(*) FROM llm_calls").fetchone()[0] == 0
