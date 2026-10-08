@@ -68,9 +68,10 @@ def tool_call(name="add_idea", **arguments):
 class Wire:
     """A fake server: answers each request from a script, in order, and keeps what it was sent."""
 
-    def __init__(self, *answers, models=None, models_status=200):
+    def __init__(self, *answers, models=None, models_status=200, key_status=200):
         self.answers = list(answers)
         self.models_status = models_status
+        self.key_status = key_status
         self.requests: list[tuple[str, str, dict]] = []
         self.models = models if models is not None else [{"id": MODEL, "object": "model"}]
         self.headers: list[httpx.Headers] = []
@@ -79,11 +80,17 @@ class Wire:
         body = json.loads(request.content) if request.content else {}
         self.requests.append((request.method, request.url.path, body))
         self.headers.append(request.headers)
+        if request.url.path.endswith("/key"):
+            if self.key_status != 200:
+                return httpx.Response(self.key_status, json={"error": {"message": "no"}})
+            return httpx.Response(200, json={"data": {"label": "k"}})
         if request.url.path.endswith("/models"):
             if self.models_status != 200:
                 return httpx.Response(self.models_status, json={"error": {"message": "no"}})
             return httpx.Response(200, json={"object": "list", "data": self.models})
         answer = self.answers.pop(0)
+        if isinstance(answer, bytes):  # a body that is not what it should be
+            return httpx.Response(200, content=answer)
         if isinstance(answer, tuple):  # (status, message)
             status, said = answer
             return httpx.Response(status, json={"error": {"message": said, "type": "x"}})
@@ -288,6 +295,8 @@ def test_a_tool_call_with_arguments_that_are_not_json_comes_through_as_no_argume
         (403, "Your API key lacks permission", "key", False),
         (403, "Input flagged by moderation", "refused", False),
         (429, "Too many requests", None, True),
+        (429, "Per-minute quota exceeded, retry in 20s", None, True),
+        (429, "Account in arrears", "credit", False),
         (429, "You exceeded your current quota", "credit", False),
         (500, "upstream broke", None, True),
         (503, "overloaded", None, True),
@@ -481,3 +490,81 @@ def test_a_redirect_answer_is_a_refusal_not_a_second_request(settings):
     with pytest.raises(AgentError):
         prov.send(TurnRequest(system=[], messages=[]))
     assert len(wire.requests) == 1
+
+
+def _acme_chat_with(settings, **more):
+    live, _ = provider(settings, Wire())
+    return live.model_copy(update={"provider": "acme", **more})
+
+
+def test_a_lookup_goes_to_the_cheaper_of_two_companies_that_can_search(settings):
+    live = _acme_chat_with(settings, openai_api_key="sk-o")  # and Claude's key from the fixture
+    assert gateway.answering(live, "enrich")[0].name == "openai"  # Luna, not Haiku
+    assert gateway.answering(live, "chat")[0].name == "acme"
+
+
+def test_with_the_second_company_off_a_lookup_waits_rather_than_go_to_one(settings):
+    live = _acme_chat_with(settings, openai_api_key="sk-o", provider_fallback=False)
+    assert gateway.answering(live, "enrich")[0].name == "acme"
+    assert not gateway.can_ask(live, "enrich") and gateway.can_ask(live, "chat")
+    # Chosen for lookups on purpose, it is the family's own word.
+    chosen = live.model_copy(update={"worker_provider": "openai"})
+    assert gateway.answering(chosen, "enrich")[0].name == "openai"
+    assert gateway.can_ask(chosen, "enrich")
+
+
+def test_a_companys_list_that_is_public_does_not_vouch_for_a_key(settings):
+    """OpenRouter lists its models to anyone, so a template names a path only a good key opens."""
+    for key_status, expected in ((401, "refused"), (500, "unchecked"), (200, "works")):
+        wire = Wire(key_status=key_status)
+        _live, prov = provider(settings, wire, template="openrouter")
+        assert prov.check_key() == expected, key_status
+        assert any(path.endswith("/key") for _, path, _ in wire.requests)
+    # A company with no template asks only for the list, as before.
+    wire = Wire()
+    _live, prov = provider(settings, wire)
+    assert prov.check_key() == "works"
+    assert not any(path.endswith("/key") for _, path, _ in wire.requests)
+
+
+# -- an answer in a shape the protocol allows or a company invents
+
+
+def test_a_message_whose_content_is_a_list_of_parts_is_read_as_its_text(settings):
+    parts_ = [{"type": "text", "text": "Hi "}, {"type": "text", "text": "Sam."}, {"type": "x"}]
+    _live, prov = provider(settings, Wire(completion({"content": parts_})))
+    assert prov.send(TurnRequest(system=[], messages=[])).text == "Hi Sam."
+
+
+def test_an_answer_that_cannot_be_read_is_asked_again_and_never_a_bare_exception(settings):
+    for answer in (
+        b'{"id": "x", "choices": [',  # cut off
+        b"<html>gateway error</html>",  # not JSON at all
+        {"id": "x", "object": "chat.completion", "choices": [{"index": 0, "message": None}]},
+    ):
+        _live, prov = provider(settings, Wire(answer))
+        with pytest.raises(AgentError) as info:
+            prov.send(TurnRequest(system=[], messages=[]))
+        assert info.value.retryable, answer
+
+
+def test_the_protocols_older_function_call_is_a_tool_call(settings):
+    legacy = {"content": None, "function_call": {"name": "add_idea", "arguments": '{"title": "A"}'}}
+    _live, prov = provider(settings, Wire(completion(legacy, finish="function_call")))
+    reply = prov.send(TurnRequest(system=[], messages=[]))
+    assert reply.stop == "tool_use"
+    assert (reply.tool_calls[0].name, reply.tool_calls[0].arguments) == ("add_idea", {"title": "A"})
+
+
+def test_a_call_is_priced_by_the_model_asked_for_when_the_company_answers_with_a_snapshot(
+    settings, registry, ctx
+):
+    wire = Wire(completion(model=MODEL + "-20260101"))
+    live, prov = provider(
+        settings, wire, prices=[ModelPrice(name=MODEL, input=1.0, output=2.0, cached=0.5)]
+    )
+    run(live, prov, registry, ctx)
+    row = calls.recent_llm_calls(ctx.conn)[0]
+    assert row["served_model"] == MODEL + "-20260101"  # who answered is still what was said
+    assert row["cost_estimated"] == 0
+    assert row["cost_usd"] == pytest.approx((1000 * 1.0 + 50 * 2.0) / 1_000_000)

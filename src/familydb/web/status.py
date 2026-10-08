@@ -75,13 +75,20 @@ def models(app: App) -> list[dict[str, Any]]:
         provider, model = gateway.answering(app.settings, kind)
         level = getattr(app.settings, gateway.spec(kind).level)
         keyed = provider.configured()
+        able = gateway.can_ask(app.settings, kind)
         rows.append(
             _row(
                 what,
-                keyed,
+                keyed and able,
                 f"{companies.status_name(provider.name)}, "
                 f"{views.model_text(provider.name, model, level)}"
-                + ("" if keyed else " — but there is no key for it"),
+                + ("" if keyed else " — but there is no key for it")
+                + (
+                    " — but it cannot search the web, and no other company that can has a key "
+                    "(or asking another company is off)"
+                    if keyed and not able
+                    else ""
+                ),
             )
         )
     chat = app.provider("chat")

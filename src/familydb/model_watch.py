@@ -189,6 +189,15 @@ def _read_company_lists(
     return listed
 
 
+def _added(company: str) -> bool:
+    """Whether this is a company the settings define. What its list says is kept and priced, but
+    nothing is told or swapped on its word: a list that leaves out a working alias would raise a
+    false alarm and put another model in, and a model that is really gone fails on its own, which
+    is told as it happens (alerts.noticed)."""
+    known = companies.get(company)
+    return known is not None and not known.built_in
+
+
 def _read_added(
     conn: sqlite3.Connection,
     settings: Any,
@@ -451,6 +460,8 @@ def _tell(
     """
     today = now.date()
     for company, name in sorted(in_use):
+        if _added(company):
+            continue  # a model its company's list stops naming fails on its own, and is told then
         model = seen.get((company, name))
         subject = f"{company}:{name}"
         company_name = companies.named(company)
@@ -695,7 +706,11 @@ def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
             notes[(company, name)] = f"goes {model.retires_on}"
         elif model.first_seen[:10] > max(first, lately):
             notes[(company, name)] = "new"
-        instead = replacement(seen, company, name, today, judged) if gone(model, today) else None
+        instead = (
+            replacement(seen, company, name, today, judged)
+            if gone(model, today) and not _added(company)
+            else None
+        )
         if instead is not None and swaps_for(model, instead):
             swaps[(company, name)] = instead.model
         if model.input is None or model.output is None:

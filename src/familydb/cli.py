@@ -541,6 +541,11 @@ def debug_cost(
         f"  lookups and discovery run on {worker_model} via {worker_provider.name} "
         f"({settings.lookup_level})"
     )
+    if not gateway.can_ask(settings, "enrich"):
+        typer.echo(
+            "  but nothing can look things up: the company that would cannot search the web, and "
+            "no other that can has a key (or asking another company is off)"
+        )
     if chat_provider.name == "anthropic":
         typer.echo(f"  the prefix above is cached for {settings.anthropic_cache_ttl}")
     spare = application.fallback("chat", chat_provider.name)

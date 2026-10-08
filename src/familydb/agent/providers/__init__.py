@@ -132,12 +132,24 @@ def for_surface(
     searches the web (`web`), a chosen company without hosted search is passed over for the first
     other that has it and a key: the family's lookups do not stop for the chat company's sake."""
     primary = build(chosen(settings, surface), settings, api=api)
-    if web and api is None and not can_search(primary):
-        for candidate in others(primary.name, settings):
-            spare = build(candidate, settings)
-            if can_search(spare) and spare.configured():
-                return spare
+    if web and api is None and not can_search(primary) and settings.provider_fallback:
+        # Only with a second company allowed: with it off the family has said one company sees
+        # their words, and a lookup waits rather than go to another (or one is chosen for lookups).
+        able = [
+            spare
+            for spare in (build(name, settings) for name in others(primary.name, settings))
+            if can_search(spare) and spare.configured()
+        ]
+        if able:
+            return min(able, key=lambda spare: _everyday_output(spare, surface))
     return primary
+
+
+def _everyday_output(provider: Provider, surface: Surface) -> float:
+    """What a company's everyday model costs a million tokens out, the unlisted rate when it is
+    not priced: the cheaper of two that can search is asked first (ties keep the spare order)."""
+    price = prices.price(provider.name, provider.model_for(surface)) or prices.UNLISTED
+    return price.output
 
 
 def fallback_for(

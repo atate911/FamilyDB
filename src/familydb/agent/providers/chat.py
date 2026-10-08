@@ -30,7 +30,7 @@ from typing import Any
 import httpx
 import openai
 
-from familydb.agent.providers import parts
+from familydb.agent.providers import companies, parts
 from familydb.agent.providers.base import (
     Audio,
     Heard,
@@ -66,6 +66,17 @@ REPLAYED = "the thinking sent back"
 TIMEOUT = 120.0
 CHECK_TIMEOUT = 10.0
 NOTHING = "no answer came back"
+# What a 429 says when it means the account is empty and not that the caller is going too fast.
+# "quota" alone is not one of them: a per-minute quota is a wait, not a bill.
+OUT_OF_CREDIT = (
+    "insufficient",
+    "balance",
+    "billing",
+    "credit",
+    "arrear",
+    "exceeded your current quota",
+    "exceeded_current_quota",
+)
 
 
 class ChatProvider:
@@ -206,6 +217,19 @@ class ChatProvider:
     # -- the answer ------------------------------------------------------------------------------
 
     def reply(self, response: Any) -> ModelReply:
+        """The loop's reading of one answer. A shape this cannot read is an `AgentError` to ask
+        again, never a bare exception: the call was paid for and must still be recorded."""
+        try:
+            return self._read(response)
+        except AgentError:
+            raise
+        except (AttributeError, TypeError, KeyError, IndexError, ValueError) as exc:
+            raise AgentError(
+                f"{self.company.label} sent an answer this could not read ({exc!r})",
+                retryable=True,
+            ) from exc
+
+    def _read(self, response: Any) -> ModelReply:
         choices = getattr(response, "choices", None) or []
         if not choices:
             # Some services answer 200 with the failure in the body.
@@ -213,10 +237,15 @@ class ChatProvider:
             raise AgentError(f"{self.company.label}: {said}", retryable=True)
         choice = choices[0]
         message = choice.message
+        if message is None:
+            raise AgentError(f"{self.company.label}: {NOTHING}", retryable=True)
         calls = [
             ToolCall(id=call.id, name=call.function.name, arguments=_arguments(call.function))
             for call in (getattr(message, "tool_calls", None) or [])
         ]
+        legacy = getattr(message, "function_call", None)
+        if not calls and legacy is not None:  # the protocol's older way of asking for a tool
+            calls = [ToolCall(id="call_legacy", name=legacy.name, arguments=_arguments(legacy))]
         finish = getattr(choice, "finish_reason", None) or "stop"
         if finish in INTERRUPTED:
             raise AgentError(f"{self.company.label} stopped short ({finish})", retryable=True)
@@ -226,7 +255,7 @@ class ChatProvider:
         prompt = getattr(usage, "prompt_tokens", None)
         return ModelReply(
             stop=stop,
-            text=(getattr(message, "content", None) or "").strip(),
+            text=_text(getattr(message, "content", None)),
             tool_calls=calls,
             usage={
                 # prompt_tokens counts the cached ones; the column means "everything else".
@@ -280,6 +309,10 @@ class ChatProvider:
                 dropped.append(part.name)
             except openai.OpenAIError as exc:
                 raise _failure(exc, self.company.label) from exc
+            except ValueError as exc:  # a 200 that was cut off or is not JSON
+                raise AgentError(
+                    f"{self.company.label} sent an answer that is not JSON ({exc})", retryable=True
+                ) from exc
 
     # -- the free questions ----------------------------------------------------------------------
 
@@ -328,7 +361,13 @@ class ChatProvider:
     def check_key(self) -> KeyCheck:
         if not self.key and not self.defined.local:
             return "no_key"
+        template = companies.TEMPLATES.get(self.defined.template)
         try:
+            if template is not None and template.key_path:
+                # The list of models is public here, so it would pass any key at all.
+                self.client.with_options(timeout=CHECK_TIMEOUT, max_retries=0).get(
+                    template.key_path, cast_to=object
+                )
             names = [str(row.get("id", "")) for row in self._listing(CHECK_TIMEOUT)]
         except openai.AuthenticationError:
             return "refused"
@@ -358,6 +397,18 @@ class ChatProvider:
 
     def describe(self, picture: Picture, ask: str) -> Seen:
         raise AgentError(f"{self.company.label} is not set up to look at photos", retryable=False)
+
+
+def _text(content: Any) -> str:
+    """The words of a message: a string, or a list of parts some companies send, of which the
+    text ones are the answer."""
+    if isinstance(content, list):
+        pieces = [
+            part if isinstance(part, str) else (part.get("text") if isinstance(part, dict) else "")
+            for part in content
+        ]
+        content = "".join(piece for piece in pieces if isinstance(piece, str))
+    return str(content or "").strip()
 
 
 def _cached(usage: Any) -> int | None:
@@ -419,9 +470,7 @@ def _failure(exc: openai.OpenAIError, company: str) -> AgentError:
 def _trouble(status: int, said: str) -> str | None:
     """What an admin would have to fix, from a refusal."""
     lowered = said.lower()
-    if status == 402 or (
-        status == 429 and any(word in lowered for word in ("insufficient", "quota", "balance"))
-    ):
+    if status == 402 or (status == 429 and any(word in lowered for word in OUT_OF_CREDIT)):
         return "credit"
     if status == 401 or (
         status == 403 and any(word in lowered for word in ("key", "credential", "auth"))

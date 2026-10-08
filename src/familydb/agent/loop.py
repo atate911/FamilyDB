@@ -186,9 +186,14 @@ def run_turn(
         for key in USAGE_KEYS:
             totals[key] += reply.usage.get(key) or 0
         asked = request.model or active.model_for(surface)
+        # Priced by the name the company answered with, unless that is a snapshot or alias nobody
+        # priced and the model asked for is: one asked for by name costs what that name does.
+        priced_as = reply.model or asked
+        if prices.price(active.name, priced_as) is None and prices.price(active.name, asked):
+            priced_as = asked
         dollars, listed = prices.cost(
             active.name,
-            reply.model or asked,
+            priced_as,
             reply.usage,
             cache_ttl=settings.anthropic_cache_ttl,
         )
