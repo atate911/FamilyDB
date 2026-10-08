@@ -224,6 +224,8 @@ older than what is installed. It gets a date when it is released.
   checked again after the repair.
 - **Fixed: strangers who messaged the bot, and Telegram links nobody opened, are forgotten on
   time.** They were dropped only when the next one came; the nightly tidy now drops them.
+- **Fixed: saving the same home town again tries the map again.** If the first lookup found
+  nothing, saving the unchanged text did nothing; it now looks again while no coordinates are kept.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

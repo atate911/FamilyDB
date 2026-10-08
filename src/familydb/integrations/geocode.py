@@ -163,6 +163,10 @@ class Geocoder:
         self._names[key] = name
         return name
 
+    def forget(self, query: str) -> None:
+        """Drop what was remembered of a place, so asking again asks the map again."""
+        self._cache.pop(" ".join(query.split()).casefold(), None)
+
     def geocode(self, query: str) -> GeoPoint | None:
         key = " ".join(query.split()).casefold()
         if not key:
