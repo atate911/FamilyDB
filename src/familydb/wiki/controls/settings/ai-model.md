@@ -73,6 +73,18 @@ Some changes need judgment and not a rule: which model replaces one that is goin
 
 A judgment never changes a setting by itself except under "within cost"; a dearer model waits for an admin to press **Put these in** on [Models and prices](/wiki/controls/status/models-and-prices#put-these-in-and-put-back). A judgment must pick one of the options it was given, and a price is accepted only when it matches a price list.
 
+## Choosing the suggestions
+
+For a planning question from a grown-up, such as "what should we do this weekend?" or "where should we eat tonight?", and for the weekend ideas, a stronger model picks first and the assistant then says the picks in her words. FamilyDB gives it what the family has told the assistant and done that bears on the question: ratings and notes, what the assistant remembers, the weeks before and after, and that chat's last few days. It picks a favorite, something new and a wildcard, each with a reason, and FamilyDB checks every pick against the options it was given. The call goes to the company that answers the chat and nowhere else.
+
+A question about right now, a kid's question and any command such as `/now` are answered as before, at no extra cost. When choosing is off, over its budget or fails, the suggestions come in FamilyDB's own order and nobody is told.
+
+| Label (`key`) | Default | What it does | Range last |
+|---|---|---|---|
+| Have a stronger model choose the suggestions (`choosing`) | on | Turns choosing on. The card puts the cost at about 3 to 13 cents for each planning question, depending on the company. | on or off |
+| How strong a model chooses (`choose_level`) | best | The strength for this call. | everyday, better or best |
+| Most to spend on it (`choose_budget`) | US$5 | Counted within the daily limit too, over the calendar month in the family's time zone. Once it is spent, suggestions go back to FamilyDB's own order until the month turns. 0 chooses nothing. The card's label is "Most to spend on it in a month (US$)", the same as for judgments above. | 0 to 50 |
+
 ## Voice notes and photos
 
 | Label (`key`) | Default | What it does | Range last |

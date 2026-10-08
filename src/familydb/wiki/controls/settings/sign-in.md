@@ -21,6 +21,14 @@ Once an admin signs in as themselves, the shared password ends for good, and it 
 |---|---|---|---|
 | Days a sign-in lasts (`web_session_days`) | 30 | How many days a phone or computer can go unused before it asks for the password again; each visit starts the count afresh. A change applies to every sign-in at once, so lowering it also signs out phones idle longer than the new value. | 1 to 3650 |
 
+### How long messages are kept
+
+| Label (`key`) | Default | What it does | Range last |
+|---|---|---|---|
+| Days a message keeps its words (`keep_messages_days`) | 0 (for good) | Each night at 03:30 FamilyDB empties the words of every message older than this. The message keeps its place in the conversation, so replies, reminders and the assistant's records that point at it still work. Anything under 30 is treated as 30. | 0 to 36500 (0 keeps them for good) |
+
+What the assistant remembers, the ideas, the plans and the things to do are kept whatever this says. The kept words of model calls on [Troubleshooting](/wiki/controls/settings/troubleshooting#the-models-own-words) are kept no longer than the messages' words, if that is sooner than their own limit.
+
 ## See a key
 
 A saved key or token is never drawn into a form. To read one, choose it and type your own password again (or the family's, while it is shared). It is shown once, on that page, and never put in the address bar. With no password on the web page, a key is shown to anyone who can reach it, which is one more reason to set one.
