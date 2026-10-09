@@ -2,6 +2,7 @@
 {% from "_ui.html" import icon, tag %}
 {% from "_wiki_nav.html" import nav_list %}
 {% block title %}{{ page_meta.title }} · Guide · {{ site_title }}{% endblock %}
+{% block body_class %}page-wiki{% endblock %}
 {# The guide (web/wiki.py): the project's own pages, for parents and admins. wiki_search.html fills the same frame with results. #}
 {% block content %}
   <div class="wiki">

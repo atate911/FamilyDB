@@ -320,13 +320,19 @@ The frame folds in order, keeping the focal element first and whole.
 
 - **Below about 1100 pixels** the rail moves under the main column, its sections in the same
   order, and the menu stays.
+- **On Home**, as the rail moves down, the to-dos come up under Next up, where the family looks for
+  them first: the page and the rail open and each part takes its place by its order (`.o1` the
+  box, `.o2` Next up, `.o3` the to-dos, then the rest).
 - **At 820 pixels and below** the page is one column under a top bar (the mark, the pill, the
   account) and over a tab bar of five (`--tabbar-total`), the current tab marked on its top edge.
-  The header is one line; the hero keeps its three rows, the box full width, Send with its word.
+  The hero keeps its rows, one above the other: her question, who is asking, the box on a line of
+  its own, then the mic and a wide, lit Send with its word, in the thumb's reach. Chat's
+  conversations and the guide's sections have their phone places in the page (a row of pills, a
+  Sections button), so the rail's copies are not drawn there.
 - **Nothing scrolls sideways** at 390 or 320 pixels, except a row of conversation pills. Labels
   that shorten keep the long one as the control's name.
 
-This is the part least tried in the mockups; check every page at 390 and 320 pixels.
+Every page is checked at 390 and 320 pixels in Phosphor, Kitchen Table and Ink.
 
 ## Page by page
 
@@ -459,8 +465,6 @@ knows, Status, Settings or Family, and no version in her footer.
 
 ## Still open
 
-- **Narrow screens** in the new frame are written above but not yet drawn; they are the next thing
-  to try.
 - **The paper looks** (Kitchen Table, Ink and the rest) have been checked on Home only.
 - **Everyone.** An owner mark for a plan that is everyone's shows all of them stacked. Showing no
   mark for the usual case is worth trying once a page has many such rows.
