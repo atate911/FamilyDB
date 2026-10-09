@@ -28,7 +28,7 @@
     </section>
   {% endif %}
 
-  <div class="idea-grid mt-4">
+  <div class="stack mt-4">
     <form class="card form form--tight" method="post" action="{{ url_for('family.change', member_id=person.id) }}" aria-labelledby="h-prof">
       <h2 class="card__head" id="h-prof">About {{ person.name }}</h2>
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
@@ -61,10 +61,13 @@
       <p class="small muted">Switching somebody off keeps everything they ever said and did; {{ assistant }} just stops answering them, including anything they sent that is still waiting.</p>
       <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}Save</button><a class="linkbtn" href="{{ url_for('family.show') }}">Cancel</a></div>
     </form>
+  </div>
+{% endblock %}
 
-    <div class="aside-stack">
-      <section class="card" id="signing-in" aria-labelledby="h-si">
-        <h2 class="card__head" id="h-si">{{ icon('lock') }}Signing in to this page</h2>
+{# The rail: this person's password and what their role may do. #}
+{% block rail %}
+      <section class="rail__sec" id="signing-in" aria-labelledby="h-si">
+        <div class="rail__head"><h2 class="overline" id="h-si">Signing in to this page</h2></div>
         {% if not personal %}
           <p class="small">Everybody signs in with the family password for now. <a href="{{ url_for('family.you') }}">Choose your own password first</a>, as an admin; then you can give everybody else a starting password here.</p>
         {% elif mine %}
@@ -92,8 +95,8 @@
       </section>
 
       {# A link that links their Telegram to them: shown once, since only a hash of it is kept. #}
-      <section class="card" id="telegram-link" aria-labelledby="h-tl">
-        <h2 class="card__head" id="h-tl">{{ icon('send') }}Linking their Telegram</h2>
+      <section class="rail__sec" id="telegram-link" aria-labelledby="h-tl">
+        <div class="rail__head"><h2 class="overline" id="h-tl">Linking their Telegram</h2></div>
         {% if not person.active %}
           <p class="small">Switched off, so there is nothing to link.</p>
         {% elif bot %}
@@ -112,8 +115,8 @@
 
       {# Folded, red, behind a tick box. Never yourself: another admin takes you off, so nobody locks themselves out. #}
       {% if not mine %}
-        <details class="card fold fold--danger" id="remove">
-          <summary><h2>Take {{ person.name }} off the list for good</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+        <details class="rail__sec fold fold--danger" id="remove">
+          <summary><h2 class="rail__q">Take {{ person.name }} off the list for good</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
           <form class="fold__body" method="post" action="{{ url_for('family.remove', member_id=person.id) }}">
             <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="revision" value="{{ person.revision }}" />
             <p class="small">Their name, how they sign in, their Telegram link, where they last were, what {{ assistant }} remembers about them and, for a kid, her wish lists are deleted. Their open things to do and reminders are canceled, in their own chat and wherever they asked for one outside a group. What they said stays in the chat without their name, so conversations still read, and the ideas, plans and group things to do they added stay, as the family’s. This can’t be undone: to stop {{ assistant }} answering them for now, switch them off instead.</p>
@@ -122,6 +125,4 @@
           </form>
         </details>
       {% endif %}
-    </div>
-  </div>
 {% endblock %}

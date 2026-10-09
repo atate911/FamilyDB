@@ -210,6 +210,7 @@ def home() -> Response | str:
         hello=views.greeting(now.astimezone(tz).hour, visitor.name),
         today=views.day_text(today.isoformat()),
         line=line,
+        summary=views.home_summary(coming, len(todo), late, todo_href=url_for("web.tasks")),
         coming=coming[:HOME_PLANS],
         more_plans=max(0, len(coming) - HOME_PLANS),
         source=seen.source,

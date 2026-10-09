@@ -365,7 +365,7 @@ def test_a_look_may_only_add_effects_of_the_allowed_kinds() -> None:
     blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
     names = ("--fx-page", "--fx-scan", "--fx-glow", "--fx-title", "--fx-title-adjust")
     assert set(names) <= set(shared)  # every look has all five, plain unless it says otherwise
-    faces = {"VT323", "Fraunces", "Georgia", "serif"}
+    faces = {"VT323", "Saira", "Arial Narrow", "Arial", "sans-serif"}
     for key, body in blocks.items():
         got = {
             **{n: shared[n] for n in names},

@@ -4,7 +4,7 @@
 {% block content %}
   {{ page_head(what | capitalize, when, crumb=('What the models were sent and said', url_for('troubleshooting.texts'))) }}
 
-  <div class="list-grid mt-4">
+  <div class="stack mt-4">
     <div class="stack">
       {% if failed %}
         <section class="card" aria-labelledby="h-error">
@@ -35,10 +35,13 @@
         </section>
       {% endif %}
     </div>
+  </div>
+{% endblock %}
 
-    <div class="aside-stack">
-      <section class="card" aria-labelledby="h-facts">
-        <h2 class="card__head" id="h-facts">{{ icon('info') }}The call</h2>
+{# The rail: about this call. #}
+{% block rail %}
+      <section class="rail__sec" aria-labelledby="h-facts">
+        <div class="rail__head"><h2 class="overline" id="h-facts">The call</h2></div>
         <dl class="kv kv--stack">
           <dt>Model</dt><dd><span class="code">{{ call.model }}</span>{% if call.provider %} ({{ call.provider }}){% endif %}</dd>
           <dt>Step</dt><dd>{{ call.iteration }}</dd>
@@ -48,6 +51,4 @@
         {% if activity %}<p class="mt-3"><a href="{{ url_for('activity.show', key=activity) }}">The whole message, start to finish{{ icon('chev', size='sm') }}</a></p>{% endif %}
       </section>
       <p class="note">{{ icon('lock') }}<span>Only an admin sees this page: it holds the family’s own words.</span></p>
-    </div>
-  </div>
 {% endblock %}

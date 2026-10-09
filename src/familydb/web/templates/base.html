@@ -9,8 +9,7 @@
     {% for media, color in look_colours %}<meta name="theme-color" content="{{ color }}"{% if media %} media="{{ media }}"{% endif %} />
     {% endfor %}
     <title>{% block title %}{{ site_title }}{% endblock %}</title>
-    <link rel="preload" href="{{ url_for('static', filename='fonts/atkinson-400.woff2') }}" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="{{ url_for('static', filename='fonts/fraunces-soft-600.woff2') }}" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="{{ url_for('static', filename='fonts/saira.woff2') }}" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='themes.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='themes-fallback.css') }}" />
@@ -107,7 +106,7 @@
                 {{ nav_item('Status', url_for('web.status'), 'status', 'pulse') }}
                 {{ nav_item('Guide', url_for('wiki.home'), 'wiki', 'info') }}
                 {% if managing %}
-                  {{ nav_item('Settings', url_for('settings.show'), 'settings', 'sliders', count=(badge('quiet', shell.check, 'to check') if shell.check else none)) }}
+                  {{ nav_item('Settings', url_for('settings.show'), 'settings', 'sliders', count=(badge('look', shell.check, 'to check') if shell.check else none)) }}
                   {{ nav_item('Family', url_for('family.show'), 'family', 'people') }}
                 {% endif %}
               </ul>
@@ -132,12 +131,21 @@
       </aside>
 
       <main class="main" id="main">
-        <div class="wrap">
-          {# What the last form said; the settings page keeps its own under another name. #}
-          {% set undoing = get_flashed_messages(category_filter=['undo']) %}
-          {% for said in get_flashed_messages(category_filter=['edit']) %}{{ flash(said, undo=undoing[-1] if loop.last and undoing else none, back=request.full_path.rstrip('?')) }}{% endfor %}
-          {% block content %}{% endblock %}
+        {# The main column, and the rail beside it: what supports the page (docs/STYLE.md, "The frame"). A page
+           fills the rail with its `rail` block; with nothing in it the column stays, empty, so every page's
+           main column starts at the same edge. #}
+        <div class="frame">
+          <div class="wrap">
+            {# What the last form said; the settings page keeps its own under another name. #}
+            {% set undoing = get_flashed_messages(category_filter=['undo']) %}
+            {% for said in get_flashed_messages(category_filter=['edit']) %}{{ flash(said, undo=undoing[-1] if loop.last and undoing else none, back=request.full_path.rstrip('?')) }}{% endfor %}
+            {% block content %}{% endblock %}
+          </div>
+          {% set rail = self.rail() | trim %}
+          {% if rail %}<aside class="rail" aria-label="Beside this page">{{ rail }}</aside>{% else %}<div class="rail"></div>{% endif %}
         </div>
+        {# Defined here so `self.rail()` above can ask for it; drawn only there. #}
+        {% if false %}{% block rail %}{% endblock %}{% endif %}
         <footer class="foot">
           <p class="foot__line">{{ brand_mark('xs') }}A little less planning. A little more together.</p>
           <p class="foot__legal">{{ footer }}</p>

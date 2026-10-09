@@ -17,7 +17,7 @@
   {% endif %}
   {% if error %}<div class="banner banner--alert" role="alert"><span class="banner__ic">{{ icon('alert') }}</span><div class="banner__text"><p>{{ error }}</p></div></div>{% endif %}
 
-  <div class="idea-grid mt-4">
+  <div class="stack mt-4">
     {% if visitor().member %}
       <section class="card" id="password" aria-labelledby="h-change">
         <h2 class="card__head" id="h-change">{% if first %}<span class="sr">Your new password</span>{% else %}{{ icon('lock') }}Change your password{% endif %}</h2>
@@ -52,8 +52,12 @@
       </section>
       <script src="{{ url_for('static', filename='push.js') }}" defer></script>
     {% endif %}
-    <aside class="aside-stack" aria-label="Good to know">
-      <section class="card" aria-labelledby="h-tips"><h2 class="card__head" id="h-tips">Good to know</h2>
+  </div>
+{% endblock %}
+
+{# The rail: good to know about passwords. #}
+{% block rail %}
+      <section class="rail__sec" aria-labelledby="h-tips"><div class="rail__head"><h2 class="overline" id="h-tips">Good to know</h2></div>
         <ul class="tips">
           <li>At least {{ own.least }} characters. A short sentence is easy to remember{{ '' if kid else ' and hard to guess' }}, like <em>pancakes on sunday mornings</em>.</li>
           {% if not kid %}<li>Each phone and computer stays signed in for a while, so you won’t type it often.</li>{% endif %}
@@ -61,6 +65,4 @@
           {% else %}<li>Forgotten it? An admin can make you a new starting password on the Family page. If you are the only admin, whoever looks after the server can, with <code>sudo /opt/familydb/scripts/maintain.sh password</code>.</li>{% endif %}
         </ul>
       </section>
-    </aside>
-  </div>
 {% endblock %}

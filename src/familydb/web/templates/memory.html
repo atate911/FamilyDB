@@ -4,10 +4,10 @@
 {# What she has been told about the family: a must is weighed as a rule, a guess only leans. Forgetting keeps the words, marked, so they are never saved again; the forms are edits.py's, through `remember`. #}
 {% block content %}
   {% call page_head('What ' ~ assistant ~ ' knows', 'What the family has told ' ~ assistant ~ ' about itself, weighed whenever it bears on a question. Forget something here and it doesn’t come back from what was said before.') %}
-    {% if visitor().may('change') %}<a class="btn btn--primary" href="#tell">{{ icon('plus') }}Tell {{ assistant }} something</a>{% endif %}
+    {% if visitor().may('change') %}<a class="btn btn--quiet" href="#tell">{{ icon('plus') }}Tell {{ assistant }} something</a>{% endif %}
   {% endcall %}
 
-  <div class="list-grid mt-4">
+  <div class="stack mt-4">
     <div class="stack">
       {% for group in groups %}
         <section class="card mem-group" aria-labelledby="mg-{{ loop.index }}">
@@ -39,11 +39,14 @@
         <p class="empty">{{ icon('memory') }}<span>Nothing yet. Tell {{ assistant }} something that matters, like “the girls are vegetarian now” or “Sam can’t do long drives”, and it is kept here.</span></p>
       {% endfor %}
     </div>
+  </div>
+{% endblock %}
 
-    <div class="aside-stack">
+{# The rail: telling her something to keep, and how she weighs what she knows. #}
+{% block rail %}
       {% if visitor().may('change') %}
-        <section class="card" id="tell" aria-labelledby="h-tell">
-          <h2 class="card__head" id="h-tell">Tell {{ assistant }} something to remember</h2>
+        <section class="rail__sec" id="tell" aria-labelledby="h-tell">
+          <div class="rail__head"><h2 class="overline" id="h-tell">Tell {{ assistant }}</h2></div>
           <form class="form form--tight" method="post" action="{{ url_for('edits.add_memory') }}">
             <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
             <div class="field"><label class="field__label" for="m-fact">What to remember</label>
@@ -60,8 +63,8 @@
           </form>
         </section>
       {% endif %}
-      <section class="card" aria-labelledby="h-how">
-        <h2 class="card__head" id="h-how">How {{ assistant }} weighs these</h2>
+      <section class="rail__sec" aria-labelledby="h-how">
+        <div class="rail__head"><h2 class="overline" id="h-how">How she weighs it</h2></div>
         <ul class="legend-list">
           <li><span class="tag tag--firm">Must</span><span>A rule: she never suggests against it.</span></li>
           <li><span class="tag tag--off">A guess</span><span>Something she noticed herself. It only leans.</span></li>
@@ -69,8 +72,8 @@
         </ul>
       </section>
       {% if forgotten %}
-        <details class="card fold" id="forgotten">
-          <summary><h2>{{ icon('undo') }}Forgotten <span class="n-quiet">{{ forgotten | length }}</span></h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+        <details class="rail__sec fold" id="forgotten">
+          <summary><h2 class="overline">Forgotten <span class="n-quiet">{{ forgotten | length }}</span></h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
           <div class="fold__body">
             <p class="small muted">Not saved again from anything said before it was forgotten. To have one remembered after all, add it again.</p>
             <ul class="mems mems--gone">
@@ -81,6 +84,4 @@
           </div>
         </details>
       {% endif %}
-    </div>
-  </div>
 {% endblock %}

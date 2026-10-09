@@ -285,7 +285,7 @@ def test_an_all_day_plan_keeps_only_the_date(planning, conn) -> None:
 def test_without_a_calendar_plans_are_kept_here_by_hand(page, conn):
     """No Google Calendar: the plan forms are there and FamilyDB keeps the plan, saying so."""
     text = page.get("/plans").text
-    assert "Add something to the plans" in text and "Add it to the plans" in text
+    assert "Add a plan" in text and "Add it to the plans" in text
     assert "isn\u2019t connected, so plans are kept here only" in text
     page.post(
         "/plans/new",

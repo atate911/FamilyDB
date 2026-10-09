@@ -28,7 +28,7 @@
               {%- if locked %} disabled{% endif %}>{{ typed or '' }}</textarea>
     {# Where dictate.js puts the mic, beside Send; empty without it. #}
     <span class="mic-slot" id="ask-mic"></span>
-    <button class="btn{{ ' btn--primary' if on_chat }} composer__send" type="submit" {{ 'disabled' if locked or not family }}>{{ icon('send') }}<span class="lbl">Send</span></button>
+    <button class="btn composer__send" type="submit" {{ 'disabled' if locked or not family }}>{{ icon('send') }}<span class="lbl">Send</span></button>
   </div>
   {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. #}
   <div class="{{ 'composer__foot' if on_chat else 'composer__who' }}" id="locate" hidden>

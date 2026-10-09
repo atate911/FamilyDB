@@ -8,7 +8,7 @@
   {% endcall %}
   {{ told(said, error) }}
 
-  <div class="settings-grid">
+  <div class="stack">
     <ul class="slist">
       {% for entry in sections %}
         {% set one = entry.section %}
@@ -20,20 +20,22 @@
           <span class="srow__go">{{ icon('chev', size='sm') }}</span></a></li>
       {% endfor %}
     </ul>
-    <aside class="aside-stack" aria-label="About this page">
-      <section class="card" aria-labelledby="h-setup">
-        <h2 id="h-setup" class="card__head">Setting up</h2>
+  </div>
+{% endblock %}
+
+{# The rail: setting up, and how to read this list. #}
+{% block rail %}
+      <section class="rail__sec" aria-labelledby="h-setup">
+        <div class="rail__head"><h2 id="h-setup" class="overline">Setting up</h2></div>
         <p>Setting up for the first time, or starting again? Setup goes through what matters most, one step at a time.</p>
         <div class="actions"><a class="btn btn--quiet btn--sm" href="{{ url_for('setup.overview') }}">Open setup</a></div>
       </section>
-      <section class="card" aria-labelledby="h-key">
-        <h2 id="h-key" class="card__head">Reading this list</h2>
+      <section class="rail__sec" aria-labelledby="h-key">
+        <div class="rail__head"><h2 id="h-key" class="overline">Reading this list</h2></div>
         <ul class="key">
           <li><span class="tag tag--look">{{ icon('alert') }}Needs a look</span>Something is missing that it needs.</li>
           <li><span class="tag tag--off">{{ icon('offc') }}Off</span>Switched off on purpose. Turn it on any time.</li>
           <li>No tag means it’s set up.</li>
         </ul>
       </section>
-    </aside>
-  </div>
 {% endblock %}

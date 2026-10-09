@@ -503,14 +503,15 @@ def test_a_parent_moves_between_conversations_and_never_reads_a_kids_words_on_th
         messages.mark_processed(conn, said.id, [], now="2026-09-20T20:00:01Z")
     client = _client(settings, clock)
     page = client.get("/chat").text
-    nav = re.search(r'<nav class="convos".*?</nav>', page, re.S).group(0)
+    nav = re.search(r'<nav class="convos convos--rail".*?</nav>', page, re.S).group(0)
     assert "Family" in nav and "the girls" in nav and "The kids\u2019 conversations" in nav
     assert "a secret wish" not in page  # when she last wrote, not what
     assert f'href="/chat?with={family["girls"].id}#latest"' in nav
     hers = client.get(f"/chat?with={family['girls'].id}").text
     assert "a secret wish" in hers and "Her own conversation, for you to read" in hers
     assert '<form class="composer"' not in hers  # a parent only reads
-    assert 'aria-current="page"' in re.search(r'<nav class="convos".*?</nav>', hers, re.S).group(0)
+    rail = re.search(r'<nav class="convos convos--rail".*?</nav>', hers, re.S).group(0)
+    assert 'aria-current="page"' in rail
 
 
 def test_what_a_turn_did_is_said_in_words_and_looking_things_up_is_not_said() -> None:
@@ -531,7 +532,7 @@ def test_the_chat_link_counts_what_she_said_since_this_browser_looked(settings, 
     """Somebody who uses only the page had no way to know she had written: the Chat link says
     "2 new" until the chat is opened. Kept in this browser's session, no write."""
     client = _client(settings, clock)
-    badge = re.compile(r'class="badge badge--act">(\d+) new<')
+    badge = re.compile(r'class="badge badge--act" title="(\d+) new"')
     assert badge.search(client.get("/").text) is None  # a new browser starts from now
     with closing(db.connect(settings.familydb_path)) as conn, db.transaction(conn):
         for words in ("Reminder: bins out.", "Reminder: call the plumber."):

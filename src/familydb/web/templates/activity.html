@@ -7,7 +7,7 @@
     <div><p class="overline">One message, start to finish</p><h1>{{ title }}</h1><p class="lede">{{ when }}</p></div>
   </div>
 
-  <div class="list-grid mt-4">
+  <div class="stack mt-4">
     <div class="stack">
       {% if asked %}
         <section class="card" aria-labelledby="h-asked">
@@ -88,11 +88,14 @@
         </section>
       {% endif %}
     </div>
+  </div>
+{% endblock %}
 
-    <div class="aside-stack">
+{# The rail: what this message cost and what it touched. #}
+{% block rail %}
       {% for one in found %}
-        <section class="card" aria-labelledby="h-found-{{ loop.index }}">
-          <h2 class="card__head" id="h-found-{{ loop.index }}">{{ icon('search') }}What the lookup found</h2>
+        <section class="rail__sec" aria-labelledby="h-found-{{ loop.index }}">
+          <div class="rail__head"><h2 class="overline" id="h-found-{{ loop.index }}">What the lookup found</h2></div>
           {% if one.skipped %}
             <p>Nothing saved{% if one.idea_id %} for <a href="{{ url_for('web.idea', idea_id=one.idea_id) }}">#{{ one.idea_id }}</a>{% endif %}: {{ one.skipped }}</p>
           {% else %}
@@ -118,6 +121,4 @@
         </section>
       {% endfor %}
       <p class="note">{{ icon('lock') }}Only an admin sees this page: it holds the family’s own words.</p>
-    </div>
-  </div>
 {% endblock %}

@@ -31,8 +31,9 @@ def test_the_new_files_are_served(client) -> None:
         "brand/favicon-16.png",
         "brand/apple-touch-icon.png",
         "brand/icon-512.png",
-        "fonts/atkinson-400.woff2",
-        "fonts/fraunces-soft-600.woff2",
+        "fonts/saira.woff2",
+        "fonts/jetbrains-mono-400.woff2",
+        "fonts/jetbrains-mono-700.woff2",
     ):
         assert client.get(f"/static/{name}").status_code == 200, name
 

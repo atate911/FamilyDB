@@ -15,10 +15,15 @@
   {% endcall %}
   {{ told(said, error) }}
 
-  <div class="settings-layout">
-    {{ settings_nav(sections, section.name) }}
-    <div class="settings-body">
-      {% include "settings/" ~ section.name ~ ".html" %}
-    </div>
+  <div class="settings-body">
+    {% include "settings/" ~ section.name ~ ".html" %}
   </div>
+{% endblock %}
+
+{# The rail: every other settings page, the way between them. #}
+{% block rail %}
+  <section class="rail__sec">
+    <div class="rail__head"><h2 class="overline">Settings</h2></div>
+    {{ settings_nav(sections, section.name) }}
+  </section>
 {% endblock %}

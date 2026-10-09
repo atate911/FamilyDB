@@ -659,6 +659,30 @@ def home_line(
     return parts
 
 
+def home_summary(
+    coming: Sequence[dict[str, Any]], open_count: int, late: int, *, todo_href: str
+) -> list[dict[str, str | None]]:
+    """A grown-up's quiet line under the day: how things stand, without repeating Next up. "5 to-dos
+    open, 1 late · next plan in 2 days". What is late is a link to the to-dos (docs/STYLE.md,
+    "The page header")."""
+    parts: list[dict[str, str | None]] = []
+    if open_count:
+        noun = "to-do" if open_count == 1 else "to-dos"
+        parts.append({"text": f"{open_count} {noun} open", "href": None})
+        if late:
+            parts.append({"text": ", ", "href": None})
+            parts.append({"text": f"{late} late", "href": todo_href})
+    else:
+        parts.append({"text": "Nothing to do", "href": None})
+    plan = coming[0] if coming else None
+    if plan:
+        nxt = f"next plan {plan['relative']}" if plan["relative"] else f"next plan {plan['when']}"
+    else:
+        nxt = "nothing planned yet"
+    parts.append({"text": " · " + nxt, "href": None})
+    return parts
+
+
 # Ways to start, under the box on Home and in an empty chat; never asked of a model.
 WEEKEND_QUESTION = "What should we do this weekend?"
 TODAY_QUESTION = "What should we do today?"
