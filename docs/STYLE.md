@@ -180,14 +180,17 @@ its unit by a no-break space ("18 min").
   steps are the same values). Nothing on the page is spaced by anything else.
 - **One card padding**: 24 on every side. Between cards in a column, 24. Inside a row, 8 between
   its lead, body and trail.
-- **Two radii**: 8 for rows, boxes, tiles, fields and buttons; 16 for cards and the hero. A
-  checkbox is 4. Round means a person (an owner mark), which is why the checkbox is square.
+- **Two radii**: 8 for rows, boxes, tiles and fields; 16 for cards and the hero. A checkbox is 4.
+  A button that stands alone, a tag and the health pill are pills; a button beside a box (Send, the
+  mic) takes the box's 8, so the row reads as one piece. Round means a person (an owner mark),
+  which is why the checkbox is square.
 - **Controls**: a primary button 48 high; every other control 44 (a select, a secondary button, a
   field). The hero's box is at least 88 high.
 - **Targets** are 44 by 44 or more. A mark that is drawn smaller (the 16-pixel checkbox, a 20-pixel
   owner mark that opens something) is given a 44-pixel hit area around it, never a 16-pixel one.
-- **Hairlines** are 1 pixel in `--line`, and decorative only: between rows, between rail sections,
-  under the page header, between the side columns and the main column.
+- **Hairlines** are 1 pixel in `--line`, and decorative only: under the page header, under every
+  section title, between rows, between rail sections, between the side columns and the main
+  column.
 
 ## Color and light
 
@@ -245,7 +248,10 @@ template builds one by hand. Person classes are slots (`.p0` to `.p8`), never na
   this message" at the left, where it goes ("Goes to the family chat.") at the right. The whole
   card has a faint halo. Chat's box is the same part.
 - **Card** (`.card`): padding 24, radius 16, a hairline edge; a head of an icon and a heading, with
-  "All plans ›" at its right. Cards live in the main column.
+  "All plans ›" at its right, and a hairline under the head. Cards live in the main column.
+- **Section title**: every section opens with its title and a hairline under it, in the main
+  column (a card's heading, 16 below it) and in the rail (the caps label, 8 below it). The line is
+  what makes a section start, so nothing else (a fill, a box, a bigger size) is needed to.
 - **Row** (`.item`, `.todo`): lead · body · trail. The lead is a date tile, a checkbox or an icon
   tile. The body is the title (words, 700 in the main column, 400 in the rail) and **one** detail
   line in ink-2. The trail is the owner mark and, where the row opens something, a chevron; the
@@ -262,12 +268,13 @@ template builds one by hand. Person classes are slots (`.p0` to `.p8`), never na
   "Mark done: …", with a 44-pixel hit area.
 - **Owner mark** (`.who`): a 20-pixel circle in the person's color with their initial. Several
   people overlap, three shown and then "+N". The names are its accessible name and its tooltip.
-- **Count dot** (`.badge` in the menu): a 20-pixel amber circle with the number, at the item's
-  right edge. Its accessible name is the words ("2 to check").
+- **Count dot** (`.badge`): a 20-pixel circle with the number, at the item's right edge: red when
+  late, amber when it needs a look or a decision, neutral for a gentle count ("2 to rate"). Its
+  words ("2 to check") are said to a screen reader and shown on hover.
 - **State tag** (`.tag`): a short label in capitals on its signal's wash: Working, Ready, Needs a
   look, Off, Planned. A tag is a word or two; anything longer is a sentence beside it.
-- **Buttons**: primary (filled, 48, one a page), secondary (an outline, 44), text links with a
-  chevron ("All plans ›"). Dangerous is red, and only for what cannot be taken back, folded behind
+- **Buttons**: primary (a filled pill, 48, one a page), secondary (an outline pill, 44), text
+  links with a chevron ("All plans ›"). Dangerous is red, and only for what cannot be taken back, folded behind
   a first step.
 - **Fields**: a caps label above, the box (44 high, `--edge`, 8 corners), a hint below in ink-2,
   an error above the box in red. "Optional" is part of the label's own words, in its own style.
