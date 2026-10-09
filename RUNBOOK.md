@@ -283,11 +283,11 @@ familydb health                            # the same, without the page (exit 1 
 
 ## 11. Settings, and choosing OpenAI, Claude or Gemini
 
-Every setting here can be changed in `.env` (restart needed) or on `/settings` (no restart). A value set on the page wins; empty its box and `.env` applies again (the grayed value in an empty box shows it; a dropdown says "Default (Thursday)"); a box set on the page is marked "changed". `familydb config` prints the lot and where each came from. `/settings` is a card to each part, saying how it stands and marking what needs a look: General (home, time zone, units, the page's name), AI model (company, key, checked with the company for free, models), Spending, Messages (what is sent unasked, and when), Lookups, Personality and family, Connections (Telegram, Google Calendar), Sign-in and security, What has changed. Each page has one Save; fine-tuning is folded.
+Every setting here can be changed in `.env` (restart needed) or on `/settings` (no restart). A value set on the page wins; empty its box and `.env` applies again (the grayed value in an empty box shows it; a dropdown says "Default (Thursday)"); a box set on the page is marked "changed". `familydb config` prints the lot and where each came from. `/settings` is a card to each part, saying how it stands and marking what needs a look: General (home, time zone, units, the page's name), AI model (which model does what, what it costs, who stands in, the keys), Spending, Messages (what is sent unasked, and when), Lookups, Personality and family, Connections (Telegram, Google Calendar), Sign-in and security, What has changed. Each page has one Save; fine-tuning is folded.
 
 A change reaches the next message and page at once, a new Telegram token within seconds, the timezone at once. Scheduled jobs (digest, follow-ups, evening check, nudges, lookups, retries) pick up a new time or interval within five minutes, hours in the family's timezone.
 
-**Who answers.** Chosen per surface:
+**Who answers.** What a use falls back to when the AI model page has no choice for it, per surface:
 
 ```
 PROVIDER=openai            # openai, anthropic or gemini: who writes the replies the family reads
@@ -295,7 +295,7 @@ WORKER_PROVIDER=           # empty means the same; set it to send lookups elsewh
 PROVIDER_FALLBACK=true     # ask another one when the first cannot take a message
 ```
 
-`OPENAI_API_KEY`, `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` sit side by side; the ones not chosen are spares.
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` sit side by side; the ones not chosen are spares. A company's own page settings (let it answer, may stand in, a monthly limit) lay over `PROVIDER_FALLBACK`.
 
 **How strong.** Each company's models are known by level (`src/familydb/agent/providers/catalog.py`); US$ per million tokens in / out, as published September 2026 (Google has said its Flash prices double on January 1, 2027):
 
@@ -305,7 +305,7 @@ PROVIDER_FALLBACK=true     # ask another one when the first cannot take a messag
 | better | GPT-6 Sol, $2 / $10 | Claude Sonnet 5, $2 / $10 | Gemini 3.8 Flash, $0.75 / $3.75 |
 | best | GPT-6 Astra, $10 / $50 | Claude Opus 5, $5 / $25 | Gemini 3.1 Pro, $2 / $12 |
 
-Everything answers at `everyday` unless chosen otherwise, per situation ("How strong a model answers", AI model page):
+Everything answers at `everyday` unless chosen otherwise. Each of eight uses (answering the family, the weekend digest, choosing suggestions, looking things up, what is on near home, voice notes, photos, weighing changes) has its own company and model, chosen on the rows of the AI model page (`model_choices` in the settings: `<company>:<model>`, `same:<use>` or `off`). A use nobody chose for is answered as the older settings say, which an install that never opens the page keeps doing:
 
 ```
 CHAT_LEVEL=everyday        # answering the family, and answering again after a failure
@@ -313,7 +313,7 @@ DIGEST_LEVEL=everyday      # the weekend digest, retries included: once a week, 
 LOOKUP_LEVEL=everyday      # looking ideas up and searching for what is on
 ```
 
-A level, not a model name, holds on whichever company answers, including after a fallback. A level up never uses a model cheaper than everyday: if the everyday model already costs more than the table's (Claude Opus 5, say) or has no price listed, better and best answer with it too. Each level's box says which model it means for the company answering now, and its cost. A situation on a stronger model than chat has a prompt cache of its own, written on first use.
+A level, not a model name, holds on whichever company stands in, including after a fallback: a stand-in answers at the strength of the model chosen. A level up never uses a model cheaper than everyday: if the everyday model already costs more than the table's (Claude Opus 5, say) or has no price listed, better and best answer with it too. Each row of the page says which model its default is, and what it costs. A situation on a stronger model than chat has a prompt cache of its own, written on first use.
 
 `everyday` is each company's pair of models, chat and mechanical lookups, defaulting to its cheapest and settable to any name it offers:
 
@@ -326,7 +326,7 @@ GEMINI_MODEL=gemini-3.1-flash-lite
 GEMINI_WORKER_MODEL=gemini-3.1-flash-lite
 ```
 
-GPT-6 Luna is the default for chat and lookups: the cheapest capable model of the three companies, web search $10 per 1,000. Claude Haiku 4.5 answers without thinking first, so the thinking settings do nothing for it. A model line in `.env` decides everyday until emptied or a page box names another; an older `.env` may still name Claude Opus 5 or Gemini 2.5 Pro, and Opus 5 as everyday leaves nothing stronger for better and best. The page's model boxes suggest known models with level and price but take any name (`claude-fable-5-1`, `claude-opus-5-5`). On a changed name the page asks that company's model list (no tokens) and refuses only on a definite "no such model"; unreachable or keyless, the save goes through. `/status` and `familydb debug cost` print who answers each situation and on which model: the quickest check that a change took.
+GPT-6 Luna is the default for chat and lookups: the cheapest capable model of the three companies, web search $10 per 1,000. Claude Haiku 4.5 answers without thinking first, so the thinking settings do nothing for it. A model line in `.env` decides everyday until emptied or a page box names another; an older `.env` may still name Claude Opus 5 or Gemini 2.5 Pro, and Opus 5 as everyday leaves nothing stronger for better and best. A row's model list offers every model with a price and takes any name (`claude-fable-5-1`, `claude-opus-5-5`) under **Other…**. On a changed name the page asks that company's model list (no tokens) and refuses only on a definite "no such model"; unreachable or keyless, the save goes through. `/status` and `familydb debug cost` print who answers each situation and on which model: the quickest check that a change took.
 
 **Spending.** `DAILY_SPEND_LIMIT` ("Daily spending limit (US$)", Spending page) is $2.00 a day by default over the family's day in its timezone; 0 turns it off. It is checked before every model call (chat, lookup, discovery, digest, voice note). Once used up, chat says "I've reached today's spending limit ($2.00), so I'm stopping here until tomorrow." and lookups wait. A turn under way stops before its next call, so a day can end over by at most one call. The figure is an estimate from a price table; a model the table lacks is counted at $15 / $75 per million input / output tokens, dearer than any listed, so it errs towards stopping. It is not the bill: set a limit on the key in the provider's console too.
 

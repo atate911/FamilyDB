@@ -11,7 +11,7 @@ from typing import Any
 
 from familydb import alerts, happening, personas, presents, upkeep, whatsnew
 from familydb import model_watch as watch
-from familydb.agent import compose, gateway, providers
+from familydb.agent import compose, gateway, providers, uses
 from familydb.agent.providers import companies
 from familydb.agent.spending import spent_today
 from familydb.app import App
@@ -73,7 +73,7 @@ def models(app: App) -> list[dict[str, Any]]:
     rows = []
     for kind, what in SITUATIONS:
         provider, model = gateway.answering(app.settings, kind)
-        level = getattr(app.settings, gateway.spec(kind).level)
+        level = uses.resolve(app.settings, uses.use_of(kind).key).level
         keyed = provider.configured()
         able = gateway.can_ask(app.settings, kind)
         rows.append(
@@ -720,7 +720,7 @@ def model_watch(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
             views.judgement_row(one, tz, app.settings)
             for one in judgement_store.recent(conn, since=since)
         ],
-        "judging": app.settings.judgements,
+        "judging": uses.on(app.settings, "judge"),
     }
 
 

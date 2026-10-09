@@ -6,7 +6,7 @@ With no key for a model yet, the card warns that no weekend ideas are sent until
 
 ## Weekend ideas
 
-Once a week the assistant asks itself what the family should do at the weekend and sends the answer: one chat turn a week, which can be a few model calls. The model level for it is **The weekend digest** (`digest_level`) on [AI model](/wiki/controls/settings/ai-model#how-strong-a-model-answers).
+Once a week the assistant asks itself what the family should do at the weekend and sends the answer: one chat turn a week, which can be a few model calls. The model for it is the **The weekend digest** row on [AI model](/wiki/controls/settings/ai-model#what-does-what), which follows the chat's model unless you choose another.
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|

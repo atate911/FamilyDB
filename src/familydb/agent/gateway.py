@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from familydb import alerts
-from familydb.agent import compose, spending, transcript
+from familydb.agent import compose, spending, transcript, uses
 from familydb.agent.compose import Composed
 from familydb.agent.history import HistoryTurn
 from familydb.agent.loop import MessagesAPI, TurnResult, run_turn, worth_switching
@@ -26,6 +26,7 @@ from familydb.agent.providers import (
     Provider,
     Seen,
     Surface,
+    Withheld,
     fallback_for,
     for_surface,
     hearers,
@@ -222,6 +223,7 @@ def answering(
 ) -> tuple[Provider, str]:
     """Who answers this kind of call first, and with which model, without asking a model."""
     call = spec(kind)
+    settings = uses.overlay(settings, kind).settings
     provider = for_surface(settings, call.surface, api=api, web=call.web_searches is not None)
     return provider, model_at(provider, call.surface, getattr(settings, call.level))
 
@@ -229,6 +231,9 @@ def answering(
 def can_ask(settings: Settings, kind: str, api: MessagesAPI | None = None) -> bool:
     """Whether any model can take this kind of call: a key for the chosen one or for the spare."""
     call = spec(kind)
+    if not uses.on(settings, uses.use_of(kind).key):
+        return False
+    settings = uses.overlay(settings, kind).settings
     return ready(settings, call.surface, api=api, web=call.web_searches is not None)
 
 
@@ -276,11 +281,23 @@ def ask(
     """One turn of `kind`, run to its answer, every call recorded. `current` is the uncached turn
     (date, sender, message). An injected `api` (a test's fake) means no spare provider."""
     call = spec(kind)
+    # The settings as this use reads them, laid over once here and passed on whole; a stand-in
+    # answers at the level of the model the use was chosen to, not the setting's.
+    overlaid = uses.overlay(settings, kind)
+    level = (
+        overlaid.resolution.level if overlaid.resolution.explicit else getattr(settings, call.level)
+    )
+    settings = overlaid.settings
     web = call.web_searches is not None
     chosen = provider or for_surface(settings, call.surface, api=api, web=web)
     spare = fallback
     if spare is None and api is None:
         spare = fallback_for(settings, call.surface, chosen.name, web=web)
+    if spare is not None and spending.company_full(
+        ctx.conn, settings, ctx.clock.now(), chosen.name
+    ):
+        # The company's month is spent: it is not asked, and the loop goes to the stand-in.
+        chosen = Withheld(chosen)
     composed = build_request(
         kind,
         conn=ctx.conn,
@@ -295,7 +312,7 @@ def ask(
     return run_turn(
         provider=chosen,
         surface=call.surface,
-        level=getattr(settings, call.level),
+        level=level,
         fallback=spare,
         settings=settings,
         registry=registry,
@@ -323,6 +340,7 @@ def handed_back(call: CallSpec, result: TurnResult, tool: str | None = None) -> 
 
 def can_listen(settings: Settings, audio: Any = None) -> bool:
     """Whether any model can hear a voice note: one that can hear, with a key, is switched on."""
+    settings = uses.overlay(settings, LISTEN).settings
     return bool(hearers(settings, audio=audio))
 
 
@@ -337,6 +355,7 @@ def listen(
     api: Any = None,
 ) -> Heard:
     """Hear one recording, limit-checked and recorded; `hearers` order, next on failure."""
+    settings = uses.overlay(settings, LISTEN).settings
     candidates = hearers(settings, audio=api)
     if not candidates:
         raise AgentError("no model that can hear voice notes has a key", retryable=False)
@@ -360,6 +379,7 @@ def listen(
 
 def can_look(settings: Settings, api: Any = None) -> bool:
     """Whether any model can look at a photo: one with a key, which all three can."""
+    settings = uses.overlay(settings, LOOK).settings
     return bool(lookers(settings, api=api))
 
 
@@ -375,6 +395,7 @@ def look(
 ) -> Seen:
     """Write down what one photo shows (`prompts/look.md`), limit-checked and recorded;
     `providers.lookers` order, next on failure."""
+    settings = uses.overlay(settings, LOOK).settings
     candidates = lookers(settings, api=api)
     if not candidates:
         raise AgentError("no model that can look at photos has a key", retryable=False)
@@ -413,7 +434,13 @@ def _written_down(
     failure: AgentError | None = None
     for provider in candidates:
         model = model_of(provider)
-        held = spending.admit(conn, settings, clock.now(), estimate(provider, model))
+        try:
+            held = spending.admit(
+                conn, settings, clock.now(), estimate(provider, model), company=provider.name
+            )
+        except spending.CompanyLimitReached as exc:
+            failure = failure or exc  # the next company that may answer is asked
+            continue
         started = time.monotonic()
         try:
             written = request(provider)

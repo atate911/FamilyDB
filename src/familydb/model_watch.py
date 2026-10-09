@@ -22,7 +22,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from familydb import alerts
-from familydb.agent import gateway, providers
+from familydb.agent import gateway, providers, uses
 from familydb.agent.providers import catalog, companies, parts, prices
 from familydb.agent.providers.prices import Price
 from familydb.dates import utc_iso
@@ -309,17 +309,29 @@ def models_in_use(settings: Any) -> set[tuple[str, str]]:
     used: set[tuple[str, str]] = set()
     for kind in gateway.KINDS:
         call = gateway.spec(kind)
-        level = getattr(settings, call.level)
+        chosen = uses.overlay(settings, kind)
+        as_read = chosen.settings
+        # A stand-in answers at the level of the model chosen, as the loop does.
+        level = (
+            chosen.resolution.level if chosen.resolution.explicit else getattr(settings, call.level)
+        )
         web = call.web_searches is not None
-        primary = providers.for_surface(settings, call.surface, web=web)
-        used.add((primary.name, providers.model_at(primary, call.surface, level).lower()))
-        spare = providers.fallback_for(settings, call.surface, primary.name, web=web)
+        primary = providers.for_surface(as_read, call.surface, web=web)
+        used.add(
+            (
+                primary.name,
+                providers.model_at(primary, call.surface, getattr(as_read, call.level)).lower(),
+            )
+        )
+        spare = providers.fallback_for(as_read, call.surface, primary.name, web=web)
         if spare is not None:
             used.add((spare.name, providers.model_at(spare, call.surface, level).lower()))
-    for hearer in providers.hearers(settings):
+    heard = uses.overlay(settings, gateway.LISTEN).settings
+    for hearer in providers.hearers(heard):
         if hearer.listener():
             used.add((hearer.name, str(hearer.listener()).lower()))
-    for looker in providers.lookers(settings):
+    seen = uses.overlay(settings, gateway.LOOK).settings
+    for looker in providers.lookers(seen):
         if looker.viewer():
             used.add((looker.name, str(looker.viewer()).lower()))
     return used
@@ -661,19 +673,18 @@ def judged_replacements(conn: sqlite3.Connection) -> dict[str, str]:
 
 
 def uses_of(settings: Any, company: str, name: str) -> list[str]:
-    uses: list[str] = []
-    provider = providers.build(company, settings)
+    found: list[str] = []
     for kind in gateway.KINDS:
-        call = gateway.spec(kind)
-        if providers.model_at(provider, call.surface, getattr(settings, call.level)) == name:
-            uses.append(call.purpose)
-    for hearer in providers.hearers(settings):
+        provider, model = gateway.answering(settings, kind)
+        if provider.name == company and model == name:
+            found.append(gateway.spec(kind).purpose)
+    for hearer in providers.hearers(uses.overlay(settings, gateway.LISTEN).settings):
         if hearer.name == company and str(hearer.listener()).lower() == name:
-            uses.append(gateway.LISTEN_PURPOSE)
-    for looker in providers.lookers(settings):
+            found.append(gateway.LISTEN_PURPOSE)
+    for looker in providers.lookers(uses.overlay(settings, gateway.LOOK).settings):
         if looker.name == company and str(looker.viewer()).lower() == name:
-            uses.append(gateway.LOOK_PURPOSE)
-    return sorted(set(uses))
+            found.append(gateway.LOOK_PURPOSE)
+    return sorted(set(found))
 
 
 def _file_questions(
@@ -693,7 +704,7 @@ def _file_questions(
     """
     from familydb import judgement
 
-    if not settings.judgements:
+    if not uses.on(settings, "judge"):
         return
     today = now.date()
     at = utc_iso(now)

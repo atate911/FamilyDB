@@ -17,7 +17,7 @@ import sqlite3
 from collections.abc import Sequence
 from urllib.parse import urlsplit
 
-from familydb.agent import providers
+from familydb.agent import gateway
 from familydb.availability import web_tools_available
 from familydb.config import Settings
 from familydb.store import ideas, places
@@ -86,7 +86,7 @@ def find_places(
     ctx: ToolContext, context: Context, constraints: Constraints
 ) -> tuple[list[WebFind], str | None]:
     """Places found for the topic, each marked when already saved; a note when none could be."""
-    if not providers.ready(ctx.settings, "worker", api=ctx.api, web=True):
+    if not gateway.can_ask(ctx.settings, "places", api=ctx.api):
         return [], "place search waits for a model key"
     request = render_places_request(context, constraints, ctx.settings)
     found, note = search(

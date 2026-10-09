@@ -671,6 +671,17 @@ Kept on a home screen, the page opens full-screen, with the mark as its icon.
   per form, in a bar that stays in reach (`.save-bar`). Commands for the server sit on a plain
   well (`pre.cmd`), never on glass. What she sends unasked is a light each, filled or a ring,
   always beside On or Off.
+- **AI model** (`/settings/model`, `static/models.css`; why and how in `docs/MODELS_PAGE.md`). The
+  one settings page that is not boxes in cards: a table with a row for each thing she does
+  (`.mp-job`), a company dropdown, a model dropdown and the month's cost on each, and a card for
+  each company beside the last 30 days' cost as a daily chart (SVG attributes only; the content
+  policy allows no inline style). Rows open in place (a checkbox the stylesheet follows, so it opens
+  without the script) to a default, what she sees, thinking, a chart, a closed **Compare models** fold
+  and a closed fold of calls and notes. It departs from the conventions on purpose: controls in the
+  table are about 40 pixels, not 44, because eight rows of two dropdowns need the density (WCAG 2.2's
+  minimum target is 24); disclosure arrows lead a row so every fold on the page agrees; the header
+  leads with a figure and a sentence. A pending change is neutral (ink), never amber, which stays for
+  "set this up" such as a company with no key. Without the script a row is one dropdown of every model.
 - **Setting up.** Seven steps, each with a number or a tick and Done, Needed, Recommended or
   Optional; each step page has the steps along the top (`.setup-progress`), "Step 3 of 7 · about
   5 minutes", the form, and Back and Next at the foot. Google Calendar's step is three cards:

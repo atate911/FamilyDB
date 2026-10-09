@@ -45,7 +45,7 @@ A busy company, or the day's limit, stops the run and leaves the rest waiting. A
 
 ### Weekend ideas job
 
-It asks "what should we do this weekend?" through the chat pipeline as the admin who was added first, at `digest_level`. It is one chat turn, but the turn can call the suggestion engine and a web-searching discovery worker ([how it is answered](/wiki/behavior/suggestions)), so it can be several model calls. Its id carries the date, so a second run the same day sends nothing, and the retry job asks again after a failed turn.
+It asks "what should we do this weekend?" through the chat pipeline as the admin who was added first, at the strength and company of the **The weekend digest** row on [AI model](/wiki/controls/settings/ai-model#what-does-what). It is one chat turn, but the turn can call the suggestion engine and a web-searching discovery worker ([how it is answered](/wiki/behavior/suggestions)), so it can be several model calls. Its id carries the date, so a second run the same day sends nothing, and the retry job asks again after a failed turn.
 
 ### Follow-ups job
 

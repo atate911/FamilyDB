@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from familydb import happening, health, privacy
+from familydb.agent import uses
 from familydb.agent.providers import companies
 from familydb.app import App
 from familydb.availability import (
@@ -612,7 +613,8 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
             "Add one on the web page: its setup says where to get one",
         )
         return
-    chosen = settings.provider
+    # What the family chose for answering, on the AI model page, else what PROVIDER says.
+    chosen = uses.resolve(settings, "chat").company or settings.provider
     company = companies.get(chosen, settings)
     chosen_env = (
         company.env_name if company else ""
@@ -623,7 +625,7 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
         instead = [
             slug
             for slug in have
-            if (spare := companies.get(slug, settings)) is not None and spare.stands_in
+            if companies.get(slug, settings) is not None and companies.may_stand_in(slug, settings)
         ]
         if not instead:
             report.add(
@@ -717,9 +719,9 @@ def check_added_companies(app: App, report: Report, *, online: bool) -> None:
             continue
         role = (
             "answers the family"
-            if settings.provider == company.slug
+            if uses.resolve(settings, "chat").company == company.slug
             else "may stand in"
-            if company.stands_in
+            if companies.may_stand_in(company.slug, settings)
             else "is added and not used"
         )
         unpriced = [
