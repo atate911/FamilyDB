@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.4.0 — in progress
+## v0.4.0 — beta (2026-10-09)
 
 ### New since v0.3.1
 
