@@ -19,13 +19,11 @@ def test_every_page_class_the_stylesheet_names_is_one_a_template_sets() -> None:
     assert named - classes == set(), "the stylesheet names a page class no page wears"
 
 
-def test_a_quiet_count_on_the_current_item_reads_in_that_items_ink() -> None:
-    """--ink-3 was drawn for the page; on the current item's own fill it fell to 1.1 to 2:1 in six
-    looks. The item's ink (`--on-here`, held to 4.5:1 by test_look) is what it must wear."""
+def test_a_quiet_count_carries_its_own_ground() -> None:
+    """A count is a dot with its own fill, so it reads the same on the current item's faint fill as
+    on the page: --ink-2 on --paper-2, never the dim ink that fell to 1.1 to 2:1 on a fill."""
     css = (WEB / "static" / "style.css").read_text()
-    assert re.search(
-        r'\.nav a\[aria-current="page"\] \.badge--quiet \{ color: var\(--on-here\); \}', css
-    )
+    assert ".badge--quiet { background: var(--paper-2); color: var(--ink-2); }" in css
 
 
 def test_a_kids_line_about_who_reads_her_chat_stays_on_the_phone() -> None:

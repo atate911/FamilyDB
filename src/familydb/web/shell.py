@@ -16,6 +16,7 @@ from flask import session
 
 from familydb import personas, presents
 from familydb.app import App
+from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
@@ -52,6 +53,9 @@ class Frame:
     check: int = 0
     # Her messages in this visitor's page conversation since this browser last looked.
     unread: int = 0
+    # Everyone on the family list as marks (name, colour, letter), so a thing that is everyone's can
+    # show the family stacked rather than a word (docs/STYLE.md, "Owner mark").
+    family: tuple[dict[str, Any], ...] = ()
 
     @property
     def look_at(self) -> int:
@@ -93,12 +97,16 @@ def frame(app: App) -> Frame:
             check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
             pill = _pill(app, conn, visitor) if visitor.may("browse") else None
             unread = _unread(conn) if visitor.may("chat") else 0
+            family = tuple(
+                {"name": m.display_name, "slot": m.slot or 0, "initial": m.display_name[:1].upper()}
+                for m in member_store.list_all(conn)
+            )
     except sqlite3.OperationalError:
         # A database not yet migrated: the frame is drawn without counts, so a page that says
         # "not found" or "not yours" never fails itself.
         log.warning("the menu's counts could not be read", exc_info=True)
         return Frame(me)
-    return Frame(me, pill, late, decide, rate, check, unread)
+    return Frame(me, pill, late, decide, rate, check, unread, family)
 
 
 def _unread(conn: sqlite3.Connection) -> int:

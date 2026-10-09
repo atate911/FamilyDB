@@ -1,207 +1,214 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, tile, tag, avatar, badge, vera_screen, date_tile, people, todo, idea_mini with context %}
+{% from "_ui.html" import icon, tile, tag, avatar, badge, vera_screen, date_tile, who, todo, idea_mini with context %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-home{% endblock %}
+{# Home is the model for every page (docs/STYLE.md): the day above, the box to talk to her as the one thing that leads, what is next under it, and what supports it (to-dos, setting up, how a plan went, what she costs) in the rail. #}
 {% block content %}
   {# What this person sees: a grown-up the household, a kid only what is hers (docs/STYLE.md, "A kid's screen"). `grownup` comes from the frame. #}
   {% set first = coming[0] if coming else none %}
   {% set member = visitor().member %}
 
-  <div class="home-head">
-    <p class="home-head__hi">{{ hello }} <span aria-hidden="true">·</span> <span class="home-head__day">{{ today }}</span></p>
-    <p class="home-head__line">{% for part in line %}{% if part.href %}<a href="{{ part.href }}">{{ part.text }}</a>{% else %}{{ part.text }}{% endif %}{% endfor %}</p>
-  </div>
+  {# The day, and one quiet line of how things stand; a kid's line is her own sentence. #}
+  <header class="page-head page-head--day">
+    <div>
+      <p class="overline">{{ hello }}</p>
+      <p class="page-head__day">{{ today }}</p>
+      <p class="lede">{% for part in (summary if grownup else line) %}{% if part.href %}<a href="{{ part.href }}">{{ part.text }}</a>{% else %}{{ part.text }}{% endif %}{% endfor %}</p>
+    </div>
+  </header>
   {% if not talk %}<h1 class="sr">{{ site_title }}</h1>{% endif %}
 
-
-  <div class="home-grid mt-4">
-    <div class="stack">
-      {# Her box is the chat's own, so anything said here lands in the conversation. `talk` is none for a role that may not talk to her (familydb/roles.py). #}
-      {% if talk %}
-        <section class="ask o1" aria-labelledby="h-ask">
-          <div class="ask__head">{{ vera_screen('lg', 'busy' if busy else 'hello') }}<div><p class="ask__who">{{ assistant }}</p><h1 id="h-ask" class="ask__q"><label for="text">What’s on your mind?</label></h1></div></div>
-          {% include "_composer.html" %}
-          <p class="composer__foot{{ ' composer__foot--kid' if not grownup }} mt-3">
-            {%- if not grownup %}Goes to your own chat with {{ assistant }}{% if readers %}; {{ readers }} can read it{% endif %}.
-              {%- if left is not none %} {{ left }} message{{ '' if left == 1 else 's' }} left today.{% endif %}
-            {%- elif member %}Goes to the family chat as {{ member.display_name }}.
-            {%- else %}Goes to the family chat.{% endif -%}
-          </p>
-          {# How it stands: what she is doing, or the last thing she said for a day. Home never looks again by itself, so the box stays open. #}
-          {% if talk.state %}
-            <p class="ask__last"><span class="ask__last-by">{{ assistant }}</span> {{ talk.note }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
-          {% elif talk.line %}
-            <p class="ask__last"><span class="ask__last-by">{{ talk.line.who }}, {{ talk.line.when | figs }}</span> {{ talk.line.text | truncate(180, true, '…') }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
-          {% endif %}
-        </section>
-      {% endif %}
-
-      <section class="card o2" aria-labelledby="h-next">
-        <div class="card__head"><h2 id="h-next">{{ icon('cal') }}{{ 'Next up' if grownup else 'Next up for you' }}</h2><a class="more" href="{{ plans_url }}">All plans{{ icon('chev', size='sm') }}</a></div>
-        {% if first %}
-          <div class="next">
-            {{ date_tile(first.chip, first.on_today, 'lg') }}
-            <div>
-              {% if first.relative %}<div class="next__tags"><span class="tag tag--when">{{ icon('cal') }}{{ first.relative | capitalize }}</span></div>{% endif %}
-              <h3>{% if first.idea_id %}<a href="{{ url_for('web.idea', idea_id=first.idea_id) }}">{{ first.title }}</a>{% else %}{{ first.title }}{% endif %}</h3>
-              <div class="meta">
-                <span class="sr">{{ first.when | figs }}, </span>
-                {%- if first.time %}<span>{{ icon('clock') }}{{ first.time | figs }}</span>{% endif -%}
-                {%- if first.away %}<span>{{ icon('car') }}{{ first.away }}</span>{% endif -%}
-                {{ people(first.people, first.who) }}
-              </div>
-              {% if grownup %}<div class="next__acts"><a class="btn btn--quiet btn--sm" href="{{ url_for('web.plans_month', _anchor='d-' ~ first.day) if grownup else url_for('web.plans', _anchor='d-' ~ first.day) }}">See the plan</a></div>{% endif %}
-            </div>
-          </div>
-          {% if coming | length > 1 %}
-            <div class="soon{{ ' phone-hide' if grownup }}">
-              <h3 class="sr">{{ 'After that' if grownup else 'Coming up' }}</h3>
-              <ul class="items">
-                {% for entry in coming[1:] %}
-                  <li><a class="item" href="{{ url_for('web.plans_month', _anchor='d-' ~ entry.day) if grownup else url_for('web.plans', _anchor='d-' ~ entry.day) }}">
-                    {{ date_tile(entry.chip, entry.on_today, 'sm') }}
-                    <span><span class="item__title">{{ entry.title }}</span>
-                      <span class="meta"><span class="sr">{{ entry.when | figs }}, </span>
-                        {%- if entry.time %}<span>{{ entry.time | figs }}</span>{% endif -%}
-                        {%- if entry.away and grownup %}<span>{{ entry.away }}</span>{% endif -%}
-                        {{ people(entry.people, entry.who) }}</span></span>
-                    {{ icon('chev', cls='muted') }}</a></li>
-                {% endfor %}
-              </ul>
-            </div>
-          {% endif %}
-          {% if more_plans and grownup %}
-            <p class="card__foot phone-only"><a class="more" href="{{ plans_url }}">{{ more_plans }} more plan{{ '' if more_plans == 1 else 's' }}{{ icon('chev', size='sm') }}</a></p>
-          {% endif %}
-        {% else %}
-          <p class="empty">{{ icon('cal') }}<span>Nothing planned yet.
-            {%- if visitor().may('change') %} Pick an idea and put it on the calendar, or ask {{ assistant }} what fits this weekend.
-            {%- elif talk %} Ask {{ assistant }} what fits this weekend.{% endif %}</span></p>
+  <div class="stack">
+    {# Her box is the chat's own, so anything said here lands in the conversation. `talk` is none for a role that may not talk to her (familydb/roles.py). #}
+    {% if talk %}
+      <section class="ask o1" aria-labelledby="h-ask">
+        <div class="ask__head">{{ vera_screen('lg', 'busy' if busy else 'hello') }}<div><p class="ask__who">{{ assistant }}</p><h1 id="h-ask" class="ask__q"><label for="text">What’s on your mind?</label></h1></div></div>
+        {% include "_composer.html" %}
+        <p class="composer__foot{{ ' composer__foot--kid' if not grownup }}">
+          {%- if not grownup %}Goes to your own chat with {{ assistant }}{% if readers %}; {{ readers }} can read it{% endif %}.
+            {%- if left is not none %} {{ left }} message{{ '' if left == 1 else 's' }} left today.{% endif %}
+          {%- elif member %}Goes to the family chat as {{ member.display_name }}.
+          {%- else %}Goes to the family chat.{% endif -%}
+        </p>
+        {# How it stands: what she is doing, or the last thing she said for a day. Home never looks again by itself, so the box stays open. #}
+        {% if talk.state %}
+          <p class="ask__last"><span class="ask__last-by">{{ assistant }}</span> {{ talk.note }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
+        {% elif talk.line %}
+          <p class="ask__last"><span class="ask__last-by">{{ talk.line.who }}, {{ talk.line.when | figs }}</span> {{ talk.line.text | truncate(180, true, '…') }} <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
         {% endif %}
-        {% if source != 'google' and grownup %}<p class="card__foot">{{ icon('info', size='sm') }} {{ source_note }}</p>{% endif %}
       </section>
-      {# On the phone the setup strip waits under the plans: what the family came for first. #}
-      {% if setup %}
-        <div class="banner banner--warn banner--slim phone-only o2">
-          <span class="banner__ic">{{ icon('alert') }}</span>
-          <p class="banner__text"><b>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</b></p>
-          <a class="btn btn--quiet btn--sm" href="{{ url_for('setup.overview') }}">Continue</a>
-        </div>
-      {% endif %}
+    {% endif %}
 
-      {% if grownup %}
-        <section class="card o6" aria-labelledby="h-ideas">
-          <div class="card__head"><h2 id="h-ideas">{{ icon('bulb') }}Just added to Ideas</h2><a class="more" href="{{ url_for('web.ideas') }}">All {{ idea_count }} idea{{ '' if idea_count == 1 else 's' }}{{ icon('chev', size='sm') }}</a></div>
-          <div class="mini-ideas">
-            {% for idea in ideas %}{{ idea_mini(idea, 'phone-hide' if loop.index > 2) }}
-            {% else %}
-              <p class="empty">{{ icon('bulb') }}<span>No ideas yet. When someone says “we should try…”, {{ assistant }} saves it here.</span></p>
-            {% endfor %}
-          </div>
-          {% if restaurant_count or visitor().may('change') %}
-            <p class="card__foot card__foot--split">
-              {% if restaurant_count %}<a class="more" href="{{ url_for('web.restaurants') }}">{{ icon('utensils', size='sm') }}Something to eat · {{ restaurant_count }} restaurant{{ '' if restaurant_count == 1 else 's' }} to try</a>{% endif %}
-              {% if visitor().may('change') %}<a class="more" href="{{ url_for('web.new_idea') }}">{{ icon('plus', size='sm') }}Add an idea</a>{% endif %}
+    <section class="card o2" aria-labelledby="h-next">
+      <div class="card__head"><h2 id="h-next">{{ icon('cal') }}{{ 'Next up' if grownup else 'Next up for you' }}</h2><a class="more" href="{{ plans_url }}">All plans{{ icon('chev', size='sm') }}</a></div>
+      {% if first %}
+        {% set first_href = url_for('web.plans_month', _anchor='d-' ~ first.day) if grownup else url_for('web.plans', _anchor='d-' ~ first.day) %}
+        {# The next plan is the featured row: its day, when it is, what, at what time, who, and the way to it, on one line. #}
+        <div class="next">
+          {{ date_tile(first.chip, first.on_today, 'lg') }}
+          <div class="next__body">
+            {% if first.relative %}<p class="overline">{{ first.relative }}</p>{% endif %}
+            <h3>{% if first.idea_id %}<a href="{{ url_for('web.idea', idea_id=first.idea_id) }}">{{ first.title }}</a>{% else %}{{ first.title }}{% endif %}</h3>
+            <p class="meta">
+              <span class="sr">{{ first.when | figs }}, </span>
+              {%- if first.time %}<span class="num">{{ icon('clock') }}{{ first.time | figs }}</span>{% endif -%}
+              {%- if first.away %}<span>{{ icon('car') }}{{ first.away }}</span>{% endif -%}
             </p>
-          {% endif %}
-        </section>
-
-        {% if kids %}
-          <section class="card o5" aria-labelledby="h-wish">
-            <div class="card__head"><h2 id="h-wish">{{ icon('gift') }}The kids’ lists</h2><a class="more" href="{{ url_for('web.wishes') }}">Kids’ lists{{ icon('chev', size='sm') }}</a></div>
+          </div>
+          {{ who(first.people, first.who, shell.family) }}
+          {% if grownup %}<a class="more next__go" href="{{ first_href }}">See the plan{{ icon('chev', size='sm') }}</a>{% endif %}
+        </div>
+        {% if coming | length > 1 %}
+          <div class="soon{{ ' phone-hide' if grownup }}">
+            <h3 class="sr">{{ 'After that' if grownup else 'Coming up' }}</h3>
             <ul class="items">
-              {% for kid in kids %}
-                <li><a class="item item--divided" href="{{ url_for('web.wishes', who=kid.id) }}">
-                  {{ avatar(kid.slot, kid.initial, 'lg') }}
-                  <span><span class="item__title">{{ kid.name }}</span>
-                    <span class="meta"><span>{% if kid.open %}{{ kid.open }} on {{ kid.pronoun }} list{% if kid.top %} · {{ kid.top | join(', ') }}{% endif %}{% else %}Nothing on {{ kid.pronoun }} list yet{% endif %}</span></span></span>
-                  <span class="item__trail">{% if kid.waiting %}{{ badge('act', kid.waiting, 'to decide') }}{% endif %}{{ icon('chev', cls='muted') }}</span></a></li>
+              {% for entry in coming[1:] %}
+                <li><a class="item" href="{{ url_for('web.plans_month', _anchor='d-' ~ entry.day) if grownup else url_for('web.plans', _anchor='d-' ~ entry.day) }}">
+                  {{ date_tile(entry.chip, entry.on_today, 'sm') }}
+                  <span><span class="item__title">{{ entry.title }}</span>
+                    <span class="meta"><span class="sr">{{ entry.when | figs }}, </span>
+                      {%- if entry.time %}<span class="num">{{ entry.time | figs }}</span>{% endif -%}
+                      {%- if entry.away and grownup %}<span>{{ entry.away }}</span>{% endif -%}</span></span>
+                  {{ who(entry.people, entry.who, shell.family) }}
+                  {{ icon('chev', cls='muted') }}</a></li>
               {% endfor %}
             </ul>
-          </section>
+          </div>
         {% endif %}
+        {% if more_plans and grownup %}
+          <p class="card__foot phone-only"><a class="more" href="{{ plans_url }}">{{ more_plans }} more plan{{ '' if more_plans == 1 else 's' }}{{ icon('chev', size='sm') }}</a></p>
+        {% endif %}
+      {% else %}
+        <p class="empty">{{ icon('cal') }}<span>Nothing planned yet.
+          {%- if visitor().may('change') %} Pick an idea and put it on the calendar, or ask {{ assistant }} what fits this weekend.
+          {%- elif talk %} Ask {{ assistant }} what fits this weekend.{% endif %}</span></p>
       {% endif %}
-    </div>
+      {% if source != 'google' and grownup %}<p class="card__foot">{{ icon('info', size='sm') }} {{ source_note }}</p>{% endif %}
+    </section>
+    {# On the phone the setup strip waits under the plans: what the family came for first. #}
+    {% if setup %}
+      <div class="banner banner--warn banner--slim phone-only o2">
+        <span class="banner__ic">{{ icon('alert') }}</span>
+        <p class="banner__text"><b>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</b></p>
+        <a class="btn btn--quiet btn--sm" href="{{ url_for('setup.overview') }}">Continue</a>
+      </div>
+    {% endif %}
 
-    <div class="stack">
-      {# A kid's own list, with what a parent said lately and her top three. #}
-      {% if wishes and not wishes.parent %}
-        {% set mine = wishes.mine %}
-        <section class="card o3" aria-labelledby="h-list">
-          <div class="card__head"><h2 id="h-list">{{ icon('gift') }}My list</h2><a class="more" href="{{ url_for('web.wishes') }}">{{ 'All ' ~ mine.open if mine.open else 'My list' }}{{ icon('chev', size='sm') }}</a></div>
-          {% if mine.answered %}
-            <ul class="wish-news">
-              {% for row in (mine.answered | sort(attribute='status', reverse=true))[:2] %}
-                {% if row.status == 'granted' %}<li class="wish-news__yes">{{ icon('sparkle') }}<span><b>Yes</b> to {{ row.title }}!</span></li>
-                {% else %}<li class="wish-news__no">{{ icon('heart') }}<span>Not this time: {{ row.title }}.</span></li>{% endif %}
-              {% endfor %}
-            </ul>
-          {% endif %}
-          <ol class="items wish-top">
-            {% for row in mine.lists[0].rows[:wishes.top] %}
-              <li class="item"><span class="wish__n{{ ' wish__n--first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span><span class="item__title"><span class="sr">Number {{ row.rank }}: </span>{{ row.title }}</span></li>
-            {% else %}
-              <li class="item muted">Nothing on it yet. Tell {{ assistant }} what you’d like.</li>
+    {# A kid's own list, with what a parent said lately and her top three. #}
+    {% if wishes and not wishes.parent %}
+      {% set mine = wishes.mine %}
+      <section class="card o3" aria-labelledby="h-list">
+        <div class="card__head"><h2 id="h-list">{{ icon('gift') }}My list</h2><a class="more" href="{{ url_for('web.wishes') }}">{{ 'All ' ~ mine.open if mine.open else 'My list' }}{{ icon('chev', size='sm') }}</a></div>
+        {% if mine.answered %}
+          <ul class="wish-news">
+            {% for row in (mine.answered | sort(attribute='status', reverse=true))[:2] %}
+              {% if row.status == 'granted' %}<li class="wish-news__yes">{{ icon('sparkle') }}<span><b>Yes</b> to {{ row.title }}!</span></li>
+              {% else %}<li class="wish-news__no">{{ icon('heart') }}<span>Not this time: {{ row.title }}.</span></li>{% endif %}
             {% endfor %}
-          </ol>
-          {% set soon = mine.lists | selectattr('countdown') | list %}
-          {% if soon %}<p class="list-soon">{% for list in soon %}<span class="tag tag--when">{{ icon('gift') }}{{ list.name }} {{ list.countdown | lower }}</span>{% endfor %}</p>{% endif %}
-        </section>
-      {% endif %}
-
-      <section class="card {{ 'o3' if grownup else 'o4' }}" aria-labelledby="h-todo">
-        <div class="card__head"><h2 id="h-todo">{{ icon('todo') }}{{ 'To do' if grownup else 'My to-dos' }}{% if late_count and grownup %} {{ badge('late', late_count, 'late') }}{% endif %}</h2>
-          <a class="more" href="{{ url_for('web.tasks') }}">{{ ('All ' ~ task_count ~ (' to-do' if task_count == 1 else ' to-dos')) if task_count and grownup else 'All' }}{{ icon('chev', size='sm') }}</a></div>
-        {% if tasks %}
-          <ul class="todos todos--compact">
-            {% for row in tasks %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup) }}{% endfor %}
           </ul>
-        {% else %}
-          <p class="empty">{{ icon('todo') }}<span>{% if grownup %}No to-dos. Tell {{ assistant }} “remind me to call the dentist on Tuesday”, or add one on To do.{% else %}Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.{% endif %}</span></p>
         {% endif %}
-        {% if grownup %}<p class="card__foot">{{ icon('bell', size='sm') }} {{ reminders_said }}</p>{% endif %}
+        <ol class="items wish-top">
+          {% for row in mine.lists[0].rows[:wishes.top] %}
+            <li class="item"><span class="wish__n{{ ' wish__n--first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span><span class="item__title"><span class="sr">Number {{ row.rank }}: </span>{{ row.title }}</span></li>
+          {% else %}
+            <li class="item muted">Nothing on it yet. Tell {{ assistant }} what you’d like.</li>
+          {% endfor %}
+        </ol>
+        {% set soon = mine.lists | selectattr('countdown') | list %}
+        {% if soon %}<p class="list-soon">{% for list in soon %}<span class="tag tag--when">{{ icon('gift') }}{{ list.name }} {{ list.countdown | lower }}</span>{% endfor %}</p>{% endif %}
+      </section>
+    {% endif %}
+
+    {% if grownup %}
+      <section class="card o6" aria-labelledby="h-ideas">
+        <div class="card__head"><h2 id="h-ideas">{{ icon('bulb') }}Just added to Ideas</h2><a class="more" href="{{ url_for('web.ideas') }}">All {{ idea_count }} idea{{ '' if idea_count == 1 else 's' }}{{ icon('chev', size='sm') }}</a></div>
+        <div class="mini-ideas">
+          {% for idea in ideas %}{{ idea_mini(idea, 'phone-hide' if loop.index > 2) }}
+          {% else %}
+            <p class="empty">{{ icon('bulb') }}<span>No ideas yet. When someone says “we should try…”, {{ assistant }} saves it here.</span></p>
+          {% endfor %}
+        </div>
+        {% if restaurant_count or visitor().may('change') %}
+          <p class="card__foot card__foot--split">
+            {% if restaurant_count %}<a class="more" href="{{ url_for('web.restaurants') }}">{{ icon('utensils', size='sm') }}Something to eat · {{ restaurant_count }} restaurant{{ '' if restaurant_count == 1 else 's' }} to try</a>{% endif %}
+            {% if visitor().may('change') %}<a class="more" href="{{ url_for('web.new_idea') }}">{{ icon('plus', size='sm') }}Add an idea</a>{% endif %}
+          </p>
+        {% endif %}
       </section>
 
-      {% if setup %}
-        <section class="card card--setup desk-only" id="setup" aria-labelledby="h-setup">
-          <div class="card__head"><h2 id="h-setup">Finish setting up</h2><span class="tag tag--look">{{ icon('alert') }}{{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</span></div>
-          <ol class="steps">
-            {% for step in setup %}<li><div><a href="{{ step.link }}">{{ step.text }}</a></div></li>{% endfor %}
-          </ol>
-          <p class="card__foot">Each one is a short page that says what to do. <a href="{{ url_for('setup.overview') }}">All the setup steps</a> · Only admins see this.</p>
-        </section>
-      {% endif %}
-
-      {% if rating %}
-        <section class="card o4" aria-labelledby="h-rate">
-          <form class="rate-line" method="post" action="{{ url_for('edits.record_outcome', idea_id=rating.idea_id) }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-            <input type="hidden" name="once" value="{{ once_token() }}" />
-            <input type="hidden" name="plan_id" value="{{ rating.plan_id }}" />
-            <input type="hidden" name="happened_on" value="{{ rating.day }}" />
-            <input type="hidden" name="back" value="home" />
-            <h2 class="card__head" id="h-rate">How did {{ rating.title }} go?</h2>
-            <p class="muted small">{{ rating.when | figs }} · {{ assistant }} uses this for the next suggestions.</p>
-            <span class="faces">
-              <button class="face" type="submit" name="went" value="loved">{{ icon('smile') }}<span>Loved it</span><span class="sr"> ({{ rating.title }})</span></button>
-              <button class="face" type="submit" name="went" value="ok">{{ icon('meh') }}<span>OK</span><span class="sr"> ({{ rating.title }})</span></button>
-              <button class="face" type="submit" name="went" value="not-great">{{ icon('frown') }}<span>Not great</span><span class="sr"> ({{ rating.title }})</span></button>
-            </span>
-          </form>
-          {% if rating.more %}<p class="card__foot"><a class="more" href="{{ url_for('web.plans_month', _anchor='rate') }}">{{ rating.more }} more plan{{ '' if rating.more == 1 else 's' }} to rate{{ icon('chev', size='sm') }}</a></p>{% endif %}
-        </section>
-      {% endif %}
-
-      {% if vera and shell.pill %}
-        <section class="card o7 phone-hide" aria-labelledby="h-vera">
-          <div class="card__head"><h2 id="h-vera">{{ icon('pulse') }}{{ assistant }} today</h2><a class="more" href="{{ url_for('web.status') }}">Status{{ icon('chev', size='sm') }}</a></div>
-          <p><span class="money"><span class="fig">{{ vera.spent }}</span></span> <span class="muted">spent today</span></p>
-          <p class="small muted mt-2">{% if vera.limit %}Your limit is <span class="fig">{{ vera.limit }}</span> a day. {% endif %}A usual day is about <span class="fig">{{ vera.usual }}</span>.</p>
-          <ul class="items mt-3">
-            <li class="item item--divided">{{ vera_screen('lg') }}<span class="item__title">{{ assistant }}</span><span class="item__trail">{{ tag('ok' if shell.pill.state == 'ready' else 'look', shell.pill.short) }}</span></li>
+      {% if kids %}
+        <section class="card o5" aria-labelledby="h-wish">
+          <div class="card__head"><h2 id="h-wish">{{ icon('gift') }}The kids’ lists</h2><a class="more" href="{{ url_for('web.wishes') }}">Kids’ lists{{ icon('chev', size='sm') }}</a></div>
+          <ul class="items">
+            {% for kid in kids %}
+              <li><a class="item item--divided" href="{{ url_for('web.wishes', who=kid.id) }}">
+                {{ avatar(kid.slot, kid.initial, 'lg') }}
+                <span><span class="item__title">{{ kid.name }}</span>
+                  <span class="meta"><span>{% if kid.open %}{{ kid.open }} on {{ kid.pronoun }} list{% if kid.top %} · {{ kid.top | join(', ') }}{% endif %}{% else %}Nothing on {{ kid.pronoun }} list yet{% endif %}</span></span></span>
+                <span class="item__trail">{% if kid.waiting %}{{ badge('act', kid.waiting, 'to decide') }}{% endif %}{{ icon('chev', cls='muted') }}</span></a></li>
+            {% endfor %}
           </ul>
         </section>
       {% endif %}
-    </div>
+    {% endif %}
   </div>
+{% endblock %}
+
+{# The rail: what supports Home, in the menu's voice. #}
+{% block rail %}
+  <section class="rail__sec o3" aria-labelledby="h-todo">
+    <div class="rail__head"><h2 id="h-todo" class="overline">{{ 'To do' if grownup else 'My to-dos' }}</h2>
+      {%- if late_count and grownup %}{{ badge('late', late_count, 'late') }}{% endif %}
+      <a class="more" href="{{ url_for('web.tasks') }}">{{ ('All ' ~ task_count ~ (' to-do' if task_count == 1 else ' to-dos')) if task_count and grownup else 'All' }}{{ icon('chev', size='sm') }}</a></div>
+    {% if tasks %}
+      <ul class="todos todos--compact">
+        {% for row in tasks %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup, everyone=shell.family) }}{% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">{{ icon('todo') }}<span>{% if grownup %}No to-dos. Tell {{ assistant }} “remind me to call the dentist on Tuesday”, or add one on To do.{% else %}Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.{% endif %}</span></p>
+    {% endif %}
+    {% if grownup %}<p class="note">{{ icon('bell', size='sm') }}{{ reminders_said }}</p>{% endif %}
+  </section>
+
+  {% if setup %}
+    <section class="rail__sec desk-only" id="setup" aria-labelledby="h-setup">
+      <div class="rail__head"><h2 id="h-setup" class="overline">Finish setting up</h2></div>
+      <p>{{ tag('look', (setup | length) ~ ' step' ~ ('' if setup | length == 1 else 's') ~ ' left', 'alert') }}</p>
+      <ol class="steps">
+        {% for step in setup %}<li><div><a href="{{ step.link }}">{{ step.text }}</a></div></li>{% endfor %}
+      </ol>
+      <p class="note">Each one is a short page that says what to do. <a href="{{ url_for('setup.overview') }}">All the setup steps</a> · Only admins see this.</p>
+    </section>
+  {% endif %}
+
+  {% if rating %}
+    <section class="rail__sec o4" aria-labelledby="h-rate">
+      <form class="rate-line" method="post" action="{{ url_for('edits.record_outcome', idea_id=rating.idea_id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="plan_id" value="{{ rating.plan_id }}" />
+        <input type="hidden" name="happened_on" value="{{ rating.day }}" />
+        <input type="hidden" name="back" value="home" />
+        <div class="rail__head"><h2 class="rail__q" id="h-rate">How did {{ rating.title }} go?</h2></div>
+        <p class="note">{{ rating.when | figs }} · {{ assistant }} uses this for the next suggestions.</p>
+        <span class="faces">
+          <button class="face" type="submit" name="went" value="loved">{{ icon('smile') }}<span>Loved it</span><span class="sr"> ({{ rating.title }})</span></button>
+          <button class="face" type="submit" name="went" value="ok">{{ icon('meh') }}<span>OK</span><span class="sr"> ({{ rating.title }})</span></button>
+          <button class="face" type="submit" name="went" value="not-great">{{ icon('frown') }}<span>Not great</span><span class="sr"> ({{ rating.title }})</span></button>
+        </span>
+      </form>
+      {% if rating.more %}<p class="note"><a class="more" href="{{ url_for('web.plans_month', _anchor='rate') }}">{{ rating.more }} more plan{{ '' if rating.more == 1 else 's' }} to rate{{ icon('chev', size='sm') }}</a></p>{% endif %}
+    </section>
+  {% endif %}
+
+  {% if vera and shell.pill %}
+    <section class="rail__sec o7 phone-hide" aria-labelledby="h-vera">
+      <div class="rail__head"><h2 id="h-vera" class="overline">{{ assistant }} today</h2><a class="more" href="{{ url_for('web.status') }}">Status{{ icon('chev', size='sm') }}</a></div>
+      <p><span class="money"><span class="fig">{{ vera.spent }}</span></span> <span class="muted">spent today</span></p>
+      <p class="note">{% if vera.limit %}Your limit is <span class="fig">{{ vera.limit }}</span> a day. {% endif %}A usual day is about <span class="fig">{{ vera.usual }}</span>.</p>
+      <ul class="items">
+        <li class="item">{{ vera_screen() }}<span class="item__title">{{ assistant }}</span><span class="item__trail">{{ tag('ok' if shell.pill.state == 'ready' else 'look', shell.pill.short) }}</span></li>
+      </ul>
+    </section>
+  {% endif %}
 {% endblock %}

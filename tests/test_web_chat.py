@@ -531,7 +531,7 @@ def test_the_chat_link_counts_what_she_said_since_this_browser_looked(settings, 
     """Somebody who uses only the page had no way to know she had written: the Chat link says
     "2 new" until the chat is opened. Kept in this browser's session, no write."""
     client = _client(settings, clock)
-    badge = re.compile(r'class="badge badge--act">(\d+) new<')
+    badge = re.compile(r'class="badge badge--act" title="(\d+) new"')
     assert badge.search(client.get("/").text) is None  # a new browser starts from now
     with closing(db.connect(settings.familydb_path)) as conn, db.transaction(conn):
         for words in ("Reminder: bins out.", "Reminder: call the plumber."):

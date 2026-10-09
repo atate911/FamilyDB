@@ -23,9 +23,9 @@
   </span>
 {%- endmacro %}
 
-{# A count with its word, loud only for what needs somebody now. `kind`: late, act, quiet or look. #}
+{# A count: the number in a small circle, its word said to a screen reader and kept as its name. `kind`: late (red), act or look (amber, needs somebody), quiet (a gentle count). #}
 {% macro badge(kind, n, word) -%}
-  <span class="badge badge--{{ kind }}">{{ n }} {{ word }}</span>
+  <span class="badge badge--{{ kind }}" title="{{ n }} {{ word }}">{{ n }}<span class="sr"> {{ word }}</span></span>
 {%- endmacro %}
 
 {# The assistant's state, said the same in the sidebar and the phone's top bar. `pill` is `status.Pill`. #}
@@ -117,14 +117,23 @@
   <span class="person">{{ avatar(one.slot, one.initial, 'sm') }}{{ one.name }}</span>
 {%- endmacro %}
 
-{# A to-do in a list: the tick (for whoever may tick it), what, who and when, how late. `compact` is Home's short row; `mine` a kid's own, which she ticks off herself and sees without an owner (and with who set it); `edit` adds the link to the to-do's own page. `back` is where a tick returns to. A done or cancelled one has no tick, only its mark. #}
-{% macro todo(row, back, compact=false, mine=false, edit=false, undo=false) -%}
+{# Who a thing is for, as marks at a row's edge (docs/STYLE.md, "Owner mark"): each person's letter in their colour, overlapping, three shown and then "+N". Everyone is the family stacked, when `everyone` (the frame's `shell.family`) is given, else the house. The names are the marks' words, for a screen reader and on hover. `people` is a list of people (name, slot, initial); `words` their names said together. #}
+{% macro who(people, words, everyone=()) -%}
+  {% set shown = everyone if (everyone and people | length == 1 and not people[0].initial) else people %}
+  <span class="who" title="{{ words }}"><span class="sr">{{ words }}</span>
+    {%- for one in shown[:3] %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor -%}
+    {%- if shown | length > 3 %}<span class="av av--sm av--more" aria-hidden="true">+{{ shown | length - 3 }}</span>{% endif -%}
+  </span>
+{%- endmacro %}
+
+{# A to-do in a list (docs/STYLE.md, "Checkbox"): the checkbox on the title's line, for whoever may tick it; the title, which opens the to-do's own page where `edit` allows; one line of when (and how late); the owner's mark at the edge. The full list adds the reminder, notes, window and repeats; `compact` is Home's short row; `mine` a kid's own, which she ticks off herself and sees without an owner (and with who set it). `back` is where a tick returns to. A done or cancelled one has no checkbox, only its mark. `everyone` is the frame's family, for a to-do that is everyone's. #}
+{% macro todo(row, back, compact=false, mine=false, edit=false, undo=false, everyone=()) -%}
   {% set open = row.status is not defined or row.status == 'open' %}
   <li class="todo{{ ' todo--compact' if compact }}{{ ' todo--mine' if mine }}{{ ' todo--late' if row.late and not mine }}{{ ' todo--done' if row.status == 'done' }}" id="t-{{ row.id }}">
     {% if not open -%}
       <span class="tick tick--done" aria-hidden="true"><span>{{ icon('check' if row.status == 'done' else 'x') }}</span></span>
     {%- elif visitor().may('change') or visitor().may('own_tasks') -%}
-    <form method="post" action="{{ url_for('edits.finish_task', task_id=row.id) }}">
+    <form class="todo__tick" method="post" action="{{ url_for('edits.finish_task', task_id=row.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
       <input type="hidden" name="once" value="{{ once_token() }}" />
       <input type="hidden" name="revision" value="{{ row.revision }}" />
@@ -132,39 +141,35 @@
       <button class="tick" type="submit" aria-label="Mark done: {{ row.title }}"><span>{{ icon('check') }}</span></button>
     </form>
     {%- else -%}
-    <span></span>
+    <span class="tick tick--none" aria-hidden="true"></span>
     {%- endif %}
-    <div>
-      <div class="todo__title">{{ row.title }}</div>
-      <div class="meta">
-        {%- if not mine %}{{ person(row.person) }}{% endif -%}
-        <span>{{ icon('clock') }}{{ row.when | figs }}</span>
-        {%- if row.late %}<span class="late">{{ row.late }}</span>{% endif -%}
-        {%- if row.status == 'cancelled' %}<span>Canceled</span>{% endif -%}
-        {%- if open and not compact and not mine %}
-          {%- if row.reminder %}<span>{{ icon('bell') }}Reminder {{ row.reminder }}{% if row.reminder_state %} · {{ row.reminder_state }}{% endif %}</span>
-          {%- else %}<span>{{ icon('belloff') }}No reminder</span>{% endif -%}
-        {%- elif open and mine and row.reminder %}<span>{{ icon('bell') }}Reminder {{ row.reminder }}</span>{% endif -%}
-        {%- if row.set_by %}<span>{{ row.set_by }}</span>{% endif -%}
-      </div>
-      {% if not compact and not mine %}
-        {% if row.notes %}<p class="small">{{ row.notes }}</p>{% endif %}
-        {% if row.window %}<p class="small muted">Preferred window: {{ row.window }}
+    {% if edit %}<a class="todo__title" href="{{ url_for('web.edit_task', task_id=row.id) }}">{{ row.title }}</a>{% else %}<span class="todo__title">{{ row.title }}</span>{% endif %}
+    <span class="meta todo__when">
+      {%- if row.status == 'cancelled' %}<span>Canceled</span>{% endif -%}
+      <span>{{ row.when | figs }}</span>
+      {%- if row.late %}<span class="late">{{ row.late }}</span>{% endif -%}
+      {%- if open and not compact and not mine %}
+        {%- if row.reminder %}<span>Reminder {{ row.reminder }}{% if row.reminder_state %} · {{ row.reminder_state }}{% endif %}</span>
+        {%- else %}<span>No reminder</span>{% endif -%}
+      {%- elif open and mine and row.reminder %}<span>Reminder {{ row.reminder }}</span>{% endif -%}
+      {%- if row.set_by %}<span>{{ row.set_by }}</span>{% endif -%}
+    </span>
+    {% if not mine %}{{ who([row.person], row.person.name, everyone) }}{% endif %}
+    {% if not compact and not mine and (row.notes or row.window or row.repeats) %}
+      <div class="todo__more">
+        {% if row.notes %}<p>{{ row.notes }}</p>{% endif %}
+        {% if row.window %}<p>Preferred window: {{ row.window }}
           {%- if row.nudge and row.nudge.on %} · {{ assistant }} brings it up on {{ row.nudge.on | figs }}{% if row.nudge.last %}, last on {{ row.nudge.last }}{% endif %}
           {%- elif row.nudge %} · not a day or part of the day {{ assistant }} can read, so it comes up only when asked about{% endif %}</p>{% endif %}
-        {% if row.repeats %}<p class="small muted">{{ row.repeats }}</p>{% endif %}
-      {% endif %}
-    </div>
+        {% if row.repeats %}<p>{{ row.repeats }}</p>{% endif %}
+      </div>
+    {% endif %}
     {% if undo and row.status == 'done' -%}
-      <form method="post" action="{{ url_for('edits.reopen_task', task_id=row.id) }}">
+      <form class="todo__act" method="post" action="{{ url_for('edits.reopen_task', task_id=row.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
         <input type="hidden" name="back" value="{{ back }}" />
         <button class="textbtn" type="submit">{{ icon('undo', size='sm') }}Undo<span class="sr"> done: {{ row.title }}</span></button>
       </form>
-    {%- elif edit -%}
-      <a class="todo__edit" href="{{ url_for('web.edit_task', task_id=row.id) }}">{{ icon('edit', size='sm') }}<span class="lbl">Edit</span><span class="sr"> {{ row.title }}</span></a>
-    {%- else -%}
-      <span></span>
     {%- endif %}
   </li>
 {%- endmacro %}

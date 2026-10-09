@@ -249,7 +249,11 @@ def test_what_is_left_to_do_is_on_home_and_ticks_off_there(settings, clock, conn
         and "All 2 to-dos" in home
     )
 
-    tick = re.search(rf'<form method="post" action="/task/{towels}/done">.*?</form>', home, re.S)
+    tick = re.search(
+        rf'<form class="todo__tick" method="post" action="/task/{towels}/done">.*?</form>',
+        home,
+        re.S,
+    )
     assert tick is not None and 'aria-label="Mark done: Buy paper towels"' in tick.group(0)
     fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', tick.group(0)))
     stale = client.post(f"/task/{towels}/done", data={**fields, "revision": "0", "once": "old"})
@@ -275,6 +279,20 @@ def test_the_greeting_follows_the_hour_and_the_name() -> None:
 
 def _plan(title: str, relative: str | None = "tomorrow") -> dict:
     return {"title": title, "relative": relative}
+
+
+def test_a_grown_ups_quiet_line_says_how_things_stand_without_repeating_next_up() -> None:
+    def said(coming, open_count, late):
+        parts = views.home_summary(coming, open_count, late, todo_href="/tasks")
+        return "".join(part["text"] for part in parts)
+
+    plan = {"title": "Hopscotch brunch", "relative": "in 2 days", "when": "Sat 10 Oct"}
+    assert said([plan], 5, 0) == "5 to-dos open · next plan in 2 days"
+    assert said([plan], 1, 1) == "1 to-do open, 1 late · next plan in 2 days"
+    assert said([], 0, 0) == "Nothing to do · nothing planned yet"
+    assert "Hopscotch" not in said([plan], 5, 0)  # the plan's name is Next up's to say
+    late = views.home_summary([plan], 3, 2, todo_href="/tasks")
+    assert {"text": "2 late", "href": "/tasks"} in late
 
 
 def test_the_one_line_under_the_greeting_says_what_is_coming_and_what_is_late() -> None:
@@ -384,7 +402,7 @@ def test_a_grown_up_is_greeted_by_name_and_sees_the_household(app, conn, family)
     _task(conn, family, "Call the dentist", due="2026-09-18T19:00:00Z")
     home = _in_as(app, "Sam", "sam likes long sentences").get("/").text
     assert "Good afternoon, Sam" in home and "Sunday 20 September" in home
-    assert ">One to-do</a> is late." in home and "2 days late" in home
+    assert "1 to-do open, " in home and ">1 late</a>" in home and "2 days late" in home
     assert "Goes to the family chat as Sam." in home
     assert "Vera today" in home and "spent today" in home  # what she costs: for grown-ups
     assert "Just added to Ideas" in home

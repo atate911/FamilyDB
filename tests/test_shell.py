@@ -127,7 +127,7 @@ def test_the_page_can_be_skipped_to_and_names_its_language(sam) -> None:
     html = sam.get("/more").text
     assert '<a class="skip" href="#main">Skip to content</a>' in html
     assert 'id="main"' in html and '<html lang="en-US"' in html
-    assert "style.css" in html and "fonts/atkinson-400.woff2" in html
+    assert "style.css" in html and "fonts/saira.woff2" in html
 
 
 def test_somebody_who_is_not_signed_in_gets_no_menu(app) -> None:
@@ -165,8 +165,8 @@ def test_late_to_dos_are_counted_for_a_grown_up_and_a_kid_counts_only_her_own(
     _late_task(conn, family["sam"].id)
     _late_task(conn, family["alex"].id, "Renew the car")
     _late_task(conn, family["girls"].id, "Feed the fish")
-    assert 'badge--late">3 late' in _sidebar(sam)
-    assert 'badge--late">1 late' in _sidebar(girl)
+    assert 'badge--late" title="3 late">3<span class="sr"> late</span>' in _sidebar(sam)
+    assert 'badge--late" title="1 late">1<span class="sr"> late</span>' in _sidebar(girl)
     assert '3<span class="sr"> late</span>' in _tabbar(sam)
 
 
@@ -244,9 +244,9 @@ def test_a_plan_made_for_a_present_is_not_asked_about_where_the_present_is_hidde
             )
     # Sam may know of it; Alex, whom it is for, sees neither the title nor the count of it.
     assert "How did Scarf for Alex go?" in sam.get("/").text
-    assert 'badge--quiet">2 to rate' in _sidebar(sam)
+    assert 'badge--quiet" title="2 to rate">2<' in _sidebar(sam)
     assert "Scarf for Alex" in sam.get("/plans/month?month=2026-09").text
     for page in ("/", "/plans/month?month=2026-09"):
         assert "Scarf for Alex" not in alex.get(page).text
     assert "How did Silver Falls hike go?" in alex.get("/").text
-    assert 'badge--quiet">1 to rate' in _sidebar(alex)
+    assert 'badge--quiet" title="1 to rate">1<' in _sidebar(alex)
