@@ -20,7 +20,6 @@
         {% if grownup %}<a href="{{ url_for('web.happening_page') }}">{{ icon('ticket', size='sm') }}{{ happening_name }}</a>{% endif %}
       </nav>
     </div>
-    {% if grownup %}<p class="note plans__note">{{ icon('cal') }}{{ source_note }}</p>{% endif %}
 
     <section class="plans__cal" aria-labelledby="h-month">
       <h2 class="sr" id="h-month">{{ month }}</h2>
@@ -64,37 +63,44 @@
       </p>
     </section>
 
-    <section class="card plans__list" aria-labelledby="h-coming">
-      <div class="card__head"><h2 id="h-coming">{{ icon('cal') }}Coming up</h2></div>
-      {% if coming %}
-        <ul class="items">
-          {% for row in coming %}
-            <li{% if row.anchor %} id="d-{{ row.day }}"{% endif %}><a class="item" href="{{ url_for('web.idea', idea_id=row.idea_id) if row.idea_id and row.linked else url_for('web.plans', _anchor='d-' ~ row.day) }}">
-              {{ date_tile(row.chip, row.on_today, 'sm') }}
-              <span><span class="item__title">{{ row.title }}</span>
-                <span class="meta"><span class="sr">{{ row.short }}, </span><span>{{ row.when | figs }}</span>{% if row.away %}<span>{{ row.away }}</span>{% endif %}{{ people(row.people, row.who) }}</span></span>
-              {{ icon('chev', cls='muted') }}</a></li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="empty">{{ icon('cal') }}<span>Nothing on in {{ month }}.</span></p>
-      {% endif %}
-    </section>
-
-    {% if rate %}
-      <section class="card plans__rate" id="rate" aria-labelledby="h-rate">
-        <div class="card__head"><h2 id="h-rate">How did it go?</h2>{{ badge('quiet', rate | length, 'to rate') }}</div>
-        <ul class="items rates">
-          {% for row in rate %}
-            <li class="rate" id="r-{{ row.plan_id }}">
-              <div class="item">{{ tile(row.glyph) }}<span><span class="item__title">{{ row.title }}</span><span class="meta"><span>{{ row.when | figs }}</span>{{ people(row.people, row.who if row.who is defined else '') }}</span></span><span></span></div>
-              {{ faces(row, 'plans', month=request.args.get('month', '')) }}
-            </li>
-          {% endfor %}
-        </ul>
-        <p class="card__foot">{{ assistant }} uses your answers when she suggests the next weekend.</p>
-      </section>
-    {% endif %}
   </div>
-  {% if grownup %}<p class="page-foot mt-6"><a href="{{ url_for('web.export_plans') }}">{{ icon('arrowdown', size='sm') }}Download the plans for another calendar</a></p>{% endif %}
+{% endblock %}
+
+{# The rail: what is coming this month, how the last plans went, where the plans come from, and taking them away. #}
+{% block rail %}
+    <section class="rail__sec plans__list" aria-labelledby="h-coming">
+    <div class="rail__head"><h2 id="h-coming" class="overline">Coming up</h2></div>
+    {% if coming %}
+      <ul class="items">
+        {% for row in coming %}
+          <li{% if row.anchor %} id="d-{{ row.day }}"{% endif %}><a class="item" href="{{ url_for('web.idea', idea_id=row.idea_id) if row.idea_id and row.linked else url_for('web.plans', _anchor='d-' ~ row.day) }}">
+            {{ date_tile(row.chip, row.on_today, 'sm') }}
+            <span><span class="item__title">{{ row.title }}</span>
+              <span class="meta"><span class="sr">{{ row.when | figs }}</span><span aria-hidden="true">{{ (row.time | figs) if row.time else 'All day' }}</span></span></span>
+            {{ icon('chev', cls='muted') }}</a></li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">{{ icon('cal') }}<span>Nothing on in {{ month }}.</span></p>
+    {% endif %}
+  </section>
+
+  {% if rate %}
+    <section class="rail__sec plans__rate" id="rate" aria-labelledby="h-rate">
+      <div class="rail__head"><h2 id="h-rate" class="overline">How did it go?</h2>{{ badge('quiet', rate | length, 'to rate') }}</div>
+      <ul class="items rates">
+        {% for row in rate %}
+          <li class="rate" id="r-{{ row.plan_id }}">
+            <div class="item">{{ tile(row.glyph) }}<span><span class="item__title">{{ row.title }}</span><span class="meta"><span>{{ row.when | figs }}</span></span></span></div>
+            {{ faces(row, 'plans', month=request.args.get('month', '')) }}
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="note">{{ assistant }} uses your answers when she suggests the next weekend.</p>
+    </section>
+  {% endif %}
+  {% if grownup %}
+    <section class="rail__sec"><p class="note">{{ icon('cal') }}{{ source_note }}</p></section>
+    <section class="rail__sec"><p class="note"><a href="{{ url_for('web.export_plans') }}">{{ icon('arrowdown', size='sm') }}Download the plans for another calendar</a></p></section>
+  {% endif %}
 {% endblock %}

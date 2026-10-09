@@ -339,39 +339,45 @@ Each page names its focal element, what the main column holds, and what the rail
 - **Chat.** Focal: the box, the hero's part. Main: the conversation, newest at the bottom, her
   messages beside her screen and the family's in their own color's soft. Rail: the conversations
   (the family's, and the kids', which grown-ups may read along) and who can read this one.
-- **Ideas.** Focal: search. Main: the ideas as rows (kind tile, title, one line of where or when,
-  owner mark), then the radar, the one instrument in the app. Rail: narrowing by kind, person or
-  status; "Save a thought for later"; why something has not been looked up. **An idea**: its own
-  page, everything about it, the changes folded. **Restaurants**: the same rows, with today's
-  hours and cost on the detail line.
+- **Ideas.** Focal: search, with narrowing by kind, person or status folded under it. Main: the
+  ideas as rows in one card (kind tile, title, one line of the kind and where or how far, tags,
+  owner marks), then the radar, the one instrument in the app. Rail: "Save a thought for later",
+  why something has not been looked up, the download. **An idea**: its own page; main: what it
+  is, when it is on the calendar, the place, how it went; rail: at a glance, looking it up,
+  planning it. **Restaurants**: a card per place, with today's hours and cost.
 - **Plans.** Focal: the next plan. Main: Month or List; the list as rows by month (date tile,
-  title, time and place on one line, owner marks), each row opening its plan, where Move and
-  Cancel live. Rail: adding a plan, the calendar's connection, how to read the month.
+  title, when and where on one line, owner marks), Move and Cancel as one quiet line under each.
+  Rail on the list: where the plans come from, adding a plan, what happened lately, the download;
+  on the month: what is coming (the time beside each date tile), how the last plans went, where
+  the plans come from.
 - **What is on near home** (its name is the family's, written once in `familydb/happening.py`): a
   third tab of Plans, for grown-ups only, drawn as Plans' list, a heading a day, each find a row
   with no date tile.
 - **To do.** Focal: adding one. Main: overdue first under a red heading, then the rest, No date
-  last; each a checkbox row that opens the to-do's own page. Rail: who and what the reminders do.
+  last; each a checkbox row whose title opens the to-do's own page. Rail: that she can be told
+  instead, the download. The to-do's own page: the form; rail: what to know, what reminders do.
 - **Lists.** Focal: the shopping list. Main: each list as checkbox rows, what was got folded under
   "Got". Rail: the other lists.
 - **The kids' lists.** Main: each kid's lists at a glance, what Vera flagged, the answers. A kid's
   own page: "A kid's screen".
 - **What Vera knows.** Main: each fact as a row under whom it is about, with how sure and where it
-  came from, and Forget.
+  came from, and Forget. Rail: telling her something, how she weighs it, what was forgotten.
 - **Family.** Focal: the list of people. Main: each person a row (avatar, name, role, how Vera
-  reaches them). Rail: "Add somebody" as a form, what each role does. The primary action is the
-  form's Add, once.
+  reaches them). Rail: "Add somebody" as a form, the roles. The primary action is the form's Add,
+  once; the header's "Add somebody" is a quiet way to it. One person's page: the form; rail:
+  signing in, linking Telegram, and taking them off the list, folded in red.
 - **Status.** Focal: the verdict, one sentence on a wash. Main: spent today, the last 30 days, how
   each part is doing as rows (a sentence, a tag, at most one action). Rail: recent activity, for an
   admin.
 - **Settings.** Main: a row per settings page with how it stands. Rail: setting up, how to read the
-  tags. Each settings page: its groups as cards, one Save in a bar that stays in reach. **AI
+  tags. Each settings page: its groups as cards, one Save in a bar that stays in reach; the rail
+  lists every settings page. **AI
   model** (`docs/MODELS_PAGE.md`) is a table, the one page dense by design. **Troubleshooting**
   lists what went wrong as sentences first, then the log.
 - **Setting up.** Focal: the step's one form. The steps along the top, Back and Next at the foot.
-- **The guide** (`/wiki`, grown-ups). Main: the article. Rail: the sections and "On this page".
-  Search at the top; no model is asked.
-- **You, Look, Sign in.** One form each. Sign in is the pane, then name and password; the family
+- **The guide** (`/wiki`, grown-ups). Main: the article. Rail: "On this page" (when the page has
+  sections), then every section of the guide. Search at the top; no model is asked.
+- **You, Look, Sign in.** One form each; Your password keeps what is good to know in the rail. Sign in is the pane, then name and password; the family
   is never listed.
 - **Not found, not yours.** The pane: "404 · nothing on the radar", or "403 · signed in Maya · role
   kid", then the page's own words and the way back.

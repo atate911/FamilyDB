@@ -4,7 +4,7 @@
 {% block content %}
   {{ page_head('Edit a to-do', task.title ~ ' · added' ~ (' by ' ~ made_by if made_by else '') ~ ' on ' ~ added, crumb=('To do', url_for('web.tasks'))) }}
   {% if row.changed %}<p class="small muted">{{ row.changed }}</p>{% endif %}
-  <div class="idea-grid">
+  <div class="stack">
     <form class="card form" method="post" action="{{ url_for('edits.edit_task', task_id=task.id) }}" aria-labelledby="h-edit" novalidate>
       <h2 class="sr" id="h-edit">Edit</h2>
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
@@ -55,20 +55,21 @@
         <a class="linkbtn" href="{{ url_for('web.tasks') }}">Cancel</a>
       </div>
     </form>
+  </div>
+{% endblock %}
 
-    <aside class="aside-stack" aria-label="About this to-do">
-      <section class="card" aria-labelledby="h-know2">
-        <h2 id="h-know2" class="card__head">Good to know</h2>
+{# The rail: about this to-do. #}
+{% block rail %}
+      <section class="rail__sec" aria-labelledby="h-know2">
+        <div class="rail__head"><h2 id="h-know2" class="overline">Good to know</h2></div>
         <ul class="tips">
           <li>Ticking it off on the list does the same as setting it to Done here.</li>
           <li>To-dos aren’t deleted: a canceled one moves to “Canceled”, and can be set back to Open.</li>
           <li>If somebody changed it while you had it open, your save is refused, so reload and try again.</li>
         </ul>
       </section>
-      <section class="card" aria-labelledby="h-rem2">
-        <h2 id="h-rem2" class="card__head">{{ icon('bell') }}Reminders</h2>
+      <section class="rail__sec" aria-labelledby="h-rem2">
+        <div class="rail__head"><h2 id="h-rem2" class="overline">Reminders</h2></div>
         <p class="small">{{ reminders_said }} One for everyone goes to the family’s chat.</p>
       </section>
-    </aside>
-  </div>
 {% endblock %}

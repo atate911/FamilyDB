@@ -243,7 +243,7 @@
 
 
 {# One plan in a list: its day, what and where and when, who it is for. `acts` adds the ways to move it or take it off the calendar (only with Google connected: it really changes the family calendar). #}
-{% macro plan(row, past=false, acts=false) -%}
+{% macro plan(row, past=false, acts=false, everyone=()) -%}
   <li class="plan{{ ' plan--past' if past }}"{% if row.anchor %} id="d-{{ row.day }}"{% endif %}>
     {{ date_tile(row.chip, row.on_today, 'sm') }}
     <div class="plan__body">
@@ -257,7 +257,6 @@
         {%- if row.from_google %}<span class="tag tag--off">added in Google</span>{% endif -%}
         {%- if row.location %}<span>{{ icon('pin') }}{{ row.location }}</span>{% endif -%}
         {%- if row.away %}<span>{{ icon('car') }}{{ row.away }}</span>{% endif -%}
-        {{ people(row.people, row.who) }}
       </div>
       {% if row.notes %}<p class="small muted mt-1">{{ row.notes }}</p>{% endif %}
       {% if acts and row.id and row.status != 'cancelled' and visitor().may('change') %}
@@ -284,6 +283,7 @@
         </div>
       {% endif %}
     </div>
+    {{ who(row.people, row.who, everyone) }}
   </li>
 {%- endmacro %}
 
@@ -316,25 +316,25 @@
   <span class="tag tag--surprise">{{ icon('eyeoff') }}Surprise<span class="tag__more"> · hidden from {{ words }}</span></span>
 {%- endmacro %}
 
-{# One idea as a card (a compact row on the phone). `kid` is the plain card a kid sees: no who, no drive, no looking-up. #}
-{% macro idea_card(row, kid=false) -%}
+{# One idea as a row (docs/STYLE.md, "Row"): its kind's tile, the title and one line (the kind, then how far, where, or that it has not been looked up), its tags, and whom it is for as marks at the edge. `kid` is the plain row a kid sees: no who, no drive, no looking-up. `everyone` is the frame's family, for an idea that is everyone's. #}
+{% macro idea_card(row, kid=false, everyone=()) -%}
   <article class="idea{{ ' idea--kid' if kid }}{{ ' idea--unknown' if row.pending and not kid }}">
-    {{ tile(row.glyph) }}<span class="idea__kind">{{ row.kind_name }}</span>
-    <h3><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></h3>
-    {% if kid %}
-      {% if row.where or row.on %}<p class="idea__for">
-        {%- if row.where %}<span>{{ icon('pin', size='sm') }}{{ row.where }}</span>{% endif -%}
-        {%- if row.on %}<span>{{ icon('cal', size='sm') }}{{ row.on | figs }}</span>{% endif -%}
-      </p>{% endif %}
-    {% else %}
-      <p class="idea__for"><span class="kindw">{{ row.kind_name }} · </span>
-        {%- if row.people | length == 1 and not row.people[0].initial %}{{ avatar(0, '', 'sm') }}
-        {%- else %}<span class="avs">{% for one in row.people %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor %}</span>{% endif -%}
-        <span>{{ row.who }}</span>
-        {%- if row.away %}<span class="drive phone-only"> · {{ row.away }}</span>
-        {%- elif row.pending %}<span class="drive phone-only"> · Not looked up yet</span>{% endif -%}
+    {{ tile(row.glyph) }}
+    <div class="idea__body">
+      <h3><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></h3>
+      <p class="idea__for">
+        {%- if kid %}
+          {%- if row.where %}<span>{{ icon('pin', size='sm') }}{{ row.where }}</span>{% endif -%}
+          {%- if row.on %}<span>{{ icon('cal', size='sm') }}{{ row.on | figs }}</span>{% endif -%}
+        {%- else %}
+          <span class="idea__kind">{{ row.kind_name }}</span>
+          {%- if row.away %}<span>{{ icon('car', size='sm') }}{{ row.away }}</span>
+          {%- elif row.pending %}<span>Not looked up yet</span>
+          {%- elif row.where %}<span>{{ icon('pin', size='sm') }}{{ row.where }}</span>
+          {%- elif row.details %}<span>{{ row.details }}</span>{% endif -%}
+        {%- endif -%}
       </p>
-    {% endif %}
+    </div>
     {% if row.hidden or row.went or (row.on and not kid) or row.status in ('planned', 'dropped') %}
       <div class="idea__tags">
         {%- if row.hidden %}{{ surprise(row.hidden) }}{% endif -%}
@@ -344,14 +344,7 @@
         {%- if row.status == 'dropped' %}<span class="tag tag--off">Dropped</span>{% endif -%}
       </div>
     {% endif %}
-    {% if not kid %}
-      <p class="idea__foot">
-        {%- if row.away %}{{ icon('car') }}<span>{{ row.away }}</span>
-        {%- elif row.pending %}{{ icon('compass') }}<span>Not looked up yet</span>
-        {%- elif row.where %}{{ icon('pin') }}<span>{{ row.where }}</span>
-        {%- else %}{{ icon('compass') }}<span>{{ row.details }}</span>{% endif -%}
-      </p>
-    {% endif %}
+    {% if not kid %}{{ who(row.people, row.who, everyone) }}{% endif %}
   </article>
 {%- endmacro %}
 

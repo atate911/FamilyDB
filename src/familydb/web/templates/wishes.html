@@ -167,8 +167,7 @@
         </section>
       {% endif %}
     {% endif %}
-    <div class="wkid__grid mt-4">
-      <div class="stack">
+    <div class="stack mt-4">
         {% if parent or not talk %}
           <form class="card adder adder--wish" id="wish-add" method="post" action="{{ url_for('edits.add_wish') }}" aria-labelledby="h-addw">
             {{ hidden(kid) }}
@@ -181,13 +180,17 @@
           </form>
         {% endif %}
         {{ the_lists(kid, false) }}
-      </div>
-      <div class="stack">
-        {% if parent %}{{ turned(kid) }}{{ answers(kid) }}
-        {% else %}{{ answers(kid) }}{{ turned(kid) }}
-          <p class="privacy">{{ icon('eye') }}<span>Your list isn’t secret: {{ parents_text }} can see it.</span></p>
-        {% endif %}
-      </div>
     </div>
+  {% endif %}
+{% endblock %}
+
+{# The rail, on one kid's list: what was answered, what could not go on it, and who can see it. #}
+{% block rail %}
+  {% if not (parent and not one) and kids %}
+    {% set kid = kids[0] %}
+    {% if parent %}{{ turned(kid) }}{{ answers(kid) }}
+    {% else %}{{ answers(kid) }}{{ turned(kid) }}
+      <p class="privacy">{{ icon('eye') }}<span>Your list isn’t secret: {{ parents_text }} can see it.</span></p>
+    {% endif %}
   {% endif %}
 {% endblock %}

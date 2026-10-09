@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, page_head, plan %}
+{% from "_ui.html" import icon, page_head, plan with context %}
 {% block title %}Plans · {{ site_title }}{% endblock %}
 {% block content %}
   {# Somebody who does not browse the household (a kid) gets one list, no way to choose (docs/STYLE.md, "A kid's screen"). #}
@@ -12,26 +12,27 @@
         <a href="{{ url_for('web.happening_page') }}">{{ icon('ticket', size='sm') }}{{ happening_name }}</a>
       </nav>
     </div>
-    <p class="note mt-2">{{ icon('cal') }}{{ source_note }}{% if source != 'google' and managing %} <a href="{{ url_for('settings.section', name='connections') }}">Connect Google Calendar</a>{% endif %}</p>
   {% endif %}
 
-  <div class="{{ 'list-grid mt-4' if grownup else '' }}">
-    <section class="card{{ '' if grownup else ' mt-4' }}" aria-labelledby="h-coming">
-      <div class="card__head"><h2 id="h-coming">{{ icon('cal') }}Coming up</h2>{% if grownup %}<span class="small muted">{{ upcoming | length }} in the next {{ ahead }} days</span>{% endif %}</div>
-      {% for group in months %}
-        <h3 class="group-h">{{ group.title }}</h3>
-        <ul class="plans-agenda">{% for row in group.rows %}{{ plan(row, acts=true) }}{% endfor %}</ul>
-      {% else %}
-        <p class="empty">{{ icon('cal') }}<span>Nothing on the calendar for the next {{ ahead }} days.</span></p>
-      {% endfor %}
-    </section>
+  <section class="card mt-4" aria-labelledby="h-coming">
+    <div class="card__head"><h2 id="h-coming">{{ icon('cal') }}Coming up</h2>{% if grownup %}<span class="small muted">{{ upcoming | length }} in the next {{ ahead }} days</span>{% endif %}</div>
+    {% for group in months %}
+      <h3 class="group-h">{{ group.title }}</h3>
+      <ul class="plans-agenda">{% for row in group.rows %}{{ plan(row, acts=true, everyone=shell.family) }}{% endfor %}</ul>
+    {% else %}
+      <p class="empty">{{ icon('cal') }}<span>Nothing on the calendar for the next {{ ahead }} days.</span></p>
+    {% endfor %}
+  </section>
+{% endblock %}
 
-    {% if grownup %}
-      <div class="aside-stack">
+{# The rail: where the plans come from, adding one, what happened lately, and taking them away. #}
+{% block rail %}
+  {% if grownup %}
+    <section class="rail__sec"><p class="note">{{ icon('cal') }}{{ source_note }}{% if source != 'google' and managing %} <a href="{{ url_for('settings.section', name='connections') }}">Connect Google Calendar</a>{% endif %}</p></section>
         {% if visitor().may('change') %}
-          <section class="card" id="add" aria-labelledby="h-add-plan">
+          <section class="rail__sec" id="add" aria-labelledby="h-add-plan">
             <details class="fold"{{ ' open' if not upcoming }}>
-              <summary><h2 id="h-add-plan">{{ icon('plus') }}{{ 'Put something on the calendar' if on_google else 'Add something to the plans' }}</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+              <summary><h2 id="h-add-plan" class="overline">{{ 'Put something on the calendar' if on_google else 'Add a plan' }}</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
               <div class="fold__body">
                   <form class="form" method="post" action="{{ url_for('edits.add_plan') }}" novalidate>
                     <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
@@ -56,13 +57,11 @@
         {% endif %}
 
         {% if recent %}
-          <section class="card past" aria-labelledby="h-recent">
-            <div class="card__head"><h2 id="h-recent">{{ icon('clock') }}Recently</h2></div>
+          <section class="rail__sec past" aria-labelledby="h-recent">
+            <div class="rail__head"><h2 id="h-recent" class="overline">Recently</h2></div>
             <ul class="plans-agenda">{% for row in recent %}{{ plan(row, past=true) }}{% endfor %}</ul>
           </section>
         {% endif %}
-      </div>
-    {% endif %}
-  </div>
-  {% if grownup %}<p class="page-foot mt-6"><a href="{{ url_for('web.export_plans') }}">{{ icon('arrowdown', size='sm') }}Download the plans for another calendar</a></p>{% endif %}
+    <section class="rail__sec"><p class="note"><a href="{{ url_for('web.export_plans') }}">{{ icon('arrowdown', size='sm') }}Download the plans for another calendar</a></p></section>
+  {% endif %}
 {% endblock %}

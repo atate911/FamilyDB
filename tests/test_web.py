@@ -289,7 +289,8 @@ def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> N
     assert "Ramen &amp; noodles &lt;Main St&gt;" in page.text
     assert "<Main St>" not in page.text
     assert f'href="/idea/{ramen.id}"' in page.text
-    assert "<span>whole family</span>" in page.text  # whom it is for, with the house beside it
+    # whom it is for, as its mark's words
+    assert '<span class="sr">whole family</span>' in page.text
 
 
 def test_the_ideas_list_filters(settings, clock, conn, family) -> None:

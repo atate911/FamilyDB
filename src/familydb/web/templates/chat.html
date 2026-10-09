@@ -10,6 +10,22 @@
     <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
   {% endif %}
 {% endblock %}
+{# The conversations: in the rail on a wide screen, a row of pills above the room on a phone (docs/STYLE.md, "Chat"). Drawn once for each, shown at its own width only. #}
+{% macro conversations(where) %}
+  <nav class="convos convos--{{ where }}" aria-label="Conversations">
+    {% if where == 'rail' %}<div class="rail__head"><h2 class="overline">Conversations</h2></div>{% endif %}
+    {% for one in convos %}
+      <a class="convo" href="{{ one.href }}"{% if one.current %} aria-current="page"{% endif %}>
+        {{ avatar(one.slot, one.initial) }}<span><b>{{ one.name }}</b><small>{{ one.snippet }}</small></span></a>
+      {% if loop.first and not private and convos | length > 1 %}<p class="convos__h">The kids’ conversations</p>{% endif %}
+    {% endfor %}
+    {% if private %}
+      {% if readers %}<p class="privacy">{{ icon('eye', size='sm') }}<span>{{ readers }} can read your chat with {{ assistant }}.</span></p>{% endif %}
+    {% else %}
+      <p class="privacy">{{ icon('eye', size='sm') }}<span>Each kid talks to {{ assistant }} on her own. You can read along; the kids see a note saying so at the top of theirs.</span></p>
+    {% endif %}
+  </nav>
+{% endmacro %}
 {% block content %}
   {% set title = 'Chat with ' ~ assistant if has_persona else 'Chat' %}
   {% if reading %}
@@ -22,18 +38,7 @@
 
   <div class="chat">
     {% if convos %}
-      <nav class="convos" aria-label="Conversations">
-        {% for one in convos %}
-          <a class="convo" href="{{ one.href }}"{% if one.current %} aria-current="page"{% endif %}>
-            {{ avatar(one.slot, one.initial) }}<span><b>{{ one.name }}</b><small>{{ one.snippet }}</small></span></a>
-          {% if loop.first and not private and convos | length > 1 %}<p class="convos__h">The kids’ conversations</p>{% endif %}
-        {% endfor %}
-        {% if private %}
-          {% if readers %}<p class="privacy">{{ icon('eye', size='sm') }}<span>{{ readers }} can read your chat with {{ assistant }}.</span></p>{% endif %}
-        {% else %}
-          <p class="privacy">{{ icon('eye', size='sm') }}<span>Each kid talks to {{ assistant }} on her own. You can read along; the kids see a note saying so at the top of theirs.</span></p>
-        {% endif %}
-      </nav>
+      {{ conversations('phone') }}
       {% if private and readers %}
         <p class="privacy privacy--room">{{ icon('eye', size='sm') }}<span>{{ readers }} can read your chat with {{ assistant }}.</span></p>
       {% elif convos | length > 1 %}
@@ -43,7 +48,7 @@
 
     <section class="card room" aria-labelledby="h-room">
       <div class="room__head">
-        <div class="who">
+        <div class="room__who">
           {% if room.people | length > 1 %}<span class="avs">{% for one in room.people %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor %}</span>
           {% else %}{{ avatar(room.people[0].slot, room.people[0].initial, 'sm') }}{% endif %}
           <div><h2 id="h-room">{{ room.title }}</h2>
@@ -69,4 +74,8 @@
       {% if not reading %}{% include "_composer.html" %}{% endif %}
     </section>
   </div>
+{% endblock %}
+
+{% block rail %}
+  {% if convos %}<section class="rail__sec">{{ conversations('rail') }}</section>{% endif %}
 {% endblock %}

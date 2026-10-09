@@ -46,7 +46,7 @@
     <p class="muted mt-4">{{ rows | length }} idea{{ '' if rows | length == 1 else 's' }}{% if filtered %} match{{ 'es' if rows | length == 1 else '' }}{% endif %}{% if rows | length == limit %}, showing the first {{ limit }}{% endif %}</p>
     <h2 class="sr">{{ 'Matching ideas' if filtered else 'All ideas, newest first' }}</h2>
     {% if rows %}
-      <ul class="ideas">{% for row in rows %}<li>{{ idea_card(row) }}</li>{% endfor %}</ul>
+      <ul class="ideas">{% for row in rows %}<li>{{ idea_card(row, everyone=shell.family) }}</li>{% endfor %}</ul>
     {% else %}
       <p class="empty">{{ icon('bulb') }}<span>
         {%- if filtered %}Nothing matches. <a href="{{ url_for('web.ideas') }}">Clear search and filters</a>
@@ -54,9 +54,26 @@
       </span></p>
     {% endif %}
 
-    {% if visitor().may('change') %}
-      <details class="card fold capture jot mt-5" id="capture">
-        <summary><h2>{{ icon('sparkle') }}Save a thought for later</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+    {% if on_map %}
+      <section class="mapband" aria-labelledby="h-far">
+        <h2 id="h-far">How far each idea is from home</h2>
+        <details class="mapband__fold">
+          <summary>{{ icon('compass') }}Show the map <span class="val">how far each idea is from home</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+          <p class="small muted mapband__cap">Estimated drive times. Home is in the middle and north is up; each name is one of the idea cards above. Ideas in the same direction are spread a little so each shows.
+            {%- if off_map %} {{ off_map }} idea{{ ' has' if off_map == 1 else 's have' }} no drive time yet, so {{ 'it isn’t' if off_map == 1 else 'they aren’t' }} on the map.{% endif %}</p>
+          <div class="instrument__pane">{{ map_plot(on_map.wide, 'wide') }}{{ map_plot(on_map.narrow, 'narrow') }}</div>
+        </details>
+      </section>
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{# The rail: saving a thought for her to organize, why some ideas have no details, and taking the list away. #}
+{% block rail %}
+  {% if grownup %}
+    {% if visitor().may('change') %}<section class="rail__sec">
+      <details class="fold capture jot" id="capture">
+        <summary><h2 class="overline">Save a thought for later</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
         <form class="fold__body form form--tight" method="post" action="{{ url_for('chat.send') }}">
           <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
           <input type="hidden" name="intent" value="save_idea" />
@@ -72,23 +89,10 @@
           <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('sparkle') }}Organize in the chat</button><a class="linkbtn" href="{{ url_for('web.new_idea') }}">Or add an idea yourself</a></div>
         </form>
       </details>
-    {% endif %}
-
-    {% if on_map %}
-      <section class="mapband" aria-labelledby="h-far">
-        <h2 id="h-far">How far each idea is from home</h2>
-        <details class="mapband__fold">
-          <summary>{{ icon('compass') }}Show the map <span class="val">how far each idea is from home</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
-          <p class="small muted mapband__cap">Estimated drive times. Home is in the middle and north is up; each name is one of the idea cards above. Ideas in the same direction are spread a little so each shows.
-            {%- if off_map %} {{ off_map }} idea{{ ' has' if off_map == 1 else 's have' }} no drive time yet, so {{ 'it isn’t' if off_map == 1 else 'they aren’t' }} on the map.{% endif %}</p>
-          <div class="instrument__pane">{{ map_plot(on_map.wide, 'wide') }}{{ map_plot(on_map.narrow, 'narrow') }}</div>
-        </details>
-      </section>
-    {% endif %}
-
-    {% if not looking_up %}
-      <p class="note mt-4">{{ icon('compass') }}Looking things up is off, so new ideas won’t get hours, prices or estimated drive times.{% if managing %} <a href="{{ url_for('settings.section', name='lookups') }}">Turn it on in Settings</a>{% endif %}</p>
-    {% endif %}
+    </section>{% endif %}
+    {% if not looking_up %}<section class="rail__sec">
+      <p class="note">{{ icon('compass') }}Looking things up is off, so new ideas won’t get hours, prices or estimated drive times.{% if managing %} <a href="{{ url_for('settings.section', name='lookups') }}">Turn it on in Settings</a>{% endif %}</p>
+    </section>{% endif %}
+    <section class="rail__sec"><p class="note"><a href="{{ url_for('web.export_ideas') }}">{{ icon('arrowdown', size='sm') }}Download the ideas as a spreadsheet</a></p></section>
   {% endif %}
-  {% if grownup %}<p class="page-foot mt-6"><a href="{{ url_for('web.export_ideas') }}">{{ icon('arrowdown', size='sm') }}Download the ideas as a spreadsheet</a></p>{% endif %}
 {% endblock %}

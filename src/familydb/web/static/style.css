@@ -251,7 +251,9 @@ p, li, dd, .lede { text-wrap: pretty; }
 
 /* 5.7 Meta line */
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s4); margin-top: var(--s1); font-size: var(--t-meta); color: var(--ink-2); line-height: 1.3; }
-.meta > span { display: inline-flex; align-items: center; gap: var(--s1); }
+.meta > span { display: inline; }
+.meta > span > .icon:first-child { margin-right: var(--s1); vertical-align: -3px; }
+.meta > .person, .meta > .who { display: inline-flex; }
 .meta .icon { width: 16px; height: 16px; color: var(--ink-3); }
 .late { color: var(--red); font-weight: 700; }
 .late .icon { color: var(--red); }
@@ -340,12 +342,17 @@ a.todo__title:hover { text-decoration: underline; color: var(--ink); }
 .composer { display: grid; gap: var(--s3); }
 .composer__row { display: flex; gap: var(--s3); align-items: stretch; }
 .composer textarea { flex: 1; min-width: 0; font: inherit; font-size: 1.125rem; line-height: 1.45; color: var(--ink); background: var(--field); border: 1.5px solid var(--edge); border-radius: var(--r-md); min-height: 58px; padding: 15px var(--s4); resize: none; }
-.composer__send { min-height: 58px; border-radius: var(--r-md); padding: 0 var(--s6); }
+.composer__send { min-height: 58px; border-radius: var(--r-md); padding: 0 var(--s5); background: var(--send); border-color: var(--send); color: var(--on-send); }
+.composer__send:hover { background: var(--send-2); border-color: var(--send-2); color: var(--on-send); }
+/* Send is the one lit thing: the glow means "talk to Vera here" */
+.composer__send:not(:disabled) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--send) 80%, transparent), 0 0 20px color-mix(in srgb, var(--send) 55%, transparent), 0 0 54px color-mix(in srgb, var(--send) 28%, transparent); }
+.composer__who select { width: auto; min-width: 176px; }
 .composer__who { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; font-size: var(--t-meta); color: var(--ink-2); }
 .composer__who b { color: var(--ink); }
 .composer__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; font-size: var(--t-meta); color: var(--ink-2); }
-.composer__photo { font-weight: 700; color: var(--ink); }
-.composer__foot input[type="file"] { max-width: 100%; font: inherit; }
+.composer__photo { color: var(--ink-2); margin-right: var(--s2); }
+.composer__foot input[type="file"] { max-width: 100%; font: inherit; color: var(--ink-2); }
+input[type="file"]::file-selector-button { font: inherit; font-weight: 700; min-height: var(--target); padding: 0 var(--s4); margin-right: var(--s2); border-radius: var(--r-pill); border: 1px solid var(--line-2); background: var(--card); color: var(--ink); cursor: pointer; }
 .starters { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .starter { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); padding: 0 var(--s4); border-radius: var(--r-pill); font: inherit; font-size: var(--t-meta); font-weight: 700; text-decoration: none; cursor: pointer; border: 1.5px solid var(--line-2); background: var(--card); color: var(--ink); }
 /* a starter that sends is filled, with the send icon; one that fills the box is an outline with a pen, ending in … */
@@ -374,7 +381,6 @@ a.todo__title:hover { text-decoration: underline; color: var(--ink); }
 .ask__head .ask__who { font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ask-ink-2); }
 .ask .composer textarea { min-height: 88px; padding: var(--s4) var(--s5); font-size: var(--t-md); border-width: 2px; border-color: color-mix(in srgb, var(--send) 70%, var(--ask-edge)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--send) 14%, transparent), 0 0 26px color-mix(in srgb, var(--send) 12%, transparent); }
 /* Send is the one lit thing: the glow means "talk to Vera here" */
-.ask .composer__send:not(:disabled) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--send) 80%, transparent), 0 0 20px color-mix(in srgb, var(--send) 55%, transparent), 0 0 54px color-mix(in srgb, var(--send) 28%, transparent); }
 .ask .composer__send { min-height: 88px; padding: 0 var(--s5); }
 .ask .composer__who label, .ask .check { color: var(--ask-ink-2); }
 .ask select { width: auto; min-width: 176px; }
@@ -467,25 +473,22 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 .face .icon { width: 26px; height: 26px; color: var(--ink); }
 .face:hover { border-color: var(--ink); color: var(--ink); }
 
-/* 5.16 Ideas list (cards on desktop, compact rows on phone) */
-.ideas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); }
-.idea { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "tile kind" "title title" "for for" "tags tags" "foot foot"; gap: var(--s2) var(--s3); align-content: start; height: 100%; padding: var(--s4) var(--s5); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); }
-.idea:hover { border-color: var(--line-2); box-shadow: var(--pop); }
-.idea:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
-.idea .tile { grid-area: tile; }
-.idea__kind { grid-area: kind; align-self: center; font-size: var(--t-meta); font-weight: 700; color: var(--ink-2); }
-/* an idea is an item like a plan or a to-do: its title is Atkinson 700, the same on every page */
-.idea h3 { grid-area: title; font-family: var(--font-text); font-weight: 700; font-size: var(--t-md); line-height: 1.25; letter-spacing: 0; margin-top: var(--s1); }
+/* 5.16 Ideas: rows in one card, like Next up: the kind's tile, the title and one line, tags, whom it is for */
+.ideas { list-style: none; margin: 0; padding: 0 var(--s5); display: grid; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+.ideas > li + li, .ideas > .idea + .idea { border-top: 1px solid var(--line); }
+.idea { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: var(--s2) var(--s4); align-items: center; padding: var(--s4) 0; }
+.idea:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: var(--r-md); }
+.idea__body { min-width: 0; }
+.idea h3 { font-family: var(--font-text); font-stretch: var(--w-text); font-weight: 700; font-size: var(--t-md); line-height: 1.3; }
 .idea h3 a { color: var(--ink); text-decoration: none; }
-.idea h3 a::after { content: ""; position: absolute; inset: 0; border-radius: var(--r-lg); }
+.idea h3 a::after { content: ""; position: absolute; inset: 0; }
+.idea h3 a:hover { text-decoration: underline; }
 .idea h3 a:focus-visible { outline: none; }
-.idea__for { grid-area: for; display: flex; align-items: center; gap: var(--s2); font-size: var(--t-meta); color: var(--ink-2); }
-.idea__tags { grid-area: tags; display: flex; flex-wrap: wrap; gap: 6px; }
-.idea__foot { grid-area: foot; align-self: end; margin-top: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--line); display: flex; align-items: center; gap: var(--s2); font-size: var(--t-meta); color: var(--ink-2); }
-.idea__foot .icon { color: var(--ink-3); }
-.idea--unknown { border-style: dashed; background: transparent; }
-
-.idea__for .kindw { display: none; }
+.idea__for { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s4); margin-top: var(--s1); color: var(--ink-2); }
+.idea__for > span { display: inline-flex; align-items: center; gap: var(--s1); }
+.idea__for .icon { color: var(--ink-3); }
+.idea__tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s2); }
+.idea--kid { grid-template-columns: auto minmax(0, 1fr) auto; }
 
 /* 5.17 Chat */
 .thread { display: grid; gap: var(--s4); align-content: start; }
@@ -546,7 +549,7 @@ h2.card__head, h3.card__head { font-size: var(--t-h3); display: flex; align-item
 
 /* 5.21 Choices: radio or checkbox pills. Where a choice must be made, none starts checked. */
 .choices { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-wrap: wrap; gap: var(--s2); }
-.choices > legend { width: 100%; padding: 0; margin-bottom: var(--s2); font-weight: 700; font-size: var(--t-meta); }
+.choices > legend { width: 100%; padding: 0; margin-bottom: var(--s2); font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
 .choice { position: relative; display: inline-flex; }
 .choice input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .choice > span { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: 0 var(--s4); border-radius: var(--r-pill); border: 1.5px solid var(--edge); background: var(--field); font-weight: 700; }
@@ -665,7 +668,6 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .sheet-nav { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .adder .errors, .adder .choices { grid-column: 1 / -1; }
 .adder__btn { align-self: end; }
-.ideas.ideas--one { grid-template-columns: minmax(0, 1fr); }
 
 /* 5.27 The brand --------------------------------------------------------- */
 /* Wordmark: the name in Fraunces at full softness, and a lit cursor that waits, the way a terminal does:
@@ -764,6 +766,10 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .fold > summary { list-style: none; display: flex; align-items: center; gap: var(--s2); min-height: var(--target); cursor: pointer; }
 .fold > summary::-webkit-details-marker { display: none; }
 .fold > summary h2 { display: flex; align-items: center; gap: var(--s3); font-size: var(--t-h3); }
+/* a fold in the rail is titled like every rail section: the label */
+.fold > summary h2.overline { font-size: var(--t-xs); }
+.fold > summary h2.rail__q { font-size: var(--t-md); }
+.rail__sec > .fold > summary { border-bottom: 1px solid var(--line); }
 .fold > summary .chev { margin-left: auto; transition: transform .15s; }
 .fold[open] > summary .chev { transform: rotate(90deg); }
 .fold__body { margin-top: var(--s3); display: grid; gap: var(--s3); }
@@ -783,19 +789,20 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 
 /* the plans list: one row per plan, date tile first, grouped by month */
 .plans-agenda { list-style: none; margin: 0; padding: 0; }
-.plan { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); padding: var(--s3) 0; border-top: 1px solid var(--line); }
+.plan { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s4); align-items: start; padding: var(--s4) 0; border-top: 1px solid var(--line); }
+.plan > .who { align-self: center; }
 .plans-agenda > .plan:first-child { border-top: 0; }
-.plan--bare { grid-template-columns: minmax(0, 1fr); }  /* no date tile: the day is the heading above it (what is on near home) */
+.plan--bare { grid-template-columns: minmax(0, 1fr) auto; }  /* no date tile: the day is the heading above it (what is on near home) */
 .plan > .dt { align-self: start; }
 .plan__title { font-family: var(--font-text); font-size: var(--t-md); font-weight: 700; line-height: 1.25; letter-spacing: 0; }
 .plan__title a { color: var(--ink); text-decoration-color: var(--line-2); }
 .plan--past .plan__title, .plan--past .plan__title a { color: var(--ink-2); }
 .rel { color: var(--ink-2); }
-.plan__acts { display: grid; justify-items: start; gap: var(--s2); margin-top: var(--s2); }
+.plan__acts { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s2); margin-top: var(--s2); }
 /* a small fold whose summary is a quiet button: Move it, Cancel it */
-.mini-fold > summary { list-style: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--s4); border-radius: var(--r-pill); border: 1.5px solid var(--line-2); background: var(--card); font-weight: 700; font-size: var(--t-meta); cursor: pointer; }
+.mini-fold > summary { list-style: none; display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: 0 var(--s4); border-radius: var(--r-pill); border: 1px solid var(--line-2); background: transparent; font-weight: 700; font-size: var(--t-meta); cursor: pointer; }
 .mini-fold > summary::-webkit-details-marker { display: none; }
-.mini-fold[open] { justify-self: stretch; }
+.mini-fold[open] { flex-basis: 100%; }
 .mini-fold[open] > summary { background: var(--paper-2); }
 .mini-fold--danger > summary { color: var(--red); }
 .mini-fold__body { margin-top: var(--s2); padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper); display: grid; gap: var(--s3); }
@@ -962,26 +969,37 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .item > .who { justify-self: end; }
 
 /* Chat */
-.chat { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--s5); min-height: calc(100vh - 168px); }
+/* the room is the main column; the conversations are in the rail (a row of pills above the room on a phone) */
+.chat { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); min-height: calc(100vh - 168px); }
+@media (min-width: 821px) { .chat .convos--phone { display: none; } }
 .convos { display: grid; gap: var(--s2); align-content: start; }
-.convo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s3); align-items: center; padding: var(--s3); border-radius: var(--r-md); border: 1.5px solid transparent; color: var(--ink); text-decoration: none; }
-.convo:hover { background: var(--card); color: var(--ink); }
-.convo[aria-current="page"] { background: var(--card); border-color: var(--line-2); box-shadow: inset 3px 0 0 var(--vera), var(--shadow); }
+.convo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); align-items: center; padding: var(--s2); border-radius: var(--r-md); border: 1px solid transparent; color: var(--ink); text-decoration: none; }
+.convo:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink); }
+.convo[aria-current="page"] { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.convo[aria-current="page"] b { font-weight: 700; }
+.convos--rail .convo b { font-weight: 400; }
 .convo b { display: block; line-height: 1.25; }
 .convo small { display: block; font-size: var(--t-sm); color: var(--ink-2); line-height: 1.35; margin-top: 2px; }
-.convos .privacy { padding: var(--s3); margin-top: var(--s2); border-top: 1px solid var(--line); }
+.convos .privacy { padding: var(--s4) 0 0; margin-top: var(--s2); border-top: 1px solid var(--line); }
 .card.room { padding: 0; }
 .room { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
 .room__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .room__head h2 { font-size: var(--t-h3); }
-.room__head .who { display: flex; align-items: center; gap: var(--s3); }
-.room__head .who small { font-size: var(--t-sm); color: var(--ink-2); }
+.room__who { display: flex; align-items: center; gap: var(--s4); }
+.room__who small { display: block; font-size: var(--t-sm); color: var(--ink-2); }
 /* column-reverse with one child: the scroller opens at the newest message with no script */
 /* Desktop: the room grows with the thread (the server sends the latest 30), so a short
    conversation is shown whole. Phone: an app-height room that scrolls inside. */
 .scroller { --tp: var(--s5); flex: 1 0 auto; display: flex; flex-direction: column-reverse; background: var(--paper); }
 .scroller .thread { padding: var(--tp); }
-.room .composer { padding: var(--s3) var(--s5) var(--s4); border-top: 1px solid var(--line); background: var(--card); }
+/* the chat's box is the hero's part: who it is from at the top, the box, the mic and Send, then the small things */
+.room .composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "who who" "row row" "loc photo"; gap: var(--s4); padding: var(--s4) var(--s5) var(--s5); border-top: 1px solid var(--line); background: var(--card); align-items: center; }
+.room .composer > .composer__who { grid-area: who; }
+.room .composer__row { grid-area: row; }
+.room #locate { grid-area: loc; }
+.room .composer__foot:has(#photo) { grid-area: photo; justify-self: end; }
+.room .composer > :is(#where, .composer__foot:not(#locate):not(:has(#photo))) { grid-column: 1 / -1; }
+.room #where:empty { display: none; }
 
 /* Ideas */
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; margin: var(--s5) 0 var(--s3); }
@@ -1001,8 +1019,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .month-nav h2 { font-size: var(--t-h1); padding: 0 var(--s2); }
 .iconbtn { width: var(--target); height: var(--target); border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--edge); background: var(--card); color: var(--ink); text-decoration: none; }
 .iconbtn:hover { border-color: var(--ink); color: var(--ink); }
-.plans { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-areas: "bar bar" "cal cal" "list rate"; gap: var(--s5); align-items: start; }
-.plans__bar { grid-area: bar; } .plans__cal { grid-area: cal; } .plans__list { grid-area: list; } .plans__rate { grid-area: rate; }
+.plans { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); align-items: start; }
 .cal { border: 1px solid var(--line-2); border-radius: var(--r-lg); overflow: hidden; background: var(--card); }
 .cal__wh { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); background: var(--paper-2); border-bottom: 1px solid var(--line-2); }
 .cal__wh > span { padding: 10px var(--s3); font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
@@ -1186,8 +1203,6 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 }
 @media (max-width: 1000px) {
   .home-grid, .status-grid, .settings-grid, .wish-grid, .idea-grid, .signin, .first-day { grid-template-columns: minmax(0, 1fr); }
-  .ideas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .plans { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "list" "rate" "cal"; }
   .chat { grid-template-columns: 240px minmax(0, 1fr); }
 }
 
@@ -1257,20 +1272,10 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .banner--slim { grid-template-columns: auto minmax(0, 1fr) auto; }
   .banner--slim > .btn { grid-column: auto; }
 
-  /* Ideas: list first, tools folded */
-  .ideas { grid-template-columns: minmax(0, 1fr); gap: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
-  .idea { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "tile title" "tile for" "tile tags"; gap: 2px var(--s3); align-items: center; border: 0; border-radius: 0; padding: var(--s3) var(--s4); background: transparent; }
-  .ideas li + li .idea, .ideas > li + li { border-top: 1px solid var(--line); }
-  .idea:hover { box-shadow: none; background: var(--paper); }
-  .idea--unknown { border-style: solid; }
-  .idea__kind, .idea__foot .icon { display: none; }
-  .idea__for .kindw { display: inline; }
-  .idea h3 { margin: 0; }
-  .idea__for { font-size: var(--t-sm); }
-  .idea__foot { display: none; }
-  .idea__for .drive { display: inline; }
-  .idea__tags { margin-top: 4px; }
-  .idea .tile { align-self: start; margin-top: 2px; }
+  /* Ideas: the same rows, tags under the line */
+  .ideas { padding: 0 var(--s4); }
+  .idea { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .idea__tags { grid-column: 2 / -1; justify-content: flex-start; }
   .finder__grid { grid-template-columns: minmax(0, 1fr); }
   .toolbar { margin-top: var(--s4); }
 
@@ -1290,7 +1295,6 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .todo-bar .seg a { flex: 1 1 auto; justify-content: center; padding: 0 var(--s3); }
 
   /* Plans: the month header and its Month/List switch, then the month at a glance, then the list */
-  .plans { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "cal" "list" "rate"; gap: var(--s4); }
   .cal-bar { display: grid; gap: var(--s3); }
   .cal-bar .seg { display: flex; }
   /* Each tab as wide as its words, sharing what is left, so a long third one (what is on near home) wraps less */
@@ -1313,8 +1317,6 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .day__n:has(.mo) { display: inline-grid; height: auto; line-height: 1.05; padding-top: 3px; }
   .day__n .mo { display: block; font-family: var(--font-text); font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; }
 
-  .idea__for { display: block; }
-  .idea__for .avs, .idea__for > .av { vertical-align: middle; margin-right: 4px; }
   .finder .btn { padding: 0 var(--s3); }
   .finder__go .icon { display: none; }
   .disclose > summary { flex-wrap: wrap; column-gap: var(--s2); row-gap: 0; padding: 10px var(--s4); }
@@ -1440,12 +1442,12 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 
 /* ---------- 9. Stage 9: settings, setting up, themes ---------- */
 /* a settings page: every page of settings down the side where there is room; on a phone the way back is the crumb */
-.settings-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: var(--s6); align-items: start; }
+/* the way between settings pages, in the rail: the menu's own voice */
 .settings-nav { position: sticky; top: var(--s5); }
 .settings-nav ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.settings-nav a { display: flex; align-items: center; gap: var(--s3); min-height: var(--target); padding: var(--s2) var(--s3); border-radius: var(--r-md); color: var(--ink-2); text-decoration: none; font-weight: 700; font-size: var(--t-meta); line-height: 1.25; }
-.settings-nav a:hover { background: var(--paper-2); color: var(--ink); }
-.settings-nav a[aria-current] { background: var(--card); color: var(--ink); box-shadow: inset 3px 0 0 var(--ink), 0 0 0 1px var(--line); }
+.settings-nav a { display: flex; align-items: center; gap: var(--s2); min-height: var(--target); padding: var(--s2); margin: 0 calc(-1 * var(--s2)); border-radius: var(--r-md); color: var(--ink-2); text-decoration: none; font-weight: 400; font-size: var(--t-meta); line-height: 1.3; }
+.settings-nav a:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink); }
+.settings-nav a[aria-current] { background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); font-weight: 700; }
 .settings-nav .icon { color: var(--ink-3); }
 .settings-body, .sform { display: grid; gap: var(--s5); min-width: 0; }
 .told { display: grid; gap: var(--s2); margin-bottom: var(--s5); }
@@ -1532,8 +1534,9 @@ textarea.script { min-height: 16em; line-height: 1.55; }
 .setup-progress .done .sp__n { background: var(--ok); border-color: var(--ok); color: var(--on-vera); }
 .setup-progress a[aria-current] { color: var(--ink); }
 .setup-progress a[aria-current] .sp__n { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-.step-head { margin-bottom: var(--s4); }
-.step-head .overline { margin-bottom: 6px; font-size: var(--t-meta); text-transform: none; letter-spacing: .02em; }
+/* a setting-up step's header is the page header: a label, the title, one quiet line, a hairline */
+.step-head { margin-bottom: var(--s5); padding-bottom: var(--s4); border-bottom: 1px solid var(--line); max-width: 760px; }
+.step-head .overline { margin-bottom: var(--s1); }
 .step-body { display: grid; gap: var(--s5); max-width: 760px; }
 .state-done { display: flex; align-items: center; gap: var(--s2); font-weight: 700; color: var(--ok); margin-bottom: var(--s4); }
 .step-body .state-done { margin-bottom: 0; }
@@ -1551,8 +1554,7 @@ textarea.script { min-height: 16em; line-height: 1.55; }
 .knock { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) var(--s4); border: 1.5px dashed var(--edge); border-radius: var(--r-md); }
 
 @media (max-width: 1000px) {
-  .settings-layout { grid-template-columns: minmax(0, 1fr); }
-  .settings-nav { display: none; }
+  .settings-nav { position: static; }
 }
 @media (max-width: 820px) {
   .sgrid, .companies { grid-template-columns: minmax(0, 1fr); }
@@ -1688,7 +1690,6 @@ textarea.script { min-height: 16em; line-height: 1.55; }
 /* her Ideas: plain cards, what and where */
 .idea--kid .idea__for { flex-wrap: wrap; gap: var(--s1) var(--s3); }
 .idea--kid .idea__for > span { display: inline-flex; align-items: center; gap: 6px; }
-.idea--kid .idea__for > span + span { margin-left: var(--s3); }
 @media (max-width: 820px) {
   .wish__acts .btn--sm { flex: 1 1 auto; }
 }
@@ -1712,7 +1713,7 @@ body { background-image: var(--fx-page); background-repeat: no-repeat; }
    her Send glows, and so do her lines in the chat. Nothing of the family's glows. */
 .vs:not(.vs--off) { filter: drop-shadow(0 0 3px var(--vs-halo)) drop-shadow(0 0 calc(7px * var(--fx-glow)) color-mix(in srgb, var(--phosphor) calc(55% * var(--fx-glow)), transparent)); }
 .vs__rim { stroke-opacity: calc(.6 + .4 * var(--fx-glow)); }
-.ask .composer__send:not(:disabled) { box-shadow: 0 0 calc(18px * var(--fx-glow)) -4px color-mix(in srgb, var(--send) calc(60% * var(--fx-glow)), transparent); }
+.composer__send:not(:disabled) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--send) 80%, transparent), 0 0 20px color-mix(in srgb, var(--send) 55%, transparent), 0 0 54px color-mix(in srgb, var(--send) 28%, transparent), 0 0 calc(18px * var(--fx-glow)) -4px color-mix(in srgb, var(--send) calc(60% * var(--fx-glow)), transparent); }
 .msg--vera:not(.msg--pending):not(.msg--failed) .msg__bub { box-shadow: 0 0 calc(18px * var(--fx-glow)) -6px color-mix(in srgb, var(--vera) calc(40% * var(--fx-glow)), transparent); }
 
 /* The title face: page titles and the wordmark only. Atkinson stays for everything read; the Ask card's question,
@@ -1727,7 +1728,7 @@ h1, .wm { font-family: var(--fx-title); font-size-adjust: var(--fx-title-adjust)
 @media print {
   body, .side, .topbar, .ask, .instrument__pane, .pane { background-image: none; }
   .vs:not(.vs--off) { filter: none; }
-  .ask .composer__send:not(:disabled), .msg--vera:not(.msg--pending):not(.msg--failed) .msg__bub { box-shadow: none; }
+  .composer__send:not(:disabled), .msg--vera:not(.msg--pending):not(.msg--failed) .msg__bub { box-shadow: none; }
 }
 
 /* ---------- 12. Small things that move ---------- */
@@ -1816,15 +1817,21 @@ li:target { border-radius: var(--r-md); }
 .wiki { display: grid; gap: var(--s5); }
 .wiki__search { display: flex; gap: var(--s2); max-width: 520px; }
 .wiki__search .searchbox { flex: 1; min-width: 0; }
-.wiki__layout { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: var(--s7); align-items: start; }
+.wiki__layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); align-items: start; }
+/* on a wide screen the sections and "On this page" are in the rail; the copies in the page are the phone's */
+@media (min-width: 821px) { .wiki__layout > .wiki__nav { display: none; } }
+.wiki__nav--rail { position: static; max-height: none; overflow: visible; padding: 0; }
+.wiki__toc--rail ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+.wiki__toc--rail ul ul { padding-left: var(--s4); }
+.wiki__toc--rail a { color: var(--ink-2); }
 .wiki__toggle, .wiki__button { display: none; }
 .wiki__nav { position: sticky; top: var(--s5); max-height: calc(100vh - var(--s7)); overflow-y: auto; padding-right: var(--s2); }
 .wiki-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .wiki-nav .wiki-nav { padding-left: var(--s4); margin: 2px 0 var(--s2) var(--s2); border-left: 1px solid var(--line); display: none; }
 .wiki-nav .is-open > .wiki-nav { display: grid; }
-.wiki-nav a { display: block; padding: var(--s2) var(--s3); border-radius: var(--r-sm); color: var(--ink-2); text-decoration: none; font-weight: 700; line-height: 1.3; }
+.wiki-nav a { display: block; padding: var(--s2); margin: 0 calc(-1 * var(--s2)); border-radius: var(--r-sm); color: var(--ink-2); text-decoration: none; font-weight: 400; line-height: 1.3; }
 .wiki-nav a:hover { color: var(--ink); background: var(--paper-2); }
-.wiki-nav a[aria-current="page"] { color: var(--ink); background: var(--paper-2); box-shadow: inset 3px 0 0 var(--link); }
+.wiki-nav a[aria-current="page"] { color: var(--ink); background: color-mix(in srgb, var(--ink) 7%, transparent); font-weight: 700; }
 .wiki-nav .wiki-nav a { font-weight: 400; }
 .wiki__main { min-width: 0; max-width: 78ch; }
 .wiki__crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: var(--s4); font-size: var(--t-meta); color: var(--ink-2); }
@@ -1875,3 +1882,15 @@ li:target { border-radius: var(--r-md); }
   .wiki__toggle:checked ~ .wiki__nav { display: block; }
   .wiki-prose table { display: block; overflow-x: auto; }
 }
+
+/* ---------- 16. A card that lands in the rail reads as a rail section: no frame, its title the label ---------- */
+.rail .card { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 0; }
+.rail > .card + .card, .rail > .card + .rail__sec, .rail > .rail__sec + .card { padding-top: var(--s5); border-top: 1px solid var(--line); }
+.rail .card__head { margin-bottom: var(--s2); padding-bottom: var(--s2); }
+.rail .card__head h2, .rail .card__head h3 { font-family: var(--font-text); font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
+.rail .card__head .icon { display: none; }
+.rail .form__row, .rail .form__row--3 { grid-template-columns: minmax(0, 1fr); }
+.rail .kv { grid-template-columns: max-content minmax(0, 1fr); gap: var(--s1) var(--s4); }
+.rail .fold__body { margin-top: var(--s4); }
+.rail .cmd-inline, .rail code { white-space: normal; overflow-wrap: anywhere; }
+.rail .tips { padding-left: var(--s4); }

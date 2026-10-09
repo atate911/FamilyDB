@@ -15,7 +15,7 @@
       <p class="lede">{% if editing %}{{ idea.title }}{% if suggested_by %}, suggested by {{ suggested_by }}{% endif %}, added {{ added }}.{% else %}Only a title and a kind are needed; the rest can wait.{% endif %}</p>
     </div>
   </div>
-  <div class="idea-grid">
+  <div class="stack">
     <form class="card form" method="post" action="{{ url_for('edits.edit_idea', idea_id=idea.id) if editing else url_for('edits.add_idea') }}" aria-labelledby="h-form"{{ '' if editing else ' novalidate' }}>
       <h2 class="sr" id="h-form">{{ 'Change the idea' if editing else 'New idea' }}</h2>
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
@@ -119,11 +119,15 @@
       <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}{{ 'Save changes' if editing else 'Add it' }}</button>
         <a class="linkbtn" href="{{ url_for('web.idea', idea_id=idea.id) if editing else url_for('web.ideas') }}">Cancel</a></div>
     </form>
-    <aside class="aside-stack" aria-label="About {{ 'changing' if editing else 'adding' }} an idea">
+  </div>
+{% endblock %}
+
+{# The rail: what changing an idea does. #}
+{% block rail %}
       {% if not editing %}
         {# Several at once: one a line, one kind for them all, each added as the form above would (edits.add_ideas). #}
-        <form class="card form" method="post" action="{{ url_for('edits.add_ideas') }}" aria-labelledby="h-several">
-          <h2 class="card__head" id="h-several">Several at once</h2>
+        <form class="rail__sec form" method="post" action="{{ url_for('edits.add_ideas') }}" aria-labelledby="h-several">
+          <div class="rail__head"><h2 class="overline" id="h-several">Several at once</h2></div>
           <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
           <div class="field"><label class="field__label" for="s-titles">One idea a line</label>
             <textarea id="s-titles" name="titles" rows="5" maxlength="4000" required data-dictate></textarea></div>
@@ -132,8 +136,8 @@
           <div class="actions"><button class="btn" type="submit">{{ icon('plus') }}Add them</button></div>
         </form>
       {% endif %}
-      <section class="card" aria-labelledby="h-ie-n">
-        <h2 class="card__head" id="h-ie-n">Good to know</h2>
+      <section class="rail__sec" aria-labelledby="h-ie-n">
+        <div class="rail__head"><h2 class="overline" id="h-ie-n">Good to know</h2></div>
         <ul class="tips">
           {% if editing %}
             <li>If somebody else changed it while you had it open, your save is refused and the page shows theirs, so nothing is lost.</li>
@@ -146,6 +150,4 @@
           {% endif %}
         </ul>
       </section>
-    </aside>
-  </div>
 {% endblock %}

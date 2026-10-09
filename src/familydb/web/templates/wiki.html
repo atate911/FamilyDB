@@ -11,7 +11,7 @@
     </form>
 
     <div class="wiki__layout">
-      {# The sections: a column on a wide screen, behind a button on a phone. The box is hidden but still takes the keyboard, so the button works without a script. #}
+      {# The sections: in the rail on a wide screen; here, behind a button, on a phone. The box is hidden but still takes the keyboard, so the button works without a script. #}
       <input class="wiki__toggle sr" type="checkbox" id="wiki-sections" />
       <label class="wiki__button btn btn--quiet" for="wiki-sections">{{ icon('list', size='sm') }}Sections</label>
       <nav class="wiki__nav" aria-label="Guide sections">
@@ -33,7 +33,7 @@
             </p>
           {% endif %}
           {% if wiki_toc %}
-            <aside class="wiki__toc" aria-label="On this page">
+            <aside class="wiki__toc phone-only" aria-label="On this page">
               <p class="overline">On this page</p>
               {{ wiki_toc }}
             </aside>
@@ -49,4 +49,20 @@
       </div>
     </div>
   </div>
+{% endblock %}
+
+{# The rail: what is on this page, then every section of the guide. #}
+{% block rail %}
+  {% if wiki_toc and '<li' in wiki_toc %}
+    <section class="rail__sec wiki__toc--rail" aria-labelledby="h-toc">
+      <div class="rail__head"><h2 id="h-toc" class="overline">On this page</h2></div>
+      {{ wiki_toc }}
+    </section>
+  {% endif %}
+  <section class="rail__sec" aria-labelledby="h-sections">
+    <div class="rail__head"><h2 id="h-sections" class="overline">The guide</h2></div>
+    <nav class="wiki__nav wiki__nav--rail" aria-label="Guide sections">
+      {{ nav_list(nav_tree, current_slug, active_slugs) }}
+    </nav>
+  </section>
 {% endblock %}
