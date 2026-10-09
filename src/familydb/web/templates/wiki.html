@@ -33,7 +33,7 @@
               {% if page_meta.depth_label %}<span class="tag tag--off">{{ page_meta.depth_label }}</span>{% endif %}
             </p>
           {% endif %}
-          {% if wiki_toc %}
+          {% if wiki_toc and '<li' in wiki_toc %}
             <aside class="wiki__toc phone-only" aria-label="On this page">
               <p class="overline">On this page</p>
               {{ wiki_toc }}

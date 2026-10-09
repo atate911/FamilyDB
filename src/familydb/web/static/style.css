@@ -1275,6 +1275,8 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .page-chat .rail, .page-wiki .rail { display: none; }
   .room .composer { grid-template-columns: minmax(0, 1fr); grid-template-areas: "who" "row" "loc" "photo"; }
   .room .composer__foot:has(#photo) { justify-self: start; }
+  /* a plan's Move and Cancel share their line beside the date tile and the marks */
+  .mini-fold > summary { padding: 0 var(--s3); }
   .rate-line { grid-template-columns: minmax(0, 1fr); }
   .mini-ideas { grid-template-columns: minmax(0, 1fr); }
   .banner { grid-template-columns: auto minmax(0, 1fr); padding: var(--s3) var(--s4); }
