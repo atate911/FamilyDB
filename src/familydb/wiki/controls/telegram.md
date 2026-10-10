@@ -16,7 +16,7 @@ The five menu commands are set up by FamilyDB itself; `/today@BotName` works in 
 |---|---|
 | `/today` | What is on today, in time order: calendar events (or the saved plans, with a note saying so, if Google Calendar is not connected or did not answer) and the reminders and due times of this chat's things to do that fall today. It leaves out overdue items |
 | `/week` | The next seven days, one line a day, from the calendar or saved plans only; no things to do |
-| `/tasks` | The open things to do asked for in this chat, with their numbers, owner, next reminder, due time, repeat and preferred window. The first 12; a note says how many more are on the To do page |
+| `/tasks` | The open things to do asked for in this chat, with their numbers, owner, next reminder, due time, repeat and preferred window. The first 12; a note says how many more are on the web page |
 | `/now` | What could start right now: up to five ideas that fit the time, the forecast, opening hours and travel, with the reason for each ("maybe" on uncertain ones), up to three that are ruled out and why, a "Travel from ..." line only when it is not counted from home (for example from a [shared location](/wiki/model/location)), and a "Not checked: ..." line naming any check it skipped. It uses what is already known and searches the web for nothing |
 | `/lookup` | Asks for the ideas waiting to be looked up to be looked up on the next run, not in the evening. It says if lookups are off or if none are waiting. Only parents and admins can use it: a kid is told that lookups wait for the evening and to ask a parent, and their ideas are looked up in the evening as usual |
 | `/start` | The assistant's introduction (not in the menu, and not stored) |

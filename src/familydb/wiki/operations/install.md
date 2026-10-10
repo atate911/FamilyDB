@@ -39,7 +39,7 @@ If the browser says the connection is not private, see [HTTPS and the firewall](
 
 ### 3. Follow the setup
 
-The web page opens on [Setup](/wiki/controls/setup): seven short steps, each saying why it matters. You can skip any step and come back, and Home lists what is left.
+The web page opens on [Setup](/wiki/controls/setup): seven short steps, each saying why it matters. You can skip any step and come back, and Now lists what is left.
 
 ## Choices you can make
 

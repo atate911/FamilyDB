@@ -1,14 +1,14 @@
 # How the page looks, and why
 
 This is FamilyDB's design: what the page looks like, the few ideas that make it work, and how to
-draw any page from them. It was worked out on Home, screen by screen, until Home looked
-*designed*: professional, modern, calm, a little technical, and unmistakably one thing. **Home is
-the model.** Every other page is drawn the way Home is, and where a page and this document
+draw any page from them. It was worked out on the first screen, screen by screen, until it looked
+*designed*: professional, modern, calm, a little technical, and unmistakably one thing. **Now is
+the model.** Every other page is drawn the way Now is, and where a page and this document
 disagree, the page is moved, not the document.
 
-It is being built now. Home is agreed (in mockups of the real app); the stylesheet, the parts and
-then the pages follow, one change at a time. Until a page has moved, it still wears the older parts,
-and the code is behind, not this document. When the last page has moved, this paragraph goes.
+The family's pages (Now, the destinations, each thing's own page) are built on it, on the frame
+`docs/INTERFACE.md` lays out; the back office (Status, Settings, Family, the guide) wears the same
+parts in its older frame. The mockups the look was agreed on are `docs/concept-mockups/`.
 
 This document records the design and why, so the next person (an AI agent included) can extend it
 without asking. Anything here may change when a better page needs it: change it in the same
@@ -19,8 +19,8 @@ about people being able to use the page, its safety, and what kids see, not abou
 
 **One thing leads. Everything else is quiet, and ready when it is wanted.**
 
-The page is a way to talk to Vera, so on Home the one thing is her box and its Send. Every other
-part (what is next, what is left to do, what she knows) is laid out around it in one quiet voice,
+The page is a way to talk to Vera, so on Now the one thing is her box and its Send. Every other
+part (what waits, what is on, what she picked) is laid out around it in one quiet voice,
 smaller, lighter and flatter, so the eye goes to the box first and finds the rest when it looks.
 
 Two sentences say how it looks:
@@ -82,7 +82,13 @@ what to check when a new page "feels off".
 
 ### The frame
 
-Every page sits in one frame: **the menu, the main column, and the rail.**
+There are two frames. **The family's frame** (`frame.html`, docs/INTERFACE.md) carries Now, the
+destinations and each thing's own page: the box first, the page, and the row of destinations,
+fixed at the foot on a phone, a rail on the left from a tablet up, and from a desk up a third
+column on the right for the box and what the last message brought back, kept in view while the
+page scrolls. **The back office's frame** (`base.html`) carries Status, Settings, Family, the
+guide and the account pages: **the menu, the main column, and the rail**, as below. The two share
+the type, the tokens, the parts and the steps the columns grow in.
 
 - **The menu and the rail are the same width**, and the main column sits centered between them,
   with the same gap on either side. Both side columns sit on the page's own background, set off
@@ -95,14 +101,15 @@ Every page sits in one frame: **the menu, the main column, and the rail.**
   | 1400 px and up | 256 | 48 | 880 |
   | 1800 px and up | 288 | 64 | 1080 |
 
-- **The rail holds the page's supporting content**: on Home, what is left to do and what is left
-  to set up; on another page, its explanations, its secondary forms and its "how to read this".
+- **The rail holds the page's supporting content**: a page's explanations, its secondary forms
+  and its "how to read this".
   It is written in the menu's voice: a caps label for each section, rows in the plain weight, a
   hairline between sections. A page with nothing supporting leaves the rail empty rather than
   stretching the main column into it, so every page's main column starts at the same edge.
-- **The page header** opens the main column: a caps label for context (on Home, the greeting), the
-  page's title or the day as a display line, at most one line in the quiet tone, and a hairline
-  under it. The page's one primary action, if it has one, sits at the header's right edge. The
+- **The page header** opens the main column: a caps label for context, the page's title or the
+  day as a display line, at most one line in the quiet tone, and a hairline under it. On the
+  family's frame a destination's head is the question it answers ("Where should we eat?") and one
+  line of the answer, then a row of chips. The page's one primary action, if it has one, sits at the header's right edge. The
   header's top lines up with the wordmark's, so the page has one top edge.
 - **The footer** ends the main column: the mark, the family's line and the version, quiet.
 
@@ -144,7 +151,7 @@ look like one hand rather than a pairing.
 | **Label** | 13 px | 700, width 125 %, capitals, tracked `.16em` | section labels, the menu's group names, a date tile's weekday and month, an eyebrow ("In 2 days"), state tags |
 | **Words** | 15 px | 400, width 88 % (700 for a row's title in the main column) | everything read: body, rows, the menu, buttons, links, hints, fields |
 | **Heading** | 22 px | 700, width 76 % | a card's title, the hero's question, a featured row's title |
-| **Display** | 28 px | 700, width 76 % | the wordmark, the day on Home, a page's title, a date tile's day |
+| **Display** | 28 px | 700, width 76 % | the wordmark, a destination's question, a page's title, a date tile's day |
 
 Line height is 1.5 for words, 1.3 in rows, 1.15 for headings and display. Paragraphs stop at about
 62 characters.
@@ -240,13 +247,14 @@ template builds one by hand. Person classes are slots (`.p0` to `.p8`), never na
 
 - **Page header** (`.page-head`): the caps label, the display line, one quiet line, the hairline;
   the page's primary action at its right edge.
-- **The hero** (`.ask`, Vera's box): the model for anywhere somebody writes to her. Three rows.
-  First, her name as a label and her question as the heading ("What's on your mind?", the box's
-  label and Home's `h1`), with **From** (who is asking) at the row's right edge while the family
-  shares one password. Then the box, the mic and **Send**, side by side; the box is the largest
-  field on the page and Send the one glowing thing. Last, one quiet line: "Share where I am with
-  this message" at the left, where it goes ("Goes to the family chat.") at the right. The whole
-  card has a faint halo. Chat's box is the same part.
+- **The box** (`.bar` and `.box`, `_box.html`): the model for anywhere somebody writes to her, the
+  same on every page of the family's. One line that grows, the mic in it and **Send** lit, the one
+  glowing thing; above it "about:" and what this page is about, where a page gives the message a
+  scope; under it the quick sentences a thing's page offers as chips, the "Share where I am" line,
+  and what the last message brought back: her screen and "thinking" while it is on its way, a
+  receipt with Undo, or her reply as a sheet (`.said-sheet`: your words at the right, hers beside
+  her screen). **From** (who is asking) sits above it while the family shares one password. Chat's
+  box (`.composer`) is the older part, with the photo.
 - **Card** (`.card`): padding 24, radius 16, a hairline edge; a head of an icon and a heading, with
   "All plans ›" at its right, and a hairline under the head. Cards live in the main column.
 - **Section title**: every section opens with its title and a hairline under it, in the main
@@ -296,7 +304,7 @@ It is inline SVG (`svg.vs`, from `vera_screen(size, state)`), crisp at 24 pixels
 `aria-hidden` with her name in text beside it. Sizes 24 (`.vs--sm`), 32 (`.vs`), 40 (`.vs--lg`, the
 hero) and 56 (`.vs--xl`, a kid's empty chat); small sizes have fewer lines, not smaller ones.
 
-It **types** its lines in once on Home as the page opens, then rests lit; it types on a loop only
+It **types** its lines in once on Now as the page opens, then rests lit; it types on a loop only
 while a reply is on its way (`.vs--busy`); it goes dark when she can't answer (`.vs--off`), with
 the words beside it saying why. It never gets eyes, a mouth, a silhouette or an expression, and its
 lines never spell anything. Every persona is a she, by the family's decision (`docs/PERSONAS.md`),
@@ -309,7 +317,7 @@ wordmark** is "FamilyDB" in the display role, followed by a lit cursor block.
 ## Motion
 
 Few motions, each meaning something, all in CSS, none for long where people read: her screen
-types once on Home, and loops only while she is writing back; the flash that says what you just
+types once on Now, and loops only while she is writing back; the flash that says what you just
 did lights and fades over a second; where a link lands lights and fades; the wordmark's cursor
 blinks for a few seconds and rests; the pill's dot breathes only while she writes back. Under
 `prefers-reduced-motion` nothing moves.
@@ -318,15 +326,14 @@ blinks for a few seconds and rests; the pill's dot breathes only while she write
 
 The frame folds in order, keeping the focal element first and whole.
 
-- **Below about 1100 pixels** the rail moves under the main column, its sections in the same
-  order, and the menu stays.
-- **On Home**, as the rail moves down, the to-dos come up under Next up, where the family looks for
-  them first: the page and the rail open and each part takes its place by its order (`.o1` the
-  box, `.o2` Next up, `.o3` the to-dos, then the rest).
-- **At 820 pixels and below** the page is one column under a top bar (the mark, the pill, the
-  account) and over a tab bar of five (`--tabbar-total`), the current tab marked on its top edge.
-  The hero keeps its rows, one above the other: her question, who is asking, the box on a line of
-  its own, then the mic and a wide, lit Send with its word, in the thumb's reach. Chat's
+- **The family's frame, below 1100 pixels,** loses Vera's column: the box comes back to the top of
+  the page, under the wordmark, and the rail of destinations stays on the left.
+- **The back office, below about 1100 pixels,** moves the rail under the main column, its
+  sections in the same order, and the menu stays.
+- **At 820 pixels and below** the family's frame is the phone's: the wordmark and the avatar, the
+  box, the page, and the row of destinations fixed at the foot (`--tabbar-total`), the current
+  one in ink with a line under it, scrolling sideways if a kid's words are long. The back office is
+  one column under a top bar (the mark, the pill, the account) over the same row. Chat's
   conversations and the guide's sections have their phone places in the page (a row of pills, a
   Sections button), so the rail's copies are not drawn there.
 - **Nothing scrolls sideways** at 390 or 320 pixels, except a row of conversation pills. Labels
@@ -338,34 +345,27 @@ Every page is checked at 390 and 320 pixels in Phosphor, Kitchen Table and Ink.
 
 Each page names its focal element, what the main column holds, and what the rail holds.
 
-- **Home.** Focal: the hero. Header: the greeting, the day, one line of how things stand. Main:
-  Next up (the featured plan, then the next few as rows), what was just added to Ideas, the kids'
-  lists. Rail: To do (checkbox rows), then, for an admin, what is left to set up. What a role may
-  not do is not offered.
-- **Chat.** Focal: the box, the hero's part. Main: the conversation, newest at the bottom, her
-  messages beside her screen and the family's in their own color's soft. Rail: the conversations
-  (the family's, and the kids', which grown-ups may read along) and who can read this one.
-- **Ideas.** Focal: search, with narrowing by kind, person or status folded under it. Main: the
-  ideas as rows in one card (kind tile, title, one line of the kind and where or how far, tags,
-  owner marks), then the radar, the one instrument in the app. Rail: "Save a thought for later",
-  why something has not been looked up, the download. **An idea**: its own page; main: what it
-  is, when it is on the calendar, the place, how it went; rail: at a glance, looking it up,
-  planning it. **Restaurants**: a card per place, with today's hours and cost.
-- **Plans.** Focal: the next plan. Main: Month or List; the list as rows by month (date tile,
-  title, when and where on one line, owner marks), Move and Cancel as one quiet line under each.
-  Rail on the list: where the plans come from, adding a plan, what happened lately, the download;
-  on the month: what is coming (the time beside each date tile), how the last plans went, where
-  the plans come from.
-- **What is on near home** (its name is the family's, written once in `familydb/happening.py`): a
-  third tab of Plans, for grown-ups only, drawn as Plans' list, a heading a day, each find a row
-  with no date tile.
-- **To do.** Focal: adding one. Main: overdue first under a red heading, then the rest, No date
-  last; each a checkbox row whose title opens the to-do's own page. Rail: that she can be told
-  instead, the download. The to-do's own page: the form; rail: what to know, what reminders do.
-- **Lists.** Focal: the shopping list. Main: each list as checkbox rows, what was got folded under
-  "Got". Rail: the other lists.
-- **The kids' lists.** Main: each kid's lists at a glance, what Vera flagged, the answers. A kid's
-  own page: "A kid's screen".
+- **Now** (docs/INTERFACE.md section 3). Focal: the box. Then one line of the day, her questions
+  (each her screen, the words, where it came from, its buttons), the plate as checkbox rows, her
+  picks as tiles in pencil (a dashed edge, lighter ink: not set), and today and tomorrow one line
+  each. Nothing is drawn for a quiet part; "Nothing needs you." where nothing waits. What a role
+  may not do is not offered.
+- **Chat.** The thread behind the box: the conversation, newest at the bottom, her messages beside
+  her screen and the family's in their own color's soft; the conversations (the family's, and the
+  kids', which grown-ups may read along) as a row of pills, and who can read this one. The page
+  has its own box at the foot of the thread, so the frame draws none.
+- **A destination** (section 4): the question as the title, one line of the answer, a row of chips,
+  then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
+  one fact line and the people's marks at the edge; "by hand" last, as a quiet link. **Eat**: the
+  pick for the next meal. **Do**: what fits the next free stretch, then the pile, the quiet ones
+  faded, the map under it. **Week**: a day a section, set things as set rows (a solid left edge,
+  the time in the mono), the free time in words, a reminder a small bell line, her pick in pencil;
+  the plate above. **Kids**: a kid a section, what waits first. **Soon**: finds by day. **Lists**:
+  big ticks. **Did**: a face a row.
+- **A thing's own page** (section 5): a place, a plan, a reminder. The head with the way back, the
+  facts that exist in two columns (caps key, bold value), where it came from as a quotation, what
+  she found marked as hers and dated, what is planned or how it went as set rows, the box about it
+  with three quick sentences, then its actions and "Edit by hand" last, folded.
 - **What Vera knows.** Main: each fact as a row under whom it is about, with how sure and where it
   came from, and Forget. Rail: telling her something, how she weighs it, what was forgotten.
 - **Family.** Focal: the list of people. Main: each person a row (avatar, name, role, how Vera
@@ -439,20 +439,20 @@ and what is there is worded for her. One natural place to say anything, and each
 what is hers or the family's, with nothing to filter, count or choose between. Every simpler page
 is drawn for whoever may not `browse`, never by asking about a role.
 
-Her menu is Home, Chat with Vera, My list, My things to do, Plans and Ideas: no pill, no What Vera
+Her row is Now, Do, My week and My list, and her menu adds Chat with Vera: no pill, no What Vera
 knows, Status, Settings or Family, and no version in her footer.
 
-- **Her Home** opens with her line ("Roller rink tomorrow with Theo, and Sam said yes to your
-  sketchbook!"), then the hero, going to her own chat, saying how many messages she has left
-  today. Then Next up for you, My list and My things to do, and nothing else.
+- **Her Now** is the box (a line under it says who can read what she writes), then her own things
+  to do with their ticks, My list with its countdowns, her picks, today and tomorrow, and how many
+  messages she has left today. Nothing of the household's workings, and no present for her.
 - **Her chat** is only her own, and says that the grown-ups can read it, at every width. Empty, it
   rests on Vera's screen at 56 pixels. She is told gently when 5 messages are left; when they are
   used up the box closes until tomorrow. No "Share where I am".
 - **My things to do** are hers, and she ticks them off herself: the checkbox, what, when in words,
   "Set by Alex". No filters, no search, no count, no reminder workings.
-- **Plans** is one list of what is coming. **Ideas** is plain rows, each a link, with nothing to
-  search, filter or count, no radar and no workings. A present for her brother shows, tagged
-  "Hidden from Theo".
+- **My week** is the family's days with her own things to do, no plate and no forms. **Do** is
+  plain rows, each a link, with nothing to search, filter or count, no map and no workings. A
+  present for her brother shows, tagged "Hidden from Theo".
 - **My list** opens on the hero, "Tell Vera anything", posting to her chat; there is no second
   form. Under it her three lists (Every day, Christmas, Birthday), each with its countdown, one
   line to each thing: the grip (only while the script runs), its rank in a round badge, what it
@@ -465,7 +465,9 @@ knows, Status, Settings or Family, and no version in her footer.
 
 ## Still open
 
-- **The paper looks** (Kitchen Table, Ink and the rest) have been checked on Home only.
+- **The paper looks** (Kitchen Table, Ink and the rest) have been checked on Now only.
+- **Vera's column** on a desk holds the box and the last answer. The thread behind it, and a reply
+  pinned as a shelf (docs/INTERFACE.md section 8), are not drawn yet.
 - **Everyone.** An owner mark for a plan that is everyone's shows all of them stacked. Showing no
   mark for the usual case is worth trying once a page has many such rows.
 - **A to-do's edit** moved from a link on every row to the row itself opening the to-do's page;

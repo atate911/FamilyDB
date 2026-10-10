@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.5.0 — in progress
+
+### New since v0.4.0
+
+- **The page is rebuilt around Vera and what the family asks.** The box to tell her something is first
+  on every page, and what the message brought back comes back to that page: a receipt with Undo, or her
+  reply as a sheet over it. Now is the first screen: what is waiting on you (a plan to rate, a kid's ask,
+  a kid's pitch), what is on your plate, her picks for right now and the weekend, made ahead by an hourly
+  job with no model call, and today and tomorrow. A row of destinations at the foot, named for what you
+  would get: Eat, Do, Week, Kids, Soon, Lists, Did, each opening on its answer and narrowed with chips;
+  a kid's row is Now, Do, My week and My list. A place, a plan and a reminder each have a page of their
+  own, in the order a person decides in, with the box about that thing. On a tablet the row stands at the
+  left; on a desk the box and her replies keep a column of their own. The design is `docs/CONCEPT.md` and
+  `docs/INTERFACE.md`; the picks job can be turned off on AI model.
+
 ## v0.4.0 — beta (2026-10-09)
 
 ### New since v0.3.1

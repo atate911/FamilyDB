@@ -2,6 +2,8 @@
 
 The skeleton every screen is built on, for the web page, a kitchen tablet and an iOS app. Second draft, October 2026, after the concept work in `CONCEPT.md`, three alternative paradigms weighed against it (section 12), and the family's answers to the questions that decide between them. Where this and the concept disagree, this document wins.
 
+**Where it stands (October 2026):** the web page is built on this skeleton: Now (section 3), the eight destinations and a kid's four (sections 4 and 9), the item pages (section 5), the box with its receipts and her reply over the page (section 6), her picks made ahead by an hourly job, and the phone and big-screen frames (section 8). The kitchen tablet, iOS and the second pass's open decisions (section 12) are not built. `docs/STYLE.md` records the look; the guide (`/wiki`) says how to use each page.
+
 It is organized from the outside in: what the app is, the map, each level of the map, the Vera layer over all of it, how a person moves, the two platforms, the people, the awkward states, and what the server has to provide. Section 12 records the second pass: what was weighed, what changed, and what still needs a decision.
 
 ## 1. What the interface is

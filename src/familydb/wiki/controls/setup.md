@@ -67,8 +67,8 @@ The numbered steps are on [Connections](/wiki/controls/settings/connections#goog
 
 ## When setup is done, and before
 
-- **Until the two needed steps are done**, an admin who opens Home is sent to `/setup`. So is anybody, while the family still shares one password or has none, because nobody is known to be an admin yet. A parent signed in as themselves is not sent anywhere, but the pill reads "Can't answer yet" and [Status](/wiki/controls/status) names what is missing. Kids see no pill.
-- **After that**, Home carries a card, "Finish setting up", listing each unfinished step with a link, and on a phone a strip saying how many steps are left. Only admins see it, and it disappears when every step is done.
+- **Until the two needed steps are done**, an admin who opens Now is sent to `/setup`. So is anybody, while the family still shares one password or has none, because nobody is known to be an admin yet. A parent signed in as themselves is not sent anywhere, but the pill reads "Can't answer yet" and [Status](/wiki/controls/status) names what is missing. Kids see no pill.
+- **After that**, Now carries "Finish setting up", listing each unfinished step with a link. Only admins see it, and it disappears when every step is done.
 - **The overview** says "Let's get FamilyDB ready" until the needed steps are done and "Nearly there" after. Its button reads Start, then "Carry on" with the next unfinished step, then "Everything is set up".
 - **The last page**, `/setup/done`, says whether the assistant can answer, suggests a first question, and lists what was left for later.
 

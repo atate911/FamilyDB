@@ -4,7 +4,7 @@ Shared location lets the assistant answer "near here" and "open now" from where 
 
 ## How a position arrives
 
-- **On the web page:** tick **Share where I am with this message** under the box on Home or Chat. The tick appears only where the browser can give a position. The browser asks your permission, and its position goes with that one message.
+- **On the web page:** tick **Share where I am with this message** under the box on any page. The tick appears only where the browser can give a position. The browser asks your permission, and its position goes with that one message.
 - **In Telegram:** attach a location (the paperclip, then Location), once or live. A live location keeps the position current while it runs.
 
 FamilyDB names the place once, as in "Old Town, Portland". On Telegram it replies once to say it has the location; later updates of a live location are silent.

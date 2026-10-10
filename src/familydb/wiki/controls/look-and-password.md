@@ -58,7 +58,7 @@ An admin makes a [starting password](/wiki/reference/glossary#starting-password)
 
 1. Sign in with your name and the starting password.
 2. You land on a page headed **Choose your own password**. Nothing else opens until you have.
-3. Save a password of your own. The starting one stops working, and you go to Home (an admin with setup unfinished lands on Setup).
+3. Save a password of your own. The starting one stops working, and you go to Now (an admin with setup unfinished lands on Setup).
 
 ### Being signed out elsewhere
 

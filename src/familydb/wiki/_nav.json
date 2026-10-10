@@ -51,7 +51,7 @@
       "children": [
         {
           "slug": "controls/home-and-chat",
-          "title": "Home and Chat",
+          "title": "Now and Chat",
           "audience": "grownups",
           "depth": "howto",
           "see_also": [
@@ -61,7 +61,7 @@
         },
         {
           "slug": "controls/ideas",
-          "title": "Ideas",
+          "title": "Eat and Do",
           "audience": "grownups",
           "depth": "howto",
           "see_also": [
@@ -72,7 +72,7 @@
         },
         {
           "slug": "controls/plans-and-tasks",
-          "title": "Plans and To do",
+          "title": "Week, Soon, Lists and Did",
           "audience": "grownups",
           "depth": "howto",
           "see_also": [
@@ -83,7 +83,7 @@
         },
         {
           "slug": "controls/wish-lists",
-          "title": "Wish lists",
+          "title": "Kids and their lists",
           "audience": "grownups",
           "depth": "howto",
           "see_also": [

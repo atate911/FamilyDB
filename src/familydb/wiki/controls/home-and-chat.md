@@ -1,51 +1,69 @@
-# Home and Chat
+# Now and Chat
 
-Home is where you ask the assistant something and see what is coming up and what is left to do. Chat is the conversation itself, where the answers arrive. They share one conversation: a message sent from Home's box lands in Chat. Reading either page makes no model call. Nearly every message you send does, and it is paid for.
+Now is the first screen: the box to tell the assistant something, then whatever is waiting on you, her picks for right now, and today and tomorrow in one line each. Chat is the conversation behind the box, where every message and answer is kept. Reading either page makes no model call; nearly every message you send does, and it is paid for.
+
+The box is the same on every page of the family's: Now, Eat, Do, Week, Kids, Soon, Lists, Did and each thing's own page. A message sent from any of them lands in your conversation, and the answer comes back to the page you sent it from.
 
 ## Who sees what
 
-Everyone signed in sees Home and may chat ([Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions)).
+Everyone signed in sees Now and may chat ([Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions)).
 
-- **Admins and parents** share one family conversation, and Home shows the whole household.
-- **A kid** has a shorter Home (the box, Next up for you, My list and My to-dos) and their own chat, which grown-ups can read; the box says who. A kid cannot see the family conversation, and a grown-up cannot write in a kid's.
+- **Admins and parents** share one family conversation, and Now shows the whole household: what is waiting on a grown-up, everybody's late things, her picks for everyone.
+- **A kid** has her own Now (the box, her things to do, My list, her picks and today and tomorrow) and her own conversation, which grown-ups can read; a line under the box says who. A kid cannot see the family conversation, and a grown-up cannot write in a kid's. Her row of pages is Now, Do, My week and My list.
 - **Under the [shared password](/wiki/reference/glossary#shared-password)** nobody is signed in as themselves, so the box asks "From" and you pick your name.
-- **An admin** is sent from Home to [Setup](/wiki/controls/setup) until an admin is on the family list and a model is connected.
+- **An admin** is sent from Now to [Setup](/wiki/controls/setup) until an admin is on the family list and a model is connected.
 
-## Home, top to bottom
+## Now, top to bottom
 
-Cards sit in two columns on a wide screen and stack on a phone. Admins and parents see all of these.
-
-| Card | What it shows |
+| Part | What it shows |
 |---|---|
-| Greeting | Your name and the day, then the next plan and how many things to do are late |
-| The box | Ask, save an idea or set a reminder. Under it, a note while an answer is on its way, or the assistant's last line if it is under a day old |
-| Next up | The next plan with its time, drive and who it is for, then up to three after it, from the next 60 days. A note says when they come from saved plans because Google Calendar is not connected or did not answer |
-| Just added to Ideas | The four newest ideas, a link to the restaurants, and Add an idea |
-| The kids' lists | Each kid's list at a glance, with a count of wishes waiting on you |
-| To do | The first four open things to do, with a late count |
-| Finish setting up | The steps left (admins only) |
-| How did it go? | The oldest plan from the last 2 weeks that nobody has rated, with three faces: Loved it, OK, Not great |
-| Vera today | What was spent today (estimated), your limit and a usual day, with the assistant's state (not on a phone). The card carries the assistant's name |
+| The box | Ask, save an idea or set a reminder. Under it, what the last message brought back (below) |
+| The line | The day and the time, then how the day stands: "Free this evening", "Swim lesson 4:30 pm" |
+| Finish setting up | The steps left, for admins only, until they are done |
+| Her questions | At most three things waiting on you: a plan to rate (Loved it, OK, Not great), a kid's ask to answer (Yes, Not this time), a kid's pitch for an outing (See it, or Later, which rests it for a week) |
+| On your plate | What is late or due today, each with its tick; a kid sees all of her own things to do |
+| What about… | Her picks, chosen ahead by code, with when they were chosen. "Different ones" asks her for others, which is a message like any other |
+| My list | A kid's wishes, with the countdowns to Christmas and her birthday |
+| Today, Tomorrow | One line each, linking to the day |
 
-A kid's Next up shows only plans that name them or everyone, and their To do only their own things.
+When nothing waits on you, Now says so ("Nothing needs you.") and gets on with the picks.
 
-The pill in the side bar (the top bar on a phone) says how the assistant stands and links to Status. Its words are on [Status](/wiki/controls/status#the-pill-and-the-verdict).
+### Her picks
+
+The picks under **What about…** are made ahead, never while you look: an hourly job chooses up to four for right now and, from Thursday, up to six for the weekend, from the suggestion engine's own ranking (what fits the free time, who is coming, the weather, what rested long enough). The job runs between 8 am and 10 pm and makes no model call. A plan she suggests shows in pencil on This week too. The job can be switched off on [AI model](/wiki/controls/settings/ai-model); on the server, `familydb picks --now` makes a fresh set.
+
+The pill in the menu (behind your picture) says how the assistant stands and links to Status. Its words are on [Status](/wiki/controls/status#the-pill-and-the-verdict).
+
+## What comes back under the box
+
+Send a message and the page you sent it from shows, under the box:
+
+- **On its way.** Her screen and "thinking" while the answer is being written. The page asks again after 3 seconds, then 5, then every 10, up to seven looks, with scripts or without.
+- **A receipt**, when the message changed something: one line of what she did ("Saved #12 Kenji's Ramen", "Reminder set for Tuesday"), with **Undo** beside it for the one change the message made, and **Earlier** to the thread.
+- **Her reply**, when the message only asked: your words, then hers, on a sheet over the page, with Undo where one applies and a pointer to the page her answer is about.
+- **"Vera wrote something"**, on any page, when she has written since you last opened the thread, so somebody who uses only the page knows.
+
+Undo takes back the last change while the record is still as that change left it, once, for whoever made it or may change things.
+
+## The box on a destination
+
+On Eat, Do, Week, Kids, Soon, Lists and Did the box says what it is about ("about: This week") and the message goes to her with that scope in front of it, so "anything cheaper?" on Eat is a question about restaurants. On a thing's own page the box is about that thing, and three quick sentences under it fill the box with the usual asks ("Plan it for this weekend", "Move it to Saturday"); nothing is sent until you press Send.
 
 ## Chat, top to bottom
 
-Chat shows, from the top: a list of conversations (for admins and parents when there are kids: the family's and each kid's), the room's header, the thread and the box. A kid sees one conversation, their own, and the list shows when a kid last wrote, not what they said. Opening a kid's conversation shows their words, with no box, although the list itself withholds them.
+Chat is the thread behind the box. From the top: the conversations (for admins and parents when there are kids: the family's and each kid's, as a row of pills), the room's header, the thread and the box. A kid sees one conversation, her own, and the list shows when a kid last wrote, not what she said. Opening a kid's conversation shows her words, with no box, although the list itself withholds them.
 
 The thread holds the latest 60 messages, with the day marked where it changes and "Earlier messages" to go back. Under the assistant's answers, admins and parents see what the message tried to change ("Saved an idea", "Remembered something"), even if it was refused. Telegram conversations are separate and do not appear here.
 
 ## Send a message
 
-Type in the box (Enter starts a new line; Ctrl or Cmd with Enter sends) and press Send. The page takes you to Chat and shows your message at once. Wait for the answer, or leave: it is written to the thread either way. A message may be up to 4,000 characters. Each goes with the chat's recent messages ([Spending](/wiki/controls/settings/spending)). Slash commands, buttons and voice notes are Telegram's ([Telegram](/wiki/controls/telegram)). A form on the page, such as adding an idea, runs the tool the assistant would, with no model call.
+Type in the box (Enter starts a new line; Ctrl or Cmd with Enter sends) and press Send. The page shows your message at once. Wait for the answer, or leave: it is written to the thread either way. A message may be up to 4,000 characters. Each goes with the chat's recent messages ([Spending](/wiki/controls/settings/spending)). Slash commands, buttons and voice notes are Telegram's ([Telegram](/wiki/controls/telegram)); the Chat page's box also takes a photo. A form on the page, such as ticking a thing off, runs the tool the assistant would, with no model call.
 
 The tab keeps a half-typed message and puts it back when you return. Signed in as yourself, it is forgotten once the message arrives; under the shared password the sent words may come back into the box. It is also forgotten when the tab closes.
 
 ## While an answer is being written
 
-The chat answers one message at a time. The box closes, a bubble says the assistant is thinking, and the page asks again after 3 seconds, then 5, then every 10, up to seven looks. "Check for her answer" is always there, with "Stop updating this page" beside it while the page is still looking. Anyone else writing in the same chat gets "Still thinking about the last message" until the answer is in. A kid's chat never waits on anyone else's.
+The chat answers one message at a time. The box closes while it does, and anyone else writing in the same chat gets "Still thinking about the last message" until the answer is in. A kid's chat never waits on anyone else's.
 
 ## When a message fails
 
@@ -57,7 +75,7 @@ A failed message shows a red edge and "This one didn't go through". The page has
 
 ## Limits for kids
 
-A kid has two limits, a message count and a daily share. What each is, and what a kid is told at each, is on [Kids](/wiki/model/family-and-roles#kids). The values are on [Spending](/wiki/controls/settings/spending#the-daily-limit).
+A kid has two limits, a message count and a daily share. What each is, and what a kid is told at each, is on [Kids](/wiki/model/family-and-roles#kids). The values are on [Spending](/wiki/controls/settings/spending#the-daily-limit). Her Now says how many messages she has left today.
 
 ## Share where I am
 
@@ -65,7 +83,7 @@ Tick **Share where I am with this message** to let the assistant use your positi
 
 ## The mic
 
-Where the browser has speech recognition and dictation is on, a mic sits beside the box. An admin turns it on or off under [General](/wiki/controls/settings/general). The browser sends the sound to its maker, never through FamilyDB.
+Where the browser has speech recognition and dictation is on, a mic sits in the box. An admin turns it on or off under [General](/wiki/controls/settings/general). The browser sends the sound to its maker, never through FamilyDB.
 
 ## What an admin needs to know
 
