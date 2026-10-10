@@ -137,7 +137,7 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         for table in ("finds", "find_sources", "feed_proposals"):
             conn.execute(f"DROP TABLE {table}")
         conn.execute("ALTER TABLE suggestions DROP COLUMN picks")
-        for table in ("ai_texts", "ai_blobs", "problems", "place_names"):
+        for table in ("ai_texts", "ai_blobs", "problems", "place_names", "pick_sets"):
             conn.execute(f"DROP TABLE {table}")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.

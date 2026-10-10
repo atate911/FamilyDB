@@ -28,6 +28,7 @@ from familydb.jobs.happening import run_happening
 from familydb.jobs.morning import any_on as morning_on
 from familydb.jobs.morning import run_morning
 from familydb.jobs.nudges import run_nudges
+from familydb.jobs.picks import run_picks
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
@@ -159,6 +160,13 @@ def job_specs(app: App) -> list[JobSpec]:
             "check the backups and the disk",
             run_upkeep,
             IntervalTrigger(hours=1),
+        ),
+        JobSpec(
+            "picks",
+            "keep her picks on Now fresh",
+            run_picks,
+            IntervalTrigger(hours=1),
+            wanted=settings.picks,
         ),
         JobSpec(
             "tidy",

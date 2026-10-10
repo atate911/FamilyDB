@@ -1105,6 +1105,20 @@ def happening_now(
     typer.echo(", ".join(f"{key}: {value}" for key, value in counts.items()))
 
 
+@app.command("picks")
+def picks_now(
+    force: bool = typer.Option(False, "--now", help="Remake every set, fresh or not."),
+) -> None:
+    """Make her picks for Now (the running bot does this hourly, each set when due). Code only:
+    no model call."""
+    from familydb.jobs.picks import run_picks
+
+    application = build_app()
+    application.migrate()
+    made = run_picks(application, force=force)
+    typer.echo(", ".join(f"{key}: {value}" for key, value in made.items()))
+
+
 def _stop(message: str, *detail: str) -> None:
     typer.secho(message, fg=typer.colors.RED, err=True)
     for line in detail:

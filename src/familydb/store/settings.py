@@ -67,6 +67,7 @@ BEHAVIOUR = (
     "judgement_budget",
     "choosing",
     "choose_level",
+    "picks",
     "choose_budget",
     "openai_better_model",
     "openai_best_model",

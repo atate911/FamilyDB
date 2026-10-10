@@ -318,6 +318,9 @@ class Settings(BaseSettings):
     # question, a question about right now, or anything but a chat message.
     choosing: bool = True
     choose_level: Level = "best"
+    # Her picks on Now, "What about…" (familydb/picks.py): made ahead by code every few hours,
+    # never a model call; off leaves Now with her questions and the day's line.
+    picks: bool = True
     choose_budget: float = Field(default=5.0, ge=0, le=50)
     # Model calls one choice may take: the answer, and one more if code refused a pick in it.
     # Each re-sends the whole dossier at the strong level, so it stays small.

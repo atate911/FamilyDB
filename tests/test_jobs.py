@@ -673,10 +673,16 @@ def test_catch_up_sends_a_digest_that_was_due_today(settings, thursday_clock, co
     delivered: list[str] = []
     app.senders["telegram"] = lambda _chat_id, text: delivered.append(text)
     api = fakes.FakeMessagesAPI(*_digest_script("Catch-up digest."))
-    assert run_catch_up(app, api=api) == {"follow_ups": 0, "digest": "ok"}
+    caught_up = run_catch_up(app, api=api)
+    assert caught_up.pop("picks") == {"now": 1, "weekend": 2}  # Now's picks, by code: no call
+    assert caught_up == {"follow_ups": 0, "digest": "ok"}
     assert delivered == ["Catch-up digest."]
-    # Already sent today: the next catch-up sends nothing.
-    assert run_catch_up(app, api=api) == {"follow_ups": 0, "digest": "skipped"}
+    # Already sent today: the next catch-up sends nothing, and the picks are fresh.
+    assert run_catch_up(app, api=api) == {
+        "follow_ups": 0,
+        "digest": "skipped",
+        "picks": {"now": 0, "weekend": 0},
+    }
     assert len(api.requests) == 2
 
 
@@ -718,7 +724,9 @@ def test_no_job_calls_the_model_when_there_is_nothing_to_do(settings, clock, con
     assert run_retries(quiet, api=api) == 0
     assert run_enrichment(quiet, api=api) == {"done": 0, "skipped": 0, "failed": 0, "deferred": 0}
     assert run_follow_ups(quiet) == 0
-    assert run_catch_up(quiet, api=api) == {"follow_ups": 0, "digest": "not due"}
+    caught_up = run_catch_up(quiet, api=api)
+    assert caught_up.pop("picks") == {"now": 1, "weekend": 2}  # made by code, never a call
+    assert caught_up == {"follow_ups": 0, "digest": "not due"}
     assert set(run_happening(quiet, api=api).values()) == {0}
     assert api.requests == []
 

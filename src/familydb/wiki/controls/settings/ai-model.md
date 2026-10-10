@@ -46,6 +46,7 @@ Earlier versions drew a box for each of these. They are still read, as what a ro
 | `chat_level`, `digest_level`, `lookup_level` | The strength for chat, the digest and lookups |
 | `judgements`, `judgement_level` | Whether to weigh a change, and how strongly |
 | `choosing`, `choose_level` | Whether to choose suggestions, and how strongly |
+| `picks` | Whether a few picks are kept ready on Now under **What about…**, worked out by code every few hours from the family's own ideas and what is on near home: never a model call |
 | `voice_notes`, `transcribe_provider`, `openai_transcribe_model`, `gemini_transcribe_model` | Whether voice notes are heard, and by whom |
 | `photos` | Whether photos are looked at |
 

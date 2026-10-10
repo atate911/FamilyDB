@@ -233,6 +233,7 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
         "alerts",
         "morning",
         "tidy",
+        "picks",
         "upkeep",
     }
     assert scheduler.get_job("retry_failed").trigger.interval == timedelta(

@@ -157,6 +157,7 @@ POINTING_AT = {
     ("memories", "said_by"): "unname",
     ("messages", "member_id"): "unname",
     ("outcomes", "recorded_by"): "unname",
+    ("pick_sets", "member_id"): "delete",
     ("plans", "created_by"): "unname",
     ("settings_log", "changed_by"): "unname",
     ("suggestions", "asked_by"): "unname",

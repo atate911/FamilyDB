@@ -457,6 +457,7 @@ GROUPS: tuple[Group, ...] = (
             field("judgement_level", "How strong a model weighs it"),
             field("choosing", "Have a stronger model choose the suggestions"),
             field("choose_level", "How strong a model chooses"),
+            field("picks", "Keep a few picks ready on Now (What about…)"),
             field("voice_notes", "Listen to voice notes"),
             field(
                 "transcribe_provider",

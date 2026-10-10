@@ -14,6 +14,7 @@ from familydb.availability import digest_configured, happening_available
 from familydb.jobs import morning
 from familydb.jobs.follow_ups import run_follow_ups
 from familydb.jobs.happening import run_happening
+from familydb.jobs.picks import run_picks
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.weekend_digest import run_digest
 from familydb.whereabouts import forget_old
@@ -70,5 +71,11 @@ def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
             result["happening"] = run_happening(app, api=api)
         except Exception:
             log.exception("reading what is on near home failed on start")
+    # Her picks for Now, when none is fresh: code only, so a restart costs no model call.
+    if app.settings.picks:
+        try:
+            result["picks"] = run_picks(app)
+        except Exception:
+            log.exception("making the picks for Now failed on start")
     log.info("catch-up on start: %s", result)
     return result

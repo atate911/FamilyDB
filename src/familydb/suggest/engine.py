@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, time, timedelta
 
 from familydb import happening
@@ -131,6 +131,8 @@ class Assessment:
     loved: set[int]  # done and loved: "again", or rated FAVORITE_RATING or more lately
     shown: list[Candidate]  # the engine's own cut, when nobody chose
     held_back: int
+    # The kids by id, for the picks made ahead to say whose idea one was (familydb/picks.py).
+    kid_names: dict[int, str] = field(default_factory=dict)
 
 
 def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> SuggestResult:
@@ -154,9 +156,13 @@ def result_of(a: Assessment, chosen: Chosen | None = None) -> SuggestResult:
     )
 
 
-def assess(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> Assessment:
+def assess(
+    ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True, record: bool = True
+) -> Assessment:
     """Every stage but the last: the window, the context, the rules, the checks, the engine's own
-    cut, the finds and the log."""
+    cut, the finds and the log. Without `record` nothing is logged as suggested: the picks made
+    ahead for Now (familydb/picks.py) are not a suggestion anybody asked for, so they must not
+    sink the same ideas in the next real question."""
     window, label, bounds = resolve_window(args, ctx.clock.now())
     context = build_context(ctx, window, bounds)
     context.origin, where_note = resolve_origin(ctx, args.near, args.window)
@@ -249,15 +255,19 @@ def assess(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) 
     if more:
         skipped.append(f"{more} more listed for these days on the page {happening.NAME}")
 
-    suggestion_id = log_suggestion(
-        ctx.conn,
-        asked_by=ctx.member.id if ctx.member else None,
-        window_start=window[0].isoformat() if window else None,
-        window_end=window[1].isoformat() if window else None,
-        candidates=candidates,
-        shown=on_show,
-        finds=finds,
-        now=ctx.now_iso(),
+    suggestion_id = (
+        log_suggestion(
+            ctx.conn,
+            asked_by=ctx.member.id if ctx.member else None,
+            window_start=window[0].isoformat() if window else None,
+            window_end=window[1].isoformat() if window else None,
+            candidates=candidates,
+            shown=on_show,
+            finds=finds,
+            now=ctx.now_iso(),
+        )
+        if record
+        else 0
     )
     return Assessment(
         args,
