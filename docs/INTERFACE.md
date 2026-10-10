@@ -1,38 +1,40 @@
 # The interface: map and architecture
 
-The skeleton every screen is built on, for the web page and an iOS app. First full draft, October 2026, after the concept work in `CONCEPT.md` and the rounds of thinking that followed it. Where the two disagree, this document wins.
+The skeleton every screen is built on, for the web page, a kitchen tablet and an iOS app. Second draft, October 2026, after the concept work in `CONCEPT.md`, three alternative paradigms weighed against it (section 12), and the family's answers to the questions that decide between them. Where this and the concept disagree, this document wins.
 
 It is organized from the outside in: what the app is, the map, each level of the map, the Vera layer over all of it, how a person moves, the two platforms, the people, the awkward states, and what the server has to provide. Section 12 records the second pass: what was weighed, what changed, and what still needs a decision.
 
 ## 1. What the interface is
 
-Two things, and a person always knows which they want:
+Three things, and a person always knows which they want:
 
-- **Destinations to look at.** A short set of screens, each named for a want ("Where should we eat?"), each one tap away, each opening on its answer with nothing to set first. Ranked by code, so they are instant and free.
-- **Vera to ask.** One box, on every screen, for any question or instruction in the person's own words. She has the family's database and answers completely in her own voice, then points to a screen only if it adds something. She never defers.
+- **Vera to tell.** The box is the first thing on every first screen, because an instruction is the most common reason to open the app: "add this restaurant", "remind me Tuesday", "tell Maya yes". It comes back as a one-line receipt with undo.
+- **Now, arranged by Vera.** Under the box, her picks for right now and the next day or two, and anything waiting on you. She arranges this part freely each time. It is the answer to the family's daily question, which is improvisational: "what should we do, now or soon?"
+- **Destinations to look at.** A short row of screens, each named for a want ("Where should we eat?"), each one tap away, each opening on its answer with nothing to set first. Ranked by code, instant and free. Vera is there too, as a supporting assistant, through the same box scoped to the screen.
 
 Four rules hold everything below:
 
-1. **Names are wants, not nouns.** A tile says what you'd get, not what table it reads.
-2. **Every screen opens on its answer.** No date, filter or person to choose before anything shows.
-3. **Three gestures.** Tap to open, chips to narrow, back to go up. The box is the fourth thing, and it is the same everywhere.
-4. **Two levels of depth, then a page.** Home, a destination, an item. Nothing is further than two taps.
+1. **The box first, always.** On every first screen, on every device, before anything else.
+2. **The middle is hers; the edges are fixed.** Vera may rearrange what is between the box and the destination row every time the screen opens. The box and the row never move, so the hand learns the screen even though its content changes.
+3. **Names are wants, not nouns.** A destination says what you'd get, not what table it reads.
+4. **Three gestures.** Tap to open, chips to narrow, back to go up. The box is the fourth thing, the same everywhere.
 
 ## 2. The map
 
 ```
-LEVEL 0   Home
-          status · the box · her questions (when any) · the tiles
+FIRST     Now                                        /
+          the box · context line · her questions · her picks · today's line
+          the destination row
 
-LEVEL 1   Destinations                              path
-          Where should we eat?        (Eat out)     /eat
-          What could we do?           (Things)      /do
-          What about…                 (Her picks)   /about
-          This week                   (Calendar)    /week
-          The kids                                  /kids
-          Happening soon                            /soon
-          Lists                                     /lists
-          What we did                               /did
+LEVEL 1   Destinations                               path
+          Where should we eat?        (Eat out)      /eat
+          What could we do?           (Things)       /do
+          This week                   (Calendar)     /week
+          The kids                                   /kids
+          Happening soon                             /soon
+          Lists                                      /lists
+          What we did                                /did
+          (What about… is Now itself, at /about when opened from elsewhere)
 
 LEVEL 2   Items
           a place        /place/57         a kid        /kids/maya
@@ -41,60 +43,64 @@ LEVEL 2   Items
           a happening    /soon/301         a memory     /did/12
 
 VERA      the box (every screen) → her reply (over the screen) → the thread (behind the reply)
-          her questions (Home, and in the destination they belong to)
+          her questions (Now, and in the destination they belong to)
           her notes (on items)
           receipts (under the box, after an instruction)
 
 AVATAR    You · The family · Settings · Status · Guide        /you /family /settings /status /wiki
 ```
 
-The paths are the deep links. Telegram, push notifications, widgets and the iOS app all land on the same ones, so one place has one address everywhere.
+The paths are the deep links. Telegram, push notifications, widgets, the tablet and the iOS app all land on the same ones. Now is personal: each person's Now has their questions and picks weighted to their context, read from their own thread and the family's shared things.
 
-## 3. Home
+## 3. Now
 
-Home is the launcher. Its job is to show what the app can tell you, and to take whatever you want to say.
+Now is the first screen. It is not a menu and not a dashboard: it is the box, then whatever Vera thinks matters for this person at this moment, then the way to everything else.
 
 ```
 ┌──────────────────────────────────────┐
 │ FamilyDB                         (S) │
-│                                      │
-│ Nothing needs you.                   │  status, always the first line
-│                                      │
 │ ┌──────────────────────────────────┐ │
-│ │ Ask Vera anything, or tell her…  │ │  the box
+│ │ Tell Vera…                       │ │  the box, first, always
 │ └──────────────────────────────────┘ │
+│ Friday 5 pm · dry through Sunday     │  one line of context
 │                                      │
-│ Maya asked for the trampoline park.  │  her questions, only when any
+│ Maya asked for the trampoline park.  │  her questions, when any
 │ Saturday morning is free.            │
 │ Plan it · Later                      │
 │                                      │
+│ What about…         chosen at 4 pm   │  her picks for now and soon
 │ ┌───────────────┐ ┌───────────────┐  │
-│ │ Where should  │ │ What could    │  │  four large tiles
-│ │ we eat?       │ │ we do?        │  │
-│ │ Kenji's       │ │ 3 fit         │  │  each with a live hint
-│ │ tonight       │ │ Saturday      │  │
+│ │ TONIGHT       │ │ SAT MORNING   │  │
+│ │ Kenji's Ramen │ │ Sky High      │  │
+│ │ Open till 9,  │ │ Maya's pitch, │  │
+│ │ 12 min.       │ │ and it's dry. │  │
 │ └───────────────┘ └───────────────┘  │
 │ ┌───────────────┐ ┌───────────────┐  │
-│ │ This week     │ │ The kids      │  │
-│ │ Free Sat pm   │ │ 1 waiting     │  │
+│ │ SUNDAY        │ │ SOMETHING NEW │  │
+│ │ Powell Butte  │ │ Pumpkin       │  │
+│ │ kites         │ │ carving, free │  │
 │ └───────────────┘ └───────────────┘  │
+│          Different ones              │
 │                                      │
-│ What about…  Happening soon          │  four small tiles
-│ Lists        What we did             │
-│                                      │
-│ Search places, plans and people      │
+│ Swim lesson 4:30 · Night Market Sat  │  today and tomorrow, one line
+├──────────────────────────────────────┤
+│ Eat · Do · Week · Kids · Lists · Did │  the destination row, fixed
 └──────────────────────────────────────┘
 ```
 
-- **Status** is one line and is always there: "Nothing needs you", "2 things are waiting on you", "Vera can't answer right now, but everything else works."
-- **The box** takes a question or an instruction. A question comes back as her reply over Home. An instruction comes back as a receipt under the box. Its placeholder teaches what it is for and changes now and then: "A place you heard about, a reminder, or a question."
-- **Her questions** are the only thing on Home that comes and goes. Each is one or two sentences with its origin, and one or two buttons. They are the same questions that reach Telegram as pushes.
-- **The tiles** never change order. The hints under them change, read from the database at view time, cheap. The four large tiles are the four most used. The small ones are a row.
-- **Search** finds by name across places, plans, people, lists and happenings, and opens the item. It is for "where's Kenji's?", which should not need Vera.
+**Fixed:** the box at the top, the destination row at the bottom, and the first line under the box, which says the time and the one fact that shapes the picks.
 
-**On a big screen** the tiles become the left rail, always visible, with the same names and hints. Home's center is then status, the box, her questions, and the What about tiles, because a wide screen has room for the richest view and a person at a desk is usually deciding something. The right column is Vera's.
+**Hers:** everything between. She decides what leads. An hour before a set plan, the plan leads with its leave-by time. At the store, the shopping list leads. On Friday afternoon, the weekend picks lead. On a quiet Tuesday morning, the screen is the box, the context line, "Nothing needs you", and the row. She may show six picks or two or none. The one promise is that anything waiting on this person is never pushed below the picks.
 
-**A kid's Home** is the same page with four tiles: My week, My list, What could we do, What about. Status reads "Nothing new for you." Her questions to a kid are invitations ("Which do you want most?"), never chores.
+**The picks** are the What about set described in section 4: one of each kind for this moment, each with a reason, made ahead and refreshed on open when stale (more than a few hours old and the budget allows). "Different ones" is a call made on purpose. Tapping a pick opens the thing with Plan it ready; swiping it away is "not now".
+
+**Her questions** are the only interruption: a kid's pitch, a plan to set, how an outing went. Each with its origin and its buttons. The same ones reach Telegram.
+
+**Today's line** is the coordination that fits in one line. The week is one tap away in the row.
+
+**Search** is inside the box: typing a name shows matches above the keyboard before anything is sent.
+
+**On a big screen** the destination row becomes the left rail, Now fills the center, and Vera's reply and thread are the right column. **On the kitchen tablet** Now becomes the board (section 8). **A kid's Now** is in section 9.
 
 ## 4. The destinations
 
@@ -130,12 +136,12 @@ Nothing else appears on a destination. Her picks and her finds are marked as her
 
 ### What about… (`/about`)
 
-The one destination where Vera chooses. Six to eight tiles, one of each kind, picked for this moment across the family's own material and her finds, each with a reason.
+The picks on Now, as a destination of their own for a big screen, a deep link, or "What now?" asked from anywhere. The one place in the app where Vera chooses: six to eight tiles, one of each kind, picked for this moment across the family's own material and her finds, each with a reason.
 
 - **Opens on:** the current set, with a header saying what drove it ("Dry Saturday, free from noon. Maya's been asking.") and when it was chosen.
 - **A tile:** kind · when it fits · name · one sentence of why. Tap opens the thing with Plan it ready. Swipe away is "not now". Hold offers "not this" and "not for me".
 - **The slots** are decided by code for this moment: tonight, the weekend, something new, with the kids, just the parents, a day trip, something in, from a kid's wish. The model fills each from the dossier; code verifies every pick is real before it shows.
-- **Made ahead,** never at view time: each morning, Thursday evening for the weekend, and when the context moves (forecast, a plan set, a wish arrives). "Different ones" is a deliberate call and says so. Inside the existing monthly choosing budget.
+- **Made ahead,** then refreshed on open when stale: each morning, Thursday evening for the weekend, when the context moves (forecast, a plan set, a wish arrives), and on opening Now when the set is more than a few hours old and the month's choosing budget has room. "Different ones" and "What now?" are deliberate calls and say so.
 - **Empty:** on a new install, "I don't know you yet. Tell me a few places you like and I'll have ideas by tomorrow." If she can't answer, the last set stays with its date.
 - **Kid:** her own set, weighted to her wishes and age, nothing about who is away.
 
@@ -238,19 +244,19 @@ Vera has no tile. She is the box, her reply, her questions, her notes, and her r
 
 ## 7. Moving around
 
-- **Persistent controls, two:** Home and the box. In the same place on every screen.
-- **Tap** opens. **Chips** narrow, always in the same place. **Back** goes up one level, and from a destination it goes to Home.
-- **No tab bar on a phone.** Home is the menu. Two menus showing different subsets of the same places is what made the current page confusing.
-- **Deep links** are the paths in section 2. A push, a Telegram link, a widget and the iOS app all land on them. Opening a deep link from outside shows the item with a Home button, never a dead end.
+- **Persistent controls, two:** the box at the top and the destination row at the bottom. In the same place on every screen. The row's first item is Now.
+- **Tap** opens. **Chips** narrow, always in the same place. **Back** goes up one level, and from a destination it goes to Now.
+- **The row is the only menu.** Seven short names and Now. There is no second menu anywhere, because two menus showing different subsets of the same places is what made the current page confusing.
+- **Deep links** are the paths in section 2. A push, a Telegram link, a widget, the tablet and the iOS app all land on them. Opening a deep link from outside shows the item with the row beneath it, never a dead end.
 - **Scoped box state** is per screen: leaving a destination clears its scope.
 - **A reply over a screen** never navigates on its own. Only its pointer does, and only when tapped.
-- **The status line** on Home is the only global signal. No badges on tiles beyond their hint.
+- **Her questions** are the only global signal, and they are on Now. The row carries no badges.
 
 ## 8. Platforms
 
 ### Web, phone width
 
-The map as drawn: Home as the launcher, the box and Home button fixed at the bottom, her reply as a sheet. Installable to the home screen (the manifest exists), with Web Push for her questions (it exists). This is the first platform and the reference layout.
+The reference layout and the one most used. Now as drawn in section 3, the box at the top, the destination row at the bottom, her reply as a sheet. Installable to the home screen (the manifest exists), with Web Push for her questions (it exists). "What now?" is one tap from anywhere.
 
 ### Web, big screen
 
@@ -271,7 +277,33 @@ The map as drawn: Home as the launcher, the box and Home button fixed at the bot
 └──────────┴─────────────────────────────────┴──────────────────┘
 ```
 
-The rail is the launcher, with the same names and hints. Selecting an item narrows the right column to it. The frame grows in steps as today, never by stretching words.
+The rail is the destination row with hints, Now fills the center, and the right column is Vera's: her reply as a live object, the thread behind it, and a reply can be pinned to the rail as a shelf of this person's own. Selecting an item narrows the right column to it. The frame grows in steps as today, never by stretching words. This is also where the admin works, with the back office behind the avatar.
+
+### The kitchen tablet
+
+A shared screen on the wall, signed in as the family. Now becomes **the board**: one surface, arranged by Vera, where what matters soonest is largest and nearest the middle, related things sit near each other, and what nobody has touched shrinks toward the edges and then rests. The weekend is big on Thursday. A kid's pitch sits beside the day it asks for. The shopping list hangs at one edge, always.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Ask Vera… ▸                                   (S)(A)(M)(T)│
+│                                                           │
+│   [Shopping ·6]      ┌───────────────────┐    [Maya:      │
+│                      │ SATURDAY          │     Sky High?] │
+│      [Kenji's        │ free from noon    │                │
+│       tonight]       │ Night Market 5 pm │  [Sun: kites?] │
+│                      └───────────────────┘                │
+│   [library Wed]   [pumpkin carving · ends Sun]            │
+│        · coast, someday ·        · pottery ·              │
+└──────────────────────────────────────────────────────────┘
+```
+
+- **The box is large,** because "let's see what Vera thinks" is the family moment this screen is for. Her reply draws on the board, in the middle, and the family reads it together.
+- **Faces along the top.** Tapping yours makes the next thing you say or tap yours: a kid can make a request as herself, a parent can say yes as themselves, on a device nobody signs in to. The choice lapses after a minute.
+- **Nothing is typed to navigate.** Tap a card to open it on the board; tap the board to come back. The destinations are available but secondary, as a small row.
+- **Guaranteed places:** anything set for today or tomorrow, anything waiting on a person, and the shopping list are always on the board whatever else she arranges. The rest is hers.
+- **Resting things fade,** which is the clearest picture the app has of ideas going quiet, and the board is where a family would notice and say "oh, the coast".
+- **Costs and admin never appear here.** The board is a kid-safe surface.
+- It is the same answer functions as Now, drawn spatially. Built after the phone and the big screen.
 
 ### iOS
 
@@ -296,19 +328,20 @@ Telegram stays the place where Vera may interrupt and where most capture happens
 
 | | Parent | Admin | Kid |
 |---|---|---|---|
-| Home tiles | all eight | all eight | My week · My list · What could we do · What about |
+| First screen | Now, personal | Now, personal | A small Now: the box ("I want… / We should…"), her list with the answers on it, what's coming for her, and at most two picks |
 | The kids | yes | yes | no; her own things are on My list |
 | Costs, models, settings, status | no | behind the avatar | never |
 | The box | general and scoped | same | general and scoped, with a daily message count said gently |
 | Her questions | pitches, plans, ratings | same, plus admin alerts | invitations and choices |
 | Items | full | full, plus Edit by hand on people | her own and the family's, no fading, no sources, presents for her hidden |
 | Threads | her own; reads each kid's | same | her own, told that parents can read it |
+| Where they meet it | phone, and the tablet for the family moment | the PC for admin, the phone otherwise | the tablet, occasionally a phone; lightly |
 
-A teenager can be given the parent's tiles without the avatar's back office, by one switch on her page in The family.
+Threads are per person. What anyone captures is shared with the family unless they say "just for me" or "keep it from Theo", and a kid's request always reaches a parent's Now as a question. A teenager can be given the parent's destinations without the back office, by one switch on her page in The family. The kids here are eleven and thirteen and use the app lightly, mostly to ask for things; their screens are drawn for that, not for browsing.
 
 ## 10. States that have to be right
 
-- **The first day.** Home is the status line "Hi, I'm Vera" and the box with "A place your family would happily go back to". Tiles appear as they get something to show; the first is This week once the calendar is connected or a plan is made. Nothing is empty-with-chrome.
+- **The first day.** Now is the box with "A place your family would happily go back to", one line from Vera introducing herself, and the destination row. No picks until she has something to pick from; she says when she will. Nothing is empty-with-chrome.
 - **A new tile's empty state** is one sentence and the box. Never a diagram of what will be here.
 - **Vera can't answer** (no key, out of credit, the company is down). The status line says so in plain words. Every destination still works, because they are code. The box still accepts instructions: they are kept as scraps and filed when she is back, and the receipt says "Kept. I'll sort it when I'm back." Nothing a person types is ever lost.
 - **No calendar connected.** This week shows the plans made here and says so once.
@@ -345,9 +378,9 @@ What was weighed again after the first draft, and what changed.
 
 **Changed: What about is made ahead.** The first instinct was to choose at view time. That breaks the no-model-call-per-view rule and makes the screen slow. Made ahead, it is instant, cheap, and has a date on it that reads as honesty.
 
-**Changed: no tab bar on the phone.** Weighed against the platform convention and chosen deliberately: the launcher is the menu, and the hint under each tile is more useful than a tab icon. If use shows people wanting faster access to one destination, the fix is a "pin to bottom" choice per person, not a second menu.
+**Changed: the destination row instead of a tab bar of icons.** Seven short names in a row, the same on every screen, is one menu. A tab bar would have held four and pushed the rest into a second menu. (In the first draft this was a launcher of tiles with no bar at all; the third pass, below, replaced the launcher with Now and kept the row.)
 
-**Changed: desktop Home shows the What about tiles.** On a phone, Home must be short. On a wide screen the same content leaves most of the screen empty, and the person at a desk is usually deciding. The tiles are the richest thing in the app, so the center shows them. The rail still names Home as the launcher, so nothing is lost.
+**Changed: the big screen's center is Now.** The first draft put a launcher there and then, finding it sparse, added the picks. With Now as the first screen on every device, the center is simply Now, and the rail is the row.
 
 **Kept: What we did as its own tile.** It was the weakest tile, and folding it into This week's past was tempting. It stays because ratings, favorites and "have we been?" need a place a person would look, and because the memory end of the ladder is where she learns taste.
 
@@ -357,6 +390,24 @@ What was weighed again after the first draft, and what changed.
 
 **Weighed: iOS native now.** Rejected for now. The web app on a phone covers the map. Go native when the share sheet, widgets or lock-screen actions are wanted, and build the API in section 11 first, since the web benefits from it too.
 
+### The third pass: three other paradigms, and the family's answers
+
+Before settling, three structurally different paradigms were drawn and weighed against the launcher: **the line of time** (one surface from the past through today to someday, free time and pencil on it), **the workspace** (the conversation as the app, every answer a live object, pins as shelves), and **the board** (one spatial surface of the family's things, arranged by Vera by importance). Each is the best design at one level of the map and a poor design for the whole: the line for This week, the workspace for Vera's column on a big screen, the board for a shared tablet.
+
+The family then answered the questions that decide between them, and the answers moved the skeleton:
+
+- Phones first; Telegram for quick instructions; admin on a PC; kids on a tablet. **So the phone layout is the reference, the big screen carries admin, and the tablet gets the board.**
+- The daily plan is improvisational: what to do now or in the next day or two. **So the first screen is Vera's picks, not a menu, and coordination is a destination.**
+- The app may rearrange itself freely. **So the middle of Now is hers; only the box and the row are fixed.**
+- Vera is the front door for instructions, which are the default; a supporting assistant for questions. **So the box is first on every first screen, and the destinations stand on their own with the box scoped to them.**
+- The kids are eleven and thirteen and will mostly ask for things. **So the kid's app is a box, her list and what's coming, and nothing to browse.**
+- Threads are per person. **So Now is personal, capture is shared by default, and surprises are a sentence.**
+- Cost has some room. **So the picks refresh on open when stale, and "What now?" is a free call to make.**
+- A kitchen tablet is wanted, for "let's see what Vera thinks". **So the board is a real layout, built third, with faces along the top.**
+- A single Home is not needed, as long as an instruction can be given on first load. **So there is no launcher. There is Now, which is different every time, under a box that never moves.**
+
+What this changed from the first draft: Home the launcher became Now; What about became the first screen's content rather than a tile; the eight tiles became a fixed row of seven; the tablet became a third layout; the kid's app shrank; threads became per person; and the picks may refresh on open.
+
 **Still needs a decision from the family:**
 
 1. Whether reminders carry owners ("I'll handle it"). On by default here; it is the family's call.
@@ -364,16 +415,19 @@ What was weighed again after the first draft, and what changed.
 3. Which kid the kid's screens are drawn for first. Here: a reader of about eight to twelve.
 4. Whether anything leaves the house: a gift page for grandparents, a sitter's link. Here: nothing until asked.
 5. Whether the What about set is also sent to Telegram on Thursday as the weekly note, or only shown. Here: sent, as the digest already is.
+6. On the tablet, whether a tapped face should lapse after a minute or stay until tapped again. Here: a minute.
 
 ## 13. Build order
 
-1. **The answer functions and the API** (section 11). Everything else reads them, and they are the first thing both platforms share.
-2. **Home**: status, box, receipts, her questions, tiles with hints, search.
-3. **The destination skeleton**, then This week and Eat out, the two with the clearest answers.
-4. **The item skeleton**, then a place and a plan, including the plan taking shape.
-5. **Her reply over a screen**, and the answering contract for the questions code can answer.
-6. **What about**, made ahead by the choosing job.
+1. **The answer functions and the API** (section 11). Everything else reads them, and every layout shares them.
+2. **Now on the phone**: the box, receipts, the context line, her questions, the picks read from the made-ahead set, today's line, the destination row, search in the box.
+3. **The picks made ahead and refreshed on open**, from the choosing job, with "Different ones" and "What now?".
+4. **The destination skeleton**, then Eat out and This week.
+5. **The item skeleton**, then a place and a plan, including the plan taking shape.
+6. **Her reply over a screen**, and the answering contract for the questions code can answer.
 7. **The kids, Lists, Happening soon, What we did.**
-8. **The kid's Home and roles.**
-9. **The big-screen frame.**
-10. **iOS**, starting with the installed web app, then native when the share sheet is wanted.
+8. **The kid's Now and roles**, per-person threads on the page.
+9. **The big-screen frame** with the rail, Vera's column and pinning.
+10. **The kitchen tablet board.**
+11. **iOS**, starting with the installed web app, then native when the share sheet is wanted.
+
