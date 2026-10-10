@@ -716,10 +716,9 @@ def eat_line(card: dict[str, Any], idea: Idea, *, kid: bool = False) -> str:
     if card["cost"] and not kid:
         parts.append(card["cost"])
     if idea.times_done:
-        parts.append(
-            f"been {idea.times_done} time{'' if idea.times_done == 1 else 's'}"
-            + (f", {card['rating']}" if card["rating"] else "")
-        )
+        times = "once" if idea.times_done == 1 else f"{idea.times_done} times"
+        rated = f", rated {idea.avg_rating:g}/10" if idea.avg_rating is not None else ""
+        parts.append(f"been {times}{rated}")
     else:
         parts.append("not been yet")
     if card["pending"]:

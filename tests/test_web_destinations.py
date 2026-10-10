@@ -631,3 +631,24 @@ def test_an_idea_untouched_for_three_months_asks_whether_it_is_still_wanted(
     assert let_go.status_code == 302 and let_go.headers["Location"] == "/do"
     assert ideas.get(conn, old.id).status == "dropped"
     assert faded.id and "Pottery class" not in client.get("/do").text.split('class="rows"')[-1]
+
+
+def test_a_restaurant_line_says_its_visits_once() -> None:
+    from familydb.store.ideas import Idea
+
+    def line(times: int, rating: float | None) -> str:
+        idea = Idea(
+            id=1,
+            title="Taqueria Sol",
+            kind="restaurant",
+            times_done=times,
+            avg_rating=rating,
+            created_at=NOW_ISO,
+            updated_at=NOW_ISO,
+        )
+        card = {"today": None, "travel": None, "cost": "$", "rating": "done once", "pending": False}
+        return views.eat_line(card, idea)
+
+    assert line(1, 8.5) == "$ · been once, rated 8.5/10"
+    assert line(3, None) == "$ · been 3 times"
+    assert line(0, None) == "$ · not been yet"
