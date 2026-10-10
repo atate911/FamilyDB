@@ -797,6 +797,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.channels")
         for alias in node.names
     } == {
+        "familydb.channels.web.BUSY",  # a turn already running, told to a script as a conflict
         "familydb.channels.web.DEFAULT_CHAT",
         "familydb.channels.web.Handing",  # a message being handed over, drawn until it is stored
         "familydb.channels.web.MAX_MESSAGE",  # how long a question handed over may be

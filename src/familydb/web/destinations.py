@@ -11,7 +11,7 @@ from contextlib import closing
 from datetime import date, timedelta
 from typing import Any
 
-from flask import Blueprint, abort, current_app, render_template, request, url_for
+from flask import Blueprint, abort, current_app, request, url_for
 
 from familydb import agenda, personas, presents, roles
 from familydb.app import App
@@ -29,6 +29,7 @@ from familydb.store.members import Member
 from familydb.suggest.types import DAY_END, DAY_START
 from familydb.tools.weather import forecast_days
 from familydb.web import auth, chat, now, routes, views
+from familydb.web.answers import answer
 
 log = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ def week() -> str:
     app = _app()
     today = app.clock.today()
     start = _day_arg("from") or today
-    return render_template("week.html", **_days(app, start, start + timedelta(days=WEEK_DAYS - 1)))
+    return answer("week.html", **_days(app, start, start + timedelta(days=WEEK_DAYS - 1)))
 
 
 @bp.get("/week/<day>")
@@ -87,7 +88,7 @@ def day(day: str) -> str:
     if not 2000 <= when.year <= 2100:
         abort(404)
     shown = _days(app, when, when)
-    return render_template("week.html", one=shown["days"][0], **shown)
+    return answer("week.html", one=shown["days"][0], **shown)
 
 
 def _days(app: App, first: date, last: date) -> dict[str, Any]:
@@ -346,7 +347,7 @@ def board() -> str:
             reverse=True,
         )[:BOARD_IDEAS]
         chat.page_box(app, conn, people, prompt=views.BOARD_PROMPT, faces=True)
-    return render_template(
+    return answer(
         "board.html",
         days=shown["days"],
         questions=questions,
@@ -404,7 +405,7 @@ def about() -> str:
         empty = views.FIRST_PICKS.format(name=personas.active(app.settings).name)
     else:
         empty = views.NO_PICKS_YET
-    return render_template(
+    return answer(
         "about.html",
         sets=sets,
         summary=next((one["header"] for one in sets if one["header"]), None)
@@ -504,7 +505,7 @@ def plan(plan_id: int) -> str:
     row = views.plan_row(found, today)
     away = views.away_from_home(place, app.settings)
     who = views.people_for(idea, slots)
-    return render_template(
+    return answer(
         "plan.html",
         plan=found,
         row=row,
@@ -593,7 +594,7 @@ def did() -> str:
     narrowed = loved_only or favorites or last_year or bool(who)
     if narrowed:
         chips.insert(0, {"label": "Everything", "href": url_for("go.did"), "on": False})
-    return render_template(
+    return answer(
         "did.html",
         rows=rows,
         rate=[] if narrowed else rate,
@@ -687,7 +688,7 @@ def outing(outcome_id: int) -> str:
         )
     box = chat.current_box()
     box["starters"] = views.outing_starters(row)
-    return render_template(
+    return answer(
         "did_one.html",
         m=row,
         idea=idea,

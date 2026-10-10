@@ -683,6 +683,16 @@
           ]
         },
         {
+          "slug": "reference/api",
+          "title": "The API",
+          "audience": "admin",
+          "depth": "deep",
+          "see_also": [
+            "security/model",
+            "operations/command-line"
+          ]
+        },
+        {
           "slug": "reference/dev-docs",
           "title": "Developer docs",
           "audience": "admin",

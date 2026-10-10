@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import logging
 import secrets
 import sqlite3
@@ -44,7 +45,7 @@ from familydb.store import logins
 from familydb.store import members as member_store
 from familydb.store.logins import Login, SignIn
 from familydb.store.members import Member
-from familydb.web import looks, views
+from familydb.web import answers, looks, views
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +56,10 @@ SESSION_KEY = "signed_in"
 # Signed in as this member id.
 MEMBER_KEY = "member"
 CSRF_KEY = "csrf"
+# Where a script (the API, docs/INTERFACE.md section 11) puts the same token a form carries.
+CSRF_HEADER = "X-CSRF-Token"
+# The API's writing doors, which are the page's own blueprints': answered as the API, in JSON.
+API_WRITES = frozenset({"chat.say", "edits.act"})
 # An HMAC (under the cookie signing key, so the cookie says nothing of the password) of the
 # password a session was opened with: changing the password ends every session using the old one.
 PASSWORD_KEY = "pw"
@@ -100,6 +105,8 @@ NEEDS: dict[str, roles.Permission] = {
     "wiki": "browse",
     # This week and What we did (web/destinations.py): everybody's, a kid's own things in them.
     "go": "sign_in",
+    # The API (web/api.py): each page it answers for asks that page's own permission.
+    "api": "sign_in",
 }
 # A page that needs something other than its blueprint's, asked before the blueprint is.
 NEEDS_HERE: dict[str, roles.Permission] = {
@@ -129,6 +136,8 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "edits.snooze_task": "own_tasks",
     # Taking back a change: anybody may try; undo.py says whose they may (a kid, her own tasks).
     "edits.undo": "own_tasks",
+    # Any of these forms from a script (the API): each asks its own form's permission.
+    "edits.act": "sign_in",
     # The lists are the grown-ups' until the family decides what a kid may do with them.
     "web.lists_page": "change",
     # Notices on one's own devices, for anybody signed in as themselves (push.py).
@@ -444,7 +453,7 @@ def refused() -> str | None:
     reported as a foreign origin: signing out and back in leaves an open page with one."""
     if not origin_ok():
         return BAD_ORIGIN
-    if not csrf_ok(request.form.get("csrf")):
+    if not csrf_ok(request.form.get("csrf") or request.headers.get(CSRF_HEADER)):
         return STALE_FORM
     return None
 
@@ -491,6 +500,8 @@ def require_login() -> Response | tuple[str, int] | None:
         if not personal:
             g.visitor = ANYONE  # nothing to sign in to
             return None
+    if for_a_script():  # told, not sent to a form
+        return _told("sign in first", 401)
     if request.method not in SAFE_METHODS:
         return Response("sign in first", status=401, mimetype="text/plain")
     return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
@@ -499,11 +510,15 @@ def require_login() -> Response | tuple[str, int] | None:
 def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
     """Keep a person to their own password first (if starting) and to what their role may reach."""
     if who.login is not None and who.login.temporary and request.endpoint not in CHOOSING:
+        if for_a_script():
+            return _told(CHOOSE_FIRST, 403)
         if request.method in SAFE_METHODS:
             return redirect(url_for("family.you"))
         return Response(CHOOSE_FIRST, status=403, mimetype="text/plain")
-    needed = NEEDS_HERE.get(request.endpoint or "") or NEEDS.get(request.blueprint or "")
-    if needed and request.endpoint not in EVERYBODY_S_OWN and not who.may(needed):
+    needed = needed_for(request.endpoint or "", who)
+    if needed is not None and for_a_script():
+        return _told(views.REFUSALS[needed][0], 403)
+    if needed is not None:
         title, why = views.REFUSALS[needed]
         why = why.format(name=personas.active(_app().settings).name)
         extra = {}
@@ -517,6 +532,26 @@ def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
             title, why, line = views.admin_only(admins, grown_up=who.may("browse"))
             extra = {"admins_line": line}
         return render_template("403.html", title=title, why=why, **extra), 403
+    return None
+
+
+def for_a_script() -> bool:
+    """Whether this request is the API's, so it is answered in JSON, never sent to a page: its
+    own, or a page's view the API is running (which then says so on the request)."""
+    return bool(g.get(answers.API)) or request.blueprint == "api" or request.endpoint in API_WRITES
+
+
+def _told(words: str, status: int) -> Response:
+    return Response(json.dumps({"error": words}), status=status, mimetype="application/json")
+
+
+def needed_for(endpoint: str, who: Visitor) -> roles.Permission | None:
+    """The permission this page needs that `who` lacks, or None when they may open it: the
+    page's own (NEEDS_HERE) before its blueprint's (NEEDS)."""
+    blueprint = endpoint.split(".", 1)[0] if "." in endpoint else ""
+    needed = NEEDS_HERE.get(endpoint) or NEEDS.get(blueprint)
+    if needed and endpoint not in EVERYBODY_S_OWN and not who.may(needed):
+        return needed
     return None
 
 

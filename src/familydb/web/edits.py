@@ -15,8 +15,20 @@ import re
 from contextlib import closing
 from typing import Any
 
-from flask import Blueprint, Response, current_app, flash, redirect, request, session, url_for
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    flash,
+    g,
+    jsonify,
+    redirect,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.datastructures import MultiDict
+from werkzeug.exceptions import HTTPException, MethodNotAllowed, NotFound
 
 from familydb import buttons, presents
 from familydb.app import App
@@ -24,7 +36,7 @@ from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store import outcomes as outcome_store
 from familydb.tools import ToolContext
-from familydb.web import auth, views
+from familydb.web import answers, auth, views
 from familydb.web.chat import WHO_KEY
 from familydb.web.once import once
 
@@ -101,6 +113,62 @@ def _app() -> App:
     return current_app.config["FAMILYDB_APP"]
 
 
+# -- the page's forms from a script (docs/INTERFACE.md section 11) --------------------------------
+
+HEARD = "heard"
+NOT_AN_ACT = "There is no form called that. GET /api lists them."
+NOT_YOURS = "That is not yours to change."
+NOTHING_CHANGED = "Nothing was changed."
+
+
+@bp.post("/api/act")
+def act() -> tuple[Response, int]:
+    """Any form of the page's, from a script: `act` names it by its view (finish_task,
+    snooze_task, change_list, record_outcome, answer_wish…), the numbers in its address come by
+    name (task_id, idea_id…) and the rest are its fields, as JSON or a form. The page's own view
+    does the work, so a tap here is the tool call the button makes, asking the same permission
+    and carrying the same checks (a task's revision, a form's `once`). Answered with what the page
+    would have said, whether anything changed, and the change Undo takes back."""
+    if (complaint := auth.refused()) is not None:
+        return answers.told(complaint, 400)
+    form = answers.as_form()
+    name = form.get("act", "")
+    endpoint = f"{bp.name}.{name}"
+    if name in ("", "act") or endpoint not in current_app.view_functions:
+        return answers.told(NOT_AN_ACT, 404)
+    rule = next(iter(current_app.url_map.iter_rules(endpoint)))
+    given = {arg: form.get(arg, "") for arg in rule.arguments}
+    if not all(one.isascii() and one.isdigit() and len(one) <= 18 for one in given.values()):
+        return answers.told(NOT_AN_ACT, 404)
+    adapter = current_app.url_map.bind_to_environ(request.environ)
+    try:
+        path = url_for(endpoint, **{arg: int(value) for arg, value in given.items()})
+        rule, args = adapter.match(path, method="POST", return_rule=True)
+    except (NotFound, MethodNotAllowed, ValueError):
+        return answers.told(NOT_AN_ACT, 404)
+    if auth.needed_for(rule.endpoint, auth.visitor()) is not None:
+        return answers.told(NOT_YOURS, 403)
+    request.url_rule = rule
+    request.view_args = args
+    g.setdefault(answers.API, True)
+    try:
+        done = current_app.view_functions[rule.endpoint](**args)
+    except HTTPException as refused:
+        return answers.told(refused.description or NOTHING_CHANGED, refused.code or 400)
+    heard = _heard()
+    said = " ".join(line for line in heard["said"] if line)
+    back = done.location if isinstance(done, Response) and done.status_code < 400 else None
+    return jsonify(
+        {
+            "act": name,
+            "changed": heard["changed"],
+            "said": said or (None if heard["changed"] else NOTHING_CHANGED),
+            "undo": heard["undo"],
+            "back": back,
+        }
+    ), (200 if heard["changed"] else 400)
+
+
 def run(
     name: str,
     values: dict[str, Any],
@@ -149,7 +217,11 @@ def run(
         return None, payload.get("error", "that did not work")
     if payload.get("available") is False:
         return None, payload.get("reason", "that is not set up yet")
-    if result.undoable and offer_undo:
+    if auth.for_a_script():
+        _heard()["changed"] = True
+        if result.undoable:
+            _heard()["undo"] = result.call_id
+    elif result.undoable and offer_undo:
         flash(str(result.call_id), UNDO_NOTICE)
     log.info("%s from the page by %s", name, auth.client_address())
     return payload, None
@@ -245,7 +317,16 @@ def _tick_back(task_id: int) -> Response:
 
 
 def _say(message: str) -> None:
-    flash(message, NOTICE)
+    if auth.for_a_script():
+        _heard()["said"].append(message)
+    else:
+        flash(message, NOTICE)
+
+
+def _heard() -> dict[str, Any]:
+    """What a form said and did while answering the API (`act`), in place of the notices it
+    leaves for the next page."""
+    return g.setdefault(HEARD, {"said": [], "changed": False, "undo": None})
 
 
 def _kept_note(idea_id: int) -> str:

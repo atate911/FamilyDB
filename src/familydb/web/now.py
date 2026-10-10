@@ -11,7 +11,7 @@ from contextlib import closing
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from flask import Response, abort, current_app, redirect, render_template, request, session, url_for
+from flask import Response, abort, current_app, redirect, request, session, url_for
 
 from familydb import agenda, personas, presents, roles
 from familydb.app import App
@@ -24,6 +24,7 @@ from familydb.store import tasks as task_store
 from familydb.store.members import Member
 from familydb.web import auth, chat, shell, views
 from familydb.web import status as status_page
+from familydb.web.answers import answer
 
 log = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ def show() -> Response | str:
     fact = picks["header"] if picks else None
     if kid and readers:  # her context line says who can read her chat, never a forecast
         fact = f"{readers} can read this"
-    return render_template(
+    return answer(
         "now.html",
         context=views.context_line(now.astimezone(tz), fact),
         left=left,

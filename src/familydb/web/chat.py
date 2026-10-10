@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any
 from urllib.parse import urlencode
+from uuid import uuid4
 
 from flask import (
     Blueprint,
@@ -17,8 +18,8 @@ from flask import (
     abort,
     current_app,
     g,
+    jsonify,
     redirect,
-    render_template,
     request,
     session,
     url_for,
@@ -27,7 +28,7 @@ from flask import (
 from familydb import audience, buttons, personas, roles, undo
 from familydb.agent import spending
 from familydb.app import App
-from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
+from familydb.channels.web import BUSY, DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.store import calls
@@ -35,8 +36,9 @@ from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store import tasks as task_store
 from familydb.store.messages import Message
-from familydb.web import auth, views
+from familydb.web import answers, auth, views
 from familydb.web import status as status_page
+from familydb.web.answers import answer
 from familydb.web.once import once
 
 log = logging.getLogger(__name__)
@@ -511,7 +513,7 @@ def page(
     with_kid = {"with": reading.id} if reading else {}
     g.box = NO_BOX  # the thread has its own box, with the photo; the frame draws none
     return (
-        render_template(
+        answer(
             "chat.html",
             lines=lines,
             **box([member.display_name for member in family], locked=locked),
@@ -742,6 +744,23 @@ def _roomy(view: Any) -> Any:
     return wrapped
 
 
+def _framed(text: str, form: Any) -> str:
+    """The message as the pipeline gets it: Save as an idea marked, and a page's scope ("About #57
+    Kenji's Ramen: ") ahead of what was typed there."""
+    sent = text
+    if form.get("intent") == "save_idea" and text.strip():
+        sent = message_store.CAPTURE_PREFIX + text
+    scope = form.get("scope", "").strip()[:MAX_SCOPE]
+    if scope and text.strip():
+        sent = f"{scope} {text}"
+    return sent
+
+
+def _on_site(path: str) -> bool:
+    """A path on this site, never somewhere else a form could be made to send a person."""
+    return path.startswith("/") and not path.startswith("//") and "\\" not in path
+
+
 @bp.post("/chat")
 @_roomy
 @once
@@ -759,17 +778,11 @@ def send() -> Response | Any:
     who = me or request.form.get("who", "").strip()
     if not who:
         return page(error=NOBODY, typed=text, status=400)
-    sent = text
-    if request.form.get("intent") == "save_idea" and text.strip():
-        sent = message_store.CAPTURE_PREFIX + text
-    # A page's scope ("About #57 Kenji's Ramen: ") goes ahead of what was typed there.
-    scope = request.form.get("scope", "").strip()[:MAX_SCOPE]
-    if scope and text.strip():
-        sent = f"{scope} {text}"
     if me is None:
         session[WHO_KEY] = who
         session[WHO_AT] = _app().clock.now().timestamp()
     session[WHERE_KEY] = request.form.get(WHERE_KEY) == "1"  # the box stays as they left it
+    sent = _framed(text, request.form)
     asked = _chat().ask(sent, who, my_chat(), _position(request.form), photo=photo)
     if (complaint := asked) is not None:
         return page(error=complaint, typed=text, status=400)
@@ -777,8 +790,38 @@ def send() -> Response | Any:
     # Redirect, since refreshing a POST would send the message again: back to the page the box
     # was on, which shows the answer under it, or to the thread.
     back = request.form.get("back", "")
-    if back.startswith("/") and not back.startswith("//") and "\\" not in back and back != "/chat":
+    if _on_site(back) and back != "/chat":
         handing = _chat().handing_over(my_chat())
         asked = {ASKED: handing.update_id} if handing is not None else {}
         return redirect(f"{back}?{urlencode(asked)}#{SAID}" if asked else back)
     return redirect(url_for("chat.show", _anchor=LATEST))
+
+
+@bp.post("/api/say")
+@_roomy
+def say() -> tuple[Response, int]:
+    """The box, from a script (docs/INTERFACE.md section 11): one message, as whoever is signed in,
+    framed as the box frames it (`scope`, `intent`), from the page named in `page`. Answered at
+    once, before she is: `asked` is the message's id and `check` the page's answer that carries
+    what it brings back, as the page comes back to itself with ?asked=. JSON or a form; a photo
+    only in a form."""
+    if (complaint := auth.refused()) is not None:
+        return answers.told(complaint, 400)
+    form = answers.as_form()
+    text = form.get("text", "")
+    photo, complaint = _photo()
+    if complaint is not None:
+        return answers.told(complaint, 400)
+    who = auth.visitor().name or form.get("who", "").strip()
+    if not who:
+        return answers.told(NOBODY, 400)
+    update_id = uuid4().hex
+    complaint = _chat().ask(
+        _framed(text, form), who, my_chat(), _position(form), photo=photo, update_id=update_id
+    )
+    if complaint is not None:
+        return answers.told(complaint, 409 if complaint == BUSY else 400)
+    log.info("web chat: %s asked something through the API", who)
+    on = form.get("page", "").split("?", 1)[0].split("#", 1)[0]
+    on = on if _on_site(on) and on != "/" else "/now"
+    return jsonify({"asked": update_id, "check": f"/api{on}?{urlencode({ASKED: update_id})}"}), 202

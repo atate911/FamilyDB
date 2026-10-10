@@ -14,8 +14,6 @@ from flask import (
     Response,
     abort,
     current_app,
-    jsonify,
-    render_template,
     request,
     session,
     url_for,
@@ -41,6 +39,7 @@ from familydb.store import wishes as wish_store
 from familydb.store.ideas import KIND_SUGGESTIONS
 from familydb.web import auth, chat, now, shell, views
 from familydb.web import status as status_page
+from familydb.web.answers import answer
 from familydb.web.chat import WHO_KEY
 
 log = logging.getLogger(__name__)
@@ -144,14 +143,14 @@ def manifest() -> Response:
 def more() -> str:
     """The phone's menu: what is not in the tab bar, and signing out. It opens from the picture at
     the top of every page and is not a page on a wide screen, where the sidebar holds all of it."""
-    return render_template("more.html")
+    return answer("more.html")
 
 
 @bp.get("/status")
 def status() -> str:
     app = _app()
     with closing(app.connect()) as conn:
-        return render_template("status.html", **status_page.status(app, conn))
+        return answer("status.html", **status_page.status(app, conn))
 
 
 @bp.get("/")
@@ -360,7 +359,7 @@ def ideas() -> str:
     live = [idea for idea in listed if idea.status != "dropped" and idea.kind != RESTAURANT_KIND]
     placed = [(idea, away[idea.id]) for idea in found if away.get(idea.id)]
     filtered = bool(query or kind or status or who or any(narrow.values()))
-    return render_template(
+    return answer(
         "do.html",
         rows=rows,
         top=top,
@@ -536,7 +535,7 @@ def idea(idea_id: int) -> str:
     away = views.away_from_home(place, settings)
     card = _idea_card(record, settings, away, slots, kept)
     by = next((m.display_name for m in family if m.id == record.suggested_by), None)
-    return render_template(
+    return answer(
         "idea.html",
         state=views.idea_state(record, plans, today),
         by=by,
@@ -579,7 +578,7 @@ def _idea_form(record: Any = None) -> str:
             else None
         )
     family = [member.display_name for member in people]
-    return render_template(
+    return answer(
         "idea_form.html",
         idea=record,
         revision=idea_store.revision(record) if record else None,
@@ -661,7 +660,7 @@ def lists_page(name: str | None = None) -> str:
         }
         for one in shown
     ]
-    return render_template(
+    return answer(
         "lists.html",
         shown=current,
         lists=shown,
@@ -709,7 +708,7 @@ def memory() -> str:
     with closing(app.connect()) as conn:
         everything = memory_store.list_all(conn)
         people = member_store.list_all(conn)
-    return render_template(
+    return answer(
         "memory.html",
         **views.memory_page(everything, people, app.clock.today(), app.settings.tzinfo),
         people=people,
@@ -767,7 +766,7 @@ def restaurants() -> str:
         card.pop("idea")
     plain = not any(narrow.values()) and not who and not tag
     top = views.meal_words(now.astimezone(app.settings.tzinfo)) if cards and plain else None
-    return render_template(
+    return answer(
         "eat.html",
         cards=cards,
         top=top,
@@ -885,7 +884,7 @@ def plans() -> str:
     horizon = today.isoformat()
     upcoming = [row for row in rows if row["end"] >= horizon]
     recent = [row for row in rows if row["end"] < horizon][::-1]
-    return render_template(
+    return answer(
         "plans.html",
         months=_months(upcoming, today),
         upcoming=upcoming,
@@ -960,7 +959,7 @@ def happening_page() -> str:
         ]
     if any(chip["on"] for chip in chips):
         chips.insert(0, {"label": "Everything", "href": url_for("web.happening_page"), "on": False})
-    return render_template(
+    return answer(
         "soon.html",
         name=happening.NAME,
         days=days,
@@ -972,118 +971,6 @@ def happening_page() -> str:
         if visitor.may("browse")
         else [],
     )
-
-
-# Search in the box: at most this many matches, and only once this much is typed.
-FIND_MOST = 8
-FIND_SHORTEST = 2
-# The plans it looks at: a month back, four months on.
-FIND_BACK_DAYS = 31
-FIND_AHEAD_DAYS = 122
-
-
-@bp.get("/api/find")
-def search_api() -> Response:
-    """Search in the box (docs/INTERFACE.md sections 3 and 11): what the family has by name, as
-    the box is typed in and before anything is sent. Code only, no model call: ideas, plans of the
-    weeks around today, open reminders, the kids, the lists and what is on near home, each with
-    where it opens; what a kid may not see, and a present kept from whoever asks, never."""
-    app = _app()
-    today = app.clock.today()
-    visitor = auth.visitor()
-    grown_up = visitor.may("browse")
-    words = " ".join(request.args.get("q", "").casefold().split())[:60]
-    found: list[dict[str, str]] = []
-
-    def hit(text: str | None) -> bool:
-        folded = (text or "").casefold()
-        return all(word in folded for word in words.split())
-
-    if len(words) >= FIND_SHORTEST:
-        with closing(app.connect()) as conn:
-            kept = presents.kept_ids(conn, visitor.member)
-            people = member_store.list_all(conn)
-            slots = views.slot_map(people)
-            for idea in idea_store.list_all(conn):
-                if idea.id not in kept and hit(idea.title):
-                    found.append(
-                        {
-                            "label": idea.title,
-                            "kind": views.kind_name(idea.kind),
-                            "href": url_for("web.idea", idea_id=idea.id),
-                        }
-                    )
-            plans = plan_store.list_between(
-                conn,
-                (today - timedelta(days=FIND_BACK_DAYS)).isoformat(),
-                (today + timedelta(days=FIND_AHEAD_DAYS)).isoformat(),
-            )
-            for plan in plans:
-                if plan.idea_id in kept or not hit(plan.title):
-                    continue
-                idea = idea_store.get(conn, plan.idea_id) if plan.idea_id else None
-                if not grown_up and not views.names_in(
-                    views.people_for(idea, slots), visitor.member
-                ):
-                    continue
-                found.append(
-                    {
-                        "label": plan.title,
-                        "kind": f"Plan, {views.day_short(date.fromisoformat(plan.start[:10]))}",
-                        "href": url_for("go.plan", plan_id=plan.id),
-                    }
-                )
-            if visitor.may("change") or visitor.may("own_tasks"):
-                own = None if grown_up or visitor.member is None else visitor.member.id
-                tasks = task_store.list_all(conn, status="open", owner_id=own)
-                for task in presents.visible_tasks(conn, tasks, visitor.member):
-                    if hit(task.title):
-                        found.append(
-                            {
-                                "label": task.title,
-                                "kind": "Reminder",
-                                "href": url_for("web.edit_task", task_id=task.id)
-                                if visitor.may("change")
-                                else url_for("go.week"),
-                            }
-                        )
-            if visitor.may("decide"):
-                for kid in _kids(conn):
-                    if hit(kid.display_name):
-                        found.append(
-                            {
-                                "label": kid.display_name,
-                                "kind": "Kid",
-                                "href": url_for("web.wishes", name=views.slug(kid.display_name)),
-                            }
-                        )
-            if visitor.may("change"):
-                for name in list_store.names(conn):
-                    if hit(views.list_title(name)):
-                        found.append(
-                            {
-                                "label": views.list_title(name),
-                                "kind": "List",
-                                "href": url_for("web.lists_page", name=name),
-                            }
-                        )
-            if grown_up:
-                listed = find_store.upcoming(
-                    conn,
-                    start=today,
-                    end=today + timedelta(days=happening.HORIZON_DAYS),
-                    limit=HAPPENING_MOST,
-                )
-                for one in listed:
-                    if hit(one.title):
-                        found.append(
-                            {
-                                "label": one.title,
-                                "kind": "Near home",
-                                "href": url_for("web.find", find_id=one.id),
-                            }
-                        )
-    return jsonify({"q": words, "found": found[:FIND_MOST]})
 
 
 @bp.get(f"/soon/<int(max={MAX_ID}):find_id>")
@@ -1113,7 +1000,7 @@ def find(find_id: int) -> str:
     row = views.find_row(found, today)
     first = found.starts_at[:10]
     last = found.ends_at[:10] if found.ends_at else first
-    return render_template(
+    return answer(
         "find.html",
         find=found,
         row=row,
@@ -1159,7 +1046,7 @@ def plans_month() -> str:
         and row["day"] <= last_day.isoformat()
         and row["end"] >= first.isoformat()
     ]
-    return render_template(
+    return answer(
         "plans_month.html",
         month=f"{first:%B %Y}",
         weeks=weeks,
@@ -1243,7 +1130,7 @@ def tasks() -> str:
         for task in done_lately
         if task.updated_at >= since
     ]
-    return render_template(
+    return answer(
         "tasks.html",
         simple=simple,
         rows=shown,
@@ -1301,7 +1188,7 @@ def edit_task(task_id: int) -> str:
     slots = views.slot_map(people)
     row = views.task_row(task, tz, app.clock.today(), nudging=app.settings.task_nudges)
     row["changed"] = views.changed_line(changed, tz, assistant=personas.active(app.settings).name)
-    return render_template(
+    return answer(
         "task_form.html",
         task=task,
         row=row,
@@ -1498,7 +1385,7 @@ def wishes(name: str | None = None) -> str:
         )
         if wanted or waiting_only:
             chips.insert(0, {"label": "Everyone", "href": url_for("web.wishes"), "on": False})
-    return render_template(
+    return answer(
         "kids.html",
         talk=not talk.get("no_box"),
         kids=shown,

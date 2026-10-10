@@ -21,6 +21,11 @@
   in the box shows what the family already has by it, before anything is sent. What we did narrows to
   Favorites and This time last year; an idea untouched for three months asks whether it is still
   wanted. A new install opens on her one line and a question in the box.
+- **The API.** Every family page is also data, at `/api` and the page's own address (`/api/now`,
+  `/api/eat`, `/api/place/57`), drawn by the same code as the page, so the two cannot disagree; a
+  script signed in as a person may send a message (`/api/say`) and use any form the page has
+  (`/api/act`), with that person's permissions. No model call for a read. There is no native phone
+  app: the page added to the home screen is the phone app. The guide's Reference has The API.
 
 ## v0.4.0 — beta (2026-10-09)
 

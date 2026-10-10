@@ -313,7 +313,7 @@ def test_search_in_the_box_finds_by_name_and_never_a_kept_present(app, conn, fam
     theirs = [one["label"] for one in girl.get("/api/find?q=zoo").get_json()["found"]]
     assert "Zoo tickets" not in theirs and "Zoo scarf for Sam" not in theirs
     assert "Oregon Zoo" in theirs
-    assert create_app(app).test_client().get("/api/find?q=zoo").status_code == 302  # signed out
+    assert create_app(app).test_client().get("/api/find?q=zoo").status_code == 401  # signed out
 
 
 # -- her picks, made ahead

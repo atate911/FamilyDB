@@ -40,6 +40,7 @@ from familydb.web import (
     views,
     wiki,
 )
+from familydb.web import api as api_page
 from familydb.web import settings as settings_page
 from familydb.web import status as status_page
 from familydb.web.auth import MIN_PASSWORD
@@ -234,6 +235,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.register_blueprint(troubleshooting.bp)
     web.register_blueprint(chat.bp)
     web.register_blueprint(destinations.bp)
+    web.register_blueprint(api_page.bp)
     web.register_blueprint(edits.bp)
     web.register_blueprint(family.bp)
     web.register_blueprint(look.bp)

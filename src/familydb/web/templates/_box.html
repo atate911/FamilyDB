@@ -5,7 +5,7 @@
    typed, locked, placeholder, and `scope`, what this page is about, which the message carries. The hooks ask.js and
    dictate.js look for stay: #ask, #text, #ask-mic, #locate, #where. #}
 {% set b = page_box() %}
-<form class="bar{% if b.scope %} bar--scoped{% endif %}" id="ask" method="post" action="{{ url_for('chat.send') }}" data-find="{{ url_for('web.search_api') }}"{% if b.look_again %} data-refresh="{{ b.look_again }}"{% endif %}>
+<form class="bar{% if b.scope %} bar--scoped{% endif %}" id="ask" method="post" action="{{ url_for('chat.send') }}" data-find="{{ url_for('api.find') }}"{% if b.look_again %} data-refresh="{{ b.look_again }}"{% endif %}>
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="once" value="{{ once_token() }}" />
   <input type="hidden" name="lat" value="" /><input type="hidden" name="lon" value="" />

@@ -1,8 +1,8 @@
 # The interface: map and architecture
 
-The skeleton every screen is built on, for the web page, a kitchen tablet and an iOS app. Second draft, October 2026, after the concept work in `CONCEPT.md`, three alternative paradigms weighed against it (section 12), and the family's answers to the questions that decide between them. Where this and the concept disagree, this document wins.
+The skeleton every screen is built on, for the web page on a phone, a big screen and a kitchen tablet. Second draft, October 2026, after the concept work in `CONCEPT.md`, three alternative paradigms weighed against it (section 12), and the family's answers to the questions that decide between them. Where this and the concept disagree, this document wins.
 
-**Where it stands (October 2026):** the web page is built on this skeleton: Now (section 3) with its first day; What about and the eight destinations, a kid's four (sections 4 and 9); every item of section 2's map, a place, a plan, a day, a kid, a list, a reminder, a happening and a memory (section 5); the box with its receipts, her reply over the page and search in the box (sections 3 and 6); her picks made ahead by an hourly job; the phone and big-screen frames, Vera's column carrying the thread's last lines; and the kitchen tablet's board with its faces (section 8). Not built: iOS; the API of section 11 beyond search (`/api/find`), since the web reads its view functions directly; pinning a reply to the rail; questions code could answer itself before the model (section 6, point 5); and the second pass's open decisions (section 12). `docs/STYLE.md` records the look; the guide (`/wiki`) says how to use each page.
+**Where it stands (October 2026):** the web page is built on this skeleton: Now (section 3) with its first day; What about and the eight destinations, a kid's four (sections 4 and 9); every item of section 2's map, a place, a plan, a day, a kid, a list, a reminder, a happening and a memory (section 5); the box with its receipts, her reply over the page and search in the box (sections 3 and 6); her picks made ahead by an hourly job; the phone and big-screen frames, Vera's column carrying the thread's last lines; and the kitchen tablet's board with its faces (section 8). The API of section 11 is built on the same answer functions: every page as data (`/api/<path>`), the box (`/api/say`), every form (`/api/act`) and search (`/api/find`). There is no native app, by the family's decision (section 8, On a phone): the installed page is the phone app. Not built: the plan taking shape on a plan's page (section 5), and the second pass's open decisions (section 12). `docs/STYLE.md` records the look; the guide (`/wiki`) says how to use each page.
 
 It is organized from the outside in: what the app is, the map, each level of the map, the Vera layer over all of it, how a person moves, the two platforms, the people, the awkward states, and what the server has to provide. Section 12 records the second pass: what was weighed, what changed, and what still needs a decision.
 
@@ -52,7 +52,7 @@ VERA      the box (every screen) → her reply (over the screen) → the thread 
 AVATAR    You · The family · Settings · Status · Guide        /you /family /settings /status /wiki
 ```
 
-The paths are the deep links. Telegram, push notifications, widgets, the tablet and the iOS app all land on the same ones. Now is personal: each person's Now has their questions and picks weighted to their context, read from their own thread and the family's shared things.
+The paths are the deep links. Telegram, push notifications, the tablet and the page added to a phone's home screen all land on the same ones. Now is personal: each person's Now has their questions and picks weighted to their context, read from their own thread and the family's shared things.
 
 ## 3. Now
 
@@ -249,7 +249,7 @@ Vera has no tile. She is the box, her reply, her questions, her notes, and her r
 - **Persistent controls, two:** the box at the top and the destination row at the bottom. In the same place on every screen. The row's first item is Now.
 - **Tap** opens. **Chips** narrow, always in the same place. **Back** goes up one level, and from a destination it goes to Now.
 - **The row is the only menu.** Seven short names and Now. There is no second menu anywhere, because two menus showing different subsets of the same places is what made the current page confusing.
-- **Deep links** are the paths in section 2. A push, a Telegram link, a widget, the tablet and the iOS app all land on them. Opening a deep link from outside shows the item with the row beneath it, never a dead end.
+- **Deep links** are the paths in section 2. A push, a Telegram link, the tablet and the installed page all land on them. Opening a deep link from outside shows the item with the row beneath it, never a dead end.
 - **Scoped box state** is per screen: leaving a destination clears its scope.
 - **A reply over a screen** never navigates on its own. Only its pointer does, and only when tapped.
 - **Her questions** are the only global signal, and they are on Now. The row carries no badges.
@@ -307,20 +307,18 @@ A shared screen on the wall, signed in as the family. Now becomes **the board**:
 - **Costs and admin never appear here.** The board is a kid-safe surface.
 - It is the same answer functions as Now, drawn spatially. Built after the phone and the big screen.
 
-### iOS
+### On a phone (no native app)
 
-**Recommendation: the installed web app first, a native app second, and the native app only for what the web can't do.** The web app already runs on a phone, installs to the home screen, and can push. A native app earns its cost with four things: the share sheet, widgets, Siri and App Intents, and reliable push through APNs.
+**Decided (October 2026): no native app.** The page added to the home screen is the phone app: it runs full screen from its own icon, keeps the person signed in, and tells them "Vera has a message" through Web Push (on an iPhone or iPad once it is added to the Home Screen, iOS 16.4 or later). The phone layout is the reference layout (section 3), so nothing in the map waits on an app.
 
-- **The share sheet is the best capture there is.** A link, a screenshot or a photo shared to Vera from any app is the "I just heard about this" moment with zero typing. This alone may justify going native.
-- **Widgets:** This week (small: today and tomorrow), On your plate, and the status line. Read-only, from cached answers.
-- **App Intents:** "Tell Vera…" and "Ask Vera…" from Siri and Shortcuts, routed to the same box endpoint.
-- **Push:** her questions, with their buttons as notification actions, so a parent can say yes from the lock screen.
+A native app was weighed for four things the web does less well, and none was worth a second codebase, an App Store account and a release cycle for one family:
 
-**Navigation on iOS** is the same map: a navigation stack from Home, no tab bar, the box as a bottom bar (the way a search bar sits), her reply as a sheet. Universal links map to the paths in section 2. Back is the platform's back.
+- **The share sheet.** On Android the installed page is already a share target (the manifest's `share_target`): a link or words shared to it wait in the box until Send. On an iPhone, Safari gives an installed page no share target, so a link is copied into the box or sent on Telegram, which takes shares from any app.
+- **Widgets.** Not available to a web page. Now on the home screen is one tap away, and the kitchen tablet's board (section 8, The kitchen tablet) is the glanceable surface.
+- **Siri and App Intents.** Not available. Telegram's voice notes are the hands-free way to tell her something.
+- **Lock-screen buttons on her questions.** Web Push notices say only that she has a message and open the chat, by design (`docs/DESIGN.md` section 16): her questions are answered on Now, Telegram's buttons or the chat.
 
-**Offline:** the last answers for each destination are cached and shown with their age. The box queues instructions and sends them when back online, with the receipt arriving then.
-
-**What the native app needs from the server** is in section 11.
+**What a script needs from the server** is in section 11: the same answers as data, for anything signed in as a person.
 
 ### Telegram
 
@@ -348,20 +346,20 @@ Threads are per person. What anyone captures is shared with the family unless th
 - **Vera can't answer** (no key, out of credit, the company is down). The status line says so in plain words. Every destination still works, because they are code. The box still accepts instructions: they are kept as scraps and filed when she is back, and the receipt says "Kept. I'll sort it when I'm back." Nothing a person types is ever lost.
 - **No calendar connected.** This week shows the plans made here and says so once.
 - **No kids.** The kids tile is absent. The kid chips are absent everywhere.
-- **Offline (iOS).** Cached answers with their age; the box queues.
+- **Offline.** The page needs the server, so a phone with no signal shows the browser's own page. What a person typed is not lost: the box keeps an unsent message in the tab (`ask.js`) until it is sent, and Telegram queues on the phone.
 - **A wrong guess.** The receipt is the fix, Undo is on every receipt, and "that's wrong" said to the box corrects the thing it was said about.
 - **A deep link to something gone.** "That plan was set for last Saturday; here's how it went." Never a 404 for a thing that existed.
 
 ## 11. What the server provides
 
-The current page is server-rendered. The web keeps that; the iOS app needs the same answers as data. One rule makes both cheap to keep in step: **every destination and item is one answer function that returns data, and the web template and the API both read it.** The view-model builders in `web/` already return dictionaries; this makes that the contract.
+The page is server-rendered, and every destination and item is one answer function that returns data: the view builds what the page shows and hands it to `web/answers.py`'s `answer`, which draws the template, or, when the request came through the API, returns the same view-model as JSON. One function, two readers, so the page and the API cannot disagree. Built October 2026 (`web/api.py`).
 
-- **Answers:** `GET /api/<path>` for every path in section 2, returning what the screen shows, including the chips available and the hints. Cheap, code only, cached a minute where it is already.
-- **The box:** `POST /api/say` with text, an optional scope, an optional photo and position. Returns either a receipt (what she did, with the undo token) or a reply (her answer, its rich pieces, its one pointer). The same endpoint the web form posts to.
-- **Buttons:** `POST /api/act` for every tap that is a tool call: Yes, Not now, Done, Snooze, I'll handle it, Set the plan, a face. No model call. Returns the updated item.
-- **Her questions:** part of the Home answer, and delivered as pushes (Web Push today; APNs for the native app) carrying the deep link and the button actions.
+- **Answers:** `GET /api/<path>` for every family page at its own address (`/api/now` is Now, then `/api/eat`, `/api/week/2026-10-17`, `/api/place/57`…), returning `page`, `answer` (what the page draws: rows, chips, hints, the forms' fields), `box` (its scope, quick sentences and what the last message brought back) and `row` (the destinations). The page's own permission is asked; what a page's records carry and the page never shows (a Telegram id, a calendar's event id, whom a present is kept from, a birthday, anything named like a secret) is left out. Code only, no model call. The back office (settings, the family list, the guide, Status's forms) is pages, not answers.
+- **The box:** `POST /api/say` with `text`, an optional `scope` and `intent`, the `page` it was said from, a photo (in a form) and position (`send_where`, `lat`, `lon`). It answers at once with the message's id and `check`, the page's answer with `?asked=`, which carries the receipt (what she did, with the change Undo takes back) or her reply, as the page shows them under the box. The same framing as the box's form (`chat._framed`), the same turn.
+- **Buttons and forms:** `POST /api/act` names any of the page's forms by its view (`finish_task`, `snooze_task`, `change_list`, `record_outcome`, `answer_wish`…), the numbers in its address by name (`task_id`, `idea_id`…) and the rest as its fields. The form's own view does the work, so a tap here is the tool call the button makes, with the same permission and checks (a task's revision, a form's `once`). No model call. It answers with what the page would have said, whether anything changed, and the change Undo takes back.
+- **Her questions:** part of the Now answer, and delivered as Web Push notices that say only that she has a message.
 - **Search:** `GET /api/find?q=` by name across item types.
-- **Auth:** the session cookie for the web; a token for the native app, issued by the same sign-in, carrying the same role.
+- **Auth:** the session cookie, as for the page; there is no other way in. `GET /api` says who is asking, the pages and forms they may use, and the token a write carries in an `X-CSRF-Token` header, from the page's own origin. Signed out, the API answers 401 in JSON rather than sending a script to the sign-in form.
 - **Made-ahead sets:** What about is written by a job into its own table with its context and chosen-at, read by the answer function.
 
 Everything in this section is read-only or a tool call except the box, which is the one model call a person makes on purpose.
@@ -390,7 +388,7 @@ What was weighed again after the first draft, and what changed.
 
 **Weighed: a kid's tab bar.** Four tiles fit a tab bar, and a kid might like one. Rejected for consistency: her app is the parents' app with less in it, and learning a different navigation from her parents is a cost for a family that shares devices.
 
-**Weighed: iOS native now.** Rejected for now. The web app on a phone covers the map. Go native when the share sheet, widgets or lock-screen actions are wanted, and build the API in section 11 first, since the web benefits from it too.
+**Decided: no native app.** The web app on a phone covers the map, and the family does not want a second app to keep (section 8, On a phone). The API of section 11 was built anyway, since the page's own scripts and anything else signed in as a person benefit from it.
 
 ### The third pass: three other paradigms, and the family's answers
 
@@ -431,5 +429,5 @@ What this changed from the first draft: Home the launcher became Now; What about
 8. **The kid's Now and roles**, per-person threads on the page.
 9. **The big-screen frame** with the rail, Vera's column and pinning.
 10. **The kitchen tablet board.**
-11. **iOS**, starting with the installed web app, then native when the share sheet is wanted.
+11. **The phone:** the installed web app. No native app (decided October 2026).
 
