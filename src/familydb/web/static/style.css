@@ -160,7 +160,7 @@ p, li, dd, .lede { text-wrap: pretty; }
 .me__acts form { margin: 0; }
 .me__acts a { display: inline-flex; align-items: center; min-height: var(--target); }
 .me__acts .textbtn { min-height: var(--target); font-size: var(--t-md); font-weight: 400; }
-.topbar, .tabbar { display: none; }
+.topbar { display: none; }
 
 /* The page header: a label for context, the title or the day as display, one quiet line, and a hairline under it.
    The page's one primary action sits at its right edge. */
@@ -345,7 +345,6 @@ a.todo__title:hover { text-decoration: underline; color: var(--ink); }
 .composer textarea { flex: 1; min-width: 0; font: inherit; font-size: 1.125rem; line-height: 1.45; color: var(--ink); background: var(--field); border: 1.5px solid var(--edge); border-radius: var(--r-md); min-height: 58px; padding: 15px var(--s4); resize: none; }
 .composer__send { min-height: 58px; border-radius: var(--r-md); padding: 0 var(--s5); background: var(--send); border-color: var(--send); color: var(--on-send); }
 .composer__send:hover { background: var(--send-2); border-color: var(--send-2); color: var(--on-send); }
-/* Send is the one lit thing: the glow means "talk to Vera here" */
 .composer__send:not(:disabled) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--send) 80%, transparent), 0 0 20px color-mix(in srgb, var(--send) 55%, transparent), 0 0 54px color-mix(in srgb, var(--send) 28%, transparent); }
 .composer__who select { width: auto; min-width: 176px; }
 .composer__who { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; font-size: var(--t-meta); color: var(--ink-2); }
@@ -357,49 +356,12 @@ input[type="file"]::file-selector-button { font: inherit; font-weight: 700; min-
 .starters { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .starter { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); padding: 0 var(--s4); border-radius: var(--r-pill); font: inherit; font-size: var(--t-meta); font-weight: 700; text-decoration: none; cursor: pointer; border: 1.5px solid var(--line-2); background: var(--card); color: var(--ink); }
 /* a starter that sends is filled, with the send icon; one that fills the box is an outline with a pen, ending in … */
-/* outside the Ask card a starter is an outline like the others: the page keeps one filled action (Send) */
-.starter--ask { border-color: var(--edge); }
 .starter .short { display: none; }
 .starter .icon { width: 16px; height: 16px; }
 
-.ask { background: var(--ask-bg); color: var(--ask-ink); border-radius: var(--r-lg); padding: var(--s5); }
-/* Three rows: her name and question with From at the edge; the box, the mic and Send; one quiet line. The
    composer's own parts take their places in the card's grid. */
-.ask { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "head who" "row row" "loc foot"; gap: var(--s4); align-items: center;
-  box-shadow: var(--ask-rim), var(--shadow), 0 0 0 1px color-mix(in srgb, var(--send) 14%, transparent), 0 0 34px color-mix(in srgb, var(--send) 10%, transparent); }
-.ask .composer { display: contents; }
-.ask__head { grid-area: head; display: flex; align-items: center; gap: var(--s4); margin: 0; }
-.ask .composer > .composer__who:not(#locate) { grid-area: who; margin: 0; }
-.ask .composer__row { grid-area: row; }
-.ask #locate { grid-area: loc; }
-.ask #where, .ask .ask__last { grid-column: 1 / -1; }
-.ask #where:empty { display: none; }
-.ask > .composer__foot { grid-area: foot; justify-self: end; text-align: right; margin: 0; }
-.ask__head h2 { font-size: var(--t-h3); }
-/* the box's label is the page's question, and Home's h1 */
-.ask__q { font-size: var(--t-h3); line-height: 1.15; }
-.ask__q label { cursor: text; font: inherit; color: inherit; }
-.ask__head .ask__who { font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ask-ink-2); }
-.ask .composer textarea { min-height: 88px; padding: var(--s4) var(--s5); font-size: var(--t-md); border-width: 2px; border-color: color-mix(in srgb, var(--send) 70%, var(--ask-edge)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--send) 14%, transparent), 0 0 26px color-mix(in srgb, var(--send) 12%, transparent); }
-/* Send is the one lit thing: the glow means "talk to Vera here" */
-.ask .composer__send { min-height: 88px; padding: 0 var(--s5); }
-.ask .composer__who label, .ask .check { color: var(--ask-ink-2); }
-.ask select { width: auto; min-width: 176px; }
-/* how the conversation stands: her last line from the past day, one tap from the chat */
-.ask__last { padding-top: var(--s4); border-top: 1px solid var(--ask-rule); font-size: var(--t-meta); color: var(--ask-ink-2); }
-.ask__last-by { font-weight: 700; color: var(--ask-ink); margin-right: 6px; }
-.ask__last a { color: var(--ask-ink); font-weight: 700; white-space: nowrap; }
 .card__foot--split { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s2) var(--s4); }
 .convos__h { margin: var(--s3) var(--s3) var(--s1); font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
-.ask textarea { caret-color: var(--cursor); }
-.ask__head p { color: var(--ask-ink-2); font-size: var(--t-meta); }
-.ask textarea { border-color: var(--ask-edge); }
-.ask .composer__send { background: var(--send); border-color: var(--send); color: var(--on-send); }
-.ask .composer__send:hover { background: var(--send-2); border-color: var(--send-2); }
-.ask .composer__foot { color: var(--ask-ink-2); }
-.ask :focus-visible { outline-color: var(--send); }
-/* Added to the design (it drew neither): the mic dictate.js puts beside Send, and the rows the box gains when
-   the family shares one password ("From") or the phone may send where it is. Both sit in her dark box too. */
 .msg__text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg__did { margin-top: var(--s1); font-size: var(--t-sm); color: var(--ink-2); }
 .msg__buttons { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
@@ -415,10 +377,6 @@ button.mic.listening { background: var(--glass); border-color: var(--phosphor); 
 .field.can-dictate > [data-dictate] { padding-right: 3.4rem; }
 .field.can-dictate > button.mic { position: absolute; right: 4px; bottom: 4px; min-width: 40px; min-height: 40px; width: 40px; height: 40px; border-color: transparent; background: transparent; }
 .field.can-dictate > button.mic.listening { background: var(--glass); border-color: var(--phosphor); }
-.ask button.mic { background: var(--ask-fill); border-color: var(--ask-edge, var(--ask-rule)); color: var(--ask-ink); }
-.ask button.mic.listening { background: var(--glass); border-color: var(--phosphor); color: var(--phosphor); }
-.ask .composer__who { color: var(--ask-ink-2); }
-.ask .composer__who label { color: inherit; }
 .composer__who label { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); cursor: pointer; }
 
 /* 5.13 Fields and forms */
@@ -646,10 +604,6 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 /* composer closed (Vera answering, resting, or can't answer; or a kid's messages used up) */
 .composer textarea:disabled { background: var(--paper-2); color: var(--ink-2); border-color: var(--line-2); cursor: not-allowed; }
 .composer__send:disabled { background: var(--paper-2); border-color: var(--line-2); color: var(--ink-2); cursor: not-allowed; }
-.ask .composer__send:disabled { background: var(--ask-fill-2); border-color: transparent; color: var(--ask-ink-2); }
-.ask textarea:disabled { background: var(--ask-fill); color: var(--ask-ink-2); border-color: var(--ask-edge); }
-.ask textarea:disabled::placeholder { color: var(--ask-ink-2); }
-.ask .banner { color: var(--ink); }
 
 /* busy calendar day: two plans, then a link to the rest */
 .ev-more { margin: 0 var(--s1) var(--s1); padding: 0 var(--s2); font-size: var(--t-sm); font-weight: 700; min-height: 32px; display: flex; align-items: center; border-radius: var(--r-sm); }
@@ -1225,12 +1179,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .topbar__r { display: flex; align-items: center; gap: var(--s2); }
   .topbar .pill-health { min-height: 32px; align-self: center; }
   /* fixed bottom tab bar, in thumb reach */
-  .tabbar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; min-height: var(--tabbar-total); padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); background: var(--card); border-top: 1px solid var(--line-2); box-shadow: var(--pop-up); }
-  .tabbar a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--r-md); color: var(--ink-2); text-decoration: none; font-size: var(--t-xs); font-weight: 700; }
-  .tabbar a .icon { width: 24px; height: 24px; }
   /* current tab: a 3 px green bar on its top edge, a tint and the green label */
-  .tabbar a[aria-current="page"] { color: var(--vera); background: var(--vera-soft); box-shadow: inset 0 3px 0 var(--vera); border-radius: 0 0 var(--r-md) var(--r-md); }
-  .tabbar .badge { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 20px; height: 20px; padding: 0 5px; font-size: var(--t-xs); }
   .topbar .acct { text-decoration: none; position: relative; display: inline-grid; place-items: center; min-width: var(--target); min-height: var(--target); }
   .topbar .acct .dot { position: absolute; top: 4px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); border: 2px solid var(--band); }
   body { padding-bottom: var(--tabbar-total); }
@@ -1245,19 +1194,9 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .stack { gap: var(--s4); }
   /* the hero on a phone: the same rows, one above the other (a column, so a part that is not there leaves no gap):
      her question, who is asking, the box with the mic and Send (Send keeps its word), sharing where you are */
-  .ask { display: flex; flex-direction: column; align-items: stretch; gap: var(--s4); padding: var(--s4); }
-  .ask .composer__who { flex-wrap: wrap; }
-  .ask > .composer__foot { justify-self: auto; text-align: left; }
   /* a kid's line says who can read her chat and how many messages are left, so it stays */
-  .ask .composer__foot:not(.composer__foot--kid), .ask__last { display: none; }
-  .ask__head h2 { font-size: var(--t-h3); }
-  .ask .composer textarea { min-height: 88px; padding: var(--s4); }
   /* the box takes the whole line; the mic and a wide, lit Send go under it, in the thumb's reach */
-  .ask .composer__row { flex-wrap: wrap; }
-  .ask .composer__row textarea { flex: 1 1 100%; }
-  .ask .composer__send { flex: 1 1 auto; min-height: 48px; }
   .composer__send { padding: 0 var(--s4); }
-  .ask .starters { margin-top: var(--s3); gap: 6px; }
   .starter { padding: 0 var(--s3); }
   /* hidden visually, never display:none: the short label beside it is aria-hidden, so this is the button's name */
   .starter .long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
@@ -1440,7 +1379,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 @media (forced-colors: active) {
   .dots i { border: 1px solid CanvasText; }
   .choice input:checked + span, .person-tile[aria-current] { border: 3px solid Highlight; }
-  .seg a[aria-current], .convo[aria-current="page"], .nav a[aria-current="page"], .tabbar a[aria-current="page"] { border: 2px solid CanvasText; }
+  .seg a[aria-current], .convo[aria-current="page"], .nav a[aria-current="page"], .row a[aria-current="page"] { border: 2px solid CanvasText; }
   .day--today .day__n { outline: 2px solid CanvasText; }
   .tag, .badge, .pill-health, .tick span, .day--today .day__n { border: 1px solid CanvasText; }
   .icon { stroke: CanvasText; }
@@ -1718,7 +1657,7 @@ textarea.script { min-height: 16em; line-height: 1.55; }
    Neither changes the colour of a word or of the ground right under it beyond what the contrast check measures
    (_kit/looks-check.py composites the scanline over its ground). Off in forced colours and on paper. */
 body { background-image: var(--fx-page); background-repeat: no-repeat; }
-.side, .topbar, .ask, .instrument__pane, .ls-band { background-image: repeating-linear-gradient(to bottom, var(--fx-scan) 0 1px, transparent 1px 3px); }
+.side, .topbar, .instrument__pane, .ls-band { background-image: repeating-linear-gradient(to bottom, var(--fx-scan) 0 1px, transparent 1px 3px); }
 
 /* Vera stays the one lit thing: in a look that glows, her sign gains a second, wider halo and a fully lit rim,
    her Send glows, and so do her lines in the chat. Nothing of the family's glows. */
@@ -1730,14 +1669,13 @@ body { background-image: var(--fx-page); background-repeat: no-repeat; }
 /* The title face: page titles and the wordmark only. Atkinson stays for everything read; the Ask card's question,
    though an h1, is a sentence at 22 px, so it keeps the heading face. A face with no bold is never faked bold. */
 h1, .wm { font-family: var(--fx-title); font-size-adjust: var(--fx-title-adjust); font-synthesis-weight: none; }
-.ask__q { font-family: var(--font-head); font-size-adjust: none; }
 
 @media (forced-colors: active) {
-  body, .side, .topbar, .ask, .instrument__pane, .pane { background-image: none; }
+  body, .side, .topbar, .instrument__pane, .pane { background-image: none; }
   .vs:not(.vs--off) { filter: none; }
 }
 @media print {
-  body, .side, .topbar, .ask, .instrument__pane, .pane { background-image: none; }
+  body, .side, .topbar, .instrument__pane, .pane { background-image: none; }
   .vs:not(.vs--off) { filter: none; }
   .composer__send:not(:disabled), .msg--vera:not(.msg--pending):not(.msg--failed) .msg__bub { box-shadow: none; }
 }
