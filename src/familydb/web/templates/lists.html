@@ -1,10 +1,11 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon %}
+{% from "_ui.html" import icon, who %}
 {% from "_dest.html" import dest_head, chip_row, dest_empty %}
 {% block title %}Lists · {{ site_title }}{% endblock %}
 {% block body_class %}page-lists{% endblock %}
-{# Lists (docs/INTERFACE.md section 4): the list in use, big targets, ticks that need no conversation; the other lists
-   are chips. Every tick and every add is the shopping_list tool (edits.change_list). #}
+{# Lists (docs/INTERFACE.md section 4): the list in use, big targets, ticks that need no conversation, and the mark of
+   whoever put each thing there; the other lists are chips. Every tick and every add is the shopping_list tool
+   (edits.change_list). #}
 {% block content %}
   {{ dest_head('Lists', summary) }}
   {{ chip_row(chips, 'Which list') }}
@@ -16,10 +17,11 @@
         <li>
           <form method="post" action="{{ url_for('edits.change_list') }}">
             <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
-            <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing }}" /><input type="hidden" name="back" value="{{ one.name }}" />
-            <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Got: {{ thing }}</span></button>
+            <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing.text }}" /><input type="hidden" name="back" value="{{ one.name }}" />
+            <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Got: {{ thing.text }}</span></button>
           </form>
-          <span>{{ thing }}</span>
+          <span>{{ thing.text }}</span>
+          {% if thing.by %}{{ who([thing.by], 'Added by ' ~ thing.by.name) }}{% endif %}
         </li>
       {% else %}
         <li class="muted">Nothing on it. Tell {{ assistant }} “we’re out of milk”.</li>

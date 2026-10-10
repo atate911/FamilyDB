@@ -17,6 +17,8 @@ class Item(BaseModel):
     text: str
     ticked_at: str | None = None
     added_at: str
+    # Who put it there (None when nobody now on the family list did); the Lists page names them.
+    added_by: int | None = None
 
 
 def fold(text: str) -> str:
@@ -53,7 +55,7 @@ def names(conn: sqlite3.Connection) -> list[str]:
 def items(conn: sqlite3.Connection, list_ref: int) -> list[Item]:
     """What is on a list: still to get first, in the order added, then what was ticked."""
     rows = conn.execute(
-        "SELECT id, list_id, text, ticked_at, added_at FROM list_items WHERE list_id = ? "
+        "SELECT id, list_id, text, ticked_at, added_at, added_by FROM list_items WHERE list_id = ? "
         "ORDER BY ticked_at IS NOT NULL, ticked_at DESC, id",
         (list_ref,),
     )
@@ -62,14 +64,15 @@ def items(conn: sqlite3.Connection, list_ref: int) -> list[Item]:
 
 def item(conn: sqlite3.Connection, item_id: int) -> Item | None:
     row = conn.execute(
-        "SELECT id, list_id, text, ticked_at, added_at FROM list_items WHERE id = ?", (item_id,)
+        "SELECT id, list_id, text, ticked_at, added_at, added_by FROM list_items WHERE id = ?",
+        (item_id,),
     ).fetchone()
     return Item(**dict(row)) if row else None
 
 
 def by_text(conn: sqlite3.Connection, list_ref: int, text: str) -> Item | None:
     row = conn.execute(
-        "SELECT id, list_id, text, ticked_at, added_at FROM list_items "
+        "SELECT id, list_id, text, ticked_at, added_at, added_by FROM list_items "
         "WHERE list_id = ? AND folded = ?",
         (list_ref, fold(text)),
     ).fetchone()

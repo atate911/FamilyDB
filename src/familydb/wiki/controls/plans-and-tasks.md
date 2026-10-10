@@ -68,7 +68,7 @@ Each find has a page of its own: its day, place and cost, the listing in its own
 
 ## Lists
 
-The shopping list, always, and the family's other lists as chips, each at its own address (`/lists/costco`). Each thing is a big tick; **Got** folds what was ticked, where a thing can be put back; **Add something** adds. Every tick and add is the same tool the assistant runs for "we need milk", and the kids are told what is on a list when they ask. `/list` on Telegram reads it.
+The shopping list, always, and the family's other lists as chips, each at its own address (`/lists/costco`). Each thing is a big tick, with the mark of whoever put it there at the end of its row; **Got** folds what was ticked, where a thing can be put back; **Add something** adds. Every tick and add is the same tool the assistant runs for "we need milk", and the kids are told what is on a list when they ask. `/list` on Telegram reads it.
 
 ## Did
 

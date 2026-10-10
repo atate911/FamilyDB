@@ -141,3 +141,16 @@ def test_a_grown_up_finds_the_lists_on_a_phone_and_a_kid_does_not(app, sam, fami
     assert 'href="/lists"' not in kid.get("/more").text
     assert 'href="/lists"' not in kid.get("/").text
     assert kid.get("/lists").status_code == 403
+
+
+def test_the_lists_page_says_who_put_each_thing_there(settings, clock, conn, family):
+    from tests.test_web_edits import _client
+
+    _list(_as(conn, settings, clock, family["alex"]), action="add", items=["oat milk"])
+    nobody = _as(conn, settings, clock, None)  # nobody in particular: the shared password
+    _list(nobody, action="add", items=["bin bags"])
+    shown = _client(settings, clock).get("/lists").text
+    oat = re.search(r"<li>(?:(?!</li>).)*oat milk(?:(?!</li>).)*</li>", shown, re.S).group(0)
+    assert '<span class="who" title="Added by Alex">' in oat
+    bags = re.search(r"<li>(?:(?!</li>).)*bin bags(?:(?!</li>).)*</li>", shown, re.S).group(0)
+    assert 'class="who"' not in bags

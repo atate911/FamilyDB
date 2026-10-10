@@ -631,6 +631,9 @@ def lists_page(name: str | None = None) -> str:
         order = ["shopping", *(other for other in names if other != "shopping")]
         if wanted not in order:
             abort(404)
+        people = member_store.list_all(conn)
+        slots = views.slot_map(people)
+        named = {person.id: person.display_name for person in people}
         shown = []
         for name in order:
             ref = list_store.find(conn, name)
@@ -639,11 +642,20 @@ def lists_page(name: str | None = None) -> str:
                 {
                     "name": name,
                     "title": views.list_title(name),
-                    "to_get": [item.text for item in held if item.ticked_at is None],
+                    # Each with who put it there, as section 4 has it: "who asked".
+                    "to_get": [
+                        {
+                            "text": item.text,
+                            "by": views.person_of(named[item.added_by], slots)
+                            if item.added_by in named
+                            else None,
+                        }
+                        for item in held
+                        if item.ticked_at is None
+                    ],
                     "ticked": [item.text for item in held if item.ticked_at is not None],
                 }
             )
-        people = member_store.list_all(conn)
         current = next(one for one in shown if one["name"] == wanted)
         chat.page_box(
             app,
