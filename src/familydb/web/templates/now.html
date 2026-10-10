@@ -1,0 +1,115 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, avatar, vera_screen, faces, who, todo with context %}
+{% block title %}{{ site_title }}{% endblock %}
+{% block body_class %}page-now{% endblock %}
+{# Now (docs/INTERFACE.md section 3): the box, one line of context, then whatever needs this person, her picks, and
+   today's line. Fixed: the box above, the row below, the context line. Hers: everything between. No model call. #}
+{% block content %}
+  <h1 class="sr">{{ 'Now' if grownup else 'Now, for ' ~ visitor().name if visitor().name else 'Now' }}</h1>
+  <p class="ctx">{{ context }}</p>
+
+  {# An admin's unfinished setup: each step a link, until it is done. #}
+  {% if setup %}
+    <section class="sec sec--setup" aria-labelledby="h-setup">
+      <div class="sec__label"><h2 id="h-setup" class="label">Finish setting up</h2><small>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</small></div>
+      <ol class="steps">{% for step in setup %}<li><a href="{{ step.link }}">{{ step.text }}</a></li>{% endfor %}</ol>
+      <p class="sec__note"><a href="{{ url_for('setup.overview') }}">All the setup steps</a> · Only admins see this.</p>
+    </section>
+  {% endif %}
+
+  {# Her questions: the only interruption. Each with where it came from and its buttons. #}
+  {% for q in questions %}
+    <section class="q" aria-label="A question from {{ assistant }}">
+      {{ vera_screen() }}
+      <div class="q__body">
+        <p class="q__text">{{ q.text }}</p>
+        {% if q.origin %}<p class="q__org">{{ q.origin }}</p>{% endif %}
+        <div class="q__acts">
+          {% if q.kind == 'rate' %}
+            {{ faces(q, 'home') }}
+          {% elif q.kind == 'wish' %}
+            <form method="post" action="{{ url_for('edits.answer_wish', wish_id=q.wish_id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <input type="hidden" name="kid" value="{{ q.kid_id }}" /><input type="hidden" name="back" value="home" />
+              <button class="btn btn--sm" type="submit" name="status" value="granted">Yes</button>
+              <button class="btn btn--sm btn--quiet" type="submit" name="status" value="declined">Not this time</button>
+            </form>
+            <a class="q__lnk" href="{{ url_for('web.wishes', who=q.kid_id) }}">Her list</a>
+          {% elif q.kind == 'pitch' %}
+            <a class="btn btn--sm" href="{{ url_for('web.idea', idea_id=q.idea_id) }}">See it</a>
+            <form method="post" action="{{ url_for('web.later') }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="idea" value="{{ q.idea_id }}" />
+              <button class="q__lnk" type="submit">Later</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  {% else %}
+    {% if not picks and not plate %}<p class="nf__quiet">{{ quiet }}</p>{% endif %}
+  {% endfor %}
+
+  {# What waits on this person today: a kid's own to-dos, a grown-up's late or due ones. Ticked off here. #}
+  {% if plate %}
+    <section class="sec" aria-labelledby="h-todo">
+      <div class="sec__label"><h2 id="h-todo" class="label">{{ 'My to-dos' if not grownup else 'On your plate' }}</h2><a href="{{ url_for('web.tasks') }}">All</a></div>
+      <ul class="todos todos--compact">
+        {% for row in plate %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup, everyone=shell.family) }}{% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {# A kid's own list: what a parent said lately, her top three, and how far off the days are. #}
+  {% if my_list %}
+    <section class="sec" aria-labelledby="h-list">
+      <div class="sec__label"><h2 id="h-list" class="label">My list</h2><a href="{{ url_for('web.wishes') }}">{{ 'All ' ~ my_list.open if my_list.open else 'My list' }}</a></div>
+      {% if my_list.answered %}
+        <ul class="wish-news">
+          {% for row in my_list.answered %}
+            {% if row.status == 'granted' %}<li class="wish-news__yes">{{ icon('sparkle') }}<span><b>Yes</b> to {{ row.title }}!</span></li>
+            {% else %}<li class="wish-news__no">{{ icon('heart') }}<span>Not this time: {{ row.title }}.</span></li>{% endif %}
+          {% endfor %}
+        </ul>
+      {% endif %}
+      <ol class="items wish-top">
+        {% for row in my_list.top %}
+          <li class="item"><span class="wish__n{{ ' wish__n--first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span><span class="item__title"><span class="sr">Number {{ row.rank }}: </span>{{ row.title }}</span></li>
+        {% else %}
+          <li class="item muted">Nothing on it yet. Tell {{ assistant }} what you’d like.</li>
+        {% endfor %}
+      </ol>
+      {% if my_list.soon %}<p class="list-soon">{% for list in my_list.soon %}<span class="tag tag--when">{{ icon('gift') }}{{ list.name }} {{ list.countdown | lower }}</span>{% endfor %}</p>{% endif %}
+    </section>
+  {% endif %}
+
+  {# Her picks for this moment (familydb/picks.py), made ahead: one of each kind, each with its reason. #}
+  {% if picks %}
+    <section class="sec" aria-labelledby="h-picks">
+      <div class="sec__label"><h2 id="h-picks" class="label">What about…</h2><small>{{ picks.made }}</small></div>
+      <div class="picks">
+        {% for pick in picks.tiles %}
+          <a class="pk" href="{{ pick.href }}">
+            <span class="pk__label">{{ pick.kind }}{% if pick.when %} · {{ pick.when }}{% endif %}</span>
+            <span class="pk__t">{{ pick.title }}</span>
+            {% if pick.why %}<span class="pk__why">{{ pick.why }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+      {# A call made on purpose: it is a message to her, so it costs what a message costs. #}
+      <form class="sec__more" method="post" action="{{ url_for('chat.send') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="text" value="{{ different }}" /><input type="hidden" name="back" value="{{ request.path }}" />
+        {% if who %}<input type="hidden" name="who" value="{{ who }}" />{% endif %}
+        <button class="q__lnk" type="submit"{% if locked or not who and not visitor().member %} disabled{% endif %}>Different ones</button>
+      </form>
+    </section>
+  {% endif %}
+
+  {# Today and tomorrow, one line each. #}
+  <div class="todays">
+    {% for line in days %}
+      <p class="today"><b>{{ line.label }}</b><span>{% for part in line.parts %}{% if part.href %}<a href="{{ part.href }}">{{ part.text | figs }}</a>{% else %}{{ part.text | figs }}{% endif %}{% endfor %}</span></p>
+    {% endfor %}
+  </div>
+  {% if left is not none %}<p class="nf__quiet">{{ left }} message{{ '' if left == 1 else 's' }} left today.</p>{% endif %}
+{% endblock %}

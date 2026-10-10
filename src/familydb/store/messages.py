@@ -206,6 +206,15 @@ def set_text(conn: sqlite3.Connection, message_id: int, text: str) -> None:
     conn.execute("UPDATE messages SET text = ? WHERE id = ?", (text, message_id))
 
 
+def by_update(conn: sqlite3.Connection, channel: str, channel_update_id: str) -> Message | None:
+    """The message a channel stored under its own id: what the page asks for after sending one."""
+    row = conn.execute(
+        "SELECT * FROM messages WHERE channel = ? AND channel_update_id = ?",
+        (channel, channel_update_id),
+    ).fetchone()
+    return Message.from_row(row) if row else None
+
+
 def get(conn: sqlite3.Connection, message_id: int) -> Message | None:
     row = conn.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
     return Message.from_row(row) if row else None

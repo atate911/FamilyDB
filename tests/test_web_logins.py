@@ -316,10 +316,10 @@ def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, famil
         sent = alex.post(path, data=form)
         assert sent.status_code == 403, path
     assert app.settings.persona == "default" and app.settings.persona_name == ""
-    nav = alex.get("/").text
+    nav = alex.get("/more").text
     assert 'href="/settings"' not in nav and 'href="/family"' not in nav
     assert 'href="/you"' in nav and "Alex" in nav
-    admin_nav = sam.get("/").text
+    admin_nav = sam.get("/more").text
     assert 'href="/settings"' in admin_nav and 'href="/family"' in admin_nav
 
 
@@ -337,7 +337,7 @@ def test_every_settings_page_is_beside_its_page_and_the_account_corner_holds_the
     assert re.search(r'href="/settings" aria-current="page"', here)  # and Settings in the sidebar
 
     # On the new frame the same things sit in the account corner of the sidebar.
-    side = re.search(r'<aside class="side".*?</aside>', alex.get("/").text, re.S)
+    side = re.search(r'<aside class="side".*?</aside>', alex.get("/more").text, re.S)
     assert side is not None and "/settings" not in side.group(0)
     theirs = side.group(0).split('<div class="me">')[1]
     assert re.findall(r'<a[^>]* href="([^"]+)"', theirs) == ["/look", "/you"]
@@ -477,8 +477,9 @@ def test_a_kid_signs_in_reads_and_talks_but_changes_nothing(app, sam, family) ->
     refused = girls.get("/settings")
     assert refused.status_code == 403 and "This part is for grown-ups" in refused.text
     assert "ask Sam if something here needs to change" in refused.text
-    nav = girls.get("/").text
-    assert 'href="/status"' not in nav and 'href="/memory"' not in nav
+    for path in ("/", "/more"):
+        nav = girls.get(path).text
+        assert 'href="/status"' not in nav and 'href="/memory"' not in nav, path
     assert "Add an idea" not in girls.get("/ideas").text
     assert '<span class="tag tag--ok">Signs in</span>' in sam.get("/family").text
 
@@ -537,7 +538,7 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
             now=NOW_ISO,
         )
     home = girls.get("/").text  # a kid talks to the bot but changes nothing
-    # Her Home is her own conversation, never the family's.
+    # Her Now is her own conversation, never the family's.
     assert 'action="/chat"' in home and "The park is free." not in home
     with closing(app.connect()) as conn, db.transaction(conn):
         mine = messages.insert_in(
@@ -558,8 +559,11 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
             reply_to=mine.id,
             now=NOW_ISO,
         )
-    home = girls.get("/").text
+    # What she said and was told is in her thread, and on Now only when she just asked it.
+    home = girls.get("/?asked=u2").text
     assert "The swings are waiting." in home and "The park is free." not in home
+    assert "The swings are waiting." in girls.get("/chat").text
+    home = girls.get("/").text
     # Her own things to do she ticks off herself (roles.py `own_tasks`).
     assert "Buy paper towels" in home and f'action="/task/{towels}/done"' in home
 
@@ -811,7 +815,6 @@ def test_a_kid_sees_no_present_anywhere_and_a_grown_up_is_told_whom_it_is_kept_f
         for path in ("/", "/plans", "/restaurants", "/tasks"):
             assert "Lego set" not in kid.get(path).text, path
     assert "hidden from the kids" in sam.get("/ideas").text.lower()
-    assert "Lego set" in sam.get("/").text
 
 
 def test_a_grown_up_can_have_a_present_kept_from_them_too(app, sam, alex, family, conn) -> None:
@@ -911,8 +914,8 @@ def test_a_to_do_for_a_present_is_kept_from_whoever_the_present_is(app, sam, ale
             now=NOW_ISO,
             idea_id=watch.id,
         )
+    assert "Order the watch" in sam.get("/tasks").text
     for path in ("/tasks", "/"):
-        assert "Order the watch" in sam.get(path).text, path
         assert "Order the watch" not in alex.get(path).text, path
     assert alex.get("/task/1/edit").status_code == 404
     assert sam.get("/task/1/edit").status_code == 200

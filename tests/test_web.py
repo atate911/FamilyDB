@@ -1183,10 +1183,12 @@ def test_ideas_has_one_search_and_the_quick_note_comes_after_the_list(
     assert page.index("Ramen place") < page.index("Save a thought for later")
 
 
-def test_on_the_phone_home_the_setup_strip_waits_under_the_plans(settings, clock, family) -> None:
+def test_on_now_the_setup_strip_comes_after_the_box_and_before_the_rest(
+    settings, clock, family
+) -> None:
     page = _signed_in(settings, clock).get("/").text  # a model is not set up, so setup has steps
     assert "Setup:" in page
-    assert page.index('aria-labelledby="h-next"') < page.index("Setup:")
+    assert page.index('id="ask"') < page.index("Setup:") < page.index('class="todays"')
 
 
 def test_a_place_s_phone_number_is_a_link_a_phone_can_dial() -> None:

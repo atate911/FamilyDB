@@ -56,6 +56,8 @@ class Frame:
     # Everyone on the family list as marks (name, colour, letter), so a thing that is everyone's can
     # show the family stacked rather than a word (docs/STYLE.md, "Owner mark").
     family: tuple[dict[str, Any], ...] = ()
+    # Whether anybody on the list is a kid: without one there is no Kids in the row.
+    kids: bool = False
 
     @property
     def look_at(self) -> int:
@@ -97,16 +99,18 @@ def frame(app: App) -> Frame:
             check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
             pill = _pill(app, conn, visitor) if visitor.may("browse") else None
             unread = _unread(conn) if visitor.may("chat") else 0
+            everyone = member_store.list_all(conn)
             family = tuple(
                 {"name": m.display_name, "slot": m.slot or 0, "initial": m.display_name[:1].upper()}
-                for m in member_store.list_all(conn)
+                for m in everyone
             )
+            kids = any(m.active and m.role == "kid" for m in everyone)
     except sqlite3.OperationalError:
         # A database not yet migrated: the frame is drawn without counts, so a page that says
         # "not found" or "not yours" never fails itself.
         log.warning("the menu's counts could not be read", exc_info=True)
         return Frame(me)
-    return Frame(me, pill, late, decide, rate, check, unread, family)
+    return Frame(me, pill, late, decide, rate, check, unread, family, kids)
 
 
 def _unread(conn: sqlite3.Connection) -> int:
@@ -136,13 +140,44 @@ def _late(conn: sqlite3.Connection, visitor: auth.Visitor, tz: Any, today: Any) 
 
 
 def _to_decide(conn: sqlite3.Connection, visitor: auth.Visitor, today: Any) -> int:
-    """Wishes waiting on a parent's answer, as Home counts them."""
+    """Wishes waiting on a parent's answer, as Now asks about them."""
     if not visitor.may("decide"):
         return 0
-    from familydb.web import routes  # not at the top: routes draws pages that use this frame
+    return len(wishes_waiting(conn, today))
 
-    glance = routes.wish_glance(conn, today)
-    return len(glance["waiting"]) if glance and glance.get("parent") else 0
+
+# A turned-away wish waits on a parent this long before it is let go (docs/WISHES.md).
+WAITING_DAYS = 30
+
+
+def wishes_waiting(conn: sqlite3.Connection, today: Any) -> list[dict[str, Any]]:
+    """Every kid's wishes that wait on a parent: she asked, or it was turned away as not OK and the
+    parents were told. Oldest first, each with the kid and when it was asked."""
+    from familydb import roles
+    from familydb.store import wishes as wish_store
+
+    since = (today - timedelta(days=WAITING_DAYS)).isoformat()
+    rows = []
+    for kid in member_store.list_all(conn):
+        if not (roles.may(kid.role, "wish") and not roles.may(kid.role, "decide") and kid.active):
+            continue
+        for wish in wish_store.for_member(conn, kid.id):
+            if wish.status != "turned_away" or wish.created_at < since:
+                continue
+            if not (wish.parent_review == "asked" or wish.concern == "inappropriate"):
+                continue
+            rows.append(
+                {
+                    "id": wish.id,
+                    "title": wish.title,
+                    "kid": kid.display_name,
+                    "kid_id": kid.id,
+                    "concern": views.CONCERN_WORDS.get(wish.concern or ""),
+                    "asked_at": wish.updated_at,
+                }
+            )
+    rows.sort(key=lambda row: row["asked_at"])
+    return rows
 
 
 def _to_rate(conn: sqlite3.Connection, visitor: auth.Visitor, today: Any) -> int:
@@ -160,3 +195,64 @@ def _pill(app: App, conn: sqlite3.Connection, visitor: auth.Visitor) -> status_p
     thread = message_store.last_for_chat(conn, chat_id, limit=chat.GLANCE_LIMIT)
     state, _ = chat.standing(app, thread, chat_id)
     return status_page.pill(app, conn, name=name, busy=state == "thinking")
+
+
+# -- the row of destinations (docs/INTERFACE.md section 2) ----------------------------------------
+
+
+@dataclass(frozen=True)
+class Destination:
+    """One place in the row at the foot of every page: its word, where it goes, whether this is
+    it, and a count where one waits there ("1 to decide")."""
+
+    key: str
+    label: str
+    href: str
+    current: bool = False
+    count: int = 0
+    word: str = ""
+
+
+# Which pages belong to each place, so the row marks the one you are on.
+OWNS: dict[str, frozenset[str]] = {
+    "now": frozenset({"web.home"}),
+    "eat": frozenset({"web.restaurants"}),
+    "do": frozenset({"web.ideas", "web.idea", "web.new_idea", "web.edit_idea"}),
+    "week": frozenset({"web.plans", "web.plans_month", "web.tasks", "web.edit_task"}),
+    "kids": frozenset({"web.wishes"}),
+    "soon": frozenset({"web.happening_page"}),
+    "lists": frozenset({"web.lists_page"}),
+    "did": frozenset(),
+}
+
+
+def destinations(frame: Frame) -> list[Destination]:
+    """The row for this visitor: a grown-up's eight places, a kid's four (docs/INTERFACE.md
+    section 9). Each is a want, not a table: Eat, Do, Week."""
+    from flask import request, url_for
+
+    visitor = auth.visitor()
+    here = request.endpoint or ""
+    grown_up = visitor.may("browse")
+    places: list[tuple[str, str, str, int, str]] = [("now", "Now", url_for("web.home"), 0, "")]
+    if grown_up:
+        places.append(("eat", "Eat", url_for("web.restaurants"), 0, ""))
+        places.append(("do", "Do", url_for("web.ideas"), 0, ""))
+        places.append(
+            ("week", "Week", url_for("web.plans_month"), frame.late + frame.rate, "to look at")
+        )
+        if visitor.may("decide") and frame.kids:
+            places.append(("kids", "Kids", url_for("web.wishes"), frame.decide, "to decide"))
+        places.append(("soon", "Soon", url_for("web.happening_page"), 0, ""))
+        if visitor.may("change"):
+            places.append(("lists", "Lists", url_for("web.lists_page"), 0, ""))
+        places.append(("did", "Did", url_for("web.plans", _anchor="recent"), 0, ""))
+    else:
+        places.append(("do", "Do", url_for("web.ideas"), 0, ""))
+        places.append(("week", "My week", url_for("web.plans"), frame.late, "to do"))
+        if visitor.may("wish") and visitor.member is not None:
+            places.append(("kids", "My list", url_for("web.wishes"), 0, ""))
+    return [
+        Destination(key, label, href, here in OWNS.get(key, frozenset()), count, word)
+        for key, label, href, count, word in places
+    ]

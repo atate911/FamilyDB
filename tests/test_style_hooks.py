@@ -26,11 +26,11 @@ def test_a_quiet_count_carries_its_own_ground() -> None:
     assert ".badge--quiet { background: var(--paper-2); color: var(--ink-2); }" in css
 
 
-def test_a_kids_line_about_who_reads_her_chat_stays_on_the_phone() -> None:
+def test_a_kids_frame_is_marked_on_the_wrapper_so_the_stylesheet_can_size_it() -> None:
+    """The body class is a page's; a kid's bigger box and words come from the frame's own mark."""
     css = (WEB / "static" / "style.css").read_text()
-    home = (WEB / "templates" / "home.html").read_text()
-    assert "composer__foot--kid" in home
-    assert ".ask .composer__foot:not(.composer__foot--kid)" in css
+    frame = (WEB / "templates" / "frame.html").read_text()
+    assert "nf--kid" in frame and ".nf--kid .box" in css
 
 
 def test_the_chat_room_is_window_high_on_a_desktop_too() -> None:

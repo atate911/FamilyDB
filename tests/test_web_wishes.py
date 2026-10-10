@@ -98,8 +98,7 @@ def test_a_parent_sees_every_kid_and_answers(app, family, sam, girls) -> None:  
     _add(girls["sister"], "Slime")
     overview = sam.get("/wishes").text
     assert "A cat" in overview and "Slime" in overview and "The kids\u2019 lists" in overview
-    home = sam.get("/").text
-    assert "The kids\u2019 lists" in home and "A cat" in home
+    assert 'href="/wishes">Kids' in sam.get("/").text  # the way there, in the row
     cat = _open(app, family["girls"].id)[0]
     hers = sam.get(f"/wishes?who={family['girls'].id}").text
     assert "A cat" in hers and "Slime" not in hers
@@ -201,8 +200,10 @@ def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam,
     assert 'href="/ideas/new"' not in home and "plan an idea" not in home
     assert "Tell Vera anything" not in home and 'href="/wishes"' in home
     assert girls["mine"].get("/ideas/new").status_code == 403
-    # A grown-up's Home has no ways to start either, but can add an idea from it.
-    assert "We should try" not in sam.get("/").text and 'href="/ideas/new"' in sam.get("/").text
+    # A grown-up's Now has no ways to start either; adding an idea by hand is on the ideas page.
+    assert (
+        "We should try" not in sam.get("/").text and 'href="/ideas/new"' in sam.get("/ideas").text
+    )
 
 
 def test_her_list_opens_on_one_box_for_anything(app, family, sam, girls) -> None:  # noqa: F811
@@ -296,9 +297,9 @@ def test_what_each_person_is_told_about_whom_a_list_is_not_secret_from(
     assert "Planning a present?" not in kid
 
 
-def test_home_counts_what_waits_on_each_kid(app, family, sam, girls) -> None:  # noqa: F811
-    """The card on a parent's Home says "1 to decide" against the kid it waits on, whatever the
-    wish's own number is."""
+def test_now_counts_what_waits_on_the_kids_and_asks_about_it(app, family, sam, girls) -> None:  # noqa: F811
+    """A parent's Now counts what waits in its row ("1 to decide") and asks about it, naming the
+    kid it waits on, whatever the wish's own number is."""
     from familydb import wish_service
 
     with closing(app.connect()) as conn:
@@ -316,12 +317,10 @@ def test_home_counts_what_waits_on_each_kid(app, family, sam, girls) -> None:  #
         f"/wish/{turned.wish.id}/ask", data=_form(girls["mine"], "/wishes"), follow_redirects=True
     )
     home = sam.get("/").text
-    card = home[home.index('id="h-wish"') :].split("</section>")[0]
-    hers, chloes = (
-        next(entry for entry in card.split("<li>") if name in entry)
-        for name in (family["girls"].display_name, "Chloe")
-    )
-    assert "1 to decide" in hers and "to decide" not in chloes  # not on whoever has that number
+    assert 'title="1 to decide"' in home[home.index('<nav class="row"') :]
+    question = home[home.index('<section class="q"') :].split("</section>")[0]
+    assert f"{family['girls'].display_name} asked for a thing 3." in question
+    assert "Chloe" not in question  # not on whoever has that number
 
 
 def test_a_kid_never_sees_the_tools_a_turn_ran(app, family, sam, girls) -> None:  # noqa: F811

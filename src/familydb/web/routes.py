@@ -14,7 +14,6 @@ from flask import (
     Response,
     abort,
     current_app,
-    redirect,
     render_template,
     request,
     session,
@@ -38,7 +37,7 @@ from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store import wishes as wish_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import auth, chat, shell, views
+from familydb.web import auth, chat, now, shell, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
@@ -54,7 +53,7 @@ SEASONS = ("spring", "summer", "autumn", "winter")
 COSTS = ((0, "free"), (1, "cheap"), (2, "moderate"), (3, "pricey"), (4, "expensive"))
 RATINGS = tuple(range(10, 0, -1))
 RESTAURANT_KIND = "restaurant"
-FILTERS = ("q", "kind", "status", "who")
+FILTERS = views.IDEA_FILTERS
 HOME_AHEAD_DAYS = 60
 # A kid's To do page keeps what she ticked off this long, with a way to undo it.
 DONE_LATELY_DAYS = 7
@@ -155,86 +154,14 @@ def status() -> str:
 
 @bp.get("/")
 def home() -> Response | str:
-    """The box (the chat's own, posting to it) around what is coming up, to do and new. No model
-    call. An admin is sent to setup until the bot can answer anyone."""
-    if any(request.args.get(key) for key in FILTERS):
-        # Home takes no search; an old bookmark's goes on to the ideas list.
-        return redirect(url_for("web.ideas", **request.args))
-    app = _app()
-    now = app.clock.now()
-    today = app.clock.today()
-    tz = app.settings.tzinfo
-    visitor = auth.visitor()
-    manages = visitor.manages
-    # The box is the chat's, so only for a role that may chat.
-    talks = visitor.may("chat")
-    kid = chat.is_kid()
-    # For somebody who does not browse the household (a kid): only what is hers (docs/STYLE.md).
-    browsing = visitor.may("browse")
-    with closing(app.connect()) as conn:
-        progress = status_page.setup_progress(app, conn)
-        if manages and not status_page.ready_to_answer(progress):
-            return redirect(url_for("setup.overview"))
-        seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
-        kept = presents.kept_ids(conn, visitor.member)
-        on = presents.without(seen.entries, kept)
-        everything = [idea for idea in idea_store.list_all(conn) if idea.id not in kept]
-        unfinished = status_page.setup_steps(app, conn) if manages else []
-        people = member_store.list_all(conn)
-        todo = presents.visible_tasks(
-            conn, task_store.list_all(conn, status="open", owner_id=_own_only()), visitor.member
-        )
-        talk = chat.glance(app, conn) if talks else None
-        wished = wish_glance(conn, today)
-        slots = views.slot_map(people)
-        coming = _plan_rows(conn, app, on, today, slots, visitor.member if not browsing else None)
-        rating = _to_rate(conn, today, slots, visitor.member) if visitor.may("change") else None
-        newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
-        mini = [_idea_mini(conn, app, idea) for idea in newest]
-        today_card = status_page.vera_today(app, conn) if browsing else None
-        left = chat.messages_left(app, conn, visitor.member)
-    late = sum(views.is_late(task, tz, today) for task in todo)
-    family = [member.display_name for member in people]
-    yes = _latest_yes(wished, people) if wished and not wished["parent"] else None
-    line = views.home_line(
-        coming,
-        late,
-        plans_href=url_for("web.plans_month" if browsing else "web.plans"),
-        todo_href=url_for("web.tasks"),
-        kid=not browsing,
-        others=_others(coming, visitor.member),
-        yes=yes,
-    )
-    return render_template(
-        "home.html",
-        hello=views.greeting(now.astimezone(tz).hour, visitor.name),
-        today=views.day_text(today.isoformat()),
-        line=line,
-        summary=views.home_summary(coming, len(todo), late, todo_href=url_for("web.tasks")),
-        coming=coming[:HOME_PLANS],
-        more_plans=max(0, len(coming) - HOME_PLANS),
-        source=seen.source,
-        source_note=views.AGENDA_NOTES[seen.source],
-        ideas=mini,
-        idea_count=len(everything),
-        restaurant_count=sum(1 for idea in everything if idea.kind == RESTAURANT_KIND),
-        tasks=[views.todo_row(t, tz, today, slots, kid=not browsing) for t in todo[:HOME_TASKS]],
-        task_count=len(todo),
-        late_count=late,
-        setup=unfinished,
-        talk=talk,
-        wishes=wished,
-        kids=_kids_card(wished, people),
-        rating=rating,
-        vera=today_card,
-        left=left,
-        readers=views.names_text(
-            [{"name": p.display_name} for p in people if roles.may(p.role, "decide")]
-        ),
-        busy=bool(talk and talk["state"] == "thinking"),
-        **chat.box(family, prompt=chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT),
-        typed=chat.asked(),
-    )
+    """Now, the first screen (web/now.py): the box, her questions, her picks, today's line."""
+    return now.show()
+
+
+@bp.post("/later")
+def later() -> Response:
+    """Later on a kid's pitch on Now: off this device for a week (web/now.py)."""
+    return now.later()
 
 
 def _plan_rows(

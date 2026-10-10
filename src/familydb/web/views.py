@@ -481,12 +481,6 @@ def stuck_message_note(tries: int, given_up: bool) -> str:
     return f"{times}, will try again"
 
 
-def greeting(hour: int, name: str | None) -> str:
-    """ "Good morning, Sam"; with the family sharing one password there is no name to say."""
-    part = "morning" if hour < 12 else "afternoon" if hour < 18 else "evening"
-    return f"Good {part}, {name}" if name else f"Good {part}"
-
-
 def slot_map(people: Sequence[Member]) -> dict[str, int]:
     """Each person's colour by name, for the lists that carry only names (an idea's people, a
     to-do's owner, a chat line). Names are matched without regard to case."""
@@ -609,99 +603,44 @@ def todo_page_row(
     }
 
 
-def home_line(
-    coming: Sequence[dict[str, Any]],
-    late: int,
-    *,
-    plans_href: str,
-    todo_href: str,
-    kid: bool = False,
-    others: str = "",
-    yes: tuple[str, str] | None = None,
-) -> list[dict[str, str | None]]:
-    """The sentence under the greeting, as parts so the plan and the to-dos can be links: "Roller
-    rink tomorrow, and three to-dos are late." `coming` are plan rows; `yes` is a kid's latest yes,
-    (who said it, the wish), told in her sentence instead of what is late."""
-    parts: list[dict[str, str | None]] = []
-
-    def say(text: str, href: str | None = None) -> None:
-        parts.append({"text": text, "href": href})
-
-    plan = coming[0] if coming else None
-    if plan:
-        label = plan["title"] + (f" {plan['relative']}" if plan["relative"] else "")
-        say(label, plans_href)
-        if kid and others:
-            say(f" with {others}")
-    if kid:
-        if yes:
-            who, wish = yes
-            say(", and " if plan else "")
-            say(f"{who} said yes to ")
-            say(wish, todo_href)
-            say("!")
-        elif plan:
-            say(".")
-        else:
-            say("Nothing is planned yet.")
-        return parts
-    if late:
-        text = count_words(late, "to-do", "to-dos")
-        say(", and " if plan else "")
-        if not plan:
-            text = text[0].upper() + text[1:]
-        say(text, todo_href)
-        say(f" {'is' if late == 1 else 'are'} late.")
-    elif plan:
-        say(".")
-    else:
-        say("Nothing is planned yet, and nothing is late.")
-    return parts
-
-
-def home_summary(
-    coming: Sequence[dict[str, Any]], open_count: int, late: int, *, todo_href: str
-) -> list[dict[str, str | None]]:
-    """A grown-up's quiet line under the day: how things stand, without repeating Next up. "5 to-dos
-    open, 1 late · next plan in 2 days". What is late is a link to the to-dos (docs/STYLE.md,
-    "The page header")."""
-    parts: list[dict[str, str | None]] = []
-    if open_count:
-        noun = "to-do" if open_count == 1 else "to-dos"
-        parts.append({"text": f"{open_count} {noun} open", "href": None})
-        if late:
-            parts.append({"text": ", ", "href": None})
-            parts.append({"text": f"{late} late", "href": todo_href})
-    else:
-        parts.append({"text": "Nothing to do", "href": None})
-    plan = coming[0] if coming else None
-    if plan:
-        nxt = f"next plan {plan['relative']}" if plan["relative"] else f"next plan {plan['when']}"
-    else:
-        nxt = "nothing planned yet"
-    parts.append({"text": " · " + nxt, "href": None})
-    return parts
-
-
-# Ways to start, under the box on Home and in an empty chat; never asked of a model.
+IDEA_FILTERS = ("q", "kind", "status", "who")
+# The question setup's last page hands to the box, unsent; never asked of a model by a page.
 WEEKEND_QUESTION = "What should we do this weekend?"
-TODAY_QUESTION = "What should we do today?"
-STARTERS = ("Remind me to ", "We should try ")
 
 
-def starters(today: date, *, kid: bool = False) -> list[dict[str, str]]:
-    """The suggestions under the box: what each puts in it, and its label. None for a kid
-    (docs/STYLE.md, "A kid's screen")."""
-    if kid:
-        return []
-    question = TODAY_QUESTION if today.weekday() >= 5 else WEEKEND_QUESTION
-    return [
-        {"say": text, "label": text.rstrip() + ("…" if text.endswith(" ") else "")}
-        for text in (question, *STARTERS)
-    ]
+def context_line(local_now: datetime, fact: str | None = None) -> str:
+    """The one line under the box on Now: the day and the hour, and the one fact that shapes
+    her picks when there is one. "Friday 5 pm · dry through Sunday"."""
+    when = f"{local_now:%A} {clock_time(local_now)}"
+    return f"{when} · {fact}" if fact else when
 
 
-# "every:unit" and its words.
+def day_line(rows: Sequence[dict[str, Any]], href: str) -> list[dict[str, str | None]]:
+    """What is on one day as the parts of a sentence, the plans a link to the day: "Swim lesson
+    4:30 pm, then Night Market 5 pm." or "Free." when nothing is."""
+    if not rows:
+        return [{"text": "Free.", "href": None}]
+    said = []
+    for row in rows:
+        title = row["title"] + (f" {row['time']}" if row.get("time") else "")
+        if row.get("status") == "tentative":
+            title += " (tentative)"
+        said.append(title)
+    text = said[0] if len(said) == 1 else ", ".join(said[:-1]) + f", then {said[-1]}"
+    return [{"text": text, "href": href}, {"text": ".", "href": None}]
+
+
+def made_words(made_at: str, now: datetime, tz: ZoneInfo) -> str:
+    """When a set of picks was chosen, briefly: "chosen 4 pm", "chosen yesterday", "chosen Mon"."""
+    moment = datetime.fromisoformat(made_at.replace("Z", "+00:00")).astimezone(tz)
+    today = now.astimezone(tz).date()
+    if moment.date() == today:
+        return f"chosen {clock_time(moment)}"
+    if moment.date() == today - timedelta(days=1):
+        return "chosen yesterday"
+    return f"chosen {moment:%a}"
+
+
 REPEATS = (
     ("", "Doesn't repeat"),
     ("1:day", "Every day"),

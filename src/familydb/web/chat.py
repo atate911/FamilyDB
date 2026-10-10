@@ -9,6 +9,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any
+from urllib.parse import urlencode
 
 from flask import (
     Blueprint,
@@ -237,6 +238,86 @@ def glance(app: App, conn: Any) -> dict[str, Any]:
     return {"state": state, "note": notes.get(state or "", "").format(name=name), "line": line}
 
 
+# Under the box, after a message was sent from a page built on the frame (docs/INTERFACE.md
+# section 6): her reply rises over the page you were on; an instruction comes back as a receipt.
+ASKED = "asked"
+LOOKED = "n"
+SAID = "said"
+
+
+def under_box(app: App, conn: Any, chat_id: str, visitor: auth.Visitor) -> dict[str, Any]:
+    """What the frame shows under the box: `pending` while the message named in the address
+    (`asked`) or any turn in this chat is being answered, `receipt` when its turn changed
+    something, `said` when she only answered; `locked`, `look_again` and `refresh` say whether the
+    box is closed meanwhile and when the page looks again. Nothing when nothing was asked."""
+    assistant = personas.active(app.settings).name
+    thread = message_store.last_for_chat(conn, chat_id, limit=GLANCE_LIMIT)
+    state, handing = standing(app, thread, chat_id)
+    looked = _number(LOOKED, STOP_LOOKING) or 0
+    update_id = request.args.get(ASKED, "")
+    asked = (
+        message_store.by_update(conn, "web", update_id)
+        if update_id.isalnum() and len(update_id) <= 64
+        else None
+    )
+    shown: dict[str, Any] = {"locked": state == "thinking", "look_again": None, "refresh": None}
+    here = url_for(request.endpoint or "web.home", **(request.view_args or {}))
+    if state is not None and (asked is None or asked.id not in _answered(thread)):
+        if asked is None and not handing and update_id == "":
+            # Somebody else's message is being answered: the box waits, nothing else is said.
+            return shown
+        notes = AT_HOME if visitor.may("browse") else AT_HOME_PLAIN
+        refresh = refresh_after(state, looked)
+        shown.update(
+            {
+                "pending": {
+                    "state": state,
+                    "text": notes.get(state, "").format(name=assistant),
+                    "check": url_for(
+                        request.endpoint or "web.home",
+                        **(request.view_args or {}),
+                        **{ASKED: update_id, LOOKED: looked + 1},
+                        _anchor=SAID,
+                    ),
+                },
+                "refresh": refresh,
+                "look_again": refresh if not shown["locked"] else None,
+                "here": url_for(
+                    request.endpoint or "web.home",
+                    **(request.view_args or {}),
+                    **{ASKED: update_id, LOOKED: looked + 1},
+                    _anchor=SAID,
+                ),
+            }
+        )
+        return shown
+    if asked is None:
+        return shown
+    replies = message_store.replies_to(conn, asked.id)
+    if not replies:
+        if asked.status == "failed" or asked.give_up:
+            shown["said"] = {"asked": message_store.as_said(asked.text), "text": LOST}
+        return shown
+    reply = replies[-1]
+    did = views.tools_used(asked.actions) if visitor.may("browse") else []
+    undo = _undoable(app, conn, [asked], visitor).get(asked.id)
+    if did:
+        shown["receipt"] = {"text": reply.text, "did": did, "undo": undo}
+    else:
+        shown["said"] = {
+            "asked": message_store.as_said(asked.text),
+            "text": reply.text,
+            "undo": undo,
+            "pointer": None,
+        }
+    log.debug("under the box on %s: %s", here, "receipt" if did else "said")
+    return shown
+
+
+def _answered(thread: list[Message]) -> set[int]:
+    return {message.reply_to for message in thread if message.reply_to is not None}
+
+
 def refresh_after(state: str | None, looked: int) -> int | None:
     """Seconds before the page next asks for the answer, or None once it has asked enough.
     `looked` is how many times it already has."""
@@ -358,7 +439,7 @@ def page(
             earlier=url_for("chat.show", before=thread[0].id, **with_kid) if older else None,
             newest=url_for("chat.show", **with_kid, _anchor=LATEST) if before else None,
             where="chat",
-            readers=_readers(family),
+            readers=readers(family),
             telegram=_telegram(app) if visitor.may("browse") else None,
             me=_me(visitor, slots),
             left=left,
@@ -405,7 +486,7 @@ def _undoable(app: App, conn: Any, thread: list[Message], visitor: auth.Visitor)
     }
 
 
-def _readers(family: list[member_store.Member]) -> str:
+def readers(family: list[member_store.Member]) -> str:
     """Who may read a kid's conversation: the people who decide, as "Sam and Alex"."""
     return views.names_text(
         [{"name": m.display_name} for m in family if roles.may(m.role, "decide")]
@@ -589,5 +670,11 @@ def send() -> Response | Any:
     if (complaint := asked) is not None:
         return page(error=complaint, typed=text, status=400)
     log.info("web chat: %s asked something", who)
-    # Redirect, since refreshing a POST would send the message again.
+    # Redirect, since refreshing a POST would send the message again: back to the page the box
+    # was on, which shows the answer under it, or to the thread.
+    back = request.form.get("back", "")
+    if back.startswith("/") and not back.startswith("//") and "\\" not in back and back != "/chat":
+        handing = _chat().handing_over(my_chat())
+        asked = {ASKED: handing.update_id} if handing is not None else {}
+        return redirect(f"{back}?{urlencode(asked)}#{SAID}" if asked else back)
     return redirect(url_for("chat.show", _anchor=LATEST))

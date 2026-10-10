@@ -695,7 +695,10 @@ LISTS = {"everyday", "christmas", "birthday"}
 
 
 def _to_wishes() -> Response:
-    """Back to the lists the form came from (one kid's, for a parent looking at hers)."""
+    """Back to the lists the form came from (one kid's, for a parent looking at hers), or to Now
+    when the question was asked there."""
+    if request.form.get("back") == "home":
+        return _back("web.home")
     kid = request.form.get("kid", "")
     return _back("web.wishes", **({"who": kid} if kid.isdigit() else {}))
 

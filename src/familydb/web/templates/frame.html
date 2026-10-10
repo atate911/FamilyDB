@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, wordmark, avatar, vera_screen, flash %}
+{# The frame of the family's pages (docs/INTERFACE.md): the box first, always; the middle is the page's; the row of
+   destinations is fixed at the bottom on a phone and becomes the rail on a wide screen. The back office (settings,
+   status, the family list, the guide) keeps base.html. `shell`, `viewer`, `grownup` come from base.html. #}
+{% block head %}
+  {# While an answer is on its way the page fetches itself again (works without scripts), soon at first and then
+     less often (chat.refresh_after); never with words in the box, which it would take with it. #}
+  {% if refresh and locked %}<meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}<noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>{% endif %}
+{% endblock %}
+{% block frame %}
+  {% set row = destinations(shell) %}
+  <div class="nf{% if not grownup %} nf--kid{% endif %}">
+    <header class="nf__top">
+      <a class="nf__brand" href="{{ url_for('web.home') }}" aria-label="{{ site_title }}, now">{{ wordmark(site_title) }}</a>
+      <div class="nf__right">
+        {% if shell.pill and shell.pill.state != 'ready' %}<a class="nf__pill" href="{{ url_for('web.status') }}">{{ shell.pill.short }}</a>{% endif %}
+        <a class="nf__me" href="{{ url_for('web.more') }}" aria-label="{{ shell.menu_label }}">{{ avatar(shell.me.slot, shell.me.initial) }}{% if shell.look_at %}<span class="dot"></span>{% endif %}</a>
+      </div>
+    </header>
+
+    {# The box, with what the last message brought back under it. A page may scope it (`scope`) or leave it out (`no_box`). #}
+    {% if not no_box and viewer.may('chat') %}
+      {% include "_box.html" %}
+    {% endif %}
+
+    <main class="nf__main" id="main">
+      {% set undoing = get_flashed_messages(category_filter=['undo']) %}
+      {% for said in get_flashed_messages(category_filter=['edit']) %}{{ flash(said, undo=undoing[-1] if loop.last and undoing else none, back=request.full_path.rstrip('?')) }}{% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+
+    {# The way to everything else: one row, the same on every page, the current place in ink. #}
+    <nav class="row" aria-label="Pages">
+      {% for place in row %}
+        <a href="{{ place.href }}"{% if place.current %} aria-current="page"{% endif %}>{{ place.label }}{% if place.count %}<span class="row__n" title="{{ place.count }} {{ place.word }}">{{ place.count }}<span class="sr"> {{ place.word }}</span></span>{% endif %}</a>
+      {% endfor %}
+    </nav>
+    <footer class="nf__foot"><p class="foot__legal">{{ footer }}</p></footer>
+  </div>
+{% endblock %}

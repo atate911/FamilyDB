@@ -61,8 +61,8 @@ def test_parents_and_admins_read_it_and_kids_do_not(app, sam, family) -> None:  
         assert alex.get(path).status_code == 200, path
         refused = girls.get(path)
         assert refused.status_code == 403 and "For a parent" in refused.text, path
-    # The way in is there for the grown-ups and not on a kid's screen.
-    assert 'href="/wiki"' in sam.get("/").text and 'href="/wiki"' in sam.get("/more").text
+    # The way in is in the grown-ups' menu and not on a kid's screen.
+    assert 'href="/wiki"' in sam.get("/more").text
     assert (
         'href="/wiki"' not in girls.get("/").text and 'href="/wiki"' not in girls.get("/more").text
     )

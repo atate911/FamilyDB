@@ -113,6 +113,8 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "web.export_ideas": "browse",
     "web.export_tasks": "browse",
     "web.wishes": "wish",
+    # Later on a kid's pitch, asked of whoever decides on her wishes (web/now.py).
+    "web.later": "decide",
     "edits.add_wish": "wish",
     "edits.move_wish": "wish",
     "edits.withdraw_wish": "wish",

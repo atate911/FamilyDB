@@ -207,22 +207,40 @@ def test_each_person_has_their_own_colour_and_it_does_not_follow_their_name(conn
 
 
 def test_the_page_you_are_on_is_marked_in_the_menu_and_the_tab_bar(sam, girl) -> None:
-    """Home is the first page on the frame; each of its two places for a page's name marks it
-    as current, once, for a screen reader as well as the eye."""
-    home = sam.get("/").text
-    side = re.search(r'<aside class="side".*?</aside>', home, re.S).group(0)
-    tabs = re.search(r'<nav class="tabbar".*?</nav>', home, re.S).group(0)
+    """A page on the older frame marks itself in the menu and the tab bar, once each, for a
+    screen reader as well as the eye; Now marks itself in its own row of destinations."""
+    ideas = sam.get("/ideas").text
+    side = re.search(r'<aside class="side".*?</aside>', ideas, re.S).group(0)
+    tabs = re.search(r'<nav class="tabbar".*?</nav>', ideas, re.S).group(0)
     for where in (side, tabs):
         assert where.count('aria-current="page"') == 1
-        assert re.search(r'<a href="/" aria-current="page">', where)
+        assert re.search(r'<a href="/ideas" aria-current="page">', where)
     # The account corner marks Look while you are on it.
     look = sam.get("/more").text  # a page of its own: none of the pages is current there
     assert (
         re.search(r'<aside class="side".*?</aside>', look, re.S).group(0).count("aria-current") == 0
     )
-    # A kid's Home marks hers.
-    kid = girl.get("/").text
-    assert re.search(r'<a href="/" aria-current="page">', kid)
+    # Now, and a kid's Now, mark Now in the row.
+    for client in (sam, girl):
+        row = re.search(r'<nav class="row".*?</nav>', client.get("/").text, re.S).group(0)
+        assert row.count('aria-current="page"') == 1
+        assert re.search(r'<a href="/" aria-current="page">Now</a>', row)
+
+
+def test_the_row_of_destinations_follows_the_role(sam, alex, girl, conn, family) -> None:
+    """A grown-up's row has the eight places (Kids only while a kid is on the list); a kid's has
+    her four, and never Lists, Kids or Soon (docs/INTERFACE.md section 9)."""
+
+    def places(client) -> list[str]:
+        row = re.search(r'<nav class="row".*?</nav>', client.get("/").text, re.S).group(0)
+        return re.findall(r"<a [^>]*>([^<]+)(?:<span|</a>)", row)
+
+    assert places(sam) == ["Now", "Eat", "Do", "Week", "Kids", "Soon", "Lists", "Did"]
+    assert places(alex) == ["Now", "Eat", "Do", "Week", "Kids", "Soon", "Lists", "Did"]
+    assert places(girl) == ["Now", "Do", "My week", "My list"]
+    with db.transaction(conn):
+        members.set_active(conn, family["girls"].id, False)
+    assert "Kids" not in places(sam)  # nobody to decide for
 
 
 def test_a_plan_made_for_a_present_is_not_asked_about_where_the_present_is_hidden(
