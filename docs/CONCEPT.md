@@ -2,6 +2,8 @@
 
 First draft, October 2026. One vision for how the family meets Vera on the web page and in Telegram, drawn from five rounds of brainstorming and a clean slate. Nothing here is final. It is the shot, not the rulebook.
 
+**Superseded in part.** The rounds after this draft replaced the four-place layout and the fixed-order Home with a launcher of destinations and Vera's answering contract. That skeleton is `INTERFACE.md`, and it wins where the two disagree. Sections 5 to 13 here (the glimpse, how she behaves, kids, Telegram, the first days, what is out, the family's decisions, cost) still hold.
+
 ## 1. What it is, in one breath
 
 Vera is the family's own assistant. You tell her things in passing. She keeps them, works on them, and brings them back when they are useful. The page is where you see what she has kept and what she proposes, in whichever way suits what you are doing.
