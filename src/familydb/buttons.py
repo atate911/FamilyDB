@@ -17,6 +17,7 @@ import sqlite3
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from datetime import time as day_time
+from functools import partial
 from typing import Any
 
 from familydb import roles, voice
@@ -39,6 +40,9 @@ log = logging.getLogger(__name__)
 
 # (action, label) per kind of message; what each does is in `_task_job` and `_plan_job`.
 REMINDER = (("done", "✓ Done"), ("hour", "In an hour"), ("tomorrow", "Tomorrow"))
+# Under a reminder for everyone, on a row of its own: whoever taps it takes it on (its owner), as
+# "I'll handle it" said in the chat would; the row goes and the others stay.
+MINE = (("mine", "I'll handle it"),)
 FOLLOW_UP = (
     ("again", "Loved it"),
     ("ok", "It was OK"),
@@ -53,7 +57,7 @@ WISH = (("wish_yes", "Yes!"), ("wish_no", "Not this time"), ("wish_later", "Late
 UNDO = (("undo", "↩ Undo"),)
 # A thing on a list, ticked as bought (/list); its label is the thing's own.
 TICK = (("tick", "✓"),)
-LABELS = dict(REMINDER + FOLLOW_UP + WISH + UNDO + TICK)
+LABELS = dict(REMINDER + MINE + FOLLOW_UP + WISH + UNDO + TICK)
 SNOOZES = ("hour", "tomorrow")
 # "Tomorrow" is the same time of day, on the wall clock, between these; else nine.
 TOMORROW_FROM, TOMORROW_UNTIL = day_time(8, 0), day_time(20, 0)
@@ -63,8 +67,10 @@ MAX_NUMBER_DIGITS = 18
 Button = dict[str, str]
 
 
-def for_reminder(task_id: int) -> list[Button]:
-    return _row(REMINDER, task_id)
+def for_reminder(task_id: int, *, everyone: bool = False) -> list[Button]:
+    """Done, In an hour and Tomorrow; for a to-do that is everyone's, I'll handle it below."""
+    row = _row(REMINDER, task_id)
+    return row + in_row(_row(MINE, task_id), "mine") if everyone else row
 
 
 def for_follow_up(plan_id: int) -> list[Button]:
@@ -144,13 +150,16 @@ def tap(
     update_id = f"tap:{tap_id}"
     if messages.exists_update(conn, channel, update_id):
         return None
-    if action in WENT_ACTIONS and not roles.may(member.role, "change"):
-        # How a plan went, or that it was missed, is a grown-up's to say (as in the chat).
+    if (action in WENT_ACTIONS or action == "mine") and not roles.may(member.role, "change"):
+        # How a plan went, or that it was missed, is a grown-up's to say (as in the chat), and so
+        # is taking on a to-do that is everyone's (update_task: a kid changes only her own).
         return Tapped(voice.say(settings, "tap_parents_only", seed=tap_id))
     if action.startswith("wish_"):
         planned: Any = _wish_job
     elif action in SNOOZES or action == "done":
         planned = _task_job
+    elif action == "mine":
+        planned = partial(_mine_job, member=member)
     elif action == "undo":
         planned = _undo_job
     elif action == "tick":
@@ -201,6 +210,19 @@ def tap(
         event, facts = "tap_done_again", {"when": when_text(moment, app.clock.today())}
     line = voice.say(settings, event, seed=kept.id, who=member.display_name, **facts)
     return Tapped(line, line, finished=True)
+
+
+def _mine_job(
+    app: Any, conn: sqlite3.Connection, action: str, task_id: int, *, member: members.Member
+) -> _Job | str:
+    """I'll handle it: the to-do becomes the tapper's, while it is still everyone's."""
+    task = tasks.get(conn, task_id)
+    if task is None:
+        return "tap_stale"
+    if task.status != "open" or task.owner_id is not None:
+        return "tap_already"
+    values = {"task_id": task.id, "owner": member.display_name}
+    return _Job("update_task", values, f"task #{task.id} {task.title}", "tap_mine")
 
 
 def _wish_check(

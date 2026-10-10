@@ -35,7 +35,7 @@ Some messages FamilyDB sends unasked carry buttons. A tap does what saying so in
 
 | Under | Buttons | What each does |
 |---|---|---|
-| A reminder, or a nudge to do something kept for a part of the week | **✓ Done**, **In an hour**, **Tomorrow** | Done marks the thing done (a repeating one comes round again, and the note says when). In an hour moves the reminder to 1 hour after the tap, and Tomorrow to 24 hours after the tap, not to tomorrow morning. A kid can tap only on their own things to do |
+| A reminder, or a nudge to do something kept for a part of the week | **✓ Done**, **In an hour**, **Tomorrow** | Done marks the thing done (a repeating one comes round again, and the note says when). In an hour moves the reminder to 1 hour after the tap, and Tomorrow to 24 hours after the tap, not to tomorrow morning. A kid can tap only on their own things to do. Under one that is everyone's, **I'll handle it** sits on a row of its own: a grown-up's tap makes it theirs, the note says who, and Done and the snoozes stay |
 | A follow-up on a plan that was made for an idea | **Yes, again**, **Not again**, **Didn't go** | Yes, again and Not again record how it went and whether the family would do it again. Didn't go records nothing about how it went and puts the idea back on the list |
 | A kid's ask, sent privately to each parent | **Yes!**, **Not this time**, **Later** | Only a parent can answer. Yes! grants it and Not this time declines it. Later does nothing but show "left for later", and the buttons stay. It is sent when an ask is flagged as inappropriate, or when the kid presses Ask a parent |
 

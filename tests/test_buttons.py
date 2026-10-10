@@ -6,7 +6,7 @@ import pytest
 
 from familydb import buttons
 from familydb.app import App
-from familydb.store import db, ideas, messages, outcomes, plans, tasks
+from familydb.store import db, ideas, members, messages, outcomes, plans, tasks
 from familydb.tools import ToolContext
 from familydb.tools.registry import ToolResult
 from familydb.tools.tasks import AddTaskInput, add_task
@@ -85,6 +85,30 @@ def test_done_is_done_once_and_kept_as_a_message(settings, clock, conn, family) 
     again = _tap(app, conn, f"done:{task['id']}", tap_id="q2")
     assert again == buttons.Tapped("That one's already taken care of.", finished=True)
     assert len(messages.recent_for_chat(conn, "42", limit=5, since="2000-01-01")) == 1
+
+
+def test_a_to_do_for_everyone_is_taken_on_by_whoever_taps_i_will_handle_it(
+    settings, clock, conn, family
+) -> None:
+    app = App(settings, clock)
+    ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    task = add_task(
+        ctx, AddTaskInput(title="Bins out", owner="everyone", remind_at="2026-09-20T18:00")
+    )["task"]
+    assert tasks.get(conn, task["id"]).owner_id is None
+    with db.transaction(conn):
+        members.add(conn, "Maya", "kid", channel="telegram", channel_user_id="1003", now=NOW_ISO)
+    kid = _tap(app, conn, f"mine:{task['id']}", who="1003")
+    assert not kid.finished and tasks.get(conn, task["id"]).owner_id is None  # a grown-up's
+    tapped = _tap(app, conn, f"mine:{task['id']}", who="1002", tap_id="q2")
+    assert tapped == buttons.Tapped("Alex is on it.", "Alex is on it.", finished=True)
+    assert tasks.get(conn, task["id"]).owner_id == family["alex"].id
+    kept = messages.recent_for_chat(conn, "42", limit=5, since="2000-01-01")
+    assert [m.text for m in kept] == [f"(tapped) I'll handle it: task #{task['id']} Bins out"]
+    # Taken, it is nobody else's to take; still open, Done still does.
+    again = _tap(app, conn, f"mine:{task['id']}", tap_id="q3")
+    assert again == buttons.Tapped("That one's already taken care of.", finished=True)
+    assert _tap(app, conn, f"done:{task['id']}", tap_id="q4").finished
 
 
 def test_snoozing_moves_the_reminder(settings, clock, conn, family) -> None:
@@ -250,7 +274,9 @@ def test_a_reminder_goes_with_its_buttons_where_they_can_be_shown(settings, cloc
     assert plain == [] and len(rich) == 1
     chat, text, row = rich[0]
     assert chat == "42" and text.startswith("Reminder: Bins out")
-    assert row == buttons.for_reminder(task.id)
+    # Nobody's own, so everybody's: I'll handle it on a row of its own under the rest.
+    assert row == buttons.for_reminder(task.id, everyone=True)
+    assert row[-1] == {"label": "I'll handle it", "data": f"mine:{task.id}", "row": "mine"}
     assert messages.get(conn, tasks.get(conn, task.id).reminder.message_id).buttons == row
 
 

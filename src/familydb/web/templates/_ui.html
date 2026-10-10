@@ -126,7 +126,7 @@
   </span>
 {%- endmacro %}
 
-{# A to-do in a list (docs/STYLE.md, "Checkbox"): the checkbox on the title's line, for whoever may tick it; the title, which opens the to-do's own page where `edit` allows; one line of when (and how late); the owner's mark at the edge. The full list adds the reminder, notes, window and repeats; `compact` is Home's short row; `mine` a kid's own, which she ticks off herself and sees without an owner (and with who set it). `back` is where a tick returns to. A done or cancelled one has no checkbox, only its mark. `everyone` is the frame's family, for a to-do that is everyone's. #}
+{# A to-do in a list (docs/STYLE.md, "Checkbox"): the checkbox on the title's line, for whoever may tick it; the title, which opens the to-do's own page where `edit` allows; one line of when (and how late); the owner's mark at the edge. The full list adds the reminder, notes, window and repeats; `compact` is Home's short row; `mine` a kid's own, which she ticks off herself and sees without an owner (and with who set it). `back` is where a tick returns to. A done or cancelled one has no checkbox, only its mark. `everyone` is the frame's family, for a to-do that is everyone's, which a grown-up signed in as themselves may take on with "I'll handle it" (docs/INTERFACE.md section 4, This week). #}
 {% macro todo(row, back, compact=false, mine=false, edit=false, undo=false, everyone=()) -%}
   {% set open = row.status is not defined or row.status == 'open' %}
   <li class="todo{{ ' todo--compact' if compact }}{{ ' todo--mine' if mine }}{{ ' todo--late' if row.late and not mine }}{{ ' todo--done' if row.status == 'done' }}" id="t-{{ row.id }}">
@@ -164,6 +164,14 @@
         {% if row.repeats %}<p>{{ row.repeats }}</p>{% endif %}
       </div>
     {% endif %}
+    {% if open and not mine and row.everyone and visitor().member and visitor().may('change') -%}
+      <form class="todo__act" method="post" action="{{ url_for('edits.claim_task', task_id=row.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="revision" value="{{ row.revision }}" />
+        <input type="hidden" name="back" value="{{ back }}" />
+        <button class="textbtn" type="submit">{{ icon('people', size='sm') }}I'll handle it<span class="sr">: {{ row.title }}</span></button>
+      </form>
+    {%- endif %}
     {% if undo and row.status == 'done' -%}
       <form class="todo__act" method="post" action="{{ url_for('edits.reopen_task', task_id=row.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />

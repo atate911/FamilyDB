@@ -551,6 +551,46 @@ def test_a_grown_up_signed_in_writes_as_themselves(app, conn, family) -> None:
     assert "Kids" in row and "Lists" in row
 
 
+def test_a_to_do_for_everyone_is_taken_on_with_i_will_handle_it(app, conn, family) -> None:
+    with db.transaction(conn):
+        task_id = tasks.insert(
+            conn,
+            title="Bins out",
+            notes="",
+            owner_id=None,  # everyone's
+            due_at="2026-09-20T19:00:00Z",
+            preferred_window="",
+            operation_key="test-bins",
+            channel="web",
+            chat_id="web",
+            now=NOW_ISO,
+        )
+    mine = _task(conn, family, "Call the dentist", due="2026-09-20T19:00:00Z", owner="sam")
+    sam = _in_as(app, "Sam", "sam likes long sentences")
+    home = sam.get("/").text
+    claim = re.search(
+        rf'<form class="todo__act" [^>]*action="/task/{task_id}/mine">.*?</form>', home, re.S
+    )
+    assert claim is not None and "I'll handle it" in claim.group(0)
+    assert f"/task/{mine}/mine" not in home  # already somebody's
+    fields = dict(re.findall(r'name="(csrf|once|revision|back)" value="([^"]*)"', claim.group(0)))
+    sent = sam.post(f"/task/{task_id}/mine", data=fields)
+    assert sent.status_code == 302 and sent.headers["Location"] == "/"
+    assert tasks.get(conn, task_id).owner_id == family["sam"].id
+    after = sam.get("/").text
+    assert "Yours now: Bins out." in after and f"/task/{task_id}/mine" not in after
+
+
+def test_with_nobody_signed_in_as_themselves_nobody_takes_a_to_do_on(
+    settings, clock, conn, family
+) -> None:
+    task_id = _task(conn, family, "Bins out", due="2026-09-20T19:00:00Z")
+    with db.transaction(conn):
+        tasks.update(conn, task_id, {"owner_id": None})
+    home = _now(settings, clock).get("/").text  # the shared password: nobody in particular
+    assert "Bins out" in home and f"/task/{task_id}/mine" not in home
+
+
 def test_a_kid_sees_only_what_is_hers_and_nothing_of_how_it_works(app, conn, family) -> None:
     _task(conn, family, "Feed the fish", due="2026-09-22T19:00:00Z", owner="girls")
     _task(conn, family, "Call the dentist", owner="sam")

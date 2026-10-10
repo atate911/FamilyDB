@@ -410,7 +410,7 @@ What this changed from the first draft: Home the launcher became Now; What about
 
 **Still needs a decision from the family:**
 
-1. Whether reminders carry owners ("I'll handle it"). On by default here; it is the family's call.
+1. Whether reminders carry owners ("I'll handle it"). On by default here, and built: a grown-up takes on a to-do that is everyone's from the plate or a reminder's button; it is the family's call.
 2. Whether a kid may set a plan, or only propose and second. Here: propose and second.
 3. Which kid the kid's screens are drawn for first. Here: a reader of about eight to twelve.
 4. Whether anything leaves the house: a gift page for grandparents, a sitter's link. Here: nothing until asked.

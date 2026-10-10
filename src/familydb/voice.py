@@ -193,6 +193,12 @@ EVENTS: dict[str, Event] = {
     # A button tapped (buttons.py): shown to whoever tapped; ones that did something are added under
     # the message for everyone.
     "tap_done": Event("A reminder's Done tapped", "Done ✓ ({who}).", ("who",), {"who": "Sam"}),
+    "tap_mine": Event(
+        "I'll handle it tapped under a reminder for everyone",
+        "{who} is on it.",
+        ("who",),
+        {"who": "Sam"},
+    ),
     "tap_done_again": Event(
         "A repeating reminder's Done tapped",
         "Done ✓ ({who}). Next time: {when}.",

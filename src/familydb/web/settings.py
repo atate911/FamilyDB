@@ -1433,6 +1433,7 @@ LINE_GROUPS = (
         (
             "tap_done",
             "tap_done_again",
+            "tap_mine",
             "tap_snoozed",
             "tap_undone",
             "tap_ticked",

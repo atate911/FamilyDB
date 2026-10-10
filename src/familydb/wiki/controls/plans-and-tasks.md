@@ -16,7 +16,7 @@ Who may change what is in [Roles and permissions](/wiki/model/family-and-roles#r
 
 Seven days from today, each under its own heading (Today, Tomorrow, then the day's name): what is on, as a row with its time and who it is for; the free time in words ("Free till 5 pm, then from 8 pm"); the forecast where there is one; the reminders due that day, each a link to its page; and, on a free weekend stretch, one of the assistant's picks in pencil, with Plan it. The line under the question sums it up: "Tomorrow: free till 5 pm, then from 8 pm · 2 on your plate, 1 late".
 
-**On your plate**, for a grown-up, is what has no day yet and what is late, each with its tick; **All to-dos** opens the full list. The chips narrow the week to one person; **Month** opens the month, **Past** the plans that are over. **Earlier** and **Later** move a week, **This week** comes back. A day's heading opens the day on its own, with everything on it and, after it, how it went. The note at the foot says where the plans come from:
+**On your plate**, for a grown-up, is what has no day yet and what is late, each with its tick, and **I'll handle it** under one that is everyone's, which makes it yours (signed in as yourself; the same as saying so to the assistant); **All to-dos** opens the full list. The chips narrow the week to one person; **Month** opens the month, **Past** the plans that are over. **Earlier** and **Later** move a week, **This week** comes back. A day's heading opens the day on its own, with everything on it and, after it, how it went. The note at the foot says where the plans come from:
 
 | Note | Meaning |
 |---|---|

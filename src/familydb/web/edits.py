@@ -71,6 +71,7 @@ TICKED = "Done: {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
 REOPENED = "Back on your list: {title}."
+CLAIMED = "Yours now: {title}."
 # Beside the notice after a change that can be taken back: the call to undo (undo.py).
 UNDO_NOTICE = "undo"
 UNDONE = "Undone: {what}."
@@ -686,6 +687,25 @@ def reopen_task(task_id: int) -> Response:
     else:
         result, complaint = run("update_task", {"task_id": task_id, "status": "open"})
         _say(complaint or REOPENED.format(title=result["task"]["title"]))
+    return _tick_back(task_id)
+
+
+@bp.post("/task/<int(max=9223372036854775807):task_id>/mine")
+@once
+def claim_task(task_id: int) -> Response:
+    """I'll handle it, beside a to-do that is everyone's: it becomes the signed-in person's,
+    through `update_task` as "I'll handle it" said in the chat would, at the revision it was drawn
+    at. A grown-up's (the edits blueprint's `change`), and only signed in as themselves."""
+    me = auth.visitor().name
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif _task_revision(request.form) is None:
+        _say("Reload this task before taking it on.")
+    elif me is None:
+        _say("Sign in as yourself to take this on.")
+    else:
+        result, complaint = run("update_task", {"task_id": task_id, "owner": me})
+        _say(complaint or CLAIMED.format(title=result["task"]["title"]))
     return _tick_back(task_id)
 
 

@@ -558,6 +558,8 @@ def todo_row(
         "title": task.title,
         "revision": task.revision,
         "person": person_of(task.owner, slots),
+        # Everyone's, so a grown-up may take it on (I'll handle it, web/edits.py).
+        "everyone": task.owner_id is None,
         "when": when,
         "late": late,
         "reminder": local_moment(task.reminder.remind_at, tz) if task.reminder else None,

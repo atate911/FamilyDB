@@ -113,7 +113,7 @@ def run_nudges(app: App) -> int:
                     chat_id=chat_id,
                     text=nudge_text(task, app.settings, when=when, today=moment.date().isoformat()),
                     now=now,
-                    buttons=buttons.for_reminder(task.id),
+                    buttons=buttons.for_reminder(task.id, everyone=task.owner_id is None),
                 )
                 tasks.mark_nudged(conn, task.id, now)
             voice.hand_over(

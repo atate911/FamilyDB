@@ -43,7 +43,7 @@ def run_reminders(app: App) -> int:
                         at=moment,
                     ),
                     now=now,
-                    buttons=buttons.for_reminder(task.id),
+                    buttons=buttons.for_reminder(task.id, everyone=task.owner_id is None),
                 )
                 tasks.attach_message(conn, reminder.id, out.id)
                 # A repeating task gets its next reminder now.
