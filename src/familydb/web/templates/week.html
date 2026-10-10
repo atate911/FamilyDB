@@ -1,7 +1,7 @@
 {% extends "frame.html" %}
 {% from "_ui.html" import icon, avatar, who, todo, faces with context %}
 {% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty, by_hand %}
-{% block title %}{{ 'This week' if not one else one.label }} · {{ site_title }}{% endblock %}
+{% block title %}{{ ('This week' if visitor().may('browse') else 'My week') if not one else one.label }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-week{% endblock %}
 {# This week (docs/INTERFACE.md section 4): today and the week around it, each day with what is on, the free time as
    words, the forecast, the reminders due; a plan of hers in pencil on a free weekend stretch; and the plate of what has
@@ -52,11 +52,12 @@
   </section>
 {% endmacro %}
 {% block content %}
+  {% set week_name = 'This week' if grownup else 'My week' %}
   {% if one %}
-    {{ dest_head(one.label, none, back=('This week', url_for('go.week'))) }}
+    {{ dest_head(one.label, none, back=(week_name, url_for('go.week'))) }}
     <div class="wk wk--one">{{ day_block(one, open=true) }}</div>
   {% else %}
-    {{ dest_head('This week', summary) }}
+    {{ dest_head(week_name, summary) }}
     {{ chip_row(chips + [{'label': 'Month', 'href': url_for('web.plans_month'), 'on': false}, {'label': 'Past', 'href': url_for('go.did'), 'on': false}]) }}
 
     {# On your plate stays whatever week is showing: nothing without a day can be lost by scrolling. #}
@@ -64,7 +65,7 @@
       <section class="sec" aria-labelledby="h-plate">
         <div class="sec__label"><h2 id="h-plate" class="label">On your plate</h2><a href="{{ url_for('web.tasks') }}">All to-dos</a></div>
         <ul class="todos todos--compact">
-          {% for r in plate %}{{ todo(r, 'tasks', compact=true, edit=visitor().may('change'), everyone=shell.family) }}{% endfor %}
+          {% for r in plate %}{{ todo(r, 'week', compact=true, edit=visitor().may('change'), everyone=shell.family) }}{% endfor %}
         </ul>
       </section>
     {% endif %}

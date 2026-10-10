@@ -403,8 +403,8 @@ def test_a_name_of_their_own_is_hers_wherever_she_is_named(page, conn) -> None:
     assert _prefix(page, conn)[0].text.startswith("# Who you are\n\nYou are Juno, an AI assistant")
     assert voice.say(page.app_state.settings, "start").startswith("Hi, I'm Juno.")
     chat = page.get("/chat").text
-    assert "<title>Chat with Juno · " in chat and "<span>Chat with Juno</span>" in chat
-    assert "Vera" not in chat
+    assert "<title>Chat with Juno · " in chat and "Vera" not in chat
+    assert "<span>Chat with Juno</span>" in page.get("/more").text  # the menu goes by it too
     history = page.get("/settings/history").text
     assert re.search(
         r'<b>Her name</b>\s*default <span aria-hidden="true">→</span>'

@@ -70,7 +70,7 @@ NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
 FORGOTTEN = "Forgotten: {fact}. It will not come back from what was said before."
 NEEDS_FACT = "Say what to remember."
-TICK_PAGES = {"home": "web.home", "tasks": "web.tasks", "chat": "chat.show"}
+TICK_PAGES = {"home": "web.home", "tasks": "web.tasks", "chat": "chat.show", "week": "go.week"}
 NEEDS_TITLE = "An idea needs a title."
 NEEDS_KIND = "An idea needs a kind: restaurant, outing, trip, show…"
 NOT_A_NUMBER = "{label} needs to be a number."
@@ -214,6 +214,15 @@ def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
 
 def _back(target: str, **values: Any) -> Response:
     return redirect(url_for(target, **values))
+
+
+def _tick_back(task_id: int) -> Response:
+    """Where a tick, a snooze or a reopening returns: the page its form named (TICK_PAGES), the
+    reminder's own page for `reminder`, else the list."""
+    back = request.form.get("back", "")
+    if back == "reminder":
+        return _back("web.edit_task", task_id=task_id)
+    return _back(TICK_PAGES.get(back, "web.tasks"))
 
 
 def _say(message: str) -> None:
@@ -397,6 +406,8 @@ def record_outcome(idea_id: int) -> Response:
         return _back("web.plans_month", month=_text(form, "month") or None, _anchor="rate")
     if _text(form, "back") == "did":  # asked on What we did or a day of the week
         return _back("go.did")
+    if _text(form, "back") == "plan" and plan_id and plan_id.isdigit():  # on the plan's page
+        return _back("go.plan", plan_id=int(plan_id))
     return _back("web.idea", idea_id=idea_id)
 
 
@@ -447,6 +458,8 @@ def move_plan(plan_id: int) -> Response:
         _say(complaint or "")
     else:
         _say(MOVED.format(when=views.day_text(result["plan"]["start"])))
+    if request.form.get("back") == "plan":
+        return _back("go.plan", plan_id=plan_id)
     return _back("web.plans")
 
 
@@ -458,6 +471,8 @@ def cancel_plan(plan_id: int) -> Response:
         return _back("web.plans")
     _, complaint = run("delete_event", {"plan_id": plan_id})
     _say(complaint or CANCELLED)
+    if request.form.get("back") == "plan":
+        return _back("go.week")
     return _back("web.plans")
 
 
@@ -557,7 +572,7 @@ def finish_task(task_id: int) -> Response:
         result, complaint = run("update_task", {"task_id": task_id, "status": "done"})
         said = TICKED if auth.visitor().may("browse") else TICKED_PLAIN
         _say(complaint or said.format(id=task_id, title=result["task"]["title"]))
-    return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+    return _tick_back(task_id)
 
 
 @bp.post("/task/<int(max=9223372036854775807):task_id>/reopen")
@@ -569,7 +584,7 @@ def reopen_task(task_id: int) -> Response:
     else:
         result, complaint = run("update_task", {"task_id": task_id, "status": "open"})
         _say(complaint or REOPENED.format(title=result["task"]["title"]))
-    return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+    return _tick_back(task_id)
 
 
 @bp.post("/task/<int(max=9223372036854775807):task_id>/snooze")
@@ -593,7 +608,7 @@ def snooze_task(task_id: int) -> Response:
         said = SNOOZED if auth.visitor().may("browse") else SNOOZED_PLAIN
         when = buttons.when_text(moment, clock.today())
         _say(complaint or said.format(id=task_id, title=result["task"]["title"], when=when))
-    return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+    return _tick_back(task_id)
 
 
 @bp.post("/undo")

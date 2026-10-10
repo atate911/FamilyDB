@@ -1,0 +1,8 @@
+{# The way to everything else (docs/INTERFACE.md section 2): one row, the same on every page, the current place in ink,
+   with what waits counted on it. Drawn at the foot of the frame and of the back office alike. #}
+{% set row = destinations(shell) %}
+<nav class="row" aria-label="Pages">
+  {% for place in row %}
+    <a href="{{ place.href }}"{% if place.current %} aria-current="page"{% endif %}>{{ place.label }}{% if place.count %}<span class="row__n" title="{{ place.count }} {{ place.word }}">{{ place.count }}<span class="sr"> {{ place.word }}</span></span>{% endif %}</a>
+  {% endfor %}
+</nav>

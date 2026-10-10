@@ -70,7 +70,9 @@ def test_the_week_is_seven_days_from_today_with_free_time_and_the_plate(
     calendar.seed(
         "Dentist", datetime(2026, 9, 21, 9, tzinfo=TZ), datetime(2026, 9, 21, 10, tzinfo=TZ)
     )
-    calendar.seed("Camping", datetime(2026, 9, 26, tzinfo=TZ), datetime(2026, 9, 28, tzinfo=TZ))
+    calendar.seed(
+        "Camping", datetime(2026, 9, 26, tzinfo=TZ), datetime(2026, 9, 28, tzinfo=TZ), all_day=True
+    )
     _task(conn, family, "Call the dentist")  # no day: on the plate
     _task(conn, family, "Pay the bill", due="2026-09-18T17:00:00Z")  # late: on the plate
     _task(conn, family, "Bins out", due="2026-09-22T19:00:00Z")  # a reminder on its day
@@ -210,6 +212,7 @@ def test_a_kid_sees_her_week_plainly(settings, clock, conn, family) -> None:
     assert "Rink" in page and "Dinner out" not in page  # hers and the family's, not the grown-ups'
     assert "On your plate" not in page and "Pay the bill" not in page and "pick" not in page
     assert _chips(page) == ["Month", "Past"]
+    assert "<h1 class=\"dest__q\">My week</h1>" in page  # named as her row names it
 
 
 # -- What we did

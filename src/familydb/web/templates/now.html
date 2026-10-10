@@ -99,8 +99,9 @@
       <form class="sec__more" method="post" action="{{ url_for('chat.send') }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
         <input type="hidden" name="text" value="{{ different }}" /><input type="hidden" name="back" value="{{ request.path }}" />
-        {% if who %}<input type="hidden" name="who" value="{{ who }}" />{% endif %}
-        <button class="q__lnk" type="submit"{% if locked or not who and not visitor().member %} disabled{% endif %}>Different ones</button>
+        {% set b = page_box() %}
+        {% if b.who %}<input type="hidden" name="who" value="{{ b.who }}" />{% endif %}
+        <button class="q__lnk" type="submit"{% if b.locked or not b.who and not visitor().member %} disabled{% endif %}>Different ones</button>
       </form>
     </section>
   {% endif %}

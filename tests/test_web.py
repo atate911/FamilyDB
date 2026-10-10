@@ -1148,7 +1148,7 @@ def test_the_added_date_is_the_family_s_date(settings, clock, conn, family) -> N
             conn, title="Late night idea", kind="activity", now="2026-09-21T02:30:00Z"
         )
     page = _client(settings, clock).get(f"/idea/{idea.id}")
-    assert "added Sun 20 Sep" in page.text
+    assert "Added Sun 20 Sep" in page.text
 
 
 def test_the_look_page_writes_only_a_look_and_only_through_the_rules() -> None:

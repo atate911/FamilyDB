@@ -1,52 +1,58 @@
 {% from "_ui.html" import icon, avatar, vera_screen, undo_form, badge %}
 {# The box (docs/INTERFACE.md section 6): one line, the mic and a lit Send, in the same place on every page. It posts to
-   the chat and comes back here (`back`). Under it: the message on its way, or what she did (`receipt`) or said (`said`).
-   Needs family, who, send_where, typed, locked, placeholder; `scope` names what this page is about, which the message
-   carries. The hooks ask.js and dictate.js look for stay: #ask, #text, #ask-mic, #locate, #where. #}
-<form class="bar{% if scope %} bar--scoped{% endif %}" id="ask" method="post" action="{{ url_for('chat.send') }}"{% if look_again %} data-refresh="{{ look_again }}"{% endif %}>
+   the chat and comes back here (`back`). Under it: the message on its way, what she did (a receipt) or said (her reply
+   over the page). Everything it needs is the page's box (chat.page_box, read with page_box()): family, who, send_where,
+   typed, locked, placeholder, and `scope`, what this page is about, which the message carries. The hooks ask.js and
+   dictate.js look for stay: #ask, #text, #ask-mic, #locate, #where. #}
+{% set b = page_box() %}
+<form class="bar{% if b.scope %} bar--scoped{% endif %}" id="ask" method="post" action="{{ url_for('chat.send') }}"{% if b.look_again %} data-refresh="{{ b.look_again }}"{% endif %}>
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="once" value="{{ once_token() }}" />
   <input type="hidden" name="lat" value="" /><input type="hidden" name="lon" value="" />
   <input type="hidden" name="back" value="{{ request.path }}" />
-  {% if scope %}
-    <input type="hidden" name="scope" value="{{ scope.text }}" />
-    <p class="bar__scope">about: <b>{{ scope.label }}</b>{% if scope.off %} <a href="{{ scope.off }}" aria-label="Make it general">{{ icon('x', size='sm') }}</a>{% endif %}</p>
+  {% if b.scope %}
+    <input type="hidden" name="scope" value="{{ b.scope.text }}" />
+    <p class="bar__scope">about: <b>{{ b.scope.label }}</b>{% if b.scope.off %} <a href="{{ b.scope.off }}" aria-label="Make it general">{{ icon('x', size='sm') }}</a>{% endif %}</p>
   {% endif %}
   {% if not visitor().member %}
     {# The family shares one password, so somebody says who is asking; nobody is picked for them. #}
     <div class="bar__who">
       <label for="who">From</label>
       <select id="who" name="who" required>
-        {% if not who %}<option value="">Who is asking?</option>{% endif %}
-        {% for name in family %}<option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>{% endfor %}
+        {% if not b.who %}<option value="">Who is asking?</option>{% endif %}
+        {% for name in b.family %}<option value="{{ name }}" {{ 'selected' if name == b.who }}>{{ name }}</option>{% endfor %}
       </select>
     </div>
   {% endif %}
   <div class="box">
     <label class="sr" for="text">Message to {{ assistant }}</label>
-    <textarea id="text" name="text" data-dictate="ask-mic" rows="1" required placeholder="{{ placeholder }}" enterkeyhint="send"{% if locked %} disabled{% endif %}>{{ typed or '' }}</textarea>
+    <textarea id="text" name="text" data-dictate="ask-mic" rows="1" required placeholder="{{ b.placeholder }}" enterkeyhint="send"{% if b.locked %} disabled{% endif %}>{{ b.typed or '' }}</textarea>
     <span class="mic-slot" id="ask-mic"></span>
-    <button class="box__send" type="submit" aria-label="Send"{% if locked or not family %} disabled{% endif %}>{{ icon('send') }}</button>
+    <button class="box__send" type="submit" aria-label="Send"{% if b.locked or not b.family %} disabled{% endif %}>{{ icon('send') }}</button>
   </div>
+  {# A page's quick sentences, filled into the box by ask.js (never sent by themselves). #}
+  {% if b.starters %}
+    <p class="starters starters--bar">{% for say in b.starters %}<a class="chip chip--say" href="#text" data-say="{{ say }}">{{ say }}</a>{% endfor %}</p>
+  {% endif %}
   {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. #}
   <div class="bar__where" id="locate" hidden>
-    <label class="check"><input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} /> {{ icon('pin', size='sm') }}Share where I am with this message</label>
+    <label class="check"><input type="checkbox" name="send_where" value="1" {{ 'checked' if b.send_where }} /> {{ icon('pin', size='sm') }}Share where I am with this message</label>
   </div>
   <p id="where" class="small muted"></p>
 </form>
 {# What came back from the last message: on its way (she is answering, the page looks again), what she did, or what she said. #}
-{% if pending %}
-  <div class="rcpt rcpt--pending" role="status">{{ vera_screen('', 'busy' if pending.state == 'thinking' else '') }}<p>{{ pending.text }}{% if pending.state == 'thinking' %}<span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>{% endif %} <a href="{{ pending.check }}">Look again</a></p></div>
-{% elif receipt %}
-  <div class="rcpt" role="status">{{ icon('check', size='sm') }}<p>{{ receipt.text }}{% if receipt.did %} <span class="rcpt__did">{{ receipt.did | join(' · ') }}.</span>{% endif %}</p>
-    {% if receipt.undo %}{{ undo_form(receipt.undo, request.path) }}{% endif %}
+{% if b.pending %}
+  <div class="rcpt rcpt--pending" role="status">{{ vera_screen('', 'busy' if b.pending.state == 'thinking' else '') }}<p>{{ b.pending.text }}{% if b.pending.state == 'thinking' %}<span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>{% endif %} <a href="{{ b.pending.check }}">Look again</a></p></div>
+{% elif b.receipt %}
+  <div class="rcpt" role="status">{{ icon('check', size='sm') }}<p>{{ b.receipt.text }}{% if b.receipt.did %} <span class="rcpt__did">{{ b.receipt.did | join(' · ') }}.</span>{% endif %}</p>
+    {% if b.receipt.undo %}{{ undo_form(b.receipt.undo, request.path) }}{% endif %}
     <a class="rcpt__more" href="{{ url_for('chat.show', _anchor='latest') }}">Earlier</a></div>
-{% elif said %}
+{% elif b.said %}
   <div class="said-sheet" role="status" id="said">
-    <div class="said-sheet__you"><span class="sr">You said: </span>{{ said.asked }}</div>
-    <div class="said-sheet__her">{{ vera_screen() }}<div><p class="said-sheet__by">{{ assistant }}</p><div class="said-sheet__text">{{ said.text }}</div>
-      {% if said.undo %}<div class="said-sheet__acts">{{ undo_form(said.undo, request.path) }}</div>{% endif %}</div></div>
-    <p class="said-sheet__foot"><a href="{{ url_for('chat.show', _anchor='latest') }}">Earlier</a>{% if said.pointer %}<a href="{{ said.pointer.href }}">{{ said.pointer.label }} {{ icon('chev', size='sm') }}</a>{% endif %}</p>
+    <div class="said-sheet__you"><span class="sr">You said: </span>{{ b.said.asked }}</div>
+    <div class="said-sheet__her">{{ vera_screen() }}<div><p class="said-sheet__by">{{ assistant }}</p><div class="said-sheet__text">{{ b.said.text }}</div>
+      {% if b.said.undo %}<div class="said-sheet__acts">{{ undo_form(b.said.undo, request.path) }}</div>{% endif %}</div></div>
+    <p class="said-sheet__foot"><a href="{{ url_for('chat.show', _anchor='latest') }}">Earlier</a>{% if b.said.pointer %}<a href="{{ b.said.pointer.href }}">{{ b.said.pointer.label }} {{ icon('chev', size='sm') }}</a>{% endif %}</p>
   </div>
 {% elif shell.unread %}
   {# Somebody who uses only the page would not know she had written: her new messages, until the thread is opened. #}

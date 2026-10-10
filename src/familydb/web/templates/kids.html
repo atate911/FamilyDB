@@ -147,8 +147,19 @@
       <section class="sec wkid" aria-labelledby="k-{{ kid.id }}">
         <div class="sec__label"><h2 id="k-{{ kid.id }}" class="label">{{ avatar(kid.slot, kid.initial, 'sm') }} {{ kid.name }}</h2><small>{{ kid.open }} on {{ 'her' if kid.pronoun == 'her' else kid.pronoun }} lists</small></div>
         {{ turned(kid) }}
+        {% if kid.pitches %}
+          <div class="sec__sub" aria-labelledby="h-pitch-{{ kid.id }}">
+            <h3 class="label" id="h-pitch-{{ kid.id }}">{{ kid.pronoun | capitalize }} ideas</h3>
+            <div class="rows">
+              {% for pitch in kid.pitches %}
+                <div class="r"><span class="r__t"><a href="{{ url_for('web.idea', idea_id=pitch.id) }}">{{ pitch.title }}</a></span><span class="r__m">{{ pitch.state }} · {{ pitch.when }}</span></div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
         {{ the_lists(kid, not one) }}
         {{ answers(kid) }}
+        {% if kid.thread %}<p class="sec__note">{{ icon('chat', size='sm') }} <a href="{{ kid.thread }}">Read {{ kid.pronoun }} conversation with {{ assistant }}</a></p>{% endif %}
       </section>
     {% else %}
       {{ dest_empty('No kids on the family list yet.', 'gift') }}

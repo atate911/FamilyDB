@@ -56,7 +56,7 @@ def test_the_look_page_offers_every_look_in_its_own_colours(page) -> None:
         assert one.name in text and f'value="{one.key}"' in text
         assert f'class="look-sample" data-theme="{one.key}"' in text  # a sample drawn in it
     assert 'name="mode"' in text and "Match my device" in text
-    assert 'href="/look"' in page.get("/plans").text  # and the bar's menu reaches it
+    assert 'href="/look"' in page.get("/more").text  # and the menu reaches it
     # Phosphor has no day, so it is drawn once; the others twice.
     assert text.count('class="look-sample" data-theme="phosphor"') == 1
     assert text.count('class="look-sample" data-theme="rail"') == 2

@@ -16,6 +16,7 @@ from flask import (
     Response,
     abort,
     current_app,
+    g,
     redirect,
     render_template,
     request,
@@ -321,6 +322,9 @@ DEST_PROMPT = "Narrow it, or ask {name}…"
 ITEM_PROMPT = "Plan it, ask, or change it…"
 
 
+NO_BOX: dict[str, Any] = {"no_box": True}
+
+
 def page_box(
     app: App,
     conn: Any,
@@ -330,18 +334,31 @@ def page_box(
     scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Everything a page built on the frame gives its box: the box itself, closed while an
-    answer is on its way, what came back under it, and the scope this page gives a message."""
+    answer is on its way, what came back under it, and the scope this page gives a message.
+    Kept on the request (`g.box`), so the frame reads it wherever it draws it."""
     visitor = auth.visitor()
     if not visitor.may("chat"):
-        return {"no_box": True}
+        g.box = NO_BOX
+        return NO_BOX
     under = under_box(app, conn, my_chat(), visitor)
-    locked = under.pop("locked", False)
-    return {
-        **box([m.display_name for m in people], locked=locked, prompt=prompt),
+    g.box = {
+        **box([m.display_name for m in people], locked=under.pop("locked", False), prompt=prompt),
         "typed": asked(),
         "scope": scope,
+        "no_box": False,
         **under,
     }
+    return g.box
+
+
+def current_box() -> dict[str, Any]:
+    """The page's box as its view set it, else the plain one for this visitor: a template global,
+    so a page that says nothing about its box still has one (one read, kept on the request)."""
+    if "box" in g:
+        return g.box
+    app = _app()
+    with closing(app.connect()) as conn:
+        return page_box(app, conn, member_store.list_all(conn))
 
 
 def _answered(thread: list[Message]) -> set[int]:
@@ -441,6 +458,7 @@ def page(
     }
     who_here = _room(family, chat_id, reading, assistant, slots)
     with_kid = {"with": reading.id} if reading else {}
+    g.box = NO_BOX  # the thread has its own box, with the photo; the frame draws none
     return (
         render_template(
             "chat.html",

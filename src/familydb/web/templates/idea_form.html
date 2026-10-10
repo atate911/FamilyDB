@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "frame.html" %}
 {% from "_ui.html" import icon, avatar with context %}
 {% set editing = idea is not none %}
 {% block title %}{{ 'Change this idea' if editing else 'Add an idea' }} · {{ site_title }}{% endblock %}
@@ -120,14 +120,11 @@
         <a class="linkbtn" href="{{ url_for('web.idea', idea_id=idea.id) if editing else url_for('web.ideas') }}">Cancel</a></div>
     </form>
   </div>
-{% endblock %}
 
-{# The rail: what changing an idea does. #}
-{% block rail %}
       {% if not editing %}
         {# Several at once: one a line, one kind for them all, each added as the form above would (edits.add_ideas). #}
-        <form class="rail__sec form" method="post" action="{{ url_for('edits.add_ideas') }}" aria-labelledby="h-several">
-          <div class="rail__head"><h2 class="overline" id="h-several">Several at once</h2></div>
+        <form class="sec form" method="post" action="{{ url_for('edits.add_ideas') }}" aria-labelledby="h-several">
+          <div class="sec__label"><h2 class="label" id="h-several">Several at once</h2></div>
           <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
           <div class="field"><label class="field__label" for="s-titles">One idea a line</label>
             <textarea id="s-titles" name="titles" rows="5" maxlength="4000" required data-dictate></textarea></div>
@@ -136,8 +133,8 @@
           <div class="actions"><button class="btn" type="submit">{{ icon('plus') }}Add them</button></div>
         </form>
       {% endif %}
-      <section class="rail__sec" aria-labelledby="h-ie-n">
-        <div class="rail__head"><h2 class="overline" id="h-ie-n">Good to know</h2></div>
+      <section class="sec" aria-labelledby="h-ie-n">
+        <div class="sec__label"><h2 class="label" id="h-ie-n">Good to know</h2></div>
         <ul class="tips">
           {% if editing %}
             <li>If somebody else changed it while you had it open, your save is refused and the page shows theirs, so nothing is lost.</li>

@@ -157,14 +157,15 @@ def test_her_lines_carry_her_name_whatever_they_say(settings, clock, conn, famil
     page = client.get("/chat").text
     assert "<h1>Chat with Vera</h1>" in page and '<div class="msg__by">Vera <time>' in page
     assert page.count('class="msg msg--vera"') == 1 and "FamilyDB <time>" not in page
-    assert "<span>Chat with Vera</span>" in page  # the place in the menu goes by her name
+    assert "<span>Chat with Vera</span>" in client.get("/more").text  # the menu goes by her name
     # She is never drawn: beside her lines is her screen, and the smiling mark is only the
     # page's own, in the bars and at the foot.
     assert '<svg class="vs"' in _thread(page) and "mark-fdb" not in _thread(page)
-    assert page.count('class="mark-fdb"') == 2 and page.count("mark-fdb--xs") == 1
+    assert page.count('class="mark-fdb"') == 1 and "mark-fdb--xs" not in page
 
-    nameless = _client(settings.model_copy(update={"persona": "none"}), clock).get("/chat").text
-    assert "<h1>Chat</h1>" in nameless and "<span>Chat</span>" in nameless
+    plain = _client(settings.model_copy(update={"persona": "none"}), clock)
+    assert "<h1>Chat</h1>" in plain.get("/chat").text
+    assert "<span>Chat</span>" in plain.get("/more").text
 
 
 def test_a_message_just_sent_shows_before_its_turn_has_stored_it(
@@ -503,14 +504,14 @@ def test_a_parent_moves_between_conversations_and_never_reads_a_kids_words_on_th
         messages.mark_processed(conn, said.id, [], now="2026-09-20T20:00:01Z")
     client = _client(settings, clock)
     page = client.get("/chat").text
-    nav = re.search(r'<nav class="convos convos--rail".*?</nav>', page, re.S).group(0)
+    nav = re.search(r'<nav class="convos convos--phone".*?</nav>', page, re.S).group(0)
     assert "Family" in nav and "the girls" in nav and "The kids\u2019 conversations" in nav
     assert "a secret wish" not in page  # when she last wrote, not what
     assert f'href="/chat?with={family["girls"].id}#latest"' in nav
     hers = client.get(f"/chat?with={family['girls'].id}").text
     assert "a secret wish" in hers and "Her own conversation, for you to read" in hers
     assert '<form class="composer"' not in hers  # a parent only reads
-    rail = re.search(r'<nav class="convos convos--rail".*?</nav>', hers, re.S).group(0)
+    rail = re.search(r'<nav class="convos convos--phone".*?</nav>', hers, re.S).group(0)
     assert 'aria-current="page"' in rail
 
 

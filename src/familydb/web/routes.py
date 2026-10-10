@@ -332,7 +332,7 @@ def ideas() -> str:
             if idea.place_id
         }
         picked = _weekend_picks(conn, today) if grown_up else None
-        box = chat.page_box(
+        chat.page_box(
             app, conn, people, scope={"label": "Things to do", "text": "About things to do:"}
         )
     if kind != RESTAURANT_KIND:
@@ -368,7 +368,6 @@ def ideas() -> str:
         selected={"q": query, "kind": kind, "status": status, "who": who},
         filtered=filtered,
         limit=LIST_LIMIT,
-        **box,
     )
 
 
@@ -519,10 +518,22 @@ def idea(idea_id: int) -> str:
         family = member_store.list_all(conn)
         slots = views.slot_map(family)
         kept = presents.of_presents(conn, [record], family).get(idea_id)
+        box = chat.page_box(
+            app,
+            conn,
+            family,
+            prompt=chat.ITEM_PROMPT,
+            scope={"label": record.title, "text": f"About #{record.id} {record.title}:"},
+        )
+        box["starters"] = views.idea_starters(record, today)
     away = views.away_from_home(place, settings)
     card = _idea_card(record, settings, away, slots, kept)
+    by = next((m.display_name for m in family if m.id == record.suggested_by), None)
     return render_template(
         "idea.html",
+        state=views.idea_state(record, plans, today),
+        by=by,
+        said_on=views.local_moment(original.received_at, settings.tzinfo) if original else None,
         idea=record,
         original_message=message_store.as_said(original.text) if original else None,
         original_by=views.original_by(original, family, settings.tzinfo) if original else None,
@@ -627,7 +638,7 @@ def lists_page() -> str:
             )
         people = member_store.list_all(conn)
         current = next(one for one in shown if one["name"] == wanted)
-        box = chat.page_box(
+        chat.page_box(
             app,
             conn,
             people,
@@ -648,7 +659,6 @@ def lists_page() -> str:
         lists=shown,
         chips=chips if len(shown) > 1 else [],
         summary=views.lists_summary(shown),
-        **box,
     )
 
 
@@ -742,9 +752,7 @@ def restaurants() -> str:
             card["idea"] = idea
             cards.append(card)
         tags = sorted({one.casefold() for idea in found for one in idea.tags})
-        box = chat.page_box(
-            app, conn, people, scope={"label": "Eat out", "text": "About eating out:"}
-        )
+        chat.page_box(app, conn, people, scope={"label": "Eat out", "text": "About eating out:"})
     cards = _eat_narrowed(cards, people, narrow, who, tag)
     cards.sort(key=lambda card: card["score"])
     for card in cards:
@@ -757,7 +765,6 @@ def restaurants() -> str:
         top=top,
         summary=views.eat_summary(cards[0] if cards else None, top),
         chips=_eat_chips(people, narrow, who, tags, tag, kid),
-        **box,
     )
 
 
@@ -914,7 +921,7 @@ def happening_page() -> str:
             if idea.id not in kept
         ]
         people = member_store.list_all(conn)
-        box = chat.page_box(
+        chat.page_box(
             app,
             conn,
             people,
@@ -956,7 +963,6 @@ def happening_page() -> str:
         trouble=[views.find_source_row(one, app.settings.tzinfo) for one in troubled]
         if visitor.may("browse")
         else [],
-        **box,
     )
 
 
@@ -1109,8 +1115,10 @@ def _todo_groups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 @bp.get("/task/<int(max=9223372036854775807):task_id>/edit")
+@bp.get("/reminder/<int(max=9223372036854775807):task_id>")
 def edit_task(task_id: int) -> str:
-    """A to-do's own page to change: all its boxes at once, with a way back to the list."""
+    """A reminder's own page (docs/INTERFACE.md section 5): when or on what condition, whose,
+    how it repeats, where it is sent, in words; and the form to change all of it by hand."""
     app = _app()
     with closing(app.connect()) as conn:
         task = task_store.get(conn, task_id)
@@ -1119,6 +1127,14 @@ def edit_task(task_id: int) -> str:
         people = member_store.list_all(conn)
         made_by = task_store.creators(conn, [task.id]).get(task.id)
         changed = calls.last_change(conn, task_id=task.id)
+        box = chat.page_box(
+            app,
+            conn,
+            people,
+            prompt=chat.ITEM_PROMPT,
+            scope={"label": task.title, "text": f"About the reminder {task.title}:"},
+        )
+    box["starters"] = views.task_starters(task, app.clock.today())
     tz = app.settings.tzinfo
     slots = views.slot_map(people)
     row = views.task_row(task, tz, app.clock.today(), nudging=app.settings.task_nudges)
@@ -1133,6 +1149,7 @@ def edit_task(task_id: int) -> str:
         people=[views.person_of(p.display_name, slots) for p in people],
         owner=views.person_of(task.owner, slots) if task.owner else None,
         zone=app.settings.tz,
+        presses=chat.PAGE_BUTTONS,
     )
 
 
@@ -1246,7 +1263,7 @@ def wishes() -> str:
             person.id: {"female": "her", "male": "his"}.get(person.gender or "", "their")
             for person in people
         }
-        talk = chat.page_box(
+        talk = chat.page_box(  # kept for `talk`: a kid's add form shows only without the box
             app,
             conn,
             people,
@@ -1259,6 +1276,25 @@ def wishes() -> str:
         )
     names = {member.id: member.display_name for member in people}
     parents = [m.display_name for m in people if m.active and roles.may(m.role, "decide")]
+    if wanted and visitor.may("decide"):
+        with closing(app.connect()) as conn:
+            pitched = [
+                idea
+                for idea in idea_store.list_all(conn)
+                if idea.suggested_by == shown[0]["id"] and not idea_store.is_gift(idea)
+            ]
+        shown[0]["pitches"] = [
+            {
+                "id": idea.id,
+                "title": idea.title,
+                "state": views.idea_state(idea, [], today),
+                "when": views.day_short(
+                    date.fromisoformat(views.local_day(idea.created_at, app.settings.tzinfo))
+                ),
+            }
+            for idea in sorted(pitched, key=lambda idea: idea.created_at, reverse=True)[:8]
+        ]
+        shown[0]["thread"] = url_for("chat.show", **{"with": shown[0]["id"]}, _anchor="latest")
     for kid in shown:
         kid["pronoun"] = pronouns.get(kid["id"], "their")
         kid["turned"] = (
@@ -1291,7 +1327,6 @@ def wishes() -> str:
     return render_template(
         "kids.html",
         talk=not talk.get("no_box"),
-        **talk,
         kids=shown,
         names=names,
         parents_text=views.names_text([{"name": name} for name in parents]),

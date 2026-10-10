@@ -32,11 +32,13 @@
   {% set SECTIONS = {
     'home': ['web.home'],
     'chat': ['chat.show'],
-    'ideas': ['web.ideas', 'web.idea', 'web.new_idea', 'web.edit_idea', 'web.restaurants'],
-    'plans': ['web.plans', 'web.plans_month', 'web.happening_page'],
-    'todo': ['web.tasks', 'web.edit_task'],
+    'eat': ['web.restaurants'],
+    'ideas': ['web.ideas', 'web.idea', 'web.new_idea', 'web.edit_idea'],
+    'plans': ['web.plans', 'web.plans_month', 'go.week', 'go.day', 'web.tasks', 'web.edit_task'],
+    'soon': ['web.happening_page'],
     'lists': ['web.lists_page'],
     'wishes': ['web.wishes'],
+    'did': ['go.did'],
     'memory': ['web.memory'],
     'status': ['web.status', 'activity.show'],
     'settings': ['settings.show', 'settings.section', 'settings.personality'],
@@ -53,8 +55,7 @@
   {# Grown-ups browse the household; a kid's screen is simpler (roles.py `browse`). #}
   {% set grownup = viewer.may('browse') %}
   {% set managing = viewer.may('manage') %}
-  {# The design opens Plans on the month; a kid has one list and no switch. #}
-  {% set plans_url = url_for('web.plans_month') if grownup else url_for('web.plans') %}
+  {% set plans_url = url_for('go.week') %}
   {% set wishing = 'decide' if viewer.may('decide') else ('wish' if viewer.may('wish') and viewer.member else none) %}
   <body class="{% block body_class %}{% endblock %}">
     <a class="skip" href="#main">Skip to content</a>
@@ -90,14 +91,16 @@
           {% if shell.pill %}{{ health_pill(shell.pill, url_for('web.status')) }}{% endif %}
           <nav aria-label="Pages">
             <ul class="nav">
-              {{ nav_item('Home', url_for('web.home'), 'home', 'home') }}
+              {{ nav_item('Now', url_for('web.home'), 'home', 'home') }}
               {% if viewer.may('chat') %}{{ nav_item('Chat with ' ~ assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat', count=(badge('act', shell.unread, 'new') if shell.unread else none)) }}{% endif %}
-              {{ nav_item('Ideas', url_for('web.ideas'), 'ideas', 'bulb') }}
-              {{ nav_item('Plans', plans_url, 'plans', 'cal', count=(badge('quiet', shell.rate, 'to rate') if shell.rate else none)) }}
-              {{ nav_item('To do' if grownup else 'My to-dos', url_for('web.tasks'), 'todo', 'todo', count=(badge('late', shell.late, 'late') if shell.late else none)) }}
-              {% if viewer.may('change') %}{{ nav_item('Lists', url_for('web.lists_page'), 'lists', 'list') }}{% endif %}
-              {% if wishing == 'decide' %}{{ nav_item('Kids’ lists', url_for('web.wishes'), 'wishes', 'gift', count=(badge('act', shell.decide, 'to decide') if shell.decide else none)) }}
+              {% if grownup %}{{ nav_item('Eat', url_for('web.restaurants'), 'eat', 'utensils') }}{% endif %}
+              {{ nav_item('Do', url_for('web.ideas'), 'ideas', 'bulb') }}
+              {{ nav_item('Week' if grownup else 'My week', plans_url, 'plans', 'cal', count=(badge('late', shell.late, 'late') if shell.late else none)) }}
+              {% if wishing == 'decide' %}{{ nav_item('Kids', url_for('web.wishes'), 'wishes', 'gift', count=(badge('act', shell.decide, 'to decide') if shell.decide else none)) }}
               {% elif wishing %}{{ nav_item('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
+              {% if grownup %}{{ nav_item('Soon', url_for('web.happening_page'), 'soon', 'ticket') }}{% endif %}
+              {% if viewer.may('change') %}{{ nav_item('Lists', url_for('web.lists_page'), 'lists', 'list') }}{% endif %}
+              {% if grownup %}{{ nav_item('Did', url_for('go.did'), 'did', 'smile', count=(badge('quiet', shell.rate, 'to rate') if shell.rate else none)) }}{% endif %}
               {% if grownup %}{{ nav_item('What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', url_for('web.memory'), 'memory', 'memory') }}{% endif %}
             </ul>
             {% if grownup %}
@@ -153,15 +156,8 @@
       </main>
     </div>
 
-    {# The phone's tabs: five, by what a role may do. A kid has her list where a grown-up has Ideas; the rest is in the menu behind the picture. #}
-    <nav class="tabbar" aria-label="Pages">
-      {{ tab('Home', url_for('web.home'), 'home', 'home') }}
-      {% if viewer.may('chat') %}{{ tab('Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat', new=shell.unread) }}{% endif %}
-      {% if grownup %}{{ tab('Ideas', url_for('web.ideas'), 'ideas', 'bulb') }}
-      {% elif wishing %}{{ tab('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
-      {{ tab('Plans', plans_url, 'plans', 'cal') }}
-      {{ tab('To do', url_for('web.tasks'), 'todo', 'todo', late=shell.late) }}
-    </nav>
+    {# The phone's foot: the same row of destinations as the family's pages (templates/_row.html). #}
+    {% include "_row.html" %}
     {% endblock %}
   </body>
 </html>

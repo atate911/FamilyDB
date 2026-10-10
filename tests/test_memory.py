@@ -353,7 +353,7 @@ def test_the_page_shows_what_is_remembered_and_where_it_came_from(
     _call(registry, ctx, changes=[{**BACK, "rule": rule}])
     shown = _page(settings, clock).get("/memory").text
     assert "held to: a 30 min drive at most, indoors, nothing loud" in shown
-    assert 'href="/memory"' in text  # in the bar, for everybody signed in
+    assert 'href="/memory"' in _page(settings, clock).get("/more").text  # in the menu
     assert 'class="av p3' in text or 'class="av p' in text  # each person under their own colour
 
 

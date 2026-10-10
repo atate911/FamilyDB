@@ -79,7 +79,10 @@ def test_an_idea_can_be_added_from_the_page(page, conn) -> None:
     assert saved.min_age == 6 and saved.max_age is None
     assert saved.suggested_by_name == "Alex"  # the form said who, and the tool recorded it
     shown = page.get("/idea/1")
-    assert "Saved #1 Ramen place." in _said(shown) and "<dt>Ages</dt><dd>6+</dd>" in shown.text
+    assert (
+        "Saved #1 Ramen place." in _said(shown)
+        and '<dt class="facts__k">Ages</dt><dd class="facts__v">6+</dd>' in shown.text
+    )
 
 
 def test_an_idea_with_no_title_is_refused_and_nothing_is_written(page, conn) -> None:
@@ -133,7 +136,7 @@ def test_the_days_a_thing_is_on_are_set_shown_and_cleared_from_the_page(planning
     saved = ideas.get(conn, 1)
     assert (saved.happens_from, saved.happens_until) == ("2026-10-17T18:30", "2026-10-18")
     shown = planning.get("/idea/1").text
-    assert "Sat 17 Oct, 6:30\u00a0pm to Sun 18 Oct 2026" in shown
+    assert 'Sat 17 Oct, <span class="fig">6:30\u00a0pm</span> to Sun 18 Oct 2026' in shown
     assert 'value="2026-10-17T18:30"' in shown  # the plan form starts at its start
     form = planning.get("/idea/1/edit").text
     assert 'value="2026-10-17"' in form and 'value="18:30"' in form

@@ -219,7 +219,15 @@ OWNS: dict[str, frozenset[str]] = {
     "eat": frozenset({"web.restaurants"}),
     "do": frozenset({"web.ideas", "web.idea", "web.new_idea", "web.edit_idea"}),
     "week": frozenset(
-        {"go.week", "go.day", "web.plans", "web.plans_month", "web.tasks", "web.edit_task"}
+        {
+            "go.week",
+            "go.day",
+            "go.plan",
+            "web.plans",
+            "web.plans_month",
+            "web.tasks",
+            "web.edit_task",
+        }
     ),
     "kids": frozenset({"web.wishes"}),
     "soon": frozenset({"web.happening_page"}),

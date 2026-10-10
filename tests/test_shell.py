@@ -54,8 +54,8 @@ def _sidebar(client) -> str:
     return re.search(r'<aside class="side".*?</aside>', html, re.S).group(0)
 
 
-def _tabbar(client) -> str:
-    return re.search(r'<nav class="tabbar".*?</nav>', client.get("/more").text, re.S).group(0)
+def _row(client) -> str:
+    return re.search(r'<nav class="row".*?</nav>', client.get("/more").text, re.S).group(0)
 
 
 def _late_task(conn, owner_id: int, title: str = "Call the dentist") -> None:
@@ -79,7 +79,7 @@ def _late_task(conn, owner_id: int, title: str = "Call the dentist") -> None:
 
 def test_an_admin_sees_every_page_and_what_is_behind_the_scenes(sam) -> None:
     side = _sidebar(sam)
-    for page in ("Home", "Chat with Vera", "Ideas", "Plans", "To do", "Kids\u2019 lists"):
+    for page in ("Now", "Chat with Vera", "Eat", "Do", "Week", "Kids", "Soon", "Lists", "Did"):
         assert f"<span>{page}</span>" in side, page
     assert "What Vera knows" in side
     assert 'class="overline nav-group"' in side and "Behind the scenes" in side
@@ -94,7 +94,7 @@ def test_a_parent_gets_status_but_not_settings_or_the_family_list(alex) -> None:
     side = _sidebar(alex)
     assert "Behind the scenes" in side and 'href="/status"' in side
     assert 'href="/settings"' not in side and 'href="/family"' not in side
-    assert "Kids\u2019 lists" in side and "What Vera knows" in side
+    assert "<span>Kids</span>" in side and "What Vera knows" in side
     page = alex.get("/more").text
     assert 'href="/settings"' not in page and 'href="/family"' not in page
     assert "Status" in page
@@ -105,10 +105,10 @@ def test_a_kid_sees_her_own_pages_and_nothing_of_how_it_works(girl) -> None:
     assert "Behind the scenes" not in side
     for gone in ("/status", "/settings", "/family", "/memory", "What Vera knows"):
         assert gone not in side, gone
-    assert "<span>My to-dos</span>" in side and "<span>My list</span>" in side
+    assert "<span>My week</span>" in side and "<span>My list</span>" in side
     assert "pill-health" not in girl.get("/more").text  # never a pill, or money, for a kid
-    tabs = _tabbar(girl)
-    assert "My list" in tabs and "Ideas" not in tabs  # her list where a grown-up has Ideas
+    row = _row(girl)
+    assert "My list" in row and "Eat" not in row  # her list, and no Eat, Soon, Lists or Did
     menu = girl.get("/more").text
     assert 'href="/do"' in menu  # and Do is in her menu
     assert "Behind the scenes" not in menu and "Settings" not in menu
@@ -116,11 +116,11 @@ def test_a_kid_sees_her_own_pages_and_nothing_of_how_it_works(girl) -> None:
     assert "Version" not in menu.split('<footer class="foot">')[1]
 
 
-def test_a_grown_up_phone_menu_keeps_the_five_tabs(sam) -> None:
-    tabs = _tabbar(sam)
-    for page in ("Home", "Chat", "Ideas", "Plans", "To do"):
-        assert f"<span>{page}</span>" in tabs, page
-    assert tabs.count("<a ") == 5
+def test_a_grown_up_s_row_has_the_eight_places_on_the_menu_too(sam) -> None:
+    row = _row(sam)
+    for page in ("Now", "Eat", "Do", "Week", "Kids", "Soon", "Lists", "Did"):
+        assert re.search(rf">{page}<", row), page
+    assert row.count("<a ") == 8
 
 
 def test_the_page_can_be_skipped_to_and_names_its_language(sam) -> None:
@@ -167,7 +167,7 @@ def test_late_to_dos_are_counted_for_a_grown_up_and_a_kid_counts_only_her_own(
     _late_task(conn, family["girls"].id, "Feed the fish")
     assert 'badge--late" title="3 late">3<span class="sr"> late</span>' in _sidebar(sam)
     assert 'badge--late" title="1 late">1<span class="sr"> late</span>' in _sidebar(girl)
-    assert '3<span class="sr"> late</span>' in _tabbar(sam)
+    assert '3<span class="sr"> late</span>' in _row(sam)
 
 
 def test_nothing_is_counted_when_nothing_is_late(sam) -> None:
@@ -207,14 +207,18 @@ def test_each_person_has_their_own_colour_and_it_does_not_follow_their_name(conn
 
 
 def test_the_page_you_are_on_is_marked_in_the_menu_and_the_tab_bar(sam, girl) -> None:
-    """A page on the older frame marks itself in the menu and the tab bar, once each, for a
-    screen reader as well as the eye; Now marks itself in its own row of destinations."""
+    """A page of the back office marks itself in the menu, once, for a screen reader as well as
+    the eye, and is none of the row's places; a page of the family's marks its place in the row;
+    Now marks itself in its own row of destinations."""
+    status = sam.get("/status").text
+    side = re.search(r'<aside class="side".*?</aside>', status, re.S).group(0)
+    assert side.count('aria-current="page"') == 1
+    assert re.search(r'<a href="/status" aria-current="page">', side)
+    assert "aria-current" not in re.search(r'<nav class="row".*?</nav>', status, re.S).group(0)
     plans = sam.get("/plans").text
-    side = re.search(r'<aside class="side".*?</aside>', plans, re.S).group(0)
-    tabs = re.search(r'<nav class="tabbar".*?</nav>', plans, re.S).group(0)
-    for where in (side, tabs):
-        assert where.count('aria-current="page"') == 1
-        assert re.search(r'<a href="/plans/month" aria-current="page">', where)
+    row = re.search(r'<nav class="row".*?</nav>', plans, re.S).group(0)
+    assert row.count('aria-current="page"') == 1
+    assert re.search(r'<a href="/week" aria-current="page">', row)
     # The account corner marks Look while you are on it.
     look = sam.get("/more").text  # a page of its own: none of the pages is current there
     assert (

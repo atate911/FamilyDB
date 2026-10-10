@@ -193,6 +193,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["shell_frame"] = lambda: shell.frame(app)
     # The row of destinations at the foot of the family's pages (frame.html).
     web.jinja_env.globals["destinations"] = shell.destinations
+    # The box on a page built on the frame, as its view set it or the plain one (chat.current_box).
+    web.jinja_env.globals["page_box"] = chat.current_box
     web.jinja_env.globals["money"] = views.money_text
     web.jinja_env.filters["figs"] = views.figs
     web.jinja_env.globals["reminders_said"] = views.REMINDERS_SAID

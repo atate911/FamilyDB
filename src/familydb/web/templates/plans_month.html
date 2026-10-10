@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "frame.html" %}
 {% from "_ui.html" import icon, avatar, page_head, date_tile, people, tile, faces, badge %}
 {% block title %}{{ month }} · {{ site_title }}{% endblock %}
 {% block content %}
@@ -62,14 +62,10 @@
         <span class="cal-key__i"><span class="dots dots--key"><i class="d-past"></i></span>Past</span>
       </p>
     </section>
-
   </div>
-{% endblock %}
 
-{# The rail: what is coming this month, how the last plans went, where the plans come from, and taking them away. #}
-{% block rail %}
-    <section class="rail__sec plans__list" aria-labelledby="h-coming">
-    <div class="rail__head"><h2 id="h-coming" class="overline">Coming up</h2></div>
+    <section class="sec plans__list" aria-labelledby="h-coming">
+    <div class="sec__label"><h2 id="h-coming" class="label">Coming up</h2></div>
     {% if coming %}
       <ul class="items">
         {% for row in coming %}
@@ -86,8 +82,8 @@
   </section>
 
   {% if rate %}
-    <section class="rail__sec plans__rate" id="rate" aria-labelledby="h-rate">
-      <div class="rail__head"><h2 id="h-rate" class="overline">How did it go?</h2>{{ badge('quiet', rate | length, 'to rate') }}</div>
+    <section class="sec plans__rate" id="rate" aria-labelledby="h-rate">
+      <div class="sec__label"><h2 id="h-rate" class="label">How did it go?</h2>{{ badge('quiet', rate | length, 'to rate') }}</div>
       <ul class="items rates">
         {% for row in rate %}
           <li class="rate" id="r-{{ row.plan_id }}">
@@ -100,7 +96,8 @@
     </section>
   {% endif %}
   {% if grownup %}
-    <section class="rail__sec"><p class="note">{{ icon('cal') }}{{ source_note }}</p></section>
-    <section class="rail__sec"><p class="note"><a href="{{ url_for('web.export_plans') }}">{{ icon('arrowdown', size='sm') }}Download the plans for another calendar</a></p></section>
+    <section class="sec"><p class="note">{{ icon('cal') }}{{ source_note }}</p></section>
+    <section class="sec"><p class="note"><a href="{{ url_for('web.export_plans') }}">{{ icon('arrowdown', size='sm') }}Download the plans for another calendar</a></p></section>
   {% endif %}
 {% endblock %}
+

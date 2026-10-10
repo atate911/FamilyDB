@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "frame.html" %}
 {% from "_ui.html" import icon, avatar, page_head, todo with context %}
 {% block title %}{{ 'To do' if grownup else 'My to-dos' }} · {{ site_title }}{% endblock %}
 {# One person to choose, as a pill: their colour and their letter, then their name. `value` is what the form sends. #}
@@ -81,13 +81,9 @@
     {% else %}
       <p class="empty mt-4">{{ icon('todo') }}<span>No to-dos match.{% if visitor().may('change') %} Add one above, or ask {{ assistant }}.{% endif %}</span></p>
     {% endif %}
+    <p class="sec__note">{{ icon('chat', size='sm') }} You can also tell {{ assistant }}: “remind Alex to call the dentist on Tuesday at 9”. She’ll send it once Telegram is connected.</p>
+    <p class="sec__note"><a href="{{ url_for('web.export_tasks') }}">{{ icon('arrowdown', size='sm') }}Download the to-dos as a spreadsheet</a></p>
   {% endif %}
 {% endblock %}
 
-{# The rail: saying it to her instead, and taking the list away. #}
-{% block rail %}
-  {% if grownup %}
-    <section class="rail__sec"><p class="note">{{ icon('chat', size='sm') }}You can also tell {{ assistant }}: “remind Alex to call the dentist on Tuesday at 9”. She’ll send it once Telegram is connected.</p></section>
-    <section class="rail__sec"><p class="note"><a href="{{ url_for('web.export_tasks') }}">{{ icon('arrowdown', size='sm') }}Download the to-dos as a spreadsheet</a></p></section>
-  {% endif %}
-{% endblock %}
+

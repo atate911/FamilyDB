@@ -1,10 +1,51 @@
-{% extends "base.html" %}
-{% from "_ui.html" import icon, avatar, page_head %}
-{% block title %}Edit a to-do · {{ site_title }}{% endblock %}
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, avatar, page_head, who with context %}
+{% from "_dest.html" import dest_head %}
+{% block title %}{{ task.title }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-reminder{% endblock %}
+{# A reminder (docs/INTERFACE.md section 5): when or on what condition, whose, how it repeats and where it is sent,
+   in words; then the form to change all of it by hand. #}
 {% block content %}
-  {{ page_head('Edit a to-do', task.title ~ ' · added' ~ (' by ' ~ made_by if made_by else '') ~ ' on ' ~ added, crumb=('To do', url_for('web.tasks'))) }}
-  {% if row.changed %}<p class="small muted">{{ row.changed }}</p>{% endif %}
-  <div class="stack">
+  {{ dest_head(task.title, words.when | figs, back=('This week', url_for('go.week'))) }}
+  <dl class="facts">
+    <div><dt class="facts__k">Whose</dt><dd class="facts__v">{{ words.person.name }}</dd></div>
+    {% if words.late %}<div><dt class="facts__k">Late</dt><dd class="facts__v late">{{ words.late }}</dd></div>{% endif %}
+    {% if task.preferred_window %}<div><dt class="facts__k">When it suits</dt><dd class="facts__v">{{ task.preferred_window }}{% if row.nudge and row.nudge.on %} · {{ assistant }} brings it up on {{ row.nudge.on | figs }}{% endif %}</dd></div>{% endif %}
+    {% if task.reminder %}<div><dt class="facts__k">Reminder</dt><dd class="facts__v">{{ row.reminder_time | figs }}</dd></div>{% endif %}
+    {% if row.repeats %}<div><dt class="facts__k">Repeats</dt><dd class="facts__v">{{ row.repeats }}</dd></div>{% endif %}
+    {% if task.status != 'open' %}<div><dt class="facts__k">Status</dt><dd class="facts__v">{{ 'Canceled' if task.status == 'cancelled' else task.status | capitalize }}</dd></div>{% endif %}
+  </dl>
+  {% if task.notes %}<p>{{ task.notes }}</p>{% endif %}
+  <p class="said__by">Added{{ ' by ' ~ made_by if made_by }} on {{ added }}.{% if row.changed %} {{ row.changed }}{% endif %} {{ reminders_said }}</p>
+  {# Done, and a snooze, by code: the tool the model would call (edits.finish_task, snooze_task), as whoever is signed in. #}
+  {% if visitor().may('change') or visitor().may('own_tasks') %}
+    <div class="acts">
+      {% if task.status == 'open' %}
+        <form method="post" action="{{ url_for('edits.finish_task', task_id=task.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="back" value="reminder" />
+          <button class="btn btn--primary btn--sm" type="submit">{{ icon('check') }}Done</button>
+        </form>
+        {% for action, label in presses if action != 'done' %}
+          <form method="post" action="{{ url_for('edits.snooze_task', task_id=task.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+            <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="back" value="reminder" />
+            <input type="hidden" name="when" value="{{ action }}" />
+            <button class="btn btn--sm btn--quiet" type="submit">{{ label }}</button>
+          </form>
+        {% endfor %}
+      {% elif task.status == 'done' %}
+        <form method="post" action="{{ url_for('edits.reopen_task', task_id=task.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          <input type="hidden" name="back" value="reminder" />
+          <button class="btn btn--sm btn--quiet" type="submit">Not done after all</button>
+        </form>
+      {% endif %}
+    </div>
+  {% endif %}
+  <details class="fold fold--quiet" id="edit"{{ ' open' if request.args.get('edit') }}>
+    <summary>Edit by hand{{ icon('chev', size='sm', cls='chev') }}</summary>
+  <div class="stack fold__body">
     <form class="card form" method="post" action="{{ url_for('edits.edit_task', task_id=task.id) }}" aria-labelledby="h-edit" novalidate>
       <h2 class="sr" id="h-edit">Edit</h2>
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
@@ -52,24 +93,9 @@
 
       <div class="actions">
         <button class="btn btn--primary" type="submit">{{ icon('check') }}Save changes</button>
-        <a class="linkbtn" href="{{ url_for('web.tasks') }}">Cancel</a>
+        <a class="linkbtn" href="{{ url_for('web.tasks') }}">All to-dos</a>
       </div>
     </form>
   </div>
-{% endblock %}
-
-{# The rail: about this to-do. #}
-{% block rail %}
-      <section class="rail__sec" aria-labelledby="h-know2">
-        <div class="rail__head"><h2 id="h-know2" class="overline">Good to know</h2></div>
-        <ul class="tips">
-          <li>Ticking it off on the list does the same as setting it to Done here.</li>
-          <li>To-dos aren’t deleted: a canceled one moves to “Canceled”, and can be set back to Open.</li>
-          <li>If somebody changed it while you had it open, your save is refused, so reload and try again.</li>
-        </ul>
-      </section>
-      <section class="rail__sec" aria-labelledby="h-rem2">
-        <div class="rail__head"><h2 id="h-rem2" class="overline">Reminders</h2></div>
-        <p class="small">{{ reminders_said }} One for everyone goes to the family’s chat.</p>
-      </section>
+  </details>
 {% endblock %}

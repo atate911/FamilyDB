@@ -19,6 +19,8 @@ from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store import outcomes as outcome_store
 from familydb.store import picks as pick_store
+from familydb.store import places as place_store
+from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store.members import Member
 from familydb.suggest.types import DAY_END, DAY_START
@@ -108,9 +110,7 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
         pencil = _pencil(conn, kept, first, last, today) if grown_up else None
         went = _went(conn, first, last, slots) if last < today or first == last else []
         rate = routes._unrated(conn, today, slots, visitor.member) if visitor.may("change") else []
-        box = chat.page_box(
-            app, conn, people, scope={"label": "This week", "text": "About this week:"}
-        )
+        chat.page_box(app, conn, people, scope={"label": "This week", "text": "About this week:"})
     forecasts = _forecasts(app, first, last, today)
     days = []
     for offset in range((last - first).days + 1):
@@ -160,7 +160,6 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
         "later": url_for("go.week", **{"from": (last + timedelta(days=1)).isoformat()}),
         "this_week": url_for("go.week") if first != today else None,
         "on_google": calendar_available(app.settings),
-        **box,
     }
 
 
@@ -182,10 +181,15 @@ def _free(rows: list[dict[str, Any]], when: date, iso: str) -> list[tuple[int, i
         return []
     busy = []
     for row in rows:
-        if row["all_day"] or row["status"] == "cancelled" or row["day"] != iso:
+        if row["all_day"] or row["status"] == "cancelled":
             continue
-        start = _minutes(row["start_value"])
-        end = _minutes(row["end_value"]) if row.get("end_value") else start + ASSUMED_MINUTES
+        # A plan over several days takes this one from its start, or from midnight, to its end,
+        # or to midnight.
+        start = _minutes(row["start_value"]) if row["start_value"][:10] == iso else 0
+        if row.get("end_value"):
+            end = _minutes(row["end_value"]) if row["end_value"][:10] == iso else 24 * 60
+        else:
+            end = start + ASSUMED_MINUTES
         busy.append((start, min(end, 24 * 60)))
     spans: list[tuple[int, int]] = []
     cursor = DAY_START
@@ -333,6 +337,76 @@ def _forecasts(app: App, first: date, last: date, today: date) -> dict[date, Any
         return {}
 
 
+# -- A plan ----------------------------------------------------------------------------------------
+
+
+@bp.get("/plan/<int(max=9223372036854775807):plan_id>")
+def plan(plan_id: int) -> str:
+    """A plan's own page (docs/INTERFACE.md section 5): when, the leave-by, who, where, what it
+    is a plan of, and after the day how it went. Moving and taking it off are its forms."""
+    app = _app()
+    today = app.clock.today()
+    tz = app.settings.tzinfo
+    visitor = auth.visitor()
+    with closing(app.connect()) as conn:
+        found = plan_store.get(conn, plan_id)
+        idea = idea_store.get(conn, found.idea_id) if found and found.idea_id else None
+        if found is None or presents.is_kept_from(conn, idea, visitor.member):
+            abort(404)
+        people = member_store.list_all(conn)
+        slots = views.slot_map(people)
+        place = place_store.get(conn, idea.place_id) if idea and idea.place_id else None
+        went = (
+            [
+                _memory(outcome, idea, slots)
+                for outcome in outcome_store.list_for_idea(conn, idea.id)
+                if outcome.plan_id == found.id or outcome.happened_on == found.start[:10]
+            ]
+            if idea
+            else []
+        )
+        rate = (
+            [
+                r
+                for r in routes._unrated(conn, today, slots, visitor.member)
+                if r["plan_id"] == plan_id
+            ]
+            if visitor.may("change")
+            else []
+        )
+        chat.page_box(
+            app,
+            conn,
+            people,
+            prompt=chat.ITEM_PROMPT,
+            scope={
+                "label": found.title,
+                "text": f"About the plan {found.title} ({found.start[:10]}):",
+            },
+        )
+    row = views.plan_row(found, today)
+    away = views.away_from_home(place, app.settings)
+    who = views.people_for(idea, slots)
+    return render_template(
+        "plan.html",
+        plan=found,
+        row=row,
+        idea=idea,
+        state=views.plan_state(found, today, tz),
+        leave_by=views.leave_by(found, away, tz),
+        away=away.words if away else None,
+        people=who,
+        people_words=views.names_text(who),
+        place=views.place_panel(place, app.clock.now(), app.settings.place_stale_days, today)
+        if place
+        else None,
+        went=went,
+        rate=rate,
+        day_href=url_for("go.day", day=found.start[:10]),
+        on_google=calendar_available(app.settings),
+    )
+
+
 # -- What we did -----------------------------------------------------------------------------------
 
 
@@ -368,7 +442,7 @@ def did() -> str:
                 continue
             rows.append(row)
         rate = routes._unrated(conn, today, slots, visitor.member) if visitor.may("change") else []
-        box = chat.page_box(
+        chat.page_box(
             app, conn, people, scope={"label": "What we did", "text": "About what we did:"}
         )
     chips = [{"label": "Loved", "href": url_for("go.did", loved="1"), "on": loved_only}]
@@ -389,7 +463,6 @@ def did() -> str:
         rate=rate,
         chips=chips,
         summary=views.did_summary(rows, rate),
-        **box,
     )
 
 

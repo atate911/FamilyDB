@@ -863,6 +863,73 @@ def my_list_summary(kid: dict[str, Any]) -> str:
     return _n(open_count, "thing", "things") + " on your lists."
 
 
+# Quick sentences under an idea's box, filled in by a tap, never sent by themselves.
+def idea_starters(idea: Idea, today: date) -> list[str]:
+    weekend = "this weekend" if today.weekday() < 5 else "next weekend"
+    first = "Plan it for " + weekend
+    second = "Is it good for the kids?" if idea.kind != "gift" else "What would go with it?"
+    third = (
+        "What else is near it?"
+        if idea.kind in ("restaurant", "outing", "day_trip")
+        else "Tell me more about it"
+    )
+    return [first, second, third]
+
+
+def task_starters(task: Task, today: date) -> list[str]:
+    """Three sentences a reminder's page offers the box, each a change she can make to it."""
+    weekend = "Saturday" if today.weekday() < 5 else "next Saturday"
+    first = f"Move it to {weekend}"
+    second = "Remind me the evening before" if task.due_at else "Give it a day"
+    third = "Stop it repeating" if task.repeats else "Make it weekly"
+    return [first, second, third]
+
+
+def plan_state(plan: Plan, today: date, tz: ZoneInfo) -> str:
+    """A plan's state in words: "Planned for Saturday 3 October, 6:30 pm", "Today at 6:30 pm",
+    "Was on Saturday 3 October", "Canceled", "Tentative for …"."""
+    when = day_text(plan.start[:10] if plan.all_day else plan.start)
+    day = date.fromisoformat(plan.start[:10])
+    if plan.status == "cancelled":
+        return f"Canceled: was for {when}"
+    if day < today:
+        return f"Was on {when}"
+    if day == today:
+        said = "Today" if plan.all_day else f"Today at {clock_time(plan.start)}"
+    else:
+        said = f"Planned for {when}"
+    return f"Tentative: {said[0].lower()}{said[1:]}" if plan.status == "tentative" else said
+
+
+def leave_by(plan: Plan, away: Away | None, tz: ZoneInfo) -> str | None:
+    """When to leave to be there at the start, from the estimated drive: "Leave by 9:35 am ·
+    20 min". None for an all-day plan or one with no drive known."""
+    if plan.all_day or away is None or away.near:
+        return None
+    start = datetime.fromisoformat(plan.start)
+    leave = start - timedelta(minutes=away.minutes)
+    return f"Leave by {clock_time(leave)} · {drive_text(away.minutes)}"
+
+
+def idea_state(idea: Idea, plans: Sequence[Plan], today: date) -> str:
+    """An idea's state in words, for its page: "An idea", "Planned for Saturday 3 October",
+    "Done, last on Saturday 12 September", "Dropped", "On until Sunday 11 October"."""
+    if idea.status == "dropped":
+        return "Dropped"
+    coming = [p for p in plans if p.status != "cancelled" and p.start[:10] >= today.isoformat()]
+    if coming:
+        first = min(coming, key=lambda p: p.start)
+        return f"Planned for {day_text(first.start[:10] if first.all_day else first.start)}"
+    if idea.status == "done" or idea.times_done:
+        if idea.last_done_at:
+            return f"Done, last on {day_text(idea.last_done_at[:10])}"
+        return "Done"
+    last = idea.last_day
+    if last is not None and last >= today:
+        return f"On until {day_text(last.isoformat())}"
+    return "An idea"
+
+
 def made_words(made_at: str, now: datetime, tz: ZoneInfo) -> str:
     """When a set of picks was chosen, briefly: "chosen 4 pm", "chosen yesterday", "chosen Mon"."""
     moment = datetime.fromisoformat(made_at.replace("Z", "+00:00")).astimezone(tz)

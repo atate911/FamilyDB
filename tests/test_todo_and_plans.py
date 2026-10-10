@@ -104,7 +104,7 @@ def _make(conn, title="Bins out", **changes):
             title=title,
             notes="",
             owner_id=changes.pop("owner_id", None),
-            due_at=None,
+            due_at=changes.pop("due_at", None),
             preferred_window="",
             operation_key=title,
             channel="web",
@@ -118,9 +118,51 @@ def test_a_to_do_has_its_own_page_to_edit_with_a_way_back(settings, clock, conn,
     task_id = _make(conn)
     client = _client(settings, clock)
     list_page = client.get("/tasks").text
-    assert f'href="/task/{task_id}/edit"' in list_page
+    assert f'href="/reminder/{task_id}"' in list_page
     assert f'action="/task/{task_id}/edit"' not in list_page  # the boxes are on its own page
-    page = client.get(f"/task/{task_id}/edit")
+    page = client.get(f"/reminder/{task_id}")
     assert page.status_code == 200 and 'value="Bins out"' in page.text
-    assert 'href="/tasks"' in page.text  # the way back
-    assert client.get("/task/9999/edit").status_code == 404
+    assert 'href="/week"' in page.text  # the way back
+    assert client.get(f"/task/{task_id}/edit").status_code == 200  # the older address still works
+    assert client.get("/reminder/9999").status_code == 404
+
+
+def test_a_reminder_s_page_ticks_it_off_and_snoozes_it_by_code(settings, clock, conn, family):
+    """Done, In an hour and Tomorrow on a reminder's own page are the tool the model would call,
+    by code, and come back to the page (docs/INTERFACE.md section 5)."""
+    from tests.test_web_edits import _token
+
+    task_id = _make(conn, due_at="2026-09-21T17:00:00Z")
+    client = _client(settings, clock)
+    page = client.get(f"/reminder/{task_id}").text
+    assert 'name="scope" value="About the reminder Bins out:"' in page
+    assert 'data-say="Move it to next Saturday"' in page  # a Sunday: the coming one is next week
+    for action in ("done", "snooze"):
+        assert f'action="/task/{task_id}/{action}"' in page
+    revision = re.search(r'name="revision" value="(\d+)"', page).group(1)
+    snoozed = client.post(
+        f"/task/{task_id}/snooze",
+        data={
+            "csrf": _token(client, f"/reminder/{task_id}"),
+            "revision": revision,
+            "when": "tomorrow",
+            "back": "reminder",
+        },
+    )
+    assert snoozed.status_code == 302 and snoozed.headers["Location"] == f"/reminder/{task_id}"
+    assert tasks.get(conn, task_id).reminder is not None
+    page = client.get(f"/reminder/{task_id}").text
+    revision = re.search(r'name="revision" value="(\d+)"', page).group(1)
+    done = client.post(
+        f"/task/{task_id}/done",
+        data={
+            "csrf": _token(client, f"/reminder/{task_id}"),
+            "revision": revision,
+            "back": "reminder",
+        },
+    )
+    assert done.status_code == 302 and done.headers["Location"] == f"/reminder/{task_id}"
+    assert tasks.get(conn, task_id).status == "done"
+    page = client.get(f"/reminder/{task_id}").text
+    assert f'action="/task/{task_id}/reopen"' in page and "Not done after all" in page
+    assert f'action="/task/{task_id}/done"' not in page
