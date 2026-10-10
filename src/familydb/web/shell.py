@@ -218,11 +218,13 @@ OWNS: dict[str, frozenset[str]] = {
     "now": frozenset({"web.home"}),
     "eat": frozenset({"web.restaurants"}),
     "do": frozenset({"web.ideas", "web.idea", "web.new_idea", "web.edit_idea"}),
-    "week": frozenset({"web.plans", "web.plans_month", "web.tasks", "web.edit_task"}),
+    "week": frozenset(
+        {"go.week", "go.day", "web.plans", "web.plans_month", "web.tasks", "web.edit_task"}
+    ),
     "kids": frozenset({"web.wishes"}),
     "soon": frozenset({"web.happening_page"}),
     "lists": frozenset({"web.lists_page"}),
-    "did": frozenset(),
+    "did": frozenset({"go.did"}),
 }
 
 
@@ -238,18 +240,16 @@ def destinations(frame: Frame) -> list[Destination]:
     if grown_up:
         places.append(("eat", "Eat", url_for("web.restaurants"), 0, ""))
         places.append(("do", "Do", url_for("web.ideas"), 0, ""))
-        places.append(
-            ("week", "Week", url_for("web.plans_month"), frame.late + frame.rate, "to look at")
-        )
+        places.append(("week", "Week", url_for("go.week"), frame.late, "late"))
         if visitor.may("decide") and frame.kids:
             places.append(("kids", "Kids", url_for("web.wishes"), frame.decide, "to decide"))
         places.append(("soon", "Soon", url_for("web.happening_page"), 0, ""))
         if visitor.may("change"):
             places.append(("lists", "Lists", url_for("web.lists_page"), 0, ""))
-        places.append(("did", "Did", url_for("web.plans", _anchor="recent"), 0, ""))
+        places.append(("did", "Did", url_for("go.did"), frame.rate, "to rate"))
     else:
         places.append(("do", "Do", url_for("web.ideas"), 0, ""))
-        places.append(("week", "My week", url_for("web.plans"), frame.late, "to do"))
+        places.append(("week", "My week", url_for("go.week"), 0, ""))
         if visitor.may("wish") and visitor.member is not None:
             places.append(("kids", "My list", url_for("web.wishes"), 0, ""))
     return [

@@ -50,7 +50,7 @@ def test_a_kid_keeps_her_own_list_on_the_page(app, family, girls) -> None:  # no
     kid = girls["mine"]
     page = kid.get("/wishes")
     assert page.status_code == 200 and "My list" in page.text
-    assert 'href="/wishes"' in kid.get("/").text  # in her bar, and on her Home
+    assert 'href="/kids"' in kid.get("/").text  # in her row, and on her Now
     assert "On your list: Lego." in _said(_add(kid, "Lego"))
     _add(kid, "Kite")
     _add(kid, "Roller skates", "birthday")
@@ -97,8 +97,8 @@ def test_a_parent_sees_every_kid_and_answers(app, family, sam, girls) -> None:  
     _add(girls["mine"], "A cat")
     _add(girls["sister"], "Slime")
     overview = sam.get("/wishes").text
-    assert "A cat" in overview and "Slime" in overview and "The kids\u2019 lists" in overview
-    assert 'href="/wishes">Kids' in sam.get("/").text  # the way there, in the row
+    assert "A cat" in overview and "Slime" in overview and "The kids" in overview
+    assert 'href="/kids">Kids' in sam.get("/").text  # the way there, in the row
     cat = _open(app, family["girls"].id)[0]
     hers = sam.get(f"/wishes?who={family['girls'].id}").text
     assert "A cat" in hers and "Slime" not in hers
@@ -198,7 +198,7 @@ def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam,
     assert 'class="starters"' not in home and "We should try" not in home
     assert f'placeholder="{KID_HOME_PROMPT}"' in home
     assert 'href="/ideas/new"' not in home and "plan an idea" not in home
-    assert "Tell Vera anything" not in home and 'href="/wishes"' in home
+    assert "Tell Vera anything" not in home and 'href="/kids"' in home
     assert girls["mine"].get("/ideas/new").status_code == 403
     # A grown-up's Now has no ways to start either; adding an idea by hand is on the ideas page.
     assert (
@@ -207,15 +207,19 @@ def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam,
 
 
 def test_her_list_opens_on_one_box_for_anything(app, family, sam, girls) -> None:  # noqa: F811
-    """Where she lands on her list: one box, the chat's own, posting to her conversation, where
+    """Where she lands on her list: one box, the frame's, posting to her conversation, where
     Vera sorts what she says; no second form to choose between. A parent's view of her list has
-    the add form and no chat box."""
+    the add form folded away, and the box scoped to the kids."""
+    from familydb.web.chat import KID_LIST_PROMPT
+
     page = girls["mine"].get("/wishes").text
-    assert 'action="/chat"' in page and "Tell Vera anything" in page
+    assert (
+        'action="/chat"' in page and f'placeholder="{KID_LIST_PROMPT.format(name="Vera")}"' in page
+    )
+    assert 'name="scope" value="About my list:"' in page
     assert 'id="wish-add"' not in page and "Add to my list" not in page
     parent = sam.get(f"/wishes?who={family['girls'].id}").text
-    assert 'action="/chat"' not in parent and "Tell Vera anything" not in parent
-    assert 'id="wish-add"' in parent
+    assert 'name="scope" value="About the kids:"' in parent and 'id="wish-add"' in parent
 
 
 def test_a_kid_sees_the_pages_simply(app, family, girls) -> None:  # noqa: F811

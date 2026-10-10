@@ -264,8 +264,8 @@ def _with_place(conn, idea, **fields):
 
 
 def _cards(text: str) -> int:
-    """How many idea cards a page draws."""
-    return len(re.findall(r'<article class="idea[ "]', text))
+    """How many rows a destination draws."""
+    return len(re.findall(r'<div class="r[ "]', text))
 
 
 def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> None:
@@ -281,16 +281,17 @@ def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> N
         suggested_by=family["sam"].id,
     )
     _idea(conn, "Museum day", kind="outing", participants=["with the girls"])
-    page = _client(settings, clock).get("/ideas")
+    client = _client(settings, clock)
+    page = client.get("/ideas")
     assert page.status_code == 200
-    assert _cards(page.text) == 2
-    assert "2 ideas" in page.text
+    # Restaurants have their own door, so What could we do lists the outing alone.
+    assert _cards(page.text) == 1 and "1 idea saved" in page.text and "Museum day" in page.text
+    assert '<span class="sr">with the girls</span>' in page.text  # whom it is for, as a mark
+    eat = client.get("/eat").text
     # Titles come from chat, so they are escaped rather than rendered as markup.
-    assert "Ramen &amp; noodles &lt;Main St&gt;" in page.text
-    assert "<Main St>" not in page.text
-    assert f'href="/idea/{ramen.id}"' in page.text
-    # whom it is for, as its mark's words
-    assert '<span class="sr">whole family</span>' in page.text
+    assert "Ramen &amp; noodles &lt;Main St&gt;" in eat and "<Main St>" not in eat
+    assert f'href="/idea/{ramen.id}"' in eat
+    assert '<span class="sr">whole family</span>' in eat
 
 
 def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
@@ -299,7 +300,7 @@ def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
     _idea(conn, "Old plan", kind="outing", status="done")
     dropped = _idea(conn, "Never again", kind="outing", status="dropped")
     client = _client(settings, clock)
-    assert _cards(client.get("/ideas").text) == 3  # dropped is hidden
+    assert _cards(client.get("/ideas").text) == 2  # dropped is hidden, restaurants are on Eat
     assert "Ramen place" in client.get("/ideas?kind=restaurant").text
     assert "Museum day" not in client.get("/ideas?kind=restaurant").text
     assert _cards(client.get("/ideas?status=done").text) == 1
@@ -411,7 +412,7 @@ def test_no_two_names_on_the_map_sit_on_each_other_or_on_home() -> None:
 
 
 def test_the_ideas_list_draws_its_places_on_a_map(settings, clock, conn, family) -> None:
-    ramen = _idea(conn, "Ramen <Main St>", kind="restaurant")
+    ramen = _idea(conn, "Ramen <Main St>", kind="activity")
     _with_place(conn, ramen, lat=45.70, lon=-122.67)  # north of home
     museum = _idea(conn, "Museum day", kind="outing")
     _with_place(conn, museum, lat=45.63, lon=-122.40)  # east, and further
@@ -426,8 +427,8 @@ def test_the_ideas_list_draws_its_places_on_a_map(settings, clock, conn, family)
     # Every card with a place says the drive and the way, which is all the map shows.
     assert "12 min drive, north" in page and "33 min drive, east" in page
     # It follows the filters, and an idea inside the first ring is not worth a map.
-    restaurants = client.get("/ideas?kind=restaurant").text
-    assert "Museum day" not in restaurants and 'class="radar' not in restaurants
+    activities = client.get("/ideas?kind=activity").text
+    assert "Museum day" not in activities and 'class="radar' not in activities
     # Nothing listed on the map, or no home to measure from: none.
     assert 'class="radar' not in client.get("/ideas?q=picnic").text
     assert 'class="radar' not in _client(settings, clock).get("/ideas").text
@@ -575,16 +576,19 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
     _idea(conn, "Museum day", kind="outing")
     page = _client(settings, clock).get("/restaurants")
     assert page.status_code == 200
-    assert _cards(page.text) == 0 and page.text.count('class="place"') == 2  # not the outing
-    assert "Museum day" not in page.text and "2 places" in page.text
-    assert "Small counter, long queue." in page.text and "1 Main St" in page.text
-    assert "open today 11\u00a0am to 9\u00a0pm" in page.text  # the shared clock is a Sunday
-    assert "about 12 min away" in page.text and "$$" in page.text
-    assert 'href="https://example.com/ramen" rel="noopener noreferrer"' in page.text
-    assert 'href="https://example.com/book" rel="noopener noreferrer"' in page.text
-    assert "openstreetmap.org" in page.text
-    assert f'href="/idea/{ramen.id}"' in page.text
-    assert "details not looked up yet" in page.text  # the second restaurant
+    assert _cards(page.text) == 2 and "Museum day" not in page.text  # not the outing
+    # The top pick for the next meal leads, with the one line that decides; the rest follow.
+    assert "Where should we eat?" in page.text
+    assert (
+        "Ramen place tonight: open today 11\u00a0am to 9\u00a0pm · 12 min · $$ · not been yet."
+        in page.text
+    )
+    top = re.search(r'<div class="r r--top">.*?</div>\s*<div class="r">', page.text, re.S).group(0)
+    assert "Ramen place" in top and '<span class="r__label">Tonight</span>' in top
+    assert f'href="/idea/{ramen.id}"' in page.text  # the place page has the links out
+    assert "Closed on Sundays" in page.text and "not looked up yet" in page.text
+    # Chips narrow it: open today leaves the one with hours.
+    assert _cards(_client(settings, clock).get("/eat?open=1").text) == 1
 
 
 def test_the_restaurants_page_when_there_are_none(settings, clock, conn, family) -> None:
@@ -1169,18 +1173,19 @@ def test_the_look_page_writes_only_a_look_and_only_through_the_rules() -> None:
     assert not any(name.startswith("familydb.store") for name in reached)
 
 
-def test_ideas_has_one_search_and_the_quick_note_comes_after_the_list(
+def test_do_has_one_search_its_chips_and_the_way_to_the_form_last(
     settings, clock, conn, family
 ) -> None:
     from familydb.store import db as db_store
     from familydb.store import ideas as idea_store
 
     with db_store.transaction(conn):
-        idea_store.insert(conn, title="Ramen place", kind="restaurant", now=NOW_ISO)
-    page = _signed_in(settings, clock).get("/ideas").text
+        idea_store.insert(conn, title="Zoo day", kind="outing", now=NOW_ISO)
+    page = _signed_in(settings, clock).get("/do").text
     assert page.count(">Filter<") == 0 and ">Search</button>" in page  # one Search, not two Filters
-    assert "Narrow by kind, person or status" in page
-    assert page.index("Ramen place") < page.index("Save a thought for later")
+    chips = re.search(r'<nav class="chips".*?</nav>', page, re.S).group(0)
+    assert "Outing" in chips and "Free" in chips and "Dropped" in chips and "Sam" in chips
+    assert page.index("Zoo day") < page.index("Add an idea by hand")
 
 
 def test_on_now_the_setup_strip_comes_after_the_box_and_before_the_rest(

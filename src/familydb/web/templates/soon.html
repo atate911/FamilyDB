@@ -1,0 +1,33 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon %}
+{% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty %}
+{% block title %}{{ name }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-soon{% endblock %}
+{# Happening soon (docs/INTERFACE.md section 4): dated possibilities by date, what the sources list near home and the
+   family's own things with a closing date, each marked with where it came from. #}
+{% block content %}
+  {{ dest_head(name, summary) }}
+  {{ chip_row(chips) }}
+  {% for row in trouble %}<p class="sec__note">{{ icon('alert', size='sm') }}{{ row.label }}: {{ row.detail }}</p>{% endfor %}
+  {% for day in days %}
+    <section class="sec" aria-labelledby="s-{{ loop.index }}">
+      <div class="sec__label"><h2 id="s-{{ loop.index }}" class="label">{{ day.label }}</h2></div>
+      <div class="rows">
+        {% for r in day.rows %}
+          <div class="r">
+            <span class="r__t">{% if r.href %}<a href="{{ r.href }}">{{ r.title }}</a>{% elif r.url %}<a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</span>
+            <span class="r__m">{{ r.when }}{% if r.where %} · {{ r.where }}{% endif %}{% if r.price %} · {{ r.price }}{% endif %}{% if r.summary %} · {{ r.summary }}{% endif %}</span>
+            <span class="r__tr"><span class="tag tag--off">{{ r.source_words }}</span></span>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    {% if reading %}
+      {{ dest_empty('Nothing listed for the next ' ~ ahead ~ ' days yet. The calendars and Ticketmaster are read once a day.', 'ticket') }}
+    {% else %}
+      <p class="empty">{{ icon('ticket') }}<span>Nothing near home is read yet.{% if visitor().may('manage') %} Add a calendar, a Ticketmaster key or the weekly search <a href="{{ url_for('settings.section', name='happening') }}">in the settings</a>.{% endif %}</span></p>
+    {% endif %}
+  {% endfor %}
+  {% if days %}<p class="sec__note">Not on your list: tell {{ assistant }} to save one, or to put it on the calendar.</p>{% endif %}
+{% endblock %}

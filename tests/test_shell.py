@@ -110,7 +110,7 @@ def test_a_kid_sees_her_own_pages_and_nothing_of_how_it_works(girl) -> None:
     tabs = _tabbar(girl)
     assert "My list" in tabs and "Ideas" not in tabs  # her list where a grown-up has Ideas
     menu = girl.get("/more").text
-    assert 'href="/ideas"' in menu  # and Ideas is in her menu
+    assert 'href="/do"' in menu  # and Do is in her menu
     assert "Behind the scenes" not in menu and "Settings" not in menu
     # No version number on a kid's footer.
     assert "Version" not in menu.split('<footer class="foot">')[1]
@@ -209,12 +209,12 @@ def test_each_person_has_their_own_colour_and_it_does_not_follow_their_name(conn
 def test_the_page_you_are_on_is_marked_in_the_menu_and_the_tab_bar(sam, girl) -> None:
     """A page on the older frame marks itself in the menu and the tab bar, once each, for a
     screen reader as well as the eye; Now marks itself in its own row of destinations."""
-    ideas = sam.get("/ideas").text
-    side = re.search(r'<aside class="side".*?</aside>', ideas, re.S).group(0)
-    tabs = re.search(r'<nav class="tabbar".*?</nav>', ideas, re.S).group(0)
+    plans = sam.get("/plans").text
+    side = re.search(r'<aside class="side".*?</aside>', plans, re.S).group(0)
+    tabs = re.search(r'<nav class="tabbar".*?</nav>', plans, re.S).group(0)
     for where in (side, tabs):
         assert where.count('aria-current="page"') == 1
-        assert re.search(r'<a href="/ideas" aria-current="page">', where)
+        assert re.search(r'<a href="/plans/month" aria-current="page">', where)
     # The account corner marks Look while you are on it.
     look = sam.get("/more").text  # a page of its own: none of the pages is current there
     assert (

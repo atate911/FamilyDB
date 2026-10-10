@@ -70,7 +70,7 @@ def test_a_question_handed_over_by_a_link_waits_in_the_box_unsent(
 
 def test_the_old_address_of_a_search_still_finds_it(settings, clock, conn) -> None:
     moved = _now(settings, clock).get("/?q=museum&kind=outing")
-    assert moved.status_code == 302 and moved.headers["Location"] == "/ideas?q=museum&kind=outing"
+    assert moved.status_code == 302 and moved.headers["Location"] == "/do?q=museum&kind=outing"
 
 
 def test_the_context_line_says_the_day_and_the_hour(settings, clock, conn, family) -> None:
@@ -308,7 +308,7 @@ def test_her_picks_are_tiles_with_a_reason_and_a_way_in(settings, clock, conn, f
     ).group(0)
     assert "What about…" in picks and "chosen 1\u00a0pm" in picks
     tiles = re.findall(r'<a class="pk" href="([^"]+)">(.*?)</a>', picks, re.S)
-    assert [href for href, _ in tiles] == [f"/idea/{ramen.id}", "/happening"]
+    assert [href for href, _ in tiles] == [f"/idea/{ramen.id}", "/soon"]
     assert "Eat · tonight" in tiles[0][1] and "Open till 9 pm, 12 min" in tiles[0][1]
     assert "New · Sat 26 Sep" in tiles[1][1]
     assert '<p class="ctx">Sunday 2:03\u00a0pm · Dry, free this afternoon</p>' in home
@@ -479,7 +479,7 @@ def test_a_wish_waiting_on_a_parent_is_asked_and_answered_from_now(app, conn, fa
     question = re.search(r'<section class="q".*?</section>', home, re.S).group(0)
     assert "the girls asked for Roller skates." in question
     assert 'value="granted">Yes</button>' in question and "Not this time" in question
-    assert f'href="/wishes?who={family["girls"].id}"' in question
+    assert f'href="/kids?who={family["girls"].id}"' in question
     fields = dict(re.findall(r'name="(csrf|once|kid|back)" value="([^"]*)"', question))
     sent = client.post(f"/wish/{wish.id}/answer", data={**fields, "status": "granted"})
     assert sent.status_code == 302 and sent.headers["Location"] == "/"

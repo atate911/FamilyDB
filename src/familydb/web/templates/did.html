@@ -1,0 +1,37 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, avatar, who, faces with context %}
+{% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty %}
+{% block title %}What we did · {{ site_title }}{% endblock %}
+{% block body_class %}page-did{% endblock %}
+{# What we did (docs/INTERFACE.md section 4): recent outings newest first, what each got, who went; what is still to
+   rate first, as her question; Again? puts a place back among the things to do. #}
+{% block content %}
+  {{ dest_head('What we did', summary) }}
+  {{ chip_row(chips) }}
+  {% for r in rate %}
+    <section class="q" aria-label="A question from {{ assistant }}">
+      <div class="q__body"><p class="q__text">How did {{ r.title }} go?</p><p class="q__org">{{ r.when }}</p><div class="q__acts">{{ faces(r, 'did') }}</div></div>
+    </section>
+  {% endfor %}
+  {% if rows %}
+    <div class="rows">
+      {% for m in rows %}
+        <div class="r r--did" id="m-{{ m.id }}">
+          <span class="r__face">{{ icon('smile' if m.face == 'loved' else ('frown' if m.face == 'not-great' else 'meh'), label=m.face_words or 'Not rated') }}</span>
+          <span class="r__t">{% if m.idea_id %}<a href="{{ url_for('web.idea', idea_id=m.idea_id) }}">{{ m.title }}</a>{% else %}{{ m.title }}{% endif %}</span>
+          <span class="r__m">{{ m.when }}{% if m.face_words %} · {{ m.face_words }}{% endif %}{% if m.notes %} · {{ m.notes }}{% endif %}</span>
+          <span class="r__tr">{{ who(m.people, m.who, shell.family) }}</span>
+          {% if grownup and m.idea_id and visitor().may('change') and m.status == 'done' %}
+            <form class="r__act" method="post" action="{{ url_for('edits.set_status', idea_id=m.idea_id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <input type="hidden" name="status" value="idea" />
+              <button class="q__lnk" type="submit">Again?<span class="sr"> {{ m.title }}: back among the things to do</span></button>
+            </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% elif not rate %}
+    {{ dest_empty('Nothing recorded yet. After an outing, ' ~ assistant ~ ' asks how it went; the answer lands here.', 'smile') }}
+  {% endif %}
+{% endblock %}

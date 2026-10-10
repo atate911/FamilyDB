@@ -23,7 +23,7 @@ from flask import (
 from familydb import agenda, export, happening, health, personas, presents, roles
 from familydb.app import App
 from familydb.availability import calendar_available, enrichment_available, happening_available
-from familydb.dates import next_birthday, utc_iso
+from familydb.dates import next_birthday, utc_iso, weekend_window
 from familydb.store import calls
 from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store
@@ -32,6 +32,7 @@ from familydb.store import members as member_store
 from familydb.store import memories as memory_store
 from familydb.store import messages as message_store
 from familydb.store import outcomes as outcome_store
+from familydb.store import picks as pick_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
@@ -293,14 +294,20 @@ def _latest_yes(
 
 
 @bp.get("/ideas")
+@bp.get("/do")
 def ideas() -> str:
+    """What could we do? (docs/INTERFACE.md section 4): the saved pile, what fits the next free
+    stretch on top, then everything newest first. Restaurants have their own door (Eat)."""
     app = _app()
     settings = app.settings
+    today = app.clock.today()
     visitor = auth.visitor()
+    grown_up = visitor.may("browse")
     query = request.args.get("q", "").strip()
     kind = request.args.get("kind", "").strip()
     status = request.args.get("status", "").strip()
     who = request.args.get("who", "").strip()
+    narrow = {key: request.args.get(key, "") == "1" for key in ("free", "close", "kids", "us")}
     with closing(app.connect()) as conn:
         kept = presents.kept_ids(conn, visitor.member)
         found = idea_store.search(
@@ -308,7 +315,7 @@ def ideas() -> str:
             text=query or None,
             kind=kind or None,
             status=status if status in STATUSES else None,
-            participant=who or None,
+            participant=who if who and who not in ("kids", "us") else None,
             limit=LIST_LIMIT,
             exclude_ids=kept,
             newest_first=not query,
@@ -316,39 +323,157 @@ def ideas() -> str:
         listed = [
             idea for idea in idea_store.list_all(conn, include_dropped=True) if idea.id not in kept
         ]
-        kinds, people = _choices(listed)
-        capture_people = member_store.list_all(conn)
-        slots = views.slot_map(capture_people)
-        hidden = presents.of_presents(conn, found, capture_people)
+        people = member_store.list_all(conn)
+        slots = views.slot_map(people)
+        hidden = presents.of_presents(conn, found, people)
         away = {
             idea.id: views.away_from_home(place_store.get(conn, idea.place_id), settings)
             for idea in found
             if idea.place_id
         }
-    filtered = bool(query or kind or status or who)
-    rows = [
-        _idea_card(idea, settings, away.get(idea.id), slots, hidden.get(idea.id)) for idea in found
-    ]
+        picked = _weekend_picks(conn, today) if grown_up else None
+        box = chat.page_box(
+            app, conn, people, scope={"label": "Things to do", "text": "About things to do:"}
+        )
+    if kind != RESTAURANT_KIND:
+        found = [idea for idea in found if idea.kind != RESTAURANT_KIND]
+    found = _narrowed(found, people, away, narrow)
+    names = {m.id: m.display_name for m in people}
+    stale = utc_iso(app.clock.now() - timedelta(days=FADE_DAYS))
+    rows = []
+    for idea in found:
+        card = _idea_card(idea, settings, away.get(idea.id), slots, hidden.get(idea.id))
+        card["line"] = views.do_line(
+            card,
+            by=names.get(idea.suggested_by or -1),
+            closing=views.closing_words(idea, today),
+        )
+        card["faded"] = idea.status == "idea" and idea.updated_at < stale
+        rows.append(card)
+    top = None
+    if picked and not (query or kind or status or who or any(narrow.values())):
+        rows, top = _lead_with_pick(rows, picked)
+    live = [idea for idea in listed if idea.status != "dropped" and idea.kind != RESTAURANT_KIND]
     placed = [(idea, away[idea.id]) for idea in found if away.get(idea.id)]
-    live = [idea for idea in listed if idea.status != "dropped"]
+    filtered = bool(query or kind or status or who or any(narrow.values()))
     return render_template(
-        "ideas.html",
-        capture_people=capture_people,
+        "do.html",
         rows=rows,
-        total=len(live),
-        restaurant_count=sum(1 for idea in live if idea.kind == RESTAURANT_KIND),
+        top=top,
+        summary=views.do_summary(len(live), top, rows[0] if top else None),
+        chips=_do_chips(listed, people, kind, who, status, narrow, grown_up),
         on_map=views.places_map(placed),
         off_map=len(found) - len(placed),
         looking_up=enrichment_available(settings),
-        kinds=kinds,
-        people=people,
-        statuses=STATUSES,
-        status_words=views.STATUS_WORDS,
         selected={"q": query, "kind": kind, "status": status, "who": who},
-        filter_words=views.filter_words(kind, who, status),
         filtered=filtered,
         limit=LIST_LIMIT,
+        **box,
     )
+
+
+# An untouched idea goes paler after this long (docs/INTERFACE.md section 4).
+FADE_DAYS = 42
+# How near "Close" is, in minutes of driving.
+CLOSE_MINUTES = 20
+KIND_CHIPS = (
+    ("outing", "Outing"),
+    ("activity", "Activity"),
+    ("day_trip", "Day trip"),
+    ("trip", "Trip"),
+    ("show", "Show"),
+    ("event", "Event"),
+    ("seasonal", "Seasonal"),
+    ("home", "Stay in"),
+)
+
+
+def _weekend_picks(conn: Any, today: date) -> Any:
+    """Her weekend set while its days are not over, else whatever set is current."""
+    weekend = pick_store.latest(conn, window="weekend")
+    if weekend is not None and weekend.window_end >= today.isoformat():
+        return weekend
+    return pick_store.current(conn, today=today.isoformat())
+
+
+def _narrowed(
+    found: list[Any],
+    people: list[member_store.Member],
+    away: dict[int, Any],
+    narrow: dict[str, bool],
+) -> list[Any]:
+    """The chips that no search column answers: free, close, with the kids, just us."""
+    kept = found
+    if narrow["free"]:
+        kept = [idea for idea in kept if idea.cost_level == 0]
+    if narrow["close"]:
+        kept = [
+            idea
+            for idea in kept
+            if away.get(idea.id) is not None and away[idea.id].minutes <= CLOSE_MINUTES
+        ]
+    if narrow["kids"]:
+        kept = [idea for idea in kept if views.with_the_kids(idea, people)]
+    if narrow["us"]:
+        kept = [idea for idea in kept if views.just_us(idea, people)]
+    return kept
+
+
+def _do_chips(
+    listed: list[Any],
+    people: list[member_store.Member],
+    kind: str,
+    who: str,
+    status: str,
+    narrow: dict[str, bool],
+    grown_up: bool,
+) -> list[dict[str, Any]]:
+    """Kinds that exist in the pile, who it is for, free, close, each person, and Dropped."""
+    kinds = {idea.kind for idea in listed if idea.status != "dropped"}
+    chips = [
+        {"label": label, "href": url_for("web.ideas", kind=value), "on": kind == value}
+        for value, label in KIND_CHIPS
+        if value in kinds
+    ]
+    if grown_up:
+        chips.append(
+            {"label": "With the kids", "href": url_for("web.ideas", kids="1"), "on": narrow["kids"]}
+        )
+        chips.append({"label": "Just us", "href": url_for("web.ideas", us="1"), "on": narrow["us"]})
+    chips.append({"label": "Free", "href": url_for("web.ideas", free="1"), "on": narrow["free"]})
+    chips.append({"label": "Close", "href": url_for("web.ideas", close="1"), "on": narrow["close"]})
+    if grown_up:
+        chips += [
+            {
+                "label": person.display_name,
+                "href": url_for("web.ideas", who=person.display_name),
+                "on": who.casefold() == person.display_name.casefold(),
+            }
+            for person in people
+        ]
+        chips.append(
+            {
+                "label": "Dropped",
+                "href": url_for("web.ideas", status="dropped"),
+                "on": status == "dropped",
+            }
+        )
+    if any(chip["on"] for chip in chips):
+        chips.insert(0, {"label": "Everything", "href": url_for("web.ideas"), "on": False})
+    return chips
+
+
+def _lead_with_pick(
+    rows: list[dict[str, Any]], picked: Any
+) -> tuple[list[dict[str, Any]], str | None]:
+    """Her weekend pick that is in the pile leads it, with when it fits over it."""
+    for tile in picked.picks:
+        for row in rows:
+            if tile.get("idea_id") == row["id"] and row["kind_name"] != "Restaurant":
+                rest = [other for other in rows if other is not row]
+                when = tile.get("when") or "the weekend"
+                return [row, *rest], f"Fits {when}"
+    return rows, None
 
 
 def _idea_card(
@@ -478,12 +603,18 @@ def edit_idea(idea_id: int) -> str:
 
 @bp.get("/lists")
 def lists_page() -> str:
-    """The family's lists: what is still to get, a box to add to each, a tick for each thing
-    (forms through shopping_list, edits.change_list). The shopping list is always there."""
-    with closing(_app().connect()) as conn:
+    """Lists (docs/INTERFACE.md section 4): the list in use, big ticks that need no conversation;
+    the other lists are chips. Every tick and add is the shopping_list tool (edits.change_list).
+    The shopping list is always there."""
+    app = _app()
+    wanted = list_store.name_of(request.args.get("list", "")) or "shopping"
+    with closing(app.connect()) as conn:
         names = list_store.names(conn)
+        order = ["shopping", *(other for other in names if other != "shopping")]
+        if wanted not in order:
+            abort(404)
         shown = []
-        for name in ["shopping", *(other for other in names if other != "shopping")]:
+        for name in order:
             ref = list_store.find(conn, name)
             held = list_store.items(conn, ref) if ref is not None else []
             shown.append(
@@ -494,7 +625,31 @@ def lists_page() -> str:
                     "ticked": [item.text for item in held if item.ticked_at is not None],
                 }
             )
-    return render_template("lists.html", lists=shown)
+        people = member_store.list_all(conn)
+        current = next(one for one in shown if one["name"] == wanted)
+        box = chat.page_box(
+            app,
+            conn,
+            people,
+            scope={"label": current["title"], "text": f"About the {current['title'].lower()}:"},
+        )
+    chips = [
+        {
+            "label": one["title"].removesuffix(" list").capitalize(),
+            "href": url_for("web.lists_page", list=one["name"]),
+            "on": one["name"] == wanted,
+            "n": len(one["to_get"]),
+        }
+        for one in shown
+    ]
+    return render_template(
+        "lists.html",
+        shown=current,
+        lists=shown,
+        chips=chips if len(shown) > 1 else [],
+        summary=views.lists_summary(shown),
+        **box,
+    )
 
 
 def _download(text: str, name: str, mimetype: str) -> Response:
@@ -546,35 +701,129 @@ def memory() -> str:
 
 
 @bp.get("/restaurants")
+@bp.get("/eat")
 def restaurants() -> str:
+    """Where should we eat? (docs/INTERFACE.md section 4): a top pick for the next meal, chosen
+    by code, then every saved restaurant with the one fact that decides."""
     app = _app()
     now = app.clock.now()
     today = app.clock.today()
     stale_days = app.settings.place_stale_days
+    visitor = auth.visitor()
+    kid = not visitor.may("browse")
+    who = request.args.get("who", "").strip()
+    narrow = {key: request.args.get(key, "") == "1" for key in ("open", "close", "new")}
+    tag = request.args.get("tag", "").strip().casefold()
     with closing(app.connect()) as conn:
-        kept = presents.kept_ids(conn, auth.visitor().member)
+        kept = presents.kept_ids(conn, visitor.member)
         found = idea_store.search(
-            conn, kind=RESTAURANT_KIND, limit=LIST_LIMIT, exclude_ids=kept, newest_first=True
+            conn,
+            kind=RESTAURANT_KIND,
+            participant=who if who and who not in ("kids", "us") else None,
+            limit=LIST_LIMIT,
+            exclude_ids=kept,
+            newest_first=True,
         )
         people = member_store.list_all(conn)
         slots = views.slot_map(people)
-        cards = [
-            {
-                **views.restaurant_card(
-                    idea,
-                    place_store.get(conn, idea.place_id) if idea.place_id else None,
-                    today,
-                    now,
-                    stale_days,
-                ),
-                "people": views.people_for(idea, slots),
-            }
-            for idea in found
-        ]
-        total = len([idea for idea in idea_store.list_all(conn) if idea.id not in kept])
+        cards = []
+        for idea in found:
+            card = views.restaurant_card(
+                idea,
+                place_store.get(conn, idea.place_id) if idea.place_id else None,
+                today,
+                now,
+                stale_days,
+            )
+            card["people"] = views.people_for(idea, slots)
+            card["who"] = views.names_text(card["people"])
+            card["line"] = views.eat_line(card, idea, kid=kid)
+            card["score"] = views.eat_score(card, idea)
+            card["idea"] = idea
+            cards.append(card)
+        tags = sorted({one.casefold() for idea in found for one in idea.tags})
+        box = chat.page_box(
+            app, conn, people, scope={"label": "Eat out", "text": "About eating out:"}
+        )
+    cards = _eat_narrowed(cards, people, narrow, who, tag)
+    cards.sort(key=lambda card: card["score"])
     for card in cards:
-        card["who"] = views.names_text(card["people"])
-    return render_template("restaurants.html", cards=cards, total=total)
+        card.pop("idea")
+    plain = not any(narrow.values()) and not who and not tag
+    top = views.meal_words(now.astimezone(app.settings.tzinfo)) if cards and plain else None
+    return render_template(
+        "eat.html",
+        cards=cards,
+        top=top,
+        summary=views.eat_summary(cards[0] if cards else None, top),
+        chips=_eat_chips(people, narrow, who, tags, tag, kid),
+        **box,
+    )
+
+
+def _eat_narrowed(
+    cards: list[dict[str, Any]],
+    people: list[member_store.Member],
+    narrow: dict[str, bool],
+    who: str,
+    tag: str,
+) -> list[dict[str, Any]]:
+    kept = cards
+    if narrow["open"]:
+        kept = [card for card in kept if card["today"] and card["today"].startswith("open")]
+    if narrow["close"]:
+        kept = [card for card in kept if views._travel_minutes(card["travel"]) <= CLOSE_MINUTES]
+    if narrow["new"]:
+        kept = [card for card in kept if not card["idea"].times_done]
+    if who == "kids":
+        kept = [card for card in kept if views.with_the_kids(card["idea"], people)]
+    elif who == "us":
+        kept = [card for card in kept if views.just_us(card["idea"], people)]
+    if tag:
+        kept = [card for card in kept if tag in {one.casefold() for one in card["tags"]}]
+    return kept
+
+
+def _eat_chips(
+    people: list[member_store.Member],
+    narrow: dict[str, bool],
+    who: str,
+    tags: list[str],
+    tag: str,
+    kid: bool,
+) -> list[dict[str, Any]]:
+    chips = [
+        {"label": "Open today", "href": url_for("web.restaurants", open="1"), "on": narrow["open"]},
+        {"label": "Close", "href": url_for("web.restaurants", close="1"), "on": narrow["close"]},
+        {"label": "New to us", "href": url_for("web.restaurants", new="1"), "on": narrow["new"]},
+    ]
+    if not kid:
+        chips.append(
+            {"label": "Just us", "href": url_for("web.restaurants", who="us"), "on": who == "us"}
+        )
+        chips.append(
+            {
+                "label": "With the kids",
+                "href": url_for("web.restaurants", who="kids"),
+                "on": who == "kids",
+            }
+        )
+    chips += [
+        {"label": one.capitalize(), "href": url_for("web.restaurants", tag=one), "on": tag == one}
+        for one in tags[:8]
+    ]
+    if not kid:
+        chips += [
+            {
+                "label": person.display_name,
+                "href": url_for("web.restaurants", who=person.display_name),
+                "on": who.casefold() == person.display_name.casefold(),
+            }
+            for person in people
+        ]
+    if any(chip["on"] for chip in chips):
+        chips.insert(0, {"label": "Everything", "href": url_for("web.restaurants"), "on": False})
+    return chips
 
 
 def _month(asked: str | None, today: date) -> date:
@@ -636,10 +885,16 @@ def plans() -> str:
 
 
 @bp.get("/happening")
+@bp.get("/soon")
 def happening_page() -> str:
-    """What is on near home in the weeks ahead, as the family's sources list it, by day."""
+    """Happening soon (docs/INTERFACE.md section 4): what is on near home in the weeks ahead, as
+    the family's sources list it, and the family's own things with a closing date, by day."""
     app = _app()
     today = app.clock.today()
+    visitor = auth.visitor()
+    weekend_only = request.args.get("when") == "weekend"
+    free_only = request.args.get("free") == "1"
+    source = request.args.get("source", "").strip()
     with closing(app.connect()) as conn:
         found = find_store.upcoming(
             conn,
@@ -648,13 +903,60 @@ def happening_page() -> str:
             limit=HAPPENING_MOST,
         )
         troubled = [one for one in find_store.sources(conn) if not one.ok]
+        kept = presents.kept_ids(conn, visitor.member)
+        ending = [
+            idea
+            for idea in idea_store.ending_between(
+                conn,
+                today.isoformat(),
+                (today + timedelta(days=happening.HORIZON_DAYS)).isoformat(),
+            )
+            if idea.id not in kept
+        ]
+        people = member_store.list_all(conn)
+        box = chat.page_box(
+            app,
+            conn,
+            people,
+            scope={"label": "Happening soon", "text": "About what is on near home:"},
+        )
+    sources = sorted({views.find_row(one, today)["who"] for one in found})
+    if source:
+        found = [one for one in found if views.find_row(one, today)["who"] == source]
+    days = views.happening_days(found, today, own=ending, kid=not visitor.may("browse"))
+    if weekend_only:
+        saturday, sunday = weekend_window(today)
+        days = [day for day in days if saturday.isoformat() <= day["iso"] <= sunday.isoformat()]
+    if free_only:
+        days = [{**day, "rows": [row for row in day["rows"] if row["free"]]} for day in days]
+        days = [day for day in days if day["rows"]]
+    chips = [
+        {
+            "label": "This weekend",
+            "href": url_for("web.happening_page", when="weekend"),
+            "on": weekend_only,
+        },
+        {"label": "Free", "href": url_for("web.happening_page", free="1"), "on": free_only},
+    ]
+    if visitor.may("browse"):
+        chips += [
+            {"label": one, "href": url_for("web.happening_page", source=one), "on": source == one}
+            for one in sources[:8]
+        ]
+    if any(chip["on"] for chip in chips):
+        chips.insert(0, {"label": "Everything", "href": url_for("web.happening_page"), "on": False})
     return render_template(
-        "happening.html",
+        "soon.html",
         name=happening.NAME,
-        days=views.happening_days(found, today),
+        days=days,
+        chips=chips,
+        summary=views.soon_summary(days, today),
         ahead=happening.HORIZON_DAYS,
         reading=happening_available(app.settings),
-        trouble=[views.find_source_row(one, app.settings.tzinfo) for one in troubled],
+        trouble=[views.find_source_row(one, app.settings.tzinfo) for one in troubled]
+        if visitor.may("browse")
+        else [],
+        **box,
     )
 
 
@@ -916,12 +1218,15 @@ def wish_glance(conn: Any, today: date) -> dict[str, Any] | None:
 
 
 @bp.get("/wishes")
+@bp.get("/kids")
 def wishes() -> str:
-    """A kid's own wish lists; for a parent, every kid's, or one kid's with ?who=."""
+    """The kids (docs/INTERFACE.md section 4): for a parent each kid as a section, what waits
+    first; a kid's own wish lists, in her order."""
     app = _app()
     today = app.clock.today()
     visitor = auth.visitor()
     wanted = request.args.get("who", "")
+    waiting_only = request.args.get("waiting") == "1"
     with closing(app.connect()) as conn:
         if visitor.may("decide"):
             kids = _kids(conn)
@@ -936,18 +1241,56 @@ def wishes() -> str:
         else:
             abort(404)
         people = member_store.list_all(conn)
-        family = [member.display_name for member in people]
+        everyone = _kids(conn) if visitor.may("decide") else []
+        pronouns = {
+            person.id: {"female": "her", "male": "his"}.get(person.gender or "", "their")
+            for person in people
+        }
+        talk = chat.page_box(
+            app,
+            conn,
+            people,
+            prompt=chat.KID_LIST_PROMPT if not visitor.may("decide") else chat.DEST_PROMPT,
+            scope=(
+                {"label": "The kids", "text": "About the kids:"}
+                if visitor.may("decide")
+                else {"label": "My list", "text": "About my list:"}
+            ),
+        )
     names = {member.id: member.display_name for member in people}
     parents = [m.display_name for m in people if m.active and roles.may(m.role, "decide")]
-    talk = (
-        {}
-        if visitor.may("decide") or not visitor.may("chat")
-        else chat.box(family, prompt=chat.KID_LIST_PROMPT)
-    )
+    for kid in shown:
+        kid["pronoun"] = pronouns.get(kid["id"], "their")
+        kid["turned"] = (
+            [row for row in kid["turned"] if row["to_decide"]]
+            if visitor.may("decide")
+            else kid["turned"]
+        )
+    waiting = sum(len(kid["turned"]) for kid in shown) if visitor.may("decide") else 0
+    if waiting_only:
+        shown = [kid for kid in shown if kid["turned"]]
+    chips = []
+    if visitor.may("decide") and len(everyone) > 1:
+        chips = [
+            {
+                "label": kid.display_name,
+                "href": url_for("web.wishes", who=kid.id),
+                "on": str(kid.id) == wanted,
+            }
+            for kid in everyone
+        ]
+        chips.append(
+            {
+                "label": "Waiting on you",
+                "href": url_for("web.wishes", waiting="1"),
+                "on": waiting_only,
+            }
+        )
+        if wanted or waiting_only:
+            chips.insert(0, {"label": "Everyone", "href": url_for("web.wishes"), "on": False})
     return render_template(
-        "wishes.html",
-        talk=bool(talk),
-        ask_label=chat.KID_LIST_LABEL.format(name=personas.active(app.settings).name),
+        "kids.html",
+        talk=not talk.get("no_box"),
         **talk,
         kids=shown,
         names=names,
@@ -955,4 +1298,8 @@ def wishes() -> str:
         parent=visitor.may("decide"),
         one=bool(wanted) or not visitor.may("decide"),
         choices=[(value or "everyday", name) for value, name, _ in views.WISH_LISTS],
+        chips=chips,
+        summary=views.kids_summary(shown, waiting)
+        if visitor.may("decide")
+        else views.my_list_summary(shown[0]),
     )

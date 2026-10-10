@@ -98,6 +98,8 @@ NEEDS: dict[str, roles.Permission] = {
     "troubleshooting": "manage",
     # How it works and how to run it: not for kids (docs/DESIGN.md section 16).
     "wiki": "browse",
+    # This week and What we did (web/destinations.py): everybody's, a kid's own things in them.
+    "go": "sign_in",
 }
 # A page that needs something other than its blueprint's, asked before the blueprint is.
 NEEDS_HERE: dict[str, roles.Permission] = {

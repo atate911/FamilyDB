@@ -65,6 +65,8 @@ RETRY_REFRESH_SECONDS = REFRESH_STEPS["retrying"][0]
 STOP_LOOKING = len(REFRESH_STEPS["thinking"])
 # Slack on top of every attempt the settings allow, a retry interval apart.
 RETRY_SLACK_MINUTES = 5
+# A page's scope for a message, at most ("About #57 Kenji's Ramen:").
+MAX_SCOPE = 120
 # The most any request may carry, a photo in this box (the server's read limit too).
 MAX_UPLOAD_BYTES = 4_500_000
 # A photo sent from the chat's box: what can be looked at, and how big (pipeline.MAX_PHOTO_BYTES).
@@ -312,6 +314,34 @@ def under_box(app: App, conn: Any, chat_id: str, visitor: auth.Visitor) -> dict[
         }
     log.debug("under the box on %s: %s", here, "receipt" if did else "said")
     return shown
+
+
+# The box on a destination or an item: it narrows or asks about this screen.
+DEST_PROMPT = "Narrow it, or ask {name}…"
+ITEM_PROMPT = "Plan it, ask, or change it…"
+
+
+def page_box(
+    app: App,
+    conn: Any,
+    people: list[member_store.Member],
+    *,
+    prompt: str = DEST_PROMPT,
+    scope: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Everything a page built on the frame gives its box: the box itself, closed while an
+    answer is on its way, what came back under it, and the scope this page gives a message."""
+    visitor = auth.visitor()
+    if not visitor.may("chat"):
+        return {"no_box": True}
+    under = under_box(app, conn, my_chat(), visitor)
+    locked = under.pop("locked", False)
+    return {
+        **box([m.display_name for m in people], locked=locked, prompt=prompt),
+        "typed": asked(),
+        "scope": scope,
+        **under,
+    }
 
 
 def _answered(thread: list[Message]) -> set[int]:
@@ -663,6 +693,10 @@ def send() -> Response | Any:
     sent = text
     if request.form.get("intent") == "save_idea" and text.strip():
         sent = message_store.CAPTURE_PREFIX + text
+    # A page's scope ("About #57 Kenji's Ramen: ") goes ahead of what was typed there.
+    scope = request.form.get("scope", "").strip()[:MAX_SCOPE]
+    if scope and text.strip():
+        sent = f"{scope} {text}"
     if me is None:
         session[WHO_KEY] = who
     session[WHERE_KEY] = request.form.get(WHERE_KEY) == "1"  # the box stays as they left it

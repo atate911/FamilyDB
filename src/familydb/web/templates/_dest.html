@@ -1,0 +1,43 @@
+{# The destinations' shared skeleton (docs/INTERFACE.md section 4): the title is the question it answers, one line of
+   what to know, chips to narrow in the same place, then the answer. Every destination is built from these, so one
+   learned is all learned. #}
+{% from "_ui.html" import icon %}
+
+{# The head: the question, and one line under it. #}
+{% macro dest_head(question, summary=none, back=none) -%}
+  <header class="dest">
+    {% if back %}<a class="back" href="{{ back[1] }}">{{ icon('chevl', size='sm') }}{{ back[0] }}</a>{% endif %}
+    <h1 class="dest__q">{{ question }}</h1>
+    {% if summary %}<p class="dest__sum">{{ summary }}</p>{% endif %}
+  </header>
+{%- endmacro %}
+
+{# Chips to narrow: each a link, the one in force filled. `items` are dicts with label, href, on. #}
+{% macro chip_row(items, label='Narrow it') -%}
+  {% if items %}
+  <nav class="chips" aria-label="{{ label }}">
+    {% for chip in items %}<a class="chip{{ ' chip--on' if chip.on }}" href="{{ chip.href }}"{% if chip.on %} aria-current="true"{% endif %}>{{ chip.label }}{% if chip.n is defined and chip.n %}<span class="chip__n">{{ chip.n }}</span>{% endif %}</a>{% endfor %}
+  </nav>
+  {% endif %}
+{%- endmacro %}
+
+{# One row of an answer: a title (a link where it opens something), one line of what decides, and marks at its edge
+   (the `trail` block). `top` is the featured first row, with a label over it. #}
+{% macro dest_row(title, line=none, href=none, top=none, trail=none, cls='') -%}
+  <div class="r{{ ' r--top' if top }}{{ ' ' ~ cls if cls }}">
+    {% if top %}<span class="r__label">{{ top }}</span>{% endif %}
+    <span class="r__t">{% if href %}<a href="{{ href }}">{{ title }}</a>{% else %}{{ title }}{% endif %}</span>
+    {% if line %}<span class="r__m">{{ line }}</span>{% endif %}
+    {% if trail %}<span class="r__tr">{{ trail }}</span>{% endif %}
+  </div>
+{%- endmacro %}
+
+{# What a destination says when there is nothing yet, and what to do about it. #}
+{% macro dest_empty(words, glyph='sparkle') -%}
+  <p class="empty">{{ icon(glyph) }}<span>{{ words }}</span></p>
+{%- endmacro %}
+
+{# The quiet way to the forms, last on the page. #}
+{% macro by_hand(label, href) -%}
+  <p class="byhand"><a href="{{ href }}">{{ label }}</a></p>
+{%- endmacro %}

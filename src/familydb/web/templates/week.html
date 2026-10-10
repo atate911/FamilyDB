@@ -1,0 +1,81 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, avatar, who, todo, faces with context %}
+{% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty, by_hand %}
+{% block title %}{{ 'This week' if not one else one.label }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-week{% endblock %}
+{# This week (docs/INTERFACE.md section 4): today and the week around it, each day with what is on, the free time as
+   words, the forecast, the reminders due; a plan of hers in pencil on a free weekend stretch; and the plate of what has
+   no day yet or is late, for a grown-up. One day (`one`) is the same, for that day, with how it went after it. #}
+{% macro day_block(day, open=false) %}
+  <section class="wk__day{{ ' wk__day--today' if day.today }}{{ ' wk__day--we' if day.weekend }}{{ ' wk__day--past' if day.past }}" aria-labelledby="d-{{ day.iso }}" id="d-{{ day.iso }}">
+    <div class="wk__head">
+      <h2 class="wk__label" id="d-{{ day.iso }}-h">{% if open %}{{ day.label }}{% else %}<a href="{{ day.href }}">{{ day.label }}</a>{% endif %}</h2>
+      {% if day.forecast %}<span class="wk__wx">{{ day.forecast }}</span>{% endif %}
+    </div>
+    <div class="wk__body">
+      {% for r in day.rows %}
+        <div class="set{{ ' set--off' if r.status == 'cancelled' }}">
+          <span class="set__num num">{{ (r.time | figs) if r.time else 'All day' }}</span>
+          <div class="set__text">
+            <span class="set__t">{% if r.idea_id and r.linked %}<a href="{{ url_for('web.idea', idea_id=r.idea_id) }}">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</span>
+            <span class="set__m">
+              {%- if r.status == 'tentative' %}tentative · {% endif -%}
+              {%- if r.location %}{{ r.location }}{% if r.away %} · {% endif %}{% endif -%}
+              {%- if r.away %}{{ r.away }}{% endif -%}
+            </span>
+          </div>
+          {{ who(r.people, r.who, shell.family) }}
+        </div>
+      {% endfor %}
+      {% if day.pencil %}
+        <a class="pk pk--day" href="{{ day.pencil.href }}"><span class="pk__label">{{ assistant }}’s pick</span><span class="pk__t">{{ day.pencil.title }}</span>{% if day.pencil.why %}<span class="pk__why">{{ day.pencil.why }}</span>{% endif %}</a>
+      {% endif %}
+      {% if day.free and not day.past %}<p class="wk__free">{{ day.free }}</p>{% endif %}
+      {% if day.due %}
+        <ul class="wk__due">
+          {% for t in day.due %}<li>{{ icon('bell', size='sm') }}<a href="{{ url_for('web.edit_task', task_id=t.id) if grownup else url_for('web.tasks') }}">{{ t.title }}</a>{% if t.when and ',' in t.when %} <span class="muted">{{ t.when.split(', ')[1] | figs }}</span>{% endif %}</li>{% endfor %}
+        </ul>
+      {% endif %}
+      {% if day.rate %}
+        {% for r in day.rate %}
+          <div class="q q--small"><div class="q__body"><p class="q__text">How did {{ r.title }} go?</p><div class="q__acts">{{ faces(r, 'did') }}</div></div></div>
+        {% endfor %}
+      {% endif %}
+      {% for m in day.went %}
+        <div class="set set--done">
+          <span class="set__num">{{ icon('smile' if m.face == 'loved' else ('frown' if m.face == 'not-great' else 'meh')) }}</span>
+          <div class="set__text"><span class="set__t">{{ m.title }}</span><span class="set__m">{{ m.face_words }}{% if m.notes %} · {{ m.notes }}{% endif %}</span></div>
+        </div>
+      {% endfor %}
+      {% if not day.rows and not day.due and not day.went and day.past %}<p class="wk__free muted">Nothing on.</p>{% endif %}
+    </div>
+  </section>
+{% endmacro %}
+{% block content %}
+  {% if one %}
+    {{ dest_head(one.label, none, back=('This week', url_for('go.week'))) }}
+    <div class="wk wk--one">{{ day_block(one, open=true) }}</div>
+  {% else %}
+    {{ dest_head('This week', summary) }}
+    {{ chip_row(chips + [{'label': 'Month', 'href': url_for('web.plans_month'), 'on': false}, {'label': 'Past', 'href': url_for('go.did'), 'on': false}]) }}
+
+    {# On your plate stays whatever week is showing: nothing without a day can be lost by scrolling. #}
+    {% if plate %}
+      <section class="sec" aria-labelledby="h-plate">
+        <div class="sec__label"><h2 id="h-plate" class="label">On your plate</h2><a href="{{ url_for('web.tasks') }}">All to-dos</a></div>
+        <ul class="todos todos--compact">
+          {% for r in plate %}{{ todo(r, 'tasks', compact=true, edit=visitor().may('change'), everyone=shell.family) }}{% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    <div class="wk">
+      {% for day in days %}{{ day_block(day) }}{% endfor %}
+    </div>
+    <p class="wk__nav"><a href="{{ earlier }}">{{ icon('chevl', size='sm') }}Earlier</a>{% if this_week %}<a href="{{ this_week }}">This week</a>{% endif %}<a href="{{ later }}">Later{{ icon('chev', size='sm') }}</a></p>
+    {% if grownup %}
+      <p class="sec__note">{{ source_note }}{% if source != 'google' and managing %} <a href="{{ url_for('settings.section', name='connections') }}">Connect Google Calendar</a>{% endif %}</p>
+      {% if visitor().may('change') %}{{ by_hand('Put something on the calendar by hand', url_for('web.plans', _anchor='add')) }}{% endif %}
+    {% endif %}
+  {% endif %}
+{% endblock %}

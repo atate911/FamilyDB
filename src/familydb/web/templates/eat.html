@@ -1,0 +1,26 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, avatar, who with context %}
+{% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty, by_hand %}
+{% block title %}Where should we eat? · {{ site_title }}{% endblock %}
+{% block body_class %}page-eat{% endblock %}
+{# Where should we eat? (docs/INTERFACE.md section 4): a top pick for the next meal, chosen by code, then every saved
+   restaurant, one fact line each. A kid sees the same list without cost bands. #}
+{% block content %}
+  {{ dest_head('Where should we eat?', summary) }}
+  {{ chip_row(chips) }}
+  {% if cards %}
+    <div class="rows">
+      {% for card in cards %}
+        <div class="r{{ ' r--top' if loop.first and top }}{{ ' r--faded' if card.faded }}">
+          {% if loop.first and top %}<span class="r__label">{{ top }}</span>{% endif %}
+          <span class="r__t"><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></span>
+          <span class="r__m">{{ card.line }}</span>
+          <span class="r__tr">{{ who(card.people, card.who, shell.family) }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ dest_empty('No restaurants yet. Tell ' ~ assistant ~ ' one you’ve heard about.', 'utensils') }}
+  {% endif %}
+  {% if grownup and visitor().may('change') %}{{ by_hand('Add a place by hand', url_for('web.new_idea', kind='restaurant')) }}{% endif %}
+{% endblock %}

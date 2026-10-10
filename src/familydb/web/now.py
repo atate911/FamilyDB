@@ -75,7 +75,9 @@ def show() -> Response | str:
         picks = _picks(conn, app, visitor, kept, today)
         setup = status_page.setup_steps(app, conn) if visitor.manages else []
         my_list = _my_list(conn, visitor, today) if kid else None
-        under = chat.under_box(app, conn, chat.my_chat(), visitor) if visitor.may("chat") else {}
+        box = chat.page_box(
+            app, conn, people, prompt=chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT
+        )
         left = chat.messages_left(app, conn, visitor.member)
         readers = chat.readers(people) if kid else ""
     fact = picks["header"] if picks else None
@@ -93,13 +95,7 @@ def show() -> Response | str:
         quiet=QUIET if grown_up else QUIET_KID,
         setup=setup,
         different=DIFFERENT,
-        **chat.box(
-            [m.display_name for m in people],
-            locked=bool(under.pop("locked", False)),
-            prompt=chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT,
-        ),
-        typed=chat.asked(),
-        **under,
+        **box,
     )
 
 

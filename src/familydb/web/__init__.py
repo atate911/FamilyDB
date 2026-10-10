@@ -25,6 +25,7 @@ from familydb.web import (
     activity,
     auth,
     chat,
+    destinations,
     edits,
     family,
     fields,
@@ -230,6 +231,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.register_blueprint(activity.bp)
     web.register_blueprint(troubleshooting.bp)
     web.register_blueprint(chat.bp)
+    web.register_blueprint(destinations.bp)
     web.register_blueprint(edits.bp)
     web.register_blueprint(family.bp)
     web.register_blueprint(look.bp)

@@ -10,7 +10,7 @@ import math
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from functools import lru_cache
 from itertools import islice, pairwise
 from typing import Any
@@ -630,6 +630,239 @@ def day_line(rows: Sequence[dict[str, Any]], href: str) -> list[dict[str, str | 
     return [{"text": text, "href": href}, {"text": ".", "href": None}]
 
 
+def day_label(when: date, today: date) -> str:
+    """A day as the week names it: Today, Tomorrow, Yesterday, else "Saturday 11 October"."""
+    gap = (when - today).days
+    if gap == 0:
+        return "Today"
+    if gap == 1:
+        return "Tomorrow"
+    if gap == -1:
+        return "Yesterday"
+    return f"{when:%A} {when.day} {when:%B}"
+
+
+def _minute_clock(minute: int) -> str:
+    return clock_time(time(minute // 60 % 24, minute % 60))
+
+
+def free_words(spans: Sequence[tuple[int, int]], *, whole: bool = False) -> str:
+    """A day's free time as words: "Free all day", "Free till 4 pm", "Free from 1 pm", "Free 1 pm
+    to 4 pm, then from 6 pm"; nothing when nothing is free."""
+    from familydb.suggest.types import DAY_END, DAY_START
+
+    if whole or (len(spans) == 1 and spans[0] == (DAY_START, DAY_END)):
+        return "Free all day"
+    if not spans:
+        return ""
+    said = []
+    for start, end in spans:
+        if start <= DAY_START:
+            said.append(f"till {_minute_clock(end)}")
+        elif end >= DAY_END:
+            said.append(f"from {_minute_clock(start)}")
+        else:
+            said.append(f"{_minute_clock(start)} to {_minute_clock(end)}")
+    return "Free " + ", then ".join(said)
+
+
+def forecast_words(forecast: Any, settings: Settings) -> str:
+    """A day's forecast in a few words: "Mainly clear, 18°" or "Rain 70%, 12°"."""
+    parts = [forecast.summary] if forecast.summary else []
+    if forecast.rain_chance is not None and forecast.rain_chance >= 30:
+        parts.append(f"rain {forecast.rain_chance}%")
+    if forecast.high is not None:
+        parts.append(f"{forecast.high:.0f}°")
+    return ", ".join(parts)
+
+
+def week_summary(days: Sequence[dict[str, Any]], plate: Sequence[Any], grown_up: bool) -> str:
+    """The one thing to know about the week: the first free weekend stretch, else the next plan,
+    and what is on the plate."""
+    said = []
+    weekend = next((d for d in days if d["weekend"] and d["free"] and not d["past"]), None)
+    if weekend:
+        free = weekend["free"]
+        said.append(f"{weekend['label'].split(' ')[0]}: {free[0].lower()}{free[1:]}")
+    else:
+        nxt = next((r for d in days if not d["past"] for r in d["rows"]), None)
+        if nxt:
+            said.append(f"Next: {nxt['title']}")
+        else:
+            said.append("Nothing on this week")
+    if grown_up and plate:
+        late = sum(1 for row in plate if row["late"])
+        said.append(f"{len(plate)} on your plate" + (f", {late} late" if late else ""))
+    return " · ".join(said) + "."
+
+
+def did_summary(rows: Sequence[dict[str, Any]], rate: Sequence[Any]) -> str:
+    if rate:
+        return _n(len(rate), "outing", "outings") + " to say how it went."
+    if rows:
+        return f"Last: {rows[0]['title']}, {rows[0]['when']}."
+    return "Nothing yet."
+
+
+def eat_line(card: dict[str, Any], idea: Idea, *, kid: bool = False) -> str:
+    """The one fact line under a restaurant: open till when, how far, the cost band, who
+    suggested it, been or not. A kid is told nothing of cost."""
+    parts = []
+    if card["today"]:
+        parts.append(card["today"].capitalize())
+    if card["travel"]:
+        minutes = _travel_minutes(card["travel"])
+        parts.append(f"{minutes} min" if minutes < 999 else card["travel"])
+    if card["cost"] and not kid:
+        parts.append(card["cost"])
+    if idea.times_done:
+        parts.append(
+            f"been {idea.times_done} time{'' if idea.times_done == 1 else 's'}"
+            + (f", {card['rating']}" if card["rating"] else "")
+        )
+    else:
+        parts.append("not been yet")
+    if card["pending"]:
+        parts.append("not looked up yet")
+    return " · ".join(parts)
+
+
+def eat_score(card: dict[str, Any], idea: Idea) -> tuple:
+    """What comes first on Where should we eat: open today, not done lately, loved, near."""
+    opened = bool(card["today"] and card["today"].startswith("open"))
+    rating = idea.avg_rating or 0.0
+    minutes = _travel_minutes(card["travel"])
+    return (not opened, idea.times_done > 0 and rating < 8, -rating, minutes, idea.id)
+
+
+def _travel_minutes(text: str | None) -> int:
+    found = re.search(r"(\d+)", text or "")
+    return int(found.group(1)) if found else 999
+
+
+def do_line(row: dict[str, Any], *, by: str | None = None, closing: str | None = None) -> str:
+    """The one fact line under an idea on What could we do: its kind, where or how far, who
+    said it, and that it is ending soon."""
+    parts = [row["kind_name"]]
+    if row.get("away"):
+        parts.append(row["away"])
+    elif row.get("where"):
+        parts.append(row["where"])
+    elif row.get("pending"):
+        parts.append("not looked up yet")
+    if by:
+        parts.append(f"{by}\u2019s idea")
+    if closing:
+        parts.append(closing)
+    if row.get("hidden"):
+        parts.append(f"hidden from {row['hidden']}")
+    return " · ".join(parts)
+
+
+# Words in an idea's "for" that mean the family, or the kids, or the grown-ups alone.
+EVERYONE_WORDS = frozenset({"everyone", "family", "the family", "whole family", "all", "us all"})
+KIDS_WORDS = frozenset({"kids", "the kids", "children", "the children", "the girls", "the boys"})
+ADULT_WORDS = frozenset({"adults", "the adults", "parents", "the parents", "just us", "date night"})
+
+
+def with_the_kids(idea: Idea, people: Sequence[Member]) -> bool:
+    """Whether an idea is for the kids too: it names nobody (so everyone), the family, the kids,
+    or a kid by name."""
+    if not idea.participants:
+        return True
+    kids = {p.display_name.casefold() for p in people if p.role == "kid"}
+    for one in idea.participants:
+        word = one.casefold().strip()
+        if word in EVERYONE_WORDS or word in KIDS_WORDS or word in kids:
+            return True
+    return False
+
+
+def just_us(idea: Idea, people: Sequence[Member]) -> bool:
+    """Whether an idea is the grown-ups' alone: it names only grown-ups, or says so."""
+    if not idea.participants:
+        return False
+    grown = {p.display_name.casefold() for p in people if p.role != "kid"}
+    return all(
+        one.casefold().strip() in ADULT_WORDS or one.casefold().strip() in grown
+        for one in idea.participants
+    )
+
+
+def closing_words(idea: Idea, today: date) -> str | None:
+    """ "ends Sat 11 Oct" for a thing with a last day coming; "last day today"; None otherwise."""
+    last = idea.last_day
+    if last is None or last < today:
+        return None
+    if last == today:
+        return "last day today"
+    return f"ends {day_short(last)}" if (last - today).days <= 21 else None
+
+
+def _n(count: int, one: str, many: str) -> str:
+    """A count in digits with its noun: "1 idea", "12 ideas"."""
+    return f"{count} {one if count == 1 else many}"
+
+
+def do_summary(count: int, top: str | None, lead: dict[str, Any] | None) -> str:
+    said = _n(count, "idea saved", "ideas saved")
+    if top and lead:
+        said += f" · {lead['title']} {top[0].lower()}{top[1:]}"
+    return said + "."
+
+
+def meal_words(local_now: datetime) -> str:
+    """Which meal is next: the label over the top pick."""
+    if local_now.hour >= 14:
+        return "Tonight"
+    if local_now.hour >= 11:
+        return "Lunch"
+    return "Today"
+
+
+def eat_summary(top: dict[str, Any] | None, meal: str | None) -> str:
+    if top is None:
+        return "Nothing saved yet."
+    if meal:
+        return f"{top['title']} {meal.lower()}: {top['line'].lower()}."
+    return f"{top['title']}: {top['line'].lower()}."
+
+
+def soon_summary(days: Sequence[dict[str, Any]], today: date) -> str:
+    from familydb.dates import weekend_window
+
+    saturday, sunday = weekend_window(today)
+    weekend = sum(
+        len(day["rows"]) for day in days if saturday.isoformat() <= day["iso"] <= sunday.isoformat()
+    )
+    total = sum(len(day["rows"]) for day in days)
+    if not total:
+        return "Nothing found yet."
+    if weekend:
+        return f"{weekend} this weekend, {total} in the next few weeks."
+    return f"{total} in the next few weeks."
+
+
+def lists_summary(lists: Sequence[dict[str, Any]]) -> str:
+    parts = [f"{one['title'].removesuffix(' list')} · {len(one['to_get'])}" for one in lists]
+    return " · ".join(parts) + " to get"
+
+
+def kids_summary(kids: Sequence[dict[str, Any]], waiting: int) -> str:
+    if waiting:
+        return _n(waiting, "request", "requests") + " waiting on you."
+    if not kids:
+        return "No kids on the family list yet."
+    return "Nothing waiting on you."
+
+
+def my_list_summary(kid: dict[str, Any]) -> str:
+    open_count = kid["open"]
+    if not open_count:
+        return "Nothing on it yet."
+    return _n(open_count, "thing", "things") + " on your lists."
+
+
 def made_words(made_at: str, now: datetime, tz: ZoneInfo) -> str:
     """When a set of picks was chosen, briefly: "chosen 4 pm", "chosen yesterday", "chosen Mon"."""
     moment = datetime.fromisoformat(made_at.replace("Z", "+00:00")).astimezone(tz)
@@ -959,6 +1192,7 @@ def entry_row(
         # Made elsewhere: shown, not movable here.
         "from_google": entry.plan_id is None,
         "start_value": entry.start[:16] if not entry.all_day else f"{entry.start[:10]}T09:00",
+        "end_value": entry.end[:16] if entry.end and not entry.all_day else None,
         # Who it is for (each with their colour; Everyone when nobody is named) and how far.
         "people": list(people) if people is not None else [person_of(None, {})],
         "who": names_text(people) if people is not None else EVERYONE,
@@ -1533,15 +1767,49 @@ def find_row(find: Any, today: date) -> dict[str, Any]:
     }
 
 
-def happening_days(found: Sequence[Any], today: date) -> list[dict[str, Any]]:
+def happening_days(
+    found: Sequence[Any],
+    today: date,
+    *,
+    own: Sequence[Idea] = (),
+    kid: bool = False,
+) -> list[dict[str, Any]]:
     """What is on near home, by the day it starts, soonest first; what began before today and is
-    still on goes under today."""
+    still on goes under today. `own` are the family's own ideas with a closing date, listed under
+    the day they start (today once they have). A kid is told nothing of the sources."""
     days: dict[date, list[dict[str, Any]]] = {}
     for find in found:
         day = max(date.fromisoformat(find.starts_at[:10]), today)
-        days.setdefault(day, []).append(find_row(find, today))
+        row = find_row(find, today)
+        row["source_words"] = "listed near home" if kid else f"listed by {row['who']}"
+        row["href"] = None
+        row["free"] = bool(row["price"]) and "free" in row["price"].casefold()
+        days.setdefault(day, []).append(row)
+    for idea in own:
+        first, last = idea.first_day, idea.last_day
+        if first is None and last is None:
+            continue
+        day = max(first or today, today)
+        if last is not None and last < today:
+            continue
+        when = f"until {day_short(last)}" if last and last != day else "all day"
+        days.setdefault(day, []).append(
+            {
+                "when": when,
+                "title": idea.title,
+                "url": None,
+                "href": f"/idea/{idea.id}",
+                "where": idea.location_name,
+                "price": cost_text(idea.cost_level),
+                "summary": None,
+                "who": "you",
+                "source_words": "your idea",
+                "free": idea.cost_level == 0,
+            }
+        )
     return [
         {
+            "iso": day.isoformat(),
             "label": "Today" if day == today else f"{day:%A} {day.day} {day:%B}",
             "today": day == today,
             "rows": sorted(rows, key=lambda row: (row["when"][0].isdigit(), row["when"])),

@@ -52,7 +52,7 @@ def test_what_is_on_is_listed_by_day_with_who_listed_it(page, conn) -> None:
         ),
     )
     text = page.get("/happening").text
-    assert f"<h1>{escape(happening.NAME)}</h1>" in text
+    assert f'<h1 class="dest__q">{escape(happening.NAME)}</h1>' in text
     assert "<script>alert(1)</script>" not in text and "&lt;script&gt;" in text
     assert "javascript:" not in text
     assert 'rel="noopener noreferrer"' in text and "listed by library.example.org" in text
@@ -60,9 +60,9 @@ def test_what_is_on_is_listed_by_day_with_who_listed_it(page, conn) -> None:
     assert "until Thu 1 Oct" in text and "10:30" in text
 
 
-def test_the_tab_is_beside_list_and_month(page) -> None:
+def test_the_page_is_soon_in_the_row_and_beside_list_and_month(page) -> None:
     for path in ("/plans", "/plans/month"):
-        assert 'href="/happening"' in page.get(path).text
+        assert 'href="/soon"' in page.get(path).text
     text = page.get("/happening").text
-    assert 'href="/happening" aria-current="page"' in text
+    assert 'href="/soon" aria-current="page"' in text
     assert "Nothing near home is read yet." in text

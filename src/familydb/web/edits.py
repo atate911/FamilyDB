@@ -395,6 +395,8 @@ def record_outcome(idea_id: int) -> Response:
         return _back("web.home")
     if _text(form, "back") == "plans":  # asked on the month: back to what is still to rate
         return _back("web.plans_month", month=_text(form, "month") or None, _anchor="rate")
+    if _text(form, "back") == "did":  # asked on What we did or a day of the week
+        return _back("go.did")
     return _back("web.idea", idea_id=idea_id)
 
 
@@ -644,7 +646,7 @@ def change_list() -> Response:
     if already := result.get("already"):
         said.append(views.LIST_ALREADY.format(items=", ".join(already)))
     _say(" ".join(said))
-    return _back("web.lists_page")
+    return _back("web.lists_page", list=_text(request.form, "back") or None)
 
 
 @bp.post("/memory/new")

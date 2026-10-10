@@ -1,0 +1,48 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, avatar, who, map_plot with context %}
+{% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty, by_hand %}
+{% block title %}What could we do? · {{ site_title }}{% endblock %}
+{% block body_class %}page-do{% endblock %}
+{# What could we do? (docs/INTERFACE.md section 4): the saved pile, what fits the next free stretch on top, then
+   everything newest first; restaurants have their own door. Untouched things fade after six weeks; rested things are
+   under the Dropped chip, never gone. A kid sees plain rows, nothing paler, no Dropped. #}
+{% block content %}
+  {{ dest_head('What could we do?', summary) }}
+  {{ chip_row(chips) }}
+  {% if grownup %}
+    <form class="finder finder--line" method="get" action="{{ url_for('web.ideas') }}" role="search">
+      {% for key, value in selected.items() if value and key != 'q' %}<input type="hidden" name="{{ key }}" value="{{ value }}" />{% endfor %}
+      <div class="searchbox">{{ icon('search') }}<label class="sr" for="q">Search ideas</label><input id="q" type="search" name="q" value="{{ selected.q }}" placeholder="Search ideas" /></div>
+      <button class="btn btn--quiet btn--sm finder__go" type="submit">Search</button>
+      {% if filtered %}<a class="q__lnk" href="{{ url_for('web.ideas') }}">Clear</a>{% endif %}
+    </form>
+  {% endif %}
+  {% if rows %}
+    <div class="rows">
+      {% for r in rows %}
+        <div class="r{{ ' r--top' if loop.first and top }}{{ ' r--faded' if r.faded and grownup }}">
+          {% if loop.first and top %}<span class="r__label">{{ top }}</span>{% endif %}
+          <span class="r__t"><a href="{{ url_for('web.idea', idea_id=r.id) }}">{{ r.title }}</a></span>
+          <span class="r__m">{{ r.line }}</span>
+          {% if grownup %}<span class="r__tr">{{ who(r.people, r.who, shell.family) }}</span>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    {% if rows | length == limit %}<p class="sec__note">The first {{ limit }}; narrow it to see the rest.</p>{% endif %}
+  {% else %}
+    {% if filtered %}{{ dest_empty('Nothing matches.', 'bulb') }}
+    {% else %}{{ dest_empty('Nothing saved yet. When someone says “we should try…”, it lands here.', 'bulb') }}{% endif %}
+  {% endif %}
+  {% if on_map and grownup %}
+    <details class="mapband__fold mt-4">
+      <summary>{{ icon('compass') }}How far each idea is from home{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <p class="small muted mapband__cap">Estimated drive times. Home is in the middle and north is up.{% if off_map %} {{ off_map }} idea{{ ' has' if off_map == 1 else 's have' }} no drive time yet.{% endif %}</p>
+      <div class="instrument__pane">{{ map_plot(on_map.wide, 'wide') }}{{ map_plot(on_map.narrow, 'narrow') }}</div>
+    </details>
+  {% endif %}
+  {% if grownup %}
+    {% if not looking_up %}<p class="sec__note">{{ icon('compass', size='sm') }} Looking things up is off, so new ideas won’t get hours, prices or drive times.{% if managing %} <a href="{{ url_for('settings.section', name='lookups') }}">Turn it on in Settings</a>{% endif %}</p>{% endif %}
+    {% if visitor().may('change') %}{{ by_hand('Add an idea by hand', url_for('web.new_idea')) }}{% endif %}
+    <p class="sec__note"><a href="{{ url_for('web.export_ideas') }}">{{ icon('arrowdown', size='sm') }}Download the ideas as a spreadsheet</a></p>
+  {% endif %}
+{% endblock %}

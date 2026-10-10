@@ -1,55 +1,61 @@
-{% extends "base.html" %}
-{% from "_ui.html" import icon, page_head %}
+{% extends "frame.html" %}
+{% from "_ui.html" import icon %}
+{% from "_dest.html" import dest_head, chip_row, dest_empty %}
 {% block title %}Lists · {{ site_title }}{% endblock %}
+{% block body_class %}page-lists{% endblock %}
+{# Lists (docs/INTERFACE.md section 4): the list in use, big targets, ticks that need no conversation; the other lists
+   are chips. Every tick and every add is the shopping_list tool (edits.change_list). #}
 {% block content %}
-  {{ page_head('Lists', 'What the family needs to get. Tell ' ~ assistant ~ ' too: “we’re out of milk” goes on the shopping list.') }}
-  {% for one in lists %}
-    {% set n = loop.index %}
-    <section class="card list-card" aria-labelledby="l-{{ n }}">
-      <h2 class="card__head" id="l-{{ n }}">{{ one.title }}</h2>
-      <ul class="list-items">
-        {% for thing in one.to_get %}
-          <li>
-            <form method="post" action="{{ url_for('edits.change_list') }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
-              <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing }}" />
-              <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Got: {{ thing }}</span></button>
-            </form>
-            <span>{{ thing }}</span>
-          </li>
-        {% else %}
-          <li class="muted">Nothing on it.</li>
-        {% endfor %}
-      </ul>
-      <form class="form" method="post" action="{{ url_for('edits.change_list') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
-        <input type="hidden" name="action" value="add" /><input type="hidden" name="name" value="{{ one.name }}" />
-        <div class="field"><label class="field__label" for="add-{{ n }}">Add to it (one a line)</label>
-          <textarea id="add-{{ n }}" name="items" rows="2" maxlength="4000" required data-dictate></textarea></div>
-        <div class="actions"><button class="btn btn--sm" type="submit">{{ icon('plus') }}Add</button></div>
-      </form>
-      {% if one.ticked %}
-        <details class="list-got">
-          <summary>Got ({{ one.ticked | length }})</summary>
-          <ul class="list-items">
-            {% for thing in one.ticked %}
-              <li>
-                <form method="post" action="{{ url_for('edits.change_list') }}">
-                  <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
-                  <input type="hidden" name="action" value="untick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing }}" />
-                  <button class="linkbtn" type="submit">Put back</button>
-                </form>
-                <s>{{ thing }}</s>
-              </li>
-            {% endfor %}
-          </ul>
+  {{ dest_head('Lists', summary) }}
+  {{ chip_row(chips, 'Which list') }}
+  {% set one = shown %}
+  <section class="sec" aria-labelledby="l-{{ one.name }}">
+    <div class="sec__label"><h2 id="l-{{ one.name }}" class="label">{{ one.title }}</h2><small>{{ one.to_get | length }} to get</small></div>
+    <ul class="list-items list-items--big">
+      {% for thing in one.to_get %}
+        <li>
           <form method="post" action="{{ url_for('edits.change_list') }}">
             <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
-            <input type="hidden" name="action" value="clear_ticked" /><input type="hidden" name="name" value="{{ one.name }}" />
-            <button class="btn btn--quiet btn--sm" type="submit">Clear what was got</button>
+            <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing }}" /><input type="hidden" name="back" value="{{ one.name }}" />
+            <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Got: {{ thing }}</span></button>
           </form>
-        </details>
-      {% endif %}
-    </section>
-  {% endfor %}
+          <span>{{ thing }}</span>
+        </li>
+      {% else %}
+        <li class="muted">Nothing on it. Tell {{ assistant }} “we’re out of milk”.</li>
+      {% endfor %}
+    </ul>
+    <details class="fold fold--quiet">
+      <summary>Add by hand{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <form class="form fold__body" method="post" action="{{ url_for('edits.change_list') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="action" value="add" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="back" value="{{ one.name }}" />
+        <div class="field"><label class="field__label" for="add-{{ one.name }}">Add to it (one a line)</label>
+          <textarea id="add-{{ one.name }}" name="items" rows="2" maxlength="4000" required data-dictate></textarea></div>
+        <div class="actions"><button class="btn btn--sm" type="submit">{{ icon('plus') }}Add</button></div>
+      </form>
+    </details>
+    {% if one.ticked %}
+      <details class="list-got">
+        <summary>Got ({{ one.ticked | length }})</summary>
+        <ul class="list-items">
+          {% for thing in one.ticked %}
+            <li>
+              <form method="post" action="{{ url_for('edits.change_list') }}">
+                <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                <input type="hidden" name="action" value="untick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing }}" /><input type="hidden" name="back" value="{{ one.name }}" />
+                <button class="linkbtn" type="submit">Put back</button>
+              </form>
+              <s>{{ thing }}</s>
+            </li>
+          {% endfor %}
+        </ul>
+        <form method="post" action="{{ url_for('edits.change_list') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          <input type="hidden" name="action" value="clear_ticked" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="back" value="{{ one.name }}" />
+          <button class="btn btn--quiet btn--sm" type="submit">Clear what was got</button>
+        </form>
+      </details>
+    {% endif %}
+  </section>
 {% endblock %}

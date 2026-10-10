@@ -298,18 +298,20 @@ def test_original_free_form_idea_is_recoverable(ctx):
     assert describe_idea(ctx, DescribeIdeaInput(id=idea.id))["original_message"] == raw
 
 
-def test_free_form_capture_hands_the_words_to_chat(settings, clock, conn, family, monkeypatch):
+def test_the_box_on_a_destination_hands_the_words_to_chat_with_its_scope(
+    settings, clock, conn, family, monkeypatch
+):
     client = _client(settings, clock)
-    page = client.get("/ideas")
-    assert "Save a thought for later" in page.text
-    form = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', page.text))
+    page = client.get("/do")
+    form = dict(re.findall(r'name="(csrf|once|back|scope)" value="([^"]+)"', page.text))
+    assert form["scope"] == "About things to do:" and form["back"] == "/do"
     raw = "Maybe a McMenamins passport stop with food carts nearby?"
-    form.update(text=raw, who="Sam", intent="save_idea")
+    form.update(text=raw, who="Sam")
     received = []
     chat = client.application.config["FAMILYDB_CHAT"]
     monkeypatch.setattr(chat, "ask", lambda *args, **more: received.append((*args, more)))
     assert client.post("/chat", data=form).status_code == 302
-    assert received == [("Save this idea for later:\n" + raw, "Sam", "web", None, {"photo": None})]
+    assert received == [("About things to do: " + raw, "Sam", "web", None, {"photo": None})]
 
 
 def test_an_idea_number_not_on_the_list_is_reported_not_silently_empty(ctx):
