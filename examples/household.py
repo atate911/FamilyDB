@@ -475,7 +475,6 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
             idea_id=pumpkins.id,
             location="Fernwood Farm",
         )
-        ideas.update(conn, pumpkins.id, {"status": "planned"}, now=ago(days=2))
         plans.insert(
             conn,
             title="Riverside Science Center",
@@ -514,16 +513,20 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
                 recorded_by=by,
                 now=iso(local(date.fromisoformat(day), 20)),
             )
-        for idea_id in (kites.id, sol.id, bramble.id, maze.id):
-            done = outcomes.list_for_idea(conn, idea_id)
+        # Each outing counted on its idea, oldest first, as record_outcome would have.
+        so_far: dict[int, list[int]] = {}
+        for idea_id, _, day, rating, *_ in sorted(went, key=lambda one: one[2]):
+            so_far.setdefault(idea_id, []).append(rating)
             ideas.apply_outcome(
                 conn,
                 idea_id,
-                happened_on=max(one.happened_on for one in done),
-                avg_rating=sum(one.rating or 0 for one in done) / len(done),
-                now=ago(days=6),
+                happened_on=day,
+                avg_rating=sum(so_far[idea_id]) / len(so_far[idea_id]),
+                now=iso(local(date.fromisoformat(day), 20)),
             )
-        ideas.update(conn, kites.id, {"status": "done"}, now=ago(days=6))
+        # The pumpkins came round again this year, and Bramble was not worth going back to.
+        ideas.update(conn, pumpkins.id, {"status": "planned"}, now=ago(days=2))
+        ideas.update(conn, bramble.id, {"status": "idea"}, now=ago(days=27))
 
         # -- reminders and things to do
         def todo(title: str, owner: members.Member | None, due: datetime | None, key: str, **more):
@@ -584,7 +587,7 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
         sketch = wishes.insert(
             conn,
             member_id=maya.id,
-            title="A sketchbook with thick paper",
+            title="Sketchbook with thick paper",
             topic="sketchbook",
             occasion=None,
             rank=2,
