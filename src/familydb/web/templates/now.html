@@ -18,6 +18,14 @@
     </section>
   {% endif %}
 
+  {# The first day: one line from her, saying who she is and what to tell her. #}
+  {% if first_day %}
+    <section class="q q--first" aria-label="{{ assistant }}">
+      {{ vera_screen('lg') }}
+      <div class="q__body"><p class="q__text">{{ first_day }}</p></div>
+    </section>
+  {% endif %}
+
   {# Her questions: the only interruption. Each with where it came from and its buttons. #}
   {% for q in questions %}
     <section class="q" aria-label="A question from {{ assistant }}">
@@ -47,7 +55,7 @@
       </div>
     </section>
   {% else %}
-    {% if not picks and not plate %}<p class="nf__quiet">{{ quiet }}</p>{% endif %}
+    {% if not picks and not plate and not first_day %}<p class="nf__quiet">{{ quiet }}</p>{% endif %}
   {% endfor %}
 
   {# What waits on this person today: a kid's own to-dos, a grown-up's late or due ones. Ticked off here. #}

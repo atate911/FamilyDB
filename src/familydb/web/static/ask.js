@@ -70,6 +70,75 @@
     tidy();
   }
 
+  // Search in the box: while a short name is typed, what the family has by that name opens from
+  // under the box (data-find, the page's /api/find), before anything is sent. A sentence is a
+  // message, so nothing is looked up for one. Code on the server, never a model.
+  var finder = form.getAttribute("data-find");
+  var holder = form.querySelector(".box");
+  if (finder && holder && window.fetch) {
+    var list = document.createElement("ul");
+    list.className = "box-finds";
+    list.id = "box-finds";
+    list.hidden = true;
+    list.setAttribute("aria-label", "Already here");
+    holder.parentNode.insertBefore(list, holder.nextSibling);
+    var waiting = null;
+    var asked = "";
+
+    var show = function (found) {
+      list.textContent = "";
+      found.forEach(function (one) {
+        var item = document.createElement("li");
+        var link = document.createElement("a");
+        link.href = one.href;
+        var title = document.createElement("span");
+        title.className = "box-finds__t";
+        title.textContent = one.label;
+        var kind = document.createElement("span");
+        kind.className = "box-finds__k";
+        kind.textContent = one.kind;
+        link.appendChild(title);
+        link.appendChild(kind);
+        item.appendChild(link);
+        list.appendChild(item);
+      });
+      list.hidden = found.length === 0;
+    };
+
+    var look = function () {
+      var typed = words(box.value);
+      if (typed.length < 2 || typed.length > 40 || typed.split(" ").length > 4) {
+        asked = "";
+        show([]);
+        return;
+      }
+      if (typed === asked) return;
+      asked = typed;
+      window
+        .fetch(finder + "?q=" + encodeURIComponent(typed), {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        })
+        .then(function (answer) {
+          return answer.ok ? answer.json() : { found: [] };
+        })
+        .then(function (data) {
+          if (asked === typed) show(data.found || []);
+        })
+        .catch(function () {
+          show([]);
+        });
+    };
+
+    box.addEventListener("input", function () {
+      window.clearTimeout(waiting);
+      waiting = window.setTimeout(look, 180);
+    });
+    box.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") show([]);
+    });
+  }
+
   var here = form.querySelector('input[name="send_where"]');
   if (here && navigator.geolocation) {
     var lat = form.querySelector('input[name="lat"]');

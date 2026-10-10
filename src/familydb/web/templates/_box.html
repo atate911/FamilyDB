@@ -5,7 +5,7 @@
    typed, locked, placeholder, and `scope`, what this page is about, which the message carries. The hooks ask.js and
    dictate.js look for stay: #ask, #text, #ask-mic, #locate, #where. #}
 {% set b = page_box() %}
-<form class="bar{% if b.scope %} bar--scoped{% endif %}" id="ask" method="post" action="{{ url_for('chat.send') }}"{% if b.look_again %} data-refresh="{{ b.look_again }}"{% endif %}>
+<form class="bar{% if b.scope %} bar--scoped{% endif %}" id="ask" method="post" action="{{ url_for('chat.send') }}" data-find="{{ url_for('web.search_api') }}"{% if b.look_again %} data-refresh="{{ b.look_again }}"{% endif %}>
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="once" value="{{ once_token() }}" />
   <input type="hidden" name="lat" value="" /><input type="hidden" name="lon" value="" />
@@ -57,5 +57,18 @@
 {% elif shell.unread %}
   {# Somebody who uses only the page would not know she had written: her new messages, until the thread is opened. #}
   <p class="rcpt rcpt--new"><a href="{{ url_for('chat.show', _anchor='latest') }}">{{ badge('act', shell.unread, 'new') }}<span>{{ assistant }} wrote {{ 'something' if shell.unread == 1 else shell.unread ~ ' new messages' }}</span></a></p>
+{% endif %}
+{# Vera's column on a big screen (docs/INTERFACE.md section 8): the thread behind her reply, its last lines, drawn only
+   where the box has a column of its own. #}
+{% if b.recent %}
+  <section class="vc" aria-labelledby="vc-h">
+    <h2 class="label" id="vc-h">Earlier with {{ assistant }}</h2>
+    <ol class="vc__lines">
+      {% for line in b.recent %}
+        <li class="vc__line{{ ' vc__line--her' if line.from_bot }}"><span class="vc__by">{{ line.who }} <time>{{ line.clock | figs }}</time></span><span class="vc__text">{{ line.text | truncate(240) }}</span></li>
+      {% endfor %}
+    </ol>
+    <p class="vc__more"><a href="{{ url_for('chat.show', _anchor='latest') }}">The whole conversation</a></p>
+  </section>
 {% endif %}
 <script src="{{ url_for('static', filename='ask.js') }}" defer></script>

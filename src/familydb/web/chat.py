@@ -341,14 +341,44 @@ def page_box(
         g.box = NO_BOX
         return NO_BOX
     under = under_box(app, conn, my_chat(), visitor)
+    recent = _recent(app, conn, people)
+    if under.get("said") or under.get("receipt"):
+        recent = recent[:-2]  # the last exchange is under the box already
     g.box = {
         **box([m.display_name for m in people], locked=under.pop("locked", False), prompt=prompt),
         "typed": asked(),
         "scope": scope,
         "no_box": False,
+        "recent": recent,
         **under,
     }
     return g.box
+
+
+# Vera's column on a big screen shows the thread behind her reply: this many of its last lines.
+COLUMN_LINES = 6
+
+
+def _recent(app: App, conn: Any, people: list[member_store.Member]) -> list[dict[str, Any]]:
+    """The last lines of this visitor's conversation, as the thread draws them, for the column
+    the box keeps on a big screen. Read from the log, no model call."""
+    thread = message_store.last_for_chat(conn, my_chat(), limit=COLUMN_LINES)
+    names = {person.id: person.display_name for person in people}
+    slots = views.slot_map(people)
+    assistant = personas.active(app.settings).name
+    return [
+        views.chat_line(
+            message,
+            names,
+            app.settings.tzinfo,
+            did=[],
+            waiting=False,
+            assistant=assistant,
+            slots=slots,
+        )
+        for message in thread
+        if message.text and message.text.strip()
+    ]
 
 
 def current_box() -> dict[str, Any]:

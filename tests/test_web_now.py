@@ -45,6 +45,8 @@ def _row(page: str) -> str:
 
 
 def test_the_box_is_first_and_posts_to_the_chat_to_come_back_here(settings, clock, conn, family):
+    with db.transaction(conn):
+        ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)  # not the first day
     home = _now(settings, clock).get("/").text
     body = home[home.index("<body") :]
     assert body.index('id="ask"') < body.index('class="ctx"') < body.index('class="row"')
@@ -96,8 +98,12 @@ def test_a_message_sent_from_now_comes_back_to_now_with_her_answer_under_the_box
     assert "what should we do this weekend?" in sheet and "Saturday looks dry. The museum?" in sheet
     assert 'href="/chat#latest"' in sheet  # the thread, one tap away
     assert len(api.requests) == 1  # one message, one call; none for the pages around it
-    # Opened again without the message named, Now is quiet: the reply lives in the thread.
-    assert "Saturday looks dry" not in client.get("/").text
+    # Opened again without the message named, the page is quiet: the reply lives in the thread,
+    # whose last lines only Vera's column on a big screen shows.
+    again = client.get("/").text
+    assert "Saturday looks dry" not in again.split('<section class="vc"')[0]
+    column = re.search(r'<section class="vc".*?</section>', again, re.S).group(0)
+    assert "what should we do this weekend?" in column and "Saturday looks dry" in column
     assert "Saturday looks dry" in client.get("/chat").text
 
 
@@ -142,7 +148,7 @@ def test_while_she_answers_now_says_so_closes_the_box_and_looks_again(
     assert refresh is not None and "n=1" in refresh.group(1) and "asked=" in refresh.group(1)
     # Somebody else opening Now meanwhile finds the box closed and nothing of the message.
     other = create_app(App(settings, clock), api=web.config["FAMILYDB_CHAT"]._api).test_client()
-    assert "take your time" not in other.get("/").text
+    assert "take your time" not in other.get("/").text.split('<section class="vc"')[0]
     release.set()
     assert web.config["FAMILYDB_CHAT"].wait(10)
     assert 'http-equiv="refresh"' not in client.get(sent.headers["Location"].split("#")[0]).text
@@ -256,8 +262,58 @@ def test_a_kids_pitch_is_asked_about_and_later_puts_it_off_on_this_device(
 
 
 def test_with_nothing_waiting_now_says_so(settings, clock, conn, family) -> None:
+    with db.transaction(conn):
+        ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
     home = _now(settings, clock).get("/").text
     assert "Nothing needs you." in home and 'class="q"' not in home
+
+
+def test_the_first_day_is_her_line_and_a_question_in_the_box(settings, clock, conn, family) -> None:
+    home = _now(settings, clock).get("/").text
+    assert "Hi, I&#39;m Vera. Tell me a place your family would happily go back to" in home
+    assert 'placeholder="A place your family would happily go back to…"' in _box(home)
+    assert "Nothing needs you." not in home  # nothing empty-with-chrome
+    with db.transaction(conn):
+        ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
+    assert "Hi, I&#39;m Vera" not in _now(settings, clock).get("/").text
+
+
+# -- search in the box
+
+
+def test_search_in_the_box_finds_by_name_and_never_a_kept_present(app, conn, family) -> None:
+    with db.transaction(conn):
+        zoo = ideas.insert(conn, title="Oregon Zoo", kind="outing", now=NOW_ISO)
+        ideas.insert(conn, title="Zoom call", kind="other", status="dropped", now=NOW_ISO)
+        scarf = ideas.insert(
+            conn, title="Zoo scarf for Sam", kind="gift", participants=["Sam"], now=NOW_ISO
+        )
+        plans.insert(
+            conn,
+            title="Oregon Zoo",
+            start="2026-09-26T10:00",
+            end="2026-09-26T14:00",
+            all_day=False,
+            idea_id=zoo.id,
+        )
+    _task(conn, family, "Zoo tickets")
+    sam = _in_as(app, "Sam", "sam likes long sentences")
+    page = sam.get("/").text
+    assert 'data-find="/api/find"' in _box(page)
+    found = sam.get("/api/find?q=zoo").get_json()["found"]
+    labels = [(one["label"], one["kind"]) for one in found]
+    assert ("Oregon Zoo", "Outing") in labels and ("Oregon Zoo", "Plan, Sat 26 Sep") in labels
+    assert ("Zoo tickets", "Reminder") in labels
+    assert all("scarf" not in label for label, _ in labels)  # Sam's own present stays hidden
+    assert all(label != "Zoom call" for label, _ in labels)  # dropped is not looked for
+    assert {one["href"] for one in found} >= {f"/idea/{zoo.id}", "/plan/1", "/reminder/1"}
+    assert sam.get("/api/find?q=z").get_json()["found"] == []  # too short to look
+    assert scarf.id
+    girl = _in_as(app, "the girls", "a kid can choose one too")
+    theirs = [one["label"] for one in girl.get("/api/find?q=zoo").get_json()["found"]]
+    assert "Zoo tickets" not in theirs and "Zoo scarf for Sam" not in theirs
+    assert "Oregon Zoo" in theirs
+    assert create_app(app).test_client().get("/api/find?q=zoo").status_code == 302  # signed out
 
 
 # -- her picks, made ahead

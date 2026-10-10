@@ -110,6 +110,7 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "web.status": "browse",
     # What is on near home: grown-ups' (Ticketmaster lists shows for adults too), like Plans' tabs.
     "web.happening_page": "browse",
+    "web.find": "browse",
     # The family's data to take away (export.py): a grown-up's; everything is an admin's.
     "web.export_plans": "browse",
     "web.export_ideas": "browse",

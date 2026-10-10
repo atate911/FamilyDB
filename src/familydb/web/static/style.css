@@ -2089,3 +2089,22 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
   .nf--nobox { grid-template-columns: var(--side) minmax(0, 1fr); grid-template-areas: "top top" "rail main" "rail foot"; }
   .nf--nobox .nf__main { padding-right: var(--gutter); }
 }
+
+/* search in the box (ask.js, /api/find): what the family has by the name being typed, each opening its page */
+.box-finds { list-style: none; margin: 0; padding: var(--s1) 0; border: 1px solid var(--line-2); border-radius: var(--r-md); background: var(--card); box-shadow: var(--shadow); }
+.box-finds a { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--target); padding: 0 var(--s4); color: var(--ink); text-decoration: none; }
+.box-finds a:hover, .box-finds a:focus-visible { background: var(--paper-2); }
+.box-finds__t { min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+.box-finds__k { flex: none; font-size: var(--t-meta); color: var(--ink-2); }
+
+/* Vera's column: the last lines of the thread behind her reply, only where the box has a column of its own */
+.vc { display: none; }
+@media (min-width: 1100px) {
+  .nf .vc { display: grid; gap: var(--s2); margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--line); }
+  .vc__lines { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+  .vc__line { display: grid; gap: 2px; padding-left: var(--s3); border-left: 2px solid var(--line-2); }
+  .vc__line--her { border-left-color: var(--primary); }
+  .vc__by { font-size: var(--t-xs); font-weight: 700; color: var(--ink-2); }
+  .vc__text { font-size: var(--t-meta); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .vc__more { font-size: var(--t-meta); }
+}

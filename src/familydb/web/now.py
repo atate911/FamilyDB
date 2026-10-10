@@ -13,7 +13,7 @@ from typing import Any
 
 from flask import Response, abort, current_app, redirect, render_template, request, session, url_for
 
-from familydb import agenda, presents, roles
+from familydb import agenda, personas, presents, roles
 from familydb.app import App
 from familydb.dates import clock_time, utc_iso
 from familydb.store import ideas as idea_store
@@ -42,6 +42,12 @@ QUIET_KID = "Nothing waiting on you."
 DIFFERENT = "What else could we do? Different ones, please."
 # How a question from her names where it came from.
 ASKED_ON = "{who}, {when}"
+# The first day: the box's question, and her one line.
+FIRST_PROMPT = "A place your family would happily go back to…"
+FIRST_DAY = (
+    "Hi, I'm {name}. Tell me a place your family would happily go back to, or something you've "
+    "been meaning to try, and I'll have ideas for you by tomorrow."
+)
 
 
 def _app() -> App:
@@ -75,7 +81,16 @@ def show() -> Response | str:
         picks = _picks(conn, app, visitor, kept, today)
         setup = status_page.setup_steps(app, conn) if visitor.manages else []
         my_list = _my_list(conn, visitor, today) if kid else None
-        chat.page_box(app, conn, people, prompt=chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT)
+        # The first day (docs/INTERFACE.md section 10): nothing saved and nothing on, so the box
+        # asks for a place they would go back to and she says who she is; nothing empty-with-chrome.
+        first_day = (
+            grown_up
+            and not picks
+            and not rows
+            and not idea_store.list_all(conn, include_dropped=True)
+        )
+        prompt = chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT
+        chat.page_box(app, conn, people, prompt=FIRST_PROMPT if first_day else prompt)
         left = chat.messages_left(app, conn, visitor.member)
         readers = chat.readers(people) if kid else ""
     fact = picks["header"] if picks else None
@@ -93,6 +108,7 @@ def show() -> Response | str:
         quiet=QUIET if grown_up else QUIET_KID,
         setup=setup,
         different=DIFFERENT,
+        first_day=FIRST_DAY.format(name=personas.active(app.settings).name) if first_day else None,
     )
 
 
