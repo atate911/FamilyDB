@@ -340,6 +340,8 @@ def ideas() -> str:
     found = _narrowed(found, people, away, narrow)
     names = {m.id: m.display_name for m in people}
     stale = utc_iso(app.clock.now() - timedelta(days=FADE_DAYS))
+    resting = utc_iso(app.clock.now() - timedelta(days=STILL_WANT_DAYS))
+    asking = grown_up and visitor.may("change")
     rows = []
     for idea in found:
         card = _idea_card(idea, settings, away.get(idea.id), slots, hidden.get(idea.id))
@@ -349,6 +351,7 @@ def ideas() -> str:
             closing=views.closing_words(idea, today),
         )
         card["faded"] = idea.status == "idea" and idea.updated_at < stale
+        card["still_want"] = asking and idea.status == "idea" and idea.updated_at < resting
         rows.append(card)
     top = None
     if picked and not (query or kind or status or who or any(narrow.values())):
@@ -371,8 +374,10 @@ def ideas() -> str:
     )
 
 
-# An untouched idea goes paler after this long (docs/INTERFACE.md section 4).
+# An untouched idea goes paler after this long, and after the second asks whether it is still
+# wanted, with Keep and Let go (docs/INTERFACE.md section 4).
 FADE_DAYS = 42
+STILL_WANT_DAYS = 90
 # How near "Close" is, in minutes of driving.
 CLOSE_MINUTES = 20
 KIND_CHIPS = (

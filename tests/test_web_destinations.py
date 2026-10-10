@@ -503,7 +503,7 @@ def test_what_about_shows_both_sets_as_made_and_never_a_kept_present(
     question, summary = _head(page)
     assert question == "What about…" and summary == "Dry Saturday, free from noon"
     assert "For the next few hours" in page and "For the weekend" in page
-    assert 'href="/idea/1"' in page and 'href="/soon/7"' in page and "chosen 1 pm" in page
+    assert 'href="/idea/1"' in page and 'href="/soon/7"' in page and "chosen 1\u00a0pm" in page
     assert "Different ones" in page and 'aria-current="page">Now<' in page
     # Alex, whom the present is for, never sees it among the picks.
     alex = _signed_in(settings, clock, conn, family["alex"])
@@ -590,7 +590,7 @@ def test_an_outing_has_a_page_with_the_times_before_and_what_made_it_good(
 
 
 def test_favorites_and_this_time_last_year(settings, clock, conn, family) -> None:
-    first, latest = _outings(conn)
+    _outings(conn)
     client = _client(settings, clock)
     favorites = client.get("/did?fav=1").text
     rows = re.split(r'<div class="r r--did"', favorites)[1:]
@@ -610,3 +610,24 @@ def test_a_kid_has_her_own_address_and_a_list_has_its_own(settings, clock, conn,
         idea = ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
     place = client.get(f"/place/{idea.id}")  # the map's name for a place's page
     assert place.status_code == 200 and '<h1 class="dest__q">Zoo</h1>' in place.text
+
+
+def test_an_idea_untouched_for_three_months_asks_whether_it_is_still_wanted(
+    settings, clock, conn, family
+) -> None:
+    with db.transaction(conn):
+        old = ideas.insert(conn, title="Pottery class", kind="activity", now="2026-06-01T12:00:00Z")
+        faded = ideas.insert(conn, title="Kite day", kind="outing", now="2026-08-01T12:00:00Z")
+        ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
+    client = _client(settings, clock)
+    page = client.get("/do").text
+    rows = {row.split("</a>")[0].rsplit(">", 1)[-1]: row for row in page.split('<div class="r')[1:]}
+    assert "Still want this?" in rows["Pottery class"] and "r--faded" in rows["Pottery class"]
+    assert "Still want this?" not in rows["Kite day"] and "--faded" in rows["Kite day"]
+    assert "Still want this?" not in rows["Zoo"]
+    form = re.search(r'<form class="r__ask".*?</form>', rows["Pottery class"], re.S).group(0)
+    fields = dict(re.findall(r'name="(csrf|once|back)" value="([^"]+)"', form))
+    let_go = client.post(f"/idea/{old.id}/status", data={**fields, "status": "dropped"})
+    assert let_go.status_code == 302 and let_go.headers["Location"] == "/do"
+    assert ideas.get(conn, old.id).status == "dropped"
+    assert faded.id and "Pottery class" not in client.get("/do").text.split('class="rows"')[-1]

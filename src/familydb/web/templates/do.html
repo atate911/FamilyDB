@@ -25,6 +25,16 @@
           <span class="r__t"><a href="{{ url_for('web.idea', idea_id=r.id) }}">{{ r.title }}</a></span>
           <span class="r__m">{{ r.line }}</span>
           {% if grownup %}<span class="r__tr">{{ who(r.people, r.who, shell.family) }}</span>{% endif %}
+          {% if r.still_want %}
+            {# Three months untouched: keep it (it stops fading) or let it go (under Dropped, never gone). #}
+            <form class="r__ask" method="post" action="{{ url_for('edits.set_status', idea_id=r.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}" />
+              <span>Still want this?</span>
+              <button class="q__lnk" type="submit" name="status" value="idea">Keep<span class="sr"> {{ r.title }}</span></button>
+              <button class="q__lnk" type="submit" name="status" value="dropped">Let go<span class="sr"> of {{ r.title }}</span></button>
+            </form>
+          {% endif %}
         </div>
       {% endfor %}
     </div>

@@ -325,9 +325,7 @@ def about() -> str:
                 sets.append({**shown, "title": views.PICK_WINDOWS[window]})
         first_day = not idea_store.list_all(conn, include_dropped=True)
         people = member_store.list_all(conn)
-        chat.page_box(
-            app, conn, people, scope={"label": "What about", "text": "About your picks:"}
-        )
+        chat.page_box(app, conn, people, scope={"label": "What about", "text": "About your picks:"})
     if not app.settings.picks:
         empty = views.PICKS_OFF
     elif first_day:
