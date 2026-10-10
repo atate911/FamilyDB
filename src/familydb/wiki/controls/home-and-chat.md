@@ -51,6 +51,8 @@ Send a message and the page you sent it from shows, under the box:
 
 Undo takes back the last change while the record is still as that change left it, once, for whoever made it or may change things.
 
+A few questions are answered at once, by FamilyDB itself with no model call, when they are the whole message: "what's on today?", "what's this week?", "what's on my plate?", "what's on the shopping list?", "what now?" and "undo that". They come back as her reply like any other and cost nothing, so a kid's are not counted. The same answers as Telegram's [commands](/wiki/controls/telegram#commands).
+
 ## Search in the box
 
 While you type a short name (one to four words), the box shows what the family already has by that name: places and ideas, plans of the weeks around today, open reminders, the kids, the lists and what is on near home. Tap one to open it; Escape hides them. This is looked up in FamilyDB with no model call, and nothing is sent until you press Send. A kid finds only what is hers or the family's, and nobody finds a present kept from them. It needs the browser's scripts; without them the box still sends.

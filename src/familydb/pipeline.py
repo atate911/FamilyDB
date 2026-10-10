@@ -14,6 +14,7 @@ from typing import Any
 from familydb import (
     audience,
     buttons,
+    commands,
     family,
     memory,
     personas,
@@ -145,6 +146,8 @@ def receive(
     member = members.resolve(conn, msg.channel, msg.channel_user_id)
     if member is None:
         return _stranger(app, conn, msg)
+    if (said := commands.in_words(app, conn, msg)) is not None:
+        return said  # answered at once by code, with nothing to gather it with
     inbound_id = _store_inbound(app, conn, msg, member)
     if inbound_id is None:
         return None
@@ -226,6 +229,8 @@ def _handle(
     member = members.resolve(conn, msg.channel, msg.channel_user_id)
     if member is None:
         return _stranger(app, conn, msg)
+    if (said := commands.in_words(app, conn, msg)) is not None:
+        return said  # a question code answers, as its command is: no model call
 
     inbound_id = _store_inbound(app, conn, msg, member)
     if inbound_id is None:

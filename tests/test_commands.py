@@ -370,3 +370,60 @@ def test_a_kids_lookup_says_it_waits_for_the_evening_and_never_how_it_works(
         assert said == say(app.settings, "lookups_wait", seed=0) and "evening" in said
         assert "settings" not in said and "switched off" not in said
     assert ideas.get(conn, 1).lookup_wanted_at is None
+
+
+# -- the same questions, asked in words
+
+
+def test_a_question_in_plain_words_is_its_command() -> None:
+    for words, name in (
+        ("What's on this week?", "week"),
+        ("what is on today", "today"),
+        ("Whats on the shopping list??", "list"),
+        ("Vera, what\u2019s on my plate?", "tasks"),
+        ("hey vera what now", "now"),
+        ("Undo that.", "undo"),
+    ):
+        assert commands.asked_in_words(words, her_name="Vera") == name, words
+    # Only the whole message, and never a bare answer to her question ("When?" "Today").
+    for words in (
+        "today",
+        "this week",
+        "the list",
+        "what's on this week at the museum?",
+        "what's on today? and book dinner for 7",
+        "/week",
+        "",
+    ):
+        assert commands.asked_in_words(words, her_name="Vera") is None, words
+
+
+def test_a_question_in_words_is_answered_by_code_on_any_channel(settings, conn, family) -> None:
+    from familydb.pipeline import handle_incoming, receive
+
+    app = _app(settings)
+    model = fakes.FakeMessagesAPI()  # nothing to say: any call would fail the test
+    asked = IncomingMessage("telegram", "7", "42", "1001", "What's on this week?")
+    reply = handle_incoming(app, asked, api=model)
+    assert reply is not None and reply.text.startswith("Here's the week ahead:")
+    assert model.requests == []
+    question, answer = conn.execute("SELECT * FROM messages ORDER BY id").fetchall()
+    assert (question["text"], question["status"]) == ("What's on this week?", "processed")
+    assert (answer["direction"], answer["reply_to"]) == ("out", question["id"])
+    assert handle_incoming(app, asked, api=model) is None  # the same update again
+    # Gathered messages (Telegram's pause) are answered at once, with nothing to wait for.
+    gathered = receive(app, IncomingMessage("telegram", "8", "42", "1001", "what now?"))
+    assert gathered is not None and not isinstance(gathered, int)
+
+
+def test_a_kid_asking_in_words_is_not_told_where_it_was_read_from(settings, conn, family) -> None:
+    from familydb.pipeline import handle_incoming
+    from familydb.web.chat import private_chat
+
+    app = _app(settings)  # no calendar: the saved plans, which a grown-up is told
+    kid = family["girls"]
+    mine = IncomingMessage("web", "k1", private_chat(kid.id), kid.display_name, "what's on today?")
+    said = handle_incoming(app, mine, api=fakes.FakeMessagesAPI()).text
+    assert said.startswith("Here's today, Fri 25 Sep:") and "Google Calendar" not in said
+    sams = IncomingMessage("telegram", "s1", "1001", "1001", "what's on today?")
+    assert "Google Calendar isn't connected" in handle_incoming(app, sams).text

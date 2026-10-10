@@ -11,6 +11,11 @@ The heading of each answer is one of her lines (`voice.EVENTS` `cmd_*`), rewrita
 Personality page; the facts under it are worded here. A chat sees only the tasks asked for in it,
 as only it gets their reminders.
 
+The same questions asked in words ("what's on this week?", "what's on the shopping list?") are
+answered the same way, on every channel, before any model is asked (`in_words`, from the pipeline):
+only the whole message, in one of the plain ways people ask it (`WORDS`), so a sentence with more
+in it goes to her as always and a one-word answer to her question ("today") is never taken for one.
+
 /lookup is code calling `look_up_now` as the member, as a button's tap does. /start is her
 introduction, or a stranger's line with a knock so Start shows on the Family and setup pages;
 from an admin's link (family.py `invite`) it links the sender's Telegram first. A wordless
@@ -28,7 +33,17 @@ from contextlib import closing
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from familydb import agenda, audience, buttons, family, presents, roles, task_service, voice
+from familydb import (
+    agenda,
+    audience,
+    buttons,
+    family,
+    personas,
+    presents,
+    roles,
+    task_service,
+    voice,
+)
 from familydb.agenda import Agenda
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
@@ -63,6 +78,85 @@ SOURCE_NOTES = {
 }
 
 
+# The plain ways a command's question is asked, each the whole message once folded (`folded`):
+# questions, never a bare "today" or "this week", which may be an answer to hers.
+WORDS: dict[str, tuple[str, ...]] = {
+    "today": (
+        "what's on today",
+        "what's happening today",
+        "what are we doing today",
+        "what do we have today",
+        "what's the plan today",
+        "what's the plan for today",
+        "anything on today",
+    ),
+    "week": (
+        "what's this week",
+        "what's on this week",
+        "what's happening this week",
+        "what are we doing this week",
+        "what do we have this week",
+        "what's the week",
+        "what's the week look like",
+        "what does the week look like",
+        "what does this week look like",
+        "anything on this week",
+    ),
+    "tasks": (
+        "what's on my plate",
+        "what's on my list",
+        "what are my to-dos",
+        "what are my todos",
+        "what are my tasks",
+        "what are my reminders",
+        "what do i have to do",
+        "what do i need to do",
+        "what's left to do",
+    ),
+    "list": (
+        "what's on the shopping list",
+        "what's on the grocery list",
+        "what's on the list",
+        "what do we need from the store",
+        "what do we need from the shop",
+        "what's the shopping list",
+        "what's on our shopping list",
+    ),
+    "now": (
+        "what now",
+        "what could we do now",
+        "what can we do now",
+        "what should we do now",
+        "what could we do right now",
+        "what can we do right now",
+        "what should we do right now",
+    ),
+    "undo": ("undo", "undo that", "undo it", "take that back"),
+}
+_ASKED = {words: name for name, said in WORDS.items() for words in said}
+_PUNCTUATION = str.maketrans({"\u2019": "'", "\u2018": "'", "?": " ", "!": " ", ".": " "})
+
+
+def folded(text: str, *, her_name: str = "") -> str:
+    """A message as `WORDS` reads it: lower case, one apostrophe, "what is" and "whats" as
+    "what's", no end punctuation, and without her name in front ("Vera, what's on today?")."""
+    words = " ".join(text.casefold().translate(_PUNCTUATION).replace(",", " , ").split())
+    words = words.replace("what is ", "what's ").replace("whats ", "what's ")
+    if words == "whats":
+        words = "what's"
+    name = her_name.casefold()
+    for start in (f"{name} , ", f"{name} ", f"hey {name} , ", f"hey {name} "):
+        if name and words.startswith(start):
+            words = words[len(start) :]
+            break
+    return words.replace(" , ", ", ").strip(" ,")
+
+
+def asked_in_words(text: str, *, her_name: str = "") -> str | None:
+    """The command a whole message asks in plain words, or None."""
+    return _ASKED.get(folded(text, her_name=her_name))
+
+
 def name_of(text: str) -> str | None:
     words = text.split(maxsplit=1)
     if not words or not words[0].startswith("/"):
@@ -74,6 +168,16 @@ def name_of(text: str) -> str | None:
 def answer(app: App, msg: IncomingMessage) -> OutgoingMessage | None:
     with closing(app.connect()) as conn:
         return _answer(app, conn, msg)
+
+
+def in_words(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> OutgoingMessage | None:
+    """A message that asks one of the commands' questions in plain words, answered as the
+    command is (no model call), or None for everything else: a voice note or a photo, which is
+    heard or looked at first, included."""
+    if msg.voice is not None or msg.photos:
+        return None
+    name = asked_in_words(msg.text, her_name=personas.active(app.settings).name)
+    return _answer(app, conn, msg, name) if name is not None else None
 
 
 def start(app: App, msg: IncomingMessage) -> OutgoingMessage:
@@ -177,8 +281,10 @@ def _stranger(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> Outgo
     return OutgoingMessage(msg.chat_id, stranger, "unknown_sender")
 
 
-def _answer(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> OutgoingMessage | None:
-    name = name_of(msg.text)
+def _answer(
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, name: str | None = None
+) -> OutgoingMessage | None:
+    name = name or name_of(msg.text)
     if name is None:
         return None
     if msg.channel_update_id and messages.exists_update(conn, msg.channel, msg.channel_update_id):
@@ -233,7 +339,7 @@ def _today(
     timed += _tasks_today(conn, msg, member, today, app)
     lines = [text for _, text in sorted(timed)] or ["Nothing on."]
     said = voice.say(app.settings, "cmd_today", seed=seed, day=f"{today:%a %d %b}")
-    return _with_source(_under(said, lines), seen)
+    return _with_source(_under(said, lines), seen, plain=_plain(conn, msg, member))
 
 
 def _week(
@@ -250,7 +356,7 @@ def _week(
         month = f" {day:%b}" if offset == 0 or day.day == 1 else ""
         lines.append(f"{day:%a} {day.day}{month}: {things}")
     said = voice.say(app.settings, "cmd_week", seed=seed)
-    return _with_source(_under(said, lines), seen)
+    return _with_source(_under(said, lines), seen, plain=_plain(conn, msg, member))
 
 
 def _no_presents(
@@ -286,9 +392,15 @@ def _tasks_today(
     return found
 
 
-def _with_source(said: str, seen: Agenda) -> str:
-    note = SOURCE_NOTES.get(seen.source)
+def _with_source(said: str, seen: Agenda, *, plain: bool = False) -> str:
+    """The answer, and where it was read from when that is not the calendar; never where a kid
+    reads, who is not told how it works (docs/DESIGN.md section 16)."""
+    note = None if plain else SOURCE_NOTES.get(seen.source)
     return f"{said}\n{note}" if note else said
+
+
+def _plain(conn: sqlite3.Connection, msg: IncomingMessage, member: Member) -> bool:
+    return audience.plain(conn, msg.channel, msg.chat_id, member)
 
 
 def _tasks(
