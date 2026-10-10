@@ -42,7 +42,7 @@ packages = ["src/familydb"]
 
 [tool.ruff]
 # Agents' working copies of the repo, each linted in its own right.
-extend-exclude = [".claude/worktrees"]
+extend-exclude = [".claude/worktrees", "docs/concept-mockups"]  # and the mockups' builder, design scratch
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
