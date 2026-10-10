@@ -55,9 +55,9 @@ Home answers "anything I should know?" It is short, it has a fixed order, and it
 
 1. **Her line.** One sentence in her voice. "Dry weekend ahead, and Theo's library books are due Wednesday."
 2. **Today.** Set plans and reminders for the day, drawn solid. These always appear. Vera curates nothing here.
-3. **Needs you.** At most three things waiting on a person: a plan to set, a kid's pitch, how Saturday went. Absent when empty.
-4. **One idea.** A single glimpse for the next free stretch, with its reason. Never more than one.
-5. **Just caught.** What she filed from recent mentions, each with keep, fix or drop. Only the ones she was unsure about.
+3. **Needs you.** At most three things waiting on a person: a kid's pitch to shape, a plan to set, how last weekend went (three faces, right on the card). Absent when empty.
+4. **One idea.** A single glimpse for the next free stretch, with its reason and three actions: Yes, Not this one, Change something. Never more than one.
+5. **One quiet line** of what she filed since yesterday, with a way to look. Not a section.
 6. **The end.** "That's all for today." On a quiet day Home is three lines and the end.
 
 In the evening Home turns to tomorrow, and if something happened today it asks once: how was it, with three faces and room for a photo.
@@ -86,7 +86,7 @@ Calendar answers "what are we doing, and when are we free?" It is a lens on the 
 
 **At a glance on a big screen:** the week or month on the left, the selected day on the right.
 
-**Pencil and ink:** set plans are solid and reminders are small marks. A plan taking shape appears in pencil only once the family is considering a time. Vera may pencil one idea into a free weekend stretch, never more. Tapping a free stretch asks her for two or three glimpses that would fit it.
+**Pencil and ink:** set plans are solid and reminders are small marks. A plan taking shape appears in pencil only once the family is considering a time. Vera may pencil one idea into a free stretch, never more than one per stretch. Tapping a free stretch asks her for two or three glimpses that would fit it.
 
 **One tap deeper:** a day page. For a plan taking shape it leads with the open questions. For a set plan it leads with when to leave, who is coming and what to bring. After the day it holds the memory: a photo, a line, the faces, and "Again?", which puts the place back among the ideas.
 
@@ -205,7 +205,11 @@ These are set by the family, not by the design.
 
 Nothing on this page asks a model when it is viewed. Glimpses come from the call that makes the suggestion. Fading, the map, free time, the week strip and the fixed order of Home are all code. The new calls are the ones the family would expect to pay for: her weekly note, shaping a plan, and the deeper check when a plan is taking shape.
 
-## 14. What to build first
+## 14. Mockups
+
+Eight static screens drawn from this concept live in `docs/concept-mockups/` (`python3 build.py`, then open the HTML files): Home, a plan taking shape, Calendar, Ideas, Lists, a kid's Home, and Calendar and Home on a big screen. They use the app's own font and icons and made-up family data.
+
+## 15. What to build first
 
 1. **Home in its fixed order, and the bar.** Most of the feel is here.
 2. **One card, three sizes, pencil and ink.** The visual rule everything else uses.
