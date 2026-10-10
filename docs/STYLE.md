@@ -362,7 +362,18 @@ Each page names its focal element, what the main column holds, and what the rail
   the time in the mono), the free time in words, a reminder a small bell line, her pick in pencil;
   the plate above. **Kids**: a kid a section, what waits first. **Soon**: finds by day. **Lists**:
   big ticks. **Did**: a face a row.
-- **A thing's own page** (section 5): a place, a plan, a reminder. The head with the way back, the
+- **What about** (`/about`): her picks as a destination, a section a set (the next few hours, the
+  weekend), its tiles three across where there is room, each set with what drove it and when it was
+  chosen; Different ones under them, a quiet link.
+- **The board** (`/board`, the kitchen tablet): one surface, no cards around the whole. The box
+  spans the top, with a face per person along it while the family shares the screen (a radio
+  each, the tapped one ringed in ink). Under it a grid: the shopping list down the left on a card
+  with an amber edge, today and tomorrow as cards in the middle (the nearer day's name in the
+  display size), what waits on a person down the right as her questions, her picks under the days,
+  and the saved ideas along the bottom as a line of names, the newest bold, the resting ones in the
+  quiet tone. The row stays at the foot, small and centered, never a rail. On a phone it is one
+  column in that order.
+- **A thing's own page** (section 5): a place, a plan, a reminder, a happening, an outing. The head with the way back, the
   facts that exist in two columns (caps key, bold value), where it came from as a quotation, what
   she found marked as hers and dated, what is planned or how it went as set rows, the box about it
   with three quick sentences, then its actions and "Edit by hand" last, folded.
@@ -466,8 +477,8 @@ knows, Status, Settings or Family, and no version in her footer.
 ## Still open
 
 - **The paper looks** (Kitchen Table, Ink and the rest) have been checked on Now only.
-- **Vera's column** on a desk holds the box and the last answer. The thread behind it, and a reply
-  pinned as a shelf (docs/INTERFACE.md section 8), are not drawn yet.
+- **Vera's column** on a desk holds the box, the last answer and the thread's last lines. A reply
+  pinned as a shelf (docs/INTERFACE.md section 8) is not drawn yet.
 - **Everyone.** An owner mark for a plan that is everyone's shows all of them stacked. Showing no
   mark for the usual case is worth trying once a page has many such rows.
 - **A to-do's edit** moved from a link on every row to the row itself opening the to-do's page;

@@ -20,13 +20,13 @@ The chips narrow the list: **Open today**, **Close** (about 20 minutes' drive or
 
 ## Do
 
-The line under the question says what fits the next free stretch, and that idea leads the list. Then everything that is not a restaurant, newest first; an idea nobody has touched for six weeks is drawn faded, for a grown-up, so the pile shows what is going quiet. The chips are the kinds in the pile (Outing, Activity, Day trip, Trip, Show, Event, Seasonal, Stay in), **With the kids**, **Just us**, **Free**, **Close**, each person, and **Dropped**, which is the only way a dropped idea shows. **Search** matches whole words, any of them, in the title, description, tags and the Where box; chips and search apply together. At most 200 show, and the page says when it cuts the list.
+The line under the question says what fits the next free stretch, and that idea leads the list. Then everything that is not a restaurant, newest first; an idea nobody has touched for six weeks is drawn faded, for a grown-up, so the pile shows what is going quiet. At three months its row asks **Still want this?**: **Keep** touches it so it stops fading, and **Let go** drops it under the Dropped chip, never gone. The chips are the kinds in the pile (Outing, Activity, Day trip, Trip, Show, Event, Seasonal, Stay in), **With the kids**, **Just us**, **Free**, **Close**, each person, and **Dropped**, which is the only way a dropped idea shows. **Search** matches whole words, any of them, in the title, description, tags and the Where box; chips and search apply together. At most 200 show, and the page says when it cuts the list.
 
 **The map** sits under the list for grown-ups: home in the middle, north up, rings at 15 minutes, 30 minutes, 1 hour, 2 hours and 3 hours, not evenly spaced, and each idea with a position a dot. Drive times are estimates, not routes ([Places](/wiki/model/ideas-and-places#places)). It needs a home position, appears only when an idea is more than 15 minutes away, and follows the chips. **Add an idea by hand** is at the foot.
 
 ## A place's page
 
-Open a row for the place's own page, in the order a person decides in:
+Open a row for the place's own page (at `/idea/<number>`, or `/place/<number>`), in the order a person decides in:
 
 - The kind, the number (`#57` is how you name it in chat; a kid sees no number), the title, and its state in words (An idea, Planned for Saturday, Done twice, Dropped).
 - The facts that exist, and only those: open today, from home, the cost (not for a kid), booking, who it is for, ages, how long, indoor or out, the weather, when it is on, how it has gone so far.

@@ -14,6 +14,13 @@
   own, in the order a person decides in, with the box about that thing. On a tablet the row stands at the
   left; on a desk the box and her replies keep a column of their own. The design is `docs/CONCEPT.md` and
   `docs/INTERFACE.md`; the picks job can be turned off on AI model.
+- **What about, the board, and a page for everything on the map.** What about shows all her picks for
+  the next few hours and the weekend. The board is Now for a tablet on the kitchen wall, with a face
+  for each person along the box's top. An outing, something listed near home, a kid and a list each
+  have a page of their own; an outing asks what made it good, which she remembers. Typing a short name
+  in the box shows what the family already has by it, before anything is sent. What we did narrows to
+  Favorites and This time last year; an idea untouched for three months asks whether it is still
+  wanted. A new install opens on her one line and a question in the box.
 
 ## v0.4.0 — beta (2026-10-09)
 

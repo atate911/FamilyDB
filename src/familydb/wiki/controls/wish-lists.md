@@ -31,7 +31,7 @@ Only two things reach a parent's phone, each sent to every parent and admin with
 
 ## Add a wish for a kid
 
-1. Open **Kids** and choose a kid.
+1. Open **Kids** and choose a kid (each kid has an address of their own, such as `/kids/maya`).
 2. Type the wish in **Add something for <name>**, choose a list, and choose **Add**.
 
 This makes no model call and costs nothing. It follows the same rules as the kid's own asks, except the lock and the daily count: [Wish-list rules](/wiki/model/wishes#the-rules-code-holds) has them.

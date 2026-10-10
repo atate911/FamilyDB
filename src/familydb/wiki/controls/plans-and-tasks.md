@@ -62,15 +62,19 @@ A reminder's page says when, whose, the window it suits, how it repeats and wher
 
 ## Soon
 
-What is on near home in the weeks ahead, by day, with the family's own things that have a closing date among them and the free time on each day. It is read from the family's sources, the calendars and the listings set on [its settings page](/wiki/controls/settings/happening), with no model call. The chips are **This weekend**, **Free** (only days with free time) and each source. A find opens where its source lists it; **Save it** keeps it as an idea.
+What is on near home in the weeks ahead, by day, with the family's own things that have a closing date among them and the free time on each day. It is read from the family's sources, the calendars and the listings set on [its settings page](/wiki/controls/settings/happening), with no model call. The chips are **This weekend**, **Free** (only days with free time) and each source.
+
+Each find has a page of its own: its day, place and cost, the listing in its own words and a link to it, and who listed it. **Save it** keeps it as an idea with its dates and place (the tool the assistant would call); **Put it on the calendar** adds it as a plan. Once it is over, the page says so.
 
 ## Lists
 
-The shopping list, always, and the family's other lists as chips. Each thing is a big tick; **Got** folds what was ticked, where a thing can be put back; **Add something** adds. Every tick and add is the same tool the assistant runs for "we need milk", and the kids are told what is on a list when they ask. `/list` on Telegram reads it.
+The shopping list, always, and the family's other lists as chips, each at its own address (`/lists/costco`). Each thing is a big tick; **Got** folds what was ticked, where a thing can be put back; **Add something** adds. Every tick and add is the same tool the assistant runs for "we need milk", and the kids are told what is on a list when they ask. `/list` on Telegram reads it.
 
 ## Did
 
-What we did, newest first: each outing with its face (Loved it from 8 out of ten, OK from 5, Not great below), when, who went and the note. What is still to rate comes first, with the faces to say. **Loved** keeps only the loved ones; each person's chip, what they were at.
+What we did, newest first: each outing with its face (Loved it from 8 out of ten, OK from 5, Not great below), when, who went and the note. What is still to rate comes first, with the faces to say. **Loved** keeps only the loved ones; **Favorites** shows one row a place the family loved on average, with how many times; **This time last year** shows the month either side of the day a year ago; each person's chip, what they were at.
+
+Each outing opens a page of its own: when, who went, how it went out of ten and whether they would go again, the words said about it and who recorded it, and the other times at the same place. **What made it good?** offers a few chips (An early start, A friend came, Short, Cheap, Close to home, Outdoors); a tap becomes something the assistant remembers about the family, which you can see and forget on [What Vera knows](/wiki/controls/memory). **Again?** puts the place back among the things to do.
 
 ## Birthdays and the same from chat
 

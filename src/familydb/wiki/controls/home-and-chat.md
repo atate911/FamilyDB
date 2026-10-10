@@ -32,6 +32,12 @@ When nothing waits on you, Now says so ("Nothing needs you.") and gets on with t
 
 The picks under **What about…** are made ahead, never while you look: an hourly job chooses up to four for right now and, from Thursday, up to six for the weekend, from the suggestion engine's own ranking (what fits the free time, who is coming, the weather, what rested long enough). The job runs between 8 am and 10 pm and makes no model call. A plan she suggests shows in pencil on This week too. The job can be switched off on [AI model](/wiki/controls/settings/ai-model); on the server, `familydb picks --now` makes a fresh set.
 
+**What about…** has a page of its own too (its heading on Now, or the menu behind your picture): the set for the next few hours and the weekend's, each with the line that drove it ("Saturday: free from noon") and when it was chosen. A kid sees the set made for her.
+
+### The first day
+
+On a new install, with nothing saved and nothing on, Now is one line from the assistant saying who she is, and the box asks for "a place your family would happily go back to". Once one thing is saved, Now is as above.
+
 The pill in the menu (behind your picture) says how the assistant stands and links to Status. Its words are on [Status](/wiki/controls/status#the-pill-and-the-verdict).
 
 ## What comes back under the box
@@ -45,9 +51,19 @@ Send a message and the page you sent it from shows, under the box:
 
 Undo takes back the last change while the record is still as that change left it, once, for whoever made it or may change things.
 
+## Search in the box
+
+While you type a short name (one to four words), the box shows what the family already has by that name: places and ideas, plans of the weeks around today, open reminders, the kids, the lists and what is on near home. Tap one to open it; Escape hides them. This is looked up in FamilyDB with no model call, and nothing is sent until you press Send. A kid finds only what is hers or the family's, and nobody finds a present kept from them. It needs the browser's scripts; without them the box still sends.
+
 ## The box on a destination
 
 On Eat, Do, Week, Kids, Soon, Lists and Did the box says what it is about ("about: This week") and the message goes to her with that scope in front of it, so "anything cheaper?" on Eat is a question about restaurants. On a thing's own page the box is about that thing, and three quick sentences under it fill the box with the usual asks ("Plan it for this weekend", "Move it to Saturday"); nothing is sent until you press Send.
+
+## On a big screen, and the kitchen tablet
+
+From a tablet's width up, the row of destinations stands down the left. From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and the last lines of your conversation under it, so her answer stays in view while you move between pages.
+
+**The board** (the menu behind your picture, or `/board`) is Now for a tablet on the kitchen wall: a large box; today and tomorrow in the middle, the nearer day largest; what waits on someone and the shopping list in places of their own; her picks, the weekend's from Thursday; and the saved ideas along the bottom, the ones nobody has touched fading. It shows no costs and nothing of the back office. While the family shares one password, the box has a face for each person along its top: tap yours before you send, and it holds for a minute, so the next person who walks up is not taken for you.
 
 ## Chat, top to bottom
 

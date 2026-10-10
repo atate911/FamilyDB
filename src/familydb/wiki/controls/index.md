@@ -5,6 +5,8 @@ Everything the family does day to day is on one of these pages or in Telegram. T
 | Page | What it is for | Who |
 |---|---|---|
 | [Now](/wiki/controls/home-and-chat) | The box to tell Vera something, what is waiting on you, her picks for right now, today and tomorrow | Everyone |
+| [What about](/wiki/controls/home-and-chat#her-picks) | All of her picks, for the next few hours and the weekend, made ahead | Everyone |
+| [The board](/wiki/controls/home-and-chat#on-a-big-screen-and-the-kitchen-tablet) | Now for a tablet on the kitchen wall, with a face for each person on the box | Everyone |
 | [Chat](/wiki/controls/home-and-chat) | The conversation behind the box; every message is paid for | Anyone who may chat |
 | [Eat](/wiki/controls/ideas) | Where should we eat? A pick for the next meal, then every saved restaurant with the one fact that decides | Everyone reads; parents and admins change |
 | [Do](/wiki/controls/ideas) | What could we do? What fits the next free stretch on top, then the whole pile; open one for its hours, drive and booking link | Everyone reads; parents and admins change |
