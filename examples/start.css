@@ -1,0 +1,46 @@
+/* Layout: one column of reading width; a door per person, the phone's first screen beside what
+   it shows from a tablet's width up, above it on a phone. FamilyDB's own type (Saira, JetBrains Mono for the moment)
+   and its Kitchen Table colours, light and dark. */
+@font-face { font-family: "Saira"; src: url("static/fonts/saira.woff2") format("woff2"); font-weight: 100 900; font-stretch: 50% 125%; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("static/fonts/jetbrains-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+:root {
+  --paper: #F6F1E7; --card: #FFFCF6; --ink: #1D2526; --ink-2: #4B5657; --line: #E2D8C4;
+  --link: #1E5C4F; --send: #F2C14E; --on-send: #1D2526; --cursor: #1B9A55;
+  --body: "Saira", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --paper: #0C100F; --card: #161D1B; --ink: #EEE8DA; --ink-2: #CBC5B6; --line: #24302C; --link: #8BD3B4; --send: #E0B04A; --on-send: #0C100F; --cursor: #6DFF9C; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --paper: #0C100F; --card: #161D1B; --ink: #EEE8DA; --ink-2: #CBC5B6; --line: #24302C; --link: #8BD3B4; --send: #E0B04A; --on-send: #0C100F; --cursor: #6DFF9C; color-scheme: dark; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--body); font-stretch: 88%; font-size: 17px; line-height: 1.55; }
+.ex { max-width: 66rem; margin: 0 auto; padding-inline: 16px; padding-block: 40px 56px; display: grid; gap: 44px; }
+.ex a { color: var(--link); text-underline-offset: 3px; }
+.ex a:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; border-radius: 4px; }
+.ex__head { display: grid; gap: 14px; max-width: 44rem; }
+.wm { font-weight: 700; font-stretch: 76%; font-size: 1.35rem; display: inline-flex; align-items: center; gap: 0; }
+.wm__cur { display: inline-block; width: .42em; height: .86em; margin-left: .14em; border-radius: 2px; background: var(--cursor); }
+.ex h1 { margin: 0; font-size: clamp(2rem, 5.2vw, 3.1rem); line-height: 1.05; font-weight: 700; font-stretch: 72%; text-wrap: balance; }
+.ex__lede { margin: 0; font-size: 1.12rem; color: var(--ink-2); max-width: 40rem; }
+.ex__moment { margin: 0; font-family: var(--mono); font-size: .84rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.doors { display: grid; gap: 20px; }
+.door { display: grid; gap: 16px; min-width: 0; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+@media (min-width: 640px) { .door { grid-template-columns: 200px minmax(0, 1fr); align-items: start; gap: 24px; padding: 20px; } }
+.door__pic { display: block; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); aspect-ratio: 39 / 34; }
+@media (min-width: 640px) { .door__pic { aspect-ratio: 39 / 56; } }
+.door__pic img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.door__body { display: grid; align-content: start; gap: 10px; min-width: 0; }
+.door__kicker { margin: 0; font-size: .74rem; font-weight: 700; font-stretch: 125%; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.door h2 { margin: 0; font-size: 1.6rem; line-height: 1.1; font-weight: 700; font-stretch: 76%; }
+.door p { margin: 0; }
+.door__open { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 10px; background: var(--send); color: var(--on-send) !important; font-weight: 700; text-decoration: none; }
+.door__open:hover { filter: brightness(1.04); }
+.door__more { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: .95rem; }
+.try { display: grid; gap: 14px; max-width: 46rem; }
+.try h2 { margin: 0; font-size: .74rem; font-weight: 700; font-stretch: 125%; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.try ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.try li { padding-left: 14px; border-left: 3px solid var(--line); }
+.try b { font-weight: 700; }
+.ex__foot { margin: 0; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: .92rem; max-width: 46rem; }
+.ex__foot code { font-family: var(--mono); font-size: .85em; }
+@media (prefers-reduced-motion: no-preference) { .door__open { transition: filter .15s ease; } }
