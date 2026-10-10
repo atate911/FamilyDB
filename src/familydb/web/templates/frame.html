@@ -11,7 +11,7 @@
   {% elif b.refresh %}<noscript><meta http-equiv="refresh" content="{{ b.refresh }}; url={{ b.here }}" /></noscript>{% endif %}
 {% endblock %}
 {% block frame %}
-  <div class="nf{% if not grownup %} nf--kid{% endif %}">
+  <div class="nf{% if not grownup %} nf--kid{% endif %}{% if page_box().no_box %} nf--nobox{% endif %}">
     <header class="nf__top">
       <a class="nf__brand" href="{{ url_for('web.home') }}" aria-label="{{ site_title }}, now">{{ brand_mark() }}{{ wordmark(site_title) }}</a>
       <div class="nf__right">
@@ -22,7 +22,7 @@
 
     {# The box, with what the last message brought back under it: the page's (chat.page_box), scoped or plain; the
        thread, which has its own, says no. #}
-    {% if not page_box().no_box %}{% include "_box.html" %}{% endif %}
+    {% if not page_box().no_box %}<div class="nf__box">{% include "_box.html" %}</div>{% endif %}
 
     <main class="nf__main" id="main">
       {% set undoing = get_flashed_messages(category_filter=['undo']) %}

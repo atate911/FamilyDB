@@ -212,7 +212,7 @@ def test_a_kid_sees_her_week_plainly(settings, clock, conn, family) -> None:
     assert "Rink" in page and "Dinner out" not in page  # hers and the family's, not the grown-ups'
     assert "On your plate" not in page and "Pay the bill" not in page and "pick" not in page
     assert _chips(page) == ["Month", "Past"]
-    assert "<h1 class=\"dest__q\">My week</h1>" in page  # named as her row names it
+    assert '<h1 class="dest__q">My week</h1>' in page  # named as her row names it
 
 
 # -- What we did

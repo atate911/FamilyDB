@@ -2,8 +2,8 @@
 {% from "_ui.html" import icon, avatar, badge, tag, tile, srow, page_head %}
 {% block title %}Menu · {{ site_title }}{% endblock %}
 {% block content %}
-  {# The phone's menu. Grown-ups: everything the tab bar has no room for. A kid: her other pages and signing out. #}
-  {{ page_head('Menu', lede='Everything that isn’t in the tab bar.' if grownup else 'Your other pages, and signing out.') }}
+  {# The menu behind the avatar. Grown-ups: everything the row of destinations has no room for. A kid: her other pages and signing out. #}
+  {{ page_head('Menu', lede='Everything that isn’t in the row.' if grownup else 'Your other pages, and signing out.') }}
 
   {% if viewer.member %}
     <ul class="slist">
@@ -17,7 +17,7 @@
     {{ srow(url_for('look.show'), 'Look', ('Yours, on every phone and computer you use' if not grownup else 'Yours, on every phone and computer you sign in on') if shell.me.name else 'How the page looks, in this browser', lead=lead) }}
     {% if not grownup %}
       {% set lead %}{{ tile('bulb') }}{% endset %}
-      {{ srow(url_for('web.ideas'), 'Ideas', 'Places to go and things to try', lead=lead) }}
+      {{ srow(url_for('web.ideas'), 'Do', 'Places to go and things to try', lead=lead) }}
     {% endif %}
   </ul>
 
@@ -31,7 +31,7 @@
       {% if wishing == 'decide' %}
         {% set lead %}{{ tile('gift') }}{% endset %}
         {% set trail %}{% if shell.decide %}{{ badge('act', shell.decide, 'to decide') }}{% endif %}{% endset %}
-        {{ srow(url_for('web.wishes'), 'Kids’ lists', 'What each of the kids would like', lead=lead, trail=trail) }}
+        {{ srow(url_for('web.wishes'), 'Kids', 'What each of the kids would like', lead=lead, trail=trail) }}
       {% endif %}
       {% set lead %}{{ tile('memory') }}{% endset %}
       {{ srow(url_for('web.memory'), 'What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', 'What has been learned about the family, and what to forget', lead=lead) }}

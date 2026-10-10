@@ -4,6 +4,7 @@
    1 Fonts  2 Tokens  3 Base  4 Shell (the frame)  5 Components
    6 Pages  7 Phone  8 Forced colours  9 Settings  10 The Look page
    11 Effects (what a look may add beyond colour)  12 Small things that move  17 The family's frame (Now)
+   18 The destinations  19 Items  20 The big screen
    ===================================================================== */
 
 /* ---------- 1. Fonts (self-hosted, Latin) ---------- */
@@ -2112,3 +2113,33 @@ li:target { border-radius: var(--r-md); }
 .chip--say { min-height: 32px; font-size: var(--t-sm); color: var(--ink-2); }
 /* the reminder's page: the facts in words above the form */
 .reminder__words { display: grid; gap: var(--s1); }
+
+/* ---------- 20. The big screen (docs/INTERFACE.md section 8) ---------- */
+/* From a tablet up the row of destinations is a rail on the left, under the wordmark, and the page fills the
+   middle; from a desk up the box and what came back from it are a column of their own on the right, Vera's,
+   kept in view while the page scrolls. The back office keeps its own menu there, so its row goes. Nothing is
+   stretched: the middle keeps the reading width (--center) and the columns grow in the same steps as the menu. */
+@media (min-width: 821px) {
+  body > .row { display: none; }
+  .nf { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "top top" "rail box" "rail main" "rail foot"; padding-bottom: 0; }
+  .nf__top { grid-area: top; padding: var(--s4) var(--gutter) 0 var(--s5); }
+  /* the line between the rail and the page is the page's, so it runs the page's whole height */
+  .nf__box { grid-area: box; border-left: 1px solid var(--line); padding: var(--s4) var(--gutter) 0; }
+  .nf__main { grid-area: main; margin: 0; padding: var(--s5) var(--gutter) var(--s7); border-left: 1px solid var(--line); }
+  .nf__foot { grid-area: foot; text-align: left; padding: 0 var(--gutter) var(--s5); border-left: 1px solid var(--line); }
+  .nf .row { grid-area: rail; position: sticky; top: 0; align-self: start; max-height: 100vh; overflow: auto; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 2px; min-height: 0; padding: var(--s5) var(--s3) var(--s5) var(--s4); background: transparent; border-top: 0; }
+  .nf .row a { min-height: var(--target); padding: 0 var(--s3); border-bottom: 0; border-left: 3px solid transparent; border-radius: 0 var(--r-md) var(--r-md) 0; font-size: var(--t-md); }
+  .nf .row a:hover { background: var(--paper-2); color: var(--ink); }
+  .nf .row a[aria-current="page"] { border-left-color: var(--primary); background: var(--paper-2); }
+  .nf .row .row__n { margin-left: auto; }
+  .nf .bar, .nf .rcpt, .nf .said-sheet { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+  .nf .said-sheet { padding: var(--s4); max-width: none; width: auto; }
+}
+@media (min-width: 1100px) {
+  .nf { grid-template-columns: var(--side) minmax(0, 1fr) minmax(300px, 380px); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "top top top" "rail main box" "rail foot box"; }
+  .nf__box { position: sticky; top: var(--s4); align-self: start; max-height: calc(100vh - var(--s4) * 2); overflow: auto; padding: var(--s4) var(--gutter) var(--s5) var(--s5); border-left: 0; }
+  .nf__main { padding-right: var(--s5); }
+  /* the thread has no box of its own column: the page takes the width */
+  .nf--nobox { grid-template-columns: var(--side) minmax(0, 1fr); grid-template-areas: "top top" "rail main" "rail foot"; }
+  .nf--nobox .nf__main { padding-right: var(--gutter); }
+}
