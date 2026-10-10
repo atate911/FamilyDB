@@ -1,7 +1,8 @@
-"""The destinations that have no page of their own yet (docs/INTERFACE.md section 4): This week
-(`/week`, and a day of it at `/week/<date>`) and What we did (`/did`). Reading only, worded by
-code; the forms they draw post to the edit pages. Eat, Do, Kids, Soon and Lists are the older
-pages redrawn on the frame (web/routes.py)."""
+"""Destinations and items that are new with the frame (docs/INTERFACE.md sections 4 and 5): What
+about (`/about`), This week (`/week`, and a day of it at `/week/<date>`), a plan (`/plan/<id>`),
+What we did (`/did`) and one outing of it (`/did/<id>`). Reading only, worded by code; the forms
+they draw post to the edit pages. Eat, Do, Kids, Soon and Lists are the older pages redrawn on
+the frame (web/routes.py)."""
 
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ from typing import Any
 
 from flask import Blueprint, abort, current_app, render_template, request, url_for
 
-from familydb import agenda, presents, roles
+from familydb import agenda, personas, presents, roles
 from familydb.app import App
 from familydb.availability import calendar_available, weather_available
 from familydb.store import ideas as idea_store
@@ -25,7 +26,7 @@ from familydb.store import tasks as task_store
 from familydb.store.members import Member
 from familydb.suggest.types import DAY_END, DAY_START
 from familydb.tools.weather import forecast_days
-from familydb.web import auth, chat, routes, views
+from familydb.web import auth, chat, now, routes, views
 
 log = logging.getLogger(__name__)
 
@@ -299,6 +300,50 @@ def _went(conn: Any, first: date, last: date, slots: dict[str, int]) -> list[dic
     return rows
 
 
+# -- What about ----------------------------------------------------------------------------------
+
+
+@bp.get("/about")
+def about() -> str:
+    """What about… (docs/INTERFACE.md section 4): her picks as a destination of their own, the
+    set for the next few hours and the weekend's, each with the line that drove it and when it was
+    chosen. Made ahead by the picks job (familydb/picks.py); the page only reads them. A kid sees
+    the set made for her."""
+    app = _app()
+    today = app.clock.today()
+    visitor = auth.visitor()
+    mine = visitor.member.id if chat.is_kid() and visitor.member else None
+    with closing(app.connect()) as conn:
+        kept = presents.kept_ids(conn, visitor.member)
+        sets = []
+        for window in pick_store.WINDOWS:
+            found = pick_store.latest(conn, window=window, member_id=mine)
+            if found is None or found.window_end < today.isoformat():
+                continue
+            shown = now.pick_set(app, found, kept)
+            if shown is not None:
+                sets.append({**shown, "title": views.PICK_WINDOWS[window]})
+        first_day = not idea_store.list_all(conn, include_dropped=True)
+        people = member_store.list_all(conn)
+        chat.page_box(
+            app, conn, people, scope={"label": "What about", "text": "About your picks:"}
+        )
+    if not app.settings.picks:
+        empty = views.PICKS_OFF
+    elif first_day:
+        empty = views.FIRST_PICKS.format(name=personas.active(app.settings).name)
+    else:
+        empty = views.NO_PICKS_YET
+    return render_template(
+        "about.html",
+        sets=sets,
+        summary=next((one["header"] for one in sets if one["header"]), None)
+        or (views.PICKS_SUMMARY if sets else None),
+        empty=empty,
+        different=now.DIFFERENT,
+    )
+
+
 def _memory(outcome: Any, idea: Any, slots: dict[str, int]) -> dict[str, Any]:
     face = None
     if outcome.rating is not None:
@@ -322,7 +367,9 @@ def _memory(outcome: Any, idea: Any, slots: dict[str, int]) -> dict[str, Any]:
         "face_words": FACE_WORDS.get(face or "", ""),
         "again": outcome.would_repeat,
         "notes": outcome.notes,
+        "rating": outcome.rating,
         "status": idea.status if idea else None,
+        "kind": idea.kind if idea else None,
     }
 
 
@@ -412,21 +459,33 @@ def plan(plan_id: int) -> str:
 
 @bp.get("/did")
 def did() -> str:
-    """Recent outings, newest first, with the face each got; what is still to rate first."""
+    """Recent outings, newest first, with the face each got; what is still to rate first. The
+    chips narrow to the loved ones, to this time last year, to the favorites (one row a place
+    loved on average), or to one person's."""
     app = _app()
     today = app.clock.today()
     visitor = auth.visitor()
     grown_up = visitor.may("browse")
     loved_only = request.args.get("loved") == "1"
+    last_year = request.args.get("year") == "1"
+    favorites = request.args.get("fav") == "1"
     who = request.args.get("who", "").strip()
+    a_year_ago = _a_year_before(today)
+    around = (
+        (a_year_ago - timedelta(days=AROUND_DAYS)).isoformat(),
+        (a_year_ago + timedelta(days=AROUND_DAYS)).isoformat(),
+    )
     with closing(app.connect()) as conn:
         people = member_store.list_all(conn)
         slots = views.slot_map(people)
         kept = presents.kept_ids(conn, visitor.member)
-        since = (today - timedelta(days=DID_DAYS)).isoformat()
+        back = FAVORITE_DAYS if favorites else (DID_DAYS if not last_year else 400)
+        since = (today - timedelta(days=back)).isoformat()
         rows = []
         for outcome in outcome_store.recent(conn, since=since):
             if outcome.idea_id in kept:
+                continue
+            if last_year and not around[0] <= outcome.happened_on <= around[1]:
                 continue
             idea = idea_store.get(conn, outcome.idea_id) if outcome.idea_id else None
             row = _memory(outcome, idea, slots)
@@ -441,11 +500,17 @@ def did() -> str:
             if who and not views.names_in(row["people"], _named(people, who)):
                 continue
             rows.append(row)
+        if favorites:
+            rows = _favorites(rows)
         rate = routes._unrated(conn, today, slots, visitor.member) if visitor.may("change") else []
         chat.page_box(
             app, conn, people, scope={"label": "What we did", "text": "About what we did:"}
         )
-    chips = [{"label": "Loved", "href": url_for("go.did", loved="1"), "on": loved_only}]
+    chips = [
+        {"label": "Loved", "href": url_for("go.did", loved="1"), "on": loved_only},
+        {"label": "Favorites", "href": url_for("go.did", fav="1"), "on": favorites},
+        {"label": "This time last year", "href": url_for("go.did", year="1"), "on": last_year},
+    ]
     if grown_up:
         chips += [
             {
@@ -455,14 +520,113 @@ def did() -> str:
             }
             for person in people
         ]
-    if loved_only or who:
+    narrowed = loved_only or favorites or last_year or bool(who)
+    if narrowed:
         chips.insert(0, {"label": "Everything", "href": url_for("go.did"), "on": False})
     return render_template(
         "did.html",
         rows=rows,
-        rate=rate,
+        rate=[] if narrowed else rate,
         chips=chips,
-        summary=views.did_summary(rows, rate),
+        summary=views.did_summary(rows, [] if narrowed else rate),
+        narrowed=narrowed,
+        last_year=last_year,
+        favorites=favorites,
+    )
+
+
+# What "this time last year" takes in, either side of the day a year ago.
+AROUND_DAYS = 31
+# How far back the favorites look, and what makes one: loved on average.
+FAVORITE_DAYS = 730
+
+
+def _a_year_before(day: date) -> date:
+    try:
+        return day.replace(year=day.year - 1)
+    except ValueError:  # the 29th of February
+        return day.replace(year=day.year - 1, day=28)
+
+
+def _favorites(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One row a place the family loved on average, its latest outing, the most loved first."""
+    by_idea: dict[int, list[dict[str, Any]]] = {}
+    for row in rows:
+        if row["idea_id"] is not None and row["rating"] is not None:
+            by_idea.setdefault(row["idea_id"], []).append(row)
+    found = []
+    for outings in by_idea.values():
+        average = sum(row["rating"] for row in outings) / len(outings)
+        if average < LOVED_FROM:
+            continue
+        times = len(outings)
+        found.append(
+            {
+                **outings[0],  # the latest, as `recent` gives them newest first
+                "face": "loved",
+                "face_words": "Loved it" if times == 1 else f"Loved it, {times} times",
+                "average": average,
+            }
+        )
+    found.sort(key=lambda row: (-row["average"], row["title"].casefold()))
+    return found
+
+
+@bp.get("/did/<int(max=9223372036854775807):outcome_id>")
+def outing(outcome_id: int) -> str:
+    """One outing (a memory, docs/INTERFACE.md section 5): what, when, who went, the face it got,
+    what was said about it, the times before; Again? and What made it good? as forms. A kid sees
+    an outing she went on, never one of a present kept from her."""
+    app = _app()
+    today = app.clock.today()
+    visitor = auth.visitor()
+    with closing(app.connect()) as conn:
+        found = outcome_store.get(conn, outcome_id)
+        if found is None:
+            abort(404)
+        idea = idea_store.get(conn, found.idea_id) if found.idea_id else None
+        if presents.is_kept_from(conn, idea, visitor.member):
+            abort(404)
+        people = member_store.list_all(conn)
+        slots = views.slot_map(people)
+        row = _memory(found, idea, slots)
+        if not visitor.may("browse") and not (
+            visitor.member and views.names_in(row["people"], visitor.member)
+        ):
+            abort(404)
+        plan = plan_store.get(conn, found.plan_id) if found.plan_id else None
+        before = (
+            [
+                _memory(other, idea, slots)
+                for other in outcome_store.list_for_idea(conn, idea.id)
+                if other.id != found.id
+            ]
+            if idea
+            else []
+        )
+        names = {person.id: person.display_name for person in people}
+        chat.page_box(
+            app,
+            conn,
+            people,
+            prompt=chat.ITEM_PROMPT,
+            scope={
+                "label": row["title"],
+                "text": f"About {row['title']} on {found.happened_on}:",
+            },
+        )
+    box = chat.current_box()
+    box["starters"] = views.outing_starters(row)
+    return render_template(
+        "did_one.html",
+        m=row,
+        idea=idea,
+        plan=plan,
+        day_words=views.day_text(found.happened_on),
+        before=sorted(before, key=lambda one: one["day"], reverse=True)[:6],
+        by=names.get(found.recorded_by or -1),
+        reasons=views.GOOD_REASONS,
+        today=today,
     )
 
 

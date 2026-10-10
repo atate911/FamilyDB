@@ -1,0 +1,9 @@
+{# "Different ones" under her picks (Now, What about): a call made on purpose, so it is a message to her and costs what a
+   message costs. `different` is what it says. #}
+{% set b = page_box() %}
+<form class="sec__more" method="post" action="{{ url_for('chat.send') }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+  <input type="hidden" name="text" value="{{ different }}" /><input type="hidden" name="back" value="{{ request.path }}" />
+  {% if b.who %}<input type="hidden" name="who" value="{{ b.who }}" />{% endif %}
+  <button class="q__lnk" type="submit"{% if b.locked or not b.who and not visitor().member %} disabled{% endif %}>Different ones</button>
+</form>

@@ -268,7 +268,14 @@ def test_what_we_did_lists_outings_with_their_faces_and_asks_about_the_unrated(
     assert "Sat 12 Sep · Loved it · loved the otters" in rows[0]
     assert "Not great" in rows[1]
     assert 'name="status" value="idea"' in rows[0]  # Again? puts it back among the things to do
-    assert _chips(page) == ["Loved", "Sam", "Alex", "the girls"]
+    assert _chips(page) == [
+        "Loved",
+        "Favorites",
+        "This time last year",
+        "Sam",
+        "Alex",
+        "the girls",
+    ]
     loved = client.get("/did?loved=1").text
     assert "Zoo" in loved and "Ramen" not in loved.split('class="rows"')[-1]
     assert _scope(page) == "About what we did:"
@@ -422,18 +429,19 @@ def test_lists_shows_one_list_at_a_time_with_the_rest_as_chips(
     assert _head(page) == ("Lists", "Shopping · 1 · Camping · 2 to get")
     assert ">milk<" in page and ">tent<" not in page  # one list at a time
     chips = re.search(r'<nav class="chips".*?</nav>', page, re.S).group(0)
-    assert 'href="/lists?list=camping"' in chips and 'class="chip chip--on"' in chips
-    camping_page = client.get("/lists?list=camping").text
+    assert 'href="/lists/camping"' in chips and 'class="chip chip--on"' in chips
+    camping_page = client.get("/lists/camping").text
     assert ">tent<" in camping_page and ">milk<" not in camping_page
     assert _scope(camping_page) == "About the camping list:"
-    assert client.get("/lists?list=nothing").status_code == 404
+    assert ">tent<" in client.get("/lists?list=camping").text  # the older address too
+    assert client.get("/lists/nothing").status_code == 404
     # A tick comes back to the list it was on.
     fields = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', camping_page))
     ticked = client.post(
         "/lists/change",
         data={**fields, "action": "tick", "name": "camping", "items": "tent", "back": "camping"},
     )
-    assert ticked.headers["Location"] == "/lists?list=camping"
+    assert ticked.headers["Location"] == "/lists/camping"
 
 
 def test_the_words_of_the_week_and_the_days() -> None:
@@ -453,3 +461,152 @@ def test_the_words_of_the_week_and_the_days() -> None:
         == "Free till 10\u00a0am, then 12\u00a0pm to 3\u00a0pm"
     )
     assert views.free_words([]) == ""
+
+
+# -- What about, one outing, the item addresses
+
+
+def _set(conn, window, picks, member_id=None, header="Dry Saturday, free from noon"):
+    with db.transaction(conn):
+        return pick_store.insert(
+            conn,
+            member_id=member_id,
+            window=window,
+            window_start="2026-09-20",
+            window_end="2026-09-27",
+            header=header,
+            picks=picks,
+            made_at="2026-09-20T20:00:00Z",
+            stale_at="2026-09-21T20:00:00Z",
+        )
+
+
+def test_what_about_shows_both_sets_as_made_and_never_a_kept_present(
+    settings, clock, conn, family
+) -> None:
+    with db.transaction(conn):
+        zoo = ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
+        scarf = ideas.insert(
+            conn, title="Scarf for Alex", kind="gift", participants=["Alex"], now=NOW_ISO
+        )
+    _set(conn, "now", [{"title": "Zoo", "kind": "Go out", "why": "dry", "idea_id": zoo.id}])
+    _set(
+        conn,
+        "weekend",
+        [
+            {"title": "Scarf for Alex", "kind": "Idea", "idea_id": scarf.id},
+            {"title": "Lantern walk", "kind": "New", "find_id": 7},
+        ],
+        header=None,
+    )
+    page = _client(settings, clock).get("/about").text
+    question, summary = _head(page)
+    assert question == "What about…" and summary == "Dry Saturday, free from noon"
+    assert "For the next few hours" in page and "For the weekend" in page
+    assert 'href="/idea/1"' in page and 'href="/soon/7"' in page and "chosen 1 pm" in page
+    assert "Different ones" in page and 'aria-current="page">Now<' in page
+    # Alex, whom the present is for, never sees it among the picks.
+    alex = _signed_in(settings, clock, conn, family["alex"])
+    assert "Scarf for Alex" not in alex.get("/about").text
+
+
+def test_what_about_with_nothing_saved_says_who_she_is(settings, clock, conn, family) -> None:
+    page = _client(settings, clock).get("/about").text
+    assert "I&#39;m Vera, and I don&#39;t know you yet." in page
+    off = _client(settings.model_copy(update={"picks": False}), clock).get("/about").text
+    assert views.PICKS_OFF in off
+
+
+def _signed_in(settings, clock, conn, member):
+    from familydb import family as rules
+
+    rules.choose_password(conn, member.id, "a long enough password", now=NOW_ISO)
+    client = _client(
+        settings.model_copy(update={"web_password": "installer-made-password-1"}), clock
+    )
+    signed = client.post(
+        "/login", data={"name": member.display_name, "password": "a long enough password"}
+    )
+    assert signed.status_code == 302
+    return client
+
+
+def _outings(conn) -> tuple[int, int]:
+    with db.transaction(conn):
+        zoo = ideas.insert(
+            conn, title="Zoo", kind="outing", participants=["the girls"], now=NOW_ISO
+        )
+        ideas.apply_outcome(conn, zoo.id, happened_on="2026-09-12", avg_rating=9.0, now=NOW_ISO)
+        first = outcomes.insert(
+            conn,
+            idea_id=zoo.id,
+            plan_id=None,
+            happened_on="2025-09-27",
+            rating=8,
+            would_repeat=True,
+            notes="the penguins",
+            recorded_by=None,
+            now=NOW_ISO,
+        )
+        latest = outcomes.insert(
+            conn,
+            idea_id=zoo.id,
+            plan_id=None,
+            happened_on="2026-09-12",
+            rating=10,
+            would_repeat=True,
+            notes="loved the otters",
+            recorded_by=1,
+            now=NOW_ISO,
+        )
+    return first.id, latest.id
+
+
+def test_an_outing_has_a_page_with_the_times_before_and_what_made_it_good(
+    settings, clock, conn, family
+) -> None:
+    first, latest = _outings(conn)
+    client = _client(settings, clock)
+    did = client.get("/did").text
+    assert f'href="/did/{latest}"' in did
+    page = client.get(f"/did/{latest}").text
+    question, summary = _head(page)
+    assert question == "Zoo" and summary == "Saturday 12 September · Loved it"
+    assert "loved the otters" in page and "Sam" in page  # what was said, and who recorded it
+    assert "10/10" in page and "Would go again" in page
+    assert f'href="/did/{first}"' in page and "The other times" in page
+    assert _scope(page) == "About Zoo on 2026-09-12:"
+    assert 'aria-current="page">Did<' in page
+    # What made it good becomes something she remembers.
+    form = re.search(r'<form class="chips chips--form".*?</form>', page, re.S).group(0)
+    fields = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', form))
+    sent = client.post(f"/did/{latest}/good", data={**fields, "reason": "An early start"})
+    assert sent.status_code == 302 and sent.headers["Location"] == f"/did/{latest}"
+    remembered = conn.execute("SELECT fact FROM memories").fetchall()
+    assert [row[0] for row in remembered] == ["What made Zoo good: an early start"]
+    refused = client.post(f"/did/{latest}/good", data={**fields, "reason": "anything"})
+    assert refused.status_code == 302
+    assert client.get("/did/9999").status_code == 404
+
+
+def test_favorites_and_this_time_last_year(settings, clock, conn, family) -> None:
+    first, latest = _outings(conn)
+    client = _client(settings, clock)
+    favorites = client.get("/did?fav=1").text
+    rows = re.split(r'<div class="r r--did"', favorites)[1:]
+    assert len(rows) == 1 and "Loved it, 2 times" in rows[0]  # one row a place
+    year = client.get("/did?year=1").text
+    rows = re.split(r'<div class="r r--did"', year)[1:]
+    assert len(rows) == 1 and "the penguins" in rows[0]
+
+
+def test_a_kid_has_her_own_address_and_a_list_has_its_own(settings, clock, conn, family) -> None:
+    client = _client(settings, clock)
+    kid = client.get("/kids/the-girls").text
+    assert "the girls" in kid and 'aria-current="page">Kids<' in kid
+    assert client.get("/kids/nobody").status_code == 404
+    assert client.get("/kids/sam").status_code == 404  # a grown-up is not a kid
+    with db.transaction(conn):
+        idea = ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
+    place = client.get(f"/place/{idea.id}")  # the map's name for a place's page
+    assert place.status_code == 200 and '<h1 class="dest__q">Zoo</h1>' in place.text

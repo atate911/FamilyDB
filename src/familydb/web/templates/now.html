@@ -1,5 +1,6 @@
 {% extends "frame.html" %}
 {% from "_ui.html" import icon, avatar, vera_screen, faces, who, todo with context %}
+{% from "_dest.html" import pick_tile %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-now{% endblock %}
 {# Now (docs/INTERFACE.md section 3): the box, one line of context, then whatever needs this person, her picks, and
@@ -34,7 +35,7 @@
               <button class="btn btn--sm" type="submit" name="status" value="granted">Yes</button>
               <button class="btn btn--sm btn--quiet" type="submit" name="status" value="declined">Not this time</button>
             </form>
-            <a class="q__lnk" href="{{ url_for('web.wishes', who=q.kid_id) }}">Her list</a>
+            <a class="q__lnk" href="{{ url_for('web.wishes', name=q.kid_slug) }}">Her list</a>
           {% elif q.kind == 'pitch' %}
             <a class="btn btn--sm" href="{{ url_for('web.idea', idea_id=q.idea_id) }}">See it</a>
             <form method="post" action="{{ url_for('web.later') }}">
@@ -85,24 +86,9 @@
   {# Her picks for this moment (familydb/picks.py), made ahead: one of each kind, each with its reason. #}
   {% if picks %}
     <section class="sec" aria-labelledby="h-picks">
-      <div class="sec__label"><h2 id="h-picks" class="label">What about…</h2><small>{{ picks.made }}</small></div>
-      <div class="picks">
-        {% for pick in picks.tiles %}
-          <a class="pk" href="{{ pick.href }}">
-            <span class="pk__label">{{ pick.kind }}{% if pick.when %} · {{ pick.when }}{% endif %}</span>
-            <span class="pk__t">{{ pick.title }}</span>
-            {% if pick.why %}<span class="pk__why">{{ pick.why }}</span>{% endif %}
-          </a>
-        {% endfor %}
-      </div>
-      {# A call made on purpose: it is a message to her, so it costs what a message costs. #}
-      <form class="sec__more" method="post" action="{{ url_for('chat.send') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
-        <input type="hidden" name="text" value="{{ different }}" /><input type="hidden" name="back" value="{{ request.path }}" />
-        {% set b = page_box() %}
-        {% if b.who %}<input type="hidden" name="who" value="{{ b.who }}" />{% endif %}
-        <button class="q__lnk" type="submit"{% if b.locked or not b.who and not visitor().member %} disabled{% endif %}>Different ones</button>
-      </form>
+      <div class="sec__label"><h2 id="h-picks" class="label"><a href="{{ url_for('go.about') }}">What about…</a></h2><small>{{ picks.made }}</small></div>
+      <div class="picks">{% for pick in picks.tiles %}{{ pick_tile(pick) }}{% endfor %}</div>
+      {% include "_different.html" %}
     </section>
   {% endif %}
 

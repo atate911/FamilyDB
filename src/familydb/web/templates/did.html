@@ -18,19 +18,21 @@
       {% for m in rows %}
         <div class="r r--did" id="m-{{ m.id }}">
           <span class="r__face">{{ icon('smile' if m.face == 'loved' else ('frown' if m.face == 'not-great' else 'meh'), label=m.face_words or 'Not rated') }}</span>
-          <span class="r__t">{% if m.idea_id %}<a href="{{ url_for('web.idea', idea_id=m.idea_id) }}">{{ m.title }}</a>{% else %}{{ m.title }}{% endif %}</span>
+          <span class="r__t"><a href="{{ url_for('go.outing', outcome_id=m.id) }}">{{ m.title }}</a></span>
           <span class="r__m">{{ m.when }}{% if m.face_words %} · {{ m.face_words }}{% endif %}{% if m.notes %} · {{ m.notes }}{% endif %}</span>
           <span class="r__tr">{{ who(m.people, m.who, shell.family) }}</span>
           {% if grownup and m.idea_id and visitor().may('change') and m.status == 'done' %}
             <form class="r__act" method="post" action="{{ url_for('edits.set_status', idea_id=m.idea_id) }}">
               <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
-              <input type="hidden" name="status" value="idea" />
+              <input type="hidden" name="status" value="idea" /><input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}" />
               <button class="q__lnk" type="submit">Again?<span class="sr"> {{ m.title }}: back among the things to do</span></button>
             </form>
           {% endif %}
         </div>
       {% endfor %}
     </div>
+  {% elif narrowed %}
+    {{ dest_empty('Nothing here yet.' if not last_year else 'Nothing recorded for this time last year.', 'smile') }}
   {% elif not rate %}
     {{ dest_empty('Nothing recorded yet. After an outing, ' ~ assistant ~ ' asks how it went; the answer lands here.', 'smile') }}
   {% endif %}

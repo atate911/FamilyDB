@@ -22,6 +22,7 @@ from familydb import buttons, presents
 from familydb.app import App
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
+from familydb.store import outcomes as outcome_store
 from familydb.tools import ToolContext
 from familydb.web import auth, views
 from familydb.web.chat import WHO_KEY
@@ -70,6 +71,9 @@ NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
 FORGOTTEN = "Forgotten: {fact}. It will not come back from what was said before."
 NEEDS_FACT = "Say what to remember."
+NOT_A_REASON = "Choose one of the reasons on the page."
+# What a reason chip becomes in her memory: about the family, in their terms.
+MADE_IT_GOOD = "What made {title} good: {reason}"
 TICK_PAGES = {"home": "web.home", "tasks": "web.tasks", "chat": "chat.show", "week": "go.week"}
 NEEDS_TITLE = "An idea needs a title."
 NEEDS_KIND = "An idea needs a kind: restaurant, outing, trip, show…"
@@ -216,6 +220,15 @@ def _back(target: str, **values: Any) -> Response:
     return redirect(url_for(target, **values))
 
 
+def _back_here(target: str, **values: Any) -> Response:
+    """Back to the page the form named in `back` when it is a path on this site (Did, an outing,
+    a happening), else to `target`. Never somewhere else a form could be made to send a person."""
+    back = request.form.get("back", "")
+    if back.startswith("/") and not back.startswith("//") and "\\" not in back:
+        return redirect(back)
+    return _back(target, **values)
+
+
 def _tick_back(task_id: int) -> Response:
     """Where a tick, a snooze or a reopening returns: the page its form named (TICK_PAGES), the
     reminder's own page for `reminder`, else the list."""
@@ -345,7 +358,7 @@ def set_status(idea_id: int) -> Response:
         _say(complaint or "")
     else:
         _say(CHANGED_IDEA.format(id=result["id"], title=result["title"]))
-    return _back("web.idea", idea_id=idea_id)
+    return _back_here("web.idea", idea_id=idea_id)
 
 
 @bp.post("/idea/<int:idea_id>/lookup")
@@ -438,7 +451,7 @@ def add_plan() -> Response:
     else:
         words = SCHEDULED if result.get("event") else PLANNED_HERE
         _say(words.format(title=result["plan"]["title"]))
-    return _back(back[0], **back[1])
+    return _back_here(back[0], **back[1])
 
 
 @bp.post("/plan/<int:plan_id>/move")
@@ -661,7 +674,7 @@ def change_list() -> Response:
     if already := result.get("already"):
         said.append(views.LIST_ALREADY.format(items=", ".join(already)))
     _say(" ".join(said))
-    return _back("web.lists_page", list=_text(request.form, "back") or None)
+    return _back("web.lists_page", name=_text(request.form, "back") or None)
 
 
 @bp.post("/memory/new")
@@ -690,6 +703,39 @@ def add_memory() -> Response:
         complaint = REMEMBERED.get(done["result"], "{fact}").format(fact=done["fact"])
     _say(complaint or "")
     return _back("web.memory")
+
+
+@bp.post("/did/<int(max=9223372036854775807):outcome_id>/good")
+@once
+def made_it_good(outcome_id: int) -> Response:
+    """What made an outing good, one chip on its page: `remember` keeps it about the family, so
+    she leans that way next time (docs/INTERFACE.md section 4, What we did)."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("go.outing", outcome_id=outcome_id)
+    reason = _text(request.form, "reason")
+    if reason not in views.GOOD_REASONS:
+        _say(NOT_A_REASON)
+        return _back("go.outing", outcome_id=outcome_id)
+    with closing(_app().connect()) as conn:
+        outing = outcome_store.get(conn, outcome_id)
+        idea = idea_store.get(conn, outing.idea_id) if outing and outing.idea_id else None
+        kept = idea is not None and presents.is_kept_from(conn, idea, auth.visitor().member)
+    if idea is None or kept:
+        _say(NOT_A_REASON)
+        return _back("go.did")
+    change = {
+        "action": "add",
+        "fact": MADE_IT_GOOD.format(title=idea.title, reason=reason.lower()),
+        "about": "family",
+        "category": "food" if idea.kind == "restaurant" else "activities",
+    }
+    result, complaint = run("remember", {"changes": [change]})
+    if complaint is None and result is not None:
+        done = result["remembered"][0]
+        complaint = REMEMBERED.get(done["result"], "{fact}").format(fact=done["fact"])
+    _say(complaint or "")
+    return _back("go.outing", outcome_id=outcome_id)
 
 
 @bp.post("/memory/<int(max=9223372036854775807):memory_id>/forget")

@@ -172,6 +172,12 @@ def mark_gone(
 _ON = "gone = 0 AND starts_at < ? AND coalesce(ends_at, starts_at) >= ?"  # overlaps the days asked
 
 
+def get(conn: sqlite3.Connection, find_id: int) -> Find | None:
+    """One thing a source listed, gone or not, for its own page."""
+    row = conn.execute("SELECT * FROM finds WHERE id = ?", (find_id,)).fetchone()
+    return Find.from_row(row) if row else None
+
+
 def upcoming(conn: sqlite3.Connection, *, start: date, end: date, limit: int) -> list[Find]:
     """What is on at some point from `start` to `end` (both days included), soonest first."""
     rows = conn.execute(

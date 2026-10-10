@@ -381,7 +381,7 @@ def test_today_and_tomorrow_are_one_line_each(calendar_settings, clock, conn, fa
             r'<p class="today"><b>(\w+)</b><span>(.*?)</span></p>', home, re.S
         )
     ]
-    assert 'href="/plans/month#d-2026-09-21"' in home
+    assert 'href="/week/2026-09-21"' in home
     assert lines[0][0] == "Today" and "Soccer practice 5\u00a0pm" in lines[0][1]
     assert lines[1][0] == "Tomorrow" and "Dentist 9\u00a0am, then Swim 4\u00a0pm" in lines[1][1]
     assert "Brunch" not in home  # yesterday
@@ -479,7 +479,7 @@ def test_a_wish_waiting_on_a_parent_is_asked_and_answered_from_now(app, conn, fa
     question = re.search(r'<section class="q".*?</section>', home, re.S).group(0)
     assert "the girls asked for Roller skates." in question
     assert 'value="granted">Yes</button>' in question and "Not this time" in question
-    assert f'href="/kids?who={family["girls"].id}"' in question
+    assert 'href="/kids/the-girls"' in question
     fields = dict(re.findall(r'name="(csrf|once|kid|back)" value="([^"]*)"', question))
     sent = client.post(f"/wish/{wish.id}/answer", data={**fields, "status": "granted"})
     assert sent.status_code == 302 and sent.headers["Location"] == "/"

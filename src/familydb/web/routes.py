@@ -495,6 +495,7 @@ def _idea_card(
     }
 
 
+@bp.get(f"/place/<int(max={MAX_ID}):idea_id>")
 @bp.get(f"/idea/<int(max={MAX_ID}):idea_id>")
 def idea(idea_id: int) -> str:
     app = _app()
@@ -612,13 +613,14 @@ def edit_idea(idea_id: int) -> str:
     return _idea_form(record)
 
 
+@bp.get("/lists/<name>")
 @bp.get("/lists")
-def lists_page() -> str:
+def lists_page(name: str | None = None) -> str:
     """Lists (docs/INTERFACE.md section 4): the list in use, big ticks that need no conversation;
-    the other lists are chips. Every tick and add is the shopping_list tool (edits.change_list).
-    The shopping list is always there."""
+    the other lists are chips, each at its own address (`/lists/costco`). Every tick and add is
+    the shopping_list tool (edits.change_list). The shopping list is always there."""
     app = _app()
-    wanted = list_store.name_of(request.args.get("list", "")) or "shopping"
+    wanted = list_store.name_of(name or request.args.get("list", "")) or "shopping"
     with closing(app.connect()) as conn:
         names = list_store.names(conn)
         order = ["shopping", *(other for other in names if other != "shopping")]
@@ -647,7 +649,7 @@ def lists_page() -> str:
     chips = [
         {
             "label": one["title"].removesuffix(" list").capitalize(),
-            "href": url_for("web.lists_page", list=one["name"]),
+            "href": url_for("web.lists_page", name=one["name"]),
             "on": one["name"] == wanted,
             "n": len(one["to_get"]),
         }
@@ -966,6 +968,48 @@ def happening_page() -> str:
     )
 
 
+@bp.get(f"/soon/<int(max={MAX_ID}):find_id>")
+def find(find_id: int) -> str:
+    """A happening (docs/INTERFACE.md section 5): what a source listed near home, when and where,
+    the listing in its own words; Save it (`add_idea`) and Put it on the calendar
+    (`create_event`) as forms, for whoever may change things. A kid sees it without its source."""
+    app = _app()
+    today = app.clock.today()
+    visitor = auth.visitor()
+    with closing(app.connect()) as conn:
+        found = find_store.get(conn, find_id)
+        if found is None:
+            abort(404)
+        people = member_store.list_all(conn)
+        box = chat.page_box(
+            app,
+            conn,
+            people,
+            prompt=chat.ITEM_PROMPT,
+            scope={
+                "label": found.title,
+                "text": f"About {found.title} ({found.starts_at[:10]}), listed near home:",
+            },
+        )
+    box["starters"] = views.find_starters(found, today)
+    row = views.find_row(found, today)
+    first = found.starts_at[:10]
+    last = found.ends_at[:10] if found.ends_at else first
+    return render_template(
+        "find.html",
+        find=found,
+        row=row,
+        state=views.find_state(found, today),
+        over=last < today.isoformat(),
+        kid=not visitor.may("browse"),
+        first=first,
+        time=found.starts_at[11:16] if "T" in found.starts_at else "",
+        last=last if last != first else "",
+        where=", ".join(part for part in (found.venue, found.address) if part),
+        on_google=calendar_available(app.settings),
+    )
+
+
 @bp.get("/plans/month")
 def plans_month() -> str:
     """One month as a calendar, with what is coming in it and what is waiting to be rated."""
@@ -1234,17 +1278,29 @@ def wish_glance(conn: Any, today: date) -> dict[str, Any] | None:
     return None
 
 
+@bp.get("/kids/<name>")
 @bp.get("/wishes")
 @bp.get("/kids")
-def wishes() -> str:
+def wishes(name: str | None = None) -> str:
     """The kids (docs/INTERFACE.md section 4): for a parent each kid as a section, what waits
-    first; a kid's own wish lists, in her order."""
+    first; one kid at her own address (`/kids/maya`), with her pitches and her thread to read
+    along; a kid's own wish lists, in her order."""
     app = _app()
     today = app.clock.today()
     visitor = auth.visitor()
     wanted = request.args.get("who", "")
     waiting_only = request.args.get("waiting") == "1"
     with closing(app.connect()) as conn:
+        if name is not None:
+            named = next(
+                (kid for kid in _kids(conn) if views.slug(kid.display_name) == name.casefold()),
+                None,
+            )
+            me = visitor.member
+            mine = me is not None and named is not None and named.id == me.id
+            if named is None or not (visitor.may("decide") or mine):
+                abort(404)
+            wanted = str(named.id) if visitor.may("decide") else ""
         if visitor.may("decide"):
             kids = _kids(conn)
             if wanted:
@@ -1310,7 +1366,7 @@ def wishes() -> str:
         chips = [
             {
                 "label": kid.display_name,
-                "href": url_for("web.wishes", who=kid.id),
+                "href": url_for("web.wishes", name=views.slug(kid.display_name)),
                 "on": str(kid.id) == wanted,
             }
             for kid in everyone

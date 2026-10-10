@@ -41,3 +41,13 @@
 {% macro by_hand(label, href) -%}
   <p class="byhand"><a href="{{ href }}">{{ label }}</a></p>
 {%- endmacro %}
+
+{# One of her picks: the kind and when it fits as a label, the name, one sentence of why. Drawn in pencil: a dashed
+   edge and lighter ink, because nothing is set until somebody sets it. #}
+{% macro pick_tile(pick) -%}
+  <a class="pk" href="{{ pick.href }}">
+    <span class="pk__label">{{ pick.kind }}{% if pick.when %} · {{ pick.when }}{% endif %}</span>
+    <span class="pk__t">{{ pick.title }}</span>
+    {% if pick.why %}<span class="pk__why">{{ pick.why }}</span>{% endif %}
+  </a>
+{%- endmacro %}

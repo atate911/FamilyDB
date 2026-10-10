@@ -1,0 +1,19 @@
+{% extends "frame.html" %}
+{% from "_dest.html" import dest_head, dest_empty, pick_tile %}
+{% block title %}What about… · {{ site_title }}{% endblock %}
+{% block body_class %}page-about{% endblock %}
+{# What about… (docs/INTERFACE.md section 4): her picks as a destination, for a big screen or a link from anywhere. Each
+   set says what drove it and when it was chosen; made ahead by a job, so this page asks no model. #}
+{% block content %}
+  {{ dest_head('What about…', summary) }}
+  {% for set in sets %}
+    <section class="sec" aria-labelledby="h-{{ set.window }}">
+      <div class="sec__label"><h2 id="h-{{ set.window }}" class="label">{{ set.title }}</h2><small>{{ set.made }}</small></div>
+      {% if set.header and not loop.first %}<p class="sec__note">{{ set.header }}</p>{% endif %}
+      <div class="picks picks--wide">{% for pick in set.tiles %}{{ pick_tile(pick) }}{% endfor %}</div>
+    </section>
+  {% else %}
+    {{ dest_empty(empty, 'sparkle') }}
+  {% endfor %}
+  {% if sets %}{% include "_different.html" %}{% endif %}
+{% endblock %}

@@ -131,12 +131,9 @@ def _days(rows: list[dict[str, Any]], today: date, grown_up: bool) -> list[dict[
     for offset, label in ((0, "Today"), (1, "Tomorrow")):
         day = today + timedelta(days=offset)
         on = [row for row in rows if row["day"] <= day.isoformat() <= row["end"]]
-        href = (
-            url_for("web.plans_month", _anchor=f"d-{day.isoformat()}")
-            if grown_up
-            else url_for("web.plans", _anchor=f"d-{day.isoformat()}")
+        lines.append(
+            {"label": label, "parts": views.day_line(on, url_for("go.day", day=day.isoformat()))}
         )
-        lines.append({"label": label, "parts": views.day_line(on, href)})
     return lines
 
 
@@ -224,6 +221,7 @@ def _questions(
                     "kind": "wish",
                     "wish_id": row["id"],
                     "kid_id": row["kid_id"],
+                    "kid_slug": views.slug(row["kid"]),
                     "text": f"{row['kid']} asked for {row['title']}."
                     + (f" {row['concern']}." if row.get("concern") else ""),
                     "origin": ASKED_ON.format(
@@ -340,17 +338,22 @@ def _picks(
     reason, never a present kept from this person. None when there is no set yet."""
     mine = visitor.member.id if chat.is_kid() and visitor.member else None
     found = pick_store.current(conn, member_id=mine, today=today.isoformat())
-    if found is None:
-        return None
+    return pick_set(app, found, kept) if found is not None else None
+
+
+def pick_set(app: App, found: pick_store.PickSet, kept: set[int]) -> dict[str, Any] | None:
+    """A made-ahead set as Now and What about draw it: its tiles, never a present kept from this
+    person, the line that drove it and when it was chosen. None when nothing in it is left."""
     tiles = []
     for pick in found.picks:
         if pick.get("idea_id") in kept:
             continue
-        href = (
-            url_for("web.idea", idea_id=pick["idea_id"])
-            if pick.get("idea_id")
-            else url_for("web.happening_page")
-        )
+        if pick.get("idea_id"):
+            href = url_for("web.idea", idea_id=pick["idea_id"])
+        elif pick.get("find_id"):
+            href = url_for("web.find", find_id=pick["find_id"])
+        else:
+            href = url_for("web.happening_page")
         tiles.append(
             {
                 "kind": pick.get("kind", ""),
@@ -363,6 +366,7 @@ def _picks(
     if not tiles:
         return None
     return {
+        "window": found.window,
         "tiles": tiles,
         "header": found.header,
         "made": views.made_words(found.made_at, app.clock.now(), app.settings.tzinfo),

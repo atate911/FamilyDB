@@ -1,0 +1,49 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon %}
+{% from "_dest.html" import dest_head %}
+{% block title %}{{ find.title }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-find{% endblock %}
+{# A happening (docs/INTERFACE.md section 5): what a source listed near home, its day and place, the listing in its own
+   words, where it came from; Save it and Put it on the calendar, each the tool the assistant would call. A kid sees it
+   without its source or cost. #}
+{% block content %}
+  {{ dest_head(find.title, state, back=('Happening soon', url_for('web.happening_page'))) }}
+  <dl class="facts">
+    <div><dt class="facts__k">When</dt><dd class="facts__v">{{ state | figs }}</dd></div>
+    {% if where %}<div><dt class="facts__k">Where</dt><dd class="facts__v">{{ where }}</dd></div>{% endif %}
+    {% if row.price and not kid %}<div><dt class="facts__k">Cost</dt><dd class="facts__v">{{ row.price }}</dd></div>{% endif %}
+    {% if find.category %}<div><dt class="facts__k">What</dt><dd class="facts__v">{{ find.category }}</dd></div>{% endif %}
+  </dl>
+  {% if find.summary %}<blockquote class="said">{{ find.summary }}{% if not kid %}<footer class="said__by">The listing, by {{ row.who }}</footer>{% endif %}</blockquote>{% endif %}
+  {% if not kid %}
+    <p class="found__links">{% if row.url %}<a href="{{ row.url }}" rel="noopener noreferrer">{{ icon('link', size='sm') }}The listing</a>{% endif %}</p>
+    <p class="found__by">Listed by {{ row.who }}{% if find.gone %}, and gone from its list since{% endif %}.</p>
+  {% endif %}
+
+  {% if visitor().may('change') and not over %}
+    <div class="acts">
+      <form method="post" action="{{ url_for('edits.add_idea') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="title" value="{{ find.title }}" /><input type="hidden" name="kind" value="event" />
+        <input type="hidden" name="happens_from" value="{{ first }}" /><input type="hidden" name="happens_time" value="{{ time }}" />
+        <input type="hidden" name="happens_until" value="{{ last }}" /><input type="hidden" name="location_name" value="{{ where }}" />
+        <input type="hidden" name="url" value="{{ row.url or '' }}" /><input type="hidden" name="description" value="{{ find.summary or '' }}" />
+        <button class="btn btn--primary btn--sm" type="submit">{{ icon('bulb', size='sm') }}Save it</button>
+      </form>
+      <details class="fold fold--quiet" id="plan-it">
+        <summary class="q__lnk">Put it on the calendar</summary>
+        <form class="form fold__body" method="post" action="{{ url_for('edits.add_plan') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          <input type="hidden" name="title" value="{{ find.title }}" /><input type="hidden" name="location" value="{{ where }}" />
+          <input type="hidden" name="back" value="{{ request.path }}" />
+          <div class="field"><label class="field__label" for="start">When</label>
+            <input id="start" name="start" type="datetime-local" required value="{{ first ~ 'T' ~ time if time else first ~ 'T10:00' }}" />
+            <label class="check"><input type="checkbox" name="all_day" value="yes"{{ ' checked' if not time }} />All day</label></div>
+          <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ 'Put it on the calendar' if on_google else 'Add it to the plans' }}</button></div>
+        </form>
+      </details>
+    </div>
+  {% elif over %}
+    <p class="sec__note">It is over. Saved as an idea, it can come round again next year.</p>
+  {% endif %}
+{% endblock %}

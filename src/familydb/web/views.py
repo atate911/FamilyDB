@@ -876,6 +876,52 @@ def idea_starters(idea: Idea, today: date) -> list[str]:
     return [first, second, third]
 
 
+def outing_starters(row: dict[str, Any]) -> list[str]:
+    """Three sentences an outing's page offers the box."""
+    loved = row.get("face") == "loved"
+    first = "Let's go again soon" if loved else "What would have made it better?"
+    second = "Find something like it" if row.get("kind") != "restaurant" else "Somewhere like it?"
+    return [first, second, "Who else would like it?"]
+
+
+def find_starters(find: Any, today: date) -> list[str]:
+    """Three sentences a happening's page offers the box."""
+    return ["Would the kids like it?", "Is it worth the drive?", "Put it on the calendar"]
+
+
+def find_state(find: Any, today: date) -> str:
+    """A happening's day in words: "Saturday 17 October, 6:30 pm", "Today at 6:30 pm", "On until
+    Sunday 18 October", "Was on Saturday 3 October"."""
+    first = date.fromisoformat(find.starts_at[:10])
+    last = date.fromisoformat(find.ends_at[:10]) if find.ends_at else first
+    if last < today:
+        return f"Was on {day_text(find.starts_at[:10])}"
+    if first <= today < last:
+        return f"On until {day_text(last.isoformat())}"
+    if first == today:
+        return f"Today at {clock_time(find.starts_at)}" if "T" in find.starts_at else "Today"
+    said = day_text(find.starts_at)
+    return said if last == first else f"{said} to {day_text(last.isoformat())}"
+
+
+def slug(name: str) -> str:
+    """A name as a path part: "the girls" is the-girls, "Maya" is maya."""
+    return re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-") or "someone"
+
+
+# What made an outing good, offered as chips on its page; each becomes something she remembers.
+GOOD_REASONS = ("An early start", "A friend came", "Short", "Cheap", "Close to home", "Outdoors")
+# The two sets of picks, as What about heads them.
+PICK_WINDOWS = {"now": "For the next few hours", "weekend": "For the weekend"}
+PICKS_SUMMARY = "Chosen ahead from what you have saved and what is on near home."
+PICKS_OFF = "Picks made ahead are turned off."
+FIRST_PICKS = (
+    "I'm {name}, and I don't know you yet. Tell me a few places you like and I'll have ideas "
+    "by tomorrow."
+)
+NO_PICKS_YET = "No picks just now. They are chosen every hour between 8 am and 10 pm."
+
+
 def task_starters(task: Task, today: date) -> list[str]:
     """Three sentences a reminder's page offers the box, each a change she can make to it."""
     weekend = "Saturday" if today.weekday() < 5 else "next Saturday"
@@ -1849,7 +1895,7 @@ def happening_days(
         day = max(date.fromisoformat(find.starts_at[:10]), today)
         row = find_row(find, today)
         row["source_words"] = "listed near home" if kid else f"listed by {row['who']}"
-        row["href"] = None
+        row["href"] = f"/soon/{find.id}"
         row["free"] = bool(row["price"]) and "free" in row["price"].casefold()
         days.setdefault(day, []).append(row)
     for idea in own:

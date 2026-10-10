@@ -215,7 +215,7 @@ class Destination:
 
 # Which pages belong to each place, so the row marks the one you are on.
 OWNS: dict[str, frozenset[str]] = {
-    "now": frozenset({"web.home"}),
+    "now": frozenset({"web.home", "go.about"}),
     "eat": frozenset({"web.restaurants"}),
     "do": frozenset({"web.ideas", "web.idea", "web.new_idea", "web.edit_idea"}),
     "week": frozenset(
@@ -230,9 +230,9 @@ OWNS: dict[str, frozenset[str]] = {
         }
     ),
     "kids": frozenset({"web.wishes"}),
-    "soon": frozenset({"web.happening_page"}),
+    "soon": frozenset({"web.happening_page", "web.find"}),
     "lists": frozenset({"web.lists_page"}),
-    "did": frozenset({"go.did"}),
+    "did": frozenset({"go.did", "go.outing"}),
 }
 
 

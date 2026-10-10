@@ -1,0 +1,61 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, who with context %}
+{% from "_dest.html" import dest_head %}
+{% block title %}{{ m.title }}, {{ m.when }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-outing{% endblock %}
+{# One outing (a memory, docs/INTERFACE.md section 5): what, when, who went, the face it got and what was said, the times
+   before; Again? puts the place back among the things to do, and What made it good? becomes something she remembers.
+   Both are tool calls (edits.set_status, edits.made_it_good). #}
+{% block content %}
+  {{ dest_head(m.title, day_words ~ (' · ' ~ m.face_words if m.face_words else ''), back=('What we did', url_for('go.did'))) }}
+  <dl class="facts">
+    <div><dt class="facts__k">When</dt><dd class="facts__v">{{ day_words }}</dd></div>
+    <div><dt class="facts__k">Who went</dt><dd class="facts__v">{{ m.who }}</dd></div>
+    <div><dt class="facts__k">How it went</dt><dd class="facts__v">{{ m.face_words or 'Not rated' }}{% if m.rating is not none and grownup %} · {{ m.rating }}/10{% endif %}</dd></div>
+    {% if m.again is not none %}<div><dt class="facts__k">Again?</dt><dd class="facts__v">{{ 'Would go again' if m.again else 'Would not' }}</dd></div>{% endif %}
+  </dl>
+  {% if m.notes %}
+    <blockquote class="said">{{ m.notes }}{% if by %}<footer class="said__by">{{ by }}</footer>{% endif %}</blockquote>
+  {% elif by %}
+    <p class="said__by">Recorded by {{ by }}.</p>
+  {% endif %}
+  {% if idea or plan %}
+    <p class="sec__note">{{ icon('bulb', size='sm') }}
+      {%- if idea %} <a href="{{ url_for('web.idea', idea_id=idea.id) }}">{{ idea.title }}</a>{% endif %}
+      {%- if plan %}{{ ' · ' if idea }}<a href="{{ url_for('go.plan', plan_id=plan.id) }}">The plan</a>{% endif %}</p>
+  {% endif %}
+
+  {% if before %}
+    <section class="sec" aria-labelledby="h-before">
+      <div class="sec__label"><h2 id="h-before" class="label">The other times</h2></div>
+      {% for one in before %}
+        <div class="set set--done">
+          <span class="set__num">{{ icon('smile' if one.face == 'loved' else ('frown' if one.face == 'not-great' else 'meh')) }}</span>
+          <div class="set__text"><span class="set__t"><a href="{{ url_for('go.outing', outcome_id=one.id) }}">{{ one.when }}</a></span>
+            <span class="set__m">{{ one.face_words or 'Not rated' }}{% if one.notes %} · {{ one.notes }}{% endif %}</span></div>
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  {% if grownup and visitor().may('change') and idea %}
+    <section class="sec" aria-labelledby="h-good">
+      <div class="sec__label"><h2 id="h-good" class="label">What made it good?</h2></div>
+      <form class="chips chips--form" method="post" action="{{ url_for('edits.made_it_good', outcome_id=m.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        {% for reason in reasons %}<button class="chip" type="submit" name="reason" value="{{ reason }}">{{ reason }}</button>{% endfor %}
+      </form>
+      <p class="sec__note">{{ assistant }} remembers it, and leans that way next time.</p>
+    </section>
+    {% if idea.status == 'done' %}
+      <div class="acts">
+        <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          <input type="hidden" name="status" value="idea" /><input type="hidden" name="back" value="{{ request.path }}" />
+          <button class="btn btn--primary btn--sm" type="submit">Again?</button>
+        </form>
+        <p class="small muted">Puts {{ idea.title }} back among the things to do.</p>
+      </div>
+    {% endif %}
+  {% endif %}
+{% endblock %}

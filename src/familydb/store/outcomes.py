@@ -120,6 +120,12 @@ def recent_ratings(conn: sqlite3.Connection, *, since: str, last: int = 2) -> di
     return kept
 
 
+def get(conn: sqlite3.Connection, outcome_id: int) -> Outcome | None:
+    """One outing as it was recorded, for its own page."""
+    row = conn.execute("SELECT * FROM outcomes WHERE id = ?", (outcome_id,)).fetchone()
+    return Outcome.from_row(row) if row else None
+
+
 def recent(conn: sqlite3.Connection, *, since: str) -> list[Outcome]:
     """Every outcome for a day on or after `since` (YYYY-MM-DD), the latest first."""
     rows = conn.execute(
