@@ -74,7 +74,13 @@ NEEDS_FACT = "Say what to remember."
 NOT_A_REASON = "Choose one of the reasons on the page."
 # What a reason chip becomes in her memory: about the family, in their terms.
 MADE_IT_GOOD = "What made {title} good: {reason}"
-TICK_PAGES = {"home": "web.home", "tasks": "web.tasks", "chat": "chat.show", "week": "go.week"}
+TICK_PAGES = {
+    "home": "web.home",
+    "tasks": "web.tasks",
+    "chat": "chat.show",
+    "week": "go.week",
+    "board": "go.board",
+}
 NEEDS_TITLE = "An idea needs a title."
 NEEDS_KIND = "An idea needs a kind: restaurant, outing, trip, show…"
 NOT_A_NUMBER = "{label} needs to be a number."
@@ -415,6 +421,8 @@ def record_outcome(idea_id: int) -> Response:
     _say(complaint or (RATED if went in FACES else RECORDED.format(id=idea_id)))
     if _text(form, "back") == "home":  # asked on Home: back there for the next one
         return _back("web.home")
+    if _text(form, "back") == "board":  # asked on the kitchen tablet
+        return _back("go.board")
     if _text(form, "back") == "plans":  # asked on the month: back to what is still to rate
         return _back("web.plans_month", month=_text(form, "month") or None, _anchor="rate")
     if _text(form, "back") == "did":  # asked on What we did or a day of the week
@@ -674,6 +682,8 @@ def change_list() -> Response:
     if already := result.get("already"):
         said.append(views.LIST_ALREADY.format(items=", ".join(already)))
     _say(" ".join(said))
+    if _text(request.form, "back") == "board":  # ticked on the kitchen tablet
+        return _back("go.board")
     return _back("web.lists_page", name=_text(request.form, "back") or None)
 
 
@@ -762,6 +772,8 @@ def _to_wishes() -> Response:
     when the question was asked there."""
     if request.form.get("back") == "home":
         return _back("web.home")
+    if request.form.get("back") == "board":
+        return _back("go.board")
     kid = request.form.get("kid", "")
     return _back("web.wishes", **({"who": kid} if kid.isdigit() else {}))
 

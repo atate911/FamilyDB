@@ -16,7 +16,9 @@ from flask import Blueprint, abort, current_app, render_template, request, url_f
 from familydb import agenda, personas, presents, roles
 from familydb.app import App
 from familydb.availability import calendar_available, weather_available
+from familydb.dates import utc_iso
 from familydb.store import ideas as idea_store
+from familydb.store import lists as list_store
 from familydb.store import members as member_store
 from familydb.store import outcomes as outcome_store
 from familydb.store import picks as pick_store
@@ -298,6 +300,76 @@ def _went(conn: Any, first: date, last: date, slots: dict[str, int]) -> list[dic
         idea = idea_store.get(conn, outcome.idea_id) if outcome.idea_id else None
         rows.append(_memory(outcome, idea, slots))
     return rows
+
+
+# -- The kitchen tablet ---------------------------------------------------------------------------
+
+# Ideas on the board's edge: the newest few in full, the rest smaller, fading as they rest.
+BOARD_FRESH = 4
+BOARD_IDEAS = 12
+BOARD_LIST = 12
+# From Thursday the weekend's picks lead the board (docs/INTERFACE.md section 8).
+WEEKEND_FROM = 3
+
+
+@bp.get("/board")
+def board() -> str:
+    """The kitchen tablet (docs/INTERFACE.md section 8): Now drawn as one surface for the family
+    at the wall. A large box with faces along the top; today and tomorrow in the middle, largest;
+    anything waiting on a person and the shopping list in places of their own; her picks, the
+    weekend's from Thursday; the saved ideas along the bottom, the untouched ones fading. Costs
+    and the back office never appear. Read like Now, no model call."""
+    app = _app()
+    today = app.clock.today()
+    visitor = auth.visitor()
+    shown = _days(app, today, today + timedelta(days=1))
+    with closing(app.connect()) as conn:
+        people = member_store.list_all(conn)
+        slots = views.slot_map(people)
+        kept = presents.kept_ids(conn, visitor.member)
+        questions = now._questions(conn, app, visitor, today, slots, people)[: now.MOST_QUESTIONS]
+        mine = visitor.member.id if chat.is_kid() and visitor.member else None
+        window = "weekend" if today.weekday() >= WEEKEND_FROM else "now"
+        found = pick_store.latest(conn, window=window, member_id=mine)
+        if found is None or found.window_end < today.isoformat():
+            found = pick_store.current(conn, member_id=mine, today=today.isoformat())
+        picks = now.pick_set(app, found, kept) if found is not None else None
+        shopping = _shopping(conn) if visitor.may("change") else None
+        stale = utc_iso(app.clock.now() - timedelta(days=routes.FADE_DAYS))
+        saved = sorted(
+            (
+                idea
+                for idea in idea_store.list_all(conn)
+                if idea.id not in kept and idea.status == "idea" and not idea_store.is_gift(idea)
+            ),
+            key=lambda idea: idea.updated_at,
+            reverse=True,
+        )[:BOARD_IDEAS]
+        chat.page_box(app, conn, people, prompt=views.BOARD_PROMPT, faces=True)
+    return render_template(
+        "board.html",
+        days=shown["days"],
+        questions=questions,
+        picks=picks,
+        shopping=shopping,
+        someday=[
+            {
+                "title": idea.title,
+                "href": url_for("web.idea", idea_id=idea.id),
+                "fresh": number < BOARD_FRESH,
+                "resting": idea.updated_at < stale,
+            }
+            for number, idea in enumerate(saved)
+        ],
+    )
+
+
+def _shopping(conn: Any) -> dict[str, Any]:
+    """The shopping list, which always hangs on the board: what is still to get."""
+    ref = list_store.find(conn, "shopping")
+    held = list_store.items(conn, ref) if ref is not None else []
+    waiting = [item.text for item in held if item.ticked_at is None]
+    return {"items": waiting[:BOARD_LIST], "more": max(0, len(waiting) - BOARD_LIST)}
 
 
 # -- What about ----------------------------------------------------------------------------------

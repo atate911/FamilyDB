@@ -909,6 +909,8 @@ def slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-") or "someone"
 
 
+# The kitchen tablet's box: the family moment it is for.
+BOARD_PROMPT = "Let's see what {name} thinks…"
 # What made an outing good, offered as chips on its page; each becomes something she remembers.
 GOOD_REASONS = ("An early start", "A friend came", "Short", "Cheap", "Close to home", "Outdoors")
 # The two sets of picks, as What about heads them.

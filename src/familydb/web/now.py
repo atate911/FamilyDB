@@ -341,7 +341,7 @@ def later() -> Response:
     kept = _later()
     kept[idea] = utc_iso(_app().clock.now() + timedelta(days=LATER_DAYS))
     session[LATER_KEY] = kept
-    return redirect(url_for("web.home"))
+    return redirect(url_for("go.board" if request.form.get("back") == "board" else "web.home"))
 
 
 # -- her picks -------------------------------------------------------------------------------------

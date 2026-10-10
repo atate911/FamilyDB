@@ -14,7 +14,16 @@
     <input type="hidden" name="scope" value="{{ b.scope.text }}" />
     <p class="bar__scope">about: <b>{{ b.scope.label }}</b>{% if b.scope.off %} <a href="{{ b.scope.off }}" aria-label="Make it general">{{ icon('x', size='sm') }}</a>{% endif %}</p>
   {% endif %}
-  {% if not visitor().member %}
+  {% if not visitor().member and b.faces %}
+    {# The kitchen tablet: who is asking is a face along the top, tapped; it holds for a minute. #}
+    <fieldset class="bar__faces">
+      <legend class="sr">Who is asking</legend>
+      {% for name in b.family %}
+        {% set person = shell.family | selectattr('name', 'equalto', name) | first %}
+        <label class="facepick"><input type="radio" name="who" value="{{ name }}" required{{ ' checked' if name == b.who }} />{{ avatar(person.slot if person else 0, person.initial if person else name[:1] | upper, 'lg') }}<span>{{ name }}</span></label>
+      {% endfor %}
+    </fieldset>
+  {% elif not visitor().member %}
     {# The family shares one password, so somebody says who is asking; nobody is picked for them. #}
     <div class="bar__who">
       <label for="who">From</label>

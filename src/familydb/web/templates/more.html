@@ -35,6 +35,10 @@
       {% endif %}
       {% set lead %}{{ tile('memory') }}{% endset %}
       {{ srow(url_for('web.memory'), 'What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', 'What has been learned about the family, and what to forget', lead=lead) }}
+      {% set lead %}{{ tile('home') }}{% endset %}
+      {{ srow(url_for('go.board'), 'The board', 'For a tablet on the kitchen wall: today, what waits, the list', lead=lead) }}
+      {% set lead %}{{ tile('sparkle') }}{% endset %}
+      {{ srow(url_for('go.about'), 'What about…', 'All of ' ~ assistant ~ '’s picks, for now and the weekend', lead=lead) }}
     </ul>
 
     <h2 class="group-h">Behind the scenes</h2>

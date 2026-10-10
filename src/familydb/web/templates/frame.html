@@ -11,7 +11,7 @@
   {% elif b.refresh %}<noscript><meta http-equiv="refresh" content="{{ b.refresh }}; url={{ b.here }}" /></noscript>{% endif %}
 {% endblock %}
 {% block frame %}
-  <div class="nf{% if not grownup %} nf--kid{% endif %}{% if page_box().no_box %} nf--nobox{% endif %}">
+  <div class="nf{% if not grownup %} nf--kid{% endif %}{% if page_box().no_box %} nf--nobox{% endif %}{% block nf_class %}{% endblock %}">
     <header class="nf__top">
       <a class="nf__brand" href="{{ url_for('web.home') }}" aria-label="{{ site_title }}, now">{{ brand_mark() }}{{ wordmark(site_title) }}</a>
       <div class="nf__right">

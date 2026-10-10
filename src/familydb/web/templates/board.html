@@ -1,0 +1,106 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, vera_screen, faces, who with context %}
+{% from "_dest.html" import pick_tile %}
+{% block title %}The board · {{ site_title }}{% endblock %}
+{% block body_class %}page-board{% endblock %}
+{% block nf_class %} nf--board{% endblock %}
+{# The kitchen tablet (docs/INTERFACE.md section 8): Now as one surface on the wall. What matters soonest is largest and
+   in the middle; anything waiting on a person and the shopping list keep places of their own; the saved ideas run
+   along the bottom, the untouched ones fading. Kid-safe: no costs, no workings, no back office. No model call. #}
+{% block content %}
+  <h1 class="sr">The board</h1>
+  <div class="bd">
+    <section class="bd__days" aria-label="Today and tomorrow">
+      {% for day in days %}
+        <article class="bd__day{{ ' bd__day--first' if loop.first }}" aria-labelledby="bd-{{ day.iso }}">
+          <header class="bd__dayhead">
+            <h2 class="bd__dayname" id="bd-{{ day.iso }}"><a href="{{ day.href }}">{{ day.label }}</a></h2>
+            {% if day.forecast %}<span class="bd__wx">{{ day.forecast }}</span>{% endif %}
+          </header>
+          {% for r in day.rows %}
+            <div class="set{{ ' set--off' if r.status == 'cancelled' }}">
+              <span class="set__num num">{{ (r.time | figs) if r.time else 'All day' }}</span>
+              <div class="set__text"><span class="set__t">{% if r.plan_id %}<a href="{{ url_for('go.plan', plan_id=r.plan_id) }}">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</span>
+                {% if r.location %}<span class="set__m">{{ r.location }}</span>{% endif %}</div>
+              {{ who(r.people, r.who, shell.family) }}
+            </div>
+          {% endfor %}
+          {% if day.pencil %}<a class="pk pk--day" href="{{ day.pencil.href }}"><span class="pk__label">{{ assistant }}’s pick</span><span class="pk__t">{{ day.pencil.title }}</span></a>{% endif %}
+          {% if day.free %}<p class="bd__free">{{ day.free }}</p>{% endif %}
+          {% if day.due %}<ul class="wk__due">{% for t in day.due %}<li>{{ icon('bell', size='sm') }}{{ t.title }}</li>{% endfor %}</ul>{% endif %}
+        </article>
+      {% endfor %}
+    </section>
+
+    {% if questions %}
+      <section class="bd__asks" aria-label="Waiting on someone">
+        {% for q in questions %}
+          <div class="q bd__q">
+            {{ vera_screen() }}
+            <div class="q__body">
+              <p class="q__text">{{ q.text }}</p>
+              {% if q.origin %}<p class="q__org">{{ q.origin }}</p>{% endif %}
+              <div class="q__acts">
+                {% if q.kind == 'rate' %}{{ faces(q, 'board') }}
+                {% elif q.kind == 'wish' %}
+                  <form method="post" action="{{ url_for('edits.answer_wish', wish_id=q.wish_id) }}">
+                    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                    <input type="hidden" name="kid" value="{{ q.kid_id }}" /><input type="hidden" name="back" value="board" />
+                    <button class="btn btn--sm" type="submit" name="status" value="granted">Yes</button>
+                    <button class="btn btn--sm btn--quiet" type="submit" name="status" value="declined">Not this time</button>
+                  </form>
+                {% elif q.kind == 'pitch' %}
+                  <a class="btn btn--sm" href="{{ url_for('web.idea', idea_id=q.idea_id) }}">See it</a>
+                  <form method="post" action="{{ url_for('web.later') }}">
+                    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="idea" value="{{ q.idea_id }}" /><input type="hidden" name="back" value="board" />
+                    <button class="q__lnk" type="submit">Later</button>
+                  </form>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    {% if shopping is not none %}
+      <section class="bd__list" aria-labelledby="bd-list">
+        <h2 class="label" id="bd-list"><a href="{{ url_for('web.lists_page') }}">Shopping</a></h2>
+        {% if shopping['items'] %}
+          <ul class="bd__items">
+            {% for thing in shopping['items'] %}
+              <li>
+                <form method="post" action="{{ url_for('edits.change_list') }}">
+                  <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                  <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="shopping" />
+                  <input type="hidden" name="items" value="{{ thing }}" /><input type="hidden" name="back" value="board" />
+                  <button class="tick" type="submit"><span>{{ icon('check') }}</span><span class="sr">Got: </span></button>
+                </form>
+                <span>{{ thing }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if shopping.more %}<p class="sec__note">and {{ shopping.more }} more</p>{% endif %}
+        {% else %}
+          <p class="sec__note">Nothing on it. Tell {{ assistant }} “we’re out of milk”.</p>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    {% if picks %}
+      <section class="bd__picks" aria-labelledby="bd-picks">
+        <h2 class="label" id="bd-picks"><a href="{{ url_for('go.about') }}">What about…</a> <small>{{ picks.made }}</small></h2>
+        <div class="picks">{% for pick in picks.tiles %}{{ pick_tile(pick) }}{% endfor %}</div>
+      </section>
+    {% endif %}
+
+    {% if someday %}
+      <section class="bd__someday" aria-labelledby="bd-someday">
+        <h2 class="label" id="bd-someday"><a href="{{ url_for('web.ideas') }}">Someday</a></h2>
+        <ul class="bd__ideas">
+          {% for idea in someday %}<li class="bd__idea{{ ' bd__idea--fresh' if idea.fresh }}{{ ' bd__idea--resting' if idea.resting }}"><a href="{{ idea.href }}">{{ idea.title }}</a></li>{% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}

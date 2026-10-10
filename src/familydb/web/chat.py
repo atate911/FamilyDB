@@ -45,6 +45,10 @@ bp = Blueprint("chat", __name__)
 
 # Who the person last said they were, while the family shares a password and the page cannot know.
 WHO_KEY = "who"
+# On the kitchen tablet a tapped face holds for a minute (docs/INTERFACE.md section 8), so the next
+# person to walk up is not taken for the last one.
+WHO_AT = "who_at"
+FACE_LAPSE_SECONDS = 60
 # Whether this browser sends where it is with each message: off until someone ticks the box.
 WHERE_KEY = "send_where"
 # The newest of her messages this browser has seen, and in which conversation: the Chat link's
@@ -144,14 +148,21 @@ def my_chat() -> str:
     return DEFAULT_CHAT
 
 
-def _who(names: list[str]) -> str | None:
+def _who(names: list[str], *, lapse: bool = False) -> str | None:
     """Whoever is signed in, or what this session last chose while they are still family."""
     if (me := auth.visitor().name) is not None:
         return me
     chosen = session.get(WHO_KEY)
-    if chosen in names:
+    if chosen in names and not (lapse and _lapsed()):
         return chosen
     return names[0] if len(names) == 1 else None
+
+
+def _lapsed() -> bool:
+    """Whether the face last tapped on this device is more than a minute old."""
+    at = session.get(WHO_AT)
+    now = _app().clock.now().timestamp()
+    return not isinstance(at, int | float) or now - at > FACE_LAPSE_SECONDS
 
 
 def waiting_on(
@@ -175,12 +186,16 @@ def waiting_on(
     return "lost"
 
 
-def box(family: list[str], *, locked: bool = False, prompt: str = PROMPT) -> dict[str, Any]:
-    """What the box needs wherever it is drawn."""
+def box(
+    family: list[str], *, locked: bool = False, prompt: str = PROMPT, faces: bool = False
+) -> dict[str, Any]:
+    """What the box needs wherever it is drawn. With `faces` (the kitchen tablet) who is asking is
+    a row of faces, and the one tapped holds for a minute."""
     name = personas.active(_app().settings).name
     return {
         "family": family,
-        "who": _who(family),
+        "faces": faces,
+        "who": _who(family, lapse=faces),
         "send_where": bool(session.get(WHERE_KEY)),
         "locked": locked,
         "placeholder": (LOCKED if locked else prompt).format(name=name),
@@ -332,6 +347,7 @@ def page_box(
     *,
     prompt: str = DEST_PROMPT,
     scope: dict[str, Any] | None = None,
+    faces: bool = False,
 ) -> dict[str, Any]:
     """Everything a page built on the frame gives its box: the box itself, closed while an
     answer is on its way, what came back under it, and the scope this page gives a message.
@@ -345,7 +361,12 @@ def page_box(
     if under.get("said") or under.get("receipt"):
         recent = recent[:-2]  # the last exchange is under the box already
     g.box = {
-        **box([m.display_name for m in people], locked=under.pop("locked", False), prompt=prompt),
+        **box(
+            [m.display_name for m in people],
+            locked=under.pop("locked", False),
+            prompt=prompt,
+            faces=faces,
+        ),
         "typed": asked(),
         "scope": scope,
         "no_box": False,
@@ -747,6 +768,7 @@ def send() -> Response | Any:
         sent = f"{scope} {text}"
     if me is None:
         session[WHO_KEY] = who
+        session[WHO_AT] = _app().clock.now().timestamp()
     session[WHERE_KEY] = request.form.get(WHERE_KEY) == "1"  # the box stays as they left it
     asked = _chat().ask(sent, who, my_chat(), _position(request.form), photo=photo)
     if (complaint := asked) is not None:
