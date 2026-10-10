@@ -1,5 +1,63 @@
 # Changelog
 
+## v0.5.1 — in progress
+
+### New since v0.5.0
+
+- **`maintain.sh upgrade` follows the default branch, not only tagged releases.** Once a version had
+  a date in this file, an upgrade followed its release tag and ignored later commits, so a fix merged
+  after v0.4.0 never arrived until the next version number did, and an upgrade answered "Already up to
+  date" with the fix sitting on the remote. It now follows the default branch always; the newest
+  release tag is only the fallback for a remote that names no default branch. `bootstrap.sh` installs
+  the same code when given no `--ref`. Checking out a tag by hand still works, and the next `upgrade`
+  moves on from it. It still only moves forward.
+- **A virtualenv built again keeps a Python the service can run.** The installer kept uv's cache and
+  the Python it fetched inside the install; an upgrade, the doctor, rescue and the rollback line ran uv
+  without saying so. An ordinary upgrade kept the virtualenv as it was, but one built again (the
+  doctor's or rescue's rebuild, a deleted or broken `.venv`, a version wanting a newer Python) on a
+  server whose own Python is older than 3.11 was built on a Python uv fetched into root's home, which
+  the `familydb` account cannot run, so the bot did not start. Every `uv sync` now runs the same way.
+- **`.env` is read as the program reads it, and written so it reads back whole.** The scripts took
+  `WEB_PORT=8080 # moved` as the whole text after `=` and saw nothing on an `export` line, so a page that
+  answered was called down and a restart a failure; they now follow python-dotenv (inline comments,
+  `export`, quotes, the last line wins). Setting a value no longer glues it onto a last line that had no
+  line break, and a value with `&`, `|` or a backslash is written as it is.
+- **An upgrade stops FamilyDB before the code moves, and undoes a failure before the migrations.**
+  A running bot picked up new files as they landed; now it is stopped first, the
+  backup is taken once it is, and the way back is printed before the checkout. A failure in the
+  checkout, the service file or the packages puts the old code, packages, service file and image back,
+  starts the bot again and says so: nothing is left half-done. On Docker the new image is built, with a
+  fresh base image, while the old containers keep running, so they are down only for the backup, the
+  migrations and the start, and a failed build changes nothing.
+- **The upgrade refuses, before it asks, while a shipped file was changed on the server.** `git
+  checkout` would have refused after the backup and the marker were written, which a later run and
+  `rescue rollback` then read as an upgrade stopped part-way. It names the files and where a change to
+  `docker-compose.yml` belongs (`docker-compose.override.yml`); a checkout that still fails removes the
+  marker and shows git's words.
+- **A failed fetch says what it means, a renamed default branch is followed, a moved tag is taken.**
+  Every failure was called a missing credential; now the network, a credential, a remote that
+  is gone and a checkout git will not read each get their own words, with git's own underneath, and git
+  is never left waiting for a password under a spinner. `origin/HEAD` is refreshed from the remote on
+  every fetch, so a default branch renamed on GitHub no longer leaves installs on the old one forever,
+  and tags are taken as the remote has them.
+- **The service file follows the new version when it was not edited.** A changed `deploy/familydb.service`
+  was only mentioned; now the installed unit is rewritten when it still reads as the installer wrote it,
+  the old one kept beside it as `familydb.service.before-upgrade`, and systemd reloaded. One edited by
+  hand is left alone, and the upgrade says which case it found.
+- **The new version's `maintain.sh` finishes the upgrade.** From the checkout on, the script that came
+  with the new code takes over (`upgrade --resume`), so a release can change how an upgrade is
+  finished in the same release rather than one later.
+- **Smaller guards.** Only one command that changes the install runs at a time; a second says which one
+  is running and stops. A question nobody can answer (no terminal, no `--yes`) is a failure, so a cron
+  job that forgot `--yes` no longer reads as success. `Already up to date` notices when FamilyDB is not
+  running and names `restart`. On Docker, a start is believed only once `docker compose ps` shows the
+  container running, instead of whenever the page could not be asked. Free space is checked before the
+  bot is stopped. The nightly prune spares the backup the last upgrade would go back to (`backup
+  --keep-days N` prunes the same way; run `schedule-backups` once more so the cron line uses it). A run
+  that stopped before the code moved no longer points a
+  rollback at its older backup. An install with a broken virtualenv beside Docker is still treated as a
+  virtualenv install to mend, not a Docker install to build.
+
 ## v0.5.0 — beta (2026-10-11)
 
 ### New since v0.4.0

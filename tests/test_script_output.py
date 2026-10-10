@@ -82,6 +82,10 @@ def _fake_server(tmp_path: Path, *, backups: int = 0) -> tuple[Path, dict[str, s
         stub.chmod(0o755)
     env = {
         "PATH": f"{stubs}{os.pathsep}{os.environ['PATH']}",
+        # Its own ledger and lock, as a server has: run as root, the tests would otherwise write
+        # to the machine's, and run in parallel they would wait on one another's lock.
+        "FAMILYDB_LEDGER_DIR": str(tmp_path / "ledger"),
+        "TMPDIR": str(tmp_path),
         "NO_COLOR": "1",
         "COLUMNS": "80",
         # Whatever this machine runs as a service is none of the test's business.
@@ -240,18 +244,19 @@ def test_a_backup_ends_with_where_it_is_and_how_to_fetch_it(tmp_path) -> None:
     assert not ESCAPE.search(out + done.stderr)
 
 
-def test_a_refused_question_changes_nothing_and_says_so(tmp_path) -> None:
+def test_a_question_nobody_can_answer_changes_nothing_and_is_a_failure(tmp_path) -> None:
+    """A cron job or a script that forgot --yes must not read "nothing was changed" as success."""
     target, env = _fake_server(tmp_path)
     done = _maintain(target, env, "schedule-backups")  # nobody at the terminal to say yes
-    assert done.returncode == 0
+    assert done.returncode == 1
     out = done.stdout
     asked = done.stdout + done.stderr  # the question itself goes to stderr when nobody can answer
     assert re.search(
         r"Schedule +every night at 03:15", out
     )  # what this run would set up, not how cron works
     assert out.index("Schedule") < asked.index("Add the nightly backup to the crontab?")
-    assert "There is no terminal here to answer, so the answer is no." in asked
-    assert "Nothing was changed." in out
+    assert "There is no terminal here to answer, so nothing was done." in asked
+    assert "Pass --yes" in asked
 
 
 def _asked(default: str, answer: bytes) -> tuple[int, str]:

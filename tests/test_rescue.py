@@ -211,13 +211,24 @@ def test_an_upgrade_that_changed_no_data_is_undone_by_putting_the_code_back(tmp_
         "to=x\nto_label=newer\nbackup=/none\n"
     )
     log = tmp_path / "calls.log"
-    logging_stub(env, "uv", log)
+    logging_stub(
+        env,
+        "uv",
+        log,
+        'echo "python in $UV_PYTHON_INSTALL_DIR, cache in $UV_CACHE_DIR" >> "$0.env"',
+    )
     done = maintain(target, env, "rescue", "rollback", "--yes")
     assert done.returncode == 0, done.stdout + done.stderr
     assert "only the code goes back" in " ".join(done.stdout.split())
     assert git(target, "rev-parse", "HEAD") == older
     assert not (target / "NOTES").exists()
     assert "uv sync --frozen --no-dev" in log.read_text()
+    # uv keeps its Python inside the install, as the installer put it: one fetched into root's
+    # home could not be run by the service account.
+    assert (
+        f"python in {target}/.local/share/uv/python, cache in {target}/.cache/uv"
+        in (tmp_path / "stubs/uv.env").read_text()
+    )
     assert not (ledger / "last-upgrade").exists(), "a second rollback must not flip back"
     assert "[ OK ] Back on" in done.stdout
 

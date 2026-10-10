@@ -44,7 +44,7 @@ sudo /opt/familydb/scripts/maintain.sh restart
 | `TimeoutStopSec=150` | Waits up to 150 seconds for a clean stop before killing it. A model call in progress can be slow to notice, and nothing is lost if it is killed |
 | Hardening (`ProtectSystem=strict`, no capabilities, `UMask=0077`) | The file system is read-only to FamilyDB except `data/`, so `FAMILYDB_PATH` must stay in `data/`. `WEB_PORT` must be 1025 or above. `ProtectHome=true` hides `/home`, so the installer uses `read-only` for a checkout there |
 
-An upgrade does not rewrite the unit; see [Known limits](/wiki/reference/known-limits#an-upgrade-does-not-rewrite-the-service-file). After any edit to it, run `sudo systemctl daemon-reload` and restart.
+When a new version changes `deploy/familydb.service`, `maintain.sh upgrade` updates the installed unit to match, provided it still reads as the installer wrote it, and keeps the old one beside it as `familydb.service.before-upgrade`. One you edited by hand is left as it is, and the upgrade says so. After any edit of your own, run `sudo systemctl daemon-reload` and restart.
 
 ## Docker instead
 

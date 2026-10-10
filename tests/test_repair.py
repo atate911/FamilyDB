@@ -207,7 +207,10 @@ def test_without_a_terminal_and_without_yes_it_says_so_and_changes_nothing_and_f
     done = maintain(target, env, "doctor")
     assert not css.exists()
     assert done.returncode == 1
-    assert "run it at a terminal, or with --yes" in flat(done.stdout)
+    assert "There is no terminal here to answer, so nothing was done" in flat(
+        done.stdout + done.stderr
+    )
+    assert "Pass --yes" in flat(done.stderr)
 
 
 def test_at_a_terminal_enter_goes_ahead_and_n_does_not(tmp_path) -> None:

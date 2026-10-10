@@ -156,8 +156,7 @@ fix_runtime() {
   fi
   [ -x "${TARGET}/.venv/bin/python" ] && as_root "${TARGET}/.venv/bin/python" -c 'import sys' 2>/dev/null \
     || as_root rm -rf "${TARGET}/.venv"
-  as_root env PATH="$SYSTEM_PATH" uv sync --frozen --no-dev --project "$TARGET" \
-    || { sleep 3; as_root env PATH="$SYSTEM_PATH" uv sync --frozen --no-dev --project "$TARGET"; }
+  uv_sync "$TARGET" || { sleep 3; uv_sync "$TARGET"; }
   as_root chmod -R go-w "$TARGET"
 }
 
@@ -547,12 +546,9 @@ cmd_doctor() {
   printf '\n'
   local asking=0 i
   for i in "${!PL_KIND[@]}"; do [ "${PL_KIND[i]}" != risky ] || asking=$((asking + 1)); done
+  # With nobody at a terminal and no --yes, approve itself stops here as a failure.
   if ! approve "Go ahead with these$([ "$asking" -eq 0 ] || echo " (${asking} of them will ask you again)")?" yes; then
-    if [ -t 0 ]; then
-      say "Nothing was changed."
-    else
-      finish bad "Nothing was changed, and it is not fixed: run it at a terminal, or with --yes"
-    fi
+    say "Nothing was changed."
     return 0
   fi
   dr_run

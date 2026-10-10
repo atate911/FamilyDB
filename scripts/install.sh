@@ -118,31 +118,7 @@ ask() { # ask VAR "question" "default"
   printf -v "$var" '%s' "${reply:-$default}"
 }
 
-quote_env() { # quote_env VALUE -> how that value must be written so .env reads it back whole
-  # A bare value loses everything from '#' and any trailing space: a password with either would
-  # silently change. Single quotes are literal to python-dotenv, systemd and compose alike; a
-  # value with an apostrophe falls back to double quotes.
-  local value="$1"
-  case "$value" in
-    "") printf '' ;;
-    *[!A-Za-z0-9_.:/@+,=-]*)
-      case "$value" in
-        *\'*)
-          case "$value" in
-            *[\$\`\\]*)
-              warn "a value with both an apostrophe and one of \$ \` \\ cannot be stored safely; edit .env by hand if this one matters"
-              ;;
-          esac
-          printf '"%s"' "$(printf '%s' "$value" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
-          ;;
-        *) printf "'%s'" "$value" ;;
-      esac
-      ;;
-    *) printf '%s' "$value" ;;
-  esac
-}
-
-set_env() { # set_env KEY VALUE
+set_env() { # set_env KEY VALUE (the value written as quote_env in lib/common.sh says)
   local key="$1" value="$2" written line replaced=0
   [ "$DRY_RUN" = 1 ] && { note "would set $key"; return 0; }
   # One setting per line: a value with a line break cannot be stored, and storing half is worse.
@@ -534,10 +510,10 @@ if [ "$MODE" = docker ]; then
     note "  sudo chown -R 1000:1000 ${REPO_ROOT}/data"
   fi
 else
-  # uv's cache and Python stay inside the install, so removing it removes them.
-  retry 3 "Installing the dependencies" env UV_CACHE_DIR="${REPO_ROOT}/.cache/uv" \
-    UV_PYTHON_INSTALL_DIR="${REPO_ROOT}/.local/share/uv/python" \
-    uv sync --frozen --no-dev --project "$REPO_ROOT"
+  # uv's cache and Python stay inside the install (uv_vars in lib/common.sh: the one place that
+  # says where, so an upgrade finds the same Python), and removing the install removes them.
+  mapfile -t uv_env < <(uv_vars "$REPO_ROOT")
+  retry 3 "Installing the dependencies" env "${uv_env[@]}" uv sync --frozen --no-dev --project "$REPO_ROOT"
   FAMILYDB=("${REPO_ROOT}/.venv/bin/familydb")
 fi
 

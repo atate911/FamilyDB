@@ -515,6 +515,29 @@ KNOWN_HOSTS="${LEDGER_DIR}/known_hosts"
 # must not ask for a sudo password.
 _ledger_on() { [ "$(id -u)" = 0 ] && [ "${DRY_RUN:-0}" != 1 ]; }
 
+# One command that changes an install at a time: two upgrades from two terminals, or the nightly
+# backup landing while a restore runs, would each work on what the other is changing. The lock is
+# held on an open file for as long as the process (and anything it started) lives, so there is no
+# stale lock to clear. A reader (status, check, logs) takes none.
+LOCK_FILE="${FAMILYDB_LOCK_FILE:-${LEDGER_DIR}/maintain.lock}"
+take_lock() { # take_lock WHAT - or die naming the command that holds it
+  local file="$LOCK_FILE" holder
+  have flock || return 0
+  if ! { mkdir -p "$(dirname -- "$file")" && exec 9>>"$file"; } 2>/dev/null; then
+    # Not root, so not a server: a lock of this user's own, for this install alone, keeps two
+    # of their runs apart without two installs (the tests run many at once) sharing one.
+    file="${TMPDIR:-/tmp}/familydb-maintain-$(id -u)-$(printf '%s' "${TARGET:-}" | cksum | cut -d' ' -f1).lock"
+    exec 9>>"$file" 2>/dev/null || return 0
+  fi
+  if ! flock -n 9; then
+    holder="$(head -1 "$file" 2>/dev/null || true)"
+    die "another maintain.sh is already working on ${TARGET:-this install}${holder:+: ${holder}}" \
+        "Wait for it to finish, then run this again. Nothing was changed."
+  fi
+  printf '%s (pid %s, since %s)\n' "$1" "$$" "$(date '+%Y-%m-%d %H:%M')" >"$file" 2>/dev/null || true
+  log_line "lock: $1"
+}
+
 ledger() { # ledger KIND WHAT - write down one change, once
   _ledger_on || return 0
   mkdir -p "${LEDGER_DIR}/saved" 2>/dev/null || return 0
@@ -599,19 +622,24 @@ UNDO=()
 undo_on_failure() { UNDO+=("$*"); }
 forget_undo() { UNDO=(); }
 
+UNDO_SAID=""   # an undo command that wants to be reported in its own words sets this
 _run_undo() {
   [ ${#UNDO[@]} -gt 0 ] || return 0
+  # Taken off the list before any runs: an undo that fails inside a step would otherwise run the
+  # list again from inside itself.
+  local -a todo=("${UNDO[@]}")
+  UNDO=()
   printf '\n%sPutting things back%s\n' "$E_B" "$E_OFF" >&2
   local i
-  for (( i=${#UNDO[@]}-1 ; i>=0 ; i-- )); do
-    log_line "undo: ${UNDO[i]}"
-    if eval "${UNDO[i]}" >>"${LOG_FILE:-/dev/null}" 2>&1; then
-      printf '  undone: %s\n' "${UNDO[i]}" >&2
+  for (( i=${#todo[@]}-1 ; i>=0 ; i-- )); do
+    log_line "undo: ${todo[i]}"
+    UNDO_SAID=""
+    if eval "${todo[i]}" >>"${LOG_FILE:-/dev/null}" 2>&1; then
+      printf '  %s%s%s %s\n' "$E_B" "$S_OK" "$E_OFF" "${UNDO_SAID:-undone: ${todo[i]}}" >&2
     else
-      printf '  %scould not undo:%s %s\n' "$E_YEL" "$E_OFF" "${UNDO[i]}" >&2
+      printf '  %scould not undo:%s %s\n' "$E_YEL" "$E_OFF" "${UNDO_SAID:-${todo[i]}}" >&2
     fi
   done
-  UNDO=()
 }
 
 # One line of a failure's explanation, on stderr: prose is wrapped, and a command is cyan.
@@ -829,6 +857,113 @@ on_system_path() { # every user has to find it, not just whoever is running this
 
 as_root() { if [ "$(id -u)" = 0 ]; then "$@"; else sudo "$@"; fi; }
 
+# uv keeps its cache and the Python it fetches inside the install, in the same two places on every
+# path (install, upgrade, doctor, rescue). A sync that keeps the virtualenv does not care, but one
+# that builds it again (the doctor's rebuild, a deleted .venv, a newer Python wanted) and is told
+# nothing does not find the Python the installer fetched: on a server whose own Python is too old it
+# fetches another into the caller's home and builds on that, which under /root the service account
+# cannot run, and which removing the install would not remove.
+uv_vars() { # uv_vars DIR - the environment uv runs with for the install at DIR, one assignment a line
+  printf 'UV_CACHE_DIR=%s/.cache/uv\nUV_PYTHON_INSTALL_DIR=%s/.local/share/uv/python\n' "$1" "$1"
+}
+uv_sync() { # uv_sync DIR - install the packages uv.lock pins into DIR/.venv, as root
+  local -a vars
+  mapfile -t vars < <(uv_vars "$1")
+  as_root env "PATH=${SYSTEM_PATH:-$PATH}" "${vars[@]}" uv sync --frozen --no-dev --project "$1"
+}
+uv_sync_line() { # uv_sync_line DIR - the same, as one line a person can paste
+  printf 'sudo env %s uv sync --frozen --no-dev --project %s' "$(uv_vars "$1" | tr '\n' ' ' | sed 's/ $//')" "$1"
+}
+
+# .env is read the way the program reads it (python-dotenv), so that what the script decides from
+# a value is what the program does with it: `export` and spaces around = are allowed, a value in
+# single quotes is taken as written, one in double quotes with \" and \\ undone, a bare one ends at
+# " #" and loses trailing spaces, the last line for a name wins, and Windows line ends are ignored.
+env_value() { # env_value FILE KEY - KEY's value in FILE as the program sees it; empty when unset
+  as_root cat "$1" 2>/dev/null | env LC_ALL=C awk -v key="$2" -v sq="'" '
+    { sub(/\r$/, "") }
+    /^[ \t]*(export[ \t]+)?[A-Za-z_][A-Za-z0-9_]*[ \t]*=/ {
+      line = $0
+      sub(/^[ \t]*(export[ \t]+)?/, "", line)
+      name = line
+      sub(/[ \t]*=.*$/, "", name)
+      if (name != key) next
+      v = line
+      sub(/^[^=]*=[ \t]*/, "", v)
+      q = substr(v, 1, 1)
+      if (q == "\"" || q == sq) {
+        out = ""
+        for (i = 2; i <= length(v); i++) {
+          c = substr(v, i, 1)
+          if (q == "\"" && c == "\\" && i < length(v)) {
+            n = substr(v, i + 1, 1)
+            if (n == "\"" || n == "\\") { out = out n; i++; continue }
+          }
+          if (c == q) break
+          out = out c
+        }
+        found = out
+      } else {
+        sub(/[ \t]+#.*$/, "", v)
+        sub(/[ \t]+$/, "", v)
+        found = v
+      }
+      seen = 1
+    }
+    END { if (seen) printf "%s", found }' || true
+}
+
+quote_env() { # quote_env VALUE -> how that value must be written so .env reads it back whole
+  # A bare value loses everything from '#' and any trailing space: a password with either would
+  # silently change. Single quotes are literal to python-dotenv, systemd and compose alike; a
+  # value with an apostrophe falls back to double quotes.
+  local value="$1"
+  case "$value" in
+    "") printf '' ;;
+    *[!A-Za-z0-9_.:/@+,=-]*)
+      case "$value" in
+        *\'*)
+          case "$value" in
+            *[\$\`\\]*)
+              warn "a value with both an apostrophe and one of \$ \` \\ cannot be stored safely; edit .env by hand if this one matters"
+              ;;
+          esac
+          printf '"%s"' "$(printf '%s' "$value" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+          ;;
+        *) printf "'%s'" "$value" ;;
+      esac
+      ;;
+    *) printf '%s' "$value" ;;
+  esac
+}
+
+env_file_write() { # env_file_write FILE KEY VALUE - set KEY in FILE as root, keeping its owner and mode
+  # The last line that sets the key is the one the program reads, so that is the one replaced;
+  # a missing key is added at the end, on a line of its own whether or not the file ended with
+  # one. The value goes through the environment, where awk reads no escapes in it. The file is
+  # rewritten beside itself and moved into place, so a failure part-way leaves it as it was.
+  local file="$1" tmp
+  case "$3" in *$'\n'*) die "${2} contains a line break, which .env cannot hold. Use a value on one line." ;; esac
+  tmp="${file}.tmp.$$"
+  if as_root test -f "$file"; then
+    as_root cp -p "$file" "$tmp"
+  else
+    # A new one is the service account's to read, like the one the installer writes.
+    as_root install -m 600 ${SERVICE_USER:+-o "$SERVICE_USER"} /dev/null "$tmp"
+  fi
+  as_root cat "$file" 2>/dev/null | KEY="$2" WRITTEN="$(quote_env "$3")" env LC_ALL=C awk '
+    { lines[NR] = $0; probe = $0; sub(/\r$/, "", probe)
+      if (probe ~ "^[ \t]*(export[ \t]+)?" ENVIRON["KEY"] "[ \t]*=") last = NR }
+    END {
+      for (i = 1; i <= NR; i++) {
+        if (i == last) print ENVIRON["KEY"] "=" ENVIRON["WRITTEN"]; else print lines[i]
+      }
+      if (!last) print ENVIRON["KEY"] "=" ENVIRON["WRITTEN"]
+    }' | as_root tee "$tmp" >/dev/null \
+    && as_root mv -f "$tmp" "$file" \
+    || { as_root rm -f "$tmp"; die "could not write ${file}" "Nothing in it was changed."; }
+}
+
 require_free_mb() { # require_free_mb PATH MB "what for"
   local path="$1" wanted="$2" what="$3" free
   [ -e "$path" ] || path="$(dirname -- "$path")"
@@ -994,11 +1129,10 @@ approve() { # approve "question" [yes|no]
     log_line "approved by --yes: ${question}"
     return 0
   fi
-  if [ ! -t 0 ]; then
-    warn "${question}"
-    note "There is no terminal here to answer, so the answer is no. Pass --yes if you mean it."
-    return 1
-  fi
+  # Nobody is there to answer, so nothing was agreed to: that is a failure, not a quiet no, so a
+  # cron job or a script that forgot --yes does not read "nothing was changed" as success.
+  [ -t 0 ] || die "${question} There is no terminal here to answer, so nothing was done." \
+                  "Pass --yes to answer yes without being asked."
   read -r -p "${CYN}?${OFF} ${B}${question}${OFF} [${hint}]: " reply || reply=""
   case "$reply" in
     [Yy]*) return 0 ;;
@@ -1261,13 +1395,9 @@ render_unit() { # render_unit TARGET USER [UNIT] - the service file for an insta
     }
 }
 
-# While CHANGELOG.md's newest heading says "in progress" an install follows the default branch;
-# once it carries a date, the release tags. An upgrade only ever moves forward.
-
-in_progress() { # in_progress DIR REF - succeeds when REF's changelog says its newest version is unreleased
-  as_root git -C "$1" show "${2}:CHANGELOG.md" 2>/dev/null \
-    | grep -m1 '^## v' | grep -qi 'in progress'
-}
+# An install follows the default branch, so an upgrade brings in everything merged there whether or
+# not a release has been tagged. The newest release tag is only the fallback for a remote that
+# names no default branch. An upgrade only ever moves forward.
 
 default_branch() { # default_branch DIR - the remote's default branch, as a bare name
   local ref
@@ -1282,14 +1412,42 @@ default_branch() { # default_branch DIR - the remote's default branch, as a bare
 wanted_version() { # wanted_version DIR - prints "branch NAME", "tag NAME" or "none"
   local branch tag
   branch="$(default_branch "$1")"
-  tag="$(as_root git -C "$1" tag -l 'v*' --sort=-v:refname 2>/dev/null | head -1 || true)"
-  if [ -n "$branch" ] && { [ -z "$tag" ] || in_progress "$1" "origin/${branch}"; }; then
+  if [ -n "$branch" ]; then
     printf 'branch %s\n' "$branch"
-  elif [ -n "$tag" ]; then
+    return 0
+  fi
+  tag="$(as_root git -C "$1" tag -l 'v*' --sort=-v:refname 2>/dev/null | head -1 || true)"
+  if [ -n "$tag" ]; then
     printf 'tag %s\n' "$tag"
   else
     printf 'none\n'
   fi
+}
+
+refresh_default_branch() { # refresh_default_branch DIR REMOTE - origin/HEAD follows the remote's default branch as it is now
+  # A clone writes origin/HEAD once and a fetch never moves it, so a default branch renamed on
+  # the remote would be followed by nobody: ask the remote each time, and leave it when it cannot say.
+  local head
+  head="$(as_root env GIT_TERMINAL_PROMPT=0 git -C "$1" ls-remote --symref "$2" HEAD 2>/dev/null \
+    | sed -n 's|^ref: refs/heads/\(.*\)[[:space:]]HEAD$|\1|p' | head -1 || true)"
+  [ -n "$head" ] || return 0
+  as_root git -C "$1" rev-parse --verify --quiet "refs/remotes/origin/${head}" >/dev/null 2>&1 || return 0
+  as_root git -C "$1" symbolic-ref refs/remotes/origin/HEAD "refs/remotes/origin/${head}" 2>/dev/null || true
+}
+
+fetch_trouble() { # fetch_trouble OUTPUT - what a failed fetch said, as one word: credential, network, missing, ownership or unknown
+  case "$1" in
+    *"dubious ownership"*) printf ownership ;;
+    *"Authentication failed"*|*"could not read Username"*|*"terminal prompts disabled"*|*"Permission denied (publickey"*|\
+    *"Repository not found"*|*"returned error: 401"*|*"returned error: 403"*|*"Invalid username or password"*|\
+    *"Host key verification failed"*) printf credential ;;
+    *"Could not resolve host"*|*"Couldn't connect"*|*"Could not connect"*|*"Connection timed out"*|*"Connection refused"*|\
+    *"Network is unreachable"*|*"Failed to connect"*|*"No route to host"*|*"Operation timed out"*|*"Temporary failure"*|\
+    *"ssh: connect to host"*|*"SSL"*|*"TLS"*|*"Connection reset"*|*"unexpected disconnect"*|*"RPC failed"*|\
+    *"The remote end hung up"*) printf network ;;
+    *"does not appear to be a git repository"*|*"not found"*|*"No such file"*) printf missing ;;
+    *) printf unknown ;;
+  esac
 }
 
 moves_forward() { # moves_forward DIR TARGET - succeeds when TARGET holds everything installed now, and more

@@ -281,7 +281,7 @@ rescue_wont_start() {
       fi
     elif approve "Build the Python environment again from the lock file? (Takes a minute or two; nothing in data/ is touched.)" yes; then
       if [ "$DRY_RUN" != 1 ] && [ ! -x "${TARGET}/.venv/bin/python" ]; then as_root rm -rf "${TARGET}/.venv"; fi
-      retry 2 "Installing the packages from uv.lock" as_root env PATH="${SYSTEM_PATH:-$PATH}" uv sync --frozen --no-dev --project "$TARGET"
+      retry 2 "Installing the packages from uv.lock" uv_sync "$TARGET"
       [ "$DRY_RUN" = 1 ] || as_root chmod -R go-w "$TARGET" 2>/dev/null || true
     fi
   fi
@@ -357,7 +357,7 @@ rescue_rollback() {
     "Pick the version yourself:" \
     "  sudo git -C ${TARGET} log --oneline --decorate -15" \
     "  sudo git -C ${TARGET} checkout --detach THAT_COMMIT" \
-    "  sudo uv sync --frozen --no-dev --project ${TARGET}" \
+    "  $(uv_sync_line "$TARGET")" \
     "and, if the database must go back too: sudo ${0} restore BACKUP"
   as_root git -C "$TARGET" rev-parse --verify --quiet "${from}^{commit}" >/dev/null \
     || die "the version it would go back to (${from}) is no longer in this checkout" \
@@ -400,7 +400,7 @@ rescue_rollback() {
   if [ "$DOCKER_MODE" = 1 ]; then
     step "Rebuilding the image" as_root docker compose --project-directory "$TARGET" build
   else
-    retry 2 "Installing the packages that version used" as_root env PATH="${SYSTEM_PATH:-$PATH}" uv sync --frozen --no-dev --project "$TARGET"
+    retry 2 "Installing the packages that version used" uv_sync "$TARGET"
     [ "$DRY_RUN" = 1 ] || as_root chmod -R go-w "$TARGET" 2>/dev/null || true
   fi
   progress_to 4
