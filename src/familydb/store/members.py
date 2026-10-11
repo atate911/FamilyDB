@@ -146,6 +146,8 @@ def update_profile(
 # test holds this to the schema, so a new table pointing at a member must be named here.
 POINTING_AT = {
     ("app_settings", "updated_by"): "unname",
+    # Who passed on something she found: the "not for us" stays, unnamed (store/finds.py).
+    ("finds", "passed_by"): "unname",
     ("ideas", "suggested_by"): "unname",
     ("member_locations", "member_id"): "delete",
     # The names their locations were given, taken out of what held them first (place_names.py).

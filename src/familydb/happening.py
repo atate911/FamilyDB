@@ -31,6 +31,10 @@ KINDS = ("scout", "find_feeds")
 FEED = "feed"
 TICKETMASTER = "ticketmaster"
 WEB = "web"
+# Found while answering somebody who asked (docs/FINDS.md: searching on request).
+REQUEST = "request"
+# Kinds a search found, named by the page they were found on rather than a source.
+SEARCHED = (WEB, REQUEST)
 # The source names kept in find_sources: one per calendar, one for Ticketmaster, one for the
 # weekly search, and one per home area for the lookup that proposes calendars.
 FEED_PREFIX = "feed:"
@@ -67,6 +71,13 @@ def host(url: str) -> str:
     """A calendar by the site it is on, which is what the family know it by."""
     name = urlsplit(url).hostname or url
     return name.removeprefix("www.")
+
+
+def listed_by(kind: str, source: str, url: str | None) -> str:
+    """Who listed a find, as the pages say it: the site a search found it on, else its source."""
+    if kind in SEARCHED and url:
+        return host(url)
+    return source_name(source)
 
 
 def source_name(source: str) -> str:

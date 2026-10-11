@@ -862,7 +862,9 @@ def find_starters(find: Any, today: date) -> list[str]:
 
 def find_state(find: Any, today: date) -> str:
     """A happening's day in words: "Saturday 17 October, 6:30 pm", "Today at 6:30 pm", "On until
-    Sunday 18 October", "Was on Saturday 3 October"."""
+    Sunday 18 October", "Was on Saturday 3 October"; "Any time" for a place."""
+    if find.starts_at is None:
+        return "Any time"
     first = date.fromisoformat(find.starts_at[:10])
     last = date.fromisoformat(find.ends_at[:10]) if find.ends_at else first
     if last < today:
@@ -1521,19 +1523,17 @@ def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
 
 def find_row(find: Any, today: date) -> dict[str, Any]:
     """One thing near home as its page lists it."""
-    first = date.fromisoformat(find.starts_at[:10])
+    first = date.fromisoformat(find.starts_at[:10]) if find.starts_at else today
     last = date.fromisoformat(find.ends_at[:10]) if find.ends_at else first
-    if "T" in find.starts_at:
+    if find.starts_at is None:
+        when = "any time"
+    elif "T" in find.starts_at:
         when = find.starts_at[11:16]
     elif last > first:
         when = f"until {last:%a} {last.day} {last:%b}" if first <= today else "all day"
     else:
         when = "all day"
-    who = (
-        happening.host(find.url)
-        if find.kind == happening.WEB and find.url
-        else happening.source_name(find.source)
-    )
+    who = happening.listed_by(find.kind, find.source, find.url)
     summary = find.summary or ""
     return {
         "when": when,
@@ -1558,6 +1558,8 @@ def happening_days(
     the day they start (today once they have). A kid is told nothing of the sources."""
     days: dict[date, list[dict[str, Any]]] = {}
     for find in found:
+        if find.starts_at is None:
+            continue  # a place to go any time is on no day
         day = max(date.fromisoformat(find.starts_at[:10]), today)
         row = find_row(find, today)
         row["source_words"] = "listed near home" if kid else f"listed by {row['who']}"

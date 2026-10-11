@@ -40,7 +40,10 @@ def _day(text: str) -> date:
 
 
 def when_text(find: Find) -> str:
-    """When it is on, as the family would say it: "Sat 10 Oct 19:30", "Sat 10 to Sun 11 Oct"."""
+    """When it is on, as the family would say it: "Sat 10 Oct 19:30", "Sat 10 to Sun 11 Oct",
+    "any time" for a place."""
+    if find.starts_at is None:
+        return "any time"
     first = _day(find.starts_at)
     said = f"{first:%a} {first.day} {first:%b}"
     if "T" in find.starts_at:
@@ -53,9 +56,7 @@ def when_text(find: Find) -> str:
 
 def _who(find: Find) -> str:
     """Who listed it: the calendar's site, Ticketmaster, or the page the search found."""
-    if find.kind == happening.WEB and find.url:
-        return happening.host(find.url)
-    return happening.source_name(find.source)
+    return happening.listed_by(find.kind, find.source, find.url)
 
 
 def to_web_find(find: Find) -> WebFind:
@@ -76,7 +77,7 @@ def to_web_find(find: Find) -> WebFind:
 def _in_hours(find: Find, context: Context) -> bool:
     """A timed thing starts inside the part of its day asked about (tonight, the rest of today);
     an all-day one, or a day not in the window, is kept."""
-    if "T" not in find.starts_at:
+    if find.starts_at is None or "T" not in find.starts_at:
         return True
     starts = datetime.fromisoformat(find.starts_at)
     day = context.day(starts.date())

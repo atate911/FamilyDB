@@ -470,3 +470,35 @@ def test_place_names_arrive_empty_with_0058(tmp_path, monkeypatch):
         conn.execute(
             "INSERT INTO place_names (member_id, label, named_at) VALUES (1, 'Old Town', 'x')"
         )
+
+
+def test_every_find_outlasts_the_back_pocket_rebuild_of_0061(tmp_path, monkeypatch):
+    """0061 rebuilds finds so one may be a place to go any time and keep what became of it:
+    every row and id comes across, new and offered, and a state it does not know is refused."""
+    import sqlite3
+    from contextlib import closing
+
+    import pytest
+
+    with closing(db.connect(tmp_path / "old.sqlite3")) as conn:
+        _up_to(monkeypatch, conn, 60)
+        for n in (3, 8):
+            conn.execute(
+                "INSERT INTO finds (id, source, kind, external_id, title, starts_at, "
+                "first_seen_at, last_seen_at) VALUES (?, 'feed:x', 'feed', ?, ?, "
+                "'2026-10-17T10:00', '1', '1')",
+                (n, f"e{n}", f"Show {n}"),
+            )
+        conn.commit()
+        assert db.migrate(conn)[0] == 61
+        rows = conn.execute("SELECT id, title, state, participants FROM finds ORDER BY id")
+        assert [tuple(row) for row in rows] == [
+            (3, "Show 3", "new", "[]"),
+            (8, "Show 8", "new", "[]"),
+        ]
+        conn.execute(
+            "INSERT INTO finds (source, kind, external_id, title, first_seen_at, last_seen_at) "
+            "VALUES ('request', 'request', 'u', 'A park', '1', '1')"
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute("UPDATE finds SET state = 'maybe' WHERE id = 3")
