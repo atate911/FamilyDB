@@ -10,6 +10,7 @@ from familydb.base.config import Settings
 from familydb.hours import checked_days_ago, format_ranges, is_stale, open_on
 from familydb.integrations.geocode import estimate_travel
 from familydb.store import places
+from familydb.store.ideas import needs_lookup
 from familydb.store.places import Place
 from familydb.suggest.types import (
     Candidate,
@@ -87,6 +88,9 @@ def _hours_check(
 ) -> tuple[list, bool, bool]:
     """(fitting days after the hours check, hard_fail, soft)."""
     fits = list(item.fits_days)
+    if place is None and not needs_lookup(item.idea):
+        # A stay-at-home idea has no hours to be held to; nothing is unknown about it.
+        return fits, False, False
     if place is None or not place.hours:
         checks.open = "unknown"
         if item.idea.enrichment == "done":

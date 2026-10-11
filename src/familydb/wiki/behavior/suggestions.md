@@ -29,7 +29,7 @@ Time is counted in minutes. Each day runs from 08:00 to 22:00 unless the questio
 | An idea tied to dates: over, or on days outside the window | Ruled out |
 | Forecast: an outdoor or dry-weather idea on a day with a 50% or higher chance of rain (rain and snow codes count only when no chance is given), a warm one under 18 °C (64 °F), a snow one without snow | Ruled out when no day fits |
 | Free time: the idea's length against the longest free stretch; an unknown length needs an hour, a day trip or anything of 8 hours or more needs a whole free day, a trip needs the whole window | Ruled out |
-| Opening hours saved by a lookup: open that day, long enough inside a free stretch, with travel at both ends | Closed is ruled out; unknown, or an idea with no place, is possible ("hours unknown") |
+| Opening hours saved by a lookup: open that day, long enough inside a free stretch, with travel at both ends | Closed is ruled out; unknown is possible ("hours unknown"). A stay-at-home idea with nothing to look up has no hours and is not held to any |
 | A saved place's details older than the stale limit (`place_stale_days`, 30 days) or never checked | Possible; a chat question also queues a refresh |
 | Booking: the lead time against the days left | Too late is ruled out; an unknown lead time is possible |
 | Travel: a straight-line estimate times the road factor at the average speed, from home or where they are | Over the limit asked, or the round trip plus the visit longer than the free time, is ruled out |

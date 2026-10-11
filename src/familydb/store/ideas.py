@@ -39,6 +39,22 @@ def normal_kind(kind: str) -> str:
     return GIFT if kind.lower() in GIFT_WORDS else kind
 
 
+# Kinds that are never a place. Narrow on purpose (a title can name a place, "Pizza Luna"): only
+# while no location, link or place is attached. A gift's link is to the thing itself, so only a
+# place named for it is looked up.
+NO_LOOKUP_KINDS = frozenset({"home", GIFT})
+
+
+def needs_lookup(idea: Idea) -> bool:
+    """Whether a lookup could find anything for this idea (decided in code): the lookup job
+    skips one that has nothing (jobs/enrich.py), and the engine holds it to no opening hours
+    (suggest/evaluate.py)."""
+    if idea.kind not in NO_LOOKUP_KINDS:
+        return True
+    link = idea.url if idea.kind != GIFT else None
+    return bool(idea.location_name or link or idea.place_id)
+
+
 Setting = Literal["indoor", "outdoor", "either"]
 Weather = Literal["any", "dry", "warm", "snow"]
 Status = Literal["idea", "planned", "done", "dropped"]

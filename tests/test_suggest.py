@@ -1300,6 +1300,22 @@ def test_now_is_judged_by_its_own_hours(conn, settings, clock, family) -> None:
     assert said.verdict == "ruled_out" and said.reasons[0].startswith("rain likely Sunday (90%)")
 
 
+def test_a_stay_at_home_idea_is_not_held_to_opening_hours(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    """A board game night has no hours to look up (`ideas.needs_lookup`), so it is good, not
+    "possible: hours unknown (details pending)" for ever; a restaurant not looked up yet still
+    is."""
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    games = _idea(conn, "Board game night", kind="home")
+    ramen = _idea(conn, "Ramen place", kind="restaurant")
+    _, data = _suggest(registry, ctx)
+    verdicts = {c["idea_id"]: c for c in data["candidates"]}
+    assert verdicts[games.id]["verdict"] == "good" and verdicts[games.id]["reasons"] == []
+    assert verdicts[ramen.id]["verdict"] == "possible"
+    assert verdicts[ramen.id]["reasons"] == ["hours unknown (details pending)"]
+
+
 def test_a_saved_plan_without_an_offset_is_busy_at_its_wall_time(
     conn, settings, thursday_clock
 ) -> None:

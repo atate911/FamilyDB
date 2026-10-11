@@ -24,7 +24,7 @@ from familydb.base.dates import utc_iso
 from familydb.base.errors import AgentError
 from familydb.store import ideas, messages, places
 from familydb.store.db import transaction
-from familydb.store.ideas import GIFT, Idea
+from familydb.store.ideas import Idea, needs_lookup
 from familydb.store.places import Place
 
 log = logging.getLogger(__name__)
@@ -32,19 +32,9 @@ log = logging.getLogger(__name__)
 OUTCOMES = ("done", "skipped", "failed", "deferred")
 # The most one evening looks up; the rest wait.
 EVENING_MOST = 40
-# Kinds that are never a place. Narrow on purpose (a title can name a place, "Pizza Luna"): only
-# while no location, link or place is attached. A gift's link is to the thing itself, so only a
-# place named for it is looked up.
-NO_LOOKUP_KINDS = frozenset({"home", GIFT})
+# Which ideas have nothing to look up is the idea record's rule (`ideas.needs_lookup`), shared
+# with the engine.
 NO_LOOKUP_NOTE = "nothing to look up: a {kind} idea with no place or link"
-
-
-def needs_lookup(idea: Idea) -> bool:
-    """Whether a worker turn could find anything for this idea (decided in code)."""
-    if idea.kind not in NO_LOOKUP_KINDS:
-        return True
-    link = idea.url if idea.kind != GIFT else None
-    return bool(idea.location_name or link or idea.place_id)
 
 
 def render_enrich_request(idea: Idea, place: Place | None, settings: Settings) -> str:

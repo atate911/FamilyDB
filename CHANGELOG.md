@@ -66,6 +66,10 @@
   as the server's clock, so a 9 am game counted as busy at 2 am and the morning as free; the tools
   store an offset, so a real household was not affected. It is now read as wall time, as everything
   else reads one.
+- **A stay-at-home idea is not held to opening hours.** A board game night, or anything of kind
+  home with no place or link, has nothing to look up, so the lookups skipped it and the engine then
+  called it possible for ever, "hours unknown (details skipped)", under every idea whose place is
+  known. It is now good when nothing else is against it, and says nothing of hours.
 
 ## v0.5.0 — beta (2026-10-11)
 

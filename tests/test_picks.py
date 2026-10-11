@@ -57,7 +57,9 @@ def test_a_set_is_one_pick_a_kind_with_its_reason_and_the_days_line(env, app) ->
     assert made is not None and made.window == "weekend" and made.member_id is None
     assert (made.window_start, made.window_end) == ("2026-09-26", "2026-09-27")
     kinds = [tile["kind"] for tile in made.picks]
-    assert kinds == ["Eat", "Go out", "Day trip", "Stay in"]  # one a kind, in the engine's order
+    # One a kind, in the engine's order: the board game night is good (nothing to look up), the
+    # rest possible until their lookups (suggest/evaluate.py).
+    assert kinds == ["Stay in", "Eat", "Go out", "Day trip"]
     assert len({tile["title"] for tile in made.picks}) == 4
     ramen = next(tile for tile in made.picks if tile["idea_id"] == seeded["ramen"])
     assert ramen["when"] in ("Sat", "Sun", "Sat or Sun")
