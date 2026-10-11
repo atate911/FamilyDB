@@ -469,7 +469,7 @@ def _use_view(
     month_since: str,
     set_here: dict[str, Any],
 ) -> dict[str, Any]:
-    pricer = Pricer(use, days, settings.anthropic_cache_ttl)
+    pricer = Pricer(use, days, providers.cache_ttl(settings))
     stored = _stored_choice(settings, use.key)
     default = uses.default_choice(settings, use.key)
     resolved = uses.resolve(settings, use.key)

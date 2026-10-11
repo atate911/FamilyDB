@@ -695,81 +695,50 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
     assert lockout.locked("198.51.100.4", now)
 
 
-def test_no_page_reaches_a_table_to_write_to_it() -> None:
-    """No module in the package may write to a table itself, the four that change things included:
-    the chat page hands a message to the pipeline, the edit forms call the tools, the family page
-    uses the family rules, the settings page one repository.
+def test_no_page_writes_but_through_the_four_doors() -> None:
+    """No module in the package writes to a table, the four that change things included: the chat
+    page hands a message to the channel, the edit forms dispatch a tool, the family page and the
+    Look page go through the family rules, the settings page through one repository (and has the
+    daily check read a company it was just given).
+
+    Which functions write is read off the source (`tests/writes.py`: a transaction, a statement
+    that changes a table, a dispatch, or a call to one of those, followed through the package),
+    so a store's or a service's new writer is refused however it is imported or named here.
     """
-    import ast
+    from tests import writes
 
-    import familydb.web as package
-
-    stores = {
-        "db",
-        "ideas",
-        "places",
-        "plans",
-        "outcomes",
-        "members",
-        "messages",
-        "calls",
-        "suggestions",
-        "logins",
-        "idea_store",
-        "place_store",
-        "plan_store",
-        "outcome_store",
-        "login_store",
-        "member_store",
-        "memories",
-        "memory_store",
-        "finds",
-        "find_store",
+    allowed = {
+        "edits.py": {"dispatch()"},
+        "family.py": {
+            f"familydb.family.{name}"
+            for name in (
+                "add",
+                "change",
+                "choose_password",
+                "claim",
+                "give_starting_password",
+                "invite",
+                "pin",
+                "remove",
+                "remove_login",
+                "subscribe_push",
+                "unpin",
+                "unsubscribe_push",
+            )
+        },
+        "look.py": {"familydb.family.choose_look"},
+        "settings.py": {
+            "familydb.store.settings.set_many",
+            "transaction()",
+            "familydb.model_watch.check_added",
+        },
     }
-    writes = {
-        "insert",
-        "insert_in",
-        "insert_out",
-        "update",
-        "delete",
-        "transaction",
-        "migrate",
-        "apply_outcome",
-        "requeue_enrichment",
-        "mark_followed_up",
-        "set_reply",
-        "set_active",
-        "mark_processed",
-        "set_text",
-        "firm_up",
-        "replace",
-        "forget",
-        "mark_failed",
-        "give_up",
-        "reset_retries",
-        "add",
-        "set_many",
-        "clear",
-        "put",
-        "remove",
-        "update_profile",
-    }
-    stores.add("settings_store")
-    for module in sorted(Path(package.__file__).parent.glob("*.py")):
-        if module.name == "settings.py":
-            continue  # app_settings is its own table; the next test pins how far it goes
-        tree = ast.parse(module.read_text("utf-8"), filename=module.name)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
-                "familydb.store"
-            ):
-                for alias in node.names:
-                    assert alias.name not in writes, f"{module.name} imports {alias.name}"
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-                base = node.func.value
-                called = node.func.attr
-                writing = isinstance(base, ast.Name) and base.id in stores and called in writes
-                assert not writing, f"{module.name}:{node.lineno} calls {called} on a store"
+    folder = Path(web_module.__file__).parent
+    for module in sorted(folder.glob("*.py")):
+        found = writes.writes_called(module)
+        may = allowed.get(module.name, set())
+        assert found <= may, f"{module.name} writes through {sorted(found - may)}"
+        assert found == may, f"{module.name} no longer writes through {sorted(may - found)}"
 
 
 def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
@@ -906,8 +875,18 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
             assert not family_rules, f"{name} reaches the family rules"
         if name not in {"chat.py", "__init__.py"}:  # the factory builds the thing chat.py uses
             assert not any(module.startswith("familydb.channels") for module in reached), name
+        # A page may read a few things the tools work out (opening hours, a tidy link, the
+        # forecast); the machinery that runs one is the edit forms' alone.
+        tools_read = {
+            "destinations.py": {"familydb.tools.weather"},
+            "edits.py": {"familydb.tools"},
+            "views.py": {"familydb.tools.places", "familydb.tools.urls"},
+        }
+        tools_reached = {
+            m for m in reached if m == "familydb.tools" or m.startswith("familydb.tools.")
+        }
+        assert tools_reached <= tools_read.get(name, set()), f"{name} imports {tools_reached}"
         if name != "edits.py":
-            assert "familydb.tools" not in reached, f"{name} imports the tool machinery"
             assert not dispatches, f"{name} dispatches a tool"
 
 

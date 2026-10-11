@@ -125,6 +125,12 @@ def chosen(settings: Settings, surface: Surface) -> str:
     return name if companies.get(name, settings) is not None else companies.DEFAULT
 
 
+def cache_ttl(settings: Settings) -> str:
+    """How long a cached prefix is kept where a company charges to write it: what a cost is
+    counted with when no one provider is in hand (the AI model page prices every model)."""
+    return settings.anthropic_cache_ttl
+
+
 def can_search(provider: Provider) -> bool:
     """Whether the company has hosted web search, which a lookup needs (the chat never has it)."""
     return bool(getattr(provider, "searches", True))
@@ -291,6 +297,7 @@ __all__ = [
     "WebAccess",
     "Withheld",
     "build",
+    "cache_ttl",
     "catalog",
     "chosen",
     "fallback_for",

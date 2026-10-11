@@ -159,6 +159,9 @@ class OpenAIProvider:
             return self.settings.openai_worker_model or self.settings.openai_model
         return self.settings.openai_model
 
+    def cache_ttl(self) -> str:
+        return ""
+
     def instructions(self, system: list[SystemBlock]) -> str:
         return "\n\n".join(block.text for block in system if block.text)
 

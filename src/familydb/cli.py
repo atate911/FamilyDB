@@ -549,8 +549,8 @@ def debug_cost(
             "  but nothing can look things up: the company that would cannot search the web, and "
             "no other that can has a key (or asking another company is off)"
         )
-    if chat_provider.name == "anthropic":
-        typer.echo(f"  the prefix above is cached for {settings.anthropic_cache_ttl}")
+    if ttl := chat_provider.cache_ttl():
+        typer.echo(f"  the prefix above is cached for {ttl}")
     spare = application.fallback("chat", chat_provider.name)
     if spare is not None:
         typer.echo(f"  {spare.name} answers when {chat_provider.name} cannot")

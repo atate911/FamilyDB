@@ -140,6 +140,9 @@ class GeminiProvider:
             return self.settings.gemini_worker_model or self.settings.gemini_model
         return self.settings.gemini_model
 
+    def cache_ttl(self) -> str:
+        return ""
+
     def instructions(self, system: list[SystemBlock]) -> str:
         return "\n\n".join(block.text for block in system if block.text)
 

@@ -100,9 +100,7 @@ MODEL_BOXES = {
 }
 LEVEL_BOXES = {call.level: call.surface for call in gateway.KINDS.values()}
 KEY_LABELS = {
-    "anthropic_api_key": "Anthropic key",
-    "openai_api_key": "OpenAI key",
-    "gemini_api_key": "Google key",
+    **{company.key_setting: f"{company.label} key" for company in companies.BUILT_IN},
     "telegram_bot_token": "Telegram bot token",
     "ticketmaster_api_key": "Ticketmaster key",
 }

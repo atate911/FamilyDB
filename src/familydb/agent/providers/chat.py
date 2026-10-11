@@ -140,6 +140,9 @@ class ChatProvider:
             return self.company.worker_model(self.settings)
         return self.company.chat_model(self.settings)
 
+    def cache_ttl(self) -> str:
+        return ""
+
     # -- the request -----------------------------------------------------------------------------
 
     def messages(self, request: TurnRequest, *, replay: bool) -> list[dict[str, Any]]:

@@ -148,6 +148,11 @@ class Provider(Protocol):
 
     def model_for(self, surface: Surface) -> str: ...
 
+    def cache_ttl(self) -> str:
+        """How long the company keeps the cached prefix where it charges to write it ("5m",
+        "1h"), and "" where caching costs nothing extra: what a call's cost is counted with."""
+        ...
+
     def payload(self, request: TurnRequest) -> dict[str, Any]:
         """The request as it would be sent (`debug prompt`, `send`)."""
         ...

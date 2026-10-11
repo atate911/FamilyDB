@@ -209,6 +209,9 @@ class AnthropicProvider:
             return self.settings.worker_model or self.settings.anthropic_model
         return self.settings.anthropic_model
 
+    def cache_ttl(self) -> str:
+        return self.settings.anthropic_cache_ttl
+
     def cache_marker(self) -> dict[str, str]:
         if self.settings.anthropic_cache_ttl == "1h":
             return {"type": "ephemeral", "ttl": "1h"}
