@@ -534,6 +534,9 @@ class Settings(BaseSettings):
     home_lat: Latitude | None = None
     home_lon: Longitude | None = None
     home_area: str = ""
+    # Neighbourhoods and towns the family goes to besides home, one a line: a search for them
+    # looks there too (scouting/brief.py).
+    scouting_areas: str = Field(default="", max_length=500)
     weather_units: Literal["metric", "imperial"] = "metric"
 
     web_tools_enabled: bool = False

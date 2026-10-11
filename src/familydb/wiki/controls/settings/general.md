@@ -7,6 +7,7 @@ The General card sets where home is, the family's clock and units, and how the w
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
 | Home town or area (`home_area`) | empty | Where home is, as you would say it. When it changes, or you save it again while no position is kept, FamilyDB looks it up on the map and the card says what it found; if the town is not found, or the box is emptied, the previous position is kept. | A town and a state or country; no street address |
+| Other places you go (`scouting_areas`) | none | Neighborhoods or towns you often go to, one a line. When the assistant searches the web for suggestions, it looks there as well as near home. | Up to 500 characters |
 | Time zone (`family_tz`) | the server's, set by the installer | Decides what "tonight" and "this weekend" mean, and when the messages that go out on their own are sent. | The nearest city in the same zone |
 | Units (`weather_units`) | metric | The units for the forecast and for distances. | metric or imperial |
 

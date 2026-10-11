@@ -34,6 +34,7 @@ BEHAVIOUR = (
     "history_hours",
     "family_tz",
     "home_area",
+    "scouting_areas",
     "home_lat",
     "home_lon",
     "weather_units",

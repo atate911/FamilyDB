@@ -270,6 +270,14 @@ GROUPS: tuple[Group, ...] = (
                 "looked up on the map, and the page says what it found.",
             ),
             field(
+                "scouting_areas",
+                "Other places you go",
+                "Neighborhoods or towns you often go to, one a line. When she searches the web "
+                "for things to do, she looks there as well as near home.",
+                unset="none",
+                lines=True,
+            ),
+            field(
                 "family_tz",
                 "Time zone",
                 "It decides what “tonight” and “this weekend” mean, and when the messages that "
