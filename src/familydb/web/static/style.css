@@ -2007,7 +2007,8 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .byhand a { color: var(--ink-2); text-decoration-color: var(--line-2); }
 .finder--line { display: flex; gap: var(--s2); align-items: center; }
 .finder--line .searchbox { flex: 1; min-width: 0; }
-.fold--quiet > summary { color: var(--ink-2); font-size: var(--t-meta); }
+/* a quiet fold's summary is a quiet line; one drawn as a button keeps the button's own colors */
+.fold--quiet > summary:where(:not(.btn)) { color: var(--ink-2); font-size: var(--t-meta); }
 .list-items--big li { min-height: 52px; font-size: 1.0625rem; }
 .list-items--big .tick { width: 28px; height: 28px; }
 .set__text { flex: 1; min-width: 0; display: grid; gap: 2px; }
