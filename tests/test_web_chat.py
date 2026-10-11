@@ -161,7 +161,8 @@ def test_her_lines_carry_her_name_whatever_they_say(settings, clock, conn, famil
     # She is never drawn: beside her lines is her screen, and the smiling mark is only the
     # page's own, in the bars and at the foot.
     assert '<svg class="vs"' in _thread(page) and "mark-fdb" not in _thread(page)
-    assert page.count('class="mark-fdb"') == 1 and "mark-fdb--xs" not in page
+    # One in the menu, one in the phone's top line: each drawn at its own width.
+    assert page.count('class="mark-fdb"') == 2 and "mark-fdb--xs" not in page
 
     plain = _client(settings.model_copy(update={"persona": "none"}), clock)
     assert "<h1>Chat</h1>" in plain.get("/chat").text

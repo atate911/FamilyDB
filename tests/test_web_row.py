@@ -45,6 +45,30 @@ def _row(page: str) -> list[str]:
     return re.findall(r"<a [^>]*>([^<]+)(?:<span|</a>)", nav.group(0))
 
 
+def _menu(page: str) -> list[str]:
+    """The words of the menu down the left, in its order."""
+    side = re.search(r'<aside class="side".*?</aside>', page, re.S)
+    assert side is not None
+    return re.findall(r"<span>([^<]+)</span>", side.group(0))
+
+
+def test_every_page_has_the_one_menu_with_the_back_office_in_it(app) -> None:
+    """The family's pages and the back office draw the same menu down the left (_side.html), so
+    opening Now from Settings keeps the way back; an admin's has Status, Guide, Settings and
+    Family, a kid's none of them."""
+    sam = _in_as(app, SAM)
+    for page in ("/", "/eat", "/kids", "/chat", "/settings", "/status"):
+        menu = _menu(sam.get(page).text)
+        assert {"Now", "Status", "Guide", "Settings", "Family"} <= set(menu), page
+    assert (
+        'aria-current="page">'
+        in sam.get("/eat").text.split('<aside class="side"')[1].split("</aside>")[0]
+    )
+    kid = _in_as(app, KID)
+    assert _menu(kid.get("/").text)[:5] == ["Now", "Chat with Vera", "Do", "My week", "My list"]
+    assert not {"Status", "Settings", "Family"} & set(_menu(kid.get("/").text))
+
+
 def _take_out(conn, places: str) -> None:
     with transaction(conn):
         settings_store.set_many(conn, {"row_hidden": places}, changed_by=None)
@@ -80,6 +104,16 @@ def test_a_tick_for_each_place_and_unticking_takes_it_out_of_the_row(app, conn) 
         place: place not in ("soon", "did") for place in ROW_PLACES
     }
     assert _row(sam.get("/").text) == ["Now", "Eat", "Do", "Week", "Kids", "Lists"]
+    assert _menu(sam.get("/").text)[:7] == [
+        "Now",
+        "Chat with Vera",
+        "Eat",
+        "Do",
+        "Week",
+        "Kids",
+        "Lists",
+    ]
+    assert _menu(sam.get("/settings").text) == _menu(sam.get("/").text)  # one menu everywhere
     # Nothing is gone: a place taken out still opens from a link.
     assert sam.get("/soon").status_code == 200 and sam.get("/did").status_code == 200
     # Every tick again is no setting at all, and the row is whole.

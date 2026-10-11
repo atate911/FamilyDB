@@ -102,7 +102,7 @@ Now is the first screen. It is not a menu and not a dashboard: it is the box, th
 
 **Search** is inside the box: typing a name shows matches above the keyboard before anything is sent.
 
-**On a big screen** the destination row becomes the left rail, Now fills the center, and Vera's reply and thread are the right column. **On the kitchen tablet** Now becomes the board (section 8). **A kid's Now** is in section 9.
+**On a big screen** the destination row becomes the menu on the left (the back office's too: one menu on every page), Now fills the center, and Vera's reply and thread are the right column. **On the kitchen tablet** Now becomes the board (section 8). **A kid's Now** is in section 9.
 
 ## 4. The destinations
 
@@ -279,7 +279,7 @@ The reference layout and the one most used. Now as drawn in section 3, the box a
 └──────────┴─────────────────────────────────┴──────────────────┘
 ```
 
-The rail is the destination row with hints, Now fills the center, and the right column is Vera's: her reply as a live object, the thread behind it, and a reply can be pinned to the rail as a shelf of this person's own. Selecting an item narrows the right column to it. The frame grows in steps as today, never by stretching words. This is also where the admin works, with the back office behind the avatar.
+The rail is the menu every page shares: the destination row with hints, then Chat, what she knows and, for a grown-up, the back office (Status, the guide, Settings, the family) and who is signed in, so going from Settings to Now never loses the way back. Now fills the center, and the right column is Vera's: her reply as a live object, the thread behind it, and a reply can be pinned to the rail as a shelf of this person's own. Selecting an item narrows the right column to it. The frame grows in steps as today, never by stretching words. This is also where the admin works, with the back office behind the avatar.
 
 ### The kitchen tablet
 

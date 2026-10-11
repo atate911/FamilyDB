@@ -82,13 +82,20 @@ what to check when a new page "feels off".
 
 ### The frame
 
-There are two frames. **The family's frame** (`frame.html`, docs/INTERFACE.md) carries Now, the
-destinations and each thing's own page: the box first, the page, and the row of destinations,
-fixed at the foot on a phone, a rail on the left from a tablet up, and from a desk up a third
-column on the right for the box and what the last message brought back, with what the person
-pinned of hers above the conversation's last lines, kept in view while the page scrolls. **The back office's frame** (`base.html`) carries Status, Settings, Family, the
-guide and the account pages: **the menu, the main column, and the rail**, as below. The two share
-the type, the tokens, the parts and the steps the columns grow in.
+There are two frames, with one menu. **The family's frame** (`frame.html`, docs/INTERFACE.md)
+carries Now, the destinations and each thing's own page: the box first, the page, and the row of
+destinations fixed at the foot on a phone; from a tablet up the menu stands on the left in the
+row's place, and from a desk up a third column on the right holds the box and what the last
+message brought back, with what the person pinned of hers above the conversation's last lines,
+kept in view while the page scrolls. **The back office's frame** (`base.html`) carries Status,
+Settings, Family, the guide and the account pages: **the menu, the main column, and the rail**,
+as below. **The menu** (`_side.html`) is the same in both, so moving from Settings to Now keeps
+the left column and the way back: the mark, how she is, the family's places from the row's own
+list (so it marks what the row marks and leaves out what the family took out), Chat and What she
+knows, Behind the scenes for a grown-up, and who is signed in. A page that kept the menu only in the
+back office left a person on Now with no way back but the small picture at the top. The two share
+the type, the tokens, the parts and the steps the columns grow in. The kitchen board keeps its row
+and no menu.
 
 - **The menu and the rail are the same width**, and the main column sits centered between them,
   with the same gap on either side. Both side columns sit on the page's own background, set off
@@ -328,7 +335,7 @@ blinks for a few seconds and rests; the pill's dot breathes only while she write
 The frame folds in order, keeping the focal element first and whole.
 
 - **The family's frame, below 1100 pixels,** loses Vera's column: the box comes back to the top of
-  the page, under the wordmark, and the rail of destinations stays on the left.
+  the page, and the menu stays on the left.
 - **The back office, below about 1100 pixels,** moves the rail under the main column, its
   sections in the same order, and the menu stays.
 - **At 820 pixels and below** the family's frame is the phone's: the wordmark and the avatar, the

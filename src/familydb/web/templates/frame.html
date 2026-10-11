@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% from "_ui.html" import icon, brand_mark, wordmark, avatar, vera_screen, flash %}
 {# The frame of the family's pages (docs/INTERFACE.md): the box first, always; the middle is the page's; the row of
-   destinations is fixed at the bottom on a phone and becomes the rail on a wide screen. The back office (settings,
-   status, the family list, the guide) keeps base.html. `shell`, `viewer`, `grownup` come from base.html. #}
+   destinations is fixed at the bottom on a phone, and from a tablet's width up the menu every page shares
+   (_side.html) stands down the left in its place, so the back office and these pages keep one left column. The back
+   office (settings, status, the family list, the guide) keeps base.html. `shell`, `viewer`, `grownup` come from
+   base.html. #}
 {% block head %}
   {# While an answer is on its way the page fetches itself again (works without scripts), soon at first and then
      less often (chat.refresh_after); never with words in the box, which it would take with it. #}
@@ -12,6 +14,7 @@
 {% endblock %}
 {% block frame %}
   <div class="nf{% if not grownup %} nf--kid{% endif %}{% if page_box().no_box %} nf--nobox{% endif %}{% block nf_class %}{% endblock %}">
+    {% include "_side.html" %}
     <header class="nf__top">
       <a class="nf__brand" href="{{ url_for('web.home') }}" aria-label="{{ site_title }}, now">{{ brand_mark() }}{{ wordmark(site_title) }}</a>
       <div class="nf__right">

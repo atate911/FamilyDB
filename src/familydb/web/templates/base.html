@@ -55,16 +55,10 @@
   {# Grown-ups browse the household; a kid's screen is simpler (roles.py `browse`). #}
   {% set grownup = viewer.may('browse') %}
   {% set managing = viewer.may('manage') %}
-  {% set plans_url = url_for('go.week') %}
   {% set wishing = 'decide' if viewer.may('decide') else ('wish' if viewer.may('wish') and viewer.member else none) %}
   <body class="{% block body_class %}{% endblock %}">
     <a class="skip" href="#main">Skip to content</a>
 
-    {# One link of the sidebar. `count` is a ready-made badge. #}
-    {% macro nav_item(label, target, section, glyph, count=none) %}
-      <li><a href="{{ target }}"{% if section == ns.section %} aria-current="page"{% endif %}>
-        {{- icon(glyph) }}<span>{{ label }}</span>{{ count if count }}</a></li>
-    {% endmacro %}
     {# One tab of the phone's bar: always the word, and a count for what is late, or new from her. #}
     {% macro tab(label, target, section, glyph, late=0, new=0) %}
       <a href="{{ target }}"{% if section == ns.section %} aria-current="page"{% endif %}>
@@ -85,53 +79,7 @@
     </header>
 
     <div class="app">
-      <aside class="side" aria-label="Menu">
-        <div class="side__in">
-          <a class="brand" href="{{ url_for('web.home') }}" aria-label="{{ site_title }}, home">{{ brand_mark() }}{{ wordmark(site_title) }}</a>
-          {% if shell.pill %}{{ health_pill(shell.pill, url_for('web.status')) }}{% endif %}
-          <nav aria-label="Pages">
-            <ul class="nav">
-              {{ nav_item('Now', url_for('web.home'), 'home', 'home') }}
-              {% if viewer.may('chat') %}{{ nav_item('Chat with ' ~ assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat', count=(badge('act', shell.unread, 'new') if shell.unread else none)) }}{% endif %}
-              {% if grownup %}{{ nav_item('Eat', url_for('web.restaurants'), 'eat', 'utensils') }}{% endif %}
-              {{ nav_item('Do', url_for('web.ideas'), 'ideas', 'bulb') }}
-              {{ nav_item('Week' if grownup else 'My week', plans_url, 'plans', 'cal', count=(badge('late', shell.late, 'late') if shell.late else none)) }}
-              {% if wishing == 'decide' %}{{ nav_item('Kids', url_for('web.wishes'), 'wishes', 'gift', count=(badge('act', shell.decide, 'to decide') if shell.decide else none)) }}
-              {% elif wishing %}{{ nav_item('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
-              {% if grownup %}{{ nav_item('Soon', url_for('web.happening_page'), 'soon', 'ticket') }}{% endif %}
-              {% if viewer.may('change') %}{{ nav_item('Lists', url_for('web.lists_page'), 'lists', 'list') }}{% endif %}
-              {% if grownup %}{{ nav_item('Did', url_for('go.did'), 'did', 'smile') }}{% endif %}
-              {% if grownup %}{{ nav_item('What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', url_for('web.memory'), 'memory', 'memory') }}{% endif %}
-            </ul>
-            {% if grownup %}
-              <p class="overline nav-group">Behind the scenes</p>
-              <ul class="nav">
-                {{ nav_item('Status', url_for('web.status'), 'status', 'pulse') }}
-                {{ nav_item('Guide', url_for('wiki.home'), 'wiki', 'info') }}
-                {% if managing %}
-                  {{ nav_item('Settings', url_for('settings.show'), 'settings', 'sliders', count=(badge('look', shell.check, 'to check') if shell.check else none)) }}
-                  {{ nav_item('Family', url_for('family.show'), 'family', 'people') }}
-                {% endif %}
-              </ul>
-            {% endif %}
-          </nav>
-          {# The account corner: who is signed in, and the things that are theirs. #}
-          <div class="me">
-            {{ avatar(shell.me.slot, shell.me.initial, 'lg') }}
-            <div>
-              <b>{{ shell.me.name or 'The family' }}</b>
-              <span>{{ shell.me.role | capitalize if shell.me.role else 'One shared password' }}</span>
-              <span class="me__acts">
-                <a href="{{ url_for('look.show') }}"{% if ns.section == 'look' %} aria-current="page"{% endif %}>Look</a>
-                {% if viewer.member %}<a href="{{ url_for('family.you') }}"{% if ns.section == 'you' %} aria-current="page"{% endif %}>Your password</a>{% endif %}
-                {% if viewer.signed_in %}
-                  <form method="post" action="{{ url_for('auth.logout') }}"><button class="textbtn" type="submit">Sign out</button></form>
-                {% endif %}
-              </span>
-            </div>
-          </div>
-        </div>
-      </aside>
+      {% include "_side.html" %}
 
       <main class="main" id="main">
         {# The main column, and the rail beside it: what supports the page (docs/STYLE.md, "The frame"). A page

@@ -166,8 +166,10 @@ def test_late_to_dos_are_counted_for_a_grown_up_and_a_kid_counts_only_her_own(
     _late_task(conn, family["alex"].id, "Renew the car")
     _late_task(conn, family["girls"].id, "Feed the fish")
     assert 'badge--late" title="3 late">3<span class="sr"> late</span>' in _sidebar(sam)
-    assert 'badge--late" title="1 late">1<span class="sr"> late</span>' in _sidebar(girl)
     assert '3<span class="sr"> late</span>' in _row(sam)
+    # A kid's menu is her row: My week carries no count, as her to-dos and her Now say nothing late
+    # (docs/STYLE.md, "A kid's screen"); her own late one is on her Now with its tick.
+    assert "badge--late" not in _sidebar(girl) and "late" not in _row(girl)
 
 
 def test_nothing_is_counted_when_nothing_is_late(sam) -> None:

@@ -4,6 +4,11 @@
 
 ### New since v0.5.0
 
+- **The menu on the left is the same on every page.** On a computer or a tablet, opening Now, Eat or
+  Kids from Settings or Status swapped the menu for a bare list of places, without the mark, how
+  Vera is, What Vera knows or Behind the scenes, and the only way back was the small picture at the
+  top. Every page now has the one menu, which also leaves out the places the family took out of
+  the row. Phones keep the row at the foot, and the kitchen board its own.
 - **When she cannot answer, the page says why, and only then.** It now names the trouble
   ("Anthropic refused its key") on Status, under the box on every page and above the
   conversation in Chat, with what to do: the steps for an admin, and that an admin can put it
