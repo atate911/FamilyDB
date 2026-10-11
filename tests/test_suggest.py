@@ -1440,7 +1440,8 @@ def test_a_stay_at_home_idea_is_not_held_to_opening_hours(
     ramen = _idea(conn, "Ramen place", kind="restaurant")
     _, data = _suggest(registry, ctx)
     verdicts = {c["idea_id"]: c for c in data["candidates"]}
-    assert verdicts[games.id]["verdict"] == "good" and verdicts[games.id]["reasons"] == []
+    assert verdicts[games.id]["verdict"] == "good" and "reasons" not in verdicts[games.id]
+    assert verdicts[games.id]["checks"] == {"weather": "ok"}  # only what is not as it always is
     assert verdicts[ramen.id]["verdict"] == "possible"
     assert verdicts[ramen.id]["reasons"] == ["hours unknown (details pending)"]
 

@@ -100,6 +100,10 @@
   the later calls of a turn always hit it. Status and `familydb debug cost` now also say how many of
   the family's messages found the start of the request still cached on their first call, which is
   what decides whether the prompt cache, or a shorter start, saves more on this install.
+- **Suggestions cost fewer tokens.** What the suggestion engine hands the model leaves out what is
+  as it always is (a check not made, no booking needed, travel from home), about a fifth less, sent
+  twice since it goes back with the reply; the stronger call's options no longer repeat their
+  reasons in brackets.
 
 ## v0.5.0 — beta (2026-10-11)
 

@@ -25,7 +25,7 @@ from familydb.base.dates import utc_iso
 from familydb.memory import line_of
 from familydb.store import ideas, members, memories, messages, outcomes, plans, suggestions
 from familydb.suggest.compose import LOVED, day_summaries, order_candidates
-from familydb.suggest.types import Candidate, SuggestInput, clock
+from familydb.suggest.types import SuggestInput, clock
 from familydb.tools import ToolContext
 
 # Characters per section. Their sum is the most a dossier is, firm memories aside.
@@ -132,22 +132,6 @@ def _days(a) -> list[str]:
     return lines
 
 
-def _checks(candidate: Candidate) -> str:
-    checks = candidate.checks
-    said = []
-    if checks.hours:
-        said.append(f"hours {checks.hours}")
-    elif checks.open != "unknown":
-        said.append(checks.open)
-    if checks.travel_minutes is not None:
-        said.append(f"about {checks.travel_minutes} min away")
-    if checks.booking not in ("not_needed", "unknown"):
-        said.append(f"booking {checks.booking}")
-    if checks.weather != "unknown":
-        said.append(f"weather {checks.weather}")
-    return "; ".join(said)
-
-
 def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
     """The dossier for one question, from the engine's whole assessment of it."""
     conn = ctx.conn
@@ -191,13 +175,11 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
             done_before=bool(idea and idea.times_done),
         )
         cites.add(ref)
+        # The reasons already say the hours, the drive, the booking and the weather that matter.
         reasons = ([LOVED] if candidate.idea_id in a.loved else []) + candidate.reasons
-        line = f"{ref} {candidate.verdict}: " + "; ".join(reasons)
-        checked = _checks(candidate)
-        if checked:
-            line += f" [{checked}]"
+        line = f"{ref} {candidate.verdict}" + (": " + "; ".join(reasons) if reasons else "")
         if candidate.fits_days:
-            line += f" fits {', '.join(candidate.fits_days)}"
+            line += f" (fits {', '.join(candidate.fits_days)})"
         if idea is not None:
             line += f"\n  {render_idea_line(idea)}"
         last = latest.get(candidate.idea_id)

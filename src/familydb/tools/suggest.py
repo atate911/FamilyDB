@@ -288,8 +288,12 @@ def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
     chosen = None if choosing.reason_not_to(ctx, args) else choosing.choose(ctx, args, assessed)
     if chosen is not None and chosen.reframed is not None:
         assessed = chosen.reframed  # the question as the stronger call corrected it
-    # Uncached and resent with the reply: leaving nulls out roughly halves it. A listed find's
-    # row id is the page's, not the model's.
+    # Uncached and resent with the reply: leaving out nulls and what is as it always is (a check
+    # not made, no booking needed, travel from home) roughly halves it, and the reasons say what
+    # matters. A listed find's row id is the page's, not the model's.
     return result_of(assessed, chosen).model_dump(
-        mode="json", exclude_none=True, exclude={"web_finds": {"__all__": {"find_id"}}}
+        mode="json",
+        exclude_none=True,
+        exclude_defaults=True,
+        exclude={"web_finds": {"__all__": {"find_id"}}},
     )
