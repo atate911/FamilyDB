@@ -208,3 +208,16 @@ def test_a_listed_find_fills_a_spare_tile_and_leads_to_its_page(env, app) -> Non
     ]
     assert tile["title"] == "Puppet show" and tile["find_id"] == puppets.id
     assert tile["idea_id"] is None and tile["url"] == "https://library.example.org/e0"
+
+
+def test_what_was_done_lately_is_never_on_a_tile(env, app) -> None:
+    """Resting is said in a chat answer and left to the family; a pick made ahead is a nudge, so
+    it never offers what they did last weekend."""
+    with db.transaction(env.conn):
+        show = ideas.insert(conn=env.conn, title="Puppet theatre", kind="show", now=NOW_ISO)
+        ideas.apply_outcome(
+            env.conn, show.id, happened_on="2026-09-21", avg_rating=9.0, now=NOW_ISO
+        )
+    made = picks.make(app, env.conn, "weekend")
+    assert made is not None
+    assert all(tile["idea_id"] != show.id for tile in made.picks)

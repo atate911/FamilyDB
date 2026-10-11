@@ -22,13 +22,19 @@ Time is counted in minutes. Each day runs from 08:00 to 22:00 unless the questio
 
 ## What is checked for each idea
 
+Two kinds of check. A fact rules an idea out. A matter of taste only makes it possible, with the reason said first, and the choice is left to the family and to the [stronger call](#choosing-what-to-suggest), which sees their ratings and what they have told the assistant. What the family plans anyway shows on [Status](/wiki/controls/status#what-came-of-her-suggestions).
+
 | Check | Result when it fails |
 |---|---|
-| Already planned, done in the last 60 days, rated under 5 out of 10, or marked "would not repeat" | Ruled out |
-| Who is coming, the season, and the cost, indoor or outdoor and duration limits asked for | Ruled out |
+| Already planned and still to come, or marked "would not repeat" | Ruled out |
+| Done lately, or planned for a day that has passed: a restaurant rests 21 days, an activity 30, a day trip 180, anything else 60, a week when they ask for favorites | Possible, said first ("done 6 days ago"); it comes last among the possible and is never one of her picks on Now |
+| Its last rating in the year under 5 out of 10, or its last two | Possible, said first ("rated 4 and 3/10 the last two times") |
+| Who is coming, the ages it suits, the season, and the cost, indoor or outdoor and duration limits asked for | Ruled out |
 | An idea tied to dates: over, or on days outside the window | Ruled out |
-| Forecast: an outdoor or dry-weather idea on a day with a 50% or higher chance of rain (rain and snow codes count only when no chance is given), a warm one under 18 °C (64 °F), a snow one without snow | Ruled out when no day fits |
-| Free time: the idea's length against the longest free stretch; an unknown length needs an hour, a day trip or anything of 8 hours or more needs a whole free day, a trip needs the whole window | Ruled out |
+| Forecast: an outdoor or dry-weather idea on a day with a 50% or higher chance of rain (rain and snow codes count only when no chance is given), a warm one under 18 °C (64 °F) | The days that fit; when none does, possible on the wet or cold days with the forecast said first |
+| Forecast: a snow idea with no snow forecast | Ruled out when no day has snow |
+| Free time: the idea's length against the longest free stretch; an unknown length needs an hour; a trip needs the whole window | Ruled out |
+| A day trip, or anything of 8 hours or more: a day with nothing else on it | With nothing else on any day but 8 hours free around something, possible, "something else on that day"; with no 8 hours free, ruled out |
 | Opening hours saved by a lookup: open that day, long enough inside a free stretch, with travel at both ends | Closed is ruled out; unknown is possible ("hours unknown"). A stay-at-home idea with nothing to look up has no hours and is not held to any |
 | A saved place's details older than the stale limit (`place_stale_days`, 30 days) or never checked | Possible; a chat question also queues a refresh |
 | Booking: the lead time against the days left | Too late is ruled out; an unknown lead time is possible |
@@ -42,10 +48,10 @@ Where a person is comes from the place they name or from [Shared location](/wiki
 ## The verdicts
 
 - Good: nothing failed and none of the causes of possible applies.
-- Possible: nothing failed, but something could not be checked or only partly fits: hours unknown or not listed, details stale, booking unknown, open for part of the free time, distance from where they are unknown, or too dark. An idea beyond the first eight (never-done first, then longest since done) is possible, "not checked in detail".
-- Ruled out: a check failed, and the reason says which.
+- Possible: no fact ruled it out, but something could not be checked, only partly fits, or is a matter of taste: done lately, disappointing last time, rain or cold forecast, a long day out with something else on the day, hours unknown or not listed, details stale, booking unknown, open for part of the free time, distance from where they are unknown, or too dark.
+- Ruled out: a fact failed, and the reason says which.
 
-A reply carries at most 3 reasons each, in the order good, possible, ruled out. Within a group, ideas suggested as good in the last 2 weeks come last; then never-done ideas first, and a higher rating before a lower.
+A reply carries at most 3 reasons each, in the order good, possible, ruled out. Within a group, what was done lately comes last; then ideas suggested as good in the last 2 weeks; then never-done ideas first, and a higher rating before a lower.
 
 The engine logs every idea's verdict and reasons, any web finds, who asked, the window and, for a chat answer, its reply. [Status](/wiki/controls/status#what-came-of-her-suggestions) reads it against the plans made afterwards and how they went. Every run adds a row, including `/now`, the command line and each evening-before backup, and the good verdicts in any of them push those ideas to the back of real answers for 14 days.
 
@@ -80,7 +86,7 @@ It costs tokens plus a charge for each search, within the daily limit, recorded 
 
 ## Limits
 
-At most eight ideas are checked in detail. A reply gets at most 12 offered and 6 ruled out, and the result counts the rest. The forecast covers today and the next 15 days. A chat question or the command line queues a refresh of stale places when lookups are on; `/now` does not.
+Every idea that passes the rules is checked in detail. A reply gets at most 12 offered and 6 ruled out, and the result counts the rest. The forecast covers today and the next 15 days. A chat question or the command line queues a refresh of stale places when lookups are on; `/now` does not.
 
 ## Trying it without the model
 

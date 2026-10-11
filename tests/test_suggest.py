@@ -141,7 +141,8 @@ def test_a_planned_idea_is_out_only_while_its_plan_is_to_come(
     conn, full_settings, thursday_clock, family
 ) -> None:
     """An idea stayed "already planned" for good once its day had passed and nobody said how it
-    went. Now it is out while its plan is to come, and counts as done on its day after."""
+    went. Now it is out while its plan is to come, and rests as if done on its day after: said
+    first, and possible at best."""
     ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
     context = build_context(ctx, (SAT, SUN))
     coming = _idea(conn, "Zoo", status="planned", setting="indoor")
@@ -165,9 +166,11 @@ def test_a_planned_idea_is_out_only_while_its_plan_is_to_come(
         plans=plans.latest_by_idea(conn),
     )
     reasons = {c.idea_id: c.reasons[0] for c in ruled_out}
-    assert reasons[coming.id] == "already planned for Sat 26 Sep"
-    assert reasons[over.id] == "was planned for Sat 12 Sep"  # as if done then
-    assert [s.idea.id for s in kept] == [long_ago.id]
+    assert reasons == {coming.id: "already planned for Sat 26 Sep"}
+    kept_ids = {s.idea.id: s for s in kept}
+    assert set(kept_ids) == {over.id, long_ago.id}
+    assert kept_ids[over.id].caveats == ["was planned for Sat 12 Sep"]  # as if done then
+    assert kept_ids[over.id].resting and not kept_ids[long_ago.id].resting
 
 
 def test_shortlist_rules(conn, full_settings, thursday_clock, family) -> None:
@@ -195,17 +198,19 @@ def test_shortlist_rules(conn, full_settings, thursday_clock, family) -> None:
         ratings={bad.id: [3, 4], once.id: [3]},
     )
     reasons = {c.idea_id: c.reasons[0] for c in ruled_out}
-    assert reasons[planned.id] == "already planned"
-    assert reasons[recent.id] == "done 5 days ago"
-    # Two disappointments in a row rule it out; one is said, and left to the family.
-    assert reasons[bad.id] == "rated 4 and 3/10 the last two times"
-    assert once.id not in reasons
-    assert reasons[adults.id] == "for adults only"
-    assert reasons[winter.id] == "for winter"
-    assert reasons[pricey.id] == "over the budget asked for"
+    assert reasons == {
+        planned.id: "already planned",
+        adults.id: "for adults only",
+        winter.id: "for winter",
+        pricey.id: "over the budget asked for",
+    }
     kept_ids = {s.idea.id: s for s in kept}
-    assert set(kept_ids) == {hike.id, cafe.id, long_day.id, once.id}
-    assert kept_ids[once.id].caveat == "rated 3/10 last time" and kept_ids[cafe.id].caveat is None
+    assert set(kept_ids) == {hike.id, cafe.id, long_day.id, once.id, recent.id, bad.id}
+    # Done lately, and disappointments, are taste: said first and left to the family.
+    assert kept_ids[recent.id].caveats == ["done 5 days ago"] and kept_ids[recent.id].resting
+    assert kept_ids[bad.id].caveats == ["rated 4 and 3/10 the last two times"]
+    assert kept_ids[once.id].caveats == ["rated 3/10 last time"]
+    assert kept_ids[cafe.id].caveats == [] and not kept_ids[bad.id].resting
     # Sunday is wet, so the hike only fits Saturday; the day trip needs a whole free day and
     # Saturday morning is busy, so it only fits Sunday (rain only matters outdoors).
     assert kept_ids[hike.id].fits_days == [SAT] and kept_ids[hike.id].weather == "ok"
@@ -226,11 +231,57 @@ def test_shortlist_duration_and_weather_reasons(
     context = build_context(ctx, (SAT, SUN))
     hike = _idea(conn, "The falls hike", setting="outdoor", duration_min=180)
     long_indoor = _idea(conn, "Museum marathon", setting="indoor", duration_min=420)
+    sledding = _idea(conn, "Sledding", setting="outdoor", weather="snow", duration_min=60)
     kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
     reasons = {c.idea_id: c.reasons[0] for c in ruled_out}
-    assert reasons[hike.id].startswith("rain likely Saturday (90%); rain likely Sunday (80%)")
+    # Not enough time is a fact; no snow for sledding is a fact; rain is a matter of taste.
     assert reasons[long_indoor.id] == "needs about 7 h, only 5 h free"
-    assert kept == []
+    assert reasons[sledding.id] == "no snow forecast Saturday; no snow forecast Sunday"
+    (wet,) = kept
+    assert wet.idea.id == hike.id and wet.weather == "poor" and wet.fits_days == [SAT, SUN]
+    assert wet.caveats == ["rain likely Saturday (90%); rain likely Sunday (80%)"]
+
+
+def test_no_snow_rules_a_snow_idea_out(conn, full_settings, thursday_clock, family) -> None:
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    context = build_context(ctx, (SAT, SUN))
+    sledding = _idea(conn, "Sledding", weather="snow", setting="indoor")
+    kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
+    assert kept == [] and ruled_out[0].idea_id == sledding.id
+    assert ruled_out[0].reasons[0].startswith("no snow forecast Saturday")
+
+
+def test_a_fact_after_a_matter_of_taste_still_rules_it_out(
+    conn, full_settings, thursday_clock, family
+) -> None:
+    """Done lately is said; for somebody not coming is a fact, and it is what is said."""
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    context = build_context(ctx, (SAT, SUN))
+    bar = _done(conn, "Wine bar", "outing", 3, participants=["adults only"])
+    kept, ruled_out = shortlist(
+        ideas.list_all(conn), context, Constraints(participants=["the girls"]), full_settings
+    )
+    assert kept == [] and [c.idea_id for c in ruled_out] == [bar.id]
+    assert ruled_out[0].reasons == ["for adults only"]
+
+
+def test_a_long_day_out_fits_around_something_else(
+    conn, full_settings, thursday_clock, family
+) -> None:
+    """Saturday has a dentist at 9 and Sunday is wholly free: the coast fits Sunday, good. With
+    Sunday taken too, it still fits around Saturday's appointment, which is said."""
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family, busy_saturday_morning=True)
+    context = build_context(ctx, (SAT, SUN))
+    coast = _idea(conn, "Day at the coast", kind="day_trip", setting="indoor")
+    kept, _ = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
+    assert kept[0].fits_days == [SUN] and kept[0].caveats == []
+    ctx.calendar.seed(  # Sunday: 5 hours, then 7, never 8
+        "Lunch", datetime(2026, 9, 27, 13, tzinfo=TZ), datetime(2026, 9, 27, 15, tzinfo=TZ)
+    )
+    context = build_context(ctx, (SAT, SUN))
+    kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
+    assert ruled_out == [] and kept[0].idea.id == coast.id
+    assert kept[0].fits_days == [SAT] and kept[0].caveats == ["something else on that day"]
 
 
 def test_someday_skips_window_rules(conn, settings, thursday_clock, family) -> None:
@@ -1155,21 +1206,37 @@ def test_what_was_done_rests_by_its_kind(conn, full_settings, thursday_clock, fa
     coast = _done(conn, "Day at the coast", "day_trip", 100)
     museum = _done(conn, "Science museum", "activity", 3, setting="indoor")
     kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
-    reasons = {c.idea_id: c.reasons[0] for c in ruled_out}
-    assert ramen.id in {s.idea.id for s in kept}
-    assert reasons[pizza.id] == "done 1 week ago"
-    assert reasons[coast.id] == "done 14 weeks ago"
-    assert reasons[museum.id] == "done 3 days ago"
-    kept, ruled_out = shortlist(
+    assert ruled_out == []  # resting is said, never ruled out
+    assert ramen.id in {s.idea.id for s in kept if not s.resting}  # 25 days: rested enough
+    resting = {s.idea.id: s.caveats for s in kept if s.resting}
+    assert resting == {
+        pizza.id: ["done 1 week ago"],
+        coast.id: ["done 14 weeks ago"],
+        museum.id: ["done 3 days ago"],
+    }
+    kept, _ = shortlist(
         ideas.list_all(conn), context, Constraints(), full_settings, prefer="favorites"
     )
-    assert {s.idea.id for s in kept} >= {ramen.id, pizza.id, coast.id}
-    assert {c.idea_id: c.reasons[0] for c in ruled_out}[museum.id] == "done 3 days ago"
+    assert {s.idea.id for s in kept if s.resting} == {museum.id}
+
+
+def test_what_rests_comes_last_among_the_possible(
+    conn, full_settings, thursday_clock, family
+) -> None:
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    pizza = _done(conn, "Pizza place", "restaurant", 4, setting="indoor")
+    newer = _idea(conn, "Noodle bar", kind="restaurant", setting="indoor")
+    result = run(ctx, SuggestInput(window="this_weekend", discover=False, question="?"))
+    order = [c.idea_id for c in result.candidates]
+    said = {c.idea_id: c for c in result.candidates}
+    assert order.index(newer.id) < order.index(pizza.id)
+    assert said[pizza.id].verdict == "possible" and said[pizza.id].checks.resting
+    assert said[pizza.id].reasons[0] == "done 4 days ago"
 
 
 def test_a_rating_counts_for_a_year(env) -> None:
-    """One disappointing visit is said and left to the family; two in a row rule it out; a year
-    on, neither counts."""
+    """A disappointing visit is said and left to the family, two in a row too; a year on, neither
+    counts."""
     _, sad = call(env, "add_idea", title="Noodle bar", kind="restaurant", setting="indoor")
     _, old = call(env, "add_idea", title="Old diner", kind="restaurant", setting="indoor")
     for day, rating in (("2026-05-01", 4), ("2026-06-01", 2)):
@@ -1178,7 +1245,7 @@ def test_a_rating_counts_for_a_year(env) -> None:
         call(env, "record_outcome", idea_id=old["id"], happened_on=day, rating=2)
     shown = run(env.ctx, SuggestInput(window="someday", discover=False, question="?"))
     by_id = {c.idea_id: c for c in shown.candidates}
-    assert by_id[sad["id"]].verdict == "ruled_out"
+    assert by_id[sad["id"]].verdict == "possible"  # said first, left to the family
     assert by_id[sad["id"]].reasons == ["rated 4 and 2/10 the last two times"]
     assert by_id[old["id"]].verdict == "good"
     call(env, "record_outcome", idea_id=sad["id"], happened_on="2026-07-01", rating=8)
@@ -1297,7 +1364,7 @@ def test_now_is_judged_by_its_own_hours(conn, settings, clock, family) -> None:
     ctx.clock = type(clock)(early, clock.tz)
     result = run(ctx, SuggestInput(window="today", discover=False, question="today?"))
     said = {c.idea_id: c for c in result.candidates}[kite.id]
-    assert said.verdict == "ruled_out" and said.reasons[0].startswith("rain likely Sunday (90%)")
+    assert said.verdict == "possible" and said.reasons[0].startswith("rain likely Sunday (90%)")
 
 
 def test_a_stay_at_home_idea_is_not_held_to_opening_hours(

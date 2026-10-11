@@ -73,6 +73,7 @@ class Checks(BaseModel):
     booking: Literal["not_needed", "ok", "too_late", "unknown"] = "not_needed"
     booking_url: str | None = None
     weather: Literal["ok", "poor", "unknown"] = "unknown"
+    resting: bool = False  # done or planned lately (suggest/shortlist.py), said first
 
 
 class Candidate(BaseModel):
@@ -247,5 +248,9 @@ class Shortlisted:
     idea: Idea
     fits_days: list[date]
     weather: Literal["ok", "poor", "unknown"]
-    # Said first and making it possible at best: one disappointing visit ("rated 3/10 last time").
-    caveat: str | None = None
+    # Said first and making it possible at best, a matter of taste rather than a fact: done
+    # lately, disappointing visits, rain or cold, a long day out with something else on the day.
+    caveats: list[str] = field(default_factory=list)
+    # Done or planned lately and resting (shortlist.rest_days): it comes last among the possible,
+    # and her picks made ahead leave it out (familydb/picks.py).
+    resting: bool = False

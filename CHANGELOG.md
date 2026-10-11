@@ -78,6 +78,12 @@
   good or possible, checked but not shown, found outside the list, ruled out) and how it was rated,
   and name what the family planned though it was ruled out. Read from what is kept: no migration and
   no model call.
+- **A matter of taste no longer rules an idea out.** Done lately, two disappointing visits, rain or
+  cold in the forecast, and a day trip on a day with something else on it made an idea vanish from
+  every answer. Now they make it possible, with the reason said first, and the family or the stronger
+  call decides; what was done lately still comes last and is never one of her picks on Now. Facts
+  still rule out: already planned, for somebody not coming, closed, no snow for a snow idea, not
+  enough time, too late to book, too far.
 
 ## v0.5.0 — beta (2026-10-11)
 

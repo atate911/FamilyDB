@@ -181,7 +181,8 @@ def _tiles(
 ) -> list[dict[str, Any]]:
     """One pick a kind, the stronger call's first, then the engine's best of each kind, then one
     of what the sources list; never a ruled-out idea, never the same kind twice."""
-    offered = [c for c in found.shown if c.verdict != "ruled_out"]
+    # Never a ruled-out idea, nor one done lately and resting (suggest/shortlist.py).
+    offered = [c for c in found.shown if c.verdict != "ruled_out" and not c.checks.resting]
     by_id = {c.idea_id: c for c in offered}
     tiles: list[dict[str, Any]] = []
     kinds_taken: set[str] = set()

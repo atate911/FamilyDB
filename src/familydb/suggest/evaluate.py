@@ -204,13 +204,14 @@ def evaluate(
     for item in kept:
         idea = item.idea
         place = places.get(conn, idea.place_id) if idea.place_id else None
-        checks = Checks(weather=item.weather)
-        # A disappointment last time is said first, and it is possible at best.
-        reasons: list[str] = [item.caveat] if item.caveat else []
+        checks = Checks(weather=item.weather, resting=item.resting)
+        # A matter of taste the shortlist found (done lately, a disappointment, rain) is said
+        # first, and it is possible at best.
+        reasons: list[str] = list(item.caveats)
         hard_fail = False
         # What rules it out, said first: only the first three reasons are shown (compose.py).
         out: list[str] = []
-        soft = item.caveat is not None
+        soft = bool(item.caveats)
         fits = list(item.fits_days)
         travel = travel_minutes(place, context, settings)
 
