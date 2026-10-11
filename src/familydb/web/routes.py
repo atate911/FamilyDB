@@ -23,7 +23,7 @@ from familydb import agenda, export, happening, health, personas, presents
 from familydb.app import App
 from familydb.availability import calendar_available, enrichment_available, happening_available
 from familydb.base import roles
-from familydb.base.dates import next_birthday, utc_iso, weekend_window
+from familydb.base.dates import utc_iso, weekend_window
 from familydb.store import calls
 from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store
@@ -36,9 +36,18 @@ from familydb.store import picks as pick_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
-from familydb.store import wishes as wish_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import auth, chat, now, shell, views
+from familydb.suggest import people as who_for
+from familydb.web import (
+    auth,
+    calendar_view,
+    chat,
+    map_view,
+    now,
+    page_rows,
+    views,
+    wishes_view,
+)
 from familydb.web import status as status_page
 from familydb.web.answers import answer
 from familydb.web.chat import WHO_KEY
@@ -166,97 +175,12 @@ def later() -> Response:
     return now.later()
 
 
-def _plan_rows(
-    conn: Any,
-    app: App,
-    entries: list[agenda.Entry],
-    today: date,
-    slots: dict[str, int],
-    only_for: member_store.Member | None,
-    *,
-    past: bool = False,
-) -> list[dict[str, Any]]:
-    """What is on, with whom it is for and how far it is: what is coming, and what was too when
-    `past`. With `only_for` (a kid), the ones that name her, or nobody (so everybody)."""
-    rows = []
-    for entry in entries:
-        if entry.days()[-1] < today and not past:
-            continue
-        idea = idea_store.get(conn, entry.idea_id) if entry.idea_id else None
-        people = views.people_for(idea, slots)
-        if only_for is not None and not views.names_in(people, only_for):
-            continue
-        place = place_store.get(conn, idea.place_id) if idea and idea.place_id else None
-        away = views.away_from_home(place, app.settings)
-        row = views.entry_row(entry, today, people=people, away=away)
-        # A plan whose idea has since gone is still a plan, with no page to link to.
-        row["linked"] = idea is not None
-        rows.append(row)
-    seen: set[str] = set()
-    for row in rows:  # the first plan of a day is what a link to that day lands on
-        row["anchor"] = row["day"] not in seen
-        seen.add(row["day"])
-    return rows
-
-
 def _others(coming: list[dict[str, Any]], me: member_store.Member | None) -> str:
     """For a kid's sentence: who else is on her next plan ("with Theo")."""
     if not coming or me is None:
         return ""
     named = [p for p in coming[0]["people"] if p["name"].casefold() != me.display_name.casefold()]
     return views.names_text([p for p in named if p["initial"]])
-
-
-def _unrated(
-    conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
-) -> list[dict[str, Any]]:
-    """Every plan of the last two weeks nobody has said how it went, oldest first, without the
-    ones made from a present kept from `who`."""
-    waiting = presents.without(
-        plan_store.unrated(
-            conn,
-            today=today.isoformat(),
-            since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
-        ),
-        presents.kept_ids(conn, who),
-    )
-    found = []
-    for plan in waiting:
-        idea = idea_store.get(conn, plan.idea_id) if plan.idea_id else None
-        day = date.fromisoformat(plan.start[:10])
-        found.append(
-            {
-                "plan_id": plan.id,
-                "idea_id": plan.idea_id,
-                "title": plan.title,
-                "day": plan.start[:10],
-                "when": views.day_short(day),
-                "people": views.people_for(idea, slots),
-                "glyph": views.glyph_for(idea.kind if idea else None),
-            }
-        )
-    return found
-
-
-def _to_rate(
-    conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
-) -> dict[str, Any] | None:
-    """The oldest plan nobody has said how it went, for Home's three faces, and how many more."""
-    waiting = _unrated(conn, today, slots, who)
-    return {**waiting[0], "more": len(waiting) - 1} if waiting else None
-
-
-def _idea_mini(conn: Any, app: App, idea: Any) -> dict[str, Any]:
-    """A new idea as Home's small row: its picture, its title, and how far it is or that it has
-    not been looked up."""
-    place = place_store.get(conn, idea.place_id) if idea.place_id else None
-    away = views.away_from_home(place, app.settings)
-    row = views.idea_row(idea, app.settings.tzinfo)
-    return {
-        **row,
-        "glyph": views.glyph_for(idea.kind, gift=idea_store.is_gift(idea)),
-        "away": away.words if away else None,
-    }
 
 
 def _kids_card(wished: dict[str, Any] | None, people: list[member_store.Member]) -> list[Any]:
@@ -328,7 +252,7 @@ def ideas() -> str:
         slots = views.slot_map(people)
         hidden = presents.of_presents(conn, found, people)
         away = {
-            idea.id: views.away_from_home(place_store.get(conn, idea.place_id), settings)
+            idea.id: map_view.away_from_home(place_store.get(conn, idea.place_id), settings)
             for idea in found
             if idea.place_id
         }
@@ -366,7 +290,7 @@ def ideas() -> str:
         top=top,
         summary=views.do_summary(len(live), top, rows[0] if top else None),
         chips=_do_chips(listed, people, kind, who, status, narrow, grown_up),
-        on_map=views.places_map(placed),
+        on_map=map_view.places_map(placed),
         off_map=len(found) - len(placed),
         looking_up=enrichment_available(settings),
         selected={"q": query, "kind": kind, "status": status, "who": who},
@@ -418,9 +342,9 @@ def _narrowed(
             if away.get(idea.id) is not None and away[idea.id].minutes <= CLOSE_MINUTES
         ]
     if narrow["kids"]:
-        kept = [idea for idea in kept if views.with_the_kids(idea, people)]
+        kept = [idea for idea in kept if who_for.with_the_kids(idea, people)]
     if narrow["us"]:
-        kept = [idea for idea in kept if views.just_us(idea, people)]
+        kept = [idea for idea in kept if who_for.just_us(idea, people)]
     return kept
 
 
@@ -533,7 +457,7 @@ def idea(idea_id: int) -> str:
             scope={"label": record.title, "text": f"About #{record.id} {record.title}:"},
         )
         box["starters"] = views.idea_starters(record, today)
-    away = views.away_from_home(place, settings)
+    away = map_view.away_from_home(place, settings)
     card = _idea_card(record, settings, away, slots, kept)
     by = next((m.display_name for m in family if m.id == record.suggested_by), None)
     return answer(
@@ -799,13 +723,13 @@ def _eat_narrowed(
     if narrow["open"]:
         kept = [card for card in kept if card["today"] and card["today"].startswith("open")]
     if narrow["close"]:
-        kept = [card for card in kept if views._travel_minutes(card["travel"]) <= CLOSE_MINUTES]
+        kept = [card for card in kept if views.travel_minutes(card["travel"]) <= CLOSE_MINUTES]
     if narrow["new"]:
         kept = [card for card in kept if not card["idea"].times_done]
     if who == "kids":
-        kept = [card for card in kept if views.with_the_kids(card["idea"], people)]
+        kept = [card for card in kept if who_for.with_the_kids(card["idea"], people)]
     elif who == "us":
-        kept = [card for card in kept if views.just_us(card["idea"], people)]
+        kept = [card for card in kept if who_for.just_us(card["idea"], people)]
     if tag:
         kept = [card for card in kept if tag in {one.casefold() for one in card["tags"]}]
     return kept
@@ -892,7 +816,7 @@ def plans() -> str:
         )
         on = presents.without(seen.entries, presents.kept_ids(conn, auth.visitor().member))
         people = member_store.list_all(conn)
-        rows = _plan_rows(conn, app, on, today, views.slot_map(people), None, past=True)
+        rows = page_rows.plan_rows(conn, app, on, today, views.slot_map(people), None, past=True)
         asking = _who(conn)
     horizon = today.isoformat()
     upcoming = [row for row in rows if row["end"] >= horizon]
@@ -1042,15 +966,15 @@ def plans_month() -> str:
         on = presents.without(seen.entries, presents.kept_ids(conn, auth.visitor().member))
         people = member_store.list_all(conn)
         slots = views.slot_map(people)
-        rows = _plan_rows(conn, app, on, today, slots, None, past=True)
+        rows = page_rows.plan_rows(conn, app, on, today, slots, None, past=True)
         rate = (
-            _unrated(conn, today, slots, auth.visitor().member)
+            page_rows.unrated(conn, today, slots, auth.visitor().member)
             if auth.visitor().may("change")
             else []
         )
     previous = (first - timedelta(days=1)).replace(day=1)
     following = last_day + timedelta(days=1)
-    weeks = views.month_calendar(rows, first, today, {row["plan_id"] for row in rate})
+    weeks = calendar_view.month_calendar(rows, first, today, {row["plan_id"] for row in rate})
     start = max(today, first).isoformat()
     coming = [
         row
@@ -1217,84 +1141,6 @@ def edit_task(task_id: int) -> str:
 
 # -- the kids' wish lists (docs/WISHES.md) --------------------------------------------------------
 
-ANSWERED_DAYS = 30
-TOP_WISHES = 3
-
-
-def _is_kid(member: member_store.Member) -> bool:
-    """A kid, by roles.py: keeps a wish list and decides on nobody's."""
-    return roles.may(member.role, "wish") and not roles.may(member.role, "decide")
-
-
-def _lists(conn: Any, kid: member_store.Member, today: date) -> dict[str, Any]:
-    """A kid's three lists in her order, what was answered lately, and the countdowns."""
-    christmas = date(today.year, 12, 25)
-    if christmas < today:
-        christmas = date(today.year + 1, 12, 25)
-    birthday = next_birthday(kid.birth_date, today)
-    days = {
-        "christmas": (christmas - today).days,
-        "birthday": (birthday - today).days if birthday else None,
-    }
-    lists = [
-        {
-            "occasion": occasion,
-            "value": occasion or "everyday",
-            "name": name,
-            "lede": lede,
-            "countdown": views.countdown(days.get(occasion)) if occasion else None,
-            "rows": [
-                views.wish_row(wish, today) for wish in wish_store.open_list(conn, kid.id, occasion)
-            ],
-        }
-        for occasion, name, lede in views.WISH_LISTS
-    ]
-    since = (today - timedelta(days=ANSWERED_DAYS)).isoformat()
-    everything = wish_store.for_member(conn, kid.id)
-    answered = [
-        views.wish_row(wish, today)
-        for wish in everything
-        if wish.status in ("granted", "declined") and (wish.answered_at or "") >= since
-    ]
-    turned = [
-        views.wish_row(wish, today)
-        for wish in everything
-        if wish.status == "turned_away" and wish.created_at >= since
-    ]
-    return {
-        "id": kid.id,
-        "name": kid.display_name,
-        "slot": kid.slot or 0,
-        "initial": kid.display_name[:1].upper(),
-        "lists": lists,
-        "answered": answered,
-        "turned": turned,
-        "open": sum(len(each["rows"]) for each in lists),
-    }
-
-
-def _kids(conn: Any) -> list[member_store.Member]:
-    return [m for m in member_store.list_all(conn) if _is_kid(m)]
-
-
-def wish_glance(conn: Any, today: date) -> dict[str, Any] | None:
-    """For Home: a kid's own lists, or for a parent each kid's and what waits on them."""
-    visitor = auth.visitor()
-    if visitor.may("decide"):
-        kids = [_lists(conn, kid, today) for kid in _kids(conn)]
-        if not kids:
-            return None
-        waiting = [
-            {**row, "kid": kid["name"], "kid_id": kid["id"]}
-            for kid in kids
-            for row in kid["turned"]
-            if row["to_decide"]
-        ]
-        return {"parent": True, "kids": kids, "waiting": waiting, "top": TOP_WISHES}
-    if visitor.member is not None and visitor.may("wish"):
-        return {"parent": False, "mine": _lists(conn, visitor.member, today), "top": TOP_WISHES}
-    return None
-
 
 @bp.get("/kids/<name>")
 @bp.get("/wishes")
@@ -1311,7 +1157,11 @@ def wishes(name: str | None = None) -> str:
     with closing(app.connect()) as conn:
         if name is not None:
             named = next(
-                (kid for kid in _kids(conn) if views.slug(kid.display_name) == name.casefold()),
+                (
+                    kid
+                    for kid in wishes_view.kids(conn)
+                    if views.slug(kid.display_name) == name.casefold()
+                ),
                 None,
             )
             me = visitor.member
@@ -1320,19 +1170,19 @@ def wishes(name: str | None = None) -> str:
                 abort(404)
             wanted = str(named.id) if visitor.may("decide") else ""
         if visitor.may("decide"):
-            kids = _kids(conn)
+            kids = wishes_view.kids(conn)
             if wanted:
                 chosen = next((k for k in kids if str(k.id) == wanted), None)
                 if chosen is None:
                     abort(404)
                 kids = [chosen]
-            shown = [_lists(conn, kid, today) for kid in kids]
+            shown = [wishes_view.lists(conn, kid, today) for kid in kids]
         elif visitor.member is not None:
-            shown = [_lists(conn, visitor.member, today)]
+            shown = [wishes_view.lists(conn, visitor.member, today)]
         else:
             abort(404)
         people = member_store.list_all(conn)
-        everyone = _kids(conn) if visitor.may("decide") else []
+        everyone = wishes_view.kids(conn) if visitor.may("decide") else []
         pronouns = {
             person.id: {"female": "her", "male": "his"}.get(person.gender or "", "their")
             for person in people

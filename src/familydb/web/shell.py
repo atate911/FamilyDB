@@ -12,14 +12,16 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
-from flask import session
+from flask import request, session, url_for
 
 from familydb import personas, presents
 from familydb.app import App
+from familydb.base import roles
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
+from familydb.store import wishes as wish_store
 from familydb.web import auth, chat, views
 from familydb.web import settings as settings_page
 from familydb.web import status as status_page
@@ -153,9 +155,6 @@ WAITING_DAYS = 30
 def wishes_waiting(conn: sqlite3.Connection, today: Any) -> list[dict[str, Any]]:
     """Every kid's wishes that wait on a parent: she asked, or it was turned away as not OK and the
     parents were told. Oldest first, each with the kid and when it was asked."""
-    from familydb.base import roles
-    from familydb.store import wishes as wish_store
-
     since = (today - timedelta(days=WAITING_DAYS)).isoformat()
     rows = []
     for kid in member_store.list_all(conn):
@@ -239,8 +238,6 @@ OWNS: dict[str, frozenset[str]] = {
 def destinations(frame: Frame) -> list[Destination]:
     """The row for this visitor: a grown-up's eight places, a kid's four (docs/INTERFACE.md
     section 9). Each is a want, not a table: Eat, Do, Week."""
-    from flask import request, url_for
-
     visitor = auth.visitor()
     here = request.endpoint or ""
     grown_up = visitor.may("browse")

@@ -378,7 +378,7 @@
   </article>
 {%- endmacro %}
 
-{# The map of how far each idea is from home, drawn twice from the same data so names stay readable: wide for a desktop, narrow for a phone. `plot` is `views.places_map(...)["wide"]` or `["narrow"]`. #}
+{# The map of how far each idea is from home, drawn twice from the same data so names stay readable: wide for a desktop, narrow for a phone. `plot` is `map_view.places_map(...)["wide"]` or `["narrow"]`. #}
 {% macro map_plot(plot, which) -%}
   <svg class="radar radar--{{ which }}" viewBox="0 0 {{ plot.width }} {{ plot.height }}" aria-hidden="true" focusable="false">
     {%- for ring in plot.rings %}<circle class="ring" cx="{{ plot.cx }}" cy="{{ plot.cy }}" r="{{ ring.r }}"/><text class="rl" x="{{ ring.x }}" y="{{ ring.y }}" text-anchor="{{ ring.anchor }}">{{ ring.name }}</text>{% endfor -%}

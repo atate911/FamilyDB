@@ -29,7 +29,7 @@ from familydb.store import tasks as task_store
 from familydb.store.members import Member
 from familydb.suggest.types import DAY_END, DAY_START
 from familydb.tools.weather import forecast_days
-from familydb.web import auth, chat, now, routes, views
+from familydb.web import auth, chat, household, map_view, now, page_rows, routes, views
 from familydb.web.answers import answer
 
 log = logging.getLogger(__name__)
@@ -100,12 +100,10 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
     only_for = None if grown_up else visitor.member
     who = request.args.get("who", "").strip()
     with closing(app.connect()) as conn:
-        people = member_store.list_all(conn)
-        slots = views.slot_map(people)
-        kept = presents.kept_ids(conn, visitor.member)
+        people, slots, kept = household.read(conn, visitor.member)
         seen = agenda.read(app, conn, first, last)
         on = presents.without(seen.entries, kept)
-        rows = routes._plan_rows(conn, app, on, today, slots, only_for, past=True)
+        rows = page_rows.plan_rows(conn, app, on, today, slots, only_for, past=True)
         if who:
             rows = [row for row in rows if views.names_in(row["people"], _named(people, who))]
         due = _due(conn, visitor, first, last, tz, today, slots, grown_up)
@@ -114,7 +112,9 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
         )
         pencil = _pencil(conn, kept, first, last, today) if grown_up else None
         went = _went(conn, first, last, slots) if last < today or first == last else []
-        rate = routes._unrated(conn, today, slots, visitor.member) if visitor.may("change") else []
+        rate = (
+            page_rows.unrated(conn, today, slots, visitor.member) if visitor.may("change") else []
+        )
         chat.page_box(app, conn, people, scope={"label": "This week", "text": "About this week:"})
     forecasts = _forecasts(app, first, last, today)
     days = []
@@ -326,10 +326,8 @@ def board() -> str:
     visitor = auth.visitor()
     shown = _days(app, today, today + timedelta(days=1))
     with closing(app.connect()) as conn:
-        people = member_store.list_all(conn)
-        slots = views.slot_map(people)
-        kept = presents.kept_ids(conn, visitor.member)
-        questions = now._questions(conn, app, visitor, today, slots, people)[: now.MOST_QUESTIONS]
+        people, slots, kept = household.read(conn, visitor.member)
+        questions = now.questions(conn, app, visitor, today, slots, people)[: now.MOST_QUESTIONS]
         mine = visitor.member.id if chat.is_kid() and visitor.member else None
         window = "weekend" if today.weekday() >= WEEKEND_FROM else "now"
         found = pick_store.latest(conn, window=window, member_id=mine)
@@ -487,7 +485,7 @@ def plan(plan_id: int) -> str:
         rate = (
             [
                 r
-                for r in routes._unrated(conn, today, slots, visitor.member)
+                for r in page_rows.unrated(conn, today, slots, visitor.member)
                 if r["plan_id"] == plan_id
             ]
             if visitor.may("change")
@@ -504,7 +502,7 @@ def plan(plan_id: int) -> str:
             },
         )
     row = views.plan_row(found, today)
-    away = views.away_from_home(place, app.settings)
+    away = map_view.away_from_home(place, app.settings)
     who = views.people_for(idea, slots)
     return answer(
         "plan.html",
@@ -548,9 +546,7 @@ def did() -> str:
         (a_year_ago + timedelta(days=AROUND_DAYS)).isoformat(),
     )
     with closing(app.connect()) as conn:
-        people = member_store.list_all(conn)
-        slots = views.slot_map(people)
-        kept = presents.kept_ids(conn, visitor.member)
+        people, slots, kept = household.read(conn, visitor.member)
         back = FAVORITE_DAYS if favorites else (DID_DAYS if not last_year else 400)
         since = (today - timedelta(days=back)).isoformat()
         rows = []
@@ -574,7 +570,9 @@ def did() -> str:
             rows.append(row)
         if favorites:
             rows = _favorites(rows)
-        rate = routes._unrated(conn, today, slots, visitor.member) if visitor.may("change") else []
+        rate = (
+            page_rows.unrated(conn, today, slots, visitor.member) if visitor.may("change") else []
+        )
         chat.page_box(
             app, conn, people, scope={"label": "What we did", "text": "About what we did:"}
         )

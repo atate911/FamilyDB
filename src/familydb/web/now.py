@@ -18,12 +18,10 @@ from familydb.app import App
 from familydb.base import roles
 from familydb.base.dates import clock_time, utc_iso
 from familydb.store import ideas as idea_store
-from familydb.store import members as member_store
 from familydb.store import picks as pick_store
-from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store.members import Member
-from familydb.web import auth, chat, shell, views
+from familydb.web import auth, chat, household, page_rows, shell, views, wishes_view
 from familydb.web import status as status_page
 from familydb.web.answers import answer
 
@@ -72,13 +70,11 @@ def show() -> Response | str:
         progress = status_page.setup_progress(app, conn)
         if visitor.manages and not status_page.ready_to_answer(progress):
             return redirect(url_for("setup.overview"))
-        people = member_store.list_all(conn)
-        slots = views.slot_map(people)
-        kept = presents.kept_ids(conn, visitor.member)
+        people, slots, kept = household.read(conn, visitor.member)
         seen = agenda.read(app, conn, today, today + timedelta(days=DAYS_AHEAD))
         on = presents.without(seen.entries, kept)
         rows = _rows(conn, on, visitor.member if not grown_up else None, today, slots)
-        questions = _questions(conn, app, visitor, today, slots, people)[:MOST_QUESTIONS]
+        asked = questions(conn, app, visitor, today, slots, people)[:MOST_QUESTIONS]
         todo = _todo(conn, app, visitor, today, slots, grown_up)
         picks = _picks(conn, app, visitor, kept, today)
         setup = status_page.setup_steps(app, conn) if visitor.manages else []
@@ -102,7 +98,7 @@ def show() -> Response | str:
         "now.html",
         context=views.context_line(now.astimezone(tz), fact),
         left=left,
-        questions=questions,
+        questions=asked,
         plate=todo,
         my_list=my_list,
         picks=picks,
@@ -186,11 +182,9 @@ def _todo(
 def _my_list(conn: Any, visitor: auth.Visitor, today: date) -> dict[str, Any] | None:
     """A kid's own list on her Now: what a parent said lately, her top three, and how far off the
     days are (docs/WISHES.md). The lists page's own reading of it, so the two never disagree."""
-    from familydb.web import routes  # not at the top: routes draws Now
-
     if visitor.member is None or not visitor.may("wish"):
         return None
-    mine = routes.wish_glance(conn, today)
+    mine = wishes_view.glance(conn, today)
     if not mine or mine.get("parent"):
         return None
     lists = mine["mine"]
@@ -205,7 +199,7 @@ def _my_list(conn: Any, visitor: auth.Visitor, today: date) -> dict[str, Any] | 
 # -- her questions ---------------------------------------------------------------------------------
 
 
-def _questions(
+def questions(
     conn: Any,
     app: App,
     visitor: auth.Visitor,
@@ -219,7 +213,7 @@ def _questions(
         return []
     tz = app.settings.tzinfo
     asked: list[dict[str, Any]] = []
-    for row in _unrated(conn, today, slots, visitor.member):
+    for row in page_rows.unrated(conn, today, slots, visitor.member):
         asked.append(
             {
                 "kind": "rate",
@@ -254,36 +248,6 @@ def _questions(
         asked.extend(_pitches(conn, app, today, people, tz))
     asked.sort(key=lambda q: q["sort"])
     return asked
-
-
-def _unrated(
-    conn: Any, today: date, slots: dict[str, int], who: Member | None
-) -> list[dict[str, Any]]:
-    """Every plan of the last two weeks nobody has said how it went, oldest first, without the
-    ones made from a present kept from `who`."""
-    waiting = presents.without(
-        plan_store.unrated(
-            conn,
-            today=today.isoformat(),
-            since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
-        ),
-        presents.kept_ids(conn, who),
-    )
-    found = []
-    for plan in waiting:
-        idea = idea_store.get(conn, plan.idea_id) if plan.idea_id else None
-        day = date.fromisoformat(plan.start[:10])
-        found.append(
-            {
-                "plan_id": plan.id,
-                "idea_id": plan.idea_id,
-                "title": plan.title,
-                "day": plan.start[:10],
-                "when": views.day_short(day),
-                "people": views.people_for(idea, slots),
-            }
-        )
-    return found
 
 
 def _pitches(

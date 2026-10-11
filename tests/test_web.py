@@ -15,7 +15,7 @@ import familydb.web as web_module
 from familydb.app import App
 from familydb.base.errors import ConfigError
 from familydb.store import db, ideas, outcomes, places, plans
-from familydb.web import check_configuration, create_app, views
+from familydb.web import check_configuration, create_app, map_view, views
 from tests.conftest import NOW_ISO
 
 PASSWORD = "open sesame please"  # at least MIN_PASSWORD characters
@@ -312,26 +312,29 @@ def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
 
 
 def test_where_a_place_lies_from_home_in_words_and_on_the_dial() -> None:
-    assert [round(views.bearing(45, -122, *there)) for there in ((46, -122), (45, -121))] == [0, 90]
-    assert [round(views.bearing(45, -122, *there)) for there in ((44, -122), (45, -123))] == [
+    assert [round(map_view.bearing(45, -122, *there)) for there in ((46, -122), (45, -121))] == [
+        0,
+        90,
+    ]
+    assert [round(map_view.bearing(45, -122, *there)) for there in ((44, -122), (45, -123))] == [
         180,
         270,
     ]
-    assert [views.drive_text(m) for m in (12, 58, 60, 97, 150)] == [
+    assert [map_view.drive_text(m) for m in (12, 58, 60, 97, 150)] == [
         "12 min",
         "58 min",
         "1 h",
         "1 h 35 min",
         "2 h 30 min",
     ]
-    assert views.Away(12, 44.0).text == "about 12 min north-east of home (estimate)"
-    assert views.Away(3, 200.0).text == "under 5 min from home (estimate)"
-    assert views.places_map([]) is None
-    mountain = (SimpleNamespace(id=2, title="Mount St Helens day trip"), views.Away(150, 0.0))
-    ramen = (SimpleNamespace(id=3, title="Ramen at Afuri"), views.Away(12, 90.0))
-    park = (SimpleNamespace(id=4, title="Corner park"), views.Away(3, 225.0))
-    assert views.places_map([ramen, park]) is None  # all inside the first ring: the cards say it
-    drawn = views.places_map([mountain, ramen, park])
+    assert map_view.Away(12, 44.0).text == "about 12 min north-east of home (estimate)"
+    assert map_view.Away(3, 200.0).text == "under 5 min from home (estimate)"
+    assert map_view.places_map([]) is None
+    mountain = (SimpleNamespace(id=2, title="Mount St Helens day trip"), map_view.Away(150, 0.0))
+    ramen = (SimpleNamespace(id=3, title="Ramen at Afuri"), map_view.Away(12, 90.0))
+    park = (SimpleNamespace(id=4, title="Corner park"), map_view.Away(3, 225.0))
+    assert map_view.places_map([ramen, park]) is None  # all inside the first ring: the cards say it
+    drawn = map_view.places_map([mountain, ramen, park])
     assert drawn["count"] == 3
     wide = drawn["wide"]
     by_name = {dot["name"]: dot for dot in wide["dots"]}
@@ -348,7 +351,7 @@ def test_where_a_place_lies_from_home_in_words_and_on_the_dial() -> None:
         ("W", 222),
         ("E", 638),
     ]
-    assert views.map_share(0) == 0 and views.map_share(500) == 1.0
+    assert map_view.map_share(0) == 0 and map_view.map_share(500) == 1.0
 
 
 def test_a_dot_is_named_by_the_first_words_of_its_idea() -> None:
@@ -362,23 +365,23 @@ def test_a_dot_is_named_by_the_first_words_of_its_idea() -> None:
         "Ramen at Afuri": "Ramen at Afuri",  # a head too short to name it alone
         "Pho Oregon": "Pho Oregon",
     }
-    assert {title: views.short_name(title) for title in names} == names
+    assert {title: map_view.short_name(title) for title in names} == names
 
 
 def test_a_name_goes_where_it_fits_and_clear_of_the_compass_letters() -> None:
-    near_west = views.Away(180, 270.0)  # three hours west: out at the edge, on the axis
+    near_west = map_view.Away(180, 270.0)  # three hours west: out at the edge, on the axis
     cannon = SimpleNamespace(id=1, title="Cannon Beach weekend")
-    drawn = views.places_map([(cannon, near_west)])
+    drawn = map_view.places_map([(cannon, near_west)])
     wide, narrow = drawn["wide"]["dots"][0], drawn["narrow"]["dots"][0]
     assert (wide["label_x"], wide["label_y"], wide["anchor"]) == (222.0, 202.0, "end")  # above
     assert narrow["anchor"] == "start" and narrow["label_y"] > narrow["y"]  # no room: below
-    east = views.places_map([(cannon, views.Away(120, 100.0))])["wide"]["dots"][0]
+    east = map_view.places_map([(cannon, map_view.Away(120, 100.0))])["wide"]["dots"][0]
     assert east["anchor"] == "start" and east["label_x"] > east["x"]  # on the right, beside it
 
 
 def test_no_two_names_on_the_map_sit_on_each_other_or_on_home() -> None:
     def put(idea_id, title, minutes, degrees):
-        return (SimpleNamespace(id=idea_id, title=title), views.Away(minutes, degrees))
+        return (SimpleNamespace(id=idea_id, title=title), map_view.Away(minutes, degrees))
 
     crowded = [
         put(1, "Pumpkin patch at Bi-Mart farm", 23, 316.0),
@@ -388,7 +391,7 @@ def test_no_two_names_on_the_map_sit_on_each_other_or_on_home() -> None:
         put(5, "Lava tubes at Ape Cave", 115, 40.0),
     ]
     for size in ("wide", "narrow"):
-        plot = views.places_map(crowded)[size]
+        plot = map_view.places_map(crowded)[size]
         text_size = 15 if size == "wide" else 14
         boxes = []
         for dot in plot["dots"]:
@@ -516,7 +519,6 @@ def test_view_helpers_word_things_for_people() -> None:
 
     from familydb.store.ideas import Idea
     from familydb.store.places import Place
-    from familydb.web import views
 
     def idea(**fields):
         return Idea(id=1, kind="activity", title="t", created_at="", updated_at="", **fields)
@@ -1177,7 +1179,6 @@ def test_on_now_the_setup_strip_comes_after_the_box_and_before_the_rest(
 
 
 def test_a_place_s_phone_number_is_a_link_a_phone_can_dial() -> None:
-    from familydb.web import views
 
     assert views.phone_href("(503) 555-0142") == "tel:5035550142"
     assert views.phone_href("+1 503 555 0142") == "tel:+15035550142"

@@ -24,6 +24,7 @@ from familydb.base.config import CompanyOptions, Settings
 from familydb.base.dates import parse_datetime, utc_iso
 from familydb.store import calls
 from familydb.store import model_watch as model_store
+from familydb.store import settings as settings_store
 from familydb.web import fields, views
 
 WINDOW_DAYS = 30
@@ -717,8 +718,6 @@ def _picked(
 
 def build(app: Any, conn: sqlite3.Connection, typed: Any = None) -> Built:
     """Everything the page draws, from the settings in force and the last 30 days of calls."""
-    from familydb.store import settings as settings_store
-
     settings: Settings = app.settings
     now = app.clock.now()
     days, per_day = tallies(conn, settings, now)
