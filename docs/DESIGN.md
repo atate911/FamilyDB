@@ -359,7 +359,7 @@ A decided row is the call as made and why, so whoever comes to it later can tell
 
 ## 17. Repo layout
 
-The README's [Layout](../README.md#layout); the module map in [CLAUDE.md](../CLAUDE.md#layout).
+The README's [Layout](../README.md#layout); the module map in [CLAUDE.md](../CLAUDE.md#layout), which opens with the order the packages stand in, bottom to top, held by `tests/test_layering.py`. Three more tests hold boundaries the map relies on: `tests/test_store_boundary.py` (a statement is run only in `store/`), `tests/test_web.py` with `tests/writes.py` (the page writes only through its four doors, the writers read off the source), and `tests/test_companies.py` (nothing outside the providers names a company, bar the files listed there).
 
 ## 18. Tasks, reminders and free-form capture
 
