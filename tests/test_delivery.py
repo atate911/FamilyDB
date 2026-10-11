@@ -59,6 +59,39 @@ def test_active_message_claim_blocks_second_connection_and_expired_claim_recover
     assert run_retries(env.app, api=FakeMessagesAPI(message([text("Recovered")]))) == 1
 
 
+def test_one_renewer_keeps_every_claim_the_process_holds(env):
+    """Two claims, one thread: a round of renewal moves both expiries forward together."""
+    from datetime import timedelta
+
+    from familydb import delivery
+
+    rows = [
+        messages.insert_in(
+            env.conn,
+            channel="console",
+            channel_update_id=f"held-{n}",
+            chat_id="c",
+            member_id=env.member.id,
+            text=f"hello {n}",
+        )
+        for n in (1, 2)
+    ]
+    with (
+        closing(env.app.connect()) as other,
+        lease(env.app, env.conn, rows[0].id) as first,
+        lease(env.app, other, rows[1].id) as second,
+    ):
+        assert first and second
+        assert delivery.RENEWER.holding() == 2
+        before = [messages.get(env.conn, row.id).claim_until for row in rows]
+        env.app.clock.advance(timedelta(seconds=90))
+        delivery.RENEWER.renew_all()
+        after = [messages.get(env.conn, row.id).claim_until for row in rows]
+        assert all(late > early for early, late in zip(before, after, strict=True))
+    assert delivery.RENEWER.holding() == 0
+    assert all(messages.get(env.conn, row.id).claim_token is None for row in rows)
+
+
 def test_failed_followup_delivery_retries_without_repeating_job_or_model(env):
     plans.insert(
         env.conn,

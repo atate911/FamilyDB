@@ -545,12 +545,14 @@ class TelegramChannel:
         pause = self.app.settings.gather_seconds
 
         def later(app: App, message: IncomingMessage) -> OutgoingMessage | None:
-            time.sleep(pause)
             return answer_gathered(app, message, kept)
 
-        task = asyncio.get_running_loop().create_task(
-            self._answer(update, bot, msg, handle=later, quiet=quiet)
-        )
+        async def after_the_pause() -> None:
+            # Waited out here on the loop: a burst of messages ties up no pool threads.
+            await asyncio.sleep(pause)
+            await self._answer(update, bot, msg, handle=later, quiet=quiet)
+
+        task = asyncio.get_running_loop().create_task(after_the_pause())
         self._gathering.add(task)
         task.add_done_callback(self._gathering.discard)
 

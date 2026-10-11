@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
+import time
 import uuid
 from collections.abc import Callable, Iterator
 from contextlib import closing, contextmanager
@@ -44,13 +45,65 @@ class Claim:
         return self.token is not None
 
 
+class Renewer:
+    """One thread renews every claim this process holds, every `RENEW_SECONDS`, on one
+    connection a round: a long model turn keeps its claim, and a hundred deliveries do not mean a
+    hundred threads. Started on the first claim; a daemon, so it never holds the process up."""
+
+    def __init__(self) -> None:
+        self._held: dict[str, App] = {}
+        self._lock = threading.Lock()
+        self._thread: threading.Thread | None = None
+
+    def add(self, app: App, token: str) -> None:
+        with self._lock:
+            self._held[token] = app
+            if self._thread is None or not self._thread.is_alive():
+                self._thread = threading.Thread(
+                    target=self._run, name="familydb-claims", daemon=True
+                )
+                self._thread.start()
+
+    def drop(self, token: str) -> None:
+        with self._lock:
+            self._held.pop(token, None)
+
+    def holding(self) -> int:
+        with self._lock:
+            return len(self._held)
+
+    def renew_all(self) -> None:
+        """Every claim held, kept for another `LEASE_SECONDS` from now; a round that fails is
+        logged and tried again next time (the claim lapses only after `LEASE_SECONDS`)."""
+        with self._lock:
+            by_app: dict[int, tuple[App, list[str]]] = {}
+            for token, app in self._held.items():
+                by_app.setdefault(id(app), (app, []))[1].append(token)
+        for app, tokens in by_app.values():
+            try:
+                with closing(app.connect()) as own, transaction(own):
+                    until = utc_iso(app.clock.now() + timedelta(seconds=LEASE_SECONDS))
+                    for token in tokens:
+                        messages.renew_claim(own, token, until=until)
+            except Exception:
+                log.exception("could not renew %d message claim(s)", len(tokens))
+
+    def _run(self) -> None:
+        while True:
+            time.sleep(RENEW_SECONDS)
+            self.renew_all()
+
+
+RENEWER = Renewer()
+
+
 @contextmanager
 def lease(app: App, conn: sqlite3.Connection, message_id: int) -> Iterator[Claim]:
     """Claim one message for as long as the block runs; yields a false Claim when someone else has
     it. A message held for gathering is taken over.
 
-    Renewed on its own thread and connection so a long model turn keeps its claim; released at
-    the end, success or not, with every row taken under it (`claim_also`).
+    Renewed by the process's one `Renewer` so a long model turn keeps its claim; released at the
+    end, success or not, with every row taken under it (`claim_also`).
     """
     token = uuid.uuid4().hex
     now = utc_iso(app.clock.now())
@@ -60,24 +113,11 @@ def lease(app: App, conn: sqlite3.Connection, message_id: int) -> Iterator[Claim
     if not won:
         yield Claim(None)
         return
-    stop = threading.Event()
-
-    def renew() -> None:
-        while not stop.wait(RENEW_SECONDS):
-            try:
-                with closing(app.connect()) as own, transaction(own):
-                    later = utc_iso(app.clock.now() + timedelta(seconds=LEASE_SECONDS))
-                    messages.renew_claim(own, token, until=later)
-            except Exception:
-                log.exception("could not renew message claim %s", message_id)
-
-    thread = threading.Thread(target=renew, daemon=True)
-    thread.start()
+    RENEWER.add(app, token)
     try:
         yield Claim(token)
     finally:
-        stop.set()
-        thread.join(timeout=10)
+        RENEWER.drop(token)
         with transaction(conn):
             messages.release_claim(conn, token)
 
