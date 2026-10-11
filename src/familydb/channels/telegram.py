@@ -46,9 +46,9 @@ from telegram.ext import (
 
 from familydb import buttons, commands, personas, routing, voice, whereabouts
 from familydb.app import App
+from familydb.base.config import Settings
 from familydb.channels import markup
 from familydb.channels.base import IncomingMessage, OutgoingMessage, PhotoNote, VoiceNote
-from familydb.config import Settings
 from familydb.delivery import deliver
 from familydb.pipeline import answer_gathered, handle_incoming, receive
 from familydb.store import members, messages

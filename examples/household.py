@@ -17,8 +17,8 @@ from zoneinfo import ZoneInfo
 
 from familydb import family as rules
 from familydb.app import App
-from familydb.clock import FixedClock
-from familydb.config import Settings
+from familydb.base.clock import FixedClock
+from familydb.base.config import Settings
 from familydb.integrations.events import FoundEvent
 from familydb.integrations.open_meteo import DayForecast
 from familydb.store import (

@@ -19,10 +19,11 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, export, happening, health, personas, presents, roles
+from familydb import agenda, export, happening, health, personas, presents
 from familydb.app import App
 from familydb.availability import calendar_available, enrichment_available, happening_available
-from familydb.dates import next_birthday, utc_iso, weekend_window
+from familydb.base import roles
+from familydb.base.dates import next_birthday, utc_iso, weekend_window
 from familydb.store import calls
 from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store

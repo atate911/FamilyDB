@@ -5,8 +5,8 @@ from __future__ import annotations
 import sqlite3
 from datetime import date, datetime
 
-from familydb.clock import Clock
-from familydb.config import Settings
+from familydb.base.clock import Clock
+from familydb.base.config import Settings
 from familydb.integrations.geocode import estimate_travel
 from familydb.store import places
 from familydb.store.places import Place

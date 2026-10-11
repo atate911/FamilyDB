@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Any
 
 from familydb import __version__
-from familydb.config import Settings
-from familydb.dates import parse_datetime
+from familydb.base.config import Settings
+from familydb.base.dates import parse_datetime
 from familydb.store import ideas, plans, tasks
 
 # A line of a calendar file is at most this many bytes, then folded (RFC 5545, 3.1).

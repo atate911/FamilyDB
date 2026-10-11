@@ -79,8 +79,8 @@ src/familydb/     pipeline.py (one message end to end), agent/ (the gateway, pro
                   tool group), suggest/ (the suggestion engine), store/ (SQLite, migrations/, one
                   repository per table), channels/ (console, Telegram, web chat), web/ (the page),
                   jobs/ (scheduler and jobs), integrations/ (Google Calendar, Open-Meteo, geocoder,
-                  price lists), personas/ (who the assistant is), plus cli.py, config.py, app.py,
-                  family.py, roles.py, voice.py, delivery.py, doctor.py and the other top-level modules
+                  price lists), personas/ (who the assistant is), plus base/ (settings, clock, dates, errors, roles), cli.py, app.py,
+                  family.py, voice.py, delivery.py, doctor.py and the other top-level modules
 tests/            pytest suite with scripted fakes of each provider's SDK, Google and the weather
 evals/            the family's own requests run against a real model, graded by code
 scripts/          bootstrap (bare server to running bot), install, maintain, uninstall; lib/ shared

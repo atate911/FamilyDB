@@ -12,7 +12,7 @@ from familydb import personas
 from familydb.agent.history import HistoryTurn
 from familydb.agent.providers.base import Message, SystemBlock
 from familydb.agent.render import render_family_context, render_idea_list
-from familydb.config import Settings
+from familydb.base.config import Settings
 from familydb.store import ideas, members
 
 IDEAS_HEADER = (

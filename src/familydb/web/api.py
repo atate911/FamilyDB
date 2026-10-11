@@ -9,8 +9,9 @@ from datetime import date, timedelta
 
 from flask import Blueprint, Response, current_app, jsonify, request, url_for
 
-from familydb import happening, presents, roles
+from familydb import happening, presents
 from familydb.app import App
+from familydb.base import roles
 from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store
 from familydb.store import lists as list_store

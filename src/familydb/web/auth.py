@@ -38,9 +38,10 @@ from flask import (
 )
 from itsdangerous import BadSignature, URLSafeSerializer
 
-from familydb import passwords, personas, roles
+from familydb import passwords, personas
 from familydb.app import App
-from familydb.config import Settings
+from familydb.base import roles
+from familydb.base.config import Settings
 from familydb.store import logins
 from familydb.store import members as member_store
 from familydb.store.logins import Login, SignIn

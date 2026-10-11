@@ -22,7 +22,7 @@ from contextlib import closing, contextmanager
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from familydb.dates import utc_iso
+from familydb.base.dates import utc_iso
 from familydb.store import messages
 from familydb.store.db import transaction
 

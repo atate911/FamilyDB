@@ -126,7 +126,7 @@ A company whose quirks the adapter cannot carry is a module beside `openai.py` a
 1. `agent/providers/<slug>.py` with a class that satisfies `Provider` (`base.py`), `searches` set, its
    `PARTS` (`parts.py`) and its error mapping into `AgentError.trouble`.
 2. A `Company` in `companies.py` and its slug in `config.BUILT_IN_COMPANIES`; its key, everyday chat and
-   lookup models, better and best models as settings (`config.py`, `store/settings.py`, `web/fields.py`).
+   lookup models, better and best models as settings (`base/config.py`, `store/settings.py`, `web/fields.py`).
 3. `build()` in `providers/__init__.py`, its lineup in `catalog.py`, its prices in `prices.py`, and
    LiteLLM's and OpenRouter's names for it in its `Company` (the daily check's lists).
 4. Tests: `tests/test_companies.py` holds that every built-in company has a module and the settings it

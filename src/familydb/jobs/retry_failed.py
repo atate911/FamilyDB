@@ -7,7 +7,7 @@ from contextlib import closing
 
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
-from familydb.dates import utc_iso
+from familydb.base.dates import utc_iso
 from familydb.delivery import run_deliveries
 from familydb.pipeline import retry_message
 from familydb.store import messages

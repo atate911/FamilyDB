@@ -11,9 +11,9 @@ from familydb import voice
 from familydb.agent import gateway, spending
 from familydb.agent.providers import Audio, build, hearers, prices
 from familydb.app import App
+from familydb.base.errors import AgentError
 from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
 from familydb.channels.telegram import TelegramChannel, incoming_voice
-from familydb.errors import AgentError
 from familydb.pipeline import handle_incoming, retry_message
 from familydb.store import calls, messages
 from familydb.store.db import transaction

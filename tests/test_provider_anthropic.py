@@ -6,7 +6,7 @@ from familydb.agent.providers import anthropic as anthropic_provider
 from familydb.agent.providers import build
 from familydb.agent.providers.anthropic import AnthropicProvider, ensure_credentials
 from familydb.agent.providers.base import Message, SystemBlock, ToolDef, TurnRequest, WebAccess
-from familydb.errors import AgentError
+from familydb.base.errors import AgentError
 
 
 def _provider(settings, **overrides):

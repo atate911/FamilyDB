@@ -11,12 +11,11 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import roles
-from familydb import undo as taking_back
-from familydb.errors import ToolError
+from familydb.base import roles
+from familydb.base.errors import ToolError
 from familydb.store import lists
 from familydb.store.db import transaction
-from familydb.tools.registry import ToolContext, tool
+from familydb.tools.registry import ToolContext, keep_undo, tool
 
 MAX_ITEMS = 30
 MAX_TEXT = 120
@@ -106,7 +105,7 @@ def _keep_undo(ctx: ToolContext, action: str, name: str, done: list[str]) -> Non
     if action not in OPPOSITE:
         return  # a cleared list is not brought back
     said = {"add": "added", "remove": "took off", "tick": "ticked", "untick": "unticked"}[action]
-    taking_back.keep(
+    keep_undo(
         ctx,
         "list",
         f"{said} {', '.join(done)} on the {name} list",

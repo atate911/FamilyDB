@@ -11,7 +11,7 @@ from typing import Any
 from waitress import create_server as _create_server
 
 from familydb.app import App
-from familydb.errors import ConfigError, FamilyDBError
+from familydb.base.errors import ConfigError, FamilyDBError
 from familydb.web import MAX_UPLOAD_BYTES, create_app
 
 log = logging.getLogger(__name__)

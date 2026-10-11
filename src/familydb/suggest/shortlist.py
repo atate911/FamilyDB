@@ -10,8 +10,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import date
 
-from familydb.config import Settings
-from familydb.dates import age_on
+from familydb.base.config import Settings
+from familydb.base.dates import age_on
 from familydb.integrations.open_meteo import DayForecast
 from familydb.store.ideas import GIFT, Idea, ages_text
 from familydb.store.members import Member

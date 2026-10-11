@@ -11,16 +11,18 @@ from __future__ import annotations
 import sqlite3
 from contextlib import closing
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from familydb import voice
-from familydb.app import App
+from familydb.base.dates import utc_iso
 from familydb.channels.base import OutgoingMessage
-from familydb.dates import utc_iso
 from familydb.integrations.geocode import haversine_km
 from familydb.store import locations, members, messages, place_names
 from familydb.store.db import transaction
 from familydb.store.locations import SharedLocation
+
+if TYPE_CHECKING:
+    from familydb.app import App
 
 FRESH = timedelta(hours=3)
 # Kept no longer than a day: deleted by the next share or by `forget_old` on the scheduler's round.

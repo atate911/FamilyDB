@@ -10,7 +10,7 @@ from evals.cases import CASES, by_name
 from evals.harness import grade, run_case, under_persona
 from familydb import personas
 from familydb.agent import gateway, providers
-from familydb.config import Settings
+from familydb.base.config import Settings
 
 
 def main(argv: list[str] | None = None) -> int:

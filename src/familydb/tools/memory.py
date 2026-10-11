@@ -9,15 +9,14 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import undo as taking_back
-from familydb.dates import parse_date
-from familydb.errors import ToolError
+from familydb.base.dates import parse_date
+from familydb.base.errors import ToolError
 from familydb.store import members
 from familydb.store import memories as store
 from familydb.store.db import transaction
 from familydb.store.memories import Category
 from familydb.suggest.types import CostLevel
-from familydb.tools.registry import ToolContext, tool
+from familydb.tools.registry import ToolContext, keep_undo, tool
 
 MAX_CHANGES = 5
 MAX_FACT = 200
@@ -228,7 +227,7 @@ def remember(ctx: ToolContext, args: RememberInput) -> dict[str, Any]:
     saved = [item["id"] for item in done if item["result"] == "saved"]
     if saved and len(saved) == len(done):  # new things only: a replace or a forget stays
         facts = "; ".join(item["fact"] for item in done)
-        taking_back.keep(ctx, "forget", f"remembered {facts}", memories=saved)
+        keep_undo(ctx, "forget", f"remembered {facts}", memories=saved)
     reply = (args.reply or "").strip()[:MAX_REPLY]
     if reply and all(item["result"] != "not saved" for item in done):
         ctx.offer_reply(reply)

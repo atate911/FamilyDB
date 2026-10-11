@@ -25,12 +25,13 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
-from familydb import roles, task_service
-from familydb.dates import utc_iso
-from familydb.errors import ToolError
+from familydb import task_service
+from familydb.base import roles
+from familydb.base.dates import utc_iso
+from familydb.base.errors import ToolError
 from familydb.store import calls, ideas, memories, plans, tasks
 from familydb.store.db import from_json, transaction
-from familydb.tools.registry import UNDO, ToolContext
+from familydb.tools.registry import ToolContext, keep_undo
 
 # How long after a change it can be taken back.
 WINDOW = timedelta(hours=24)
@@ -42,10 +43,7 @@ NOT_YOURS = "only your own things to do can be undone; ask a parent"
 TASK_OPS = frozenset({"cancel_task", "restore_task"})
 
 
-def keep(ctx: ToolContext, op: str, about: str, **facts: Any) -> None:
-    """Leave how to take back what a tool just did, for dispatch to keep with the call. `about`
-    says what was done, as the undo will say it ("added task #5 Call the plumber")."""
-    ctx.scratch[UNDO] = {"op": op, "about": about, **facts}
+keep = keep_undo  # a tool leaves its inverse through the registry (tools/registry.py)
 
 
 def take_back(ctx: ToolContext) -> dict[str, Any]:

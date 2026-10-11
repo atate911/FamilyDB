@@ -44,8 +44,8 @@ from familydb.agent.providers.base import (
     TurnRequest,
 )
 from familydb.agent.providers.companies import Company
-from familydb.config import Settings
-from familydb.errors import AgentError
+from familydb.base.config import Settings
+from familydb.base.errors import AgentError
 
 log = logging.getLogger(__name__)
 

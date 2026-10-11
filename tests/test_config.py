@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from familydb.config import Settings
+from familydb.base.config import Settings
 
 
 def test_defaults_and_masking(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

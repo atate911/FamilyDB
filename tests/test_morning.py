@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 
 from familydb import buttons, task_service
 from familydb.app import App
-from familydb.clock import FixedClock
-from familydb.dates import utc_iso
+from familydb.base.clock import FixedClock
+from familydb.base.dates import utc_iso
 from familydb.jobs.morning import run_morning
 from familydb.store import db, ideas, messages, mornings, plans, tasks
 from tests.conftest import TZ

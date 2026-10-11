@@ -10,7 +10,7 @@ import pytest
 from familydb import alerts, model_watch
 from familydb.agent.providers import prices
 from familydb.app import App
-from familydb.clock import FixedClock
+from familydb.base.clock import FixedClock
 from familydb.integrations.price_lists import (
     Listed,
     PriceListError,
@@ -468,7 +468,7 @@ def test_one_press_on_the_status_page_puts_the_suggested_model_in(settings, conn
 
 
 def _with_openrouter(settings, **more):
-    from familydb.config import CompanyDef
+    from familydb.base.config import CompanyDef
 
     one = CompanyDef(
         slug="openrouter",
@@ -510,7 +510,7 @@ def test_an_added_companys_models_are_kept_and_priced_by_its_own_list(settings, 
 
 
 def test_a_price_typed_for_an_added_model_wins_over_its_lists(settings, conn) -> None:
-    from familydb.config import ModelPrice
+    from familydb.base.config import ModelPrice
 
     live = _with_openrouter(settings, prices=[ModelPrice(name="vendor/chat", input=1, output=2)])
     app = _app(live)
@@ -545,7 +545,7 @@ def test_a_company_that_cannot_be_asked_leaves_what_was_known_alone(settings, co
 
 def test_nothing_is_told_or_swapped_on_an_added_companys_list(settings, conn) -> None:
     from familydb.agent import gateway
-    from familydb.config import ModelPrice
+    from familydb.base.config import ModelPrice
 
     live = _with_openrouter(
         settings,

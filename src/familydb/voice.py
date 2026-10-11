@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from familydb import happening, personas
-from familydb.dates import utc_iso
+from familydb.base.dates import utc_iso
 from familydb.store import messages
 
 log = logging.getLogger(__name__)

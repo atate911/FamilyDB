@@ -425,7 +425,7 @@ def test_suggest_end_to_end_with_verdicts(
 def test_suggest_requeues_stale_places_when_web_is_on(
     registry, conn, full_settings, thursday_clock, family, monkeypatch
 ) -> None:
-    from familydb.errors import AgentError
+    from familydb.base.errors import AgentError
 
     def unavailable(**kwargs):
         raise AgentError("test worker unavailable", retryable=False)

@@ -11,7 +11,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from typing import Any
 
-from familydb.dates import utc_iso
+from familydb.base.dates import utc_iso
 from familydb.store import heartbeat
 from familydb.store.db import transaction
 

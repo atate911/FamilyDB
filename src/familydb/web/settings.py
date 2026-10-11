@@ -56,8 +56,14 @@ from familydb.availability import (
     web_is_public,
     web_tools_available,
 )
-from familydb.config import CompanyDef, CompanyOptions, PersonaRewrite, Settings, apply_overrides
-from familydb.dates import hour_words
+from familydb.base.config import (
+    CompanyDef,
+    CompanyOptions,
+    PersonaRewrite,
+    Settings,
+    apply_overrides,
+)
+from familydb.base.dates import hour_words
 from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction

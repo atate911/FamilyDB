@@ -9,8 +9,9 @@ import pytest
 from typer.testing import CliRunner
 
 from familydb import family as rules
-from familydb import passwords, roles
+from familydb import passwords
 from familydb.app import App
+from familydb.base import roles
 from familydb.store import db, ideas, logins, members, messages, plans, tasks
 from familydb.store import settings as settings_store
 from familydb.web import check_configuration, create_app, fields

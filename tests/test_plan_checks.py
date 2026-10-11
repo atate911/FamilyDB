@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 from familydb.app import App
-from familydb.clock import FixedClock
+from familydb.base.clock import FixedClock
 from familydb.integrations.open_meteo import DayForecast
 from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.plan_checks import run_plan_checks

@@ -189,7 +189,7 @@ def test_a_service_account_key_loads_without_asking_google(tmp_path) -> None:
 
 
 def test_an_unreadable_key_asks_to_connect_again(tmp_path) -> None:
-    from familydb.errors import ToolUnavailable
+    from familydb.base.errors import ToolUnavailable
 
     path = tmp_path / "key.json"
     path.write_text("{ half a file")

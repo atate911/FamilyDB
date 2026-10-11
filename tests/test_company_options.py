@@ -5,11 +5,11 @@ from datetime import timedelta
 
 import pytest
 
-from familydb import config
 from familydb.agent import gateway, providers, spending, uses
 from familydb.agent.providers import Withheld, companies
-from familydb.config import CompanyOptions
-from familydb.dates import utc_iso
+from familydb.base import config
+from familydb.base.config import CompanyOptions
+from familydb.base.dates import utc_iso
 from familydb.store import calls
 
 
@@ -132,7 +132,7 @@ def test_each_company_says_for_itself_whether_it_stands_in(settings):
 
 
 def test_a_lookup_goes_only_to_a_company_that_may_stand_in(settings):
-    from familydb.config import CompanyDef
+    from familydb.base.config import CompanyDef
 
     one = CompanyDef(slug="acme", label="Acme", base_url="https://api.acme.example/v1", model="m")
     live = keyed(
@@ -221,7 +221,7 @@ def test_a_company_not_let_answer_is_never_sent_the_familys_words(
     """Chosen for a row and switched off, with nobody to stand in: the turn fails, and nothing is
     sent to the company the family said no to."""
     from familydb.agent.providers.anthropic import AnthropicProvider
-    from familydb.errors import AgentError
+    from familydb.base.errors import AgentError
 
     sent = []
     monkeypatch.setattr(AnthropicProvider, "send", lambda self, request: sent.append(request))
@@ -238,7 +238,7 @@ def test_a_company_not_let_answer_is_never_sent_the_familys_words(
 
 
 def test_a_withheld_company_sends_no_recording_and_no_photo(settings):
-    from familydb.errors import AgentError
+    from familydb.base.errors import AgentError
 
     live = keyed(settings, company_options=options(openai={"allowed": False}))
     withheld = providers.build("openai", live)
@@ -310,7 +310,7 @@ def test_a_stand_in_over_its_month_is_not_switched_to(
 ):
     from familydb.agent.providers.anthropic import AnthropicProvider
     from familydb.agent.providers.openai import OpenAIProvider
-    from familydb.errors import AgentError
+    from familydb.base.errors import AgentError
 
     live = keyed(
         settings,

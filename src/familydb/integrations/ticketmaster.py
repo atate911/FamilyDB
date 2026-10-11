@@ -17,7 +17,7 @@ from typing import Any, Protocol
 from urllib.parse import urlencode, urlsplit
 from zoneinfo import ZoneInfo
 
-from familydb.config import Settings
+from familydb.base.config import Settings
 from familydb.integrations.events import FoundEvent
 
 EVENTS_URL = "https://app.ticketmaster.com/discovery/v2/events.json"

@@ -7,8 +7,8 @@ import logging
 from datetime import date, timedelta
 
 from familydb.availability import calendar_available
-from familydb.clock import season_for
-from familydb.errors import ToolError
+from familydb.base.clock import season_for
+from familydb.base.errors import ToolError
 from familydb.free_time import events_by_day, free_spans
 from familydb.integrations.open_meteo import DayForecast
 from familydb.saved_plans import SavedPlans

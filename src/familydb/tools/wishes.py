@@ -7,8 +7,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import roles, wish_service
-from familydb.errors import ToolError
+from familydb import wish_service
+from familydb.base import roles
+from familydb.base.errors import ToolError
 from familydb.store import members
 from familydb.store.members import Member
 from familydb.tools.registry import ToolContext, tool

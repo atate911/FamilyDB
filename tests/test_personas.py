@@ -11,7 +11,7 @@ from familydb.agent import gateway, providers
 from familydb.agent.history import HistoryTurn
 from familydb.agent.prompt import JOB_HEADER, PERSONA_HEADER, load_system_prompt
 from familydb.agent.render import render_user_turn
-from familydb.config import PersonaRewrite, Settings
+from familydb.base.config import PersonaRewrite, Settings
 
 
 def test_every_persona_ships_whole() -> None:

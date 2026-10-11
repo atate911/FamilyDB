@@ -8,7 +8,7 @@ import sqlite3
 
 from pydantic import BaseModel
 
-from familydb import roles
+from familydb.base import roles
 from familydb.store.members import Member
 
 

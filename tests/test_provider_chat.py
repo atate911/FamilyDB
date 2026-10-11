@@ -15,8 +15,8 @@ from familydb.agent.providers import companies, parts, prices
 from familydb.agent.providers.base import ToolDef, TurnRequest, WebAccess
 from familydb.agent.providers.chat import ChatProvider
 from familydb.agent.render import render_user_turn
-from familydb.config import CompanyDef, ModelPrice
-from familydb.errors import AgentError
+from familydb.base.config import CompanyDef, ModelPrice
+from familydb.base.errors import AgentError
 from familydb.store import calls, ideas
 
 MODEL = "vendor/model-one"

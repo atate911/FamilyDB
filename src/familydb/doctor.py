@@ -32,7 +32,7 @@ from familydb.availability import (
     web_is_public,
     web_tools_available,
 )
-from familydb.dates import utc_iso
+from familydb.base.dates import utc_iso
 from familydb.store import alerts as alert_store
 from familydb.store import db, members, problems
 
@@ -142,7 +142,7 @@ def _option_names() -> set[str]:
 
     from pydantic import AliasChoices
 
-    from familydb.config import Settings
+    from familydb.base.config import Settings
 
     names = set(OTHER_OPTIONS)
     for setting, info in Settings.model_fields.items():
@@ -933,7 +933,7 @@ def check_integrations(app: App, report: Report) -> None:
 
 
 def check_web(app: App, report: Report, conn: sqlite3.Connection | None = None) -> None:
-    from familydb.errors import ConfigError
+    from familydb.base.errors import ConfigError
     from familydb.web import check_configuration
     from familydb.web.auth import own_passwords
     from familydb.web.keys import secret_path

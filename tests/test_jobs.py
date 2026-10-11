@@ -4,8 +4,8 @@ from datetime import datetime
 import pytest
 
 from familydb.app import App
+from familydb.base.clock import FixedClock
 from familydb.channels.console import one_shot
-from familydb.clock import FixedClock
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.scheduler import build_scheduler
 from familydb.pipeline import retry_message

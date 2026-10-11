@@ -6,7 +6,7 @@ from familydb.agent.loop import REFUSAL_REPLY, run_turn
 from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.providers import WebAccess, build
 from familydb.agent.render import render_user_turn
-from familydb.errors import AgentError
+from familydb.base.errors import AgentError
 from familydb.store import calls, ideas
 from tests import fakes
 

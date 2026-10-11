@@ -19,9 +19,9 @@ from tests.fakes import FakeCalendar, FakeForecast
 from evals.household import FORECAST, NOW, TZ, Household, calendar_events, seed
 from familydb import personas
 from familydb.app import App
+from familydb.base.clock import FixedClock
+from familydb.base.config import Settings, apply_overrides
 from familydb.channels.base import IncomingMessage
-from familydb.clock import FixedClock
-from familydb.config import Settings, apply_overrides
 from familydb.pipeline import handle_incoming
 from familydb.store import calls, db
 

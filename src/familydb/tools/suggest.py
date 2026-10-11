@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
 
-from familydb.errors import ToolError
+from familydb.base.errors import ToolError
 from familydb.suggest.types import SuggestInput
 from familydb.tools.registry import ToolContext, tool
 from familydb.tools.urls import clean_url

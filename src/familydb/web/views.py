@@ -23,8 +23,8 @@ from familydb import alerts, happening, presents, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, companies, prices
 from familydb.availability import happening_search_available, ticketmaster_available
-from familydb.config import Settings
-from familydb.dates import clock_time, hour_words
+from familydb.base.config import Settings
+from familydb.base.dates import clock_time, hour_words
 from familydb.integrations.geocode import estimate_travel
 from familydb.memory import words
 from familydb.store.ideas import Idea, ages_text
@@ -830,7 +830,7 @@ def eat_summary(top: dict[str, Any] | None, meal: str | None) -> str:
 
 
 def soon_summary(days: Sequence[dict[str, Any]], today: date) -> str:
-    from familydb.dates import weekend_window
+    from familydb.base.dates import weekend_window
 
     saturday, sunday = weekend_window(today)
     weekend = sum(

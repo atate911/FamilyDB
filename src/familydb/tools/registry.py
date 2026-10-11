@@ -16,11 +16,11 @@ from typing import Any, Literal
 from pydantic import BaseModel, ValidationError
 
 from familydb.agent.providers.base import ToolDef
-from familydb.clock import Clock
-from familydb.config import Settings
-from familydb.dates import utc_iso
-from familydb.errors import ToolError, ToolUnavailable
-from familydb.roles import Permission, may
+from familydb.base.clock import Clock
+from familydb.base.config import Settings
+from familydb.base.dates import utc_iso
+from familydb.base.errors import ToolError, ToolUnavailable
+from familydb.base.roles import Permission, may
 from familydb.store import calls
 from familydb.store.db import transaction
 from familydb.store.members import Member
@@ -32,6 +32,15 @@ log = logging.getLogger(__name__)
 OFFERED = "offered_reply"
 # Where the inverse of a write is left for dispatch to keep (tool_calls.undo).
 UNDO = "undo"
+
+
+def keep_undo(ctx: ToolContext, op: str, about: str, **facts: Any) -> None:
+    """Leave how to take back what a tool just did, for dispatch to keep with the call. `about`
+    says what was done, as the undo will say it ("added task #5 Call the plumber"); `op` names
+    the inverse `familydb.undo` knows."""
+    ctx.scratch[UNDO] = {"op": op, "about": about, **facts}
+
+
 Source = Literal["chat", "tap", "page", "command", "job", "worker", "cli"]
 
 

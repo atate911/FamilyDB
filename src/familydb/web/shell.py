@@ -153,7 +153,7 @@ WAITING_DAYS = 30
 def wishes_waiting(conn: sqlite3.Connection, today: Any) -> list[dict[str, Any]]:
     """Every kid's wishes that wait on a parent: she asked, or it was turned away as not OK and the
     parents were told. Oldest first, each with the kid and when it was asked."""
-    from familydb import roles
+    from familydb.base import roles
     from familydb.store import wishes as wish_store
 
     since = (today - timedelta(days=WAITING_DAYS)).isoformat()

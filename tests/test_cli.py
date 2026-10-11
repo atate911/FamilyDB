@@ -11,8 +11,8 @@ import pytest
 from typer.testing import CliRunner
 
 from familydb import __version__
+from familydb.base.errors import AgentError
 from familydb.cli import app
-from familydb.errors import AgentError
 from familydb.store import db
 from tests import fakes
 
@@ -352,8 +352,8 @@ def test_config_shortens_a_long_text_and_says_how_long_it_is(env: Path) -> None:
 
     from familydb import personas
     from familydb.app import build_app
+    from familydb.base.config import apply_overrides, load_settings
     from familydb.cli import SHOWN_CHARACTERS
-    from familydb.config import apply_overrides, load_settings
     from familydb.store import settings as settings_store
 
     hers = personas.load(personas.DEFAULT).character

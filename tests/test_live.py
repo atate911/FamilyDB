@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 
 from familydb.app import App
+from familydb.base.config import Settings
 from familydb.channels.console import one_shot
-from familydb.config import Settings
 from familydb.store import calls, db, members
 
 pytestmark = pytest.mark.live

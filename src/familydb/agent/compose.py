@@ -21,7 +21,7 @@ from familydb.agent.providers import (
     WebAccess,
     model_at,
 )
-from familydb.config import Settings
+from familydb.base.config import Settings
 from familydb.tools import ToolRegistry
 
 if TYPE_CHECKING:

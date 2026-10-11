@@ -9,7 +9,7 @@ from google.genai import errors as genai_errors
 
 from familydb.agent.providers import build
 from familydb.agent.providers.base import Message, TurnRequest, WebAccess
-from familydb.errors import AgentError
+from familydb.base.errors import AgentError
 from tests import fakes
 from tests.test_alerts import _found
 from tests.test_fallback import _turn

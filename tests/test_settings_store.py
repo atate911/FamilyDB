@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 import pytest
 
 from familydb.app import App
+from familydb.base.config import apply_overrides
 from familydb.channels.base import IncomingMessage
-from familydb.config import apply_overrides
 from familydb.store import db, plans
 from familydb.store import settings as settings_store
 from familydb.tools import ToolContext

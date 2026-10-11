@@ -13,8 +13,8 @@ import pytest
 from familydb.agent import uses
 from familydb.agent.providers import prices
 from familydb.app import App
-from familydb.config import CompanyDef, CompanyOptions
-from familydb.dates import utc_iso
+from familydb.base.config import CompanyDef, CompanyOptions
+from familydb.base.dates import utc_iso
 from familydb.store import calls
 from familydb.store import settings as settings_store
 from familydb.web import create_app, models_page

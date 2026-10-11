@@ -4,7 +4,7 @@ from datetime import timedelta
 from familydb.agent.history import HistoryTurn
 from familydb.agent.prompt import build_messages, build_system_blocks, load_system_prompt
 from familydb.agent.render import render_audience_line, render_user_turn
-from familydb.config import apply_overrides
+from familydb.base.config import apply_overrides
 from familydb.store import db, ideas
 from familydb.store.members import Member
 from tests.conftest import NOW_ISO
@@ -172,7 +172,7 @@ def test_an_unknown_persona_is_refused_when_it_is_saved(settings) -> None:
     import pytest
     from pydantic import ValidationError
 
-    from familydb.config import Settings
+    from familydb.base.config import Settings
 
     with pytest.raises(ValidationError, match="no persona called 'HAL'"):
         Settings(_env_file=None, persona="HAL")

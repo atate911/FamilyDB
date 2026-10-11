@@ -8,8 +8,8 @@ import json
 from typing import Any
 
 from familydb.availability import calendar_available, weather_available, web_tools_available
-from familydb.clock import Clock
-from familydb.config import Settings
+from familydb.base.clock import Clock
+from familydb.base.config import Settings
 from familydb.memory import Chosen, line_of
 from familydb.routing import CONFIRMED
 from familydb.store.ideas import Idea, ages_text

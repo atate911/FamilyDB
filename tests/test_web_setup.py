@@ -153,7 +153,7 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
 
 def test_a_server_zone_the_list_does_not_offer_is_offered_as_well(settings, clock, conn) -> None:
     """A server set to Etc/UTC, as many are, still finds its zone chosen on the home step."""
-    from familydb.config import apply_overrides
+    from familydb.base.config import apply_overrides
 
     # Validated afresh, since the zone in force is worked out when settings are made.
     server = apply_overrides(settings, {"web_password": INSTALLERS, "family_tz": "Etc/UTC"})

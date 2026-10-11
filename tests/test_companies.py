@@ -6,7 +6,7 @@ import importlib
 import pytest
 
 from familydb.agent.providers import catalog, companies, prices
-from familydb.config import Settings
+from familydb.base.config import Settings
 
 
 @pytest.mark.parametrize("company", companies.BUILT_IN, ids=lambda company: company.slug)

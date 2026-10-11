@@ -15,8 +15,8 @@ from zoneinfo import available_timezones
 from familydb import happening, logs
 from familydb.agent.providers import companies
 from familydb.agent.providers.prices import hearing_suggestions, suggestions
-from familydb.config import Settings
-from familydb.dates import hour_words
+from familydb.base.config import Settings
+from familydb.base.dates import hour_words
 from familydb.store.settings import BEHAVIOUR
 from familydb.web.views import DAY_NAMES
 

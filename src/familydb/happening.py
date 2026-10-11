@@ -16,8 +16,8 @@ import sqlite3
 from datetime import datetime, time
 from urllib.parse import urlsplit
 
-from familydb.config import Settings
-from familydb.dates import utc_iso
+from familydb.base.config import Settings
+from familydb.base.dates import utc_iso
 from familydb.store import calls
 
 NAME = "What's going down?"

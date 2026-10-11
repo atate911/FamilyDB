@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from familydb.config import Settings
+from familydb.base.config import Settings
 from familydb.store import db
 
 EXPECTED_TABLES = {

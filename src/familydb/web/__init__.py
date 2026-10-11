@@ -18,9 +18,9 @@ from werkzeug.security import safe_join
 from familydb import __version__, happening, personas
 from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
+from familydb.base.config import Settings
+from familydb.base.errors import ConfigError
 from familydb.channels.web import WebChat
-from familydb.config import Settings
-from familydb.errors import ConfigError
 from familydb.web import (
     activity,
     auth,

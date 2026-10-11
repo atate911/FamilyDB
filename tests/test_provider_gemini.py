@@ -7,7 +7,7 @@ from familydb.agent.providers import build
 from familydb.agent.providers.base import Message, SystemBlock, ToolDef, TurnRequest, WebAccess
 from familydb.agent.providers.gemini import GeminiProvider
 from familydb.agent.render import render_user_turn
-from familydb.errors import AgentError
+from familydb.base.errors import AgentError
 from familydb.store import calls, ideas
 from tests import fakes
 

@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from familydb import audience, routing
 from familydb.app import App
-from familydb.dates import utc_iso
+from familydb.base.dates import utc_iso
 from familydb.jobs.reminders import run_reminders
 from familydb.store import db, ideas, messages, tasks
 

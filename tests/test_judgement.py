@@ -12,8 +12,8 @@ import pytest
 from familydb import judgement, model_watch
 from familydb.agent.providers import parts, prices
 from familydb.app import App
-from familydb.clock import FixedClock
-from familydb.errors import AgentError
+from familydb.base.clock import FixedClock
+from familydb.base.errors import AgentError
 from familydb.store import calls
 from familydb.store import judgements as store
 from familydb.store.db import transaction

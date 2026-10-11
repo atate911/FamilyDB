@@ -19,9 +19,9 @@ from familydb.agent.spending import LIMITS
 from familydb.agent.worker import WorkerTurn, home_location, run_worker_turn
 from familydb.app import App
 from familydb.availability import enrichment_available
-from familydb.config import Settings
-from familydb.dates import utc_iso
-from familydb.errors import AgentError
+from familydb.base.config import Settings
+from familydb.base.dates import utc_iso
+from familydb.base.errors import AgentError
 from familydb.store import ideas, messages, places
 from familydb.store.db import transaction
 from familydb.store.ideas import GIFT, Idea

@@ -25,7 +25,7 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-from familydb.errors import ConfigError
+from familydb.base.errors import ConfigError
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
 # Strength in the order each company prices them (agent/providers/catalog.py).

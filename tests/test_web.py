@@ -13,7 +13,7 @@ import pytest
 
 import familydb.web as web_module
 from familydb.app import App
-from familydb.errors import ConfigError
+from familydb.base.errors import ConfigError
 from familydb.store import db, ideas, outcomes, places, plans
 from familydb.web import check_configuration, create_app, views
 from tests.conftest import NOW_ISO

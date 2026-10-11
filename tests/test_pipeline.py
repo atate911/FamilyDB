@@ -302,7 +302,7 @@ def test_a_kid_has_as_many_answers_a_day_as_the_family_allows(settings, clock, c
     says so in her own words, with no model call, and the message is not retried."""
     from datetime import timedelta
 
-    from familydb.clock import FixedClock
+    from familydb.base.clock import FixedClock
     from familydb.store import db, members
     from tests.conftest import NOW_ISO
 

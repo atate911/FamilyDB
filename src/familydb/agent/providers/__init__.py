@@ -27,8 +27,8 @@ from familydb.agent.providers.base import (
     TurnRequest,
     WebAccess,
 )
-from familydb.config import Settings
-from familydb.errors import AgentError, ConfigError
+from familydb.base.config import Settings
+from familydb.base.errors import AgentError, ConfigError
 
 log = logging.getLogger(__name__)
 

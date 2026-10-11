@@ -15,8 +15,8 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from familydb.app import App
-from familydb.clock import FixedClock
-from familydb.config import Settings
+from familydb.base.clock import FixedClock
+from familydb.base.config import Settings
 from familydb.integrations.geocode import Geocoder
 from familydb.integrations.ical import IcalFeeds
 from familydb.integrations.open_meteo import OpenMeteo

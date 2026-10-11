@@ -18,7 +18,7 @@ import sqlite3
 from dataclasses import dataclass
 from typing import Any
 
-from familydb import roles
+from familydb.base import roles
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store.ideas import Idea

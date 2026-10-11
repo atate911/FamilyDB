@@ -11,7 +11,7 @@ import pytest
 from familydb import happening
 from familydb.agent.prompt import load_prompt
 from familydb.app import App
-from familydb.clock import FixedClock
+from familydb.base.clock import FixedClock
 from familydb.integrations.events import FoundEvent
 from familydb.integrations.ical import FeedError
 from familydb.jobs import happening as job

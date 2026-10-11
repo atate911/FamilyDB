@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from familydb.agent.providers import prices
-from familydb.config import BUILT_IN_COMPANIES, CompanyDef
+from familydb.base.config import BUILT_IN_COMPANIES, CompanyDef
 
 
 @dataclass(frozen=True)
@@ -265,7 +265,7 @@ TEMPLATES: dict[str, Template] = {OPENROUTER.key: OPENROUTER}
 
 def options(slug: str | None, settings: Any = None) -> Any:
     """What the family said of this company on the models page (`config.CompanyOptions`)."""
-    from familydb.config import CompanyOptions
+    from familydb.base.config import CompanyOptions
 
     given = getattr(settings, "company_options", None) or {}
     return given.get(slug or "", CompanyOptions())

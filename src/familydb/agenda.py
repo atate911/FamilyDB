@@ -16,13 +16,15 @@ import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from familydb.app import App
+from familydb.base.dates import clock_time
 from familydb.calendar_sync import event_changes
-from familydb.dates import clock_time
 from familydb.store import plans as plan_store
 from familydb.store.plans import Plan
+
+if TYPE_CHECKING:
+    from familydb.app import App
 
 log = logging.getLogger(__name__)
 

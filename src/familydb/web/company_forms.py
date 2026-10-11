@@ -18,7 +18,7 @@ from pydantic import ValidationError
 
 from familydb.agent import uses
 from familydb.agent.providers import companies
-from familydb.config import CompanyDef, ModelPrice, Settings
+from familydb.base.config import CompanyDef, ModelPrice, Settings
 from familydb.integrations import address
 
 # Most companies a family would add; Settings holds twelve.

@@ -5,7 +5,7 @@ import pytest
 
 from familydb.agent import gateway, uses
 from familydb.agent.providers import catalog
-from familydb.config import USE_KEYS
+from familydb.base.config import USE_KEYS
 
 
 def keyed(settings, **more):
@@ -60,7 +60,7 @@ def test_the_page_names_the_use_that_is_spelled_once_and_the_rest_have_labels():
 
 def test_a_value_stored_by_another_version_never_stops_the_settings(settings):
     odd = settings.model_copy(update={})
-    from familydb.config import Settings
+    from familydb.base.config import Settings
 
     loaded = Settings(
         _env_file=None, model_choices={"chat": "openai:x", "future": "x", "digest": 5, "look": " "}

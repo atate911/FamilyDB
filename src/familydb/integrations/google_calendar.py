@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Any, Protocol
 from zoneinfo import ZoneInfo
 
-from familydb.config import Settings
-from familydb.errors import ToolError, ToolUnavailable
+from familydb.base.config import Settings
+from familydb.base.errors import ToolError, ToolUnavailable
 
 log = logging.getLogger(__name__)
 

@@ -32,7 +32,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from familydb.config import Settings
+    from familydb.base.config import Settings
 
 MANIFEST = "persona.toml"
 CHARACTER = "character.md"

@@ -25,7 +25,7 @@ from typing import Any
 from familydb import happening
 from familydb.agent import providers
 from familydb.agent.providers import catalog, companies
-from familydb.config import USE_KEYS, Settings
+from familydb.base.config import USE_KEYS, Settings
 
 SAME = "same"
 OFF = "off"

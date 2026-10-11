@@ -12,8 +12,8 @@ from typing import Any
 
 from familydb import logs
 from familydb.availability import calendar_available, weather_available
-from familydb.clock import Clock, SystemClock
-from familydb.config import Settings, load_settings
+from familydb.base.clock import Clock, SystemClock
+from familydb.base.config import Settings, load_settings
 from familydb.store import db
 from familydb.tools import ToolRegistry, build_registry
 from familydb.voice import Holds
@@ -183,7 +183,7 @@ class App:
         companies.use(self.settings.companies)
 
     def _reload_settings(self, conn: sqlite3.Connection) -> bool:
-        from familydb.config import apply_overrides
+        from familydb.base.config import apply_overrides
         from familydb.store import settings as settings_store
 
         try:
