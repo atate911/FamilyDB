@@ -19,7 +19,7 @@ Rules here exist so a change does not quietly cost money, break the prompt cache
 - Bound calls, tool iterations, context, output and retries. Choose the cheapest configured model that meets measured quality.
 - The daily spending limit (`agent/spending.py`) is checked before every call (in the loop per call, and in `gateway.listen` for a voice note). Cost is estimated from `agent/providers/prices.py` and stored in `llm_calls`; prices in force are the daily check's (`familydb/model_watch.py`) laid over the built-in table by `prices.use`. A model neither knows is counted dearer than any listed, so add a price when adding a model worth suggesting. It is an estimate, not the bill.
 - Every kind of model call decides, sees, acts and is trusted as framed in `docs/AI_CALLS.md` (code knows, the model understands and words). A new kind answers its five questions before it is on by default.
-- Kids' wish lists: `docs/WISHES.md`. Persona (changes how things are said, never what is done): `docs/PERSONAS.md`.
+- Kids' wish lists: `docs/WISHES.md`. Persona (changes how things are said, never what is done): `docs/PERSONAS.md`. Ideas, finds, scouting, suggestions and recommendations, the words and the plan for the back pocket: `docs/FINDS.md`.
 
 ## Commands
 
