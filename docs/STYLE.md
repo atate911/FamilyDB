@@ -3,8 +3,9 @@
 This is FamilyDB's design: what the page looks like, the few ideas that make it work, and how to
 draw any page from them. It was worked out on the first screen, screen by screen, until it looked
 *designed*: professional, modern, calm, a little technical, and unmistakably one thing. **Now is
-the model.** Every other page is drawn the way Now is, and where a page and this document
-disagree, the page is moved, not the document.
+the model.** Every other page is drawn the way Now is. Where a page and this document disagree,
+one of them is wrong: bring the page back into line, or, if the page has found something better,
+change this document, and the other pages with it, in the same change.
 
 The family's pages (Now, the destinations, each thing's own page) are built on it, on the frame
 `docs/INTERFACE.md` lays out; the back office (Status, Settings, Family, the guide) wears the same
