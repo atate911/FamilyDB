@@ -199,22 +199,24 @@ def questions(
     slots: dict[str, int],
     people: list[Member],
 ) -> list[dict[str, Any]]:
-    """What waits on this person, oldest first: a plan to say how it went, a kid's request to
-    answer, a kid's pitch to look at. A kid is asked nothing here: her questions reach her chat."""
+    """What waits on this person, oldest first: a kid's request to answer, a kid's pitch to look
+    at; then one plan to say how it went, the oldest, while the family has asking on
+    (`follow_ups`), so it never crowds out what only a parent can answer. A kid is asked nothing
+    here: her questions reach her chat."""
     if not visitor.may("change"):
         return []
     tz = app.settings.tzinfo
     asked: list[dict[str, Any]] = []
-    for row in page_rows.unrated(conn, today, slots, visitor.member):
-        asked.append(
-            {
-                "kind": "rate",
-                "text": f"How did {row.title} go?",
-                "origin": row.when,
-                "sort": row.day,
-                **rows_.as_dict(row),
-            }
-        )
+    went = [
+        {
+            "kind": "rate",
+            "text": f"How did {row.title} go?",
+            "origin": row.when,
+            "sort": row.day,
+            **rows_.as_dict(row),
+        }
+        for row in page_rows.to_ask(app, conn, today, slots, visitor.member)[:1]
+    ]
     if visitor.may("decide"):
         names = {person.id: person for person in people}
         glance = shell.wishes_waiting(conn, today)
@@ -239,7 +241,7 @@ def questions(
             )
         asked.extend(_pitches(conn, app, today, people, tz))
     asked.sort(key=lambda q: q["sort"])
-    return asked
+    return asked + went
 
 
 def _pitches(

@@ -264,11 +264,11 @@ def test_a_plan_made_for_a_present_is_not_asked_about_where_the_present_is_hidde
                 all_day=False,
                 idea_id=idea.id,
             )
-    # Sam may know of it; Alex, whom it is for, sees neither the title nor the count of it.
-    assert "How did Scarf for Alex go?" in sam.get("/").text
-    assert 'badge--quiet" title="2 to rate">2<' in _sidebar(sam)
+    # Sam may know of it; Alex, whom it is for, never sees it among what is still to say.
+    assert "How did Scarf for Alex go?" in sam.get("/did").text
     assert "Scarf for Alex" in sam.get("/plans/month?month=2026-09").text
-    for page in ("/", "/plans/month?month=2026-09"):
+    for page in ("/", "/did", "/plans/month?month=2026-09"):
         assert "Scarf for Alex" not in alex.get(page).text
     assert "How did Silver Falls hike go?" in alex.get("/").text
-    assert 'badge--quiet" title="1 to rate">1<' in _sidebar(alex)
+    # How a plan went is never a count in the menu or the row: it is asked, never owed.
+    assert "to rate" not in _sidebar(sam) and "to rate" not in sam.get("/").text

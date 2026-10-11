@@ -544,8 +544,10 @@ GROUPS: tuple[Group, ...] = (
             field(
                 "follow_ups",
                 "Ask how a plan went",
-                "The day after, with buttons to answer in one tap, so the ideas list learns what "
-                "you liked. No means nobody is asked; how it went can still be told any time.",
+                "The day after, in a message with buttons to answer in one tap, and one at a time "
+                "on Now and What we did. What you say keeps a place you did not enjoy out of "
+                "suggestions and puts favorites first. No means nobody is asked anywhere; how it "
+                "went can still be told on the plan's own page or to her.",
             ),
             field(
                 "follow_up_hour",

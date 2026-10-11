@@ -277,7 +277,7 @@ template builds one by hand. Person classes are slots (`.p0` to `.p8`), never na
 - **Owner mark** (`.who`): a 20-pixel circle in the person's color with their initial. Several
   people overlap, three shown and then "+N". The names are its accessible name and its tooltip.
 - **Count dot** (`.badge`): a 20-pixel circle with the number, at the item's right edge: red when
-  late, amber when it needs a look or a decision, neutral for a gentle count ("2 to rate"). Its
+  late, amber when it needs a look or a decision, neutral for a gentle count. How a plan went is never counted: it is asked, never owed. Its
   words ("2 to check") are said to a screen reader and shown on hover.
 - **State tag** (`.tag`): a short label in capitals on its signal's wash: Working, Ready, Needs a
   look, Off, Planned. A tag is a word or two; anything longer is a sentence beside it.

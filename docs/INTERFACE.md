@@ -96,7 +96,7 @@ Now is the first screen. It is not a menu and not a dashboard: it is the box, th
 
 **The picks** are the What about set described in section 4: one of each kind for this moment, each with a reason, made ahead and refreshed on open when stale (more than a few hours old and the budget allows). "Different ones" is a call made on purpose. Tapping a pick opens the thing with Plan it ready; swiping it away is "not now".
 
-**Her questions** are the only interruption: a kid's pitch, a plan to set, how an outing went. Each with its origin and its buttons. The same ones reach Telegram.
+**Her questions** are the only interruption: a kid's pitch, a plan to set, how an outing went. Each with its origin and its buttons. The same ones reach Telegram. How an outing went is asked, never owed: one at a time, after what only a parent can answer, nothing counts it, and the family can turn the asking off (`follow_ups`), leaving the plan's own page to take it.
 
 **Today's line** is the coordination that fits in one line. The week is one tap away in the row.
 

@@ -10,7 +10,7 @@ Four destinations read the calendar, the [things to do](/wiki/reference/glossary
 | Kid | **My week**: the family's plans and her own things to do, which she ticks off herself; no plate, no pencil, no forms. She asks the assistant to add or change one | Not in her row | What we did, with no faces |
 | Anyone on the shared password | Everything | Everything | Everything |
 
-Who may change what is in [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions). Every page leaves out plans for a present hidden from you, and things to do about one ([Presents](/wiki/model/ideas-and-places#presents)). So do **How did it go?** and its "to rate" count.
+Who may change what is in [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions). Every page leaves out plans for a present hidden from you, and things to do about one ([Presents](/wiki/model/ideas-and-places#presents)). So does **How did it go?**
 
 ## Week
 
@@ -34,7 +34,7 @@ A plan's row opens its page: when, in words and how far off; the time to leave, 
 
 > **Taking a plan off deletes the event from Google Calendar for everyone.** FamilyDB keeps the plan marked canceled but cannot bring the event back: add a new plan instead.
 
-- **Rate a plan.** On Now, on Did, on the day's page or the plan's own, choose Loved it, OK or Not great. These record 9, 6 and 3 out of ten. The question asks about confirmed plans linked to an idea that ended in the last 14 days and have no rating, and counts them as "to rate" on Did.
+- **Rate a plan.** On Now, on Did, on the day's page or the plan's own, choose Loved it, OK or Not great. These record 9, 6 and 3 out of ten. The question asks about confirmed plans linked to an idea that ended in the last 14 days and have no rating; Now asks about one at a time, after the kids' asks, and nothing counts them. With [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) off, only the plan's own page offers the faces.
 
 ### Rules for plans
 
@@ -72,7 +72,7 @@ The shopping list, always, and the family's other lists as chips, each at its ow
 
 ## Did
 
-What we did, newest first: each outing with its face (Loved it from 8 out of ten, OK from 5, Not great below), when, who went and the note. What is still to rate comes first, with the faces to say. **Loved** keeps only the loved ones; **Favorites** shows one row a place the family loved on average, with how many times; **This time last year** shows the month either side of the day a year ago; each person's chip, what they were at.
+What we did, newest first: each outing with its face (Loved it from 8 out of ten, OK from 5, Not great below), when, who went and the note. What is still to rate comes first, with the faces to say, while Ask how a plan went is on. **Loved** keeps only the loved ones; **Favorites** shows one row a place the family loved on average, with how many times; **This time last year** shows the month either side of the day a year ago; each person's chip, what they were at.
 
 Each outing opens a page of its own: when, who went, how it went out of ten and whether they would go again, the words said about it and who recorded it, and the other times at the same place. **What made it good?** offers a few chips (An early start, A friend came, Short, Cheap, Close to home, Outdoors); a tap becomes something the assistant remembers about the family, which you can see and forget on [What Vera knows](/wiki/controls/memory). **Again?** puts the place back among the things to do.
 

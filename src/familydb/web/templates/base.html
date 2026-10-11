@@ -100,7 +100,7 @@
               {% elif wishing %}{{ nav_item('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
               {% if grownup %}{{ nav_item('Soon', url_for('web.happening_page'), 'soon', 'ticket') }}{% endif %}
               {% if viewer.may('change') %}{{ nav_item('Lists', url_for('web.lists_page'), 'lists', 'list') }}{% endif %}
-              {% if grownup %}{{ nav_item('Did', url_for('go.did'), 'did', 'smile', count=(badge('quiet', shell.rate, 'to rate') if shell.rate else none)) }}{% endif %}
+              {% if grownup %}{{ nav_item('Did', url_for('go.did'), 'did', 'smile') }}{% endif %}
               {% if grownup %}{{ nav_item('What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', url_for('web.memory'), 'memory', 'memory') }}{% endif %}
             </ul>
             {% if grownup %}

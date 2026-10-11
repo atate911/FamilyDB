@@ -231,7 +231,7 @@ def plans_month() -> str:
         slots = views.slot_map(people)
         rows = page_rows.plan_rows(conn, app, on, today, slots, None, past=True)
         rate = (
-            page_rows.unrated(conn, today, slots, auth.visitor().member)
+            page_rows.to_ask(app, conn, today, slots, auth.visitor().member)
             if auth.visitor().may("change")
             else []
         )

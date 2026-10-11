@@ -232,6 +232,30 @@ def test_a_plan_nobody_has_rated_asks_three_faces_and_the_answer_is_kept(
     assert "How did Silver Falls hike go?" not in client.get("/").text  # it has been said
 
 
+def test_how_a_plan_went_is_asked_once_at_a_time_and_nowhere_once_turned_off(
+    settings, clock, conn, family
+) -> None:
+    """It is asked, never owed: one at a time on Now, the oldest, and with "Ask how a plan went"
+    off not on Now, What we did, the week or the month; the plan's own page still takes it."""
+    with db.transaction(conn):
+        for title, day in (("Zoo", "2026-09-15"), ("Silver Falls hike", "2026-09-17")):
+            idea = ideas.insert(conn, title=title, kind="outing", now=NOW_ISO)
+            plans.insert(
+                conn,
+                title=title,
+                start=f"{day}T10:00",
+                end=f"{day}T14:00",
+                all_day=False,
+                idea_id=idea.id,
+            )
+    home = _now(settings, clock).get("/").text
+    assert home.count("How did ") == 1 and "How did Zoo go?" in home
+    asked_not = _now(settings.model_copy(update={"follow_ups": False}), clock)
+    for page in ("/", "/did", "/plans/month?month=2026-09", "/week?from=2026-09-14"):
+        assert "How did" not in asked_not.get(page).text, page
+    assert "<span>Loved it</span>" in asked_not.get("/plan/1").text
+
+
 def test_a_kids_pitch_is_asked_about_and_later_puts_it_off_on_this_device(
     settings, clock, conn, family
 ) -> None:

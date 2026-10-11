@@ -13,7 +13,7 @@ from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
-from familydb.web import map_view, shell, views
+from familydb.web import map_view, views
 from familydb.web.rows import PlanRow, ToRate
 
 
@@ -64,16 +64,20 @@ def plan_card(
     )
 
 
+# How far back a plan still waits for somebody to say how it went.
+RATE_DAYS = 14
+
+
 def unrated(
     conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
 ) -> list[ToRate]:
     """Every plan of the last two weeks nobody has said how it went, oldest first, without the
-    ones made from a present kept from `who`."""
+    ones made from a present kept from `who`. A plan's own page offers its faces from these."""
     waiting = presents.without(
         plan_store.unrated(
             conn,
             today=today.isoformat(),
-            since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
+            since=(today - timedelta(days=RATE_DAYS)).isoformat(),
         ),
         presents.kept_ids(conn, who),
     )
@@ -95,12 +99,13 @@ def unrated(
     return found
 
 
-def to_rate(
-    conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
-) -> ToRate | None:
-    """The oldest plan nobody has said how it went, for Home's three faces, and how many more."""
-    waiting = unrated(conn, today, slots, who)
-    return replace(waiting[0], more=len(waiting) - 1) if waiting else None
+def to_ask(
+    app: App, conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
+) -> list[ToRate]:
+    """The plans the page asks how they went (Now, the board, What we did, a past day, the
+    month): `unrated`, or none while the family said not to ask (`follow_ups`). How it went can
+    still be told on the plan's own page, a place's page or to her."""
+    return unrated(conn, today, slots, who) if app.settings.follow_ups else []
 
 
 def idea_mini(conn: Any, app: App, idea: Any) -> dict[str, Any]:

@@ -4,6 +4,12 @@
 
 ### New since v0.5.0
 
+- **How a plan went is asked, never owed.** Now asks about one plan at a time, after the kids'
+  asks and pitches, and Did no longer carries a count of plans to rate in the row or the menu.
+  **Ask how a plan went** (Settings, Messages) now covers the page too: off, nobody is asked
+  anywhere, not on Now, Did, a past day or the month, and how it went can still be told on the
+  plan's own page or to her. What is said keeps a place the family did not enjoy out of
+  suggestions and puts favorites first.
 - **The family chooses which places are in the row.** Settings, General has a tick for each place
   in the row at the foot of every page (down the left on a wider screen): Now, Eat, Do, Week, Kids,
   Soon, Lists and Did. Untick one the family does not use and it leaves the row, for a kid's row too;
