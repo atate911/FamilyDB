@@ -114,21 +114,3 @@ def since(conn: sqlite3.Connection, *, since: str) -> list[Suggestion]:
 def list_recent(conn: sqlite3.Connection, *, limit: int = 10) -> list[Suggestion]:
     rows = conn.execute("SELECT * FROM suggestions ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     return [Suggestion.from_row(row) for row in rows]
-
-
-def recently_suggested(conn: sqlite3.Connection, *, since: str) -> set[int]:
-    """Idea ids shown as 'good' in any suggestion since `since`. Every verdict is logged, shown or
-    not; one logged before that was recorded counts as shown."""
-    rows = conn.execute("SELECT candidates FROM suggestions WHERE asked_at >= ?", (since,))
-    ids: set[int] = set()
-    for row in rows:
-        for candidate in from_json(row["candidates"], []) or []:
-            if (
-                isinstance(candidate, dict)
-                and candidate.get("verdict") == "good"
-                and candidate.get("shown", True)
-            ):
-                idea_id = candidate.get("idea_id")
-                if isinstance(idea_id, int):
-                    ids.add(idea_id)
-    return ids

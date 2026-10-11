@@ -10,7 +10,7 @@ It answers the questions the engine's rules are tuned by: how often a suggestion
 whether the stronger call's picks are taken more and rated higher than the engine's own order,
 and what the family planned that the engine had ruled out (where a rule was wrong for them). The
 Status page and `familydb debug suggestions` show it; the engine reads which suggestions led to a
-plan, to let what was ignored come back sooner (engine.recently).
+plan, to let what was ignored come back sooner (`sinking`).
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 
+from familydb.base.dates import utc_iso
 from familydb.store import calls, ideas, outcomes, plans, suggestions
 from familydb.store.ideas import normalize_title
 from familydb.store.plans import Plan
@@ -38,6 +39,11 @@ SOURCES = {
 }
 # The most of what was planned against a verdict listed by name.
 AGAINST_SHOWN = 8
+# How long an idea shown as good sinks in later answers, so asking again brings others up: a
+# while when the family planned something else from that suggestion (they passed it over), a
+# few days when nothing came of it (the weekend filled up; it is as good as it was).
+PASSED_OVER_DAYS = 14
+IGNORED_DAYS = 3
 
 
 @dataclass(frozen=True)
@@ -226,3 +232,31 @@ def report(conn: sqlite3.Connection, *, since: str) -> Report:
             continue
         found.took.append(replace(took, rating=_rating(plan, said)))
     return found
+
+
+def _shown_good(suggestion: Suggestion) -> set[int]:
+    """The ideas a suggestion showed as good; a row from before `shown` was kept counts as shown."""
+    return {
+        c["idea_id"]
+        for c in suggestion.candidates
+        if isinstance(c, dict)
+        and c.get("verdict") == "good"
+        and c.get("shown", True)
+        and isinstance(c.get("idea_id"), int)
+    }
+
+
+def sinking(conn: sqlite3.Connection, *, now: datetime) -> set[int]:
+    """The ideas that sink in this answer for variety: shown as good in the last `IGNORED_DAYS`,
+    or in the last `PASSED_OVER_DAYS` by a suggestion the family planned something else from."""
+    since = utc_iso(now - timedelta(days=PASSED_OVER_DAYS))
+    lately = now - timedelta(days=IGNORED_DAYS)
+    planned = report(conn, since=since).planned_from()
+    sink: set[int] = set()
+    for suggestion in suggestions.since(conn, since=since):
+        good = _shown_good(suggestion)
+        if suggestion.id in planned:
+            sink |= good - planned[suggestion.id]
+        elif _moment(suggestion.asked_at) >= lately:
+            sink |= good
+    return sink

@@ -7,12 +7,13 @@ from datetime import date, datetime, time, timedelta
 
 from familydb import happening
 from familydb.availability import enrichment_available
-from familydb.base.dates import parse_date_range, utc_iso, weekend_window
+from familydb.base.dates import parse_date_range, weekend_window
 from familydb.base.errors import ToolError
-from familydb.store import ideas, members, memories, outcomes, plans, suggestions
+from familydb.store import ideas, members, memories, outcomes, plans
 from familydb.store.db import transaction
 from familydb.store.ideas import Idea
 from familydb.suggest import listed as listing
+from familydb.suggest import taken
 from familydb.suggest.compose import choose, compose
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
@@ -37,9 +38,6 @@ from familydb.suggest.types import (
     clock,
 )
 from familydb.tools import ToolContext
-
-RECENT_SUGGESTION_DAYS = 14
-
 
 NOW_HOURS = 4
 MAX_TOPIC = 80
@@ -226,8 +224,8 @@ def assess(
     )
     evaluated, stale_ids = evaluate(ctx.conn, kept, context, constraints, ctx.settings, ctx.clock)
     candidates = evaluated + ruled_out
-    since = utc_iso(ctx.clock.now() - timedelta(days=RECENT_SUGGESTION_DAYS))
-    recently = suggestions.recently_suggested(ctx.conn, since=since)
+    # Shown lately and passed over, or shown in the last few days: sinks for variety.
+    recently = taken.sinking(ctx.conn, now=ctx.clock.now())
     by_id = {idea.id: idea for idea in all_ideas}
     shown, held_back = choose(candidates, by_id, recently, prefer=args.prefer, loved=loved)
     skipped = list(context.skipped)

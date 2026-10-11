@@ -139,3 +139,28 @@ def test_the_wait_for_choosing_is_reported(conn) -> None:
             )
     found = taken.report(conn, since="2026-09-01T00:00:00Z")
     assert (found.choosing_calls, found.choosing_wait) == (2, 4.2)
+
+
+def test_an_ignored_good_idea_comes_back_sooner_than_one_passed_over(conn) -> None:
+    """Shown as good and nothing came of it: it sinks for three days, then is as good as it was.
+    Shown as good while the family planned something else from the same suggestion: it was
+    passed over, and sinks for two weeks."""
+    from datetime import UTC, datetime
+
+    lately, a_while, passed, chosen, long_ago = (
+        _idea(conn, name) for name in ("Lately", "A while", "Passed", "Chosen", "Long ago")
+    )
+    _asked(conn, "2026-09-19T10:00:00Z", [{"idea_id": lately, "verdict": "good", "shown": True}])
+    _asked(conn, "2026-09-15T10:00:00Z", [{"idea_id": a_while, "verdict": "good", "shown": True}])
+    _asked(
+        conn,
+        "2026-09-14T10:00:00Z",
+        [
+            {"idea_id": passed, "verdict": "good", "shown": True},
+            {"idea_id": chosen, "verdict": "good", "shown": True},
+        ],
+    )
+    _plan(conn, "Chosen", "2026-09-14T12:00:00Z", chosen)
+    _asked(conn, "2026-09-01T10:00:00Z", [{"idea_id": long_ago, "verdict": "good"}])
+    now = datetime(2026, 9, 20, 21, 3, tzinfo=UTC)
+    assert taken.sinking(conn, now=now) == {lately, passed}

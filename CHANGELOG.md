@@ -104,6 +104,10 @@
   as it always is (a check not made, no booking needed, travel from home), about a fifth less, sent
   twice since it goes back with the reply; the stronger call's options no longer repeat their
   reasons in brackets.
+- **A good idea nobody took up comes back sooner.** An idea shown as good sank to the back of every
+  answer for two weeks, whether the family passed it over or simply had no time. Now it sinks for
+  three days when nothing came of that suggestion, and two weeks only when they planned something
+  else from it.
 
 ## v0.5.0 — beta (2026-10-11)
 

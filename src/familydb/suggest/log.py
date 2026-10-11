@@ -25,7 +25,7 @@ def log_suggestion(
     now: str,
 ) -> int:
     """Every verdict, and which the model was shown: only those count as suggested, so asking
-    again brings up the others (`suggestions.recently_suggested`)."""
+    again brings up the others (`taken.sinking`)."""
     with transaction(conn):
         row = suggestions.insert(
             conn,

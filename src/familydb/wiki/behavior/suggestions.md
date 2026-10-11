@@ -51,9 +51,9 @@ Where a person is comes from the place they name or from [Shared location](/wiki
 - Possible: no fact ruled it out, but something could not be checked, only partly fits, or is a matter of taste: done lately, disappointing last time, rain or cold forecast, a long day out with something else on the day, hours unknown or not listed, details stale, booking unknown, open for part of the free time, distance from where they are unknown, or too dark.
 - Ruled out: a fact failed, and the reason says which.
 
-A reply carries at most 3 reasons each, in the order good, possible, ruled out. Within a group, what was done lately comes last; then ideas suggested as good in the last 2 weeks; then never-done ideas first, and a higher rating before a lower.
+A reply carries at most 3 reasons each, in the order good, possible, ruled out. Within a group, what was done lately comes last; then ideas shown as good lately: for 3 days when nothing came of that suggestion, and for 2 weeks when the family planned something else from it; then never-done ideas first, and a higher rating before a lower.
 
-The engine logs every idea's verdict and reasons, any web finds, who asked, the window and, for a chat answer, its reply. [Status](/wiki/controls/status#what-came-of-her-suggestions) reads it against the plans made afterwards and how they went. Every run adds a row, including `/now`, the command line and each evening-before backup, and the good verdicts in any of them push those ideas to the back of real answers for 14 days.
+The engine logs every idea's verdict and reasons, any web finds, who asked, the window and, for a chat answer, its reply. [Status](/wiki/controls/status#what-came-of-her-suggestions) reads it against the plans made afterwards and how they went. Every run adds a row, including `/now`, the command line and each evening-before backup, and the good verdicts in any of them push those ideas to the back of real answers for 3 days, or 2 weeks when something else was planned from that run.
 
 The `someday` window is thin: with no dates there is no weather, free-time, hours, daylight or travel-fit check, only status, who, season, dates and the limits asked for.
 
@@ -92,7 +92,7 @@ Every idea that passes the rules is checked in detail. A reply gets at most 12 o
 
 ## Trying it without the model
 
-`/now` runs the engine for the next 4 hours with discovery off, so it makes no model call and works when the model is down or the limit is spent ([Telegram: commands and buttons](/wiki/controls/telegram)). On the server, `familydb suggest` runs the engine for any window and prints its verdicts; run it as in [The command line](/wiki/operations/command-line#how-to-run-it), where its options are listed. It adds a log row, so its good ideas come last in real answers for 14 days.
+`/now` runs the engine for the next 4 hours with discovery off, so it makes no model call and works when the model is down or the limit is spent ([Telegram: commands and buttons](/wiki/controls/telegram)). On the server, `familydb suggest` runs the engine for any window and prints its verdicts; run it as in [The command line](/wiki/operations/command-line#how-to-run-it), where its options are listed. It adds a log row, so its good ideas come last in real answers for 3 days.
 
 To see what the model got for one real question, an admin opens that message under [Recent activity](/wiki/controls/status/activity), where the `suggest` call shows what it was given and what it answered.
 
