@@ -420,7 +420,7 @@ def pass_find(find_id: int) -> Response:
         return _back("web.find", find_id=find_id)
     result, complaint = run("pass_find", {"find_id": find_id})
     _say(PASSED.format(title=result["title"]) if result is not None else complaint or "")
-    return _back("web.find", find_id=find_id)
+    return _back_here("web.find", find_id=find_id)
 
 
 @bp.post("/idea/<int:idea_id>/outcome")

@@ -53,7 +53,7 @@
           <div class="r">
             <span class="r__t"><a href="{{ url_for('web.find', find_id=n.id) }}">{{ n.title }}</a></span>
             <span class="r__m">{{ n.line }}</span>
-            {% if deciding %}<div class="r__acts">{{ find_acts(n.save, n.title) }}</div>{% endif %}
+            {% if deciding %}<div class="r__acts">{{ find_acts(n.save, n.title, back=request.full_path.rstrip('?')) }}</div>{% endif %}
           </div>
         {% endfor %}
       </div>

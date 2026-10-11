@@ -691,6 +691,7 @@ def test_what_she_found_and_judged_is_offered_under_new_ideas(
     assert "Wine walk" in found and "Lantern walk" not in found  # not recommended
     assert page.index("Zoo") < page.index('id="h-new"')  # the family's own first
     assert f'action="/soon/{roses.id}/pass"' in found and 'name="find_id"' in found
+    assert 'name="back" value="/do"' in found  # Not for us comes back here
     # A filter shows what was asked for, nothing else.
     assert 'id="h-new"' not in _client(settings, clock).get("/do?kind=outing").text
     # A kid reads them without the forms, and nothing for the grown-ups alone.

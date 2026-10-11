@@ -54,8 +54,9 @@
 
 
 {# Save it and Not for us on something she found: `add_idea` with the find's number, and `pass_find`, each the tool
-   the assistant would call (a find's page, New ideas). `save` is views.find_save_fields. #}
-{% macro find_acts(save, title) -%}
+   the assistant would call (a find's page, New ideas). `save` is views.find_save_fields; Not for us comes back to
+   `back` when given, else to the find's page. #}
+{% macro find_acts(save, title, back=none) -%}
   <form method="post" action="{{ url_for('edits.add_idea') }}">
     {{ guard(once=true) }}
     {% for key, value in save.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}" />{% endfor %}
@@ -63,6 +64,7 @@
   </form>
   <form method="post" action="{{ url_for('edits.pass_find', find_id=save.find_id) }}">
     {{ guard(once=true) }}
+    {% if back %}<input type="hidden" name="back" value="{{ back }}" />{% endif %}
     <button class="btn btn--quiet btn--sm" type="submit">Not for us<span class="sr"> {{ title }}</span></button>
   </form>
 {%- endmacro %}
