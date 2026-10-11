@@ -15,7 +15,7 @@
     <header class="nf__top">
       <a class="nf__brand" href="{{ url_for('web.home') }}" aria-label="{{ site_title }}, now">{{ brand_mark() }}{{ wordmark(site_title) }}</a>
       <div class="nf__right">
-        {% if shell.pill and shell.pill.state != 'ready' %}<a class="nf__pill" href="{{ url_for('web.status') }}">{{ shell.pill.short }}</a>{% endif %}
+        {% if shell.pill and shell.pill.state != 'ready' %}<a class="nf__pill" href="{{ url_for('web.status') }}"{% if shell.pill.because %} title="{{ shell.pill.because }}" aria-label="{{ shell.pill.long }}: {{ shell.pill.because }}. See status"{% endif %}>{{ shell.pill.short }}</a>{% endif %}
         <a class="nf__me" href="{{ url_for('web.more') }}" aria-label="{{ shell.menu_label }}">{{ avatar(shell.me.slot, shell.me.initial) }}{% if shell.look_at %}<span class="dot"></span>{% endif %}</a>
       </div>
     </header>

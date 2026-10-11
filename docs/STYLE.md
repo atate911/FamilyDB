@@ -250,7 +250,8 @@ template builds one by hand. Person classes are slots (`.p0` to `.p8`), never na
 - **The box** (`.bar` and `.box`, `_box.html`): the model for anywhere somebody writes to her, the
   same on every page of the family's. One line that grows, the mic in it and **Send** lit, the one
   glowing thing; above it "about:" and what this page is about, where a page gives the message a
-  scope; under it the quick sentences a thing's page offers as chips, the "Share where I am" line,
+  scope; under it, while she cannot answer, why in red words for a grown-up ("can't answer right
+  now: OpenAI refused its key", What to do); the quick sentences a thing's page offers as chips, the "Share where I am" line,
   and what the last message brought back: her screen and "thinking" while it is on its way, a
   receipt with Undo, or her reply as a sheet (`.said-sheet`: your words at the right, hers beside
   her screen). **From** (who is asking) sits above it while the family shares one password. Chat's

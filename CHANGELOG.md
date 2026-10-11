@@ -4,6 +4,12 @@
 
 ### New since v0.5.0
 
+- **When she cannot answer, the page says why, and only then.** It now names the trouble
+  ("Anthropic refused its key") on Status, under the box on every page and above the
+  conversation in Chat, with what to do: the steps for an admin, and that an admin can put it
+  right for a parent. Trouble with a company the chat does not use, or one another company may
+  stand in for, no longer says she cannot answer; it stays under Needs a look. A limit raised
+  since it was hit lets her answer at once. Kids see none of it.
 - **How hard each use thinks shows on its row.** Settings, AI model says "thinking: medium" under
   each use that thinks, without opening it, and follows a change before it is saved. Weighing
   changes has a Thinking box of its own now; it took the chat's. Chat thinking and Lookup thinking

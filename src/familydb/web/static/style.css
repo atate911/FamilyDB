@@ -1895,6 +1895,9 @@ li:target { border-radius: var(--r-md); }
 .rcpt .undo-form .btn { min-height: 32px; }
 .rcpt__more { align-self: center; white-space: nowrap; }
 .rcpt--pending p { color: var(--ink-2); }
+/* she cannot answer: why, in red words and mark, never a fill */
+.rcpt--down > .icon { color: var(--red); }
+.rcpt--down > span { flex: 1; min-width: 0; color: var(--ink); }
 .rcpt--new a { display: inline-flex; align-items: center; gap: var(--s2); min-height: 32px; color: var(--ink); text-decoration: none; }
 .rcpt--new a:hover span { text-decoration: underline; }
 .said-sheet { max-width: var(--center); width: 100%; margin: var(--s3) auto 0; padding: var(--s4); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); display: grid; gap: var(--s3); box-shadow: var(--shadow); }

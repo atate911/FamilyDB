@@ -34,9 +34,15 @@
   <span class="badge badge--{{ kind }}" title="{{ n }} {{ word }}">{{ n }}<span class="sr"> {{ word }}</span></span>
 {%- endmacro %}
 
+{# Why she cannot answer, where a grown-up would write to her (the box, the chat), and where to read what to do. Only
+   while something stops her (`status.stopping`); a kid's frame has no pill, so she is never shown the workings. #}
+{% macro cannot_answer(pill) -%}
+  {% if pill and pill.why %}<p class="rcpt rcpt--down" role="status">{{ icon('alert', size='sm') }}<span>{{ assistant }} can’t answer right now: {{ pill.because }}. <a href="{{ url_for('web.status') }}">What to do</a></span></p>{% endif %}
+{%- endmacro %}
+
 {# The assistant's state, said the same in the sidebar and the phone's top bar. `pill` is `status.Pill`. #}
 {% macro health_pill(pill, href) -%}
-  <a class="pill-health{{ ' pill-health--' ~ pill.state if pill.state != 'ready' }}" href="{{ href }}" aria-label="{{ pill.long }}. See status and spending"><span class="long">{{ pill.long }}</span><span class="short">{{ pill.short }}</span></a>
+  <a class="pill-health{{ ' pill-health--' ~ pill.state if pill.state != 'ready' }}" href="{{ href }}"{% if pill.because %} title="{{ pill.because }}"{% endif %} aria-label="{{ pill.long }}{% if pill.because %}: {{ pill.because }}{% endif %}. See status and spending"><span class="long">{{ pill.long }}</span><span class="short">{{ pill.short }}</span></a>
 {%- endmacro %}
 
 {# How a thing stands: always words, never colour alone. `state`: ok, better, look, broken, off, when, been. #}

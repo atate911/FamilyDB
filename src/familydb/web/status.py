@@ -35,7 +35,7 @@ from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
 from familydb.web import views
-from familydb.web.auth import own_passwords, password_chosen, password_in_use
+from familydb.web.auth import own_passwords, password_chosen, password_in_use, visitor
 
 DAYS = 30
 CHANGES_DAYS = 30
@@ -340,28 +340,79 @@ def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     return rows
 
 
-# Alert kinds (familydb/alerts.py) that stop the family being answered, and others worth a look.
-# Price moves, usage shifts, new models and judgements are news and leave the light alone.
+# Alert kinds (familydb/alerts.py) that can stop the family being answered (`stopping` says
+# whether one does), and others worth a look. Price moves, usage shifts, new models and judgements
+# are news and leave the light alone.
 STOPPING = frozenset({"credit", "key", "limit"})
 WORRYING = frozenset(
     {"calendar", "calendar_access", "model", "prices", "api", "refused", "happening"}
 )
+# A company out of credit or refusing its key: it stops the family only if it answers the chat.
+COMPANY_STOPPING = frozenset({"credit", "key"})
+# What to do about each, said after why she cannot answer: to an admin, and to anybody else.
+FIX = {
+    "credit": "Add credit with {company}, or let another company stand in on Settings, AI model.",
+    "key": "Check {company}\u2019s key on Settings, AI model, or choose another company there.",
+    "limit": "Raise the limit on Settings, Spending, or she answers again at midnight.",
+}
+FIX_ASK = "An admin can put it right."
+
+
+def _current(app: App, conn: sqlite3.Connection) -> list[alert_store.Alert]:
+    """The troubles still standing; the day's limit only for today, since it is noted per day
+    and clears when a call is let through: a day gone is not "now"."""
+    since = utc_iso(app.clock.now() - alerts.KEEP)
+    today = app.clock.now().astimezone(app.settings.tzinfo).date().isoformat()
+    return [
+        one
+        for one in alert_store.current(conn, since=since)
+        if one.kind != "limit" or one.subject == today
+    ]
+
+
+def stopping(app: App, conn: sqlite3.Connection) -> alert_store.Alert | None:
+    """What stops the family being answered now, or None: the day's spending limit used up (while
+    it still is), or the company that answers the chat out of credit or refusing its key while no
+    other company is free to stand in for it. Trouble with a company the chat does not use is
+    worth a look, never "she can't answer"."""
+    current = _current(app, conn)
+    limit = app.settings.daily_spend_limit
+    for one in current:
+        # Only while it still holds: a limit raised since lets her answer before any call clears it.
+        if (
+            one.kind == "limit"
+            and limit
+            and spent_today(conn, app.settings, app.clock.now()) >= limit
+        ):
+            return one
+    troubled = {one.subject: one for one in current if one.kind in COMPANY_STOPPING}
+    chat = uses.resolve(app.settings, "chat").company
+    if chat not in troubled:
+        return None
+    spare = providers.fallback_for(app.settings, "chat", chat)
+    if spare is not None and spare.name not in troubled:
+        return None
+    return troubled[chat]
+
+
+def why_not(alert: alert_store.Alert) -> str:
+    """Why she cannot answer, in a few words: "<company> refused its key"."""
+    return views.ALERT_TITLES[alert.kind].format(company=companies.named(alert.subject))
+
+
+def fix_for(alert: alert_store.Alert, *, manages: bool) -> str:
+    """What to do about it: the steps for an admin, and who can for anybody else."""
+    if not manages:
+        return FIX_ASK
+    return FIX[alert.kind].format(company=companies.named(alert.subject))
 
 
 def light(app: App, conn: sqlite3.Connection) -> str | None:
-    """The Status tile's light: "bad" while the family cannot be answered, "warn" while something
-    else only an admin can fix goes on, else None."""
-    since = utc_iso(app.clock.now() - alerts.KEEP)
-    today = app.clock.now().astimezone(app.settings.tzinfo).date().isoformat()
-    # The limit is noted per day and clears when a call is let through: a day gone is not "now".
-    kinds = {
-        one.kind
-        for one in alert_store.current(conn, since=since)
-        if one.kind != "limit" or one.subject == today
-    }
-    if kinds & STOPPING:
+    """The Status tile's light: "bad" while the family cannot be answered (`stopping`), "warn"
+    while something else only an admin can fix goes on, else None."""
+    if stopping(app, conn) is not None:
         return "bad"
-    if kinds & WORRYING:
+    if {one.kind for one in _current(app, conn)} & (STOPPING | WORRYING):
         return "warn"
     return None
 
@@ -369,11 +420,18 @@ def light(app: App, conn: sqlite3.Connection) -> str | None:
 @dataclass(frozen=True)
 class Pill:
     """How the assistant stands, said once for the sidebar, the phone's top bar and Status: one of
-    ready, busy (writing back), rest (the day's limit is spent) or down (cannot answer)."""
+    ready, busy (writing back), rest (the day's limit is spent) or down (cannot answer). `why`
+    is the trouble that stops her, where one does (`stopping`)."""
 
     state: str
     long: str
     short: str
+    why: alert_store.Alert | None = None
+
+    @property
+    def because(self) -> str:
+        """Why she cannot answer, in a few words, or nothing."""
+        return why_not(self.why) if self.why is not None else ""
 
 
 def pill(app: App, conn: sqlite3.Connection, *, name: str, busy: bool = False) -> Pill:
@@ -386,8 +444,8 @@ def pill(app: App, conn: sqlite3.Connection, *, name: str, busy: bool = False) -
     limit = live.daily_spend_limit
     if limit and spent_today(conn, live, app.clock.now()) >= limit:
         return Pill("rest", f"{name} is resting until midnight", "Resting")
-    if light(app, conn) == "bad":
-        return Pill("down", f"{name} can\u2019t answer right now", "Can\u2019t answer")
+    if (trouble := stopping(app, conn)) is not None:
+        return Pill("down", f"{name} can\u2019t answer right now", "Can\u2019t answer", trouble)
     if busy:
         return Pill("busy", f"{name} is writing back", "Writing back")
     return Pill("ready", f"{name} is ready", "Ready")
@@ -429,7 +487,9 @@ def _health_row(
     }
 
 
-def health(app: App, conn: sqlite3.Connection, *, name: str) -> list[dict[str, Any]]:
+def health(
+    app: App, conn: sqlite3.Connection, *, name: str, manages: bool = True
+) -> list[dict[str, Any]]:
     """How each part stands, in plain words: what the page, the verdict and the family read
     alike, from the same signals as the pill (`pill`). No network, no model."""
     live = app.settings
@@ -448,6 +508,10 @@ def health(app: App, conn: sqlite3.Connection, *, name: str) -> list[dict[str, A
         if missing:
             words = f"Not ready to answer yet: it still needs {', '.join(missing)}."
             action = _action("Open setup", "setup.overview")
+        elif standing.why is not None:
+            words = f"{standing.because}. {fix_for(standing.why, manages=manages)}"
+            page = "spending" if standing.why.kind == "limit" else "model"
+            action = _action("Put it right", "settings.section", name=page)
         else:
             words = "Something only an admin can fix is stopping her: see Needs a look below."
             action = None
@@ -635,7 +699,13 @@ def health(app: App, conn: sqlite3.Connection, *, name: str) -> list[dict[str, A
 
 
 def verdict(
-    parts: list[dict[str, Any]], *, name: str, standing: Pill, spent: float, thirty: float
+    parts: list[dict[str, Any]],
+    *,
+    name: str,
+    standing: Pill,
+    spent: float,
+    thirty: float,
+    manages: bool = True,
 ) -> dict[str, str]:
     """The line at the top of Status: whether she is ready, said with what is worth a look. Built
     from `health` and the pill, so it cannot say something the rows below do not."""
@@ -652,6 +722,10 @@ def verdict(
         heading = f"{name} is ready."
     today = "Nothing spent today" if spent <= 0 else f"About {views.money_text(spent)} spent today"
     words = [f"{today}; the last 30 days cost {views.money_text(thirty)}."]
+    if standing.why is not None:
+        # Why first, then what to do: the rest of the line can wait.
+        heading = f"{name} can\u2019t answer right now: {standing.because}."
+        words.insert(0, fix_for(standing.why, manages=manages))
     looks = [
         one["area"] for one in parts if one["state"] in ("look", "broken") and one["area"] != name
     ]
@@ -803,7 +877,8 @@ def overview(app: App, conn: sqlite3.Connection, since: str) -> dict[str, Any]:
     now = app.clock.now()
     spent = spent_today(conn, app.settings, now)
     thirty = sum(row["cost_usd"] for row in calls.usage_since(conn, since=since))
-    parts = health(app, conn, name=name)
+    manages = visitor().may("manage")
+    parts = health(app, conn, name=name, manages=manages)
     standing = pill(app, conn, name=name)
     usual = calls.usual_day(conn, since=utc_iso(now - timedelta(days=USUAL_DAYS)))
     answered = sum(
@@ -811,7 +886,9 @@ def overview(app: App, conn: sqlite3.Connection, since: str) -> dict[str, Any]:
     )
     return {
         "health": parts,
-        "verdict": verdict(parts, name=name, standing=standing, spent=spent, thirty=thirty),
+        "verdict": verdict(
+            parts, name=name, standing=standing, spent=spent, thirty=thirty, manages=manages
+        ),
         "thirty": {"dollars": thirty, "usual": usual, "answered": answered},
     }
 
