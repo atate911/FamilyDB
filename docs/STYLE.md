@@ -333,9 +333,10 @@ The frame folds in order, keeping the focal element first and whole.
 - **At 820 pixels and below** the family's frame is the phone's: the wordmark and the avatar, the
   box, the page, and the row of destinations fixed at the foot (`--tabbar-total`), the current
   one in ink with a line under it, scrolling sideways if a kid's words are long. The back office is
-  one column under a top bar (the mark, the pill, the account) over the same row. Chat's
-  conversations and the guide's sections have their phone places in the page (a row of pills, a
-  Sections button), so the rail's copies are not drawn there.
+  one column under a top bar (the mark, the pill, the account) over the same row. The guide's
+  sections have their phone place in the page (a Sections button), so the rail's copy is not drawn
+  there; Chat's conversations are a row of pills above the room at every width, sliding sideways
+  on a phone.
 - **Nothing scrolls sideways** at 390 or 320 pixels, except a row of conversation pills. Labels
   that shorten keep the long one as the control's name.
 
@@ -352,8 +353,11 @@ Each page names its focal element, what the main column holds, and what the rail
   may not do is not offered.
 - **Chat.** The thread behind the box: the conversation, newest at the bottom, her messages beside
   her screen and the family's in their own color's soft; the conversations (the family's, and the
-  kids', which grown-ups may read along) as a row of pills, and who can read this one. The page
-  has its own box at the foot of the thread, so the frame draws none.
+  kids', which grown-ups may read along) as a row of pills at every width, since the family's
+  frame has no rail for them, and who can read this one; what the person pinned of hers folded to
+  one line ("Pinned 2"), so the thread keeps the room however many are kept. The room is the
+  window's height and the thread scrolls inside it. The page has its own box at the foot of the
+  thread, so the frame draws none.
 - **A destination** (section 4): the question as the title, one line of the answer, a row of chips,
   then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
   one fact line and the people's marks at the edge; "by hand" last, as a quiet link. **Eat**: the
@@ -477,8 +481,8 @@ knows, Status, Settings or Family, and no version in her footer.
 ## Still open
 
 - **The paper looks** (Kitchen Table, Ink and the rest) have been checked on Now only.
-- **Vera's column** on a desk holds the box, the last answer and the thread's last lines. A reply
-  pinned as a shelf (docs/INTERFACE.md section 8) is not drawn yet.
+- **Vera's column** on a desk holds the box, the last answer, what the person pinned of hers and the
+  thread's last lines.
 - **Everyone.** An owner mark for a plan that is everyone's shows all of them stacked. Showing no
   mark for the usual case is worth trying once a page has many such rows.
 - **A to-do's edit** moved from a link on every row to the row itself opening the to-do's page;

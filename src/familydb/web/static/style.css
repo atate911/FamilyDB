@@ -361,7 +361,8 @@ input[type="file"]::file-selector-button { font: inherit; font-weight: 700; min-
 
    composer's own parts take their places in the card's grid. */
 .card__foot--split { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s2) var(--s4); }
-.convos__h { margin: var(--s3) var(--s3) var(--s1); font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
+/* said to a screen reader between the family's conversation and the kids' */
+.convos__h { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .msg__text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg__did { margin-top: var(--s1); font-size: var(--t-sm); color: var(--ink-2); }
 .msg__buttons { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
@@ -924,18 +925,17 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .item > .who { justify-self: end; }
 
 /* Chat */
-/* the room is the main column; the conversations are in the rail (a row of pills above the room on a phone) */
-.chat { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); min-height: calc(100vh - 168px); }
-@media (min-width: 821px) { .chat .convos--phone { display: none; } }
-.convos { display: grid; gap: var(--s2); align-content: start; }
-.convo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); align-items: center; padding: var(--s2); border-radius: var(--r-md); border: 1px solid transparent; color: var(--ink); text-decoration: none; }
-.convo:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink); }
-.convo[aria-current="page"] { background: color-mix(in srgb, var(--ink) 7%, transparent); }
-.convo[aria-current="page"] b { font-weight: 700; }
-.convos--rail .convo b { font-weight: 400; }
+/* the room is the main column; above it the conversations, a row of pills at every width (the family's frame has no
+   rail of its own for them), who can read this one, and what this person pinned of hers folded to a line, so the
+   room keeps the height */
+.chat { display: flex; flex-direction: column; gap: var(--s3); min-height: calc(100vh - 168px); }
+.chat > .room { flex: 1 1 auto; }
+.convos { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.convo { display: inline-grid; grid-template-columns: auto auto; gap: var(--s2); align-items: center; padding: 4px var(--s4) 4px 4px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: var(--card); color: var(--ink); text-decoration: none; }
+.convo:hover { background: var(--paper-2); color: var(--ink); }
+.convo[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .convo b { display: block; line-height: 1.25; }
-.convo small { display: block; font-size: var(--t-sm); color: var(--ink-2); line-height: 1.35; margin-top: 2px; }
-.convos .privacy { padding: var(--s4) 0 0; margin-top: var(--s2); border-top: 1px solid var(--line); }
+.convo small { display: none; }
 .card.room { padding: 0; }
 .room { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
 .room__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
@@ -1331,15 +1331,10 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   /* Chat: an app-height room; the box is pinned, the thread opens at the newest */
   .page-chat .main { padding: 0; }
   .page-chat .foot { margin-left: var(--s4); margin-right: var(--s4); padding-bottom: var(--s4); }
-  .convos__h { display: none; }
   .page-chat .page-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
   .chat { display: flex; flex-direction: column; gap: 0; height: calc(100vh - var(--topbar-total) - var(--tabbar-total)); height: calc(100dvh - var(--topbar-total) - var(--tabbar-total)); min-height: 0; }
-  .convos { display: flex; gap: var(--s2); overflow-x: auto; padding: var(--s3) var(--s4) var(--s2); scrollbar-width: none; flex: none; }
-  .convo { flex: none; padding: 4px var(--s4) 4px 4px; border-radius: var(--r-pill); background: var(--card); border-color: var(--line-2); grid-template-columns: auto auto; gap: var(--s2); }
-  .convo small { display: none; }
-  .convo[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-  .convos .privacy { display: none; }
-  .chat .privacy--room { display: flex; }
+  .convos { flex-wrap: nowrap; overflow-x: auto; padding: var(--s3) var(--s4) var(--s2); scrollbar-width: none; flex: none; }
+  .convo { flex: none; }
   .room { flex: 1; border-radius: 0; border-left: 0; border-right: 0; border-bottom: 0; }
   .room__head { display: none; }
   .scroller { --tp: var(--s3); flex: 1 1 0; min-height: 0; overflow-y: auto; scroll-padding-top: 56px; }
@@ -1372,10 +1367,9 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .chat { height: max(480px, calc(100dvh - 296px)); min-height: 0; }
   .room { min-height: 0; }
   .scroller { flex: 1 1 0; min-height: 0; overflow-y: auto; scroll-padding-top: 56px; }
-  .convos { overflow-y: auto; min-height: 0; }
 }
-.privacy--room { display: none; padding: var(--s2) var(--s4) var(--s3); font-size: var(--t-sm); }
-@media (min-width: 821px) { .chat .privacy--room { display: none; } }
+.privacy--room { font-size: var(--t-sm); }
+@media (max-width: 820px) { .privacy--room { padding: var(--s2) var(--s4) var(--s3); } }
 
 /* ---------- 8. Forced colours: selection shown by background gets a border ---------- */
 @media (forced-colors: active) {
@@ -2109,7 +2103,13 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .pins__text { font-size: var(--t-meta); white-space: pre-wrap; overflow-wrap: anywhere; }
 .pins__foot { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-xs); color: var(--ink-2); }
 .pin-form { margin: 0; }
-.pinned { display: grid; gap: var(--s2); margin-bottom: var(--s4); }
+.pinned-fold { flex: none; border-bottom: 1px solid var(--line); }
+.pinned-fold > summary { list-style: none; display: flex; align-items: center; gap: var(--s2); min-height: var(--target); cursor: pointer; font-size: var(--t-meta); font-weight: 700; color: var(--ink-2); }
+.pinned-fold > summary::-webkit-details-marker { display: none; }
+.pinned-fold > summary .chev { margin-left: auto; transition: transform .15s; }
+.pinned-fold[open] > summary .chev { transform: rotate(90deg); }
+.pinned-fold .pins { max-height: 40vh; overflow-y: auto; padding-bottom: var(--s3); }
+@media (max-width: 820px) { .pinned-fold { padding: 0 var(--s4); border-top: 1px solid var(--line); border-bottom: 0; } }
 .vc .pins + .label { margin-top: var(--s3); }
 
 /* Vera's column: the last lines of the thread behind her reply, only where the box has a column of its own */

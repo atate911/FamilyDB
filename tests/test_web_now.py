@@ -765,12 +765,12 @@ def test_a_reply_is_pinned_kept_beside_the_box_and_on_the_chat_and_unpinned(
     assert column is not None and "Pinned" in column.group(0)
     assert "Kenji's is open till nine." in column.group(0).replace("&#39;", "'")
     chat = client.get("/chat").text
-    shelf = re.search(r'<section class="card pinned".*?</section>', chat, re.S).group(0)
+    shelf = re.search(r'<details class="pinned-fold">.*?</details>', chat, re.S).group(0)
     assert "Kenji" in shelf and 'action="/unpin"' in shelf
     # Pinned again it stays where it was; Unpin takes it off.
     unpin = dict(re.findall(r'name="(csrf|once|message|back)" value="([^"]*)"', shelf))
     assert client.post("/unpin", data=unpin).status_code == 302
-    assert 'class="card pinned"' not in client.get("/chat").text
+    assert 'class="pinned-fold"' not in client.get("/chat").text
     assert family_rules.PINS_MOST == 8
 
 
