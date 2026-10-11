@@ -32,7 +32,7 @@ When nothing waits on you, Now says so ("Nothing needs you.") and gets on with t
 
 The picks under **What about…** are made ahead, never while you look: an hourly job chooses up to four for right now and, from Thursday, up to six for the weekend, from the suggestion engine's own ranking (what fits the free time, who is coming, the weather, what rested long enough). The job runs between 8 am and 10 pm and makes no model call. A plan she suggests shows in pencil on This week too. The job can be switched off on [AI model](/wiki/controls/settings/ai-model); on the server, `familydb picks --now` makes a fresh set.
 
-**What about…** has a page of its own too (its heading on Now, or the menu behind your picture): the set for the next few hours and the weekend's, each with the line that drove it ("Saturday: free from noon") and when it was chosen. A kid sees the set made for her.
+**What about…** has a page of its own too (its heading on Now, or the menu behind your picture): the set for the next few hours and the weekend's, each with the line that drove it ("Saturday: free from noon") and when it was chosen. A kid sees the set made for her: at most two, and never an idea for the grown-ups alone, such as a date night. Anywhere a kid reads, a chat answer leaves those ideas out too.
 
 At most one pick is something the family's calendars list rather than an idea of theirs, marked **New**. Something already saved as an idea is never offered as new again, and when the stronger model chose one of the listed things for the weekend, that is the one shown, with its reason.
 

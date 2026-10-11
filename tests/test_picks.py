@@ -300,3 +300,22 @@ def test_a_find_the_stronger_call_picked_is_the_find_tile(env, app) -> None:
     assert tile["title"] == "Lego club" and tile["find_id"] == ids["Lego club"]
     assert tile["why"] == "Theo has been building all week"
 
+
+def test_a_kid_s_set_holds_two_and_nothing_for_grown_ups_only(env, app, family) -> None:
+    """docs/INTERFACE.md section 9: a kid's Now holds at most two picks, and never a date
+    night."""
+    _seed(env.conn)
+    with db.transaction(env.conn):
+        bar = ideas.insert(
+            env.conn,
+            title="Wine tasting",
+            kind="activity",
+            participants=["Sam", "Alex"],
+            setting="indoor",
+            now=NOW_ISO,
+        )
+    made = picks.make(app, env.conn, "weekend", member=family["girls"])
+    assert made is not None and 1 <= len(made.picks) <= picks.KID_MOST
+    family_set = picks.make(app, env.conn, "weekend")
+    assert bar.id in [tile["idea_id"] for tile in family_set.picks]  # the grown-ups see it
+    assert all(tile["idea_id"] != bar.id for tile in made.picks)

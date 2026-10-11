@@ -108,6 +108,9 @@
   answer for two weeks, whether the family passed it over or simply had no time. Now it sinks for
   three days when nothing came of that suggestion, and two weeks only when they planned something
   else from it.
+- **A kid never hears of what is for the grown-ups alone.** A date night or a wine tasting could be
+  one of a kid's own picks, or named in an answer a kid reads, even as "ruled out". Where a kid reads,
+  those ideas are now left out, and a kid's own set on Now holds at most two picks, as designed.
 - **Her picks offer a find only once.** Something the family's calendars listed kept coming back as
   the **New** pick after it was saved as an idea; and when the stronger model chose one of the
   listed things for the weekend, its choice was dropped. Both are fixed.

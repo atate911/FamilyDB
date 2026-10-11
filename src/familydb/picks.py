@@ -42,6 +42,8 @@ FRESH_FOR = {"now": timedelta(hours=3), "weekend": timedelta(hours=20)}
 # A kid's weekend set stands as long as the family's.
 # How many tiles each set holds at most.
 MOST = {"now": 4, "weekend": 6}
+# A kid's own set holds at most this many (docs/INTERFACE.md section 9).
+KID_MOST = 2
 # The stronger call's picks lead for this long after it chose (Thursday's digest through Sunday).
 CHOSEN_FOR = timedelta(days=4)
 # Nobody is up for a pick before this hour, so the "now" set is not remade through the night.
@@ -140,7 +142,8 @@ def make(
         if roles.may(m.role, "wish") and not roles.may(m.role, "decide")
     }
     chosen = _chosen(conn, app.clock.now(), found) if window == "weekend" and member is None else []
-    tiles = _tiles(found, chosen, MOST[window], window, app.clock.now().astimezone(settings.tzinfo))
+    most = KID_MOST if member is not None else MOST[window]
+    tiles = _tiles(found, chosen, most, window, app.clock.now().astimezone(settings.tzinfo))
     start, end = found.context.window or (app.clock.today(), app.clock.today())
     now = app.clock.now()
     with transaction(conn):

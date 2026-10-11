@@ -7,12 +7,14 @@ from datetime import date, datetime, time, timedelta
 
 from familydb import happening
 from familydb.availability import enrichment_available
+from familydb.base import roles
 from familydb.base.dates import parse_date_range, weekend_window
 from familydb.base.errors import ToolError
 from familydb.store import ideas, members, memories, outcomes, plans
 from familydb.store.db import transaction
 from familydb.store.ideas import Idea
 from familydb.suggest import listed as listing
+from familydb.suggest import people as who
 from familydb.suggest import taken
 from familydb.suggest.compose import choose, compose
 from familydb.suggest.context import build_context
@@ -133,6 +135,11 @@ class Assessment:
     kid_names: dict[int, str] = field(default_factory=dict)
 
 
+def kid_reads(ctx: ToolContext) -> bool:
+    """Whether a kid will read this answer: a kid asking, or a chat a kid is in (audience.py)."""
+    return ctx.plain or (ctx.member is not None and roles.daily_limited(ctx.member.role))
+
+
 def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> SuggestResult:
     """The whole engine for one question; returns the structured result the chat model composes.
     `refresh_stale` queues a paid lookup per stale place; code running with no model call
@@ -175,6 +182,10 @@ def assess(
         context.skipped.append(where_note)
     people = members.list_all(ctx.conn)
     all_ideas = ideas.list_all(ctx.conn)
+    if kid_reads(ctx):
+        # Where a kid reads, an idea for the grown-ups alone is left out, not ruled out: the
+        # ruled-out are shown to the model, and a kid hears nothing of date nights.
+        all_ideas = [idea for idea in all_ideas if not who.just_us(idea, people)]
     listed = {idea.id for idea in all_ideas if idea.status != "dropped"}
     unknown = sorted(set(args.idea_ids) - listed)
     idea_ids = [idea_id for idea_id in args.idea_ids if idea_id in listed]

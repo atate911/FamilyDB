@@ -1487,3 +1487,19 @@ def test_the_hours_said_are_the_day_they_are_known_for(
     verdicts = {c["idea_id"]: c for c in data["candidates"]}
     assert "open Sunday 10:00-16:00" in verdicts[cafe.id]["reasons"]
     assert verdicts[cafe.id]["fits_days"] == ["2026-09-26", "2026-09-27"]
+
+
+def test_where_a_kid_reads_nothing_for_the_grown_ups_alone_is_offered(env, family) -> None:
+    """A date night is left out, not ruled out: the ruled-out are shown to the model, so a kid
+    would hear of it. Asked by a grown-up in a private chat, it is there."""
+    bar = _idea(env.conn, "Wine bar", participants=["Sam", "Alex"], setting="indoor")
+    zoo = _idea(env.conn, "Zoo", participants=["whole family"], setting="indoor")
+    asked = SuggestInput(window="someday", discover=False, question="?")
+    said = {c.idea_id for c in run(env.ctx, asked).candidates}
+    assert {bar.id, zoo.id} <= said
+    env.ctx.member = family["girls"]
+    said = {c.idea_id for c in run(env.ctx, asked).candidates}
+    assert zoo.id in said and bar.id not in said
+    env.ctx.member, env.ctx.plain = family["sam"], True  # a shared chat with a kid in it
+    said = {c.idea_id for c in run(env.ctx, asked).candidates}
+    assert zoo.id in said and bar.id not in said

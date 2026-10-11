@@ -328,7 +328,7 @@ Telegram stays the place where Vera may interrupt and where most capture happens
 
 | | Parent | Admin | Kid |
 |---|---|---|---|
-| First screen | Now, personal | Now, personal | A small Now: the box ("I want… / We should…"), her list with the answers on it, what's coming for her, and at most two picks |
+| First screen | Now, personal | Now, personal | A small Now: the box ("I want… / We should…"), her list with the answers on it, what's coming for her, and at most two picks (`picks.KID_MOST`), never one for the grown-ups alone |
 | The kids | yes | yes | no; her own things are on My list |
 | Costs, models, settings, status | no | behind the avatar | never |
 | The box | general and scoped | same | general and scoped, with a daily message count said gently |
