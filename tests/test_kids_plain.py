@@ -1,5 +1,9 @@
 """Kids never see how the bot works (audience.py, voice.PLAIN): where a kid reads, a line about
-a key, a model, a limit in dollars, an admin or the settings page is said plainly instead."""
+a key, a model, a limit in dollars, an admin or the settings page is said plainly instead.
+
+The family's decision (docs/DESIGN.md section 16): what it says is asked of them before it
+changes; how the code keeps it may be redesigned while these still hold.
+"""
 
 import pytest
 
