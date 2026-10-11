@@ -49,8 +49,8 @@ Where the code comes from (a private repository needs one of these)
                        With nothing else given, and this script inside a checkout, that
                        checkout is what gets installed.
   --repo URL           Clone from somewhere other than the default GitHub URL.
-  --ref NAME           Tag, branch or commit. Default: the newest release, or the default
-                       branch while CHANGELOG.md says the next version is in progress.
+  --ref NAME           Tag, branch or commit. Default: the default branch, which is what
+                       an upgrade follows too.
 
 Where it goes
   --target DIR         Default: /opt/familydb. Keep it out of a home directory: the service
@@ -438,7 +438,7 @@ fetch_code() {
     if [ "$kind" = tag ]; then
       step "Checking out ${name}, the newest release" as_root git -C "$TARGET" checkout --quiet "$name"
     elif [ "$kind" = branch ]; then
-      note "The newest version is still being built, so this is ${name}, where it is being built."
+      note "This is ${name}, the default branch. An upgrade follows it, released or not."
     fi
   fi
   forget_undo

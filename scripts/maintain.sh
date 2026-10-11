@@ -29,6 +29,7 @@ TARGET="$(cd -- "${HERE}/.." && pwd -P)"
 SERVICE_USER=""   # --user, else the account the install recorded, else familydb
 BACKUP_DIR=""
 KEEP_DAYS=14
+KEEP_DAYS_GIVEN=0
 ASSUME_YES=0
 DRY_RUN=0
 COMMAND=""
@@ -54,6 +55,8 @@ Look at it (these change nothing)
 
 Keep it safe
   backup               Take a backup now, using SQLite's online backup, safe while it runs.
+                       With --keep-days N, then prune backups older than that, never the one
+                       the last upgrade would go back to.
   restore FILE         Stop the bot, put that backup in place, start it again. The database
                        being replaced is itself backed up first.
   schedule-backups     Add a nightly backup to cron, and prune ones older than --keep-days.
@@ -62,10 +65,11 @@ Change it
   upgrade              Move to the newest version, reinstall the dependencies, migrate and
                        restart. Fetches first and says what this upgrade changes: the commits
                        and pull requests, new migrations, packages and settings. Then asks
-                       (Enter is yes), takes a backup, and prints how to go back before it
-                       changes anything. That is the default branch while CHANGELOG.md says
-                       the next version is in progress, else the newest release; it never
-                       moves to anything older than what is installed.
+                       (Enter is yes), stops the bot, takes a backup, and prints how to go back
+                       before the code moves; a failure before the migrations puts the old code
+                       back and starts it again. That is the newest commit on the default
+                       branch, released or not; it never moves to anything older than what is
+                       installed. On Docker the new image is built while the old one runs.
   restart              Restart it, and say whether it came back.
   https [DOMAIN] [--port N|random|443]
                        Put the page on HTTPS: at DOMAIN if one is given, else at this server's
@@ -173,8 +177,9 @@ while [ $# -gt 0 ]; do
     --user=*) SERVICE_USER="${1#*=}"; shift ;;
     --backup-dir) BACKUP_DIR="${2:-}"; shift 2 ;;
     --backup-dir=*) BACKUP_DIR="${1#*=}"; shift ;;
-    --keep-days) KEEP_DAYS="${2:-}"; shift 2 ;;
-    --keep-days=*) KEEP_DAYS="${1#*=}"; shift ;;
+    --keep-days) KEEP_DAYS="${2:-}"; KEEP_DAYS_GIVEN=1; shift 2 ;;
+    --keep-days=*) KEEP_DAYS="${1#*=}"; KEEP_DAYS_GIVEN=1; shift ;;
+    --resume) UPGRADE_RESUME=1; shift ;;   # the upgrade's own, when the new code's script takes over
     --port) HTTPS_PORT="${2:-}"; shift 2 ;;
     --port=*) HTTPS_PORT="${1#*=}"; shift ;;
     --all|-v) CHECK_VIEW=all; shift ;;
@@ -200,8 +205,6 @@ valid_user_name "$SERVICE_USER" \
 BACKUP_DIR="${BACKUP_DIR:-${TARGET}/backups}"
 DB="${TARGET}/data/familydb.sqlite3"
 FAMILYDB="${TARGET}/.venv/bin/familydb"
-DOCKER_MODE=0
-[ -x "$FAMILYDB" ] || { [ -f "${TARGET}/docker-compose.yml" ] && have docker && DOCKER_MODE=1; }
 
 log_to "/var/log/familydb-maintain.log"
 enable_failure_reporting
@@ -222,6 +225,14 @@ SERVICE_UNIT="${FAMILYDB_SERVICE_UNIT:-/etc/systemd/system/familydb.service}"   
 service_installed() { [ -f "$SERVICE_UNIT" ]; }
 service_active() { have systemctl && systemctl is-active --quiet familydb; }
 
+# How this install runs. The compose file ships with the code, so it says nothing by itself: a
+# virtualenv install is one with the service file or a .venv, however broken (that is what the
+# doctor is for), and only an install with neither, beside Docker, is the containers.
+DOCKER_MODE=0
+if ! service_installed && [ ! -d "${TARGET}/.venv" ] && [ -f "${TARGET}/docker-compose.yml" ] && have docker; then
+  DOCKER_MODE=1
+fi
+
 how_it_runs() { # how the bot is run on this machine, in a few words
   if [ "$DOCKER_MODE" = 1 ]; then
     printf 'Docker'
@@ -236,16 +247,9 @@ intro() { # intro "Upgrade" - which install, and how it runs, beside the heading
   banner "$1" "${TARGET} ${S_DOT} $(how_it_runs)"
 }
 
-env_file_value() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"\r" || true; }
-
-env_file_set() { # env_file_set KEY VALUE - in place, keeping the file's owner and mode
-  local file="${TARGET}/.env"
-  if as_root grep -qE "^${1}=" "$file"; then
-    as_root sed -i "s|^${1}=.*|${1}=${2}|" "$file"
-  else
-    printf '%s=%s\n' "$1" "$2" | as_root tee -a "$file" >/dev/null
-  fi
-}
+# .env, read as the program reads it and written so it reads it back whole (lib/common.sh).
+env_file_value() { env_value "${TARGET}/.env" "$1"; }
+env_file_set() { env_file_write "${TARGET}/.env" "$1" "$2"; }
 
 # What the page says of itself at /healthz: "ok", or why not. Status 0 for ok, 1 for a page that
 # does not answer or says it is not well, 2 when it cannot be asked at all (no curl, or no page).
@@ -281,8 +285,8 @@ wait_for_page() {
     [ "$status" = 0 ] && break
     [ "$status" = 2 ] && break
     [ "$waited" -lt 30 ] || break
-    # A service that has stopped again is not going to answer; no need to wait out the rest.
-    if [ "$DOCKER_MODE" = 0 ] && [ "$waited" -ge 3 ] && ! service_active; then break; fi
+    # A bot that has stopped again is not going to answer; no need to wait out the rest.
+    if [ "$waited" -ge 3 ] && ! bot_running; then break; fi
     sleep 1
     waited=$((waited + 1))
   done
@@ -320,8 +324,10 @@ start_bot() {
       BOT_STARTED=1
       [ -n "${QUIET_START:-}" ] || ok "It came back up, and the page answers." ;;
     2)
+      # The page could not be asked, so the service or the container is: a container that
+      # stopped straight away is not "came back up".
       sleep 3
-      if [ "$DOCKER_MODE" = 1 ] || service_active; then
+      if bot_running; then
         BOT_STARTED=1
         [ -n "${QUIET_START:-}" ] || { ok "It came back up."; note "${_OUT}."; }
       else
@@ -331,7 +337,7 @@ start_bot() {
       BOT_STARTED=0 ;;
   esac
   [ "$BOT_STARTED" = 0 ] || return 0
-  if [ "$DOCKER_MODE" = 0 ] && ! service_active; then
+  if ! bot_running; then
     warn "It did not come back up."
   else
     warn "It is running, but the page does not answer yet: ${_OUT:-no reason given}."
@@ -791,11 +797,24 @@ cmd_port() {
   fi
 }
 
+prune_backups() { # the backups older than --keep-days, except the one an upgrade would go back to
+  local spare n
+  local -a keep=()
+  for spare in "$(last_upgrade_get backup)" "$(pending_get backup)"; do
+    [ -n "$spare" ] && as_root test -f "$spare" && keep+=(! -samefile "$spare")
+  done
+  n="$(as_root find "$BACKUP_DIR" -maxdepth 1 -name 'familydb-*.sqlite3' -mtime "+${KEEP_DAYS}" ${keep[@]+"${keep[@]}"} -print -delete 2>/dev/null | grep -c . || true)"
+  [ "${n:-0}" = 0 ] || note "Pruned ${n} backup$([ "$n" = 1 ] || echo s) older than ${KEEP_DAYS} days."
+}
+
 cmd_backup() {
   local earlier
   earlier="$(as_root find "$BACKUP_DIR" -maxdepth 1 -name 'familydb-*.sqlite3' 2>/dev/null | head -1 || true)"
   BACKUP_QUIET=1 take_backup "$BACKUP_DIR"
   if [ "$DRY_RUN" = 1 ]; then finish ok "Dry run"; return 0; fi
+  # Only after this one succeeded: a night whose backup failed must not be the night the old
+  # ones go.
+  [ "$KEEP_DAYS_GIVEN" = 0 ] || prune_backups
   finish ok "Backed up the database ($(du -h "$LAST_BACKUP" | cut -f1)) to ${LAST_BACKUP#"${TARGET}/"}"
   # Said for the first one only: a person who has taken more knows how to get them off the machine.
   [ -z "$earlier" ] || return 0
@@ -947,7 +966,7 @@ rollback_lines() { # rollback_lines LABEL BEFORE BACKUP - the commands, one a li
     if [ "$DOCKER_MODE" = 1 ]; then
       printf '  sudo docker compose --project-directory %s build\n' "$TARGET"
     else
-      printf '  sudo uv sync --frozen --no-dev --project %s\n' "$TARGET"
+      printf '  %s\n' "$(uv_sync_line "$TARGET")"
     fi
   fi
   printf '  sudo %s restore %s\n' "$0" "$backup"
@@ -960,12 +979,12 @@ rollback_lines() { # rollback_lines LABEL BEFORE BACKUP - the commands, one a li
 # read from git between two refs, so it is about this run and no other. The globals are left for
 # the steps that apply it, and for the last line.
 
-UPGRADE_COMMITS=0
-UPGRADE_MIGRATIONS=0
-UPGRADE_MIGRATION_NAMES=""
-UPGRADE_PACKAGES=""      # "2 updated, 1 added", empty when none moves
-UPGRADE_PACKAGE_COUNT=0
-UPGRADE_FOLLOWING=""     # the branch it follows while the next version is still being built
+UPGRADE_COMMITS="${UPGRADE_COMMITS:-0}"
+UPGRADE_MIGRATIONS="${UPGRADE_MIGRATIONS:-0}"
+UPGRADE_MIGRATION_NAMES="${UPGRADE_MIGRATION_NAMES-}"
+UPGRADE_PACKAGES="${UPGRADE_PACKAGES-}"      # "2 updated, 1 added", empty when none moves
+UPGRADE_PACKAGE_COUNT="${UPGRADE_PACKAGE_COUNT:-0}"
+UPGRADE_FOLLOWING="${UPGRADE_FOLLOWING-}"     # the branch it follows
 
 lock_packages() { # lock_packages REF - "name version" for each package uv.lock pins at REF
   as_root git -C "$TARGET" show "${1}:uv.lock" 2>/dev/null \
@@ -1131,9 +1150,14 @@ upgrade_changes() { # upgrade_changes FROM TO
   [ "$nr" -eq 0 ] || { text="${text}${text:+; }${nr} removed (${gone}$(more_than "$nr" 4))"; UPGRADE_PACKAGES="${UPGRADE_PACKAGES}${UPGRADE_PACKAGES:+, }${nr} removed"; }
   [ -z "$text" ] || rows=1
 
-  local options service=0
+  local options service=0 service_note=""
   options="$(comm -13 <(env_options "$from") <(env_options "$to") | tr '\n' ' ' | sed 's/ $//' || true)"
-  as_root git -C "$TARGET" diff --quiet "$from" "$to" -- deploy/familydb.service 2>/dev/null || service=1
+  if [ "$DOCKER_MODE" = 0 ] && service_installed \
+    && ! as_root git -C "$TARGET" diff --quiet "$from" "$to" -- deploy/familydb.service 2>/dev/null; then
+    service=1
+    if unit_as_installed "$from"; then service_note="the installed one is updated to match, and a copy of it kept"
+    else service_note="the installed one was edited by hand, so it is left as it is"; fi
+  fi
   [ -z "$options" ] && [ "$service" = 0 ] || rows=1
 
   [ "$rows" = 0 ] || printf '\n'
@@ -1142,7 +1166,7 @@ upgrade_changes() { # upgrade_changes FROM TO
   fi
   [ -z "$text" ] || kv "Packages" "$text"
   [ -z "$options" ] || kv "Settings" "new in .env.example: ${options}" warn
-  [ "$service" = 0 ] || kv "Service file" "changed in deploy/familydb.service; an upgrade does not rewrite the installed one" warn
+  [ "$service" = 0 ] || kv "Service file" "changed in deploy/familydb.service; ${service_note}" warn
   if [ "$count" -gt 0 ]; then
     INDENT="  " hint "They change the database's layout, and some rewrite what is in it; the backup is what goes back."
   fi
@@ -1163,181 +1187,268 @@ describe_ref() { # describe_ref REF - the name a person would say it by
   as_root git -C "$TARGET" describe --tags --always "$1" 2>/dev/null || echo "$1"
 }
 
-cmd_upgrade() {
-  [ -d "${TARGET}/.git" ] || die "${TARGET} is not a git checkout, so there is nothing to pull" \
-    "Upgrade by unpacking a new copy over it, keeping .env and data/."
+# --- the upgrade itself --------------------------------------------------------------------------
+# In the order that keeps the bot whole. Nothing that cannot be undone happens before the backup is
+# taken and the way back is on the screen. On a virtualenv install the bot is stopped before the
+# code moves, so a running one never loads half-new files; on Docker the new image is built while
+# the old one still runs, and the containers are down only for the backup, the migrations and the
+# start. A failure before the migrations puts everything back and starts the bot again
+# (`upgrade_undo`); after them, the way back is the rollback, printed again. From the checkout on,
+# the maintain.sh that came with the new code finishes the job (`upgrade_handoff`), so a release can
+# change these steps in the same release. What the second half needs is in UPGRADE_* globals, which
+# the handoff carries over as environment and --resume reads back.
 
-  local current
-  current="$(describe_ref HEAD)"
+UPGRADE_RESUME="${UPGRADE_RESUME:-0}"            # --resume: this is the new code's script, carrying on
+UPGRADE_NAME="${UPGRADE_NAME:-}"                 # the branch or tag it moves to
+UPGRADE_REF="${UPGRADE_REF:-}"                   # the same as git names it: origin/NAME, or the tag
+UPGRADE_BEFORE="${UPGRADE_BEFORE:-}"             # the commit it came from; empty when nothing recorded it
+UPGRADE_CURRENT="${UPGRADE_CURRENT:-}"           # that commit by the name a person would use
+UPGRADE_BACKUP="${UPGRADE_BACKUP:-}"             # the backup a rollback would restore
+UPGRADE_FRESH="${UPGRADE_FRESH:-1}"              # 1 when the code moves this run, 0 when finishing an earlier one
+UPGRADE_MOVED="${UPGRADE_MOVED:-0}"              # 1 once the code has moved this run (what a failure puts back)
+UPGRADE_STOPPED_AT="${UPGRADE_STOPPED_AT:-}"     # when the bot was stopped, in epoch seconds, for the last line
+UPGRADE_BEFORE_FAILING="${UPGRADE_BEFORE_FAILING-}"  # the checks that failed before the upgrade, one a line
+UPGRADE_BEFORE_COUNTS="${UPGRADE_BEFORE_COUNTS-}"
+UPGRADE_STOPPED="${UPGRADE_STOPPED:-0}"          # 1 once the bot was stopped this run (what a failure starts again)
+UPGRADE_SYNCED=0; UPGRADE_UNIT_SAVED=""; UPGRADE_IMAGE_SAVED=0
 
-  # A private repository needs a credential here. bootstrap.sh leaves the deploy key wired up
-  # when one was used, and deliberately does not write a token down, so say which case this is.
-  # Fetching only moves the remote's branches in the checkout: nothing the bot runs changes yet,
-  # and it is what lets the screen say what this upgrade would change before it is asked.
-  # shellcheck disable=SC2034  # lib/common.sh names this in its failure report.
-  FAILED_STEP="fetching the newest code"
-  local -a fetch_from=(origin)
-  local origin_url
-  origin_url="$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || true)"
-  if [ -n "${GITHUB_TOKEN:-}" ]; then
-    case "$origin_url" in
-      https://github.com/*)
-        # Used for this fetch only, as bootstrap did for the clone: never written down.
-        fetch_from=("https://x-access-token:${GITHUB_TOKEN}@github.com/${origin_url#https://github.com/}"
-                    "+refs/heads/*:refs/remotes/origin/*")
-        note "Fetching over HTTPS with the token from the environment." ;;
-      *) warn "GITHUB_TOKEN only helps with an https://github.com/... remote; this one is ${origin_url}" ;;
-    esac
-  fi
-  _capture "Fetching the newest code from ${origin_url:-the git remote}" \
-    as_root git -C "$TARGET" fetch --tags --quiet "${fetch_from[@]}"
-  [ -z "$_OUT" ] || printf '%s\n' "$_OUT" >>"${LOG_FILE:-/dev/null}"
-  if [ "$_STATUS" != 0 ]; then
-    local remote sshcmd
-    remote="$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || echo unknown)"
-    sshcmd="$(as_root git -C "$TARGET" config core.sshCommand 2>/dev/null || true)"
-    die "could not fetch from ${remote}" \
-        "What this means: this is a private repository, and this checkout has no credential" \
-        "it can use. Nothing was changed." \
-        "" \
-        "What to try, depending on how the code got here:" \
-        "  · with a deploy key — point the checkout at it:" \
-        "      sudo git -C ${TARGET} remote set-url origin git@github.com:atate911/FamilyDB.git" \
-        "      sudo git -C ${TARGET} config core.sshCommand 'ssh -i /path/to/key -o IdentitiesOnly=yes'" \
-        "      sudo git -C ${TARGET} fetch --tags origin       # should now work" \
-        "  · with a token — give it again for this run; it is not written down:" \
-        "      read -rs GITHUB_TOKEN && export GITHUB_TOKEN" \
-        "      sudo --preserve-env=GITHUB_TOKEN bash ${0} upgrade" \
-        "    (a token that has expired needs a new one; a deploy key never expires)" \
-        "  · with a copy you made yourself — there is nothing to fetch from. Unpack the new" \
-        "    version over ${TARGET} (.env and data/ are not in it, so they stay) and run:" \
-        "      sudo bash ${TARGET}/scripts/install.sh" \
-        "    docs/INSTALL.md, 'Day to day', has the steps." \
-        "" \
-        "Currently configured: ${sshcmd:-no core.sshCommand set}" \
-        "docs/INSTALL.md, 'Other ways to get the code onto the server', covers all three."
-  fi
-  # shellcheck disable=SC2034  # cleared so a later failure does not name this step.
-  FAILED_STEP=""
-  log_line "fetched ${origin_url:-the git remote}"
-
-  local kind name target before pending_backup
-  read -r kind name <<<"$(wanted_version "$TARGET")"
-  case "$kind" in
-    branch) target="origin/${name}" ;;
-    tag) target="$name" ;;
-    *) die "there is nothing to upgrade to: the remote has no default branch and no release" ;;
-  esac
-  before="$(as_root git -C "$TARGET" rev-parse HEAD 2>/dev/null || echo unknown)"
-  # An earlier upgrade that stopped part-way remembers what to go back to: that, not the state
-  # this run found.
-  pending_backup="$(pending_get backup)"
-  if [ -n "$(pending_get before)" ]; then
-    before="$(pending_get before)"
-    current="$(describe_ref "$before")"
-  fi
-
-  local unfinished="" fresh=0
-  if as_root git -C "$TARGET" merge-base --is-ancestor "$target" HEAD; then
-    # On the code is not the same as upgraded: a stop after the checkout leaves the code here and
-    # the dependencies, the migrations or the restart undone.
-    local have newest
-    have="$(database_version)"
-    newest="$(newest_migration)"
-    if [ -n "$(pending_get target)" ]; then
-      unfinished="an earlier upgrade to $(pending_get target) stopped after moving the code; its dependencies, migrations or restart may not have run"
-    elif [ -n "$have" ] && [ -n "$newest" ] && [ "$have" -lt "$newest" ]; then
-      unfinished="the database is at migration ${have} and this code has up to ${newest}"
-    fi
-    if [ -z "$unfinished" ]; then
-      show_versions HEAD HEAD
-      finish ok "Already up to date with ${name}, and the database is migrated. Nothing to do."
-      return 0
-    fi
-    warn "The code is already on ${name}, but it is not upgraded: ${unfinished}."
-    say "Finishing it now."
-    # Nothing recorded the code it came from, so only the database can be put back.
-    [ -n "$(pending_get before)" ] || before=""
-    UPGRADE_FOLLOWING=""
-    show_versions "${before:-HEAD}" HEAD
-    UPGRADE_MIGRATIONS=0
-    UPGRADE_PACKAGES=""
-    [ -z "$have" ] || [ -z "$newest" ] || UPGRADE_MIGRATIONS=$((newest - have))
-    [ "$UPGRADE_MIGRATIONS" -ge 0 ] || UPGRADE_MIGRATIONS=0
-    printf '\n'
+# Whether the bot runs, however it runs here. start_bot and the up-to-date path ask this rather
+# than the page, which is off on some installs and curl-less on others.
+bot_running() {
+  if [ "$DOCKER_MODE" = 1 ]; then
+    as_root docker compose --project-directory "$TARGET" ps --format '{{.Service}} {{.State}}' 2>/dev/null \
+      | grep -q '^bot running'
   else
-    # Only forward. A release tag older than what is installed would take the database back past
-    # migrations it has already run; a branch that lacks what is here would lose it.
-    moves_forward "$TARGET" "$target" \
-      || die "${name} does not contain what is installed now (${current}), so moving to it would go backwards" \
-             "Nothing was changed. To choose a version yourself: sudo git -C ${TARGET} checkout NAME"
-    fresh=1
-    UPGRADE_FOLLOWING=""
-    [ "$kind" != branch ] || UPGRADE_FOLLOWING="$name"
-    upgrade_changes HEAD "$target"
+    service_active
   fi
+}
+bot_expected() { [ "$DOCKER_MODE" = 1 ] || service_installed; }   # is anything meant to be running it?
 
-  approve "Upgrade now?" yes || { say "Nothing was changed."; exit 0; }
+docker_bot_image() { # the image name the compose file gives the bot, so a saved one can be put back under it
+  local name
+  name="$(awk '/^  [a-z]/ {s = $1} s == "bot:" && /^    image:/ {print $2; exit}' "${TARGET}/docker-compose.yml" 2>/dev/null || true)"
+  printf '%s' "${name:-familydb:local}"
+}
 
-  progress_total 8
-  # What is already wrong before anything changes, so that what the check says afterwards is about
-  # the upgrade and not about the install it found.
-  _capture "Checking the install as it is" familydb_cmd doctor
-  show_doctor count "$_OUT"
-  local before_failing before_counts
-  before_failing="$(failing_checks "$_OUT")"
-  before_counts="${DOCTOR_FINE} ${DOCTOR_WARN} ${DOCTOR_BAD}"
-  [ -n "$_OUT" ] || before_counts=""
-  progress_to 1
-  take_backup "$BACKUP_DIR"
-  local upgrade_backup="${pending_backup:-$LAST_BACKUP}" line
+unit_as_installed() { # unit_as_installed REF - does the installed service file read as REF's installer would have written it?
+  local old wanted same=1
+  as_root test -f "$SERVICE_UNIT" || return 1
+  old="$(mktemp)"; wanted="$(mktemp)"
+  as_root git -C "$TARGET" show "${1}:deploy/familydb.service" >"$old" 2>/dev/null \
+    && render_unit "$TARGET" "$SERVICE_USER" "$old" >"$wanted" 2>/dev/null \
+    && as_root cmp -s "$wanted" "$SERVICE_UNIT" || same=0
+  rm -f "$old" "$wanted"
+  [ "$same" = 1 ]
+}
+
+upgrade_unit() { # upgrade_unit BEFORE - the service file follows the new code, unless somebody edited the installed one
+  [ "$DOCKER_MODE" = 0 ] && service_installed && [ -n "$1" ] && [ "$1" != unknown ] || return 0
+  as_root git -C "$TARGET" diff --quiet "$1" HEAD -- deploy/familydb.service 2>/dev/null && return 0
+  [ -f "${TARGET}/deploy/familydb.service" ] || return 0
+  if ! unit_as_installed "$1"; then
+    warn "deploy/familydb.service changed in this version, but ${SERVICE_UNIT} was edited by hand, so it is left as it is."
+    note "To see what the new one would say: sudo diff ${SERVICE_UNIT} ${TARGET}/deploy/familydb.service"
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    note "[dry run] would update ${SERVICE_UNIT} from deploy/familydb.service, keeping the old one beside it"
+    return 0
+  fi
+  local wanted
+  wanted="$(mktemp)"
+  render_unit "$TARGET" "$SERVICE_USER" >"$wanted"
+  UPGRADE_UNIT_SAVED="${SERVICE_UNIT}.before-upgrade"
+  as_root cp -p "$SERVICE_UNIT" "$UPGRADE_UNIT_SAVED" \
+    && as_root install -m 644 "$wanted" "$SERVICE_UNIT" \
+    && as_root systemctl daemon-reload \
+    && ok "Service file updated; the old one is kept at ${UPGRADE_UNIT_SAVED}" \
+    || warn "Could not update ${SERVICE_UNIT}; the new one is at ${TARGET}/deploy/familydb.service"
+  rm -f "$wanted"
+}
+
+upgrade_way_back() { # the commands that undo this upgrade, on the screen before anything they would undo
+  local line
   note "To go back:"
-  while IFS= read -r line; do note "$line"; done < <(rollback_lines "$current" "$before" "$upgrade_backup")
-  if [ "$fresh" = 1 ]; then
-    pending_write "$name" "$before" "$upgrade_backup"
+  while IFS= read -r line; do note "$line"; done < <(rollback_lines "$UPGRADE_CURRENT" "$UPGRADE_BEFORE" "$UPGRADE_BACKUP")
+}
+
+upgrade_undo() { # what a failure before the migrations puts back: the code, the service file, the packages, the image, the bot
+  local said=""
+  if [ "$UPGRADE_MOVED" = 1 ] && [ -n "$UPGRADE_BEFORE" ] && [ "$UPGRADE_BEFORE" != unknown ]; then
+    as_root git -C "$TARGET" checkout --quiet --detach "$UPGRADE_BEFORE" && said="the code is back on ${UPGRADE_CURRENT}"
+  fi
+  if [ -n "$UPGRADE_UNIT_SAVED" ] && as_root test -f "$UPGRADE_UNIT_SAVED"; then
+    as_root cp -p "$UPGRADE_UNIT_SAVED" "$SERVICE_UNIT" && as_root rm -f "$UPGRADE_UNIT_SAVED" \
+      && { as_root systemctl daemon-reload 2>/dev/null || true; } && said="${said}${said:+, }the service file as it was"
+  fi
+  if [ "$UPGRADE_SYNCED" = 1 ]; then
+    if retry 2 "Putting the packages back" uv_sync "$TARGET"; then said="${said}${said:+, }its packages as they were"
+    else said="${said}${said:+; }its packages could not be put back (sudo ${0} doctor rebuilds them)"; fi
+  fi
+  if [ "$UPGRADE_IMAGE_SAVED" = 1 ]; then
+    as_root docker image tag familydb:before-upgrade "$(docker_bot_image)" 2>/dev/null && said="${said}${said:+, }the image as it was"
+  fi
+  as_root rm -f "$UPGRADE_PENDING"
+  if [ "$UPGRADE_STOPPED" = 1 ]; then
+    QUIET_START=1 STEP_QUIET=1 start_bot
+    if [ "${BOT_STARTED:-}" = 0 ]; then said="${said}${said:+; }FamilyDB did not start: sudo ${0} logs"
+    else said="${said}${said:+, and }FamilyDB is running again"; fi
+  fi
+  # shellcheck disable=SC2034  # read by _run_undo in lib/common.sh, which reports it
+  UNDO_SAID="${said:-nothing had changed}"
+}
+
+upgrade_handoff() { # the maintain.sh that came with the new code finishes the upgrade; returns only when it should not
+  local script="${TARGET}/scripts/maintain.sh"
+  [ "$UPGRADE_RESUME" = 0 ] && [ "$DRY_RUN" = 0 ] && [ "${FAMILYDB_NO_HANDOFF:-0}" = 0 ] || return 0
+  [ -n "$UPGRADE_BEFORE" ] && [ "$UPGRADE_BEFORE" != unknown ] || return 0
+  as_root git -C "$TARGET" diff --quiet "$UPGRADE_BEFORE" HEAD -- scripts 2>/dev/null && return 0
+  if ! [ -f "$script" ] || ! bash -n "$script" 2>/dev/null || ! grep -q -- '--resume' "$script"; then
+    warn "The scripts changed in this version, but the new maintain.sh cannot take over; this one finishes the upgrade."
+    return 0
+  fi
+  log_line "handing over to the maintain.sh that came with ${UPGRADE_NAME}"
+  export UPGRADE_RESUME=1 UPGRADE_NAME UPGRADE_REF UPGRADE_BEFORE UPGRADE_CURRENT UPGRADE_BACKUP UPGRADE_FRESH \
+    UPGRADE_MOVED UPGRADE_STOPPED UPGRADE_STOPPED_AT UPGRADE_BEFORE_FAILING UPGRADE_BEFORE_COUNTS UPGRADE_COMMITS \
+    UPGRADE_MIGRATIONS UPGRADE_MIGRATION_NAMES UPGRADE_PACKAGES UPGRADE_PACKAGE_COUNT UPGRADE_FOLLOWING
+  local -a args=(upgrade --resume --target "$TARGET" --user "$SERVICE_USER" --backup-dir "$BACKUP_DIR")
+  [ "$ASSUME_YES" = 1 ] && args+=(--yes)
+  exec bash "$script" "${args[@]}"
+}
+
+upgrade_fetch_failed() { # upgrade_fetch_failed OUTPUT - what a fetch that failed means, from what git said
+  local remote sshcmd kind
+  local -a said=()
+  remote="$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || echo unknown)"
+  sshcmd="$(as_root git -C "$TARGET" config core.sshCommand 2>/dev/null || true)"
+  mapfile -t said < <(printf '%s\n' "$1" | sed '/^[[:space:]]*$/d' | tail -4 | sed 's/^/    /')
+  kind="$(fetch_trouble "$1")"
+  log_line "fetch failed (${kind}): ${1}"
+  case "$kind" in
+    network)
+      die "could not reach ${remote}" "What git said:" "${said[@]}" "" \
+          "What this means: the network, a DNS server or GitHub is not answering from here. Nothing was changed." \
+          "What to try: run it again in a few minutes. To see whether this server reaches GitHub at all:" \
+          "  curl -sI https://github.com | head -1" ;;
+    ownership)
+      die "git will not read ${TARGET}: it is owned by somebody other than the account running this" "What git said:" "${said[@]}" "" \
+          "Nothing was changed. The doctor puts the ownership right:" \
+          "  sudo bash ${0} doctor" \
+          "or tell git the checkout is trusted:  sudo git config --system --add safe.directory ${TARGET}" ;;
+    missing)
+      die "there is no repository at ${remote}" "What git said:" "${said[@]}" "" \
+          "Nothing was changed. The remote this checkout points at is gone or was renamed. Point it at the right one:" \
+          "  sudo git -C ${TARGET} remote set-url origin git@github.com:atate911/FamilyDB.git" ;;
+    credential)
+      die "could not fetch from ${remote}" "What git said:" "${said[@]}" "" \
+          "What this means: this is a private repository, and this checkout has no credential" \
+          "it can use. Nothing was changed." \
+          "" \
+          "What to try, depending on how the code got here:" \
+          "  · with a deploy key — point the checkout at it:" \
+          "      sudo git -C ${TARGET} remote set-url origin git@github.com:atate911/FamilyDB.git" \
+          "      sudo git -C ${TARGET} config core.sshCommand 'ssh -i /path/to/key -o IdentitiesOnly=yes'" \
+          "      sudo git -C ${TARGET} fetch --tags origin       # should now work" \
+          "  · with a token — give it again for this run; it is not written down:" \
+          "      read -rs GITHUB_TOKEN && export GITHUB_TOKEN" \
+          "      sudo --preserve-env=GITHUB_TOKEN bash ${0} upgrade" \
+          "    (a token that has expired needs a new one; a deploy key never expires)" \
+          "  · with a copy you made yourself — there is nothing to fetch from. Unpack the new" \
+          "    version over ${TARGET} (.env and data/ are not in it, so they stay) and run:" \
+          "      sudo bash ${TARGET}/scripts/install.sh" \
+          "    docs/INSTALL.md, 'Day to day', has the steps." \
+          "" \
+          "Currently configured: ${sshcmd:-no core.sshCommand set}" \
+          "docs/INSTALL.md, 'Other ways to get the code onto the server', covers all three." ;;
+    *)
+      die "could not fetch from ${remote}" "What git said:" "${said[@]}" "" \
+          "Nothing was changed. The usual causes are the network, a credential this checkout lacks, or" \
+          "a remote that moved; docs/INSTALL.md, 'Other ways to get the code onto the server', covers them." \
+          "Currently configured: ${sshcmd:-no core.sshCommand set}" ;;
+  esac
+}
+
+upgrade_refuses_edited_files() { # an upgrade would overwrite a shipped file somebody changed here: say which, before anything is touched
+  local edited
+  local -a files=()
+  edited="$(as_root git -C "$TARGET" status --porcelain --untracked-files=no 2>/dev/null | cut -c4- || true)"
+  [ -n "$edited" ] || return 0
+  mapfile -t files <<<"$edited"
+  die "files that ship with FamilyDB were changed here, and the upgrade would overwrite them" \
+      "Nothing was changed. The files:" "${files[@]/#/  }" "" \
+      "A change to docker-compose.yml belongs in docker-compose.override.yml: Compose reads it on top of" \
+      "the shipped file, and an upgrade leaves it alone." \
+      "To keep a copy of a change and let the upgrade through:" \
+      "  sudo cp ${TARGET}/FILE ${TARGET}/FILE.mine && sudo git -C ${TARGET} checkout -- FILE" \
+      "To see what was changed:  sudo git -C ${TARGET} diff"
+}
+
+upgrade_finish() { # from the checkout on: the packages or the image, the migrations, the start, the checks, the last line
+  local name="$UPGRADE_NAME" before="$UPGRADE_BEFORE" current="$UPGRADE_CURRENT"
+  if [ "$UPGRADE_FRESH" = 1 ]; then
+    undo_on_failure "upgrade_undo"
+    on_failure_hint "What happens now: the old code is put back and FamilyDB started again (below). Nothing in the database has changed."
+    again_hint "try the upgrade again: sudo bash ${0} upgrade"
+  fi
+  if [ "$DOCKER_MODE" = 1 ]; then
     progress_to 2
-    STEP_QUIET=1 step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
+    require_free_mb "$TARGET" 1500 "building the new image"
+    local id=""
+    [ "$DRY_RUN" = 1 ] || id="$(as_root docker compose --project-directory "$TARGET" images -q bot 2>/dev/null | head -1 || true)"
+    if [ -n "$id" ] && as_root docker image tag "$id" familydb:before-upgrade 2>/dev/null; then UPGRADE_IMAGE_SAVED=1; fi
+    step "Building the new image (the old one keeps running meanwhile)" \
+      as_root docker compose --project-directory "$TARGET" build --pull
+    progress_to 3
+    UPGRADE_STOPPED_AT="$(date +%s)"
+    STEP_QUIET=1 stop_bot
+    UPGRADE_STOPPED=1
+    progress_to 4
+    take_backup "$BACKUP_DIR"
+    [ "$UPGRADE_FRESH" = 1 ] && UPGRADE_BACKUP="$LAST_BACKUP" || UPGRADE_BACKUP="${UPGRADE_BACKUP:-$LAST_BACKUP}"
+    [ "$UPGRADE_FRESH" = 0 ] || pending_write "$name" "$before" "$UPGRADE_BACKUP"
+    upgrade_way_back
+    progress_to 5
+  else
+    progress_to 4
+    [ "$UPGRADE_FRESH" = 0 ] || upgrade_unit "$before"
+    UPGRADE_SYNCED=1
+    if [ -n "$UPGRADE_PACKAGES" ]; then
+      retry 2 "Installing packages: ${UPGRADE_PACKAGES}" uv_sync "$TARGET"
+    else
+      STEP_QUIET=1 retry 2 "Checking the installed packages" uv_sync "$TARGET"
+    fi
+    [ "$DRY_RUN" = 1 ] || as_root chmod -R go-w "$TARGET" 2>>"${LOG_FILE:-/dev/null}" \
+      || warn "Could not take write access to the code away from everyone but its owner."
+    progress_to 5
   fi
 
-  # From here the code is the new one, so a failure is not "nothing was half-done": say what is,
-  # and how to go back or finish. lib/common.sh prints both at the foot of every failure.
+  # From here the database changes: a failure is finished by running this again, or undone by the
+  # rollback, which lib/common.sh prints at the foot of every failure from here on.
+  forget_undo
   local undo back
-  undo="$(rollback_lines "$current" "$before" "$upgrade_backup")"
+  undo="$(rollback_lines "$current" "$before" "$UPGRADE_BACKUP")"
   back="To go back to ${current} instead, database and all:"
   [ -n "$before" ] || back="To put the database from before the upgrade back instead:"
-  on_failure_hint "The upgrade stopped part-way: the code is on ${name}, and the steps after it (dependencies, migrations, restart) are not all done. The bot may be stopped."$'\n'"${back}"$'\n'"${undo}"
+  on_failure_hint "The upgrade stopped part-way: the code is on ${name}, and the steps after it (migrations, restart) are not all done. The bot may be stopped."$'\n'"${back}"$'\n'"${undo}"
   again_hint "finish the upgrade: sudo bash ${0} upgrade"
-
-  # A step that goes as expected is not worth a line: what is said is what moved, and how long the
-  # bot was away.
-  local down_from=$SECONDS
-  progress_to 3
-  STEP_QUIET=1 stop_bot
-  progress_to 4
-  if [ "$DOCKER_MODE" = 1 ]; then
-    step "Rebuilding the image" as_root docker compose --project-directory "$TARGET" build
-  elif [ -n "$UPGRADE_PACKAGES" ]; then
-    retry 2 "Installing packages: ${UPGRADE_PACKAGES}" \
-      as_root env PATH="$SYSTEM_PATH" uv sync --frozen --no-dev --project "$TARGET"
-  else
-    STEP_QUIET=1 retry 2 "Checking the installed packages" \
-      as_root env PATH="$SYSTEM_PATH" uv sync --frozen --no-dev --project "$TARGET"
-  fi
-  [ "$DRY_RUN" = 1 ] || as_root chmod -R go-w "$TARGET" 2>>"${LOG_FILE:-/dev/null}" \
-    || warn "Could not take write access to the code away from everyone but its owner."
-  progress_to 5
   if [ "$UPGRADE_MIGRATIONS" -gt 0 ]; then
     step "Applying ${UPGRADE_MIGRATIONS} new migration$([ "$UPGRADE_MIGRATIONS" = 1 ] || echo s)${UPGRADE_MIGRATION_NAMES:+ (${UPGRADE_MIGRATION_NAMES})}" familydb_cmd db migrate
   else
     STEP_QUIET=1 step "Checking the database is up to date" familydb_cmd db migrate
   fi
-  last_upgrade_write "$before" "$upgrade_backup"
+  last_upgrade_write "$before" "$UPGRADE_BACKUP"
   [ "$DRY_RUN" = 1 ] || as_root rm -f "$UPGRADE_PENDING"
+  progress_to 6
+  # The upgrade is done once the migrations are: a start that fails is said as that, not as an
+  # upgrade to finish, and running upgrade again would find nothing to do.
+  on_failure_hint "The upgrade itself is done: the code is on ${name} and the database is migrated. FamilyDB did not start, and its log says why: sudo bash ${0} logs"
+  again_hint "start it: sudo bash ${0} restart"
+  STEP_QUIET=1 QUIET_START=1 start_bot
   on_failure_hint ""
   again_hint ""
-  progress_to 6
-  STEP_QUIET=1 QUIET_START=1 start_bot
-  local down=$((SECONDS - down_from))
+  local now down
+  now="$(date +%s)"
+  down=$(( now - ${UPGRADE_STOPPED_AT:-$now} ))
   progress_to 7
   [ "${BOT_STARTED:-}" != 1 ] || ok "Restarted: the page answers (the bot was away for $(fmt_secs "$down"))"
 
@@ -1355,11 +1466,11 @@ cmd_upgrade() {
     warn "The check printed nothing, so it may not have run. Run it yourself: sudo ${0} check"
   else
     # A problem that was there before is not the upgrade's: it is shown, and it is not blamed on it.
-    new_failing="$(comm -13 <(printf '%s\n' "$before_failing") <(failing_checks "$_OUT" | sort) | sed '/^$/d')"
+    new_failing="$(comm -13 <(printf '%s\n' "$UPGRADE_BEFORE_FAILING") <(failing_checks "$_OUT" | sort) | sed '/^$/d')"
     local was=""
-    if [ -n "$before_counts" ] && [ "$before_counts" != "${DOCTOR_FINE} ${DOCTOR_WARN} ${DOCTOR_BAD}" ]; then
-      was="  ${DIM}(was ${before_counts// / ${S_DOT} })${OFF}"
-    elif [ -n "$before_counts" ] && [ "$DOCTOR_BAD" -gt 0 ]; then
+    if [ -n "$UPGRADE_BEFORE_COUNTS" ] && [ "$UPGRADE_BEFORE_COUNTS" != "${DOCTOR_FINE} ${DOCTOR_WARN} ${DOCTOR_BAD}" ]; then
+      was="  ${DIM}(was ${UPGRADE_BEFORE_COUNTS// / ${S_DOT} })${OFF}"
+    elif [ -n "$UPGRADE_BEFORE_COUNTS" ] && [ "$DOCTOR_BAD" -gt 0 ]; then
       was="  ${DIM}(the same before the upgrade)${OFF}"
     fi
     if [ "$DOCTOR_BAD" -gt 0 ]; then
@@ -1392,8 +1503,174 @@ cmd_upgrade() {
   # What puts it back was printed before anything changed; it is said again only when it may be needed.
   if [ "$trouble" = 1 ]; then
     after "To go back to ${current}"
-    rollback_lines "$current" "$before" "$upgrade_backup" | show_commands
+    rollback_lines "$current" "$before" "$UPGRADE_BACKUP" | show_commands
   fi
+}
+
+cmd_upgrade() {
+  if [ "$UPGRADE_RESUME" = 1 ]; then
+    # The old code's script fetched, asked and moved the code; this one, which came with the new
+    # code, does the rest. What it was handed is checked before it is believed.
+    [ -n "$UPGRADE_NAME" ] && [ -n "$(pending_get target)" ] \
+      || die "--resume is for the upgrade itself to use: nothing here is half-way through one" \
+             "To upgrade: sudo bash ${0} upgrade"
+    progress_total 8
+    upgrade_finish
+    return 0
+  fi
+  [ -d "${TARGET}/.git" ] || die "${TARGET} is not a git checkout, so there is nothing to pull" \
+    "Upgrade by unpacking a new copy over it, keeping .env and data/."
+
+  local current
+  current="$(describe_ref HEAD)"
+
+  # A private repository needs a credential here. bootstrap.sh leaves the deploy key wired up
+  # when one was used, and deliberately does not write a token down, so say which case this is.
+  # Fetching only moves the remote's branches in the checkout: nothing the bot runs changes yet,
+  # and it is what lets the screen say what this upgrade would change before it is asked. Tags are
+  # taken as the remote has them, moved or not, and git is told never to ask for a password here,
+  # where a question under a spinner would wait forever.
+  # shellcheck disable=SC2034  # lib/common.sh names this in its failure report.
+  FAILED_STEP="fetching the newest code"
+  local -a fetch_from=(origin)
+  local origin_url
+  origin_url="$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || true)"
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    case "$origin_url" in
+      https://github.com/*)
+        # Used for this fetch only, as bootstrap did for the clone: never written down.
+        fetch_from=("https://x-access-token:${GITHUB_TOKEN}@github.com/${origin_url#https://github.com/}"
+                    "+refs/heads/*:refs/remotes/origin/*")
+        note "Fetching over HTTPS with the token from the environment." ;;
+      *) warn "GITHUB_TOKEN only helps with an https://github.com/... remote; this one is ${origin_url}" ;;
+    esac
+  fi
+  _capture "Fetching the newest code from ${origin_url:-the git remote}" \
+    as_root env GIT_TERMINAL_PROMPT=0 git -C "$TARGET" fetch --tags --force --quiet "${fetch_from[@]}"
+  [ -z "$_OUT" ] || printf '%s\n' "$_OUT" >>"${LOG_FILE:-/dev/null}"
+  [ "$_STATUS" = 0 ] || upgrade_fetch_failed "$_OUT"
+  # shellcheck disable=SC2034  # cleared so a later failure does not name this step.
+  FAILED_STEP=""
+  log_line "fetched ${origin_url:-the git remote}"
+  refresh_default_branch "$TARGET" "${fetch_from[0]}"
+
+  local kind name target before pending_backup
+  read -r kind name <<<"$(wanted_version "$TARGET")"
+  case "$kind" in
+    branch) target="origin/${name}" ;;
+    tag) target="$name" ;;
+    *) die "there is nothing to upgrade to: the remote has no default branch and no release" ;;
+  esac
+  before="$(as_root git -C "$TARGET" rev-parse HEAD 2>/dev/null || echo unknown)"
+  # An earlier upgrade that stopped part-way remembers what to go back to: that, not the state
+  # this run found.
+  pending_backup="$(pending_get backup)"
+  if [ -n "$(pending_get before)" ]; then
+    before="$(pending_get before)"
+    current="$(describe_ref "$before")"
+  fi
+
+  local unfinished="" fresh=0
+  if as_root git -C "$TARGET" merge-base --is-ancestor "$target" HEAD; then
+    # On the code is not the same as upgraded: a stop after the checkout leaves the code here and
+    # the dependencies, the migrations or the restart undone.
+    local have newest
+    have="$(database_version)"
+    newest="$(newest_migration)"
+    if [ -n "$(pending_get target)" ]; then
+      unfinished="an earlier upgrade to $(pending_get target) stopped after moving the code; its dependencies, migrations or restart may not have run"
+    elif [ -n "$have" ] && [ -n "$newest" ] && [ "$have" -lt "$newest" ]; then
+      unfinished="the database is at migration ${have} and this code has up to ${newest}"
+    fi
+    if [ -z "$unfinished" ]; then
+      show_versions HEAD HEAD
+      # Up to date is not the same as running: after an upgrade whose restart failed, this is
+      # the state, and "nothing to do" would be the wrong answer.
+      if bot_expected && ! bot_running; then
+        finish warn "Already up to date with ${name}, but FamilyDB is not running"
+        hint "Start it, and if it does not come back, let the doctor look:"
+        cmdline "sudo bash ${0} restart"
+        cmdline "sudo bash ${0} doctor"
+      else
+        finish ok "Already up to date with ${name}, and the database is migrated. Nothing to do."
+      fi
+      return 0
+    fi
+    warn "The code is already on ${name}, but it is not upgraded: ${unfinished}."
+    say "Finishing it now."
+    # Nothing recorded the code it came from, so only the database can be put back.
+    [ -n "$(pending_get before)" ] || before=""
+    UPGRADE_FOLLOWING=""
+    show_versions "${before:-HEAD}" HEAD
+    UPGRADE_MIGRATIONS=0
+    UPGRADE_PACKAGES=""
+    [ -z "$have" ] || [ -z "$newest" ] || UPGRADE_MIGRATIONS=$((newest - have))
+    [ "$UPGRADE_MIGRATIONS" -ge 0 ] || UPGRADE_MIGRATIONS=0
+    printf '\n'
+  else
+    # Only forward. A release tag older than what is installed would take the database back past
+    # migrations it has already run; a branch that lacks what is here would lose it.
+    moves_forward "$TARGET" "$target" \
+      || die "${name} does not contain what is installed now (${current}), so moving to it would go backwards" \
+             "Nothing was changed. To choose a version yourself: sudo git -C ${TARGET} checkout NAME"
+    upgrade_refuses_edited_files
+    fresh=1
+    UPGRADE_FOLLOWING=""
+    [ "$kind" != branch ] || UPGRADE_FOLLOWING="$name"
+    upgrade_changes HEAD "$target"
+  fi
+
+  approve "Upgrade now?" yes || { say "Nothing was changed."; exit 0; }
+
+  UPGRADE_NAME="$name"; UPGRADE_REF="$target"; UPGRADE_BEFORE="$before"; UPGRADE_CURRENT="$current"
+  UPGRADE_FRESH="$fresh"
+  progress_total 8
+  # What is already wrong before anything changes, so that what the check says afterwards is about
+  # the upgrade and not about the install it found.
+  _capture "Checking the install as it is" familydb_cmd doctor
+  show_doctor count "$_OUT"
+  UPGRADE_BEFORE_FAILING="$(failing_checks "$_OUT")"
+  UPGRADE_BEFORE_COUNTS="${DOCTOR_FINE} ${DOCTOR_WARN} ${DOCTOR_BAD}"
+  [ -n "$_OUT" ] || UPGRADE_BEFORE_COUNTS=""
+  progress_to 1
+
+  if [ "$DOCKER_MODE" = 1 ]; then
+    # The old containers keep running while the code moves and the image is built from it: a
+    # container runs the copy inside its image, not the checkout. The backup is taken once they
+    # are stopped, in upgrade_finish, so nothing told to the bot meanwhile is missed by it.
+    if [ "$fresh" = 1 ]; then
+      pending_write "$name" "$before" ""
+      undo_on_failure "upgrade_undo"
+      STEP_QUIET=1 step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
+      UPGRADE_MOVED=1
+      upgrade_handoff
+    fi
+    upgrade_finish
+    return 0
+  fi
+
+  # A virtualenv install runs the checkout itself, so the bot is stopped before a file of it moves,
+  # and the backup is taken once it is, so that nothing said to it meanwhile is missed by it.
+  require_free_mb "$TARGET" 600 "installing the new packages"
+  UPGRADE_STOPPED_AT="$(date +%s)"
+  STEP_QUIET=1 stop_bot
+  UPGRADE_STOPPED=1
+  [ "$fresh" = 0 ] || undo_on_failure "upgrade_undo"
+  progress_to 2
+  take_backup "$BACKUP_DIR"
+  # The backup from a run that stopped is the right one only when the code had moved by then and
+  # its migrations may have run; a run that stopped before that left the database as it was.
+  UPGRADE_BACKUP="$LAST_BACKUP"
+  [ "$fresh" = 1 ] || UPGRADE_BACKUP="${pending_backup:-$LAST_BACKUP}"
+  progress_to 3
+  upgrade_way_back
+  if [ "$fresh" = 1 ]; then
+    pending_write "$name" "$before" "$UPGRADE_BACKUP"
+    STEP_QUIET=1 step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
+    UPGRADE_MOVED=1
+    upgrade_handoff
+  fi
+  upgrade_finish
 }
 
 cmd_logs() {
@@ -1430,12 +1707,12 @@ cmd_schedule_backups() {
   local line command quoted target_q dir_q
   printf -v target_q '%q' "$TARGET"
   printf -v dir_q '%q' "$BACKUP_DIR"
-  command="/bin/bash ${target_q}/scripts/maintain.sh backup --target ${target_q} --backup-dir ${dir_q} --yes && find ${dir_q} -maxdepth 1 -name 'familydb-*.sqlite3' -mtime +${KEEP_DAYS} -delete"
+  command="/bin/bash ${target_q}/scripts/maintain.sh backup --target ${target_q} --backup-dir ${dir_q} --keep-days ${KEEP_DAYS} --yes"
   printf -v quoted '%q' "$command"
   line="15 3 * * * /bin/bash -c ${quoted} # familydb-maintain-backup"
   kv "Schedule" "every night at 03:15, in root's crontab"
   kv "Folder" "$BACKUP_DIR"
-  kv "Keeps" "${KEEP_DAYS} days; old ones are pruned only after a backup has succeeded"
+  kv "Keeps" "${KEEP_DAYS} days; old ones are pruned only after a backup has succeeded, never the one the last upgrade would go back to"
   if [ "$DRY_RUN" = 1 ]; then
     printf '  %s%s%s\n' "$DIM" "$line" "$OFF"
     finish ok "Dry run"
@@ -1473,20 +1750,21 @@ cmd_schedule_backups() {
   cmdline "sudo crontab -u root -l"
 }
 
+# A command that changes the install holds the lock while it runs; the readers take none.
 case "$COMMAND" in
   status)           cmd_status ;;
   check)            intro "Check"; cmd_check ;;
-  doctor)           intro "Doctor"; cmd_doctor ;;
-  password)         intro "New password"; cmd_password ;;
-  https)            intro "HTTPS"; cmd_https ;;
-  port)             intro "Port"; cmd_port ;;
-  backup)           intro "Backup"; cmd_backup ;;
-  restore)          intro "Restore"; cmd_restore ;;
-  upgrade)          intro "Upgrade"; cmd_upgrade ;;
+  doctor)           take_lock doctor; intro "Doctor"; cmd_doctor ;;
+  password)         take_lock password; intro "New password"; cmd_password ;;
+  https)            take_lock https; intro "HTTPS"; cmd_https ;;
+  port)             take_lock port; intro "Port"; cmd_port ;;
+  backup)           take_lock backup; intro "Backup"; cmd_backup ;;
+  restore)          take_lock restore; intro "Restore"; cmd_restore ;;
+  upgrade)          take_lock upgrade; [ "$UPGRADE_RESUME" = 1 ] || intro "Upgrade"; cmd_upgrade ;;
   logs)             cmd_logs ;;
-  restart)          intro "Restart"; cmd_restart ;;
-  rescue)           intro "Rescue"; cmd_rescue ;;
-  schedule-backups) intro "Nightly backups"; cmd_schedule_backups ;;
+  restart)          take_lock restart; intro "Restart"; cmd_restart ;;
+  rescue)           take_lock rescue; intro "Rescue"; cmd_rescue ;;
+  schedule-backups) take_lock schedule-backups; intro "Nightly backups"; cmd_schedule_backups ;;
   -h|--help|help)   usage ;;
   *) usage >&2; die "unknown command: ${COMMAND}" ;;
 esac

@@ -31,6 +31,14 @@ GIT_ENV = {
     "GIT_AUTHOR_EMAIL": "t@example.com",
     "GIT_COMMITTER_NAME": "t",
     "GIT_COMMITTER_EMAIL": "t@example.com",
+    # git 2.46 and later hand a commit's or a fetch's housekeeping to a background process that
+    # holds .git/maintenance.lock for a moment after the command returns; a test that then removes
+    # or inspects .git races it. Every git run here, by a test or by maintain.sh, keeps it in front.
+    "GIT_CONFIG_COUNT": "2",
+    "GIT_CONFIG_KEY_0": "maintenance.autoDetach",
+    "GIT_CONFIG_VALUE_0": "false",
+    "GIT_CONFIG_KEY_1": "gc.autoDetach",
+    "GIT_CONFIG_VALUE_1": "false",
 }
 
 HARNESS = r"""
@@ -39,12 +47,32 @@ set -euo pipefail
 enable_failure_reporting
 LEDGER_DIR="$WORK/ledger"
 as_root() { "$@"; }
-take_backup() { echo BACKUP; LAST_BACKUP="$WORK/backups/familydb-1.sqlite3"; }
-stop_bot() { echo STOPPING; }
-start_bot() { echo STARTING; }
+# Each stand-in says what it did on the screen and, because a step's output goes to the log and
+# not the screen, in $WORK/sequence too, which is where the order of things is read from.
+did() { echo "$1"; echo "$1" >> "$WORK/sequence"; }
+take_backup() { did BACKUP; LAST_BACKUP="$WORK/backups/familydb-1.sqlite3"; }
+stop_bot() { did STOPPING; }
+start_bot() { did STARTING; }
 retry() {
-  echo SYNC
-  if [ "${FAIL_SYNC:-0}" = 1 ]; then die "Installing the dependencies failed"; fi
+  did SYNC
+  # FAIL_SYNC fails the first sync only: the one that puts the old packages back then works.
+  if [ "${FAIL_SYNC:-0}" = 1 ] && [ ! -f "$WORK/sync-failed" ]; then
+    touch "$WORK/sync-failed"
+    die "Installing the dependencies failed"
+  fi
+}
+SERVICE_UNIT="${FAMILYDB_SERVICE_UNIT:-/nonexistent/familydb.service}"
+SERVICE_USER=familydb
+service_installed() { [ -f "$SERVICE_UNIT" ]; }
+service_active() { [ "${SERVICE_UP:-1}" = 1 ]; }
+systemctl() { did "SYSTEMCTL $*"; }
+docker() {
+  did "DOCKER $*"
+  case "$*" in
+    *" ps "*) echo "bot ${CONTAINER_STATE:-running}" ;;
+    *"images -q"*) echo abc123 ;;
+    *" build"*) [ "${FAIL_DOCKER_BUILD:-0}" = 0 ] || return 1 ;;
+  esac
 }
 familydb_cmd() {
   case "$1" in
@@ -54,7 +82,7 @@ familydb_cmd() {
       if [ "$seen" = 0 ]; then printf '%b' "${DOCTOR_BEFORE-✓ settings: loaded\n\nEverything is set up.\n}"
       else printf '%b' "${DOCTOR_AFTER-✓ settings: loaded\n\nEverything is set up.\n}"; fi ;;
     db)
-      echo MIGRATE
+      did MIGRATE
       [ "${FAIL_MIGRATE:-0}" = 0 ] || return 1
       python3 -c "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('insert into schema_version values (?, ?)', (int(sys.argv[2]), 'now')); c.commit()" "$DB" "$NEWEST" ;;
   esac
@@ -84,13 +112,14 @@ def _git(cwd: Path, *args: str) -> str:
 class Server:
     """A remote with two commits, a checkout one behind it, and a database one migration behind."""
 
-    def __init__(self, tmp: Path, *, rich: bool = False):
+    def __init__(self, tmp: Path, *, rich: bool = False, released: bool = False):
         self.tmp = tmp
         remote = tmp / "remote.git"
         seed = tmp / "seed"
         _git(tmp, "init", "-q", "--bare", "-b", "main", str(remote))
         _git(tmp, "init", "-q", "-b", "main", str(seed))
-        (seed / "CHANGELOG.md").write_text("# Changelog\n\n## v9.9.9 — in progress\n\n### New\n\n")
+        heading = "v9.9.9 — beta (2026-10-09)" if released else "v9.9.9 — in progress"
+        (seed / "CHANGELOG.md").write_text(f"# Changelog\n\n## {heading}\n\n### New\n\n")
         migrations = seed / "src/familydb/store/migrations"
         migrations.mkdir(parents=True)
         (migrations / "0001_first.sql").write_text("select 1;\n")
@@ -101,8 +130,10 @@ class Server:
             (seed / "deploy/familydb.service").write_text("[Service]\nUser=familydb\n")
         _git(seed, "add", "-A")
         _git(seed, "commit", "-q", "-m", "one")
+        if released:
+            _git(seed, "tag", "v9.9.9")
         _git(seed, "remote", "add", "origin", str(remote))
-        _git(seed, "push", "-q", "origin", "main")
+        _git(seed, "push", "-q", "--tags", "origin", "main")
         self.target = tmp / "target"
         _git(tmp, "clone", "-q", str(remote), str(self.target))
         self.before = _git(self.target, "rev-parse", "HEAD")
@@ -130,6 +161,13 @@ class Server:
             conn.execute("insert into schema_version values (1, 'then')")
             conn.commit()
         self.marker = tmp / "ledger/upgrade-pending"
+        self.remote = remote
+        self.seed = seed
+
+    def sequence(self) -> list[str]:
+        """What the stand-ins did, in order, whether it reached the screen or only the log."""
+        path = self.tmp / "sequence"
+        return path.read_text().splitlines() if path.exists() else []
 
     def version(self) -> int:
         with closing(sqlite3.connect(self.db)) as conn:
@@ -145,7 +183,7 @@ class Server:
         return subprocess.run(
             [BASH, path.as_posix()],
             env={
-                **os.environ,
+                **GIT_ENV,
                 "ROOT": ROOT.as_posix(),
                 "WORK": self.tmp.as_posix(),
                 "TARGET": self.target.as_posix(),
@@ -165,22 +203,178 @@ class Server:
         )
 
 
-def test_rollback_is_printed_before_the_bot_is_stopped(tmp_path):
+def test_the_bot_is_stopped_before_the_code_moves_and_the_way_back_is_printed_before_it(tmp_path):
+    """A running bot would pick up new files as they land; a backup taken once it is stopped
+    misses nothing said to it meanwhile; and the way back is on the screen before the code moves."""
     server = Server(tmp_path)
     result = server.upgrade()
     assert result.returncode == 0, result.stdout + result.stderr
+    out = result.stdout
     command = f"checkout --quiet --detach {server.before}"
-    assert command in result.stdout
-    assert "familydb-1.sqlite3" in result.stdout
-    assert result.stdout.index(command) < result.stdout.index("STOPPING")
+    assert "familydb-1.sqlite3" in out
+    assert out.index("STOPPING") < out.index("BACKUP") < out.index(command) < out.index("SYNC")
+    assert server.sequence() == ["STOPPING", "BACKUP", "SYNC", "MIGRATE", "STARTING"]
     assert server.version() == 2
     assert not server.marker.exists()
 
 
-@pytest.mark.parametrize("failing", ["FAIL_MIGRATE", "FAIL_SYNC"])
-def test_a_stop_after_the_checkout_says_how_to_go_back_and_how_to_finish(tmp_path, failing):
+def test_a_failure_before_the_migrations_puts_the_old_code_back_and_starts_the_bot_again(tmp_path):
     server = Server(tmp_path)
-    result = server.upgrade(**{failing: "1"})
+    result = server.upgrade(FAIL_SYNC="1")
+    assert result.returncode != 0
+    assert _git(server.target, "rev-parse", "HEAD") == server.before
+    assert "Putting things back" in result.stderr
+    assert "the code is back on" in result.stderr
+    assert "its packages as they were" in result.stderr
+    assert "FamilyDB is running again" in result.stderr
+    assert server.sequence()[-1] == "STARTING"
+    assert not server.marker.exists(), "nothing is left half-done to finish"
+    assert server.version() == 1
+    assert "try the upgrade again" in result.stderr
+    assert "Nothing in the database has changed" in result.stderr
+
+
+def test_on_docker_the_image_is_built_while_the_old_one_still_runs(tmp_path):
+    server = Server(tmp_path)
+    result = server.upgrade(DOCKER_MODE="1")
+    assert result.returncode == 0, result.stdout + result.stderr
+    done = server.sequence()
+    build = next(i for i, line in enumerate(done) if "build --pull" in line)
+    assert build < done.index("STOPPING") < done.index("BACKUP") < done.index("MIGRATE")
+    assert "SYNC" not in done
+    assert result.stdout.index("BACKUP") < result.stdout.index("To go back:")
+    assert server.version() == 2
+    assert not server.marker.exists()
+
+
+def test_on_docker_a_build_that_fails_leaves_the_old_containers_running_on_the_old_code(tmp_path):
+    server = Server(tmp_path)
+    result = server.upgrade(DOCKER_MODE="1", FAIL_DOCKER_BUILD="1")
+    assert result.returncode != 0
+    assert _git(server.target, "rev-parse", "HEAD") == server.before
+    assert "STOPPING" not in server.sequence()
+    assert not server.marker.exists()
+    assert "the code is back on" in result.stderr and "the image as it was" in result.stderr
+
+
+def test_a_default_branch_renamed_on_the_remote_is_followed(tmp_path):
+    """A clone writes origin/HEAD once and a fetch never moves it: the remote is asked each time."""
+    server = Server(tmp_path)
+    _git(server.seed, "checkout", "-q", "-b", "trunk")
+    (server.seed / "NEW").write_text("x\n")
+    _git(server.seed, "add", "-A")
+    _git(server.seed, "commit", "-qm", "three")
+    _git(server.seed, "push", "-q", "origin", "trunk")
+    _git(server.remote, "symbolic-ref", "HEAD", "refs/heads/trunk")
+    _git(server.remote, "branch", "-D", "main")
+    result = server.upgrade()
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _git(server.target, "rev-parse", "HEAD") == _git(server.seed, "rev-parse", "trunk")
+    assert "on trunk" in result.stdout
+
+
+def test_a_release_tag_moved_on_the_remote_does_not_stop_the_fetch(tmp_path):
+    server = Server(tmp_path, released=True)  # v9.9.9 on the first commit, in the clone too
+    _git(server.seed, "tag", "-f", "v9.9.9")  # the remote moved it to the second
+    _git(server.seed, "push", "-q", "-f", "origin", "refs/tags/v9.9.9")
+    result = server.upgrade()
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _git(server.target, "rev-parse", "v9.9.9") == _git(server.seed, "rev-parse", "HEAD")
+
+
+def test_a_fetch_that_fails_says_what_git_said_and_what_it_means(tmp_path):
+    server = Server(tmp_path)
+    _git(server.target, "remote", "set-url", "origin", str(tmp_path / "gone.git"))
+    result = server.upgrade()
+    assert result.returncode != 0
+    assert "there is no repository at" in result.stderr
+    assert "does not appear to be a git repository" in result.stderr  # git's words, not a guess
+    assert "private repository" not in result.stderr
+    assert "STOPPING" not in result.stdout
+
+
+def test_a_shipped_file_changed_here_stops_the_upgrade_before_anything_is_touched(tmp_path):
+    server = Server(tmp_path)
+    (server.target / "CHANGELOG.md").write_text("my notes\n")
+    result = server.upgrade()
+    assert result.returncode != 0
+    assert "CHANGELOG.md" in result.stderr
+    assert "docker-compose.override.yml" in result.stderr
+    assert server.sequence() == []
+    assert not server.marker.exists()
+    assert _git(server.target, "rev-parse", "HEAD") == server.before
+
+
+def test_up_to_date_still_notices_the_bot_is_not_running(tmp_path):
+    """After an upgrade whose restart failed, this is the state; "nothing to do" would be wrong."""
+    server = Server(tmp_path)
+    assert server.upgrade().returncode == 0
+    unit = tmp_path / "familydb.service"
+    unit.write_text("[Service]\n")
+    again = server.upgrade(FAMILYDB_SERVICE_UNIT=str(unit), SERVICE_UP="0")
+    assert "[WARN] Already up to date" in again.stdout and "not running" in again.stdout
+    assert "restart" in again.stdout
+    fine = server.upgrade(FAMILYDB_SERVICE_UNIT=str(unit), SERVICE_UP="1")
+    assert "[ OK ] Already up to date" in fine.stdout
+
+
+def test_a_service_file_as_the_installer_wrote_it_follows_the_new_version(tmp_path):
+    server = Server(tmp_path, rich=True)  # deploy/familydb.service gains Nice=5
+    unit = tmp_path / "familydb.service"
+    unit.write_text("[Service]\nUser=familydb\n")  # exactly what the old version's installer wrote
+    result = server.upgrade(FAMILYDB_SERVICE_UNIT=str(unit))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "the installed one is updated to match" in " ".join(result.stdout.split())
+    assert unit.read_text() == "[Service]\nUser=familydb\nNice=5\n"
+    assert (
+        tmp_path / "familydb.service.before-upgrade"
+    ).read_text() == "[Service]\nUser=familydb\n"
+    assert "SYSTEMCTL daemon-reload" in server.sequence()
+
+
+def test_a_service_file_edited_by_hand_is_left_alone(tmp_path):
+    server = Server(tmp_path, rich=True)
+    unit = tmp_path / "familydb.service"
+    unit.write_text("[Service]\nUser=familydb\nNice=10\n")
+    result = server.upgrade(FAMILYDB_SERVICE_UNIT=str(unit))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "edited by hand" in " ".join(result.stdout.split())
+    assert unit.read_text() == "[Service]\nUser=familydb\nNice=10\n"
+    assert not (tmp_path / "familydb.service.before-upgrade").exists()
+
+
+def test_a_run_that_stopped_before_the_code_moved_goes_back_to_the_fresh_backup(tmp_path):
+    """The backup of an earlier run is the right one only when that run had moved the code and its
+    migrations may have run; before that, the database was untouched and the new backup is newer."""
+    server = Server(tmp_path)
+    server.marker.parent.mkdir(parents=True, exist_ok=True)
+    server.marker.write_text(
+        f"target=main\nbefore={server.before}\nbackup=/old/familydb-0.sqlite3\n"
+    )
+    result = server.upgrade()
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "familydb-1.sqlite3" in result.stdout
+    assert "familydb-0.sqlite3" not in result.stdout
+
+
+def test_an_upgrade_brings_in_work_merged_after_the_release_with_no_new_version(tmp_path):
+    """The newest version is tagged and dated, and the branch has a commit past it: the upgrade
+    goes to that commit rather than finding the release it is already on."""
+    server = Server(tmp_path, released=True)
+    assert _git(server.target, "describe", "--tags", "--exact-match", "HEAD") == "v9.9.9"
+    result = server.upgrade()
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Already up to date" not in result.stdout
+    assert _git(server.target, "rev-parse", "HEAD") == _git(
+        server.target, "rev-parse", "origin/main"
+    )
+    assert _git(server.target, "rev-parse", "HEAD") != server.before
+    assert server.version() == 2
+
+
+def test_a_stop_in_the_migrations_says_how_to_go_back_and_how_to_finish(tmp_path):
+    server = Server(tmp_path)
+    result = server.upgrade(FAIL_MIGRATE="1")
     assert result.returncode != 0
     assert "Nothing was half-done" not in result.stderr
     assert "The upgrade stopped part-way" in result.stderr
@@ -225,15 +419,18 @@ def test_the_screen_says_what_this_upgrade_changes_before_it_asks_and_takes_no_b
     tmp_path,
 ):
     server = Server(tmp_path, rich=True)
-    result = server.upgrade()
+    unit = tmp_path / "familydb.service"
+    unit.write_text("[Service]\nUser=familydb\n")
+    result = server.upgrade(FAMILYDB_SERVICE_UNIT=str(unit))
     assert result.returncode == 0, result.stdout + result.stderr
     out = result.stdout
     order = [
         out.index("1 commit (#64)"),
         out.index("Database"),
-        out.index("BACKUP"),  # only once it was agreed
+        out.index("STOPPING"),  # only once it was agreed
+        out.index("BACKUP"),
         out.index("To go back:"),
-        out.index("STOPPING"),
+        out.index("SYNC"),
     ]
     assert order == sorted(order)
     flat = " ".join(out.split())

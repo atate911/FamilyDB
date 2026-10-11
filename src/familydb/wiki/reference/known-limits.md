@@ -32,10 +32,6 @@ If the calendar is no longer shared with the service account or was deleted, the
 
 ## Server
 
-### An upgrade does not rewrite the service file
-
-`maintain.sh upgrade` leaves the systemd service file as it was. After a release that changes the unit, copy the new one from `deploy/` by hand; see [The server](/wiki/operations/host#the-service).
-
 ### The web page can fail to start while the assistant runs
 
 If the web page cannot start (the port is taken, or no password is set), FamilyDB logs the reason and keeps answering on Telegram. Read the log with `maintain.sh logs`; see [Logs](/wiki/operations/diagnostics#logs).

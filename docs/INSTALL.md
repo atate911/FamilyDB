@@ -175,11 +175,11 @@ The bot runs as its own account, which on Debian and Ubuntu cannot enter anyone'
 - `--dry-run` says what would happen and changes nothing.
 - `--local-only` keeps the page off the internet ([below](#keeping-the-page-off-the-internet)).
 - `--mode docker` runs it in Docker instead of a virtualenv.
-- `--target DIR` and `--user NAME` move the install and rename its account. The name is used for the account, the files it owns and the service unit, and is kept in `/var/lib/familydb-install/service-user`, so `maintain.sh` and `uninstall.sh` find it later (pass `--user` to them if that file is gone).
+- `--target DIR` and `--user NAME` move the install and rename its account. The name is used for the account and the files it owns (the service unit is always `familydb.service`, with that name as its `User=`), and is kept in `/var/lib/familydb-install/service-user`, so `maintain.sh` and `uninstall.sh` find it later (pass `--user` to them if that file is gone).
 - `--ref NAME` installs a particular tag, branch or commit.
 - `--yes` takes every default, for a scripted build.
 
-Without `--ref`, the version depends on `CHANGELOG.md`: while the newest version is marked "in progress" it installs the default branch; once that has a date, the newest release tag.
+Without `--ref`, it installs the default branch, the same code an upgrade follows.
 </details>
 
 ## A domain name instead of the address
@@ -346,7 +346,7 @@ sudo /opt/familydb/scripts/maintain.sh restore FILE       # stops it, puts it ba
 sudo /opt/familydb/scripts/maintain.sh upgrade            # newer code, backup taken first
 ```
 
-`restore` and `upgrade` each take a backup first, so either can be undone. Use `upgrade`, not `git pull` (which fails on the detached commit an upgrade leaves). RUNBOOK section 8 says what it does and which version it moves to.
+`restore` and `upgrade` each take a backup first, so either can be undone, and an upgrade that fails before its migrations undoes itself. Use `upgrade`, not `git pull` (which fails on the detached commit an upgrade leaves). RUNBOOK section 8 says what it does and which version it moves to. Keep a change to `docker-compose.yml` in `docker-compose.override.yml`: an upgrade refuses to overwrite a shipped file you changed.
 
 **Upgrades on a private repository.** `upgrade` fetches from `origin`, which needs a credential.
 

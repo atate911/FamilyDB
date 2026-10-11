@@ -491,9 +491,9 @@ PY
     missing="$(printf '%s\n' "$_DC_OUT" | sed -n 's/^MISSING //p')"; differ="$(printf '%s\n' "$_DC_OUT" | sed -n 's/^DIFFER //p')"
     if [ -n "$missing" ]; then
       doctor_row bad "packages" "not installed: ${missing}; the program fails at import" \
-        "sudo uv sync --frozen --no-dev --project ${TARGET}   # or: sudo ${0} rescue wont-start"
+        "$(uv_sync_line "$TARGET")   # or: sudo ${0} rescue wont-start"
     elif [ -n "$differ" ]; then
-      doctor_row warn "packages" "differ from uv.lock: ${differ}" "sudo uv sync --frozen --no-dev --project ${TARGET}"
+      doctor_row warn "packages" "differ from uv.lock: ${differ}" "$(uv_sync_line "$TARGET")"
     else
       doctor_row ok "packages" "every dependency is installed at the version uv.lock names"
     fi

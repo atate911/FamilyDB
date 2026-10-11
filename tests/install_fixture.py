@@ -178,6 +178,21 @@ def _write(path: Path, text: str, mode: int = 0o755) -> Path:
     return path
 
 
+# An identity, and no background housekeeping (see the fixture's environment): a commit's or a
+# fetch's `git maintenance run --auto` detaching with .git/maintenance.lock held would race a test
+# that removes .git the moment the command returns, as it does on a runner with git 2.46 or later.
+GIT_FLAGS = (
+    "-c",
+    "user.name=t",
+    "-c",
+    "user.email=t@t",
+    "-c",
+    "maintenance.autoDetach=false",
+    "-c",
+    "gc.autoDetach=false",
+)
+
+
 def healthy_install(tmp_path: Path, *, docker: bool = False) -> tuple[Path, dict[str, str]]:
     """An install that `maintain.sh check` finds nothing wrong with, and the environment to run it in."""
     target = tmp_path / "install"
@@ -208,7 +223,7 @@ def healthy_install(tmp_path: Path, *, docker: bool = False) -> tuple[Path, dict
     shutil.copy(data / "familydb.sqlite3", backups / "familydb-20260914030000.sqlite3")
     (backups / "familydb-20260914030000.sqlite3").chmod(0o600)
 
-    git = ["git", "-C", str(target), "-c", "user.name=t", "-c", "user.email=t@t"]
+    git = ["git", "-C", str(target), *GIT_FLAGS]
     subprocess.run([*git, "init", "-q", "-b", "main"], check=True)
     subprocess.run([*git, "remote", "add", "origin", "git@github.com:owner/repo.git"], check=True)
     # What an install tracks is the code, not what the install makes.
@@ -239,7 +254,9 @@ def healthy_install(tmp_path: Path, *, docker: bool = False) -> tuple[Path, dict
     meminfo = tmp_path / "meminfo"
     meminfo.write_text("MemTotal: 4096000 kB\nMemAvailable: 2048000 kB\nSwapTotal: 1024000 kB\n")
     if docker:
-        (venv / "familydb").unlink()
+        # A Docker install has no virtualenv at all: one with a .venv, however broken, is a
+        # virtualenv install that needs mending, and the compose file ships with the code.
+        shutil.rmtree(target / ".venv")
         shutil.copy(ROOT / "docker-compose.yml", target / "docker-compose.yml")
     env_path = f"{stubs}{os.pathsep}{os.environ['PATH']}"
     env = {
@@ -254,6 +271,14 @@ def healthy_install(tmp_path: Path, *, docker: bool = False) -> tuple[Path, dict
         "TMPDIR": str(tmp_path),
         "HOME": str(tmp_path),
         "GITHUB_TOKEN": "",
+        # git 2.46 and later hand a commit's or a fetch's housekeeping to a background process that
+        # holds .git/maintenance.lock for a moment after the command returns; a test that then removes
+        # or inspects .git races it. Every git run here, by a test or by maintain.sh, keeps it in front.
+        "GIT_CONFIG_COUNT": "2",
+        "GIT_CONFIG_KEY_0": "maintenance.autoDetach",
+        "GIT_CONFIG_VALUE_0": "false",
+        "GIT_CONFIG_KEY_1": "gc.autoDetach",
+        "GIT_CONFIG_VALUE_1": "false",
     }
     return target, env
 
@@ -393,7 +418,7 @@ def maintain_on_tty(
 
 def git(target: Path, *args: str) -> str:
     done = subprocess.run(
-        ["git", "-C", str(target), "-c", "user.name=t", "-c", "user.email=t@t", *args],
+        ["git", "-C", str(target), *GIT_FLAGS, *args],
         capture_output=True,
         text=True,
         check=True,

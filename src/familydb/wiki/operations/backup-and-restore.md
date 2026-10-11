@@ -19,9 +19,9 @@ Backup files are mode 600, owned by the `familydb` account (on Docker, the conta
 
 ## The nightly backup
 
-The installer puts one line in root's [crontab](/wiki/reference/glossary#crontab). At 03:15 every night it takes a backup into `/opt/familydb/backups/` and, only if that succeeded, deletes backups more than 14 days old, which in practice means from the fifteenth day. A backup that fails never deletes the good ones. `sudo crontab -u root -l` shows the line; `maintain.sh schedule-backups` puts it back, and `--keep-days N` changes how long backups are kept.
+The installer puts one line in root's [crontab](/wiki/reference/glossary#crontab). At 03:15 every night it takes a backup into `/opt/familydb/backups/` and, only if that succeeded, deletes backups more than 14 days old, which in practice means from the fifteenth day, except the one the last upgrade would go back to, which `rescue rollback` needs. A backup that fails never deletes the good ones. `sudo crontab -u root -l` shows the line; `maintain.sh schedule-backups` puts it back, and `--keep-days N` changes how long backups are kept.
 
-Backups are named `familydb-<timestamp>.sqlite3`. The [safety backup](/wiki/reference/glossary#safety-backup) that a restore or an [upgrade](/wiki/operations/upgrade-and-rollback) takes first uses the same folder and name, so it is pruned on the same schedule: an upgrade's backup is gone after about two weeks. The prune deletes anything named `familydb-*.sqlite3` in that folder, whoever put it there. To keep one longer, copy it out.
+Backups are named `familydb-<timestamp>.sqlite3`. The [safety backup](/wiki/reference/glossary#safety-backup) that a restore or an [upgrade](/wiki/operations/upgrade-and-rollback) takes first uses the same folder and name, so it is pruned on the same schedule, with one exception: the backup the last upgrade took is kept until a later upgrade takes its place, so the way back stays open. The prune deletes anything else named `familydb-*.sqlite3` in that folder, whoever put it there. To keep one longer, copy it out. `maintain.sh backup --keep-days N` does the same prune after a backup you take yourself.
 
 Nothing alerts you when the nightly backup stops. Once a week, run `sudo /opt/familydb/scripts/maintain.sh status` and read the `Last backup` line.
 

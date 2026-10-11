@@ -26,6 +26,14 @@ ENV = {
     "GIT_COMMITTER_NAME": "t",
     "GIT_COMMITTER_EMAIL": "t@example.com",
     "GIT_CONFIG_GLOBAL": "/dev/null",
+    # git 2.46 and later hand a commit's or a fetch's housekeeping to a background process that
+    # holds .git/maintenance.lock for a moment after the command returns; a test that then removes
+    # or inspects .git races it. Every git run here, by a test or by maintain.sh, keeps it in front.
+    "GIT_CONFIG_COUNT": "2",
+    "GIT_CONFIG_KEY_0": "maintenance.autoDetach",
+    "GIT_CONFIG_VALUE_0": "false",
+    "GIT_CONFIG_KEY_1": "gc.autoDetach",
+    "GIT_CONFIG_VALUE_1": "false",
 }
 
 
@@ -75,8 +83,31 @@ def test_while_a_version_is_being_built_an_install_follows_the_branch(remote, tm
     assert shell(install, 'wanted_version "$INSTALL"').stdout.strip() == "branch main"
 
 
-def test_once_it_is_released_an_install_follows_the_tag(remote, tmp_path) -> None:
+def test_once_it_is_released_an_install_still_follows_the_branch(remote, tmp_path) -> None:
     install = clone(remote, tmp_path)
+    assert shell(install, 'wanted_version "$INSTALL"').stdout.strip() == "branch main"
+
+
+def test_work_merged_after_a_release_reaches_an_install_without_a_new_version(
+    remote, tmp_path
+) -> None:
+    """The release is dated, the tag exists, and the branch has moved on: the install is still
+    offered the branch's new commits, not the tag it is already past."""
+    install = clone(remote, tmp_path)
+    git(install, "checkout", "-q", "--detach", "v0.1.0")
+    (remote / "fix.txt").write_text("a fix merged after v0.1.0 was tagged\n")
+    git(remote, "add", "fix.txt")
+    git(remote, "commit", "-q", "-m", "A fix, with no new version")
+    git(install, "fetch", "-q", "--tags", "origin")
+    kind, name = shell(install, 'wanted_version "$INSTALL"').stdout.split()
+    assert (kind, name) == ("branch", "main")
+    assert shell(install, f'moves_forward "$INSTALL" origin/{name}').returncode == 0
+
+
+def test_with_no_default_branch_the_newest_release_is_the_fallback(remote, tmp_path) -> None:
+    install = clone(remote, tmp_path)
+    git(remote, "symbolic-ref", "HEAD", "refs/heads/not-a-branch")  # the remote names none
+    git(install, "remote", "set-head", "origin", "--delete")
     assert shell(install, 'wanted_version "$INSTALL"').stdout.strip() == "tag v0.1.0"
 
 

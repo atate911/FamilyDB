@@ -42,8 +42,8 @@ jobs:
           echo "version=$VERSION packaged=$packaged"
           test "${VERSION#v}" = "$packaged"
       - name: The version must be finished
-        # While CHANGELOG.md says a version is in progress, installs follow the default branch
-        # (scripts/lib/common.sh, wanted_version). Releasing it means giving it a date first.
+        # A release is its tag and its notes; installs follow the default branch whatever is
+        # tagged (scripts/lib/common.sh, wanted_version). Releasing means giving it a date first.
         run: |
           heading=$(grep -m1 "^## ${VERSION} " CHANGELOG.md || true)
           echo "$heading"

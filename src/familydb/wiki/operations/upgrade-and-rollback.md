@@ -4,7 +4,7 @@
 sudo /opt/familydb/scripts/maintain.sh upgrade
 ```
 
-That is the whole upgrade. It takes a backup first, moves to the newer code, applies any new database [migrations](/wiki/reference/glossary#migration), restarts FamilyDB. It prints the commands to go back before it changes anything. Do not use `git pull`: after an upgrade the checkout sits on a [detached commit](/wiki/reference/glossary#detached-commit), where it fails, and it would skip the backup and the dependency install.
+That is the whole upgrade. It stops FamilyDB, takes a backup, moves to the newer code, applies any new database [migrations](/wiki/reference/glossary#migration), starts FamilyDB again. It prints the commands to go back before the code moves, and a failure before the migrations puts the old code back and starts FamilyDB again by itself. Do not use `git pull`: after an upgrade the checkout sits on a [detached commit](/wiki/reference/glossary#detached-commit), where it fails, and it would skip the backup and the dependency install.
 
 ## Before you upgrade
 
@@ -12,6 +12,7 @@ That is the whole upgrade. It takes a backup first, moves to the newer code, app
 - Run `sudo /opt/familydb/scripts/maintain.sh status` and note the `Version` row. It shows only the version you have installed, not whether a newer one exists.
 - Check free disk: the upgrade needs room for a backup (the database plus 50 MB) and the new dependencies. On Docker it rebuilds the image.
 - Copy a recent backup off the server if you have not lately; see [Backup and restore](/wiki/operations/backup-and-restore#keep-a-copy-off-the-server).
+- Put any change you made to a file that ships with FamilyDB somewhere the upgrade leaves alone. It refuses to run, before it asks, while such a file is changed, naming the file: an upgrade would overwrite it. A change to `docker-compose.yml` belongs in `docker-compose.override.yml`, which Compose reads on top of the shipped file. For anything else, keep a copy and put the shipped file back: `sudo git -C /opt/familydb checkout -- FILE`.
 
 ## What an upgrade does
 
@@ -22,13 +23,13 @@ It fetches first, which changes nothing the bot runs, so it can tell you what th
 - the newest commits, and what the changelog says is new;
 - **Database**, only when there are new migrations: they are named, with a reminder that some rewrite what is in the database, so the backup is what goes back;
 - **Packages**, only when `uv.lock` moves: each from what to what;
-- **Settings**, only when `.env.example` has new options, and **Service file**, only when `deploy/familydb.service` changed, which an upgrade does not install (see [Known limits](/wiki/reference/known-limits#an-upgrade-does-not-rewrite-the-service-file)).
+- **Settings**, only when `.env.example` has new options, and **Service file**, only when `deploy/familydb.service` changed: the installed one is updated to match when it is as the installer wrote it, with a copy kept beside it, and left as it is when it was edited by hand.
 
 A part that does not change is not mentioned: no `Database` line means no new migrations. Then it asks `Upgrade now? [Y/n]`: Enter says yes. It needs a terminal to ask, or `--yes`; `--dry-run` shows all of it and does none of it.
 
-After a yes it checks the install as it is (so that what the check says afterwards is about the upgrade), takes a backup and prints the commands to go back, with this run's commit and backup in them. While it works, one line shows what it is doing: a bar of how many of the eight steps are done (the one under way pulsing), its percent, `5/8`, the step and the seconds. The wait for the page fills a bar toward its 30 seconds instead. The steps are: the first check, the backup, checking the new version out, stopping FamilyDB, reinstalling the dependencies at their locked versions (on Docker it rebuilds the image instead, which takes minutes), applying the new migrations, starting FamilyDB and waiting up to 30 seconds for the page to answer, and running the doctor. A step that goes as expected has no line of its own; what is shown is the backup, the packages and migrations it applied, how long FamilyDB was away, and the check, which lists only what must be fixed (`✗`) and counts the rest, with what the counts were before when they changed. A problem that was already there is shown and marked `(the same before the upgrade)`, and is not blamed on the upgrade; only a new one makes it `[WARN]`. A step that fails stops the run with what it said.
+After a yes it checks the install as it is (so that what the check says afterwards is about the upgrade), checks there is room, stops FamilyDB, takes a backup and prints the commands to go back, with this run's commit and backup in them. While it works, one line shows what it is doing: a bar of how many of the eight steps are done (the one under way pulsing), its percent, `5/8`, the step and the seconds. The wait for the page fills a bar toward its 30 seconds instead. The steps are: the first check, stopping FamilyDB, the backup, checking the new version out, reinstalling the dependencies at their locked versions, applying the new migrations, starting FamilyDB and waiting up to 30 seconds for the page to answer, and running the doctor. FamilyDB is stopped before the code moves because a running one would pick up new files as they land, and the backup is taken once it is stopped so that nothing said to it meanwhile is missed. On Docker the order differs: the new image is built from the new code while the old containers keep running (which takes minutes), and only then are they stopped, for the backup, the migrations and the start. If the scripts themselves changed in the new version, the `maintain.sh` that came with it finishes the upgrade, so a release can change these steps. A step that goes as expected has no line of its own; what is shown is the backup, the packages and migrations it applied, how long FamilyDB was away, and the check, which lists only what must be fixed (`✗`) and counts the rest, with what the counts were before when they changed. A problem that was already there is shown and marked `(the same before the upgrade)`, and is not blamed on the upgrade; only a new one makes it `[WARN]`. A step that fails stops the run with what it said. If it fails before the migrations, the upgrade puts back what it changed, the code, its packages, the service file and on Docker the image, starts FamilyDB again and says so under the error: nothing in the database has changed, and there is nothing to finish.
 
-If you already have the newest version and the upgrade is finished, it shows the **Installed** row and says `Already up to date`, takes no backup and changes nothing.
+If you already have the newest version and the upgrade is finished, it shows the **Installed** row and says `Already up to date`, takes no backup and changes nothing. If FamilyDB is not running at that point, which is how an upgrade whose restart failed leaves things, it says so as `[WARN]` and names `restart`.
 
 The last line stands alone, for a log or a mail: `[ OK ] Upgraded v0.2.0+137 → v0.3.0+4 · 14 commits · 2 migrations · 3 packages · down 14s (48s)`, or `[WARN] … but the check found 2 new problems`, or `[FAIL] … but FamilyDB did not start` (and the exit status is 1); any warnings are listed again under it. Above it is the run's bar, full when every step ran, and short and red where a run that stopped got to.
 
@@ -38,13 +39,7 @@ Your `.env`, your keys and the family's data are not removed. A migration change
 
 ## Which version it moves to
 
-> **While the newest `CHANGELOG.md` heading says "in progress", `upgrade` installs unreleased code.** To stay on a release, move to a tag yourself, as below.
-
-`upgrade` follows the changelog of the code it has just fetched. While the newest heading says "in progress", it follows the default branch. Once a version heading carries a date, it follows the newest release tag (`v…`). The installed copy shows which rule applied to the version you have:
-
-```bash
-grep -m1 '^## v' /opt/familydb/CHANGELOG.md
-```
+`upgrade` moves to the newest commit on the default branch, whether or not a release has been tagged for it. Work merged there arrives on the next upgrade; it does not wait for a version number. The `Upgrading` row says which branch it follows and, while the newest `CHANGELOG.md` heading says "in progress", which version is being built there.
 
 - If the new version is the same as yours, older, or already contained in yours, and no earlier upgrade is unfinished and the database is migrated, `upgrade` says `Already up to date`, takes no backup and changes nothing else. Otherwise it finishes the earlier upgrade; see [If it goes wrong](#if-it-goes-wrong).
 - If the two histories have split, which happens after a force-push, it refuses with `moving to it would go backwards` and changes nothing else.
@@ -56,7 +51,7 @@ sudo git -C /opt/familydb fetch --tags origin
 sudo git -C /opt/familydb tag -l 'v*' --sort=-v:refname | head -1
 ```
 
-To move forward to a particular tag yourself, take a backup, then check it out, reinstall the dependencies and restart, which migrates. No restore is needed.
+To move forward to a particular tag yourself, take a backup, then check it out, reinstall the dependencies and restart, which migrates. No restore is needed. The next `upgrade` leaves the tag and follows the branch again, so a tag is a place to stop for now, not a setting.
 
 ```bash
 sudo /opt/familydb/scripts/maintain.sh backup
@@ -83,6 +78,8 @@ The code is in a private repository, so the fetch has to prove it may read it. W
 | A token | The installer did not keep it. Give it for each upgrade; it is used for that fetch only and never written down. Tokens expire |
 | A copy you made yourself | There is nothing to fetch. Unpack a new archive over the install, rerun `install.sh` and restart; `docs/INSTALL.md`, "Day to day", has the steps |
 
+A fetch that fails says what git said and what it means: the network or GitHub not answering (try again later), a credential this checkout lacks (the table above), a remote that is gone, or a checkout git will not read because somebody else owns it (the doctor puts the ownership right). It never waits for a password to be typed.
+
 With a token, run these. The last line keeps the token from staying in your shell:
 
 ```bash
@@ -95,7 +92,7 @@ To stop needing a token, make a deploy key and point the checkout at it once; `d
 
 ## If it goes wrong
 
-The upgrade prints the commands to go back before it checks out the new code, and prints them again at the foot of any failure after that, together with the command to finish. Copy them from the terminal. A failure before the checkout, such as a failed fetch, changes nothing: fix the cause and run `upgrade` again.
+The upgrade prints the commands to go back before it checks out the new code, and prints them again at the foot of any failure after the migrations began, together with the command to finish. Copy them from the terminal. A failure before the checkout, such as a failed fetch, changes nothing. A failure after it but before the migrations, such as the packages not installing, is undone by the upgrade itself: the old code, packages, service file and image are put back and FamilyDB started again, and the screen says so. In both cases, fix the cause and run `upgrade` again.
 
 If it stops after the checkout, the code is new but the dependencies, migrations or restart may not all be done, and FamilyDB may be stopped. You have two ways out.
 
@@ -117,9 +114,11 @@ sudo /opt/familydb/scripts/maintain.sh rescue rollback
 
 ```bash
 sudo git -C /opt/familydb checkout --quiet --detach <the commit that was installed>
-sudo uv sync --frozen --no-dev --project /opt/familydb
+sudo env UV_CACHE_DIR=/opt/familydb/.cache/uv UV_PYTHON_INSTALL_DIR=/opt/familydb/.local/share/uv/python uv sync --frozen --no-dev --project /opt/familydb
 sudo /opt/familydb/scripts/maintain.sh restore <the backup the upgrade took>
 ```
+
+The two variables on the second line keep uv's cache and Python inside the install, where the installer put them and where the `familydb` account can run it; without them, a uv that has to build the virtualenv again on a server whose own Python is too old fetches a Python into root's home and builds on that, which the service cannot start. The upgrade prints the line with them in.
 
 On Docker, the second command is:
 
@@ -156,4 +155,4 @@ sudo /opt/familydb/scripts/maintain.sh status
 
 You should see no `✗` in the check and the new version on the `Version` row. Then open Status and send one message to see that FamilyDB answers.
 
-An upgrade does not rewrite the service file; see [Known limits](/wiki/reference/known-limits#an-upgrade-does-not-rewrite-the-service-file). A Docker install whose Caddy kept its certificate in `data/caddy` should move it to `caddy/`; the runbook explains.
+A Docker install whose Caddy kept its certificate in `data/caddy` should move it to `caddy/`; the runbook explains.
