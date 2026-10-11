@@ -2007,6 +2007,8 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .fold--quiet > summary:where(:not(.btn)) { color: var(--ink-2); font-size: var(--t-meta); }
 .list-items--big li { min-height: 52px; font-size: 1.0625rem; }
 .list-items--big .tick { width: 28px; height: 28px; }
+.list-items--big .tick > span:not(.sr) { width: 24px; height: 24px; border-radius: 6px; }
+.list-items--big .tick .icon { width: 16px; height: 16px; }
 .set__text { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .set--off { opacity: .6; border-left-color: var(--line-2); }
 .set--done { border-left-color: var(--ok); }

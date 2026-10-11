@@ -808,9 +808,16 @@ def soon_summary(days: Sequence[dict[str, Any]], today: date) -> str:
     return f"{total} in the next few weeks."
 
 
-def lists_summary(lists: Sequence[dict[str, Any]]) -> str:
-    parts = [f"{one['title'].removesuffix(' list')} · {len(one['to_get'])}" for one in lists]
-    return " · ".join(parts) + " to get"
+def lists_summary(lists: Sequence[dict[str, Any]], shown: dict[str, Any]) -> str:
+    """The list open, then what waits on the others: "6 to get. 5 more on Costco and Camping." """
+    here = len(shown["to_get"])
+    said = f"{here} to get." if here else "Nothing to get."
+    others = [one for one in lists if one["name"] != shown["name"] and one["to_get"]]
+    if others:
+        more = sum(len(one["to_get"]) for one in others)
+        names = names_text([{"name": one["title"].removesuffix(" list")} for one in others])
+        said += f" {more} more on {names}."
+    return said
 
 
 def kids_summary(kids: Sequence[dict[str, Any]], waiting: int) -> str:

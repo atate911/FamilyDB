@@ -430,12 +430,13 @@ def test_lists_shows_one_list_at_a_time_with_the_rest_as_chips(
         list_store.add(conn, camping, "torch", by=None, now=NOW_ISO)
     client = _client(settings, clock)
     page = client.get("/lists").text
-    assert _head(page) == ("Lists", "Shopping · 1 · Camping · 2 to get")
+    assert _head(page) == ("Lists", "1 to get. 2 more on Camping.")
     assert ">milk<" in page and ">tent<" not in page  # one list at a time
     chips = re.search(r'<nav class="chips".*?</nav>', page, re.S).group(0)
     assert 'href="/lists/camping"' in chips and 'class="chip chip--on"' in chips
     camping_page = client.get("/lists/camping").text
     assert ">tent<" in camping_page and ">milk<" not in camping_page
+    assert _head(camping_page) == ("Lists", "2 to get. 1 more on Shopping.")
     assert _scope(camping_page) == "About the camping list:"
     assert ">tent<" in client.get("/lists?list=camping").text  # the older address too
     assert client.get("/lists/nothing").status_code == 404
