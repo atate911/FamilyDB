@@ -55,9 +55,8 @@ def test_it_says_who_answers_and_where_each_key_came_from(status, conn, settings
             conn,
             {
                 "gemini_api_key": "gm-never-shown",
-                "provider": "gemini",
+                "model_choices": {"chat": "gemini:everyday", "digest": "gemini:best"},
                 "gemini_worker_model": "gemini-3.8-flash",
-                "digest_level": "best",
             },
         )
     text = _flat(status.get("/status"))

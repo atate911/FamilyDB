@@ -8,8 +8,8 @@ from types import SimpleNamespace
 import pytest
 
 from familydb import voice
-from familydb.agent import gateway, spending
-from familydb.agent.providers import Audio, build, hearers, prices
+from familydb.agent import gateway, spending, uses
+from familydb.agent.providers import Audio, build, prices
 from familydb.app import App
 from familydb.base.errors import AgentError
 from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
@@ -221,8 +221,8 @@ def _keys(settings, **overrides):
 
 
 def test_who_hears_a_voice_note(settings) -> None:
-    def names(**overrides):
-        return [p.name for p in hearers(_keys(settings, **overrides))]
+    def names(**overrides):  # in the order the use asks them (uses.hearing)
+        return [p.name for p, _ in uses.hearing(_keys(settings, **overrides))]
 
     # Claude alone cannot hear, and nobody else has a key.
     assert names() == []

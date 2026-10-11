@@ -304,8 +304,9 @@ everything.
   call `gateway.KINDS` names for it; `gateway.ask` (and `listen`, `look`) asks `uses.answering`
   (`hearing`, `looking`) once at its door who answers and with which model, so the request builder
   and the daily check need only ask there. A use
-  nobody chose for is answered as `chat_level`, `digest_level`, `lookup_level` and the older
-  settings say (`uses.default_choice`), so an install that never opens the page is untouched. A call
+  nobody chose for is answered as the environment's older keys say, read as choices at load
+  (`Settings.env_choices`), else by its own default (`uses.default_choice`), so an install that
+  never opens the page is untouched. A call
   that moves to a stand-in company is answered at the strength of the model chosen (the level the
   lineup gives it, everyday for one it does not list). A level up never answers with a cheaper model
   than everyday, so an everyday model set above the lineup's, or one the price table does not list,

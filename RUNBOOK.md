@@ -287,7 +287,7 @@ Every setting here can be changed in `.env` (restart needed) or on `/settings` (
 
 A change reaches the next message and page at once, a new Telegram token within seconds, the timezone at once. Scheduled jobs (digest, follow-ups, evening check, nudges, lookups, retries) pick up a new time or interval within five minutes, hours in the family's timezone.
 
-**Who answers.** What a use falls back to when the AI model page has no choice for it, per surface:
+**Who answers.** Which model does each thing is chosen on the AI model page, a row for each of the eight uses. These `.env` lines are read as those choices (`config.older_to_choices`) for a use the page has no choice for, so an install that never opens the page behaves as they say; a choice made on the page wins, and an older database's stored values become the page's choices once on upgrade:
 
 ```
 PROVIDER=openai            # openai, anthropic or gemini: who writes the replies the family reads
@@ -305,7 +305,7 @@ PROVIDER_FALLBACK=true     # ask another one when the first cannot take a messag
 | better | GPT-6 Sol, $2 / $10 | Claude Sonnet 5, $2 / $10 | Gemini 3.8 Flash, $0.75 / $3.75 |
 | best | GPT-6 Astra, $10 / $50 | Claude Opus 5, $5 / $25 | Gemini 3.1 Pro, $2 / $12 |
 
-Everything answers at `everyday` unless chosen otherwise. Each of eight uses (answering the family, the weekend digest, choosing suggestions, looking things up, what is on near home, voice notes, photos, weighing changes) has its own company and model, chosen on the rows of the AI model page (`model_choices` in the settings: `<company>:<model>`, `same:<use>` or `off`). A use nobody chose for is answered as the older settings say, which an install that never opens the page keeps doing:
+Everything answers at `everyday` unless chosen otherwise. Each of eight uses (answering the family, the weekend digest, choosing suggestions, looking things up, what is on near home, voice notes, photos, weighing changes) has its own company and model, chosen on the rows of the AI model page (`model_choices` in the settings: `<company>:<model>`, `same:<use>` or `off`). A use nobody chose for on the page is answered as these say (read as `<company>:<level>` choices), which an install that never opens the page keeps doing:
 
 ```
 CHAT_LEVEL=everyday        # answering the family, and answering again after a failure

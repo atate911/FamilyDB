@@ -35,6 +35,67 @@ Level = Literal["everyday", "better", "best"]
 BUILT_IN_COMPANIES = ("anthropic", "openai", "gemini")
 # What the family has Vera do, each with one choice of company and model (agent/uses.py).
 USE_KEYS = ("chat", "digest", "choose", "lookup", "onnear", "hear", "look", "judge")
+# The keys an older FamilyDB chose models with. Still read from the environment (`.env`, the
+# installer's PROVIDER line) and from an older database once (store/settings.upgrade), and turned
+# into the choices the AI model page keeps (`older_to_choices`); nothing else reads them, held by
+# tests/test_config.py.
+OLDER = (
+    "provider",
+    "worker_provider",
+    "provider_fallback",
+    "chat_level",
+    "digest_level",
+    "lookup_level",
+    "choose_level",
+    "judgement_level",
+    "choosing",
+    "judgements",
+    "voice_notes",
+    "photos",
+    "transcribe_provider",
+    "openai_transcribe_model",
+    "gemini_transcribe_model",
+)
+DEFAULT_COMPANY = "openai"
+EVERYDAY = "everyday"
+
+
+def older_to_choices(older: Mapping[str, Any]) -> tuple[dict[str, str], bool]:
+    """What the older keys say, as the page's choices (`<company>:<model or level>`, `same:<use>`,
+    `off`) for the uses they change, and whether a company may stand in for another. A value at
+    its old default says nothing, so a use it leaves alone keeps the page's own default."""
+    company = str(older.get("provider") or DEFAULT_COMPANY)
+    worker = str(older.get("worker_provider") or company)
+    chat_level = str(older.get("chat_level") or EVERYDAY)
+    digest_level = str(older.get("digest_level") or EVERYDAY)
+    lookup_level = str(older.get("lookup_level") or EVERYDAY)
+    choose_level = str(older.get("choose_level") or "best")
+    judgement_level = str(older.get("judgement_level") or "best")
+    choices: dict[str, str] = {}
+    if company != DEFAULT_COMPANY or chat_level != EVERYDAY:
+        choices["chat"] = f"{company}:{chat_level}"
+    if digest_level != chat_level:
+        choices["digest"] = f"{company}:{digest_level}"
+    if worker != company or lookup_level != EVERYDAY:
+        choices["lookup"] = f"{worker}:{lookup_level}"
+    if older.get("choosing") is False:
+        choices["choose"] = "off"
+    elif choose_level != "best":
+        choices["choose"] = f"{company}:{choose_level}"
+    if older.get("judgements"):
+        choices["judge"] = f"{worker}:{judgement_level}"
+    hears = str(older.get("transcribe_provider") or "")
+    if older.get("voice_notes") is False:
+        choices["hear"] = "off"
+    elif hears:
+        model = str(older.get(f"{hears}_transcribe_model") or EVERYDAY)
+        choices["hear"] = f"{hears}:{model}"
+    if older.get("photos") is False:
+        choices["look"] = "off"
+    stand_in = older.get("provider_fallback")
+    return choices, True if stand_in is None else bool(stand_in)
+
+
 CacheTTL = Literal["5m", "1h"]
 LookupsWhen = Literal["evening", "asap"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -678,6 +739,20 @@ class Settings(BaseSettings):
             if value and value not in known:
                 raise ValueError(f"{name} is {value!r}; use one of {', '.join(known)}")
         return self
+
+    @property
+    def env_choices(self) -> dict[str, str]:
+        """The choices the environment made with the older keys (`OLDER`, read as choices by
+        `older_to_choices`): what a use falls back to when the page has no choice for it. Worked
+        out on each read, so a copy with a key changed says so; nothing downstream reads the keys
+        themselves."""
+        return older_to_choices({name: getattr(self, name) for name in OLDER})[0]
+
+    @property
+    def env_stand_in(self) -> bool:
+        """Whether a company may answer for another, as the environment said (PROVIDER_FALLBACK),
+        for a company the page has not told."""
+        return older_to_choices({name: getattr(self, name) for name in OLDER})[1]
 
     @model_validator(mode="after")
     def _resolve_timezone(self) -> Settings:

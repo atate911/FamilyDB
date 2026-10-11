@@ -36,7 +36,7 @@ The **Save** bar stays in view. It says what is unsaved ("Answering the family â
 
 ### Settings an older page drew
 
-Earlier versions drew a box for each of these. They are still read, as what a row falls back to when nothing is chosen for it, so an install that never uses the page behaves as it always did; they come from `.env` or an older save and are not drawn.
+Earlier versions drew a box for each of these. They are read from `.env` as the choice a row falls back to when nothing is chosen for it on this page (so an install that never uses the page behaves as its `.env` says), and what an older version stored became this page's choices once, on upgrade. They are not drawn, and the page never stores them.
 
 | `key` | What it was |
 |---|---|

@@ -459,11 +459,6 @@ def test_a_service_out_on_the_internet_cannot_be_called_local(page, conn):
 
 
 def test_the_company_boxes_stay_dropdowns_and_offer_no_added_company_for_lookups(page, conn):
-    from familydb.web import fields
-
-    for key in ("provider", "worker_provider"):
-        one = next(box for box in fields.FIELDS if box.key == key)
-        assert one.choices == companies.SPARE_ORDER, key
     add_openrouter(page)
     text = page.get("/settings/model").text
 

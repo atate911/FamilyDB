@@ -65,7 +65,6 @@ class CallSpec:
     kind: Kind
     purpose: str  # for people: what these calls were for, as `debug cost` and /status say it
     surface: Surface  # which model answers: the chat model, or the lookup (worker) model
-    level: str  # the setting naming how strong a model answers (catalog.LEVELS)
     prompt: str  # the file in agent/prompts/; "system" also brings the family and the ideas
     tools: tuple[str, ...] | None  # None: every chat tool, the same list on every turn
     hand_back: tuple[str, ...] = ()  # the tools whose success is the result of a worker turn
@@ -82,7 +81,6 @@ class CallSpec:
 
 _CHAT = {
     "surface": "chat",
-    "level": "chat_level",
     "prompt": "system",
     "tools": None,
     "closes": ("remember",),
@@ -92,7 +90,6 @@ _CHAT = {
 WORKER_MAX_TOKENS = 4000
 _WORKER = {
     "surface": "worker",
-    "level": "lookup_level",
     "iterations": "worker_max_iterations",
     "effort": "worker_effort",
     "max_tokens": WORKER_MAX_TOKENS,
@@ -102,7 +99,7 @@ KINDS: dict[str, CallSpec] = {
     spec.kind: spec
     for spec in (
         CallSpec("chat", "answering the family", **_CHAT),
-        CallSpec("digest", "the weekend digest", **{**_CHAT, "level": "digest_level"}),
+        CallSpec("digest", "the weekend digest", **_CHAT),
         CallSpec("retry", "answering a message again after a failure", **_CHAT),
         CallSpec(
             "enrich",
@@ -168,7 +165,6 @@ KINDS: dict[str, CallSpec] = {
             "choosing what to suggest",
             budget="choose_budget",
             surface="chat",
-            level="choose_level",
             prompt="choose",
             tools=("give_picks",),
             hand_back=("give_picks",),
@@ -183,7 +179,7 @@ KINDS: dict[str, CallSpec] = {
             prompt="judge",
             tools=("give_judgement",),
             hand_back=("give_judgement",),
-            **{**_WORKER, "level": "judgement_level", "effort": None},
+            **{**_WORKER, "effort": None},
         ),
         # Extraction, not judgement: the lookup model reads a company's pricing page.
         CallSpec(

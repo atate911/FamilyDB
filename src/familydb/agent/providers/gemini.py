@@ -354,7 +354,7 @@ class GeminiProvider:
                 raise _failure(exc) from exc
 
     def listener(self) -> str | None:
-        return self.settings.gemini_transcribe_model or self.model_for("worker")
+        return self.model_for("worker")
 
     def hearing(self, audio: Audio, hints: str, model: str | None = None) -> dict[str, Any]:
         model = model or self.listener() or self.settings.gemini_model

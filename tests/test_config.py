@@ -124,3 +124,34 @@ def test_both_providers_cap_the_answer_the_same_way(settings) -> None:
     request = TurnRequest(system=[], messages=[Message("user", ["hi"])])
     assert build("anthropic", capped, api=object()).payload(request)["max_tokens"] == 999
     assert build("openai", capped, api=object()).payload(request)["max_output_tokens"] == 999
+
+
+def test_the_older_model_keys_are_read_nowhere_but_as_choices() -> None:
+    """`config.OLDER` (PROVIDER, the levels, the toggles) are read from the environment and turned
+    into choices by `older_to_choices`; no module reads one off the settings itself, so the page's
+    choices are the one way a model is chosen."""
+    import ast
+    from pathlib import Path
+
+    import familydb
+    from familydb.base.config import OLDER
+
+    package = Path(familydb.__file__).parent
+    # Names a module might hold settings in; `provider`, `photos` and the toggles are also words
+    # for other things (a reply's provider, a message's photos), so only reads off these count.
+    holders = {"settings", "live", "base", "candidate", "fresh", "trial", "plain", "alone"}
+    found = []
+    for path in sorted(package.rglob("*.py")):
+        where = path.relative_to(package).as_posix()
+        if where == "base/config.py":
+            continue
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            if not (isinstance(node, ast.Attribute) and node.attr in OLDER):
+                continue
+            value = node.value
+            held = (isinstance(value, ast.Name) and value.id in holders) or (
+                isinstance(value, ast.Attribute) and value.attr == "settings"
+            )
+            if held:
+                found.append(f"{where}:{node.lineno} .{node.attr}")
+    assert found == [], found

@@ -103,7 +103,7 @@ def test_with_nothing_said_who_answers_is_what_the_older_machinery_said(settings
         who = uses.answering(live, kind)
         older = providers.for_surface(live, call.surface, web=call.web_searches is not None)
         assert who.provider.name == older.name, kind
-        assert who.model == providers.model_at(older, call.surface, getattr(live, call.level)), kind
+        assert who.model == providers.model_at(older, call.surface, who.level), kind
         assert who.effort is None, kind
     assert [p.name for p, _ in uses.hearing(live)] == [p.name for p in providers.hearers(live)]
     assert [p.name for p, _ in uses.looking(live)] == [p.name for p in providers.lookers(live)]

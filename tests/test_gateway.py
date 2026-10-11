@@ -9,7 +9,6 @@ import pytest
 
 from familydb.agent import compose, gateway
 from familydb.agent.prompt import load_prompt
-from familydb.agent.providers import catalog
 from familydb.agent.worker import run_worker_turn, worker_turn
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
@@ -81,7 +80,6 @@ def test_each_kind_is_declared_whole(kind, registry, settings) -> None:
     call = gateway.spec(kind)
     assert load_prompt(call.prompt)  # the prompt file exists
     assert isinstance(getattr(settings, call.iterations), int)
-    assert getattr(settings, call.level) in catalog.LEVELS  # a level setting, read as one
     if call.effort:
         assert getattr(settings, call.effort)
     if call.budget:
@@ -251,4 +249,4 @@ def test_choosing_answers_on_the_chat_surface() -> None:
     call = gateway.spec("choose")
     assert call.surface == "chat" and call.web_searches is None
     assert call.tools == ("give_picks",) == call.hand_back
-    assert call.iterations == "choose_max_iterations" and call.level == "choose_level"
+    assert call.iterations == "choose_max_iterations"

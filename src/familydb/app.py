@@ -36,6 +36,7 @@ class App:
         self._base = settings
         self._put_companies_in_force()
         self._overrides_stamp: str | None = None
+        self._upgraded_settings = False
         self._models_stamp: str | None = None
         self._reload = threading.Lock()
         self._calendar = calendar
@@ -129,10 +130,13 @@ class App:
         return self._base
 
     def provider(self, surface: str = "chat", api: Any = None) -> Any:
-        """The model provider, built fresh so a settings change takes effect."""
-        from familydb.agent import providers
+        """The company that answers this surface (the chat's, or the lookups'), built fresh so a
+        settings change takes effect: what `uses.answering` says for the chat or a lookup."""
+        from familydb.agent import uses
 
-        return providers.for_surface(self.settings, surface, api=api)
+        return uses.answering(
+            self.settings, "chat" if surface == "chat" else "enrich", api=api
+        ).provider
 
     def can_ask(self, surface: str = "chat", api: Any = None, kind: str | None = None) -> bool:
         """Whether any model can be asked for this kind of call (the chat's, or the lookups', which
@@ -187,6 +191,10 @@ class App:
         from familydb.store import settings as settings_store
 
         try:
+            if not self._upgraded_settings and not conn.in_transaction:
+                # An older FamilyDB's stored model choices become the page's, once.
+                self._upgraded_settings = True
+                settings_store.upgrade(conn, self._base)
             stamp = settings_store.stamp(conn)
             if stamp == self._overrides_stamp:
                 return False

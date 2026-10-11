@@ -548,7 +548,7 @@ def _use_view(
         "default": default,
         "default_text": default_text(default),
         "by_company": _defaults_by_company(settings, use, every, default),
-        "deflevel": str(getattr(settings, use.level_setting)),
+        "deflevel": uses.default_level(settings, use.key),
         "anchor": use.anchor,
         "hassame": bool(use.exact and use.anchor),
         "hasoff": bool(use.off),

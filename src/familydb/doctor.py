@@ -595,7 +595,7 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
         )
         return
     # What the family chose for answering, on the AI model page, else what PROVIDER says.
-    chosen = uses.resolve(settings, "chat").company or settings.provider
+    chosen = uses.resolve(settings, "chat").company or companies.DEFAULT
     company = companies.get(chosen, settings)
     chosen_env = (
         company.env_name if company else ""

@@ -118,11 +118,9 @@ owner = companies.owner
 
 
 def chosen(settings: Settings, surface: Surface) -> str:
-    """Which provider answers this surface; workers default to the chat choice. A company no longer
-    defined (its settings changed under a running process) is not asked for: the default is."""
-    name = settings.worker_provider if surface == "worker" else ""
-    name = name or settings.provider
-    return name if companies.get(name, settings) is not None else companies.DEFAULT
+    """The company a fresh install answers on, for either surface: FamilyDB's default. Which
+    company a use is chosen to is `agent/uses.py`'s to say."""
+    return companies.DEFAULT
 
 
 def cache_ttl(settings: Settings) -> str:
@@ -230,11 +228,12 @@ def _first_then_standing(settings: Settings, able: list[Provider]) -> list[Provi
     return [able[0], *[p for p in able[1:] if companies.may_stand_in(p.name, settings)]]
 
 
-def hearers(settings: Settings, audio: Any = None) -> list[Provider]:
-    """Who may hear a voice note, in the order to ask: the chosen (else chat) company, then any
-    other that can hear and has a key; spares only with the fallback on. Claude hears nothing.
-    An injected `audio` answers alone for the first that could."""
-    first = settings.transcribe_provider or settings.provider
+def hearers(settings: Settings, audio: Any = None, *, first: str | None = None) -> list[Provider]:
+    """Who may hear a voice note, in the order to ask: the default company, then any other that
+    can hear and has a key; spares only with the fallback on. Claude hears nothing. An injected
+    `audio` answers alone for the first that could. The company chosen to hear is
+    `uses.hearing`'s to put first."""
+    first = first if first and companies.get(first, settings) is not None else companies.DEFAULT
     order = [first, *others(first, settings)]
     if audio is not None:
         for name in order:
@@ -247,16 +246,13 @@ def hearers(settings: Settings, audio: Any = None) -> list[Provider]:
         for provider in (build(name, settings) for name in order)
         if provider.listener() and provider.configured()
     ]
-    if settings.transcribe_provider and (not able or able[0].name != settings.transcribe_provider):
-        # The one chosen to hear cannot: only a company that may stand in answers.
-        return [spare for spare in able if companies.may_stand_in(spare.name, settings)]
     return _first_then_standing(settings, able)
 
 
-def lookers(settings: Settings, api: Any = None) -> list[Provider]:
+def lookers(settings: Settings, api: Any = None, *, first: str | None = None) -> list[Provider]:
     """Who may look at a photo, in the order to ask: the lookup company, then any other with a
     key; spares only with the fallback on. An injected `api` answers alone."""
-    first = chosen(settings, "worker")
+    first = first if first and companies.get(first, settings) is not None else companies.DEFAULT
     if api is not None:
         return [build(first, settings, api=api)]
     able = [

@@ -119,7 +119,9 @@ def test_debug_prompt_is_built_from_what_the_page_stored(env: Path) -> None:
 
     runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
     with closing(build_app().connect()) as conn, db.transaction(conn):
-        settings_store.set_many(conn, {"persona_name": "Juno", "chat_level": "best"})
+        settings_store.set_many(
+            conn, {"persona_name": "Juno", "model_choices": {"chat": "anthropic:best"}}
+        )
     result = runner.invoke(app, ["debug", "prompt", "hi"])
     assert result.exit_code == 0, result.output
     assert '"model": "claude-opus-5"' in result.output
@@ -217,7 +219,7 @@ def test_validate_tools_asks_about_the_model_that_answers_the_chat(
 
     runner.invoke(app, ["db", "migrate"])
     with closing(build_app().connect()) as conn, db.transaction(conn):
-        settings_store.set_many(conn, {"chat_level": "best"})
+        settings_store.set_many(conn, {"model_choices": {"chat": "anthropic:best"}})
     asked: list[str | None] = []
 
     def count(self, request):
@@ -414,7 +416,10 @@ def test_a_command_reports_the_settings_in_force_not_the_file_s(env: Path) -> No
     assert "via anthropic" in runner.invoke(app, ["debug", "cost"]).output
     application = build_app()
     with closing(application.connect()) as conn, db.transaction(conn):
-        settings_store.set_many(conn, {"provider": "gemini", "gemini_model": "gemini-2.5-flash"})
+        settings_store.set_many(
+            conn,
+            {"model_choices": {"chat": "gemini:everyday"}, "gemini_model": "gemini-2.5-flash"},
+        )
     result = runner.invoke(app, ["debug", "cost"])
     assert result.exit_code == 0, result.output
     assert "chat runs on gemini-2.5-flash via gemini" in result.output

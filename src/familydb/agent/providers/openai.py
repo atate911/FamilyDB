@@ -40,6 +40,9 @@ NO_CREDENTIALS = "no OpenAI credentials configured: set OPENAI_API_KEY (see .env
 # GPT-6 takes all five effort names; older reasoning models stop at high (xhigh is a 400), and
 # GPT-4o/4.1 take no `reasoning`. Older models are named, so a later release gets everything.
 EFFORT = {"low": "low", "medium": "medium", "high": "high", "xhigh": "high", "max": "high"}
+# What hears a voice note when the family chose no other (the page offers the rest).
+HEARING_MODEL = "gpt-4o-mini-transcribe"
+
 HIGH_AT_MOST_MODELS = ("gpt-5", "o1", "o3", "o4")
 NO_REASONING_MODELS = ("gpt-3", "gpt-4", "chatgpt-")
 
@@ -404,7 +407,7 @@ class OpenAIProvider:
                 raise _failure(exc) from exc
 
     def listener(self) -> str | None:
-        return self.settings.openai_transcribe_model or None
+        return HEARING_MODEL
 
     def transcribe(self, audio: Audio, hints: str, model: str | None = None) -> Heard:
         model = model or self.listener()

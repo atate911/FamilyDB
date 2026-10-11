@@ -35,7 +35,6 @@ class Company:
     worker_setting: str = ""  # and its everyday lookup model
     better_setting: str = ""  # and the family's own better and best models
     best_setting: str = ""
-    transcribe_setting: str = ""  # and its hearing model, where it can hear
     owns: tuple[str, ...] = ()  # prefixes of the model names that are its own
     litellm: str = ""  # LiteLLM's name for the company
     openrouter: str = ""  # the maker's name in OpenRouter's model ids
@@ -78,7 +77,6 @@ class Company:
                 self.worker_setting,
                 self.better_setting,
                 self.best_setting,
-                self.transcribe_setting,
             )
             if name
         )
@@ -101,7 +99,6 @@ OPENAI = Company(
     worker_setting="openai_worker_model",
     better_setting="openai_better_model",
     best_setting="openai_best_model",
-    transcribe_setting="openai_transcribe_model",
     owns=("gpt", "o1", "o3", "o4", "chatgpt"),
     litellm="openai",
     openrouter="openai",
@@ -136,7 +133,6 @@ GEMINI = Company(
     worker_setting="gemini_worker_model",
     better_setting="gemini_better_model",
     best_setting="gemini_best_model",
-    transcribe_setting="gemini_transcribe_model",
     owns=("gemini",),
     litellm="gemini",
     openrouter="google",
@@ -304,7 +300,7 @@ def may_stand_in(slug: str | None, settings: Any = None) -> bool:
     company = get(slug, settings)
     if company is None:
         return False
-    fallback = bool(getattr(settings, "provider_fallback", True))
+    fallback = bool(getattr(settings, "env_stand_in", True))
     return fallback if company.defined is None else bool(company.defined.stand_in and fallback)
 
 

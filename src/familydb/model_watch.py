@@ -310,6 +310,8 @@ def models_in_use(settings: Any) -> set[tuple[str, str]]:
     for kind in gateway.KINDS:
         call = gateway.spec(kind)
         who = uses.answering(settings, kind)
+        if who.resolution.off or who.resolution.company is None:
+            continue  # a use that is off, or that nothing can do, has no model in use
         used.add((who.provider.name, who.model.lower()))
         # A stand-in answers at the level of the model chosen, as the loop does.
         web = call.web_searches is not None
@@ -663,8 +665,10 @@ def judged_replacements(conn: sqlite3.Connection) -> dict[str, str]:
 def uses_of(settings: Any, company: str, name: str) -> list[str]:
     found: list[str] = []
     for kind in gateway.KINDS:
-        provider, model = gateway.answering(settings, kind)
-        if provider.name == company and model == name:
+        who = uses.answering(settings, kind)
+        if who.resolution.off or who.resolution.company is None:
+            continue
+        if who.provider.name == company and who.model == name:
             found.append(gateway.spec(kind).purpose)
     for hearer, model in uses.hearing(settings):
         if hearer.name == company and str(model).lower() == name:

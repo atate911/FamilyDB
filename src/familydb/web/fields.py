@@ -14,7 +14,7 @@ from zoneinfo import available_timezones
 
 from familydb import happening, logs
 from familydb.agent.providers import companies
-from familydb.agent.providers.prices import hearing_suggestions, suggestions
+from familydb.agent.providers.prices import suggestions
 from familydb.base.config import Settings
 from familydb.base.dates import hour_words
 from familydb.store.settings import BEHAVIOUR
@@ -219,7 +219,6 @@ EFFORT = (
 
 
 # Boxes whose list is fixed rather than found by the daily check of models.
-FIXED_OFFERS = frozenset({"openai_transcribe_model"})
 # Each company's chat model and lookup model.
 MODEL_KEYS = {
     company.slug: (company.chat_setting, company.worker_setting) for company in companies.BUILT_IN
@@ -427,60 +426,6 @@ GROUPS: tuple[Group, ...] = (
                 for level in ("better", "best")
             ),
         ),
-    ),
-    Group(
-        "model",
-        "legacy",
-        "Replaced by a choice for each use",
-        "An older version drew these. They are still read: each is what a use falls back to when "
-        "nothing was chosen for it, so an install that never opens the page behaves as it always "
-        "did. They are not drawn, because each use now has its own choice.",
-        (
-            field(
-                "provider",
-                "Company that answers",
-                choices=companies.SPARE_ORDER,
-                words=tuple(COMPANIES.items()),
-            ),
-            field("chat_level", "Answering the family"),
-            field("digest_level", "The weekend digest"),
-            field("lookup_level", "Looking things up"),
-            field(
-                "worker_provider",
-                "Company for lookups",
-                choices=companies.SPARE_ORDER,
-                words=tuple(COMPANIES.items()),
-                unset="the company that answers",
-            ),
-            field("provider_fallback", "Ask another company when the first cannot"),
-            field("judgements", "Ask a stronger model when a change needs judgment"),
-            field("judgement_level", "How strong a model weighs it"),
-            field("choosing", "Have a stronger model choose the suggestions"),
-            field("choose_level", "How strong a model chooses"),
-            field("picks", "Keep a few picks ready on Now (What about…)"),
-            field("voice_notes", "Listen to voice notes"),
-            field(
-                "transcribe_provider",
-                "Who hears voice notes",
-                words=tuple(COMPANIES.items()),
-                unset="the chat company if it can",
-            ),
-            field(
-                "openai_transcribe_model",
-                "OpenAI hearing model",
-                suggested=hearing_suggestions("openai"),
-                company="openai",
-            ),
-            field(
-                "gemini_transcribe_model",
-                "Gemini hearing model",
-                suggested=suggestions("gemini"),
-                unset="Gemini's lookup model",
-                company="gemini",
-            ),
-            field("photos", "Look at photos"),
-        ),
-        folded=True,
     ),
     Group(
         "spending",
@@ -770,6 +715,12 @@ GROUPS: tuple[Group, ...] = (
                 "Without it, no idea is filled in and nothing new is discovered.",
             ),
             field(
+                "picks",
+                "Keep a few picks ready on Now (What about…)",
+                "Worked out by code every few hours from the family's ideas and what is on near "
+                "home: never a model call.",
+            ),
+            field(
                 "place_stale_days",
                 "Days before details look old",
                 "After this, an idea's hours and prices are marked as worth checking again.",
@@ -1053,11 +1004,6 @@ GROUPS: tuple[Group, ...] = (
 FIELDS: tuple[Field, ...] = tuple(one for group in GROUPS for one in group.fields)
 BY_KEY: dict[str, Field] = {one.key: one for one in FIELDS}
 SECTION_OF: dict[str, str] = {one.key: group.section for group in GROUPS for one in group.fields}
-# What the AI model page no longer draws a box for: agent/uses.py still reads each as the default
-# of the uses nobody chose for, so the page and the environment can set them but nothing shows them.
-LEGACY: frozenset[str] = frozenset(
-    one.key for group in GROUPS if group.name == "legacy" for one in group.fields
-)
 
 
 def groups_in(section: str) -> tuple[Group, ...]:
@@ -1133,7 +1079,6 @@ __all__ = [
     "COMPANIES",
     "FIELDS",
     "GROUPS",
-    "LEGACY",
     "SECTIONS",
     "SECTION_BY_NAME",
     "Field",

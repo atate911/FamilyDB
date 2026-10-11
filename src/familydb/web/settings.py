@@ -43,7 +43,7 @@ from flask import (
 from pydantic import ValidationError
 
 from familydb import export, model_watch, passwords, personas, voice
-from familydb.agent import gateway, providers, uses
+from familydb.agent import providers, uses
 from familydb.agent.providers import companies, prices
 from familydb.agent.spending import spent_today
 from familydb.app import App
@@ -98,7 +98,6 @@ COMPANIES = fields.COMPANIES
 MODEL_BOXES = {
     one.key: (one.company, COMPANIES[one.company]) for one in fields.FIELDS if one.company
 }
-LEVEL_BOXES = {call.level: call.surface for call in gateway.KINDS.values()}
 KEY_LABELS = {
     **{company.key_setting: f"{company.label} key" for company in companies.BUILT_IN},
     "telegram_bot_token": "Telegram bot token",
@@ -227,23 +226,9 @@ CALENDAR_DISCONNECTED = (
 def suggested(one: fields.Field) -> list[tuple[str, str]]:
     """The names a box suggests, each with a word on its place in the lineup and its price."""
     company = MODEL_BOXES.get(one.key, ("", ""))[0]
-    # As the daily check last found them, except the hearing models, which it does not follow.
-    live = company and one.key not in fields.FIXED_OFFERS
-    names = prices.suggestions(company) if live else one.suggested
+    # As the daily check last found them.
+    names = prices.suggestions(company) if company else one.suggested
     return [(name, views.model_offer(company, name)) for name in names]
-
-
-def level_labels(key: str, live: Settings) -> dict[str, str]:
-    surface = LEVEL_BOXES.get(key)
-    if surface is None:
-        return {}
-    answering = providers.for_surface(live, surface)
-    return {
-        level: views.level_choice(
-            level, answering.name, providers.model_at(answering, surface, level)
-        )
-        for level in providers.catalog.LEVELS
-    }
 
 
 def google_panel(live: Any) -> dict[str, Any]:
@@ -264,7 +249,8 @@ KEY_STARTS = {company.slug: company.key_start for company in companies.BUILT_IN}
 
 def company_choice(live: Settings, asked: str) -> dict[str, Any]:
     """The three companies, and the one whose key is shown: the one asked for, else answering."""
-    company = asked if asked in COMPANY_LINES else live.provider
+    answering = uses.resolve(live, "chat")
+    company = asked if asked in COMPANY_LINES else (answering.company or companies.DEFAULT)
     if company not in COMPANY_LINES:  # an added company answers: the cards show the default
         company = companies.DEFAULT
     return {
@@ -272,8 +258,10 @@ def company_choice(live: Settings, asked: str) -> dict[str, Any]:
         "label": COMPANIES[company],
         "prefix": KEY_STARTS[company],
         "has_key": bool(getattr(live, f"{company}_api_key")),
-        "answering": live.provider,
-        "model": providers.model_at(providers.build(company, live), "chat", live.chat_level),
+        "answering": answering.company,
+        "model": answering.model
+        if answering.company == company
+        else providers.model_at(providers.build(company, live), "chat", answering.level),
         "companies": [
             {
                 "name": name,
@@ -310,7 +298,7 @@ def _box(
         "problem": problems.get(one.key),
         "stored": one.key in overrides,
         "offers": offers.get(one.key) or suggested(one),
-        "labels": level_labels(one.key, live),
+        "labels": {},
         "grouped": headed,
     }
 
@@ -341,7 +329,7 @@ def _key_rows(
             "problem": problems.get(name),
             "revealed": revealed[1] if revealed and revealed[0] == name else None,
         }
-        for name in _key_order(live.provider)
+        for name in _key_order(uses.resolve(live, "chat").company or companies.DEFAULT)
     }
 
 
@@ -466,8 +454,8 @@ def _model(app: App, conn: Any) -> dict[str, Any]:
     live = app.settings
     # The model boxes of the companies that answer chat and that look things up; an added company
     # keeps its models in its own panel.
-    chat = fields.MODEL_KEYS.get(live.provider)
-    looking = fields.MODEL_KEYS.get(providers.for_surface(live, "worker", web=True).name)
+    chat = fields.MODEL_KEYS.get(uses.resolve(live, "chat").company or "")
+    looking = fields.MODEL_KEYS.get(uses.resolve(live, "lookup").company or "")
     in_use = tuple(box for box in (chat and chat[0], looking and looking[1]) if box)
     added = [company_forms.panel(company, live) for company in companies.added(live)]
     return {
@@ -917,8 +905,9 @@ def save_model() -> Response | tuple[str, int]:
         values[name] = given
     elif not getattr(app.settings, name):
         return _answer(back, here, error=NO_KEY_GIVEN, otherwise="model")
-    # The environment's own choice is not stored over it.
-    values["provider"] = None if company == app.base_settings.provider else company
+    # The company the key is for answers the family from now on: the chat's own row says so,
+    # as choosing it on the page would, unless that is what it does already.
+    values["model_choices"] = _answering_with(app.settings, company)
     stored = _stored()
     try:
         candidate = apply_overrides(
@@ -937,7 +926,7 @@ def save_model() -> Response | tuple[str, int]:
     her = personas.active(candidate).name
     # The check asked about the everyday model, which a "no such model" names.
     asked = chosen.model_for("chat")
-    answers = providers.model_at(chosen, "chat", candidate.chat_level)
+    answers = uses.resolve(candidate, "chat").model or asked
     model = asked if verdict == "unknown_model" else answers
     return _answer(back, here, said=said.format(company=label, model=model, name=her))
 
@@ -1244,18 +1233,22 @@ def use_company(slug: str) -> Response | tuple[str, int]:
         )
     # The chat's own row says it, as choosing it on the page would; the digest, choosing suggestions
     # and what else follows the chat follow it there.
-    model = providers.model_at(chosen, "chat", live.chat_level)
-    trial = live.model_copy(
-        update={"model_choices": {**live.model_choices, "chat": f"{slug}:{model}"}}
-    )
-    said = (
-        {}
-        if uses.default_choice(trial, "chat") == f"{slug}:{model}"
-        else {"chat": f"{slug}:{model}"}
-    )
-    kept = {key: text for key, text in live.model_choices.items() if key != "chat"}
-    _save({"model_choices": {**kept, **said} or None})
+    choices = _answering_with(live, slug)
+    model = uses.resolve(live.model_copy(update={"model_choices": choices or {}}), "chat").model
+    _save({"model_choices": choices})
     return _answer(back, here, said=COMPANY_CHOSEN.format(label=company.label, model=model))
+
+
+def _answering_with(live: Settings, slug: str) -> dict[str, str] | None:
+    """The page's choices with the chat answered by this company's everyday model, or without a
+    chat choice at all when that is what the chat falls back to anyway."""
+    if uses.resolve(live, "chat").company == slug:
+        return live.model_choices or None  # already answering, at whatever strength was chosen
+    model = providers.model_at(providers.build(slug, live), "chat", "everyday")
+    kept = {key: text for key, text in live.model_choices.items() if key != "chat"}
+    if uses.default_choice(live, "chat") == f"{slug}:{model}":
+        return kept or None
+    return {**kept, "chat": f"{slug}:{model}"}
 
 
 @bp.post("/settings/companies/<slug>/remove")
@@ -1284,11 +1277,7 @@ def remove_company(slug: str) -> Response | tuple[str, int]:
         )
     keys = {name: key for name, key in live.company_keys.items() if name != slug}
     gone: dict[str, Any] = {"companies": _definitions(live, drop=slug), "company_keys": keys}
-    # What named it goes with it: the company the settings fall back to, and what was said of it.
-    stored = _stored()
-    for setting in ("provider", "worker_provider"):
-        if stored.get(setting) == slug:
-            gone[setting] = None
+    # What was said of it goes with it.
     if slug in live.company_options:
         left = {s: o.model_dump(exclude_defaults=True) for s, o in live.company_options.items()}
         left.pop(slug)

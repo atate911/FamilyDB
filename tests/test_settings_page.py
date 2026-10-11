@@ -68,23 +68,14 @@ def test_the_page_offers_every_setting_that_can_be_stored() -> None:
 
 
 def test_saving_puts_it_in_force_at_once(page, conn) -> None:
-    form = _whole_form(page, provider="gemini", digest_hour=19, web_tools_enabled="true")
+    form = _whole_form(page, digest_hour=19, web_tools_enabled="true")
     saved = page.post("/settings", data=form)
     assert saved.status_code == 302 and saved.headers["Location"] == "/settings"
-    assert settings_store.overrides(conn) == {
-        "provider": "gemini",
-        "digest_hour": 19,
-        "web_tools_enabled": True,
-    }
-    assert page.app.settings.provider == "gemini"  # no restart, no wait
+    assert settings_store.overrides(conn) == {"digest_hour": 19, "web_tools_enabled": True}
+    assert page.app.settings.digest_hour == 19  # no restart, no wait
     after = page.get("/settings").text
     # In the words on the page, not the setting names.
-    assert (
-        "Saved. Changed: Company that answers, Weekend ideas time, Look ideas up on the web."
-        in (after)
-    )
-    # The page names who answers by what each use falls back to.
-    assert "Default: Gemini 3.1 Flash-Lite (everyday)" in page.get("/settings/model").text
+    assert "Saved. Changed: Weekend ideas time, Look ideas up on the web." in (after)
     assert 'value="19" selected' in page.get("/settings/messages").text
 
 
@@ -217,11 +208,11 @@ def test_the_history_shows_what_moved_and_who_moved_it(page, conn, family) -> No
 
 def test_a_setting_cannot_be_reached_through_the_form_unless_the_page_offers_it(page, conn) -> None:
     """A crafted post naming something else changes nothing: only the boxes are read."""
-    form = _whole_form(page, provider="gemini")
+    form = _whole_form(page, digest_hour=19)
     form["web_password"] = "changed from the page"
     form["familydb_path"] = "/tmp/elsewhere.sqlite3"
     assert page.post("/settings", data=form).status_code == 302
-    assert set(settings_store.overrides(conn)) == {"provider"}
+    assert set(settings_store.overrides(conn)) == {"digest_hour"}
     assert page.app.settings.web_password == PASSWORD
 
 
@@ -301,8 +292,10 @@ def test_each_use_says_which_model_it_falls_back_to(page) -> None:
     is, so a level set before the page was redrawn is never invisible."""
     # The fixture's everyday Claude is Opus: a level up never answers with a cheaper model.
     assert "Default: Claude Opus 5 (best)" in _row(page.get("/settings/model").text, "chat")
-    page.post("/settings", data=_whole_form(page, provider="openai", digest_level="best"))
-    assert page.app.settings.digest_level == "best"
+    # The environment's older keys, read as choices under the page's.
+    page.app.settings = page.app.settings.model_copy(
+        update={"provider": "openai", "digest_level": "best"}
+    )
     text = page.get("/settings/model").text
     assert "Default: GPT-6 Luna (everyday)" in _row(text, "chat")
     # Followed exactly while the strengths agree; at its own once they do not.
@@ -596,29 +589,55 @@ def _drawn(text: str) -> set[str]:
 
 
 def test_every_setting_is_on_exactly_one_page_and_the_right_one(page) -> None:
-    """Split into pages, a setting could fall between them, or turn up on two and be saved twice.
-    The ones the AI model page replaced with a choice for each use (`fields.LEGACY`) are drawn
-    nowhere: each is only what a use falls back to."""
+    """Split into pages, a setting could fall between them, or turn up on two and be saved twice."""
     found: dict[str, list[str]] = {}
     for section in fields.SECTIONS:
         response = page.get(f"/settings/{section.name}")
         assert response.status_code == 200, section.name
         for key in _drawn(response.text):
             found.setdefault(key, []).append(section.name)
-    assert sorted(found) == sorted(set(BEHAVIOUR) - fields.LEGACY)
+    assert sorted(found) == sorted(BEHAVIOUR)
     assert {key: pages for key, pages in found.items() if len(pages) > 1} == {}
-    drawn_on = {key: where for key, where in fields.SECTION_OF.items() if key not in fields.LEGACY}
-    assert {key: pages[0] for key, pages in found.items()} == drawn_on
+    assert {key: pages[0] for key, pages in found.items()} == dict(fields.SECTION_OF)
 
 
-def test_a_setting_the_model_page_replaced_is_still_read_as_a_default(page, conn) -> None:
-    """Nothing is lost on upgrade: what an older page stored still says what each use does."""
-    assert set(BEHAVIOUR) >= fields.LEGACY
-    assert {"chat_level", "provider", "voice_notes", "provider_fallback"} <= fields.LEGACY
-    page.post("/settings", data=_whole_form(page, chat_level="best", voice_notes="false"))
-    assert settings_store.overrides(conn) == {"chat_level": "best", "voice_notes": False}
-    row = _row(page.get("/settings/model").text, "hear")
-    assert "Default: off" in row
+def test_what_an_older_page_stored_becomes_the_pages_choices_once(page, conn) -> None:
+    """Nothing is lost on upgrade: the model settings an older page stored (`config.OLDER`) are
+    read as the page's choices the first time the new code looks, and the old keys dropped."""
+    from familydb.agent import uses
+
+    with db.transaction(conn):
+        for key, value in (
+            ("chat_level", '"best"'),
+            ("voice_notes", "false"),
+            ("provider_fallback", "false"),
+        ):
+            conn.execute(
+                "INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, '2026-01-01')",
+                (key, value),
+            )
+    page.app._upgraded_settings = False
+    page.app.refresh()
+    stored = settings_store.overrides(conn)
+    # Chat at best; the digest stays at everyday, as it was; choosing was off in the environment.
+    assert stored["model_choices"] == {
+        "chat": "anthropic:best",
+        "digest": "anthropic:everyday",
+        "choose": "off",
+        "hear": "off",
+    }
+    assert all(not options.get("stand_in", True) for options in stored["company_options"].values())
+    assert (
+        conn.execute(
+            "SELECT count(*) FROM app_settings WHERE key IN ('chat_level', 'voice_notes')"
+        ).fetchone()[0]
+        == 0
+    )
+    live = page.app.settings
+    assert uses.resolve(live, "hear").off and uses.resolve(live, "chat").model == "claude-opus-5"
+    assert "Off" in _row(page.get("/settings/model").text, "hear") or "off" in _row(
+        page.get("/settings/model").text, "hear"
+    )
 
 
 def test_a_page_that_is_not_one_is_not_found(page) -> None:

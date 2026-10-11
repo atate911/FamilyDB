@@ -11,6 +11,7 @@ import re
 
 import pytest
 
+from familydb.agent import uses
 from familydb.app import App
 from familydb.integrations.geocode import GeoPoint
 from familydb.store import db, knocks, members
@@ -132,7 +133,8 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     assert "OpenAI accepted the key. Vera answers with gpt-6-luna." in page
     lineup = " ".join(page.split())
     assert "GPT-6 Luna (everyday, $0.10 in, $0.50 out); GPT-6 Sol (better," in lineup
-    assert app.settings.openai_api_key == "sk-good" and app.settings.provider == "openai"
+    assert app.settings.openai_api_key == "sk-good"
+    assert uses.resolve(app.settings, "chat").company == "openai"
 
     # It can answer now, so the home page is the home page again.
     assert fresh.get("/").status_code == 200
@@ -179,13 +181,13 @@ def test_a_company_that_cannot_be_asked_does_not_stop_the_key(fresh, monkeypatch
     page = fresh.get("/setup/model?company=gemini").text
     assert "Google could not be asked just now" in page
     assert fresh.app.settings.gemini_api_key == "AIza-maybe"
-    assert fresh.app.settings.provider == "gemini"
+    assert uses.resolve(fresh.app.settings, "chat").company == "gemini"
 
 
 def test_a_key_check_names_the_model_it_asked_about(fresh, monkeypatch, conn) -> None:
     """The check looks the everyday model up; a stronger chat level is what then answers."""
     with db.transaction(conn):
-        settings_store.set_many(conn, {"chat_level": "better"})
+        settings_store.set_many(conn, {"model_choices": {"chat": "openai:better"}})
     _say(monkeypatch, "unknown_model")
     _post(fresh, "model", "/settings/model", provider="openai", key="sk-good")
     assert "says it has no model called gpt-6-luna" in fresh.get("/setup/model").text

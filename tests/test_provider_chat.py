@@ -364,8 +364,9 @@ def test_a_lookup_goes_to_a_company_that_can_search_when_the_chosen_one_cannot(s
         update={"anthropic_api_key": None, "openai_api_key": None, "gemini_api_key": None}
     )
     assert not gateway.can_ask(alone, "enrich") and gateway.can_ask(alone, "chat")
-    # Weighing a change takes no web, so the company chosen answers it.
-    assert gateway.answering(alone, "judge")[0].name == "acme"
+    # Weighing a change takes no web, so the company chosen answers it (once it is turned on).
+    weighing = alone.model_copy(update={"judgements": True})
+    assert gateway.answering(weighing, "judge")[0].name == "acme"
 
 
 def test_a_company_with_no_model_named_is_not_ready(settings):

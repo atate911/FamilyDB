@@ -84,8 +84,10 @@ chosen on the row, and everything else a click away.
 ### 1. Resolution (`agent/uses.py`)
 
 - **One choice per row**, stored as `same:<row>`, `off` or `<company>:<model>`, replacing `chat_level`,
-  `digest_level`, `lookup_level`, `judgement_level`, `choose_level` and the everyday boxes. Existing
-  installs are read forward from their old settings, so nothing changes on upgrade. The everyday,
+  `digest_level`, `lookup_level`, `judgement_level`, `choose_level` and the everyday boxes. The
+  older keys are read from the environment as choices (`config.older_to_choices`, under the
+  page's own), and what an older database stored becomes the page's choices once on upgrade
+  (`store.settings.upgrade`), so nothing changes on upgrade. The everyday,
   better and best lineup stays, because stand-ins, presets and switching company use it.
 - **`gateway.KINDS`** gains the row each kind belongs to; `gateway.answering` resolves through it.
 - **Per-row thinking effort** (`Settings.use_effort`), laid over `effort` and `worker_effort`, which
