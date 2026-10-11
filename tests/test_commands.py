@@ -390,6 +390,8 @@ def test_a_question_in_plain_words_is_its_command() -> None:
         "today",
         "this week",
         "the list",
+        "what's on the list?",  # the ideas, or the shopping?
+        "what's on my list?",  # a kid's is her wish list
         "what's on this week at the museum?",
         "what's on today? and book dinner for 7",
         "/week",

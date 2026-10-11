@@ -79,7 +79,8 @@ SOURCE_NOTES = {
 
 
 # The plain ways a command's question is asked, each the whole message once folded (`folded`):
-# questions, never a bare "today" or "this week", which may be an answer to hers.
+# questions, never a bare "today" or "this week", which may be an answer to hers, and never one
+# that could mean something else ("the list" may be the ideas, "my list" a kid's wishes).
 WORDS: dict[str, tuple[str, ...]] = {
     "today": (
         "what's on today",
@@ -104,7 +105,6 @@ WORDS: dict[str, tuple[str, ...]] = {
     ),
     "tasks": (
         "what's on my plate",
-        "what's on my list",
         "what are my to-dos",
         "what are my todos",
         "what are my tasks",
@@ -116,7 +116,6 @@ WORDS: dict[str, tuple[str, ...]] = {
     "list": (
         "what's on the shopping list",
         "what's on the grocery list",
-        "what's on the list",
         "what do we need from the store",
         "what do we need from the shop",
         "what's the shopping list",

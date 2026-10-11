@@ -111,7 +111,8 @@ def test_the_day_is_the_family_s(settings, clock, conn) -> None:
 def test_a_used_up_limit_stops_the_call_and_says_why(settings, clock, conn, family) -> None:
     _spent(conn, settings.daily_spend_limit)
     api = fakes.FakeMessagesAPI()  # any request would fail the test: none is scripted
-    reply = handle_incoming(App(settings, clock), _telegram("what now?", "2"), api=api, conn=conn)
+    asked = _telegram("anything fun on saturday?", "2")  # for her: code answers "what now?"
+    reply = handle_incoming(App(settings, clock), asked, api=api, conn=conn)
     assert api.requests == []
     assert reply is not None and reply.status == "failed"
     assert "spending limit" in reply.text and "$2.00" in reply.text
