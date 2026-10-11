@@ -7,8 +7,10 @@ are and how they change) under the tools, the agent and the engine; the orchestr
 channels, the jobs and the page on top. The domain and the orchestration both live directly in
 the package, told apart by `ORCHESTRATION`.
 
-Every import that crosses the order upward is named in `EXCEPTIONS` with its reason, so the list
-can only shrink: one no longer needed fails the test until it is taken out.
+Every import that crosses the order upward is named in `EXCEPTIONS` with its reason, so each is on
+purpose: one no longer needed fails the test until it is taken out. The order is a default
+(CLAUDE.md, How to read the rules): a crossing that is right is named there, and an order that no
+longer fits is changed, here and in CLAUDE.md, with the reason.
 """
 
 from __future__ import annotations
@@ -36,6 +38,11 @@ ORDER = [
     "web",
 ]
 LEVEL = {name: index for index, name in enumerate(ORDER)}
+# What a crossing's failure says to do.
+WAY_FORWARD = (
+    "move the import down, or name a crossing that is right in EXCEPTIONS with why; if the order"
+    " no longer fits, change it here and in CLAUDE.md, with the reason"
+)
 PACKAGES = {name for name in ORDER if name not in {"domain", "orchestration"}} | {"wiki"}
 
 # The modules directly in the package that wire the rest together; every other one there is
@@ -139,7 +146,7 @@ def test_every_import_stays_at_its_level_or_below() -> None:
                 used.add((where, target))
                 continue
             crossings.append(f"{where} imports {module} ({own} is below {target})")
-    assert crossings == [], "\n".join(crossings)
+    assert crossings == [], "\n".join([*crossings, WAY_FORWARD])
     stale = sorted(set(EXCEPTIONS) - used)
     assert stale == [], f"no longer needed, take them out of EXCEPTIONS: {stale}"
 
@@ -155,7 +162,7 @@ def test_the_kernel_imports_only_itself() -> None:
             if not module.startswith("familydb.base")
             and (where, _level_of_module(module)) not in EXCEPTIONS
         }
-        assert outside == set(), f"{where} imports {sorted(outside)}"
+        assert outside == set(), f"{where} imports {sorted(outside)}: {WAY_FORWARD}"
 
 
 def test_the_orchestration_list_names_only_modules_that_exist() -> None:

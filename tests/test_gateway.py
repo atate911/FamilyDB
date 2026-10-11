@@ -38,7 +38,12 @@ def _calls_named(tree: ast.AST, name: str, *, methods_only: bool = False) -> lis
 
 
 def test_nothing_but_the_gateway_starts_a_turn() -> None:
-    """A model call made anywhere else would escape the declarations, and the kind records."""
+    """A model call made anywhere else would escape the declarations, and the kind records.
+
+    This holds an invariant (cost, CLAUDE.md): every call is admitted against the limits and
+    recorded. The one door is how that is kept today; another that does the same is a change to
+    this test, said in the PR. One that skips them is not.
+    """
     starts, sends, hears, looks = [], [], [], []
     for path in sorted(PACKAGE.rglob("*.py")):
         where = path.relative_to(PACKAGE).as_posix()

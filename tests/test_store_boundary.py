@@ -41,4 +41,7 @@ def test_a_statement_is_run_only_in_the_store() -> None:
             continue
         tree = ast.parse(path.read_text("utf-8"))
         outside += [f"{where}:{line}" for line in _statement_calls(tree)]
-    assert outside == [], outside
+    assert outside == [], (
+        f"{outside}: run it through a store module, or, if a statement belongs elsewhere, change"
+        " this rule here and in CLAUDE.md, with the reason"
+    )
