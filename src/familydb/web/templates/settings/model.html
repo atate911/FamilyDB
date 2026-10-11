@@ -4,7 +4,6 @@
    dropdown of every model, grouped by company, and costs are the saved ones. The numbers come from
    web/models_page.py: the last 30 days of calls, re-priced at each model. #}
 {% set b = built %}
-{% macro money(v) -%}{% if 0 < v < 0.005 %}&lt;$0.01{% else %}${{ '{:,.2f}'.format(v) }}{% endif %}{%- endmacro %}
 {% macro delta(v) -%}{{ '+' if v >= 0 else '−' }}${{ '%.2f' % (v | abs) }}{%- endmacro %}
 
 <div class="mp" id="mp" data-models='{{ b.data | tojson }}'>

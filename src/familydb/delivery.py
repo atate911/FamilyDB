@@ -118,8 +118,12 @@ def lease(app: App, conn: sqlite3.Connection, message_id: int) -> Iterator[Claim
         yield Claim(token)
     finally:
         RENEWER.drop(token)
-        with transaction(conn):
-            messages.release_claim(conn, token)
+        try:
+            with transaction(conn):
+                messages.release_claim(conn, token)
+        except sqlite3.Error:
+            # The claim lapses by itself; what the turn raised is what matters.
+            log.exception("could not let go of message claim %s", message_id)
 
 
 def hold_for_gathering(conn: sqlite3.Connection, message_id: int, *, until: str) -> None:

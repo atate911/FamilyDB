@@ -72,7 +72,7 @@ def test_every_registered_tool_has_a_usable_schema(registry: ToolRegistry) -> No
 
 
 def test_now_tool_takes_no_input(registry: ToolRegistry) -> None:
-    schema = registry.get("now").api_definition()["input_schema"]
+    schema = registry.get("now").definition().schema
     assert schema == {"type": "object", "properties": {}, "additionalProperties": False}
 
 

@@ -222,8 +222,7 @@ def spent_this_month(conn: sqlite3.Connection, settings: Any, now: datetime) -> 
 
 
 def _room(conn: sqlite3.Connection, settings: Any, now: datetime) -> bool:
-    budget = settings.judgement_budget
-    if not budget or spent_this_month(conn, settings, now) + CALL_ALLOWANCE > budget:
+    if not gateway.month_room(conn, settings, "judge", now, estimate=CALL_ALLOWANCE):
         return False
     return not spending.used_up(conn, settings, now)
 

@@ -19,6 +19,7 @@ from familydb.pipeline import handle_incoming, handle_synthetic, retry_message
 from familydb.store import ideas
 from familydb.store.db import transaction
 from tests import fakes
+from tests.conftest import NOW_ISO
 
 PACKAGE = Path(__file__).resolve().parent.parent / "src" / "familydb"
 
@@ -58,6 +59,16 @@ def test_nothing_but_the_gateway_starts_a_turn() -> None:
             # provider.send(request); a channel's `send(chat_id, text)` is a plain function
             sends += [f"{where}:{line}" for line in _calls_named(tree, "send", methods_only=True)]
     assert [s.split(":")[0] for s in starts] == ["agent/gateway.py"], starts
+    # However it is imported or aliased: resolved to its full name (tests/writes.py).
+    from tests import writes
+
+    for path in sorted(PACKAGE.rglob("*.py")):
+        where = path.relative_to(PACKAGE).as_posix()
+        if where == "agent/gateway.py":
+            continue
+        tree = ast.parse(path.read_text("utf-8"))
+        reached = writes.calls_in(tree, writes._aliases(tree))
+        assert "familydb.agent.loop.run_turn" not in reached, where
     assert sends == [], "only the loop sends a request to a provider"
     # Hearing a voice note is paid for too: it goes through the gateway's `listen`, and only there.
     assert [h.split(":")[0] for h in hears] == ["agent/gateway.py"], hears
@@ -73,6 +84,8 @@ def test_each_kind_is_declared_whole(kind, registry, settings) -> None:
     assert getattr(settings, call.level) in catalog.LEVELS  # a level setting, read as one
     if call.effort:
         assert getattr(settings, call.effort)
+    if call.budget:
+        assert isinstance(getattr(settings, call.budget), int | float)  # a month's dollars
     specs = {spec.name: spec for spec in registry.specs()}
     if call.tools is None:  # the chat tools: never the ones a worker hands back with
         assert call.web_searches is None and not call.hand_back
@@ -88,6 +101,60 @@ def test_each_kind_is_declared_whole(kind, registry, settings) -> None:
         assert call.surface == "worker" or call.web_searches is None
         # The judge weighs facts it is given and has no web; a worker that searches is capped.
         assert call.web_searches is None or call.web_searches > 0
+
+
+def test_a_month_budget_is_checked_in_one_place_for_every_kind_that_shares_it(
+    conn, settings, clock
+) -> None:
+    from familydb.store import calls
+
+    now = clock.now()
+    assert gateway.month_room(conn, settings, "chat", now)  # no budget of its own
+    tight = settings.model_copy(update={"happening_budget": 1.0})
+    assert gateway.month_room(conn, tight, "scout", now, estimate=0.5)
+    with transaction(conn):
+        calls.log_llm_call(
+            conn,
+            message_id=None,
+            iteration=1,
+            model="gpt-6-luna",
+            served_model=None,
+            request_id=None,
+            stop_reason="end",
+            usage={},
+            duration_ms=1,
+            now=NOW_ISO,
+            provider="openai",
+            cost_usd=0.8,
+            cost_estimated=False,
+            kind="find_feeds",  # shares the budget with scout
+            turn="t1",
+        )
+    assert not gateway.month_room(conn, tight, "scout", now, estimate=0.5)
+    assert not gateway.month_room(
+        conn, settings.model_copy(update={"choose_budget": 0}), "choose", now
+    )
+
+
+@pytest.mark.parametrize("kind", sorted(gateway.KINDS))
+def test_each_kinds_prefix_is_the_same_three_days_on(
+    kind, conn, settings, family, registry, clock
+) -> None:
+    """Nothing volatile in any kind's cached part: the same system blocks and tools whatever
+    the day (the date goes in the turn)."""
+    import json
+    from datetime import timedelta
+
+    def shown():
+        made = gateway.build_request(
+            kind, conn=conn, settings=settings, registry=registry, current=["hello"], api=object()
+        ).request
+        return json.dumps(made.system, default=str), json.dumps(made.tools, default=str)
+
+    first = shown()
+    clock.advance(timedelta(days=3))
+    assert shown() == first
+    assert "Today is" not in first[0]
 
 
 def _kinds(conn) -> list[str]:

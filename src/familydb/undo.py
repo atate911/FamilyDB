@@ -31,7 +31,7 @@ from familydb.base.dates import utc_iso
 from familydb.base.errors import ToolError
 from familydb.store import calls, ideas, memories, plans, tasks
 from familydb.store.db import from_json, transaction
-from familydb.tools.registry import ToolContext, keep_undo
+from familydb.tools.registry import UNDO_VERSION, ToolContext, keep_undo
 
 # How long after a change it can be taken back.
 WINDOW = timedelta(hours=24)
@@ -40,6 +40,7 @@ CHANGED = "it has changed since, so it was left as it is"
 TOO_LATE = "that was more than a day ago"
 DONE_ALREADY = "that was undone already"
 NOT_YOURS = "only your own things to do can be undone; ask a parent"
+OLDER = "that was made by another version of FamilyDB, so it was left as it is"
 TASK_OPS = frozenset({"cancel_task", "restore_task"})
 
 
@@ -59,6 +60,8 @@ def take_back(ctx: ToolContext) -> dict[str, Any]:
     if row["created_at"] < since:
         raise ToolError(TOO_LATE)
     inverse = from_json(row["undo"])
+    if inverse.get("v") != UNDO_VERSION:
+        raise ToolError(OLDER)
     _may(ctx, row, inverse)
     stamp = ctx.now_iso()
     with transaction(conn):

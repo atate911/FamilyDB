@@ -324,7 +324,7 @@ def test_a_property_forced_to_be_required_can_still_say_nothing(registry) -> Non
     """Strict mode forbids an absent field, so an optional one needs a null to fall back on."""
     from familydb.agent.providers.openai import openai_schema
 
-    schema = openai_schema(registry.get("add_idea").api_definition()["input_schema"])
+    schema = openai_schema(registry.get("add_idea").definition().schema)
     assert set(schema["required"]) == set(schema["properties"])
     for name in ("setting", "tags", "needs_booking"):  # optional through a default, not a None
         assert {"type": "null"} in schema["properties"][name]["anyOf"], name

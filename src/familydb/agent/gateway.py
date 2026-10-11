@@ -75,6 +75,9 @@ class CallSpec:
     iterations: str = "agent_max_iterations"  # the setting that caps model calls in one turn
     effort: str | None = None  # the setting naming the effort; None is the provider's default
     max_tokens: int | None = None  # the output cap, thinking included; None: max_output_tokens
+    # The setting naming its month's budget in dollars, shared by the kinds that name the same
+    # one (`month_room`); None: the day's limit alone bounds it.
+    budget: str | None = None
 
 
 _CHAT = {
@@ -136,6 +139,7 @@ KINDS: dict[str, CallSpec] = {
         CallSpec(
             "scout",
             "searching for what is on near home",
+            budget="happening_budget",
             prompt="discover",
             tools=("report_finds",),
             hand_back=("report_finds",),
@@ -147,6 +151,7 @@ KINDS: dict[str, CallSpec] = {
         CallSpec(
             "find_feeds",
             "looking for event calendars near home",
+            budget="happening_budget",
             prompt="find_feeds",
             tools=("report_feeds",),
             hand_back=("report_feeds",),
@@ -161,6 +166,7 @@ KINDS: dict[str, CallSpec] = {
         CallSpec(
             "choose",
             "choosing what to suggest",
+            budget="choose_budget",
             surface="chat",
             level="choose_level",
             prompt="choose",
@@ -173,6 +179,7 @@ KINDS: dict[str, CallSpec] = {
         CallSpec(
             "judge",
             "weighing a change in the models",
+            budget="judgement_budget",
             prompt="judge",
             tools=("give_judgement",),
             hand_back=("give_judgement",),
@@ -182,6 +189,7 @@ KINDS: dict[str, CallSpec] = {
         CallSpec(
             "price_check",
             "checking a disputed price",
+            budget="judgement_budget",
             prompt="price_check",
             tools=("report_price",),
             hand_back=("report_price",),
@@ -214,6 +222,24 @@ def purpose(kind: str | None) -> str:
     if kind == LOOK:
         return LOOK_PURPOSE
     return KINDS[kind].purpose if kind in KINDS else kind
+
+
+def month_room(
+    conn: sqlite3.Connection, settings: Settings, kind: str, now: datetime, *, estimate: float = 0.0
+) -> bool:
+    """Whether this kind's month budget has room for one more call costing `estimate`: the
+    setting its spec names, against what every kind naming that setting has cost since the
+    family's month began. Always, for a kind with no budget of its own; never, for one whose
+    budget is unset or zero."""
+    call = spec(kind)
+    if call.budget is None:
+        return True
+    budget = getattr(settings, call.budget)
+    if not budget:
+        return False
+    sharing = tuple(name for name, each in KINDS.items() if each.budget == call.budget)
+    spent = calls.spent_on(conn, sharing, since=spending.month_start(settings, now))
+    return spent + estimate <= budget
 
 
 def answering(

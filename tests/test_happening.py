@@ -12,12 +12,13 @@ from familydb import happening
 from familydb.agent.prompt import load_prompt
 from familydb.app import App
 from familydb.base.clock import FixedClock
+from familydb.base.dates import utc_iso
 from familydb.integrations.events import FoundEvent
 from familydb.integrations.ical import FeedError
 from familydb.jobs import happening as job
 from familydb.jobs.happening import run_happening
 from familydb.store import alerts as alert_store
-from familydb.store import finds
+from familydb.store import calls, finds
 from familydb.store.db import transaction
 from tests import fakes
 from tests.conftest import TZ
@@ -204,13 +205,29 @@ def test_no_search_without_the_budget_the_setting_or_the_web(settings, conn, hel
     assert counts["read"] == 1 and counts["searched"] == 0 and api.requests == []
 
 
-def test_a_month_s_budget_spent_stops_the_search_but_not_the_calendars(
-    settings, conn, monkeypatch
-) -> None:
-    monkeypatch.setattr(happening, "spent_this_month", lambda *_: 0.95)
+def test_a_month_s_budget_spent_stops_the_search_but_not_the_calendars(settings, conn) -> None:
+    app = _app(settings, event_feeds=LIBRARY, **SEARCHING)
+    with transaction(conn):  # one search this month already cost nearly all of the budget
+        calls.log_llm_call(
+            conn,
+            message_id=None,
+            iteration=1,
+            model="gpt-6-luna",
+            served_model=None,
+            request_id=None,
+            stop_reason="end",
+            usage={},
+            duration_ms=1,
+            now=utc_iso(app.clock.now()),
+            provider="openai",
+            cost_usd=0.95,
+            cost_estimated=False,
+            kind="scout",
+            turn="t-spent",
+        )
     api = fakes.FakeMessagesAPI()
     counts = run_happening(
-        _app(settings, event_feeds=LIBRARY, **SEARCHING),
+        app,
         api=api,
         feeds=Feeds({LIBRARY: _ics(STORY)}),
     )

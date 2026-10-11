@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
+from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.base import BaseScheduler
 from apscheduler.triggers.base import BaseTrigger
@@ -240,9 +241,17 @@ def apply_settings(app: App, scheduler: BaseScheduler) -> list[str]:
     return moved
 
 
+# Jobs running at once: the minute's reminders and the retry job must never wait behind a
+# lookup turn and a feed read, and each job runs once at a time (max_instances=1), so this is
+# how many of the sixteen may overlap, not a queue depth.
+JOB_THREADS = 6
+
+
 def build_scheduler(app: App) -> BackgroundScheduler:
     """A scheduler with every job registered, not yet started."""
-    scheduler = BackgroundScheduler(timezone=app.settings.tzinfo)
+    scheduler = BackgroundScheduler(
+        timezone=app.settings.tzinfo, executors={"default": ThreadPoolExecutor(JOB_THREADS)}
+    )
     for spec in job_specs(app):
         if spec.wanted:
             _add(scheduler, app, spec)

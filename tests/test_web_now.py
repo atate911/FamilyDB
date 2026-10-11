@@ -190,6 +190,11 @@ def test_browsing_asks_nothing_of_a_model(settings, clock, conn, family) -> None
         "/wiki/_search?q=start",
     ):
         assert client.get(path).status_code == 200, path
+    # And every page without an id in its address, whatever it is (a new one is covered the day
+    # it is added): answered, redirected or refused, never by asking a model.
+    for rule in client.application.url_map.iter_rules():
+        if "GET" in rule.methods and not rule.arguments:
+            assert client.get(rule.rule).status_code < 500, rule.rule
     assert api.requests == []
     assert conn.execute("SELECT count(*) FROM llm_calls").fetchone()[0] == 0
 

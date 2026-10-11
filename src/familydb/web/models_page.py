@@ -314,10 +314,6 @@ class Pricer:
 # -- the page -------------------------------------------------------------------------------------
 
 
-def money(v: float) -> str:
-    return "<$0.01" if 0 < v < 0.005 else f"${v:,.2f}"
-
-
 def calls_said(use: uses.Use, n: int) -> str:
     if n == 0:
         return "none in 30 days"
@@ -390,7 +386,7 @@ def _advice(use: uses.Use, ladder: list[float]) -> str:
             f"{ladder[1] / ladder[0]:.0f} times everyday and best about "
             f"{ladder[2] / ladder[0]:.0f} times. Worth trying if replies start to feel off."
         )
-    return f"Everyday to best adds {money(ladder[2] - ladder[0])} a month at this use."
+    return f"Everyday to best adds {views.money_text(ladder[2] - ladder[0])} a month at this use."
 
 
 SHORT = {"chat": "chat", "lookup": "lookups"}

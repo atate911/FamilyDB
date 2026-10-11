@@ -26,7 +26,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from familydb import alerts, happening
-from familydb.agent import spending
+from familydb.agent import gateway, spending
 from familydb.agent.loop import MessagesAPI
 from familydb.agent.worker import home_location, run_worker_turn
 from familydb.availability import (
@@ -95,8 +95,7 @@ def _look_due(settings: Any, last: dict[str, store.FindSource], now: datetime) -
 
 
 def within_budget(conn: sqlite3.Connection, settings: Any, now: datetime) -> bool:
-    budget = settings.happening_budget
-    if not budget or happening.spent_this_month(conn, settings, now) + CALL_ALLOWANCE > budget:
+    if not gateway.month_room(conn, settings, "scout", now, estimate=CALL_ALLOWANCE):
         return False
     return not spending.used_up(conn, settings, now)
 

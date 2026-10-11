@@ -461,7 +461,7 @@ def money_text(dollars: float) -> str:
     """ "$0.00", "$2.00"; under ten cents "4¢", which a dollar figure would round to nothing."""
     if 0 < dollars < 0.1:
         return f"{max(round(dollars * 100), 1)}¢"
-    return f"${dollars:.2f}"
+    return f"${dollars:,.2f}"
 
 
 def count_words(count: int, one: str, many: str) -> str:
@@ -1385,6 +1385,8 @@ DID_WORDS = {
     "add_wish": "Added a wish",
     "update_wish": "Changed a wish",
     "turn_away": "Turned down a request",
+    "shopping_list": "Changed a list",
+    "undo": "Took a change back",
 }
 
 

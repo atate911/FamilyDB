@@ -30,15 +30,17 @@ log = logging.getLogger(__name__)
 
 
 OFFERED = "offered_reply"
-# Where the inverse of a write is left for dispatch to keep (tool_calls.undo).
+# Where the inverse of a write is left for dispatch to keep (tool_calls.undo), and the shape it
+# is kept in: an inverse from another version is left alone rather than read wrong (undo.py).
 UNDO = "undo"
+UNDO_VERSION = 1
 
 
 def keep_undo(ctx: ToolContext, op: str, about: str, **facts: Any) -> None:
     """Leave how to take back what a tool just did, for dispatch to keep with the call. `about`
     says what was done, as the undo will say it ("added task #5 Call the plumber"); `op` names
     the inverse `familydb.undo` knows."""
-    ctx.scratch[UNDO] = {"op": op, "about": about, **facts}
+    ctx.scratch[UNDO] = {"v": UNDO_VERSION, "op": op, "about": about, **facts}
 
 
 Source = Literal["chat", "tap", "page", "command", "job", "worker", "cli"]
@@ -126,13 +128,10 @@ class ToolSpec:
     # the command line) is not asked.
     needs: Permission | None = None
 
-    def api_definition(self) -> dict[str, Any]:
-        return {
-            "name": self.name,
-            "description": self.description,
-            "input_schema": strict_schema(self.input_model),
-            "strict": True,
-        }
+    def definition(self) -> ToolDef:
+        """What the model is told of it, provider-neutral: each provider shapes its own request
+        from this (and asks for strict schemas itself)."""
+        return ToolDef(self.name, self.description, strict_schema(self.input_model))
 
 
 def dump(value: Any) -> str:
@@ -144,13 +143,13 @@ def dump(value: Any) -> str:
 class ToolRegistry:
     def __init__(self) -> None:
         self._specs: dict[str, ToolSpec] = {}
-        self._definitions: dict[str, dict[str, Any]] = {}
+        self._definitions: dict[str, ToolDef] = {}
 
     def register(self, spec: ToolSpec) -> None:
         if spec.name in self._specs:
             raise ValueError(f"duplicate tool {spec.name!r}")
         self._specs[spec.name] = spec
-        self._definitions[spec.name] = spec.api_definition()
+        self._definitions[spec.name] = spec.definition()
 
     def tool(
         self,
@@ -204,14 +203,7 @@ class ToolRegistry:
         unknown = set(wanted) - set(self._specs)
         if unknown:
             raise ValueError(f"unknown tools: {sorted(unknown)}")
-        return [
-            ToolDef(
-                name=name,
-                description=self._specs[name].description,
-                schema=self._definitions[name]["input_schema"],
-            )
-            for name in wanted
-        ]
+        return [self._definitions[name] for name in wanted]
 
     def dispatch(
         self,

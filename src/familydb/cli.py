@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 import signal
@@ -408,7 +409,7 @@ def tool_cmd(
     if spec is None:
         raise typer.BadParameter(f"unknown tool {name!r}; see --list")
     if schema:
-        typer.echo(json.dumps(spec.api_definition(), indent=2, ensure_ascii=False))
+        typer.echo(json.dumps(dataclasses.asdict(spec.definition()), indent=2, ensure_ascii=False))
         return
     raw = sys.stdin.read() if stdin else (json_input or "{}")
     try:

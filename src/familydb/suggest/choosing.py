@@ -134,9 +134,7 @@ def _choose(ctx: ToolContext, args: SuggestInput, a: Any) -> Chosen | None:
     fresh = _fresh(ctx, made, a)
     if not _made_before(ctx, fresh):
         now = ctx.clock.now()
-        if spent_this_month(ctx.conn, ctx.settings, now) + _estimate(ctx, made) > (
-            ctx.settings.choose_budget
-        ):
+        if not gateway.month_room(ctx.conn, ctx.settings, KIND, now, estimate=_estimate(ctx, made)):
             log.info("not choosing: this month's budget for it would be passed")
             return None
         try:
