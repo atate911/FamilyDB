@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.5.0 — in progress
+## v0.5.0 — beta (2026-10-11)
 
 ### New since v0.4.0
 
@@ -30,6 +30,11 @@
   it on the plate and under its reminder on Telegram, which makes it yours. Pin under one of her
   replies keeps it at hand, at the top of Chat and beside the box on a desk. Each thing on a list
   carries the mark of whoever put it there.
+- **Example sites to walk through before going live.** `uv run python -m examples` writes a made-up
+  household's pages as linked static pages, as an admin, an eleven-year-old, the kitchen board and a
+  first day; `--serve PORT` runs the same household live.
+- **Upgrading** runs two migrations: `0059` keeps her picks made ahead, `0060` the replies each person
+  pinned. Nothing is asked of the family.
 
 ## v0.4.0 — beta (2026-10-09)
 

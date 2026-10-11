@@ -1,6 +1,6 @@
 [project]
 name = "familydb"
-version = "0.4.0"
+version = "0.5.0"
 description = "A private family planning assistant: an ideas log, calendar plans and weekend suggestions."
 readme = "README.md"
 requires-python = ">=3.11"
