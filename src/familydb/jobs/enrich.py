@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from contextlib import closing
-from datetime import datetime, time, timedelta
+from datetime import datetime
 from typing import Any
 
 from familydb import routing, voice
@@ -17,7 +17,7 @@ from familydb.agent.loop import MessagesAPI
 from familydb.app import App
 from familydb.availability import enrichment_available
 from familydb.base.config import Settings
-from familydb.base.dates import utc_iso
+from familydb.base.dates import last_hour_passed, utc_iso
 from familydb.scouting import fill
 from familydb.scouting.fill import OUTCOMES
 from familydb.scouting.reach import Reach
@@ -37,14 +37,7 @@ def lookups_due_before(settings: Settings, now: datetime) -> str | None:
     as a UTC stamp: ideas waiting since before it are due."""
     if settings.lookups_when == "asap":
         return None
-    zone = settings.tzinfo
-    local = now.astimezone(zone)
-    evening = datetime.combine(local.date(), time(settings.lookup_hour), tzinfo=zone)
-    if local < evening:
-        evening = datetime.combine(
-            local.date() - timedelta(days=1), time(settings.lookup_hour), tzinfo=zone
-        )
-    return utc_iso(evening)
+    return utc_iso(last_hour_passed(now, settings.lookup_hour, settings.tzinfo))
 
 
 def render_place_note(idea: Idea, place: Place, settings: Any) -> str:

@@ -34,7 +34,7 @@ from familydb.agent import gateway, spending, uses
 from familydb.agent.loop import MessagesAPI
 from familydb.agent.providers import catalog, companies, prices
 from familydb.agent.worker import worker_turn
-from familydb.base.dates import utc_iso
+from familydb.base.dates import last_hour_passed, utc_iso
 from familydb.base.errors import AgentError
 from familydb.integrations.price_lists import Prices
 from familydb.store import calls
@@ -199,12 +199,7 @@ def _evening(settings: Any, now: datetime) -> str | None:
     """
     if settings.lookups_when == "asap":
         return None
-    zone = settings.tzinfo
-    local = now.astimezone(zone)
-    evening = datetime.combine(local.date(), time(settings.lookup_hour), tzinfo=zone)
-    if local < evening:
-        evening -= timedelta(days=1)
-    return utc_iso(evening)
+    return utc_iso(last_hour_passed(now, settings.lookup_hour, settings.tzinfo))
 
 
 def due(questions: list[store.Judgement], settings: Any, now: datetime) -> list[store.Judgement]:
