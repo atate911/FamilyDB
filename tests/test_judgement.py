@@ -10,7 +10,7 @@ import anthropic
 import pytest
 
 from familydb import judgement, model_watch
-from familydb.agent.providers import parts, prices
+from familydb.agent.providers import companies, parts, prices
 from familydb.app import App
 from familydb.base.clock import FixedClock
 from familydb.base.errors import AgentError
@@ -87,10 +87,10 @@ def test_a_going_model_s_place_is_weighed_with_the_evening_lookups_and_put_in_at
 
     # The same price as the one it replaces: put in by itself, and said, with the way back.
     evening.refresh()
-    assert evening.settings.worker_model == "claude-haiku-5"
+    assert companies.ANTHROPIC.worker_model(evening.settings) == "claude-haiku-5"
     (answered,) = store.recent(conn, since="2000")
     assert answered.outcome.startswith("claude-haiku-5 put in place of claude-haiku-4-5")
-    assert answered.answer["undo"] == {"worker_model": ""}
+    assert answered.answer["undo"] == {"anthropic_worker_model": ""}
     assert ("advice", "replacement:anthropic:claude-haiku-4-5") in _found(conn)
     assert calls.recent_llm_calls(conn)[0]["kind"] == "judge"
 
@@ -103,11 +103,12 @@ def test_a_dearer_choice_waits_for_an_admin_with_a_button(settings, conn, family
     evening = _app(settings, hour=21)
     judgement.run_judgements(evening, api=_answer([_pick(question, "claude-sonnet-5")]))
     evening.refresh()
-    assert evening.settings.worker_model == "claude-haiku-4-5"  # twice the price: not by itself
+    # Twice the price: not by itself.
+    assert companies.ANTHROPIC.worker_model(evening.settings) == "claude-haiku-4-5"
     page = create_app(evening).test_client().get("/status").text
     form = re.search(r'<form[^>]*class="inline-action">(?:(?!</form>).)*Put these in', page, re.S)
     assert form is not None
-    assert 'name="worker_model" value="claude-sonnet-5"' in form.group(0)
+    assert 'name="anthropic_worker_model" value="claude-sonnet-5"' in form.group(0)
 
 
 def test_only_suggest_changes_nothing_by_itself(settings, conn) -> None:
@@ -116,9 +117,9 @@ def test_only_suggest_changes_nothing_by_itself(settings, conn) -> None:
     evening = _app(settings, hour=21, judgement_acts="suggest")
     judgement.run_judgements(evening, api=_answer([_pick(question, "claude-haiku-5")]))
     evening.refresh()
-    assert evening.settings.worker_model == "claude-haiku-4-5"
+    assert companies.ANTHROPIC.worker_model(evening.settings) == "claude-haiku-4-5"
     assert store.recent(conn, since="2000")[0].answer["waiting"] == {
-        "worker_model": "claude-haiku-5"
+        "anthropic_worker_model": "claude-haiku-5"
     }
 
 

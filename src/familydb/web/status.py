@@ -34,7 +34,7 @@ from familydb.store import judgements as judgement_store
 from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
-from familydb.web import fields, views
+from familydb.web import views
 from familydb.web.auth import own_passwords, password_chosen, password_in_use
 
 DAYS = 30
@@ -695,11 +695,8 @@ def switch_for(app: App, conn: sqlite3.Connection, subject: str) -> dict[str, An
     company, _, rest = subject.partition(":")
     name = rest.split(":")[0]
     live = app.settings
-    boxes = [
-        one.key
-        for one in fields.FIELDS
-        if one.company == company and str(getattr(live, one.key, "") or "").lower() == name
-    ]
+    found = companies.get(company, live)
+    boxes = found.boxes_naming(live, name) if found else []
     instead = watch.replacement_for(conn, company, name, app.clock.today())
     if not boxes or instead is None:
         return None

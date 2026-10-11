@@ -9,17 +9,17 @@ from pathlib import Path
 import pytest
 
 from familydb.agent.providers import catalog, companies, prices
-from familydb.base.config import Settings
+from familydb.base.config import OLDER_MODEL_BOXES, Settings
 
 
 @pytest.mark.parametrize("company", companies.BUILT_IN, ids=lambda company: company.slug)
 def test_a_built_in_company_has_a_module_and_the_settings_it_names(company):
     importlib.import_module(f"familydb.agent.providers.{company.slug}")
     fields = Settings.model_fields
-    for name in (company.key_setting, company.chat_setting, company.worker_setting):
+    assert company.key_setting in fields, f"{company.slug}: its key is not a setting"
+    # Its models come from the environment under `OLDER_MODEL_BOXES`, under the page's own.
+    for name in OLDER_MODEL_BOXES[company.slug]:
         assert name in fields, f"{company.slug}: {name} is not a setting"
-    for name in (company.better_setting, company.best_setting):
-        assert name in fields
 
 
 def test_every_company_is_looked_for_as_a_spare_once():

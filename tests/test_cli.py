@@ -418,7 +418,10 @@ def test_a_command_reports_the_settings_in_force_not_the_file_s(env: Path) -> No
     with closing(application.connect()) as conn, db.transaction(conn):
         settings_store.set_many(
             conn,
-            {"model_choices": {"chat": "gemini:everyday"}, "gemini_model": "gemini-2.5-flash"},
+            {
+                "model_choices": {"chat": "gemini:everyday"},
+                "company_models": {"gemini": {"model": "gemini-2.5-flash"}},
+            },
         )
     result = runner.invoke(app, ["debug", "cost"])
     assert result.exit_code == 0, result.output

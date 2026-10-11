@@ -94,10 +94,6 @@ KEY_HAS_SPACES = "A key has no spaces in it. Check what was pasted."
 UNKNOWN_KEY = "There is no such key."
 UNKNOWN_MODEL = "{company} says it has no model called {name}. Check the spelling."
 COMPANIES = fields.COMPANIES
-# So a new name can be checked with its company.
-MODEL_BOXES = {
-    one.key: (one.company, COMPANIES[one.company]) for one in fields.FIELDS if one.company
-}
 KEY_LABELS = {
     **{company.key_setting: f"{company.label} key" for company in companies.BUILT_IN},
     "telegram_bot_token": "Telegram bot token",
@@ -161,15 +157,19 @@ def _save(values: dict[str, Any]) -> list[str]:
 
 
 def unknown_models(values: dict[str, Any], stored: dict[str, Any], proposed: Settings) -> dict:
-    """New model names their company says do not exist. Only a definite no counts: an unreachable
-    company, or none with a key, is no reason to refuse."""
+    """New model names (`company_models`) their company says do not exist, by box. Only a
+    definite no counts: an unreachable company, or none with a key, is no reason to refuse."""
     found: dict[str, str] = {}
-    for key, (company, label) in MODEL_BOXES.items():
-        name = values.get(key)
-        if not name or name == stored.get(key):
+    before = stored.get("company_models") or {}
+    for slug, entry in (values.get("company_models") or {}).items():
+        company = companies.get(slug, proposed)
+        if company is None:
             continue
-        if providers.build(company, proposed).model_exists(name) is False:
-            found[key] = UNKNOWN_MODEL.format(company=label, name=name)
+        for field, name in entry.items():
+            if not name or name == (before.get(slug) or {}).get(field):
+                continue
+            if providers.build(slug, proposed).model_exists(name) is False:
+                found[company.box(field)] = UNKNOWN_MODEL.format(company=company.label, name=name)
     return found
 
 
@@ -224,11 +224,8 @@ CALENDAR_DISCONNECTED = (
 
 
 def suggested(one: fields.Field) -> list[tuple[str, str]]:
-    """The names a box suggests, each with a word on its place in the lineup and its price."""
-    company = MODEL_BOXES.get(one.key, ("", ""))[0]
-    # As the daily check last found them.
-    names = prices.suggestions(company) if company else one.suggested
-    return [(name, views.model_offer(company, name)) for name in names]
+    """The names a box suggests, each with a word on its price."""
+    return [(name, views.model_offer("", name)) for name in one.suggested]
 
 
 def google_panel(live: Any) -> dict[str, Any]:
@@ -452,17 +449,11 @@ def reached_by(host: str) -> str:
 
 def _model(app: App, conn: Any) -> dict[str, Any]:
     live = app.settings
-    # The model boxes of the companies that answer chat and that look things up; an added company
-    # keeps its models in its own panel.
-    chat = fields.MODEL_KEYS.get(uses.resolve(live, "chat").company or "")
-    looking = fields.MODEL_KEYS.get(uses.resolve(live, "lookup").company or "")
-    in_use = tuple(box for box in (chat and chat[0], looking and looking[1]) if box)
     added = [company_forms.panel(company, live) for company in companies.added(live)]
     return {
         **company_choice(live, request.args.get("company", "")),
         # Drawn again after a complaint, it shows what was typed, so nothing else is lost.
         "built": models_page.build(app, conn, request.form if request.method == "POST" else None),
-        "in_use": in_use,
         "added": added,
         "templates": [
             template

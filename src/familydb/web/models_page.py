@@ -20,7 +20,7 @@ from typing import Any
 
 from familydb.agent import gateway, providers, spending, uses
 from familydb.agent.providers import catalog, companies, prices
-from familydb.base.config import CompanyOptions, Settings
+from familydb.base.config import MODEL_FIELDS, CompanyOptions, Settings
 from familydb.base.dates import parse_datetime, utc_iso
 from familydb.store import calls
 from familydb.store import model_watch as model_store
@@ -632,30 +632,36 @@ class Built:
     presets: dict[str, dict[str, str]] = field(default_factory=lambda: PRESETS)
 
 
-def lineup_rows(settings: Settings, base: Settings, stored: dict[str, Any]) -> list[dict[str, Any]]:
+LINEUP_CELLS = (
+    ("Everyday", "model", "everyday"),
+    ("Everyday, lookups", "worker_model", ""),
+    ("Better", "better_model", "better"),
+    ("Best", "best_model", "best"),
+)
+
+
+def lineup_rows(settings: Settings, stored: dict[str, Any]) -> list[dict[str, Any]]:
     """The everyday, better and best models of each company that has a module of its own, as
-    boxes: what is set, what it falls back to, what is offered."""
+    boxes (`Company.box`): what the page set (`company_models`), what it falls back to (the
+    environment's, else this version's lineup), what is offered."""
     rows = []
+    page = stored.get("company_models") or {}
     for company in companies.BUILT_IN:
         offered = [
             (name, label_of(company.slug, name)) for name in prices.suggestions(company.slug)
         ]
+        under = company.under(settings)
         cells = []
-        for head, setting, level in (
-            ("Everyday", company.chat_setting, "everyday"),
-            ("Everyday, lookups", company.worker_setting, ""),
-            ("Better", company.better_setting, "better"),
-            ("Best", company.best_setting, "best"),
-        ):
-            built = getattr(base, setting, "") or (
+        for head, part, level in LINEUP_CELLS:
+            built = getattr(under, part) or (
                 catalog.at(company.slug, level).name
                 if level and catalog.at(company.slug, level)
                 else ""
             )
-            current = stored.get(setting) or ""
+            current = (page.get(company.slug) or {}).get(part) or ""
             cells.append(
                 {
-                    "setting": setting,
+                    "setting": company.box(part),
                     "head": head,
                     "value": current,
                     "default": built,
@@ -774,7 +780,7 @@ def build(app: Any, conn: sqlite3.Connection, typed: Any = None) -> Built:
         "uses": [{k: one[k] for k in DATA_KEYS} for one in views_],
         "presets": PRESETS,
     }
-    lineup = lineup_rows(settings, app.base_settings, stored)
+    lineup = lineup_rows(settings, stored)
     _picked(typed, views_, rows, lineup, checked)
     return Built(
         data=data,
@@ -840,7 +846,7 @@ def read_form(form: Any, live: Settings, base: Settings, stored: dict[str, Any])
     """The posted page as settings to store. A part the form did not carry is left alone."""
     reading = Reading()
     every = companies.every(live)
-    # The plain boxes: the budgets and the lineup, read as every other settings page reads them.
+    # The plain boxes, the budgets, read as every other settings page reads them.
     values, problems = fields.read_form(form)
     # A box that says what the server already does is not an override.
     for key, value in values.items():
@@ -848,6 +854,24 @@ def read_form(form: Any, live: Settings, base: Settings, stored: dict[str, Any])
             values[key] = None
     reading.values.update(values)
     reading.problems.update(problems)
+
+    # The lineup: each built-in company's models by strength, stored together as the page's
+    # `company_models` (an added company's are in its own definition).
+    boxes: dict[str, str] = {}
+    for company in companies.BUILT_IN:
+        for part in MODEL_FIELDS:
+            box = company.box(part)
+            if box not in form:
+                continue
+            name = form[box].strip()
+            if len(name) > MOST_NAME or any(character.isspace() for character in name):
+                reading.problems[box] = NAME_SHAPE
+            else:
+                boxes[box] = name
+    if boxes:
+        reading.values["company_models"] = (
+            companies.models_with(live, stored.get("company_models"), boxes) or None
+        )
 
     choices: dict[str, str] = {}
     saw_choices = False

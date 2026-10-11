@@ -14,7 +14,6 @@ from zoneinfo import available_timezones
 
 from familydb import happening, logs
 from familydb.agent.providers import companies
-from familydb.agent.providers.prices import suggestions
 from familydb.base.config import Settings
 from familydb.base.dates import hour_words
 from familydb.store.settings import BEHAVIOUR
@@ -49,7 +48,6 @@ class Field:
     # What no value means, where "not set" would not say.
     unset: str = ""
     # For a model box, whose model it is.
-    company: str = ""
     # The keyboard a phone offers: numeric, decimal or all of it.
     keyboard: str = ""
     # For a list box, the words for the last choice, which opens a box to type any other.
@@ -161,7 +159,6 @@ def field(
     suggested: tuple[str, ...] = (),
     words: tuple[tuple[str, str], ...] = (),
     unset: str = "",
-    company: str = "",
     another: str = "",
     lines: bool = False,
 ) -> Field:
@@ -178,7 +175,6 @@ def field(
         suggested=suggested,
         words=words,
         unset=unset,
-        company=company,
         keyboard=_keyboard(key, kind),
         another=another or ("Another model" if suggested else ""),
         lines=lines,
@@ -216,29 +212,6 @@ EFFORT = (
     ("xhigh", "Extra high"),
     ("max", "Most"),
 )
-
-
-# Boxes whose list is fixed rather than found by the daily check of models.
-# Each company's chat model and lookup model.
-MODEL_KEYS = {
-    company.slug: (company.chat_setting, company.worker_setting) for company in companies.BUILT_IN
-}
-
-
-def _models(company: str, label: str) -> tuple[Field, Field]:
-    """A company's two everyday model boxes, offering its models without limiting to them."""
-    chat, worker = MODEL_KEYS[company]
-    offered = suggestions(company)
-    return (
-        field(chat, f"{label} everyday chat model", suggested=offered, company=company),
-        field(
-            worker,
-            f"{label} everyday lookup model",
-            "A smaller one is usually plenty." if company == "anthropic" else "",
-            suggested=offered,
-            company=company,
-        ),
-    )
 
 
 SECTIONS: tuple[Section, ...] = (
@@ -396,34 +369,6 @@ GROUPS: tuple[Group, ...] = (
                 "voice_max_minutes",
                 "Longest voice note heard (minutes)",
                 "A longer one is not heard at all, since every minute is paid for.",
-            ),
-        ),
-    ),
-    Group(
-        "model",
-        "lineup",
-        "Everyday, better and best",
-        "What each company answers with at each strength: its own everyday model unless you "
-        "choose another, and the better and best ones this version knows unless you name newer. "
-        "A stand-in answers at the same strength as the model it replaces.",
-        (
-            *_models("openai", "OpenAI"),
-            *_models("anthropic", "Claude"),
-            *_models("gemini", "Gemini"),
-            *(
-                field(
-                    f"{company}_{level}_model",
-                    f"{label} {level} model",
-                    suggested=suggestions(company),
-                    unset="this version's",
-                    company=company,
-                )
-                for company, label in (
-                    ("openai", "OpenAI"),
-                    ("anthropic", "Claude"),
-                    ("gemini", "Gemini"),
-                )
-                for level in ("better", "best")
             ),
         ),
     ),

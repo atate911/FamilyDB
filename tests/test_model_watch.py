@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from familydb import alerts, model_watch
-from familydb.agent.providers import prices
+from familydb.agent.providers import companies, prices
 from familydb.app import App
 from familydb.base.clock import FixedClock
 from familydb.integrations.price_lists import (
@@ -451,17 +451,19 @@ def test_one_press_on_the_status_page_puts_the_suggested_model_in(settings, conn
     client = create_app(app).test_client()
     page = client.get("/status").text
     form = re.search(
-        r'<form method="post" action="/settings" class="inline-action">.*?</form>', page, re.S
+        r'<form method="post" action="/settings/models" class="inline-action">.*?</form>',
+        page,
+        re.S,
     )
     assert form is not None and "Use claude-sonnet-5 instead" in form.group(0)
     boxes = dict(re.findall(r'name="([a-z_]+)" value="([^"]*)"', form.group(0)))
-    assert boxes["section"] == "model" and boxes["worker_model"] == "claude-sonnet-5"
+    assert boxes["anthropic_worker_model"] == "claude-sonnet-5"
     assert "anthropic_model" not in boxes  # the chat's model is Opus, which is not going
 
-    answer = client.post("/settings", data=boxes)
+    answer = client.post("/settings/models", data=boxes)
     assert answer.status_code == 302 and answer.headers["Location"].endswith("/settings/model")
     app.refresh()
-    assert app.settings.worker_model == "claude-sonnet-5"
+    assert companies.ANTHROPIC.worker_model(app.settings) == "claude-sonnet-5"
 
 
 # -- a company the settings define

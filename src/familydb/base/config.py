@@ -56,6 +56,22 @@ OLDER = (
     "openai_transcribe_model",
     "gemini_transcribe_model",
 )
+# The older settings naming each built-in company's models, read from the environment only
+# (`Settings.env_company_models`); the page's own are `Settings.company_models`.
+MODEL_FIELDS = ("model", "worker_model", "better_model", "best_model")
+OLDER_MODEL_BOXES: dict[str, tuple[str, str, str, str]] = {
+    "openai": ("openai_model", "openai_worker_model", "openai_better_model", "openai_best_model"),
+    "anthropic": (
+        "anthropic_model",
+        "worker_model",  # the first company, so unprefixed
+        "anthropic_better_model",
+        "anthropic_best_model",
+    ),
+    "gemini": ("gemini_model", "gemini_worker_model", "gemini_better_model", "gemini_best_model"),
+}
+OLDER_MODELS: tuple[str, ...] = tuple(
+    name for names in OLDER_MODEL_BOXES.values() for name in names
+)
 DEFAULT_COMPANY = "openai"
 EVERYDAY = "everyday"
 
@@ -209,6 +225,41 @@ class CompanyOptions(BaseModel):
     monthly_limit: float | None = Field(default=None, ge=0, le=100_000)
 
 
+class CompanyModels(BaseModel):
+    """One company's models by strength: its everyday chat and lookup models, and the family's
+    own better and best. Empty is "as the environment, the definition or this version's lineup
+    says"; an empty lookup model is the chat model."""
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    model: str = Field(default="", max_length=120)
+    worker_model: str = Field(default="", max_length=120)
+    better_model: str = Field(default="", max_length=120)
+    best_model: str = Field(default="", max_length=120)
+
+    @field_validator("model", "worker_model", "better_model", "best_model")
+    @classmethod
+    def _one_line(cls, value: str) -> str:
+        return one_line(value)
+
+    def laid_over(self, under: CompanyModels) -> CompanyModels:
+        """These where they say something, the ones under where they do not."""
+        return CompanyModels(
+            **{name: getattr(self, name) or getattr(under, name) for name in MODEL_FIELDS}
+        )
+
+    @property
+    def empty(self) -> bool:
+        return not any(getattr(self, name) for name in MODEL_FIELDS)
+
+
+def one_line(value: str) -> str:
+    text = value.strip()
+    if any(unicodedata.category(character) in ("Cc", "Zl", "Zp") for character in text):
+        raise ValueError("goes on one line, with no control characters in it")
+    return text
+
+
 MAX_EXTRA_BODY = 2_000
 
 
@@ -261,10 +312,11 @@ class CompanyDef(BaseModel):
     @field_validator("label", "model", "worker_model", "better_model", "best_model")
     @classmethod
     def _one_line(cls, value: str) -> str:
-        text = value.strip()
-        if any(unicodedata.category(character) in ("Cc", "Zl", "Zp") for character in text):
-            raise ValueError("goes on one line, with no control characters in it")
-        return text
+        return one_line(value)
+
+    @property
+    def own_models(self) -> CompanyModels:
+        return CompanyModels(**{name: getattr(self, name) for name in MODEL_FIELDS})
 
     @field_validator("reasoning_fields")
     @classmethod
@@ -315,6 +367,19 @@ class CompanyDef(BaseModel):
         return tuple(dict.fromkeys(name for name in named if name))
 
 
+def _readable(value: Any, kind: type[BaseModel]) -> dict[str, Any]:
+    """The entries of a mapping by slug that this version can read as `kind`."""
+    if not isinstance(value, Mapping):
+        return {}
+    kept: dict[str, Any] = {}
+    for slug, entry in value.items():
+        try:
+            kept[str(slug)] = entry if isinstance(entry, kind) else kind.model_validate(entry)
+        except ValidationError:
+            continue
+    return kept
+
+
 def _field_names(cls: type[BaseSettings]) -> dict[str, str]:
     names: dict[str, str] = {}
     for name, field in cls.model_fields.items():
@@ -349,17 +414,29 @@ class Settings(BaseSettings):
     use_effort: dict[str, Effort] = Field(default_factory=dict)
     # Each company's own switches from the page, by slug (`CompanyOptions`).
     company_options: dict[str, CompanyOptions] = Field(default_factory=dict)
+    # Each company's models from the page, by slug (`CompanyModels`), laid over what the
+    # environment (below) or, for an added company, its definition says.
+    company_models: dict[str, CompanyModels] = Field(default_factory=dict)
     provider_fallback: bool = True
     # Model strength per situation, whichever company: `everyday` is the company's model named
     # below, `better` and `best` its stronger ones (catalog.py).
     chat_level: Level = "everyday"
     digest_level: Level = "everyday"
     lookup_level: Level = "everyday"
-    # A company's better and best models in place of the lineup's; empty uses the lineup's.
+    # The built-in companies' models from the environment (`OLDER_MODEL_BOXES`): each one's
+    # everyday chat and lookup models (its cheapest unless told otherwise; an empty lookup model
+    # is the chat model), and better and best in place of the lineup's (empty uses the lineup's).
+    # Read only into `env_company_models`, under the page's `company_models`.
+    openai_model: str = "gpt-6-luna"
+    openai_worker_model: str = "gpt-6-luna"
     openai_better_model: str = ""
     openai_best_model: str = ""
+    anthropic_model: str = "claude-haiku-4-5"
+    worker_model: str = "claude-haiku-4-5"
     anthropic_better_model: str = ""
     anthropic_best_model: str = ""
+    gemini_model: str = "gemini-3.1-flash-lite"
+    gemini_worker_model: str = "gemini-3.1-flash-lite"
     gemini_better_model: str = ""
     gemini_best_model: str = ""
     # Judgement calls (judgement.py): a stronger model is asked, rarely, when a change needs
@@ -388,15 +465,8 @@ class Settings(BaseSettings):
     choose_max_iterations: int = Field(default=2, ge=1, le=5)
 
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-3.1-flash-lite"
-    gemini_worker_model: str = "gemini-3.1-flash-lite"
-
     openai_api_key: str | None = None
-    openai_model: str = "gpt-6-luna"
-    openai_worker_model: str = "gpt-6-luna"
-
     anthropic_api_key: str | None = None
-    anthropic_model: str = "claude-haiku-4-5"
     # A persona's folder in familydb/personas, or "none". Not empty for none: empty means "the
     # default" everywhere else and would bring her back. `personas.active` lays the settings below
     # over her own.
@@ -496,9 +566,6 @@ class Settings(BaseSettings):
     place_stale_days: int = Field(default=30, ge=1, le=3650)
     worker_max_iterations: int = Field(default=12, ge=1, le=30)
     # Lookups and discovery are extraction, not judgement, so they run with less thinking.
-    # `worker_model` is Anthropic's lookup model, as `openai_worker_model` and `gemini_worker_model`
-    # are the others'; empty uses `anthropic_model`.
-    worker_model: str = "claude-haiku-4-5"
     worker_effort: Effort = "low"
     travel_speed_kmh: float = Field(default=50.0, gt=0, le=200)
     road_factor: float = Field(default=1.3, ge=1, le=3)
@@ -714,19 +781,25 @@ class Settings(BaseSettings):
     def _readable_options(cls, value: Any) -> Any:
         """Options that cannot be read are dropped, as a choice for a use this version does not
         know is: a value from another version must never stop the app."""
-        if not isinstance(value, Mapping):
-            return {}
-        kept: dict[str, Any] = {}
-        for slug, entry in value.items():
-            try:
-                kept[str(slug)] = (
-                    entry
-                    if isinstance(entry, CompanyOptions)
-                    else CompanyOptions.model_validate(entry)
-                )
-            except ValidationError:
-                continue
-        return kept
+        return _readable(value, CompanyOptions)
+
+    @field_validator("company_models", mode="before")
+    @classmethod
+    def _readable_models(cls, value: Any) -> Any:
+        return _readable(value, CompanyModels)
+
+    @property
+    def env_company_models(self) -> dict[str, CompanyModels]:
+        """What the environment says each built-in company's models are (`OLDER_MODEL_BOXES`)."""
+        return {
+            slug: CompanyModels(
+                **{
+                    field: getattr(self, name)
+                    for field, name in zip(MODEL_FIELDS, names, strict=True)
+                }
+            )
+            for slug, names in OLDER_MODEL_BOXES.items()
+        }
 
     @model_validator(mode="after")
     def _companies_exist(self) -> Settings:

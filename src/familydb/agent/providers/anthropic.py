@@ -12,7 +12,7 @@ from typing import Any
 
 import anthropic
 
-from familydb.agent.providers import parts
+from familydb.agent.providers import companies, parts
 from familydb.agent.providers.base import (
     LOOK_TOKENS,
     Audio,
@@ -206,8 +206,8 @@ class AnthropicProvider:
 
     def model_for(self, surface: Surface) -> str:
         if surface == "worker":
-            return self.settings.worker_model or self.settings.anthropic_model
-        return self.settings.anthropic_model
+            return companies.ANTHROPIC.worker_model(self.settings)
+        return companies.ANTHROPIC.chat_model(self.settings)
 
     def cache_ttl(self) -> str:
         return self.settings.anthropic_cache_ttl
@@ -235,7 +235,7 @@ class AnthropicProvider:
             }
             for tool in request.tools
         ]
-        model = request.model or settings.anthropic_model
+        model = request.model or companies.ANTHROPIC.chat_model(settings)
         if request.web is not None:
             tools += web_tools(request.web, model)
 

@@ -1599,11 +1599,11 @@ def judgement_row(question: Any, tz: ZoneInfo, live: Any) -> dict[str, Any]:
     answer = question.answer or {}
 
     def in_force(values: dict[str, str]) -> bool:
-        return all(str(getattr(live, key, "") or "") == value for key, value in values.items())
+        return all(companies.box_value(key, live) == value for key, value in values.items())
 
     waiting = answer.get("waiting") or {}
     undo = answer.get("undo") or {}
-    put_in = {key: getattr(live, key, "") for key in undo}
+    put_in = {key: companies.box_value(key, live) for key in undo}
     said = f"{question.outcome}." + (f" Why: {question.reason}" if question.reason else "")
     return {
         "label": title,

@@ -6,6 +6,7 @@ import re
 
 import pytest
 
+from familydb.agent.providers import companies
 from familydb.app import App
 from familydb.store import db
 from familydb.store import settings as settings_store
@@ -256,21 +257,24 @@ def test_a_model_box_offers_models_without_limiting_them(page) -> None:
     assert _choices(text, "openai_model")[0] == "GPT-6 Luna · default"
     assert "gpt-5" in _choices(text, "openai_model")  # one the lineup has no name for, by its name
     saved = page.post("/settings/models", data={"csrf": _token(page), "openai_model": "gpt-6-sol"})
-    assert saved.status_code == 302 and page.app.settings.openai_model == "gpt-6-sol"
+    assert (
+        saved.status_code == 302 and companies.OPENAI.chat_model(page.app.settings) == "gpt-6-sol"
+    )
     after = page.get("/settings/model").text
     assert '<option value="gpt-6-sol" selected>GPT-6 Sol</option>' in after
-    # A name the list does not offer (set from the environment, or typed on an older page) stays
+    # A name the list does not offer (typed on an older page, or put in by a judgement) stays
     # chosen: saving the page again does not lose it.
-    page.post("/settings", data=_whole_form(page, openai_model="gpt-7-nova"))
+    page.post("/settings/models", data={"csrf": _token(page), "openai_model": "gpt-7-nova"})
     assert (
         '<option value="gpt-7-nova" selected>gpt-7-nova</option>'
         in page.get("/settings/model").text
     )
     page.post("/settings/models", data={"csrf": _token(page), "openai_model": "gpt-7-nova"})
-    assert page.app.settings.openai_model == "gpt-7-nova"
-    # Emptied, it is the default again.
+    assert companies.OPENAI.chat_model(page.app.settings) == "gpt-7-nova"
+    # Emptied, it is the default again, and nothing is stored for it.
     page.post("/settings/models", data={"csrf": _token(page), "openai_model": ""})
-    assert page.app.settings.openai_model == "gpt-6-luna"
+    assert companies.OPENAI.chat_model(page.app.settings) == "gpt-6-luna"
+    assert page.app.settings.company_models == {}
 
 
 def _choices(text: str, key: str) -> list[str]:
@@ -334,14 +338,12 @@ def test_a_model_the_company_does_not_have_is_refused(page, monkeypatch) -> None
     company = _Company({"gpt-6-luna"})
     _ask(monkeypatch, company)
     form = {"csrf": _token(page), "openai_model": "gpt-6-lunar"}
-    # From an older page's form, and from this one: the same sentence, and nothing saved.
-    for path in ("/settings", "/settings/models"):
-        response = page.post(path, data=form)
-        assert response.status_code == 400
-        assert "OpenAI says it has no model called gpt-6-lunar. Check the spelling." in _errors(
-            response.text
-        )
-        assert page.app.settings.openai_model == "gpt-6-luna"
+    response = page.post("/settings/models", data=form)
+    assert response.status_code == 400
+    assert "OpenAI says it has no model called gpt-6-lunar. Check the spelling." in _errors(
+        response.text
+    )
+    assert companies.OPENAI.chat_model(page.app.settings) == "gpt-6-luna"
     # What was typed comes back in its box, with the fold it is in open, not a blank one.
     assert '<option value="gpt-6-lunar" selected>gpt-6-lunar</option>' in response.text
     assert '<details class="mp-fold" id="lineup" open>' in response.text
@@ -378,8 +380,8 @@ def test_a_hearing_model_is_offered_and_checked_like_the_other_models(page, monk
 def test_a_company_that_cannot_be_asked_does_not_block_a_save(page, monkeypatch) -> None:
 
     _ask(monkeypatch, _Company(None))
-    page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
-    assert page.app.settings.openai_model == "gpt-6-sol"
+    page.post("/settings/models", data={"csrf": _token(page), "openai_model": "gpt-6-sol"})
+    assert companies.OPENAI.chat_model(page.app.settings) == "gpt-6-sol"
 
 
 def test_signing_everyone_out_ends_every_session_and_needs_the_password(page) -> None:
@@ -611,6 +613,8 @@ def test_what_an_older_page_stored_becomes_the_pages_choices_once(page, conn) ->
             ("chat_level", '"best"'),
             ("voice_notes", "false"),
             ("provider_fallback", "false"),
+            ("worker_model", '"claude-haiku-5"'),
+            ("gemini_best_model", '"gemini-4-pro"'),
         ):
             conn.execute(
                 "INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, '2026-01-01')",
@@ -627,9 +631,16 @@ def test_what_an_older_page_stored_becomes_the_pages_choices_once(page, conn) ->
         "hear": "off",
     }
     assert all(not options.get("stand_in", True) for options in stored["company_options"].values())
+    # Each company's models the page had stored are the company's own now.
+    assert stored["company_models"] == {
+        "anthropic": {"worker_model": "claude-haiku-5"},
+        "gemini": {"best_model": "gemini-4-pro"},
+    }
+    assert companies.ANTHROPIC.worker_model(page.app.settings) == "claude-haiku-5"
     assert (
         conn.execute(
-            "SELECT count(*) FROM app_settings WHERE key IN ('chat_level', 'voice_notes')"
+            "SELECT count(*) FROM app_settings "
+            "WHERE key IN ('chat_level', 'voice_notes', 'worker_model', 'gemini_best_model')"
         ).fetchone()[0]
         == 0
     )

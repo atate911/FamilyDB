@@ -178,7 +178,13 @@ def test_a_message_uses_the_settings_in_force(conn, settings, clock, family) -> 
     assert api.requests[0]["model"] == settings.anthropic_model
     assert api.requests[0]["max_tokens"] == settings.max_output_tokens
 
-    _store(conn, {"anthropic_model": "claude-haiku-4-5-20251001", "max_output_tokens": 2000})
+    _store(
+        conn,
+        {
+            "company_models": {"anthropic": {"model": "claude-haiku-4-5-20251001"}},
+            "max_output_tokens": 2000,
+        },
+    )
     second = IncomingMessage("telegram", "2", "chat-1", "1001", "and again")
     handle_incoming(app, second, api=api, conn=conn)
     assert api.requests[1]["model"] == "claude-haiku-4-5-20251001"

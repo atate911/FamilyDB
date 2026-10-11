@@ -14,7 +14,7 @@ from typing import Any
 
 import openai
 
-from familydb.agent.providers import parts
+from familydb.agent.providers import companies, parts
 from familydb.agent.providers.base import (
     LOOK_TOKENS,
     Audio,
@@ -159,8 +159,8 @@ class OpenAIProvider:
 
     def model_for(self, surface: Surface) -> str:
         if surface == "worker":
-            return self.settings.openai_worker_model or self.settings.openai_model
-        return self.settings.openai_model
+            return companies.OPENAI.worker_model(self.settings)
+        return companies.OPENAI.chat_model(self.settings)
 
     def cache_ttl(self) -> str:
         return ""
@@ -241,7 +241,7 @@ class OpenAIProvider:
 
     def payload(self, request: TurnRequest) -> dict[str, Any]:
         settings = self.settings
-        model = request.model or settings.openai_model
+        model = request.model or companies.OPENAI.chat_model(settings)
         payload: dict[str, Any] = {
             "model": model,
             "instructions": self.instructions(request.system),

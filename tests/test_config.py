@@ -128,13 +128,14 @@ def test_both_providers_cap_the_answer_the_same_way(settings) -> None:
 
 def test_the_older_model_keys_are_read_nowhere_but_as_choices() -> None:
     """`config.OLDER` (PROVIDER, the levels, the toggles) are read from the environment and turned
-    into choices by `older_to_choices`; no module reads one off the settings itself, so the page's
-    choices are the one way a model is chosen."""
+    into choices by `older_to_choices`, and `OLDER_MODELS` (each built-in company's models) into
+    `env_company_models`; no module reads one off the settings itself, so the page's choices and
+    each company's models (`companies.Company.models`) are the one way a model is chosen."""
     import ast
     from pathlib import Path
 
     import familydb
-    from familydb.base.config import OLDER
+    from familydb.base.config import OLDER, OLDER_MODELS
 
     package = Path(familydb.__file__).parent
     # Names a module might hold settings in; `provider`, `photos` and the toggles are also words
@@ -146,7 +147,7 @@ def test_the_older_model_keys_are_read_nowhere_but_as_choices() -> None:
         if where == "base/config.py":
             continue
         for node in ast.walk(ast.parse(path.read_text("utf-8"))):
-            if not (isinstance(node, ast.Attribute) and node.attr in OLDER):
+            if not (isinstance(node, ast.Attribute) and node.attr in (*OLDER, *OLDER_MODELS)):
                 continue
             value = node.value
             held = (isinstance(value, ast.Name) and value.id in holders) or (

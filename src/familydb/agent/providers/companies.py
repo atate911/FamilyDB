@@ -13,12 +13,12 @@ wording), from those `use` last put in force: `App` does it whenever the setting
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
 from familydb.agent.providers import prices
-from familydb.base.config import BUILT_IN_COMPANIES, CompanyDef
+from familydb.base.config import BUILT_IN_COMPANIES, MODEL_FIELDS, CompanyDef, CompanyModels
 
 
 @dataclass(frozen=True)
@@ -31,10 +31,6 @@ class Company:
     key_start: str = ""  # what its keys begin with, to catch a pasted word
     key_setting: str = ""  # the setting its key is stored under (built in)
     env_name: str = ""  # the environment variable the same key may come from
-    chat_setting: str = ""  # the setting naming its everyday chat model
-    worker_setting: str = ""  # and its everyday lookup model
-    better_setting: str = ""  # and the family's own better and best models
-    best_setting: str = ""
     owns: tuple[str, ...] = ()  # prefixes of the model names that are its own
     litellm: str = ""  # LiteLLM's name for the company
     openrouter: str = ""  # the maker's name in OpenRouter's model ids
@@ -50,36 +46,44 @@ class Company:
             return getattr(settings, self.key_setting, None) or None
         return (getattr(settings, "company_keys", None) or {}).get(self.slug) or None
 
+    def under(self, settings: Any) -> CompanyModels:
+        """Its models as the environment says (built in) or its definition (added): what the
+        page's own are laid over."""
+        if self.defined is not None:
+            return self.defined.own_models
+        env = getattr(settings, "env_company_models", None) or {}
+        return env.get(self.slug) or CompanyModels()
+
+    def models(self, settings: Any) -> CompanyModels:
+        """Its models in force: the page's (`Settings.company_models`) over `under`."""
+        page = (getattr(settings, "company_models", None) or {}).get(self.slug)
+        return page.laid_over(self.under(settings)) if page else self.under(settings)
+
     def chat_model(self, settings: Any) -> str:
-        if self.defined is None:
-            return str(getattr(settings, self.chat_setting, "") or "")
-        return self.defined.model
+        return self.models(settings).model
 
     def worker_model(self, settings: Any) -> str:
-        if self.defined is None:
-            return str(getattr(settings, self.worker_setting, "") or "")
-        return self.defined.worker_model or self.defined.model
+        found = self.models(settings)
+        return found.worker_model or found.model
 
     def level_model(self, settings: Any, level: str) -> str:
         """The model the family named for this company at a level above everyday, or ""."""
-        if self.defined is None:
-            name = {"better": self.better_setting, "best": self.best_setting}.get(level)
-            return str(getattr(settings, name, "") or "") if name else ""
-        return {"better": self.defined.better_model, "best": self.defined.best_model}.get(level, "")
+        found = self.models(settings)
+        return {"better": found.better_model, "best": found.best_model}.get(level, "")
 
-    def model_settings(self) -> tuple[str, ...]:
-        """The settings that name one of its models, for a built-in company (an added one keeps
-        its models in its definition)."""
-        return tuple(
-            name
-            for name in (
-                self.chat_setting,
-                self.worker_setting,
-                self.better_setting,
-                self.best_setting,
-            )
-            if name
-        )
+    def box(self, field: str) -> str:
+        """The form box for one of its models (`MODEL_FIELDS`): `openai_model`,
+        `anthropic_worker_model`, the one name a page, a judgement and the Status page agree on."""
+        return f"{self.slug}_{field}"
+
+    def boxes_naming(self, settings: Any, name: str) -> list[str]:
+        """The boxes whose model in force is this one."""
+        found = self.models(settings)
+        return [
+            self.box(field)
+            for field in MODEL_FIELDS
+            if getattr(found, field, "").lower() == name.lower()
+        ]
 
     def known_models(self) -> tuple[str, ...]:
         """The model names its definition knows; a built-in company is known by prefix instead."""
@@ -95,10 +99,6 @@ OPENAI = Company(
     key_start="sk-",
     key_setting="openai_api_key",
     env_name="OPENAI_API_KEY",
-    chat_setting="openai_model",
-    worker_setting="openai_worker_model",
-    better_setting="openai_better_model",
-    best_setting="openai_best_model",
     owns=("gpt", "o1", "o3", "o4", "chatgpt"),
     litellm="openai",
     openrouter="openai",
@@ -112,10 +112,6 @@ ANTHROPIC = Company(
     key_start="sk-ant-",
     key_setting="anthropic_api_key",
     env_name="ANTHROPIC_API_KEY",
-    chat_setting="anthropic_model",
-    worker_setting="worker_model",  # the first, so unprefixed
-    better_setting="anthropic_better_model",
-    best_setting="anthropic_best_model",
     owns=("claude",),
     litellm="anthropic",
     openrouter="anthropic",
@@ -129,10 +125,6 @@ GEMINI = Company(
     key_start="AIza",
     key_setting="gemini_api_key",
     env_name="GEMINI_API_KEY",
-    chat_setting="gemini_model",
-    worker_setting="gemini_worker_model",
-    better_setting="gemini_better_model",
-    best_setting="gemini_best_model",
     owns=("gemini",),
     litellm="gemini",
     openrouter="google",
@@ -221,6 +213,43 @@ def status_name(slug: str | None, settings: Any = None) -> str:
     """The company as the Status page says it."""
     company = get(slug, settings)
     return company.status if company else str(slug or "")
+
+
+def box_of(name: str, settings: Any = None) -> tuple[Company, str] | None:
+    """The company and model field a form box names, or None for a box that is not one."""
+    for company in every(settings):
+        for field in MODEL_FIELDS:
+            if company.box(field) == name:
+                return company, field
+    return None
+
+
+def box_value(name: str, settings: Any) -> str:
+    """The model in force in this box, or "" for a box that is not one."""
+    found = box_of(name, settings)
+    return getattr(found[0].models(settings), found[1], "") if found else ""
+
+
+def models_with(
+    settings: Any, stored: Mapping[str, Any] | None, boxes: Mapping[str, str]
+) -> dict[str, dict[str, str]]:
+    """The page's `company_models` (as stored) with these boxes set. A name that is what the
+    environment or the definition already says is kept as "", and a company with nothing said is
+    left out, so what is stored is only what the family changed."""
+    kept = {
+        slug: {str(key): str(value) for key, value in entry.items()}
+        for slug, entry in (stored or {}).items()
+        if isinstance(entry, Mapping)
+    }
+    for box, value in boxes.items():
+        found = box_of(box, settings)
+        if found is None:
+            continue
+        company, field = found
+        name = value.strip()
+        entry = kept.setdefault(company.slug, {})
+        entry[field] = "" if name == getattr(company.under(settings), field) else name
+    return {slug: entry for slug, entry in kept.items() if any(entry.values())}
 
 
 def owner(model: str | None, settings: Any = None) -> str | None:
