@@ -215,7 +215,7 @@ def _tiles(
                 "why": " ".join(part for part in (find.summary, find.source) if part)[:140],
                 "url": find.url or None,
                 "idea_id": None,
-                "find_id": find.id,
+                "find_id": find.find_id,
             }
         )
         break  # one of hers: the rest are on Happening soon

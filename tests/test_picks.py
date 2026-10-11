@@ -163,3 +163,46 @@ def test_old_sets_are_pruned_but_the_newest_of_each_stays(env, app) -> None:
     ]
     assert kept[0].startswith("2026-09-25T01")  # tonight, in UTC; the two old ones are gone
     assert len(kept) == 1
+
+
+def test_a_listed_find_fills_a_spare_tile_and_leads_to_its_page(env, app) -> None:
+    """With fewer kinds of idea than tiles, one of what the sources list for the weekend goes on
+    the last tile, carrying the stored find's id for Now to link to (web/now.py); the rest are on
+    Happening soon."""
+    from datetime import datetime
+
+    from familydb.integrations.events import FoundEvent
+    from familydb.store import finds
+    from tests.conftest import TZ
+
+    _seed(env.conn)
+    with db.transaction(env.conn):
+        finds.upsert_many(
+            env.conn,
+            "feed:https://library.example.org/events.ics",
+            "feed",
+            [
+                FoundEvent(
+                    external_id=f"e{n}",
+                    title=title,
+                    starts=datetime(2026, 9, 26, 10 + n, tzinfo=TZ),
+                    ends=None,
+                    all_day=False,
+                    venue="Main library",
+                    url=f"https://library.example.org/e{n}",
+                )
+                for n, title in enumerate(("Puppet show", "Lego club"))
+            ],
+            tz=TZ,
+            now=NOW_ISO,
+        )
+    made = picks.make(app, env.conn, "weekend")
+    assert made is not None
+    (tile,) = [tile for tile in made.picks if tile["kind"] == picks.FOUND]
+    (puppets,) = [
+        f
+        for f in finds.upcoming(env.conn, start=date(2026, 9, 26), end=date(2026, 9, 27), limit=9)
+        if f.title == "Puppet show"
+    ]
+    assert tile["title"] == "Puppet show" and tile["find_id"] == puppets.id
+    assert tile["idea_id"] is None and tile["url"] == "https://library.example.org/e0"

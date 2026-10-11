@@ -97,6 +97,9 @@ class WebFind(BaseModel):
     hours: str | None = None  # as the page writes them
     address: str | None = None
     saved_as: int | None = None  # already on the list, as this idea
+    # The stored find this is, for one the family's sources list (store/finds.py), so her picks
+    # can lead to its page; never sent to the model (tools/suggest.py leaves it out).
+    find_id: int | None = None
 
 
 class DaySummary(BaseModel):

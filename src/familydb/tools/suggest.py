@@ -246,5 +246,8 @@ def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
     # whenever it cannot, the engine's own order.
     assessed = assess(ctx, args)
     chosen = None if choosing.reason_not_to(ctx, args) else choosing.choose(ctx, args, assessed)
-    # Uncached and resent with the reply: leaving nulls out roughly halves it.
-    return result_of(assessed, chosen).model_dump(mode="json", exclude_none=True)
+    # Uncached and resent with the reply: leaving nulls out roughly halves it. A listed find's
+    # row id is the page's, not the model's.
+    return result_of(assessed, chosen).model_dump(
+        mode="json", exclude_none=True, exclude={"web_finds": {"__all__": {"find_id"}}}
+    )

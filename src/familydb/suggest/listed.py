@@ -69,6 +69,7 @@ def to_web_find(find: Find) -> WebFind:
         summary=summary,
         source=f"listed by {_who(find)}",
         starts=find.starts_at,
+        find_id=find.id,
     )
 
 

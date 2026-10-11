@@ -57,6 +57,10 @@
   that stopped before the code moved no longer points a
   rollback at its older backup. An install with a broken virtualenv beside Docker is still treated as a
   virtualenv install to mend, not a Docker install to build.
+- **Her picks are made when the sources list something.** With fewer kinds of idea fitting the
+  weekend than tiles, the picks job filled the spare tile from what the family's calendars list and
+  crashed on it, so no set was made and Now kept the old one. The tile is made, and leads to the
+  happening's page.
 
 ## v0.5.0 — beta (2026-10-11)
 

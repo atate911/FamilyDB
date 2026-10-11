@@ -1041,6 +1041,7 @@ def test_what_the_sources_list_for_the_weekend_is_offered_with_who_listed_it(
     assert story["source"] == "listed by library.example.org"
     assert story["summary"] == "Main library"
     assert shown["Harvest fair"]["dates"] == "Sat 26 to Sun 27 Sep"
+    assert "find_id" not in story  # the stored row's id is the page's (picks), not the model's
 
 
 def test_tonight_lists_only_what_starts_tonight(
