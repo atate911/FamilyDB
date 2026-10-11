@@ -347,7 +347,9 @@ def test_the_tasks_page_says_when_one_comes_up(settings, conn, family) -> None:
         tasks.mark_nudged(conn, read.id, utc_iso(SATURDAY))
     page = _client(settings, FixedClock(SATURDAY, TZ)).get("/tasks").text
     assert "Vera brings it up on a free Saturday morning, last on Sat 26 Sep" in page
-    unread = "not a day or part of the day Vera can read, so it comes up only when asked"
+    unread = "a day or part of the day Vera can read, so it comes up only when asked"
     assert page.count(unread) == 2
+    # An undated one's window is its when, so it is said once.
+    assert "Preferred window: some time before Christmas" not in page
     quiet = _client(settings.model_copy(update={"task_nudges": False}), FixedClock(SATURDAY, TZ))
     assert "brings it up" not in quiet.get("/tasks").text

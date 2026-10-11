@@ -1238,7 +1238,9 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .adder__more[open] > summary .chev { transform: rotate(90deg); }
   .adder__more:not([open])::details-content { content-visibility: hidden; display: block; }
   .adder__more[open] .adder__more-body { padding-top: var(--s2); }
-  .todo { grid-template-columns: var(--target) minmax(0, 1fr) auto; padding: var(--s2) var(--s2) var(--s2) var(--s1); }
+  /* the checkbox keeps its one line, as on a desk (its hit area is the tick's own 44 pixels), so the title sits beside it
+     and the line under it starts at the row's edge */
+  .todo { padding: var(--s2) var(--s2) var(--s2) var(--s1); }
   .todo__edit .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
   .adder__opts { grid-template-columns: minmax(0, 1fr); }
   .todo-bar { margin-top: var(--s4); }
