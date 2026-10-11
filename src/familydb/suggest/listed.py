@@ -78,6 +78,7 @@ def to_web_find(find: Find) -> WebFind:
         min_age=find.min_age,
         max_age=find.max_age,
         any_time=find.any_time,
+        recommended=find.state == "recommended",
     )
 
 
@@ -101,6 +102,13 @@ def anytime(ctx: ToolContext, constraints: Constraints) -> list[Find]:
     if words:
         found = [one for one in found if any(w in _words_of(one) for w in words)]
     return found[:ANYTIME_MOST]
+
+
+def recommended_anytime(ctx: ToolContext) -> list[Find]:
+    """The places to go any time the evening's judgement put forward (docs/FINDS.md): what code
+    asking for itself (her picks) may offer beside what is on for the days."""
+    found = finds.anytime(ctx.conn, limit=ANYTIME_READ)
+    return [one for one in found if one.state == "recommended"][:ANYTIME_MOST]
 
 
 def _words_of(find: Find) -> str:

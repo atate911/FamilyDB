@@ -156,9 +156,21 @@ def result_of(a: Assessment, chosen: Chosen | None = None) -> SuggestResult:
         shown, held_back = choose(
             a.candidates, a.by_id, a.recently, prefer=a.args.prefer, loved=a.loved, picked=picked
         )
-    return compose(
+    result = compose(
         a.context, a.label, shown, held_back, a.finds, a.skipped, a.suggestion_id, chosen
     )
+    result.new_find = new_find(result.web_finds)
+    return result
+
+
+def new_find(found: list[WebFind]) -> str | None:
+    """The one find worth a word after what is theirs: one the evening's judgement put forward,
+    else the first checked good; never one already saved."""
+    fresh = [one for one in found if one.saved_as is None]
+    best = next((one for one in fresh if one.recommended), None) or next(
+        (one for one in fresh if one.verdict == "good"), None
+    )
+    return best.title if best is not None else None
 
 
 def assess(
@@ -256,10 +268,12 @@ def assess(
     # Her back pocket for these days costs nothing to read. Somebody asked, so the web is
     # searched too, with everything known (docs/FINDS.md), once a message, and a few places she
     # found to go any time are offered; code asking for itself (her picks, /now, the jobs) is
-    # offered only what is on for the days.
+    # offered what is on for the days, and the places to go the evening's judgement put forward.
     stored = listing.listed(ctx, context)
     if args.discover:
         stored += listing.anytime(ctx, constraints)
+    else:
+        stored += listing.recommended_anytime(ctx)
     searched: list[WebFind] = []
     if web and args.discover:
         searched, note = discover(ctx, context, constraints, args.question)

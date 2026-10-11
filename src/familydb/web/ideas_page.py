@@ -19,6 +19,7 @@ from familydb.availability import calendar_available, enrichment_available
 from familydb.base import roles
 from familydb.base.dates import utc_iso
 from familydb.store import calls
+from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
@@ -102,6 +103,13 @@ def ideas() -> str:
             if idea.place_id
         }
         picked = _weekend_picks(conn, today) if grown_up else None
+        # What she found and judged worth putting forward (docs/FINDS.md), never what is for
+        # the grown-ups alone where a kid reads.
+        new_ideas = [
+            views.new_idea_row(one, today)
+            for one in find_store.recommended(conn, today=today, limit=NEW_IDEAS_MOST)
+            if grown_up or not who_for.grown_ups_only(one.participants, people)
+        ]
         chat.page_box(
             app, conn, people, scope={"label": "Things to do", "text": "About things to do:"}
         )
@@ -141,9 +149,13 @@ def ideas() -> str:
         selected={"q": query, "kind": kind, "status": status, "who": who},
         filtered=filtered,
         limit=LIST_LIMIT,
+        new_ideas=[] if filtered else new_ideas,
+        deciding=asking,
     )
 
 
+# Her finds put forward under New ideas, at most.
+NEW_IDEAS_MOST = 5
 # An untouched idea goes paler after this long, and after the second asks whether it is still
 # wanted, with Keep and Let go (docs/INTERFACE.md section 4).
 FADE_DAYS = 42

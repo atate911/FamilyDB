@@ -459,6 +459,25 @@ def mark_filled(
     )
 
 
+def recommended(conn: sqlite3.Connection, *, today: date, limit: int) -> list[Find]:
+    """What the evening's judgement put forward and is still to offer: not past, and not past
+    the last day it was to be offered; the latest judged first."""
+    rows = conn.execute(
+        f"SELECT * FROM finds WHERE {_POCKET} AND state = 'recommended' "
+        "AND (put_until IS NULL OR put_until >= ?) ORDER BY judged_at DESC, id LIMIT ?",
+        (today.isoformat(), today.isoformat(), limit),
+    ).fetchall()
+    return [Find.from_row(row) for row in rows]
+
+
+def put_forward(conn: sqlite3.Connection, find_id: int, *, window: str, now: str) -> None:
+    """She put it forward on Now, for this window (familydb/picks.py)."""
+    conn.execute(
+        "UPDATE finds SET put_forward_at = ?, put_forward_window = ? WHERE id = ?",
+        (now, window, find_id),
+    )
+
+
 def judging_due(conn: sqlite3.Connection, *, today: date) -> bool:
     """Whether anything in the pocket is new to the judging, or filled in since it was judged."""
     row = conn.execute(

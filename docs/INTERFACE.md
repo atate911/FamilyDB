@@ -135,6 +135,7 @@ Nothing else appears on a destination. Her picks and her finds are marked as her
 - **Fading:** untouched things go paler after six weeks; at three months the row asks "still want this?" with keep and let go. Rested things are under the Dropped chip, never gone.
 - **Empty:** "Nothing saved yet. When someone says 'we should try…', it lands here."
 - **Kid:** her things and the family's, plain rows, nothing paler, no Dropped.
+- **New ideas:** under the pile, what she found on her own and judged worth putting forward (`docs/FINDS.md`), at most five, marked as found by her, each with when and why, **Save it** and **Not for us**. Not shown while a chip or a search narrows the page. A kid sees them without the buttons, never one for the grown-ups alone.
 
 ### What about… (`/about`)
 

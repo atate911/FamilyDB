@@ -358,7 +358,9 @@ Each page names its focal element, what the main column holds, and what the rail
   then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
   one fact line and the people's marks at the edge; "by hand" last, as a quiet link. **Eat**: the
   pick for the next meal. **Do**: what fits the next free stretch, then the pile, the quiet ones
-  faded, the map under it. **Week**: a day a section, set things as set rows (a solid left edge,
+  faded, then New ideas (what she found and judged worth putting forward, under a label saying she
+  found them, each a hairline row with its reason and Save it and Not for us under it, small; the
+  family's own always first), the map under it. **Week**: a day a section, set things as set rows (a solid left edge,
   the time in the mono), the free time in words, a reminder a small bell line, her pick in pencil;
   the plate above. **Kids**: a kid a section, what waits first. **Soon**: finds by day. **Lists**:
   big ticks. **Did**: a face a row.

@@ -1,6 +1,6 @@
 {% extends "frame.html" %}
 {% from "_ui.html" import icon, avatar, who, map_plot, guard with context %}
-{% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty, by_hand %}
+{% from "_dest.html" import find_acts, dest_head, chip_row, dest_row, dest_empty, by_hand %}
 {% block title %}What could we do? · {{ site_title }}{% endblock %}
 {% block body_class %}page-do{% endblock %}
 {# What could we do? (docs/INTERFACE.md section 4): the saved pile, what fits the next free stretch on top, then
@@ -42,6 +42,22 @@
   {% else %}
     {% if filtered %}{{ dest_empty('Nothing matches.', 'bulb') }}
     {% else %}{{ dest_empty('Nothing saved yet. When someone says “we should try…”, it lands here.', 'bulb') }}{% endif %}
+  {% endif %}
+  {% if new_ideas %}
+    {# What she found and judged worth putting forward, after the family's own (docs/FINDS.md): its reason, Save it and
+       Not for us. Not a destination of its own. #}
+    <section class="newideas" aria-labelledby="h-new">
+      <div class="sec__label"><h2 id="h-new" class="label">New ideas</h2><small>Found by {{ assistant }}</small></div>
+      <div class="rows">
+        {% for n in new_ideas %}
+          <div class="r">
+            <span class="r__t"><a href="{{ url_for('web.find', find_id=n.id) }}">{{ n.title }}</a></span>
+            <span class="r__m">{{ n.line }}</span>
+            {% if deciding %}<div class="r__acts">{{ find_acts(n.save, n.title) }}</div>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
   {% endif %}
   {% if on_map and grownup %}
     <details class="mapband__fold mt-4">

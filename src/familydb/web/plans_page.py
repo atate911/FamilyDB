@@ -214,6 +214,7 @@ def find(find_id: int) -> str:
         state=views.find_state(found, today),
         over=bool(first) and last < today.isoformat(),
         offered=found.state in find_store.OFFERED,
+        save=views.find_save_fields(found),
         kid=not visitor.may("browse"),
         first=first,
         time=starts[11:16] if "T" in starts else "",

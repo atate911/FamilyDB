@@ -1,7 +1,7 @@
 {# The destinations' shared skeleton (docs/INTERFACE.md section 4): the title is the question it answers, one line of
    what to know, chips to narrow in the same place, then the answer. Every destination is built from these, so one
    learned is all learned. #}
-{% from "_ui.html" import icon %}
+{% from "_ui.html" import icon, guard %}
 
 {# The head: the question, and one line under it. #}
 {% macro dest_head(question, summary=none, back=none) -%}
@@ -50,4 +50,19 @@
     <span class="pk__t">{{ pick.title }}</span>
     {% if pick.why %}<span class="pk__why">{{ pick.why }}</span>{% endif %}
   </a>
+{%- endmacro %}
+
+
+{# Save it and Not for us on something she found: `add_idea` with the find's number, and `pass_find`, each the tool
+   the assistant would call (a find's page, New ideas). `save` is views.find_save_fields. #}
+{% macro find_acts(save, title) -%}
+  <form method="post" action="{{ url_for('edits.add_idea') }}">
+    {{ guard(once=true) }}
+    {% for key, value in save.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}" />{% endfor %}
+    <button class="btn btn--primary btn--sm" type="submit">{{ icon('bulb', size='sm') }}Save it<span class="sr"> {{ title }}</span></button>
+  </form>
+  <form method="post" action="{{ url_for('edits.pass_find', find_id=save.find_id) }}">
+    {{ guard(once=true) }}
+    <button class="btn btn--quiet btn--sm" type="submit">Not for us<span class="sr"> {{ title }}</span></button>
+  </form>
 {%- endmacro %}

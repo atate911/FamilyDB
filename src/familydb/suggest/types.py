@@ -165,6 +165,9 @@ class SuggestResult(BaseModel):
     # Why the question was checked in other terms than first framed, when the stronger call
     # corrected it: the reply should say what was looked at.
     reframed: str | None = None
+    # The one find to mention after what is theirs (docs/FINDS.md): what the evening's judgement
+    # put forward, else the best checked; by its title, as `web_finds` lists it.
+    new_find: str | None = None
 
 
 @dataclass

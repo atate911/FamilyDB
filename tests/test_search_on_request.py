@@ -81,6 +81,9 @@ def test_a_planning_question_searches_with_everything_known_and_keeps_it(
     result = run(ctx, SuggestInput(**ASKED))
     jazz, thai = result.web_finds  # on in the free time, before a place whose hours are unknown
     assert (jazz.verdict, thai.verdict) == ("good", "possible")
+    # The one to mention after what is theirs: none was put forward by an evening, so the first
+    # checked good.
+    assert result.new_find == "Late jazz set"
     assert (thai.title, thai.any_time, thai.for_whom, thai.why) == (
         "Thai Bloom",
         True,

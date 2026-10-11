@@ -34,7 +34,7 @@ The picks under **What about…** are made ahead, never while you look: an hourl
 
 **What about…** has a page of its own too (its heading on Now, or the menu behind your picture): the set for the next few hours and the weekend's, each with the line that drove it ("Saturday: free from noon") and when it was chosen. A kid sees the set made for her: at most two, and never an idea for the grown-ups alone, such as a date night. Anywhere a kid reads, a chat answer leaves those ideas out too.
 
-At most one pick is something the family's calendars list rather than an idea of theirs, marked **New**. Something already saved as an idea is never offered as new again, and when the stronger model chose one of the listed things for the weekend, that is the one shown, with its reason.
+At most one pick is something found outside the family's list, marked **New**, and only after the family's own ideas: one the assistant judged worth putting forward first, with its reason, then something the calendars list, only on the days it suits. Something already saved as an idea is never offered as new again, a find shown on Now is not shown in another set for a week unless its day is near, and when the stronger model chose one of the listed things for the weekend, that is the one shown, with its reason.
 
 ### The first day
 

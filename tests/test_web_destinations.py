@@ -652,3 +652,51 @@ def test_a_restaurant_line_says_its_visits_once() -> None:
     assert line(1, 8.5) == "$ · been once, rated 8.5/10"
     assert line(3, None) == "$ · been 3 times"
     assert line(0, None) == "$ · not been yet"
+
+
+def test_what_she_found_and_judged_is_offered_under_new_ideas(
+    settings, clock, conn, family
+) -> None:
+    from familydb import family as rules
+    from familydb.store import finds
+
+    with db.transaction(conn):
+        ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
+        kept, _ = finds.keep(
+            conn,
+            "web:near-home",
+            "web",
+            [
+                finds.NewFind(title="Rose garden", url="https://parks.example/roses"),
+                finds.NewFind(
+                    title="Wine walk", url="https://wine.example/", participants=["grown-ups"]
+                ),
+                finds.NewFind(title="Lantern walk", url="https://parks.example/lanterns"),
+            ],
+            now=NOW_ISO,
+        )
+        roses, wine, _lanterns = kept
+        finds.judged(
+            conn,
+            [one.id for one in kept],
+            {
+                roses.id: {"why": "They loved the tulip farm.", "when": "a dry afternoon"},
+                wine.id: {"why": "A night out for two.", "when": "Friday"},
+            },
+            now=NOW_ISO,
+        )
+    page = _client(settings, clock).get("/do").text
+    found = page[page.index('id="h-new"') :]
+    assert "Rose garden" in found and "a dry afternoon · They loved the tulip farm." in found
+    assert "Wine walk" in found and "Lantern walk" not in found  # not recommended
+    assert page.index("Zoo") < page.index('id="h-new"')  # the family's own first
+    assert f'action="/soon/{roses.id}/pass"' in found and 'name="find_id"' in found
+    # A filter shows what was asked for, nothing else.
+    assert 'id="h-new"' not in _client(settings, clock).get("/do?kind=outing").text
+    # A kid reads them without the forms, and nothing for the grown-ups alone.
+    rules.choose_password(conn, family["girls"].id, "a kid can choose one too", now=NOW_ISO)
+    app = App(settings.model_copy(update={"web_password": "installer-made-password-1"}), clock)
+    kid = create_app(app).test_client()
+    kid.post("/login", data={"name": "the girls", "password": "a kid can choose one too"})
+    hers = kid.get("/do").text
+    assert "Rose garden" in hers and "Wine walk" not in hers and "/pass" not in hers

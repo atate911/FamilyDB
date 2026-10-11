@@ -27,6 +27,7 @@ class Found(BaseModel):
     min_age: int | None = None
     max_age: int | None = None
     any_time: bool = False
+    recommended: bool = False  # the evening's judgement put it forward (scouting/judging.py)
     saved_as: int | None = None  # already on the list, as this idea
     # The stored find this is, for one the family's sources list (store/finds.py), so her picks
     # can lead to its page; never sent to the model (tools/suggest.py leaves it out).

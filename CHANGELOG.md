@@ -145,6 +145,11 @@
   something is new, her whole pocket is checked against your calendar, the forecast and your musts,
   and one call chooses up to five worth putting forward, each with why and when. Both are within the
   same monthly budget, and a quiet evening makes no call. This is migration 0062.
+- **New ideas, and one new thing in her answers.** What could we do? now ends with **New ideas**:
+  what she found and judged worth putting forward, each with why, **Save it** and **Not for us**.
+  Her picks on Now offer one of them after your own ideas, on the days it suits, and not again
+  in another set within a week unless its day is near. When she answers a planning question, and
+  in the weekend digest, she mentions the one best new thing once, after what is yours.
 
 ## v0.5.0 — beta (2026-10-11)
 

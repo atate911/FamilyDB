@@ -210,7 +210,8 @@ def keep(reach: Reach, found: list[Found]) -> list[Found]:
         if row is None:
             offered.append(one)
         elif row.state != "passed":
-            offered.append(one.model_copy(update={"find_id": row.id}))
+            update = {"find_id": row.id, "recommended": row.state == "recommended"}
+            offered.append(one.model_copy(update=update))
     return offered
 
 

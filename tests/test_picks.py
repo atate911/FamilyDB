@@ -319,3 +319,75 @@ def test_a_kid_s_set_holds_two_and_nothing_for_grown_ups_only(env, app, family) 
     family_set = picks.make(app, env.conn, "weekend")
     assert bar.id in [tile["idea_id"] for tile in family_set.picks]  # the grown-ups see it
     assert all(tile["idea_id"] != bar.id for tile in made.picks)
+
+
+def _on_saturday(conn, *titles: str) -> list:
+    """What the library's calendar lists on Saturday, an hour apart from ten."""
+    from datetime import datetime
+
+    from familydb.integrations.events import FoundEvent
+    from familydb.store import finds
+    from tests.conftest import TZ
+
+    with db.transaction(conn):
+        finds.upsert_many(
+            conn,
+            "feed:https://library.example.org/events.ics",
+            "feed",
+            [
+                FoundEvent(
+                    external_id=f"e{n}",
+                    title=title,
+                    starts=datetime(2026, 9, 26, 10 + n, tzinfo=TZ),
+                    url=f"https://library.example.org/e{n}",
+                )
+                for n, title in enumerate(titles)
+            ],
+            tz=TZ,
+            now=NOW_ISO,
+        )
+    return sorted(
+        finds.upcoming(conn, start=date(2026, 9, 26), end=date(2026, 9, 27), limit=9),
+        key=lambda f: f.starts_at,
+    )
+
+
+def test_what_the_evening_recommended_is_the_find_tile_with_its_reason(env, app) -> None:
+    from familydb.store import finds
+
+    _seed(env.conn)
+    puppets, lego, choir = _on_saturday(env.conn, "Puppet show", "Lego club", "Choir")
+    with db.transaction(env.conn):
+        finds.judged(
+            env.conn,
+            [puppets.id, lego.id, choir.id],
+            {
+                lego.id: {"why": "The girls built all summer.", "when": "Saturday"},
+                choir.id: {"why": "x", "when": "later", "put_from": "2026-10-10"},
+            },
+            now=NOW_ISO,
+        )
+    made = picks.make(app, env.conn, "weekend")
+    (tile,) = [tile for tile in made.picks if tile["kind"] == picks.FOUND]
+    # Recommended before the one listed first; the choir is to be offered only from the 10th.
+    assert (tile["title"], tile["why"]) == ("Lego club", "The girls built all summer.")
+    assert finds.get(env.conn, lego.id).put_forward_window == "weekend:2026-09-26"
+
+
+def test_a_find_put_forward_lately_rests_unless_its_day_is_near(env, app) -> None:
+    from familydb.store import finds
+
+    _seed(env.conn)
+    puppets, _lego = _on_saturday(env.conn, "Puppet show", "Lego club")
+    with db.transaction(env.conn):
+        # Put forward three days ago for another window.
+        finds.put_forward(env.conn, puppets.id, window="now:2026-09-21", now="2026-09-21T10:00:00Z")
+    made = picks.make(app, env.conn, "weekend")  # Thursday: Saturday is two days off, near
+    (tile,) = [tile for tile in made.picks if tile["kind"] == picks.FOUND]
+    assert tile["title"] == "Puppet show"
+    app.clock.advance(timedelta(days=-3))  # Monday: Saturday is not near
+    with db.transaction(env.conn):
+        finds.put_forward(env.conn, puppets.id, window="now:2026-09-19", now="2026-09-20T10:00:00Z")
+    made = picks.make(app, env.conn, "weekend")
+    (tile,) = [tile for tile in made.picks if tile["kind"] == picks.FOUND]
+    assert tile["title"] == "Lego club"

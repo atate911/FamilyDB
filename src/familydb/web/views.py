@@ -877,6 +877,40 @@ def find_state(find: Any, today: date) -> str:
     return said if last == first else f"{said} to {day_text(last.isoformat())}"
 
 
+def find_save_fields(find: Any) -> dict[str, str]:
+    """What Save it sends `add_idea` for a find (its page, New ideas): its dates, place and
+    words, and its number, so the find is marked saved as that idea."""
+    starts = find.starts_at or ""
+    first = starts[:10]
+    last = find.ends_at[:10] if find.ends_at else first
+    url = find.url if find.url and find.url.startswith(("https://", "http://")) else ""
+    return {
+        "find_id": str(find.id),
+        "title": find.title,
+        "kind": "event" if first else "outing",
+        "happens_from": first,
+        "happens_time": starts[11:16] if "T" in starts else "",
+        "happens_until": last if last != first else "",
+        "location_name": ", ".join(part for part in (find.venue, find.address) if part),
+        "url": url,
+        "description": find.summary or "",
+    }
+
+
+def new_idea_row(find: Any, today: date) -> dict[str, Any]:
+    """Something she found and judged worth putting forward, as New ideas lists it: when it is
+    on, when she would do it, and why it suits them."""
+    when = find_state(find, today)
+    if find.judged_when:
+        when = f"{when}; {find.judged_when}" if find.starts_at else find.judged_when
+    return {
+        "id": find.id,
+        "title": find.title,
+        "line": " · ".join(part for part in (when, find.judged_why or find.why) if part),
+        "save": find_save_fields(find),
+    }
+
+
 def slug(name: str) -> str:
     """A name as a path part: "the girls" is the-girls, "Maya" is maya."""
     return re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-") or "someone"

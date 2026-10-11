@@ -737,6 +737,48 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
             ),
         )
 
+        # -- what she found on her own, and judged worth putting forward (docs/FINDS.md)
+        scouted, _ = finds.keep(
+            conn,
+            "web:near-home",
+            "web",
+            [
+                finds.NewFind(
+                    title="Hoyt Arboretum tree walk",
+                    url="https://hoyt.example.org/walks",
+                    summary="Free guided walks on Saturday mornings; the maples are turning.",
+                    participants=["whole family"],
+                    why="The kids love anything outdoors with something to find.",
+                ),
+                finds.NewFind(
+                    title="Candlelight jazz at the Old Church",
+                    url="https://oldchurch.example.org/jazz",
+                    starts="2026-10-23T19:30",
+                    summary="A trio in the nave, an hour and a half.",
+                    participants=["grown-ups"],
+                    why="A night out for two that is over by 9.",
+                ),
+            ],
+            now=ago(days=1),
+        )
+        finds.judged(
+            conn,
+            [one.id for one in scouted],
+            {
+                scouted[0].id: {
+                    "why": "The kids love anything with something to find, and it's free.",
+                    "when": "a dry Saturday morning",
+                },
+                scouted[1].id: {
+                    "why": "A grown-ups' evening that has Alex home by 9.",
+                    "when": "Friday the 23rd",
+                    "put_from": "2026-10-19",
+                    "put_until": "2026-10-23",
+                },
+            },
+            now=ago(hours=20),
+        )
+
         # -- the conversations
         tomorrow = _said(
             conn,

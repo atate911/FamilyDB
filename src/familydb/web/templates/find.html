@@ -1,6 +1,6 @@
 {% extends "frame.html" %}
 {% from "_ui.html" import icon, guard %}
-{% from "_dest.html" import dest_head %}
+{% from "_dest.html" import dest_head, find_acts %}
 {% block title %}{{ find.title }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-find{% endblock %}
 {# A happening (docs/INTERFACE.md section 5): what a source listed near home, or a place she found to go any time, its
@@ -29,19 +29,7 @@
 
   {% if visitor().may('change') and not over and offered %}
     <div class="acts">
-      <form method="post" action="{{ url_for('edits.add_idea') }}">
-        {{ guard(once=true) }}
-        <input type="hidden" name="find_id" value="{{ find.id }}" />
-        <input type="hidden" name="title" value="{{ find.title }}" /><input type="hidden" name="kind" value="{{ 'event' if first else 'outing' }}" />
-        <input type="hidden" name="happens_from" value="{{ first }}" /><input type="hidden" name="happens_time" value="{{ time }}" />
-        <input type="hidden" name="happens_until" value="{{ last }}" /><input type="hidden" name="location_name" value="{{ where }}" />
-        <input type="hidden" name="url" value="{{ row.url or '' }}" /><input type="hidden" name="description" value="{{ find.summary or '' }}" />
-        <button class="btn btn--primary btn--sm" type="submit">{{ icon('bulb', size='sm') }}Save it</button>
-      </form>
-      <form method="post" action="{{ url_for('edits.pass_find', find_id=find.id) }}">
-        {{ guard(once=true) }}
-        <button class="btn btn--quiet btn--sm" type="submit">Not for us</button>
-      </form>
+      {{ find_acts(save, find.title) }}
       <details class="fold fold--quiet" id="plan-it">
         <summary class="q__lnk">Put it on the calendar</summary>
         <form class="form fold__body" method="post" action="{{ url_for('edits.add_plan') }}">

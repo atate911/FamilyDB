@@ -17,7 +17,7 @@ to come, this document is, until the code and the guide catch up and this note i
 | **Checking** | Code testing ideas and finds against the family and a moment: firm rules, who is coming and their ages, the drive, free time, weather, opening hours. Each gets a verdict (good, possible, ruled out) and its reasons. No AI. | the suggestion engine, ideas and finds alike (`suggest/pocket.py`) |
 | **Choosing** | AI judgement on what suits this family at this moment, among what checking kept, each choice with a reason. | `choose` within a suggestion; `curate` for the pocket each evening |
 | **Suggestion** | What she offers when somebody asks. | the `suggest` tool and its log |
-| **Recommendation** | What she puts forward without being asked, in a place in the interface. | "her picks" on Now, made by code |
+| **Recommendation** | What she puts forward without being asked, in a place in the interface. | her picks on Now, the digest's one new find, and New ideas on What could we do? |
 | **Picks** | What choosing chose, inside a suggestion or a recommendation. | also used for the tiles on Now; that use becomes "recommendations" |
 
 The line between a suggestion and a recommendation is who started it. "Discovery" is no longer

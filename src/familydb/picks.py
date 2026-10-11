@@ -23,6 +23,7 @@ from familydb.app import App
 from familydb.availability import calendar_available, weather_available
 from familydb.base import roles
 from familydb.base.dates import clock_time, spoken_times, utc_iso
+from familydb.store import finds as find_store
 from familydb.store import members as member_store
 from familydb.store import picks as pick_store
 from familydb.store import suggestions
@@ -68,6 +69,10 @@ PLACES = frozenset({"restaurant", "outing", "day_trip", "trip", "show", "event",
 # Only so many reasons on a tile.
 WHY_PARTS = 2
 QUESTIONS = {"now": "What could we do in the next few hours?", "weekend": "What about the weekend?"}
+# A find put forward on Now is not put forward again in another set for this long, unless its
+# day is this near (docs/FINDS.md, "A day").
+REST_DAYS = 7
+NEAR_DAYS = 2
 
 
 def due(app: App, conn: sqlite3.Connection, window: Window, member_id: int | None = None) -> bool:
@@ -143,10 +148,18 @@ def make(
     }
     chosen = _chosen(conn, app.clock.now(), found) if window == "weekend" and member is None else []
     most = KID_MOST if member is not None else MOST[window]
-    tiles = _tiles(found, chosen, most, window, app.clock.now().astimezone(settings.tzinfo))
     start, end = found.context.window or (app.clock.today(), app.clock.today())
     now = app.clock.now()
+    key = f"{window}:{start.isoformat()}"
+    offerable = _offerable(conn, found, key, now=now, today=app.clock.today(), days=(start, end))
+    tiles = _tiles(
+        found, chosen, most, window, now.astimezone(settings.tzinfo), offerable=offerable
+    )
     with transaction(conn):
+        # What she put forward, so it is not again in another set within the week.
+        for tile in tiles:
+            if tile["kind"] == FOUND and tile.get("find_id"):
+                find_store.put_forward(conn, tile["find_id"], window=key, now=utc_iso(now))
         return pick_store.insert(
             conn,
             member_id=member.id if member else None,
@@ -176,12 +189,52 @@ def _chosen(conn: sqlite3.Connection, now: datetime, found: Assessment) -> list[
     return []
 
 
+def _offerable(
+    conn: sqlite3.Connection,
+    found: Assessment,
+    key: str,
+    *,
+    now: datetime,
+    today: date,
+    days: tuple[date, date],
+) -> list[tuple[WebFind, str]]:
+    """The finds a tile may be, each with its reason: what the evening's judgement recommended
+    first, with the reason it gave; only on the days it was to be offered; and none put forward
+    in another set within `REST_DAYS` unless its day is near."""
+    rows = {f.find_id: find_store.get(conn, f.find_id) for f in found.finds if f.find_id}
+    since = utc_iso(now - timedelta(days=REST_DAYS))
+    start, end = (day.isoformat() for day in days)
+
+    def may(find: WebFind) -> bool:
+        row = rows.get(find.find_id)
+        if row is None:
+            return True
+        if (row.put_from and row.put_from > end) or (row.put_until and row.put_until < start):
+            return False
+        lately = row.put_forward_at is not None and row.put_forward_at >= since
+        if lately and row.put_forward_window != key:
+            day = date.fromisoformat(row.starts_at[:10]) if row.starts_at else None
+            return day is not None and (day - today).days <= NEAR_DAYS
+        return True
+
+    def judged(find: WebFind) -> bool:
+        row = rows.get(find.find_id)
+        return row is not None and row.state == "recommended"
+
+    kept = sorted((f for f in found.finds if may(f)), key=lambda f: not judged(f))
+    return [
+        (f, (rows[f.find_id].judged_why or "") if judged(f) and f.find_id else "") for f in kept
+    ]
+
+
 def _tiles(
     found: Assessment,
     chosen: list[dict[str, Any]],
     most: int,
     window: Window,
     local_now: datetime,
+    *,
+    offerable: list[tuple[WebFind, str]] | None = None,
 ) -> list[dict[str, Any]]:
     """One pick a kind, the stronger call's first, then the engine's best of each kind, then one
     of what the sources list; never a ruled-out idea, never the same kind twice."""
@@ -217,13 +270,14 @@ def _tiles(
         kinds_taken.add(kind)
         tiles.append(_tile(candidate, kind, "", found, window, local_now))
     if not any(t["kind"] == FOUND for t in tiles):
-        for find in found.finds:
+        # The ideas come first: a find only where a tile is left, the recommended first.
+        for find, reason in offerable if offerable is not None else [(f, "") for f in found.finds]:
             if len(tiles) >= most:
                 break
             # Theirs already, or not checked: the finds come checked, the good first.
             if find.saved_as is not None or find.verdict not in ("good", "possible"):
                 continue
-            tiles.append(_find_tile(find, ""))
+            tiles.append(_find_tile(find, reason))
             break  # one of hers: the rest are on Happening soon
     return tiles
 
