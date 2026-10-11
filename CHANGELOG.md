@@ -114,6 +114,11 @@
 - **Her picks offer a find only once.** Something the family's calendars listed kept coming back as
   the **New** pick after it was saved as an idea; and when the stronger model chose one of the
   listed things for the weekend, its choice was dropped. Both are fixed.
+- **Not for us.** A find's page has **Not for us** beside **Save it**, and saying it in the chat does
+  the same: she stops offering it, and Undo takes it back. Saving a find keeps which idea it became,
+  and the page links to it. Finds may now be places to go any time as well as dated events, and keep
+  who they are for and why they were found: the first step of her back pocket (`docs/FINDS.md`).
+  This is migration 0061, which rebuilds the `finds` table and keeps every row.
 
 ## v0.5.0 — beta (2026-10-11)
 

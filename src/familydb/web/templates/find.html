@@ -3,9 +3,10 @@
 {% from "_dest.html" import dest_head %}
 {% block title %}{{ find.title }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-find{% endblock %}
-{# A happening (docs/INTERFACE.md section 5): what a source listed near home, its day and place, the listing in its own
-   words, where it came from; Save it and Put it on the calendar, each the tool the assistant would call. A kid sees it
-   without its source or cost. #}
+{# A happening (docs/INTERFACE.md section 5): what a source listed near home, or a place she found to go any time, its
+   day and place, the listing in its own words, where it came from; Save it, Not for us and Put it on the calendar,
+   each the tool the assistant would call, while it is hers to offer, and what became of it once it is not. A kid sees
+   it without its source or cost. #}
 {% block content %}
   {{ dest_head(find.title, state, back=('Happening soon', url_for('web.happening_page'))) }}
   <dl class="facts">
@@ -20,15 +21,26 @@
     <p class="found__by">Listed by {{ row.who }}{% if find.gone %}, and gone from its list since{% endif %}.</p>
   {% endif %}
 
-  {% if visitor().may('change') and not over %}
+  {% if find.state in ('saved', 'planned') and find.idea_id %}
+    <p class="sec__note">Saved as an idea: <a href="{{ url_for('web.idea', idea_id=find.idea_id) }}">#{{ find.idea_id }}</a>.</p>
+  {% elif find.state == 'passed' %}
+    <p class="sec__note">Not for you{% if find.passed_why %}: {{ find.passed_why }}{% endif %}. It will not be offered again.</p>
+  {% endif %}
+
+  {% if visitor().may('change') and not over and offered %}
     <div class="acts">
       <form method="post" action="{{ url_for('edits.add_idea') }}">
         {{ guard(once=true) }}
-        <input type="hidden" name="title" value="{{ find.title }}" /><input type="hidden" name="kind" value="event" />
+        <input type="hidden" name="find_id" value="{{ find.id }}" />
+        <input type="hidden" name="title" value="{{ find.title }}" /><input type="hidden" name="kind" value="{{ 'event' if first else 'outing' }}" />
         <input type="hidden" name="happens_from" value="{{ first }}" /><input type="hidden" name="happens_time" value="{{ time }}" />
         <input type="hidden" name="happens_until" value="{{ last }}" /><input type="hidden" name="location_name" value="{{ where }}" />
         <input type="hidden" name="url" value="{{ row.url or '' }}" /><input type="hidden" name="description" value="{{ find.summary or '' }}" />
         <button class="btn btn--primary btn--sm" type="submit">{{ icon('bulb', size='sm') }}Save it</button>
+      </form>
+      <form method="post" action="{{ url_for('edits.pass_find', find_id=find.id) }}">
+        {{ guard(once=true) }}
+        <button class="btn btn--quiet btn--sm" type="submit">Not for us</button>
       </form>
       <details class="fold fold--quiet" id="plan-it">
         <summary class="q__lnk">Put it on the calendar</summary>
@@ -37,13 +49,13 @@
           <input type="hidden" name="title" value="{{ find.title }}" /><input type="hidden" name="location" value="{{ where }}" />
           <input type="hidden" name="back" value="{{ request.path }}" />
           <div class="field"><label class="field__label" for="start">When</label>
-            <input id="start" name="start" type="datetime-local" required value="{{ first ~ 'T' ~ time if time else first ~ 'T10:00' }}" />
+            <input id="start" name="start" type="datetime-local" required value="{{ (first ~ 'T' ~ (time or '10:00')) if first else '' }}" />
             <label class="check"><input type="checkbox" name="all_day" value="yes"{{ ' checked' if not time }} />All day</label></div>
           <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ 'Put it on the calendar' if on_google else 'Add it to the plans' }}</button></div>
         </form>
       </details>
     </div>
-  {% elif over %}
+  {% elif over and offered %}
     <p class="sec__note">It is over. Saved as an idea, it can come round again next year.</p>
   {% endif %}
 {% endblock %}

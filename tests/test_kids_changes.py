@@ -1,6 +1,7 @@
 """What a kid may change by asking the bot: add an idea, remember something and her own to-dos;
-never edit an idea, say how a plan went or make, move or cancel a plan (docs/DESIGN.md, section
-16). The tools are declared the same for everyone; dispatch refuses (tools/registry.py `needs`)."""
+never edit an idea, say how a plan went, make, move or cancel a plan, or pass on something she
+found for everyone (docs/DESIGN.md, section 16). The tools are declared the same for everyone;
+dispatch refuses (tools/registry.py `needs`)."""
 
 from __future__ import annotations
 
@@ -66,5 +67,7 @@ def test_a_parent_a_job_and_the_shared_password_still_change_things(
 def test_every_turn_is_declared_the_same_tools_and_none_says_who_may_use_it(registry) -> None:
     declared = registry.tool_defs()
     assert {"update_idea", "record_outcome", "create_event"} <= {tool.name for tool in declared}
-    five = [tool for tool in declared if registry.get(tool.name).needs]
-    assert len(five) == 5 and not any("needs" in vars(tool) for tool in five)
+    # Changing an idea, how a plan went, making, moving or cancelling a plan, and passing on
+    # something she found for everyone.
+    six = [tool for tool in declared if registry.get(tool.name).needs]
+    assert len(six) == 6 and not any("needs" in vars(tool) for tool in six)

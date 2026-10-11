@@ -1418,6 +1418,7 @@ DID_WORDS = {
     "remember": "Remembered something",
     "record_outcome": "Recorded how it went",
     "look_up_now": "Asked for a lookup",
+    "pass_find": "Passed on something she found",
     "add_wish": "Added a wish",
     "update_wish": "Changed a wish",
     "turn_away": "Turned down a request",

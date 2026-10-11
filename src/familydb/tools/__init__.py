@@ -7,6 +7,7 @@ from familydb.tools.registry import REGISTRY, ToolContext, ToolRegistry, ToolRes
 
 def build_registry() -> ToolRegistry:
     from familydb.tools import (  # noqa: F401
+        finds,
         gcal,
         ideas,
         judgement,

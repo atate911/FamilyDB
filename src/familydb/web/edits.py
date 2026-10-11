@@ -78,6 +78,7 @@ SNOOZED_PLAIN = "{title} comes back at {when}."
 NOT_A_SNOOZE = "Choose In an hour or Tomorrow."
 LOOKING = "Looking {what} up now: within a few minutes."
 NOTHING_WAITING = "Nothing is waiting to be looked up."
+PASSED = "Not for you: {title}. It will not be offered again."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
 FORGOTTEN = "Forgotten: {fact}. It will not come back from what was said before."
 NEEDS_FACT = "Say what to remember."
@@ -290,6 +291,9 @@ def add_idea() -> Response:
     if complaint:
         _say(complaint)
         return _back("web.new_idea")
+    found = _text(request.form, "find_id")
+    if found.isascii() and found.isdigit() and len(found) <= 18:
+        values["find_id"] = int(found)  # saving something she found (a happening's page)
     result, complaint = run("add_idea", values, hidden_from=_hidden_from(request.form))
     if result is None:
         _say(complaint or "")
@@ -405,6 +409,18 @@ def look_up_waiting() -> Response:
         count = len(result["asked"])
         _say(LOOKING.format(what="1 idea" if count == 1 else f"{count} ideas"))
     return _back("web.status")
+
+
+@bp.post("/soon/<int:find_id>/pass")
+@once
+def pass_find(find_id: int) -> Response:
+    """Not for us: she stops offering something she found (`pass_find`)."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.find", find_id=find_id)
+    result, complaint = run("pass_find", {"find_id": find_id})
+    _say(PASSED.format(title=result["title"]) if result is not None else complaint or "")
+    return _back("web.find", find_id=find_id)
 
 
 @bp.post("/idea/<int:idea_id>/outcome")

@@ -10,11 +10,12 @@ undoes somebody else's later change. A call is undone once (`undone_at`).
 What can be taken back: an idea added (dropped) or changed (its fields put back); a task added
 (cancelled) or changed, snoozed, done or cancelled when it does not repeat (put back, its reminder
 again if that time is still to come); a plan made (cancelled, its reminders with it) or moved or
-renamed (put back); something remembered (forgotten); a list's things added, taken off, ticked or
-unticked (the opposite). What cannot: how a plan went (counted into
-the idea's numbers), a repeating task's round, a plan cancelled or a hand-made event deleted
-(gone from Google), a kid's wish answered (she has been told), a memory replaced or forgotten, a
-lookup asked for, and anything already sent.
+renamed (put back); something remembered (forgotten); a find passed on (hers to offer again, as
+is one an idea added from it saved); a list's things added, taken off, ticked or unticked (the
+opposite). What cannot: how a plan went (counted into the idea's numbers), a repeating task's
+round, a plan cancelled or a hand-made event deleted (gone from Google), a kid's wish answered
+(she has been told), a memory replaced or forgotten, a lookup asked for, and anything already
+sent.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ from familydb import task_service
 from familydb.base import roles
 from familydb.base.dates import utc_iso
 from familydb.base.errors import ToolError
-from familydb.store import calls, ideas, memories, plans, tasks
+from familydb.store import calls, finds, ideas, memories, plans, tasks
 from familydb.store.db import from_json, transaction
 from familydb.tools.registry import UNDO_VERSION, ToolContext, keep_undo
 
@@ -109,6 +110,19 @@ def _drop_idea(ctx: ToolContext, inverse: dict[str, Any]) -> None:
         if idea is None or idea.status != inverse["status"]:
             raise ToolError(CHANGED)  # planned, done or dropped since
         ideas.update(ctx.conn, idea.id, {"status": "dropped"}, now=ctx.now_iso())
+        # A find it saved is hers to offer again, as it was, unless it has moved on since.
+        found = finds.get(ctx.conn, inverse["find"]) if "find" in inverse else None
+        if found is not None and found.idea_id == idea.id and found.state == "saved":
+            finds.restore(ctx.conn, found.id, inverse["find_before"])
+
+
+def _restore_find(ctx: ToolContext, inverse: dict[str, Any]) -> None:
+    """Hers to offer again after "not for us", as it was before."""
+    with transaction(ctx.conn):
+        found = finds.get(ctx.conn, inverse["find"])
+        if found is None or found.state != "passed":
+            raise ToolError(CHANGED)
+        finds.restore(ctx.conn, found.id, inverse["before"])
 
 
 def _restore_idea(ctx: ToolContext, inverse: dict[str, Any]) -> None:
@@ -219,6 +233,7 @@ def _apart(ctx: ToolContext) -> ToolContext:
 OPS: dict[str, Callable[[ToolContext, dict[str, Any]], None]] = {
     "drop_idea": _drop_idea,
     "restore_idea": _restore_idea,
+    "restore_find": _restore_find,
     "cancel_task": _cancel_task,
     "restore_task": _restore_task,
     "cancel_plan": _cancel_plan,

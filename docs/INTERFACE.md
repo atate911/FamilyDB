@@ -215,7 +215,7 @@ Every item page reads in this order:
 | **A kid** | The kids | Her requests, her lists, her pitches, and for a parent her thread to read along. An admin sees the role and password forms here too. |
 | **A list** | Lists | The checklist itself is the page. |
 | **A reminder** | This week, On your plate, a receipt | When or on what condition, owner, repeats, delivery rules in words. |
-| **A happening** | Happening soon | Date, source, the original listing, Yes in pencil. |
+| **A happening** | Happening soon, her picks | Date (or any time, for a place she found), source, the original listing, Yes in pencil; **Save it** and **Not for us** while it is hers to offer, and once it is not, what became of it. |
 | **A memory** | What we did, a day | Faces, photo, what made it good, Again?. |
 
 ## 6. The Vera layer
