@@ -150,6 +150,12 @@
   Her picks on Now offer one of them after your own ideas, on the days it suits, and not again
   in another set within a week unless its day is near. When she answers a planning question, and
   in the weekend digest, she mentions the one best new thing once, after what is yours.
+- **Status says what came of what she found.** Beside what came of her suggestions, Status (and
+  `familydb debug suggestions`) now shows, for the calendars, Ticketmaster, her scouting and the
+  searches made when asked, how many things were found, put forward, saved, planned and passed on,
+  how the outings went, and what scouting cost, to weigh it against its budget. Planning something
+  she found marks it planned, and her next searches lean towards what you saved and away from
+  what you passed on.
 
 ## v0.5.0 — beta (2026-10-11)
 

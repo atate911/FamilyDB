@@ -615,6 +615,7 @@ def debug_suggestions(
         found = taken.report(conn, since=since)
     if not found.asked:
         typer.echo(f"No suggestions in the last {days} days.")
+        _what_she_found(found)
         return
     typer.echo(
         f"{found.asked:,d} suggestion{'' if found.asked == 1 else 's'} in the last {days} days, "
@@ -642,6 +643,24 @@ def debug_suggestions(
         for one in against:
             rated = f", rated {one.rating}/10" if one.rating is not None else ""
             typer.echo(f"  plan #{one.plan_id} {one.title}: {one.reason or 'ruled out'}{rated}")
+    _what_she_found(found)
+
+
+def _what_she_found(found: Any) -> None:
+    """What became of her finds by where they came from, and what scouting cost."""
+    if not found.origins:
+        return
+    typer.echo(
+        f"\n  {'found by':<22} {'found':>6} {'put fwd':>8} {'saved':>6} {'planned':>8} "
+        f"{'passed':>7} {'average':>8}"
+    )
+    for one in found.origins:
+        average = f"{one.average:.1f}/10" if one.average is not None else "-"
+        typer.echo(
+            f"  {one.label:<22} {one.found:>6,d} {one.recommended:>8,d} {one.saved:>6,d} "
+            f"{one.planned:>8,d} {one.passed:>7,d} {average:>8}"
+        )
+    typer.echo(f"Scouting, filling in and judging cost US${found.scouting_cost:.2f}.")
 
 
 @debug_app.command("validate-tools")

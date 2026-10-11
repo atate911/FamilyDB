@@ -4,8 +4,9 @@ for what suits them rather than for any family near home.
 Built by code, deterministic, and bounded: each section has a cap in characters and is cut at a
 whole line, saying how many more there were. It carries who they are (how many grown-ups, the
 kids' ages), their firm limits, what they said they like and what they loved, where they live and
-go, and what they already have (their list, what she has already found, what they passed on), so
-the search looks for something new. It never carries a name (a person is "a kid, 9" or "a
+go, and what they already have (their list, what she has already found, what they saved of it,
+what they passed on and why), so the search looks for something new, leaning towards what they
+saved and away from what they passed on. It never carries a name (a person is "a kid, 9" or "a
 grown-up"), a birthday, a present or a wish list, another chat's words, a sign-in, or where
 anybody is.
 """
@@ -29,6 +30,7 @@ CAPS = {
     "areas": 300,
     "have": 1200,
     "found": 600,
+    "liked": 500,
     "passed": 500,
 }
 TOTAL = sum(CAPS.values())
@@ -40,11 +42,13 @@ HEADINGS = {
     "areas": "Where they live and go",
     "have": "Already on their list (look for something new)",
     "found": "Already found for them (do not report again)",
+    "liked": "What they saved of what was found before (more like these)",
     "passed": "They said not for them",
 }
 LOVED = 8  # a rating at or above this is something they loved
 RATINGS_DAYS = 365
 PASSED_DAYS = 180
+LIKED_DAYS = 90
 # What they said they like, from these kinds of memory; a must goes in whatever its kind.
 TASTES = ("food", "activities", "places")
 # A memory about a present is kept from a search, whatever else it says.
@@ -156,13 +160,19 @@ def brief(conn: sqlite3.Connection, settings: Settings, *, today: date) -> Brief
         "areas": [f"- home: {areas[0]}"] + [f"- they go to: {area}" for area in areas[1:]],
         "have": [f"- {idea.title} ({idea.kind})" for idea in titles],
         "found": [f"- {one.title}" for one in sorted(found, key=lambda f: f.id)],
+        "liked": [
+            f"- {one.title}" + (f" ({one.category})" if one.category else "")
+            for one in finds.saved_since(
+                conn, since=(today - timedelta(days=LIKED_DAYS)).isoformat(), limit=20
+            )
+        ],
         "passed": [
             f"- {one.title}" + (f": {one.passed_why}" if one.passed_why else "")
             for one in finds.passed(conn, since=since)
         ],
     }
     # Titles and reasons are the family's words too: a name in them is said as who it is.
-    for key in ("likes", "have", "passed"):
+    for key in ("likes", "have", "liked", "passed"):
         sections[key] = [_unnamed(line, people, today) for line in sections[key]]
     parts = {
         key: f"{HEADINGS[key]}:\n" + "\n".join(_fit(lines, CAPS[key]))

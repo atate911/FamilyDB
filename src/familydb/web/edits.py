@@ -479,6 +479,9 @@ def add_plan() -> Response:
     }
     if idea_id:
         values["idea_id"] = int(idea_id)
+    found = _text(form, "find_id")
+    if found.isascii() and found.isdigit() and len(found) <= 18:
+        values["find_id"] = int(found)  # planning something she found (a happening's page)
     result, complaint = run("create_event", values)
     if result is None:
         _say(complaint or "")

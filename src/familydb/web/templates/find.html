@@ -35,7 +35,7 @@
         <form class="form fold__body" method="post" action="{{ url_for('edits.add_plan') }}">
           {{ guard(once=true) }}
           <input type="hidden" name="title" value="{{ find.title }}" /><input type="hidden" name="location" value="{{ where }}" />
-          <input type="hidden" name="back" value="{{ request.path }}" />
+          <input type="hidden" name="back" value="{{ request.path }}" /><input type="hidden" name="find_id" value="{{ find.id }}" />
           <div class="field"><label class="field__label" for="start">When</label>
             <input id="start" name="start" type="datetime-local" required value="{{ (first ~ 'T' ~ (time or '10:00')) if first else '' }}" />
             <label class="check"><input type="checkbox" name="all_day" value="yes"{{ ' checked' if not time }} />All day</label></div>

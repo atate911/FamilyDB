@@ -166,6 +166,21 @@
       {% else %}
         <p class="muted">Nobody has asked her what to do in the last {{ taken_days }} days.</p>
       {% endif %}
+      {% if taken.origins %}
+        {# What became of what she found, by where it came from (docs/FINDS.md, "Learning"). #}
+        <h3 class="mt-4">What she found</h3>
+        <div class="scroll">
+          <table class="data">
+            <thead><tr><th scope="col">Found by</th><th scope="col" class="num">Found</th><th scope="col" class="num">Put forward</th><th scope="col" class="num">Saved</th><th scope="col" class="num">Planned</th><th scope="col" class="num">Not for us</th><th scope="col" class="num">How it went</th></tr></thead>
+            <tbody>
+              {% for one in taken.origins %}
+                <tr><td>{{ one.label }}</td><td class="num">{{ one.found }}</td><td class="num">{{ one.recommended }}</td><td class="num">{{ one.saved }}</td><td class="num">{{ one.planned }}</td><td class="num">{{ one.passed }}</td><td class="num">{% if one.average is not none %}{{ "%.1f"|format(one.average) }}/10 ({{ one.rated }} rated){% else %}not rated{% endif %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted mt-3">Scouting, filling in and judging cost US${{ "%.2f"|format(taken.scouting_cost) }} in these {{ taken_days }} days.</p>
+      {% endif %}
     </section>
 
     {# Admins only: the words here come from every chat. Each line opens its history in full. #}

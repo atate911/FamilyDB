@@ -380,6 +380,18 @@ def mark_saved(conn: sqlite3.Connection, find_id: int, *, idea_id: int, now: str
     )
 
 
+def mark_planned(
+    conn: sqlite3.Connection, *, find_id: int | None, idea_id: int | None, now: str
+) -> None:
+    """A plan was made from it: the find named, or the one saved as this idea. One passed on
+    stays passed."""
+    conn.execute(
+        "UPDATE finds SET state = 'planned', saved_at = coalesce(saved_at, ?) "
+        "WHERE state != 'passed' AND (id = ? OR (idea_id = ? AND state = 'saved'))",
+        (now, find_id, idea_id),
+    )
+
+
 def mark_passed(
     conn: sqlite3.Connection, find_id: int, *, by: int | None, why: str | None, now: str
 ) -> None:
@@ -393,6 +405,47 @@ def mark_passed(
 
 # What a change to a find's fate touches, kept before it so it can be put back (familydb/undo.py).
 FATE = ("state", "idea_id", "saved_at", "passed_at", "passed_by", "passed_why")
+
+
+def fates_since(conn: sqlite3.Connection, *, since: str) -> dict[str, dict[str, int]]:
+    """For each kind of find (where it came from), what was found since a timestamp and what
+    became of what was: put forward, saved, planned, passed on (suggest/taken.py)."""
+    rows = conn.execute(
+        "SELECT kind, "
+        "sum(first_seen_at >= ?) AS found, "
+        "sum(judged_why IS NOT NULL AND judged_at >= ?) AS recommended, "
+        "sum(saved_at IS NOT NULL AND saved_at >= ?) AS saved, "
+        "sum(state = 'planned' AND coalesce(saved_at, last_seen_at) >= ?) AS planned, "
+        "sum(passed_at IS NOT NULL AND passed_at >= ?) AS passed "
+        "FROM finds GROUP BY kind",
+        (since,) * 5,
+    ).fetchall()
+    keys = ("found", "recommended", "saved", "planned", "passed")
+    return {row["kind"]: {key: int(row[key] or 0) for key in keys} for row in rows}
+
+
+def rated_since(conn: sqlite3.Connection, *, since: str) -> dict[str, tuple[int, float]]:
+    """For each kind of find, how the outings made of the ideas it became went since a day
+    (YYYY-MM-DD): how many were rated, and their average."""
+    rows = conn.execute(
+        "SELECT f.kind AS kind, count(o.id) AS n, avg(o.rating) AS average FROM finds f "
+        "JOIN outcomes o ON o.idea_id = f.idea_id "
+        "WHERE f.idea_id IS NOT NULL AND o.rating IS NOT NULL AND o.happened_on >= ? "
+        "GROUP BY f.kind",
+        (since,),
+    ).fetchall()
+    return {row["kind"]: (int(row["n"]), round(float(row["average"]), 1)) for row in rows}
+
+
+def saved_since(conn: sqlite3.Connection, *, since: str, limit: int) -> list[Find]:
+    """What the family saved or planned of what she found, newest first: what the next search
+    leans towards (scouting/brief.py)."""
+    rows = conn.execute(
+        "SELECT * FROM finds WHERE state IN ('saved', 'planned') AND saved_at >= ? "
+        "ORDER BY saved_at DESC, id DESC LIMIT ?",
+        (since, limit),
+    ).fetchall()
+    return [Find.from_row(row) for row in rows]
 
 
 def fate(find: Find) -> dict[str, object]:

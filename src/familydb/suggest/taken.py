@@ -10,7 +10,9 @@ It answers the questions the engine's rules are tuned by: how often a suggestion
 whether the stronger call's picks are taken more and rated higher than the engine's own order,
 and what the family planned that the engine had ruled out (where a rule was wrong for them). The
 Status page and `familydb debug suggestions` show it; the engine reads which suggestions led to a
-plan, to let what was ignored come back sooner (`sinking`).
+plan, to let what was ignored come back sooner (`sinking`). Beside it, what became of her finds by
+where they came from (`origins`: found, put forward, saved, planned, passed on, and how the
+outings went) and what scouting cost, to weigh scouting against what comes of it.
 """
 
 from __future__ import annotations
@@ -20,8 +22,9 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 
+from familydb import happening
 from familydb.base.dates import utc_iso
-from familydb.store import calls, ideas, outcomes, plans, suggestions
+from familydb.store import calls, finds, ideas, outcomes, plans, suggestions
 from familydb.store.ideas import normalize_title
 from familydb.store.plans import Plan
 from familydb.store.suggestions import Suggestion
@@ -68,6 +71,30 @@ class Source:
     average: float | None
 
 
+# Where a find came from, as Status names it, in the order it lists them (docs/FINDS.md).
+ORIGINS = {
+    "feed": "Calendars",
+    "ticketmaster": "Ticketmaster",
+    "web": "Her scouting",
+    "request": "Searches when asked",
+}
+
+
+@dataclass(frozen=True)
+class Origin:
+    """What became of what one kind of source found in the period."""
+
+    key: str
+    label: str
+    found: int
+    recommended: int
+    saved: int
+    planned: int
+    passed: int
+    rated: int
+    average: float | None
+
+
 @dataclass
 class Report:
     asked: int = 0  # suggestions in the period
@@ -76,6 +103,10 @@ class Report:
     unoffered: int = 0  # plans made in the period that no suggestion offered
     choosing_calls: int = 0  # the stronger call's model calls in the period
     choosing_wait: float = 0.0  # their average time, seconds: what `choose_now` adds to "now"
+    # What became of her finds, by where they came from, and what scouting and its evening's
+    # work cost (docs/FINDS.md, "Learning").
+    origins: list[Origin] = field(default_factory=list)
+    scouting_cost: float = 0.0
 
     @property
     def led_to_plan(self) -> int:
@@ -218,6 +249,8 @@ def report(conn: sqlite3.Connection, *, since: str) -> Report:
     said = outcomes.recent(conn, since=since[:10])
     found = Report(asked=len(asked), chosen=sum(1 for s in asked if s.picks))
     found.choosing_calls, found.choosing_wait = calls.waits(conn, "choose", since=since)
+    found.origins = origins(conn, since=since)
+    found.scouting_cost = round(calls.spent_on(conn, happening.KINDS, since=since), 2)
     window = timedelta(days=ATTRIBUTE_DAYS)
     for plan in made:
         names = _names(plan, titles)
@@ -237,6 +270,33 @@ def report(conn: sqlite3.Connection, *, since: str) -> Report:
             continue
         found.took.append(replace(took, rating=_rating(plan, said)))
     return found
+
+
+def origins(conn: sqlite3.Connection, *, since: str) -> list[Origin]:
+    """For each source of finds that found or led to anything since `since`: what it found,
+    what was put forward, saved, planned and passed on, and how the outings made of it went."""
+    fates = finds.fates_since(conn, since=since)
+    rated = finds.rated_since(conn, since=since[:10])
+    shown = []
+    for key, label in ORIGINS.items():
+        said = fates.get(key, {})
+        n, average = rated.get(key, (0, None))
+        if not any(said.values()) and not n:
+            continue
+        shown.append(
+            Origin(
+                key,
+                label,
+                said.get("found", 0),
+                said.get("recommended", 0),
+                said.get("saved", 0),
+                said.get("planned", 0),
+                said.get("passed", 0),
+                n,
+                average,
+            )
+        )
+    return shown
 
 
 def _shown_good(suggestion: Suggestion) -> set[int]:

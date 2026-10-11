@@ -83,3 +83,21 @@ def test_each_part_is_capped_at_a_whole_line(conn, settings, family):
     text = brief(conn, settings, today=TODAY).text
     have = text.split("Already on their list (look for something new):\n")[1].split("\n\n")[0]
     assert len(have) <= CAPS["have"] + 30 and have.splitlines()[-1].startswith("- … and ")
+
+
+def test_the_search_leans_towards_what_they_saved_of_what_was_found(conn, settings, family):
+    with db.transaction(conn):
+        kept, _ = finds.keep(
+            conn,
+            "web:near-home",
+            "web",
+            [
+                finds.NewFind(title="Pottery night", url="https://clay.example/", category="Class"),
+                finds.NewFind(title="Wine walk", url="https://wine.example/"),
+            ],
+            now="2026-09-01T00:00:00Z",
+        )
+        finds.mark_saved(conn, kept[0].id, idea_id=None, now="2026-09-10T00:00:00Z")
+    text = brief(conn, settings, today=TODAY).text
+    liked = text.split("What they saved of what was found before (more like these):\n")[1]
+    assert liked.startswith("- Pottery night (Class)") and "Wine walk" not in liked

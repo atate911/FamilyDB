@@ -1,9 +1,9 @@
 # Ideas, finds, suggestions and recommendations
 
 What the app means by each word, how the family's own list and what the app finds on the web
-work together, and what the family decided about it on 2026-10-11. This is the design to build
-from: where it says what the code does today, the code is the authority; where it says what is
-to come, this document is, until the code and the guide catch up and this note is taken out.
+work together, and what the family decided about it on 2026-10-11. It is built (see "Where it
+lives"): where this document and the code disagree, the code is the authority and this is
+corrected.
 
 ## The words
 
@@ -105,20 +105,20 @@ rated, beside what came of the family's own ideas.
 - **Judging the pocket runs at the everyday level by default,** settable like the other uses, so
   the nightly cost stays small; choosing within a suggestion keeps its own level.
 
-## To build, in order
+## Where it lives
 
-1. Finds hold places as well as events: a find may have no date ("any time"), carries who it is
-   for, why it was found, its state (new, recommended, saved, planned, not for us) and when it
-   was last put forward. The `finds` table needs a migration for this.
-2. Searches on request keep what they find as finds, and run with the full brief.
-3. Checking covers finds: dates against free time and the hours asked, the venue geocoded for
-   the drive, who it is for and ages, firm rules against its words, weather when it is outdoors.
-4. Scouting runs nightly with the brief and the theme, under its budget; the weekly search goes.
-5. Filling in covers finds; the nightly judging call (a new kind of call, answering the five
-   questions of `docs/AI_CALLS.md`) marks what to recommend and when.
-6. Recommendations: Now's tiles from ideas and judged finds, the digest's find, the New ideas
-   section with **Save it** and **Not for us**.
-7. Learning and Status: what came of finds beside ideas, and the brief shaped by it.
+- Finds and what became of them: `store/finds.py` (migrations 0061, 0062).
+- Saving and passing on: `add_idea` with `find_id`, `pass_find` (tools/finds.py), a find's page
+  and New ideas on What could we do?; `create_event` with `find_id` marks one planned.
+- Searching on request: `scouting/search.py` `search_for`, told `scouting/brief.py`'s brief.
+- Checking: `suggest/pocket.py`, through the ideas' own `shortlist` and `evaluate`.
+- Scouting, filling in and judging each evening: `jobs/happening.py`, `scouting/near_home.py`,
+  `scouting/fill.py`, `scouting/judging.py`, within `happening_budget`.
+- Recommendations: `familydb/picks.py` (Now), `SuggestResult.new_find` (answers and the digest),
+  `web/ideas_page.py` (New ideas).
+- Learning: what became of finds by origin on Status (`suggest/taken.py` `origins`), and the brief
+  leaning towards what was saved and away from what was passed on.
 
-Each step is its own change with its tests, its line in the guide, and the evals run before and
-after where a prompt changes.
+Not yet: a find's venue is placed on the map only once it is filled in (the listing's own
+coordinates aside), so until then its drive is not checked. The evals for the prompts this
+changed (discover, scout, fill_find, curate, choose, system) have not been run against a model.

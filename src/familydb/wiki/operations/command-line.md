@@ -98,7 +98,7 @@ These show things and send nothing. On a database that has never been opened, or
 | `familydb members list [--all]` | The family list; `--all` includes people switched off |
 | `familydb ideas list [--all]` | The ideas, one line each, presents included; `--all` adds dropped ideas |
 | `familydb debug cost [--days N]` | What the last N days (30 by default) cost per purpose and model |
-| `familydb debug suggestions [--days N]` | What came of her suggestions over the last N days (90 by default): how many led to a plan, from where, how each went, and what was planned though ruled out |
+| `familydb debug suggestions [--days N]` | What came of her suggestions over the last N days (90 by default): how many led to a plan, from where, how each went, what became of her finds by where they came from and what scouting cost, and what was planned though ruled out |
 | `familydb debug prompt [TEXT] [--as NAME] [--kind KIND] [--idea N]` | The exact request that would be sent, without sending it. `--kind` is chat, digest, retry or enrich |
 | `familydb tool --list` | The tools, whether each is available and which write |
 | `familydb google events [--days N]` | The next 7 days (or N) on the family calendar, as a connection test |

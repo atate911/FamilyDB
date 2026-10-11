@@ -361,3 +361,20 @@ def test_the_verdict_is_built_from_the_parts_it_sits_over() -> None:
     assert down["tone"] == "alert" and down["heading"] == "Vera can\u2019t answer right now."
     rest = verdict(parts, name="Vera", standing=Pill("rest", "", ""), spent=2.0, thirty=3.0)
     assert rest["tone"] == "warn" and "About $2.00 spent today" in rest["text"]
+
+
+def test_it_shows_what_became_of_what_she_found(status, conn) -> None:
+    from familydb.store import finds
+
+    with db.transaction(conn):
+        [garden], _ = finds.keep(
+            conn,
+            "web:near-home",
+            "web",
+            [finds.NewFind(title="Rose garden", url="https://a.example/")],
+            now="2026-09-19T10:00:00Z",
+        )
+        finds.mark_passed(conn, garden.id, by=None, why=None, now="2026-09-19T12:00:00Z")
+    text = _flat(status.get("/status"))
+    assert "What she found" in text and "Her scouting" in text
+    assert "Scouting, filling in and judging cost US$0.00" in text

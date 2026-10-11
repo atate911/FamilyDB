@@ -118,3 +118,23 @@ def test_a_saved_find_is_not_passed_on_but_its_idea_dropped(settings, clock, con
     _, idea = _run(ctx, "add_idea", title="Night market", kind="outing", find_id=market.id)
     result, said = _run(ctx, "pass_find", find_id=market.id)
     assert result.is_error and f"idea #{idea['id']}" in said["error"]
+
+
+def test_a_plan_made_from_a_find_or_its_idea_marks_it_planned(
+    registry, conn, calendar_settings, clock, family
+) -> None:
+    from tests import fakes as made
+    from tests.conftest import TZ
+
+    concert, market = _found(conn, "Concert", "Night market")
+    ctx = _as(calendar_settings, clock, conn, family["sam"], "u1")
+    ctx.calendar = made.FakeCalendar(TZ)
+    result, said = _run(ctx, "create_event", title="Concert", start="2026-09-26T20:00", find_id=999)
+    assert result.is_error and said["error"] == "no find 999"
+    _run(ctx, "create_event", title="Concert", start="2026-09-26T20:00", find_id=concert.id)
+    assert finds.get(conn, concert.id).state == "planned"
+    # Saved as an idea first, then planned from the idea.
+    _, idea = _run(ctx, "add_idea", title="Night market", kind="outing", find_id=market.id)
+    _run(ctx, "create_event", title="Night market", start="2026-09-27T19:00", idea_id=idea["id"])
+    planned = finds.get(conn, market.id)
+    assert (planned.state, planned.idea_id) == ("planned", idea["id"])

@@ -52,6 +52,8 @@ What the family planned from what she suggested over the last 90 days, read from
 - The table says where each plan stood in its suggestion (picked by the stronger call, offered as good or possible, checked but not shown, found outside the list, or ruled out) and how the family rated it afterwards.
 - **Planned though she had ruled it out** names what the family did anyway, with the reason she gave. A reason that keeps coming up is a rule that does not suit this family: a [firm memory](/wiki/model/memory) can change it for them.
 
+**What she found** follows: for each place things come from (the calendars, Ticketmaster, her scouting each evening, and the searches made when somebody asks), how many were found, put forward, saved, planned and passed on as "not for us", and how the outings made of them were rated; then what scouting, filling in and judging cost in the period. Together they say whether scouting earns its budget ([What is on near home](/wiki/controls/settings/happening)).
+
 `familydb debug suggestions [--days N]` prints the same on the [command line](/wiki/operations/command-line).
 
 ## How each part is doing

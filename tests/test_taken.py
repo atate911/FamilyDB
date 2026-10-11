@@ -181,3 +181,36 @@ def test_a_find_ruled_out_and_planned_anyway_says_why(conn) -> None:
     found = taken.report(conn, since="2026-09-01T00:00:00Z")
     where = {one.title: (one.source, one.reason) for one in found.took}
     assert where == {"Late show": ("ruled_out", "busy while it is on"), "Matinee": ("find", None)}
+
+
+def test_what_became_of_her_finds_by_where_they_came_from(conn) -> None:
+    from familydb.store import finds
+
+    with db.transaction(conn):
+        scouted, _ = finds.keep(
+            conn,
+            "web:near-home",
+            "web",
+            [
+                finds.NewFind(title="Rose garden", url="https://a.example/"),
+                finds.NewFind(title="Gig", url="https://b.example/"),
+                finds.NewFind(title="Old", url="https://c.example/"),
+            ],
+            now="2026-09-20T10:00:00Z",
+        )
+        roses, gig, _ = scouted
+        finds.judged(
+            conn,
+            [roses.id, gig.id],
+            {roses.id: {"why": "w", "when": "w"}},
+            now="2026-09-20T21:00:00Z",
+        )
+    idea = _idea(conn, "Rose garden")
+    with db.transaction(conn):
+        finds.mark_saved(conn, roses.id, idea_id=idea, now="2026-09-21T10:00:00Z")
+        finds.mark_passed(conn, gig.id, by=None, why=None, now="2026-09-21T10:00:00Z")
+    _rated(conn, idea, None, 8, on="2026-09-27")
+    [scouting] = taken.origins(conn, since="2026-09-01T00:00:00Z")
+    assert (scouting.label, scouting.found, scouting.recommended) == ("Her scouting", 3, 1)
+    assert (scouting.saved, scouting.planned, scouting.passed) == (1, 0, 1)
+    assert (scouting.rated, scouting.average) == (1, 8.0)
