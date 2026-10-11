@@ -71,6 +71,7 @@ BEHAVIOUR = (
     "voice_max_minutes",
     "web_title",
     "web_dictation",
+    "row_hidden",
     "web_session_days",
     "keep_messages_days",
     "google_calendar_id",

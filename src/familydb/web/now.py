@@ -72,6 +72,11 @@ def show() -> Response | str:
         progress = status_page.setup_progress(app, conn)
         if visitor.manages and not status_page.ready_to_answer(progress):
             return redirect(url_for("setup.overview"))
+        # The family took Now out of the row: the page opens on the first place left in it.
+        if "now" in app.settings.row_hidden_places and (
+            away := shell.elsewhere(shell.frame(app, conn))
+        ):
+            return redirect(away)
         people, slots, kept = household.read(conn, visitor.member)
         seen = agenda.read(app, conn, today, today + timedelta(days=DAYS_AHEAD))
         on = presents.without(seen.entries, kept)

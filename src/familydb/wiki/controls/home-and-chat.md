@@ -63,7 +63,7 @@ On Eat, Do, Week, Kids, Soon, Lists and Did the box says what it is about ("abou
 
 ## On a big screen, and the kitchen tablet
 
-From a tablet's width up, the row of destinations stands down the left. From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and the last lines of your conversation under it, so her answer stays in view while you move between pages.
+From a tablet's width up, the row of destinations stands down the left. An admin can take a place the family does not use out of the row on [General](/wiki/controls/settings/general#this-page). From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and the last lines of your conversation under it, so her answer stays in view while you move between pages.
 
 **Pin** under one of her replies keeps it at hand: signed in as yourself, it stays at the top of that column on a desk and under **Pinned** at the top of Chat on any screen (one line; open it to read them), newest first, until you press **Unpin** there (or **Pinned** under the reply) to take it off. A shelf holds eight; pinning a ninth lets the oldest go. Your pins are yours alone, and go with you if you are taken off the family list.
 

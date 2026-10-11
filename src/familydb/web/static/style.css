@@ -1531,6 +1531,8 @@ textarea.script { min-height: 16em; line-height: 1.55; }
 .knock-form .field__hint { margin-top: calc(var(--s2) * -1); }
 .sgroup > .setting, .sgroup__h + .sgrid { margin-top: var(--s4); }
 .setting--wide { grid-column: 1 / -1; }
+/* a tick for each choice, side by side while they fit */
+.ticks { display: flex; flex-wrap: wrap; gap: 0 var(--s5); }
 /* settings side by side line up row by row: label, box, help, extra */
 @supports (grid-template-rows: subgrid) {
   .sgrid { row-gap: 0; margin-bottom: calc(-1 * var(--s5)); }

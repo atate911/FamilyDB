@@ -10,9 +10,36 @@
   {% endfor %}
 {%- endmacro %}
 
+{# A tick for each choice (fields.Field.ticks), every one ticked by default; the setting keeps those
+   left unticked. The hidden box tells the save the ticks were drawn, so a form without them leaves
+   the setting alone. #}
+{% macro ticks(entry) -%}
+  {% set one = entry.field %}
+  {% set told = 'h-' ~ one.key %}
+  <div class="setting setting--wide setting--ticks{% if entry.problem %} setting--bad{% endif %}" role="group" aria-labelledby="l-{{ one.key }}"
+    {%- if entry.problem or one.note %} aria-describedby="{{ told }}"{% endif %}>
+    <div class="setting__head">
+      <span class="field__label" id="l-{{ one.key }}">{{ one.label }}</span>
+      {% if entry.stored %}<span class="changed">changed</span>{% endif %}
+    </div>
+    <input type="hidden" name="{{ one.key }}" value="{{ entry.marks[0] }}" />
+    <div class="ticks">
+      {% for value, words in one.ticks %}
+        <label class="check"><input type="checkbox" name="{{ entry.marks[1] }}" value="{{ value }}"{% if value in entry.ticked %} checked{% endif %} />{{ words }}</label>
+      {% endfor %}
+    </div>
+    {% if entry.problem %}
+      <p id="{{ told }}" class="field__error" role="alert">{{ entry.problem }}</p>
+    {% elif one.note %}
+      <p id="{{ told }}" class="field__hint">{{ one.note }}</p>
+    {% endif %}
+  </div>
+{%- endmacro %}
+
 {% macro setting(entry) -%}
   {% set one = entry.field %}
   {% set told = 'h-' ~ one.key %}
+  {% if one.ticks %}{{ ticks(entry) }}{% else %}
   <div class="setting{% if entry.problem %} setting--bad{% endif %}">
     <div class="setting__head">
       <label class="field__label" for="f-{{ one.key }}">{{ one.label }}</label>
@@ -88,6 +115,7 @@
       <p id="{{ told }}" class="field__hint">{{ one.note }}</p>
     {% endif %}
   </div>
+  {% endif %}
 {%- endmacro %}
 
 {# The built name, kept for a release. #}

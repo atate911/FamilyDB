@@ -62,6 +62,8 @@ class Frame:
     kids: bool = False
     # The Status tile's light, for an admin: "bad", "warn" or None (status.light).
     light: str | None = None
+    # The places the family took out of the row (`Settings.row_hidden`).
+    hidden: frozenset[str] = frozenset()
 
     @property
     def look_at(self) -> int:
@@ -92,8 +94,9 @@ def frame(app: App, conn: sqlite3.Connection) -> Frame:
     page builds it through `chat.page_box`, the back office through `current`."""
     visitor = auth.visitor()
     me = _me()
+    hidden = app.settings.row_hidden_places
     if visitor.kind == "stranger":
-        return Frame(me)
+        return Frame(me, hidden=hidden)
     today = app.clock.today()
     tz = app.settings.tzinfo
     try:
@@ -114,8 +117,8 @@ def frame(app: App, conn: sqlite3.Connection) -> Frame:
         # A database not yet migrated: the frame is drawn without counts, so a page that says
         # "not found" or "not yours" never fails itself.
         log.warning("the menu's counts could not be read", exc_info=True)
-        return Frame(me)
-    return Frame(me, pill, late, decide, rate, check, unread, family, kids, light)
+        return Frame(me, hidden=hidden)
+    return Frame(me, pill, late, decide, rate, check, unread, family, kids, light, hidden)
 
 
 def current(app: App) -> Frame:
@@ -255,7 +258,8 @@ def belongs_to(key: str) -> None:
 
 def destinations(frame: Frame) -> list[Destination]:
     """The row for this visitor: a grown-up's eight places, a kid's four (docs/INTERFACE.md
-    section 9). Each is a want, not a table: Eat, Do, Week."""
+    section 9), less those the family took out on the settings (`Settings.row_hidden`); with
+    every one taken out, Now stays. Each is a want, not a table: Eat, Do, Week."""
     visitor = auth.visitor()
     here = request.endpoint or ""
     chosen = g.get("destination")
@@ -276,6 +280,7 @@ def destinations(frame: Frame) -> list[Destination]:
         places.append(("week", "My week", url_for("go.week"), 0, ""))
         if visitor.may("wish") and visitor.member is not None:
             places.append(("kids", "My list", url_for("web.wishes"), 0, ""))
+    places = [place for place in places if place[0] not in frame.hidden] or places[:1]
     return [
         Destination(
             key,
@@ -287,3 +292,10 @@ def destinations(frame: Frame) -> list[Destination]:
         )
         for key, label, href, count, word in places
     ]
+
+
+def elsewhere(frame: Frame) -> str | None:
+    """Where the home address sends this visitor when the family took Now out of the row: the
+    first place left in theirs. None while Now is in it."""
+    row = destinations(frame)
+    return None if any(place.key == "now" for place in row) else row[0].href

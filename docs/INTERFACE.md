@@ -248,7 +248,7 @@ Vera has no tile. She is the box, her reply, her questions, her notes, and her r
 
 - **Persistent controls, two:** the box at the top and the destination row at the bottom. In the same place on every screen. The row's first item is Now.
 - **Tap** opens. **Chips** narrow, always in the same place. **Back** goes up one level, and from a destination it goes to Now.
-- **The row is the only menu.** Seven short names and Now. There is no second menu anywhere, because two menus showing different subsets of the same places is what made the current page confusing.
+- **The row is the only menu.** Seven short names and Now. There is no second menu anywhere, because two menus showing different subsets of the same places is what made the current page confusing. A family that does not use a place can take it out of the row on Settings, General (`row_hidden`); its pages stay, reached from a link, and with Now taken out the home address opens the first place left.
 - **Deep links** are the paths in section 2. A push, a Telegram link, the tablet and the installed page all land on them. Opening a deep link from outside shows the item with the row beneath it, never a dead end.
 - **Scoped box state** is per screen: leaving a destination clears its scope.
 - **A reply over a screen** never navigates on its own. Only its pointer does, and only when tapped.

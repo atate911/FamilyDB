@@ -288,15 +288,21 @@ def _box(
     headed = (grouped or {}).get(one.key)
     reads = {value: words for _, rows in headed or () for value, words in rows}
     fallback = fields.fallback(one, base)
+    value = typed.get(one.key, fields.shown(one, overrides.get(one.key)))
+    # Ticks say what is in force: what was typed or stored, else what the setting falls back to.
+    taken = one.key in typed or one.key in overrides
     return {
         "field": one,
-        "value": typed.get(one.key, fields.shown(one, overrides.get(one.key))),
+        "value": value,
         "placeholder": reads.get(fallback) or fields.placeholder(one, fallback),
         "problem": problems.get(one.key),
         "stored": one.key in overrides,
         "offers": offers.get(one.key) or suggested(one),
         "labels": {},
         "grouped": headed,
+        "ticked": fields.ticked(one, value if taken else fallback) if one.ticks else (),
+        # What a box of ticks posts: its mark under its own name, and the name each tick posts.
+        "marks": (fields.TICKED, one.key + fields.SHOWN),
     }
 
 

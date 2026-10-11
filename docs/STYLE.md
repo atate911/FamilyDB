@@ -331,7 +331,8 @@ The frame folds in order, keeping the focal element first and whole.
 - **The back office, below about 1100 pixels,** moves the rail under the main column, its
   sections in the same order, and the menu stays.
 - **At 820 pixels and below** the family's frame is the phone's: the wordmark and the avatar, the
-  box, the page, and the row of destinations fixed at the foot (`--tabbar-total`), the current
+  box, the page, and the row of destinations (less any the family took out on Settings, General:
+  `row_hidden`) fixed at the foot (`--tabbar-total`), the current
   one in ink with a line under it, scrolling sideways if a kid's words are long. The back office is
   one column under a top bar (the mark, the pill, the account) over the same row. The guide's
   sections have their phone place in the page (a Sections button), so the rail's copy is not drawn

@@ -14,7 +14,7 @@ from zoneinfo import available_timezones
 
 from familydb import happening, logs
 from familydb.agent.providers import companies
-from familydb.base.config import Settings
+from familydb.base.config import ROW_PLACES, Settings
 from familydb.base.dates import hour_words
 from familydb.store.settings import BEHAVIOUR
 from familydb.web.views import DAY_NAMES
@@ -54,6 +54,9 @@ class Field:
     another: str = ""
     # A box of several lines, one thing a line (the calendars to read), drawn as a text area.
     lines: bool = False
+    # A tick for each of these (value, words), all ticked by default; the setting keeps the ones
+    # left unticked, a comma between them (the places taken out of the row).
+    ticks: tuple[tuple[str, str], ...] = ()
 
     def word(self, value: str) -> str:
         return dict(self.words).get(value, value)
@@ -161,6 +164,7 @@ def field(
     unset: str = "",
     another: str = "",
     lines: bool = False,
+    ticks: tuple[tuple[str, str], ...] = (),
 ) -> Field:
     kind, derived = _shape(Settings.model_fields[key].annotation)
     if kind == "toggle" and not words:
@@ -178,6 +182,7 @@ def field(
         keyboard=_keyboard(key, kind),
         another=another or ("Another model" if suggested else ""),
         lines=lines,
+        ticks=ticks,
     )
 
 
@@ -203,6 +208,9 @@ def zones() -> tuple[str, ...]:
 
 
 YES_NO = (("true", "yes"), ("false", "no"))
+# Each place in the row by its word there; a kid's says its own beside it.
+ROW_WORDS = {"week": "Week (a kid's My week)", "kids": "Kids (a kid's My list)"}
+ROW_TICKS = tuple((place, ROW_WORDS.get(place, place.capitalize())) for place in ROW_PLACES)
 HOURS = tuple(str(hour) for hour in range(24))
 HOUR_WORDS = tuple((str(hour), hour_words(hour)) for hour in range(24))
 EFFORT = (
@@ -325,6 +333,15 @@ GROUPS: tuple[Group, ...] = (
                 "Beside each box that takes words. The browser writes down what is said: Safari "
                 "sends the sound to Apple, Chrome to Google, as a phone keyboard's mic does. It "
                 "never passes through FamilyDB and costs nothing. Firefox has no mic.",
+            ),
+            field(
+                "row_hidden",
+                "Places in the row",
+                "The row at the foot of every page, down the left on a wider screen. Untick a "
+                "place the family does not use to take it out of the row: nothing is deleted, and "
+                "its pages still open from a link. With Now taken out, the page opens on the "
+                "first place left; with every one taken out, Now stays.",
+                ticks=ROW_TICKS,
             ),
         ),
     ),
@@ -977,9 +994,16 @@ def parse(one: Field, given: str) -> Any:
 
 # The last choice in a list box: "the one typed under it".
 ANOTHER = "another"
+# What a box of ticks posts under its own name, so a form that drew the ticks is told from one
+# that did not; each tick posts its value under the name and SHOWN.
+TICKED = "ticked"
+SHOWN = "_shown"
 
 
 def given(one: Field, form: Any) -> str:
+    if one.ticks and form.get(one.key) == TICKED:
+        shown = set(form.getlist(one.key + SHOWN))
+        return ",".join(value for value, _ in one.ticks if value not in shown)
     chosen = form[one.key]
     if one.another and chosen == ANOTHER:
         return form.get(f"{one.key}_{ANOTHER}", "")
@@ -1011,6 +1035,12 @@ def fallback(one: Field, base: Settings) -> Any:
     return base.tz if one.key == "family_tz" else getattr(base, one.key)
 
 
+def ticked(one: Field, hidden: Any) -> tuple[str, ...]:
+    """The ticks to draw ticked: every value but those the setting names, a comma between them."""
+    off = {part.strip() for part in str(hidden or "").split(",")}
+    return tuple(value for value, _ in one.ticks if value not in off)
+
+
 def placeholder(one: Field, value: Any) -> str:
     if value is None or value == "":
         return one.unset or "not set"
@@ -1036,5 +1066,6 @@ __all__ = [
     "placeholder",
     "read_form",
     "shown",
+    "ticked",
     "zones",
 ]
