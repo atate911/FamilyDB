@@ -131,6 +131,7 @@ class Pick(BaseModel):
     day: str | None = None  # YYYY-MM-DD, when it chose one
     idea_id: int | None = None
     url: str | None = None
+    find_id: int | None = None  # the stored find, so her picks on Now can lead to it
 
 
 @dataclass

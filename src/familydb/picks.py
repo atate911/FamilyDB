@@ -31,7 +31,7 @@ from familydb.store.ideas import Idea
 from familydb.store.members import Member
 from familydb.store.picks import PickSet, Window
 from familydb.suggest.engine import Assessment, assess
-from familydb.suggest.types import Candidate, Context, SuggestInput
+from familydb.suggest.types import Candidate, Context, SuggestInput, WebFind
 from familydb.tools import ToolContext
 
 log = logging.getLogger(__name__)
@@ -159,7 +159,8 @@ def make(
 
 
 def _chosen(conn: sqlite3.Connection, now: datetime, found: Assessment) -> list[dict[str, Any]]:
-    """The stronger call's latest picks for these days, while fresh, as (idea id, reason)."""
+    """The stronger call's latest picks for these days, while fresh: an idea's or a find's, each
+    with its reason."""
     since = utc_iso(now - CHOSEN_FOR)
     for row in sorted(
         suggestions.picked_since(conn, since=since), key=lambda s: s.asked_at, reverse=True
@@ -168,7 +169,7 @@ def _chosen(conn: sqlite3.Connection, now: datetime, found: Assessment) -> list[
         if start is not None and row.window_start and row.window_start != start.isoformat():
             continue
         picks = (row.picks or {}).get("picks") or []
-        return [p for p in picks if isinstance(p, dict) and p.get("idea_id")]
+        return [p for p in picks if isinstance(p, dict) and (p.get("idea_id") or p.get("find_id"))]
     return []
 
 
@@ -184,11 +185,20 @@ def _tiles(
     # Never a ruled-out idea, nor one done lately and resting (suggest/shortlist.py).
     offered = [c for c in found.shown if c.verdict != "ruled_out" and not c.checks.resting]
     by_id = {c.idea_id: c for c in offered}
+    # A find already saved as an idea is theirs now, whatever became of that idea.
+    finds = {f.find_id: f for f in found.finds if f.saved_as is None and f.find_id is not None}
     tiles: list[dict[str, Any]] = []
     kinds_taken: set[str] = set()
     for pick in chosen:
+        if len(tiles) >= most:
+            break
+        if pick.get("find_id"):
+            find = finds.get(pick["find_id"])
+            if find is not None and not any(t["kind"] == FOUND for t in tiles):
+                tiles.append(_find_tile(find, pick.get("reason") or ""))
+            continue
         candidate = by_id.get(pick["idea_id"])
-        if candidate is None or len(tiles) >= most:
+        if candidate is None:
             continue
         kind = (found.by_id[candidate.idea_id].kind or "other").lower().replace(" ", "_")
         kinds_taken.add(kind)
@@ -203,24 +213,29 @@ def _tiles(
             continue
         kinds_taken.add(kind)
         tiles.append(_tile(candidate, kind, "", found, window, local_now))
-    for find in found.finds:
-        if len(tiles) >= most:
-            break
-        if find.saved_as is not None and find.saved_as in by_id:
-            continue
-        tiles.append(
-            {
-                "kind": FOUND,
-                "when": find.dates or "",
-                "title": find.title,
-                "why": " ".join(part for part in (find.summary, find.source) if part)[:140],
-                "url": find.url or None,
-                "idea_id": None,
-                "find_id": find.find_id,
-            }
-        )
-        break  # one of hers: the rest are on Happening soon
+    if not any(t["kind"] == FOUND for t in tiles):
+        for find in found.finds:
+            if len(tiles) >= most:
+                break
+            if find.saved_as is not None:
+                continue
+            tiles.append(_find_tile(find, ""))
+            break  # one of hers: the rest are on Happening soon
     return tiles
+
+
+def _find_tile(find: WebFind, reason: str) -> dict[str, Any]:
+    """A tile for something the sources list: the stronger call's reason, else its own words."""
+    why = reason or " ".join(part for part in (find.summary, find.source) if part)
+    return {
+        "kind": FOUND,
+        "when": find.dates or "",
+        "title": find.title,
+        "why": why[:140],
+        "url": find.url or None,
+        "idea_id": None,
+        "find_id": find.find_id,
+    }
 
 
 def _tile(

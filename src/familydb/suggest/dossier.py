@@ -60,6 +60,7 @@ class Option:
     title: str
     idea_id: int | None = None
     url: str | None = None
+    find_id: int | None = None  # the stored find, for one the sources list
     days: tuple[str, ...] = ()  # the days it fits, YYYY-MM-DD; empty when any day of the window
     done_before: bool = False
 
@@ -199,6 +200,7 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
             kind="find",
             title=find.title,
             url=find.url or None,
+            find_id=find.find_id,
             days=(find.starts[:10],) if find.starts else (),
         )
         cites.add(ref)

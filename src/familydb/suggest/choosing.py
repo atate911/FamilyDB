@@ -217,6 +217,7 @@ def _choose(ctx: ToolContext, args: SuggestInput, a: Any) -> Chosen | None:
                 day=given["day"],
                 idea_id=option.idea_id,
                 url=option.url,
+                find_id=option.find_id,
             )
         )
     kept = {"picks": [p.model_dump(exclude_none=True) for p in picks], "framing": chosen["framing"]}

@@ -20,7 +20,7 @@ from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.origin import resolve as resolve_origin
-from familydb.suggest.places import find_places
+from familydb.suggest.places import find_places, saved
 from familydb.suggest.places import wanted as places_wanted
 from familydb.suggest.rules import fold
 from familydb.suggest.shortlist import FAVORITE_RATING, RATING_DAYS, shortlist
@@ -173,6 +173,7 @@ def assess(
     context.origin, where_note = resolve_origin(ctx, args.near, args.window)
     if where_note:
         context.skipped.append(where_note)
+    people = members.list_all(ctx.conn)
     all_ideas = ideas.list_all(ctx.conn)
     listed = {idea.id for idea in all_ideas if idea.status != "dropped"}
     unknown = sorted(set(args.idea_ids) - listed)
@@ -188,7 +189,6 @@ def assess(
         topic=" ".join(args.topic.casefold().split())[:MAX_TOPIC],
     )
     # The family's firm rules for who is coming, held by code (suggest/rules.py).
-    people = members.list_all(ctx.conn)
     held = memories.held(ctx.conn, today=ctx.clock.today())
     constraints = fold(constraints, held, people, ctx.member)
     # What the family said of what they did: "not again" leaves it out, a rating counts for a
@@ -257,6 +257,8 @@ def assess(
         if note:
             skipped.append(note)
     finds, more = listing.merge_finds(stored, finds)
+    # What the family already saved is marked, so nothing offers it again as new.
+    finds = saved(ctx.conn, finds)
     if more:
         skipped.append(f"{more} more listed for these days on the page {happening.NAME}")
 

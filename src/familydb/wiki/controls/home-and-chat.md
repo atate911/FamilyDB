@@ -34,6 +34,8 @@ The picks under **What about…** are made ahead, never while you look: an hourl
 
 **What about…** has a page of its own too (its heading on Now, or the menu behind your picture): the set for the next few hours and the weekend's, each with the line that drove it ("Saturday: free from noon") and when it was chosen. A kid sees the set made for her.
 
+At most one pick is something the family's calendars list rather than an idea of theirs, marked **New**. Something already saved as an idea is never offered as new again, and when the stronger model chose one of the listed things for the weekend, that is the one shown, with its reason.
+
 ### The first day
 
 On a new install, with nothing saved and nothing on, Now is one line from the assistant saying who she is, and the box asks for "a place your family would happily go back to". Once one thing is saved, Now is as above.

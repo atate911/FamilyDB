@@ -295,5 +295,5 @@ def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
         mode="json",
         exclude_none=True,
         exclude_defaults=True,
-        exclude={"web_finds": {"__all__": {"find_id"}}},
+        exclude={"web_finds": {"__all__": {"find_id"}}, "picks": {"__all__": {"find_id"}}},
     )

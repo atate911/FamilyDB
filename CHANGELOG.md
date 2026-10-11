@@ -108,6 +108,9 @@
   answer for two weeks, whether the family passed it over or simply had no time. Now it sinks for
   three days when nothing came of that suggestion, and two weeks only when they planned something
   else from it.
+- **Her picks offer a find only once.** Something the family's calendars listed kept coming back as
+  the **New** pick after it was saved as an idea; and when the stronger model chose one of the
+  listed things for the weekend, its choice was dropped. Both are fixed.
 
 ## v0.5.0 — beta (2026-10-11)
 

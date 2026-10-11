@@ -221,3 +221,82 @@ def test_what_was_done_lately_is_never_on_a_tile(env, app) -> None:
     made = picks.make(app, env.conn, "weekend")
     assert made is not None
     assert all(tile["idea_id"] != show.id for tile in made.picks)
+
+
+def _listed(conn, *titles):
+    """What a library calendar lists for Saturday, as stored finds, by title."""
+    from datetime import datetime
+
+    from familydb.integrations.events import FoundEvent
+    from familydb.store import finds
+    from tests.conftest import TZ
+
+    with db.transaction(conn):
+        finds.upsert_many(
+            conn,
+            "feed:https://library.example.org/events.ics",
+            "feed",
+            [
+                FoundEvent(
+                    external_id=f"e{n}",
+                    title=title,
+                    starts=datetime(2026, 9, 26, 10 + n, tzinfo=TZ),
+                    ends=None,
+                    all_day=False,
+                    venue="Main library",
+                    url=f"https://library.example.org/e{n}",
+                )
+                for n, title in enumerate(titles)
+            ],
+            tz=TZ,
+            now=NOW_ISO,
+        )
+    found = finds.upcoming(conn, start=date(2026, 9, 26), end=date(2026, 9, 27), limit=9)
+    return {f.title: f.id for f in found}
+
+
+def test_a_find_already_saved_is_never_the_new_tile(env, app) -> None:
+    """Saved as an idea, a find is theirs: it is not offered as new again, even while that idea
+    is ruled out (here, already planned)."""
+    _seed(env.conn)
+    _listed(env.conn, "Puppet show", "Lego club")
+    with db.transaction(env.conn):
+        ideas.insert(env.conn, title="Puppet show", kind="show", status="planned", now=NOW_ISO)
+    made = picks.make(app, env.conn, "weekend")
+    found = [tile["title"] for tile in made.picks if tile["kind"] == picks.FOUND]
+    assert found == ["Lego club"]
+
+
+def test_a_find_the_stronger_call_picked_is_the_find_tile(env, app) -> None:
+    _seed(env.conn)
+    ids = _listed(env.conn, "Puppet show", "Lego club")
+    with db.transaction(env.conn):
+        row = suggestions.insert(
+            conn=env.conn,
+            asked_by=None,
+            window_start="2026-09-26",
+            window_end="2026-09-27",
+            candidates=[],
+            web_finds=[],
+            now="2026-09-24T01:00:00Z",
+        )
+        suggestions.set_picks(
+            env.conn,
+            row.id,
+            {
+                "picks": [
+                    {
+                        "ref": "find:2",
+                        "find_id": ids["Lego club"],
+                        "title": "Lego club",
+                        "slot": "new",
+                        "reason": "Theo has been building all week",
+                    }
+                ]
+            },
+        )
+    made = picks.make(app, env.conn, "weekend")
+    (tile,) = [tile for tile in made.picks if tile["kind"] == picks.FOUND]
+    assert tile["title"] == "Lego club" and tile["find_id"] == ids["Lego club"]
+    assert tile["why"] == "Theo has been building all week"
+
