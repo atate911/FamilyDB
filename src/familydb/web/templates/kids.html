@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, vera_screen with context %}
+{% from "_ui.html" import icon, avatar, vera_screen, guard with context %}
 {% from "_dest.html" import dest_head, chip_row, dest_empty, by_hand %}
 {% block title %}{{ "The kids" if parent else 'My list' }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-kids{% endblock %}
@@ -11,7 +11,7 @@
    her lists in her order, and what was answered lately. A kid sees her own list, in her order, and nothing of the
    grown-ups' word. Every form is a tool call through edits.py. #}
 {% macro hidden(kid) -%}
-  <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+  {{ guard(once=true) }}
   {%- if parent %}<input type="hidden" name="kid" value="{{ kid.id }}" />{% endif %}
 {%- endmacro %}
 

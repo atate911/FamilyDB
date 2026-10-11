@@ -9,8 +9,8 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from familydb.app import App
+from familydb.base.errors import ToolError
 from familydb.delivery import lease, run_deliveries
-from familydb.errors import ToolError
 from familydb.jobs.reminders import run_reminders
 from familydb.store import db, ideas, messages, tasks
 from familydb.suggest.engine import run

@@ -9,8 +9,8 @@ from datetime import timedelta
 from typing import Literal
 
 from familydb.agent.render import render_history_line
-from familydb.clock import Clock
-from familydb.dates import utc_iso
+from familydb.base.clock import Clock
+from familydb.base.dates import utc_iso
 from familydb.store import members, messages
 
 # History is paid for on every call, so it is budgeted: the newest messages fitting HISTORY_CHARS

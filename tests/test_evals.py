@@ -10,7 +10,7 @@ from evals.cases import by_name
 from evals.harness import GROUP, Case, emoji_in, grade, run_case, under_persona
 
 from familydb import personas
-from familydb.config import apply_overrides
+from familydb.base.config import apply_overrides
 from familydb.store import messages
 from tests import fakes
 

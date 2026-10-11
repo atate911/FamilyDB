@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 
 from familydb.agent import gateway
 from familydb.availability import web_tools_available
-from familydb.config import Settings
+from familydb.base.config import Settings
 from familydb.store import ideas, places
 from familydb.suggest.discover import search
 from familydb.suggest.types import Candidate, Constraints, Context, WebFind, clock

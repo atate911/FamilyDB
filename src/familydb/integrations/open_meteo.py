@@ -14,8 +14,8 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Any, Protocol
 
-from familydb.config import Settings
-from familydb.errors import ToolError
+from familydb.base.config import Settings
+from familydb.base.errors import ToolError
 
 log = logging.getLogger(__name__)
 

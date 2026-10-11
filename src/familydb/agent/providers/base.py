@@ -148,6 +148,11 @@ class Provider(Protocol):
 
     def model_for(self, surface: Surface) -> str: ...
 
+    def cache_ttl(self) -> str:
+        """How long the company keeps the cached prefix where it charges to write it ("5m",
+        "1h"), and "" where caching costs nothing extra: what a call's cost is counted with."""
+        ...
+
     def payload(self, request: TurnRequest) -> dict[str, Any]:
         """The request as it would be sent (`debug prompt`, `send`)."""
         ...
@@ -178,7 +183,7 @@ class Provider(Protocol):
         """The model that hears recordings, or None."""
         ...
 
-    def transcribe(self, audio: Audio, hints: str) -> Heard:
+    def transcribe(self, audio: Audio, hints: str, model: str | None = None) -> Heard:
         """The words in a recording; `hints` names people and places. A declined request comes
         back with its `stop`."""
         ...
@@ -187,7 +192,7 @@ class Provider(Protocol):
         """The model that looks at pictures (the lookup model), or None."""
         ...
 
-    def describe(self, picture: Picture, ask: str) -> Seen:
+    def describe(self, picture: Picture, ask: str, model: str | None = None) -> Seen:
         """What a picture shows, as `ask` asks, in one request; a declined one comes back with its
         `stop`."""
         ...

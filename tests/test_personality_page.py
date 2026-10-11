@@ -9,7 +9,7 @@ import pytest
 from familydb import personas
 from familydb.agent.prompt import JOB_HEADER, build_system_blocks
 from familydb.app import App
-from familydb.config import PersonaRewrite
+from familydb.base.config import PersonaRewrite
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.web import create_app, views

@@ -13,9 +13,9 @@ from datetime import datetime, time, timedelta
 from typing import Any
 
 from familydb.agent.providers import LOOK_TOKENS, companies, prices
-from familydb.config import Settings
-from familydb.dates import utc_iso
-from familydb.errors import AgentError
+from familydb.base.config import Settings
+from familydb.base.dates import utc_iso
+from familydb.base.errors import AgentError
 from familydb.store import alerts as alert_store
 from familydb.store import calls
 from familydb.store.db import transaction
@@ -41,6 +41,9 @@ DONE = {
     "turn_away": ("Noted the request", "wish_id"),
     "save_place": ("Saved place details", "idea_id"),
     "skip_place": ("Marked lookup skipped", "idea_id"),
+    "look_up_now": ("Asked for a lookup", "idea_id"),
+    "shopping_list": ("Changed a list", "list_id"),
+    "undo": ("Took the last change back", "id"),
 }
 
 

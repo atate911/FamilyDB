@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from familydb.dates import weekend_window
+from familydb.base.dates import weekend_window
 from familydb.tools.registry import ToolContext, tool
 
 

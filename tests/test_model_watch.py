@@ -8,9 +8,9 @@ from datetime import datetime, timedelta
 import pytest
 
 from familydb import alerts, model_watch
-from familydb.agent.providers import prices
+from familydb.agent.providers import companies, prices
 from familydb.app import App
-from familydb.clock import FixedClock
+from familydb.base.clock import FixedClock
 from familydb.integrations.price_lists import (
     Listed,
     PriceListError,
@@ -451,24 +451,26 @@ def test_one_press_on_the_status_page_puts_the_suggested_model_in(settings, conn
     client = create_app(app).test_client()
     page = client.get("/status").text
     form = re.search(
-        r'<form method="post" action="/settings" class="inline-action">.*?</form>', page, re.S
+        r'<form method="post" action="/settings/models" class="inline-action">.*?</form>',
+        page,
+        re.S,
     )
     assert form is not None and "Use claude-sonnet-5 instead" in form.group(0)
     boxes = dict(re.findall(r'name="([a-z_]+)" value="([^"]*)"', form.group(0)))
-    assert boxes["section"] == "model" and boxes["worker_model"] == "claude-sonnet-5"
+    assert boxes["anthropic_worker_model"] == "claude-sonnet-5"
     assert "anthropic_model" not in boxes  # the chat's model is Opus, which is not going
 
-    answer = client.post("/settings", data=boxes)
+    answer = client.post("/settings/models", data=boxes)
     assert answer.status_code == 302 and answer.headers["Location"].endswith("/settings/model")
     app.refresh()
-    assert app.settings.worker_model == "claude-sonnet-5"
+    assert companies.ANTHROPIC.worker_model(app.settings) == "claude-sonnet-5"
 
 
 # -- a company the settings define
 
 
 def _with_openrouter(settings, **more):
-    from familydb.config import CompanyDef
+    from familydb.base.config import CompanyDef
 
     one = CompanyDef(
         slug="openrouter",
@@ -510,7 +512,7 @@ def test_an_added_companys_models_are_kept_and_priced_by_its_own_list(settings, 
 
 
 def test_a_price_typed_for_an_added_model_wins_over_its_lists(settings, conn) -> None:
-    from familydb.config import ModelPrice
+    from familydb.base.config import ModelPrice
 
     live = _with_openrouter(settings, prices=[ModelPrice(name="vendor/chat", input=1, output=2)])
     app = _app(live)
@@ -545,7 +547,7 @@ def test_a_company_that_cannot_be_asked_leaves_what_was_known_alone(settings, co
 
 def test_nothing_is_told_or_swapped_on_an_added_companys_list(settings, conn) -> None:
     from familydb.agent import gateway
-    from familydb.config import ModelPrice
+    from familydb.base.config import ModelPrice
 
     live = _with_openrouter(
         settings,

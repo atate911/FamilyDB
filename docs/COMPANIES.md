@@ -46,7 +46,7 @@ setting, a spare's order, a model's owner are each asked of the registry.
 | `slug`, `label` | The name in the settings and on every page. A slug is lower case letters, digits and hyphens, never a built-in one. |
 | `base_url` | The part before `/chat/completions`. https, unless `local`; a typed address must lead out onto the internet (`integrations/address.py`), because this server is the one that goes there with a key. A template's address is ours and is not looked up. |
 | `local` | Runs on this machine or the family's network: http is allowed and no key is needed. A host that is out on the internet cannot be called local. |
-| `model`, `worker_model`, `better_model`, `best_model` | Names as the company writes them. The lineup (everyday, better, best) has no company-wide answer for a company nobody listed, so the family names them; empty is the everyday model. |
+| `model`, `worker_model`, `better_model`, `best_model` | Names as the company writes them, the same four a built-in company keeps (`config.CompanyModels`). The lineup (everyday, better, best) has no company-wide answer for a company nobody listed, so the family names them; empty is the everyday model. |
 | `prices` | US dollars per million tokens, typed. They win over what the daily check read, and a model with no price anywhere is counted at `prices.UNLISTED`, dearer than any listed, so the daily limit stops early. An added company's prices are matched by the exact name only: a prefix would price a dearer variant at its cheaper sibling's rate. |
 | `reasoning_fields` | The message field a model's thinking comes back in. Some companies require it sent back unchanged beside a tool call or the next request fails (DeepSeek's `reasoning_content`; OpenRouter's `reasoning_details`). The first one a reply carries is kept in `ModelReply.raw` and replayed; if the company refuses it, it is left out and an admin told (`parts.py`). |
 | `extra_body` | A company's own switches, merged into every request: OpenRouter's `provider` preferences, a `thinking` object. Plain JSON. **Never dropped to get an answer**: one may be the family's protection, and a request that cannot carry it fails instead (a 400 naming it is `refused`). The fields the adapter owns or that would change what a chat may do (`model`, `messages`, `tools`, `max_tokens`, `stop`, `response_format`, `plugins`, `models`, `web_search_options`...) are refused. A person may take a template's protection out of a company's fields; the page says so then, and stops promising it. |
@@ -126,7 +126,7 @@ A company whose quirks the adapter cannot carry is a module beside `openai.py` a
 1. `agent/providers/<slug>.py` with a class that satisfies `Provider` (`base.py`), `searches` set, its
    `PARTS` (`parts.py`) and its error mapping into `AgentError.trouble`.
 2. A `Company` in `companies.py` and its slug in `config.BUILT_IN_COMPANIES`; its key, everyday chat and
-   lookup models, better and best models as settings (`config.py`, `store/settings.py`, `web/fields.py`).
+   lookup models, better and best models as settings (`base/config.py`, `store/settings.py`, `web/fields.py`).
 3. `build()` in `providers/__init__.py`, its lineup in `catalog.py`, its prices in `prices.py`, and
    LiteLLM's and OpenRouter's names for it in its `Company` (the daily check's lists).
 4. Tests: `tests/test_companies.py` holds that every built-in company has a module and the settings it

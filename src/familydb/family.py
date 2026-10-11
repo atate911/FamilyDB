@@ -25,10 +25,11 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from familydb import audience, passwords, roles
-from familydb.dates import age_on as age_on
-from familydb.dates import next_birthday as next_birthday
-from familydb.dates import utc_iso
+from familydb import audience, looks, passwords
+from familydb.base import roles
+from familydb.base.dates import age_on as age_on
+from familydb.base.dates import next_birthday as next_birthday
+from familydb.base.dates import utc_iso
 from familydb.store import invites, logins, members, messages, plans, tasks
 from familydb.store import pins as pin_store
 from familydb.store import push as push_store
@@ -337,8 +338,6 @@ def choose_look(conn: sqlite3.Connection, member_id: int, value: str) -> str:
     """Keep somebody's look with them, so it follows them to every phone and computer they sign in
     on. `value` is what the Look page's form holds as the look cookie does ("rail.dark"); one that
     names no look is refused. Only ever for the person signed in: the page passes their own id."""
-    from familydb.web import looks  # the looks are the page's; this checks a choice against them
-
     key, _, mode = value.partition(".")
     chosen = looks.choose(key, mode)
     if chosen is None:

@@ -1,5 +1,11 @@
 {# Kitchen Table's parts (docs/STYLE.md; the class names are the design's STANDARD.md §2). Icons are the design's own sprite (static/icons.svg): beside words they are hidden from a screen reader, alone they get a label. #}
 
+{# What every form carries so the server takes it (web/auth.py `refused`): the CSRF token, and with `once` the token a
+   form whose repeat would do harm carries as well (web/once.py). #}
+{% macro guard(once=false) -%}
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />{% if once %}<input type="hidden" name="once" value="{{ once_token() }}" />{% endif %}
+{%- endmacro %}
+
 {% macro icon(name, label=none, cls='', size='') -%}
   <svg class="icon{{ ' icon--' ~ size if size }}{{ ' ' ~ cls if cls }}" focusable="false"
     {%- if label %} role="img" aria-label="{{ label }}"{% else %} aria-hidden="true"{% endif %}>
@@ -77,7 +83,7 @@
 
 {% macro undo_form(target, back) -%}
   <form class="undo-form" method="post" action="{{ url_for('edits.undo') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+    {{ guard(once=true) }}
     <input type="hidden" name="target" value="{{ target }}" /><input type="hidden" name="back" value="{{ back }}" />
     <button class="btn btn--quiet btn--sm" type="submit">Undo</button>
   </form>
@@ -86,7 +92,7 @@
 {# Pin under one of her replies (docs/INTERFACE.md section 8), a toggle that reads Pinned once kept at hand for whoever is signed in as themselves; on the shelf (`shelf`) it reads Unpin. `pin` is {id, pinned}; `back` where the form returns. #}
 {% macro pin_form(pin, back, shelf=false) -%}
   <form class="pin-form" method="post" action="{{ url_for('family.unpin' if pin.pinned else 'family.pin') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+    {{ guard(once=true) }}
     <input type="hidden" name="message" value="{{ pin.id }}" /><input type="hidden" name="back" value="{{ back }}" />
     {% if shelf -%}
     <button class="btn btn--quiet btn--sm" type="submit">{{ icon('x', size='sm') }}Unpin</button>
@@ -156,7 +162,7 @@
       <span class="tick tick--done" aria-hidden="true"><span>{{ icon('check' if row.status == 'done' else 'x') }}</span></span>
     {%- elif visitor().may('change') or visitor().may('own_tasks') -%}
     <form class="todo__tick" method="post" action="{{ url_for('edits.finish_task', task_id=row.id) }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      {{ guard() }}
       <input type="hidden" name="once" value="{{ once_token() }}" />
       <input type="hidden" name="revision" value="{{ row.revision }}" />
       <input type="hidden" name="back" value="{{ back }}" />
@@ -188,7 +194,7 @@
     {% endif %}
     {% if open and not mine and row.everyone and visitor().member and visitor().may('change') -%}
       <form class="todo__act" method="post" action="{{ url_for('edits.claim_task', task_id=row.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        {{ guard(once=true) }}
         <input type="hidden" name="revision" value="{{ row.revision }}" />
         <input type="hidden" name="back" value="{{ back }}" />
         <button class="textbtn" type="submit">{{ icon('people', size='sm') }}I'll handle it<span class="sr">: {{ row.title }}</span></button>
@@ -196,7 +202,7 @@
     {%- endif %}
     {% if undo and row.status == 'done' -%}
       <form class="todo__act" method="post" action="{{ url_for('edits.reopen_task', task_id=row.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        {{ guard(once=true) }}
         <input type="hidden" name="back" value="{{ back }}" />
         <button class="textbtn" type="submit">{{ icon('undo', size='sm') }}Undo<span class="sr"> done: {{ row.title }}</span></button>
       </form>
@@ -235,7 +241,7 @@
               {% if line.tasks | length > 1 %}<span class="msg__for">{{ task.title }}</span>{% endif %}
               {% for action, label in presses %}
                 <form method="post" action="{{ url_for('edits.finish_task', task_id=task.id) if action == 'done' else url_for('edits.snooze_task', task_id=task.id) }}">
-                  <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                  {{ guard(once=true) }}
                   <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="back" value="chat" />
                   {% if action != 'done' %}<input type="hidden" name="when" value="{{ action }}" />{% endif %}
                   <button class="btn btn--sm btn--quiet" type="submit">{{ label }}{% if line.tasks | length > 1 %}<span class="sr">: {{ task.title }}</span>{% endif %}</button>
@@ -294,7 +300,7 @@
           <details class="mini-fold">
             <summary>Move it</summary>
             <form class="mini-fold__body" method="post" action="{{ url_for('edits.move_plan', plan_id=row.id) }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              {{ guard(once=true) }}
               <div class="field"><label class="field__label" for="start-{{ row.id }}">New time</label>
                 <input id="start-{{ row.id }}" name="start" type="datetime-local" required value="{{ row.start_value }}" /></div>
               <label class="check"><input type="checkbox" name="all_day" value="yes"{{ ' checked' if row.all_day }} />All day</label>
@@ -305,7 +311,7 @@
           <details class="mini-fold mini-fold--danger">
             <summary>Cancel it</summary>
             <form class="mini-fold__body" method="post" action="{{ url_for('edits.cancel_plan', plan_id=row.id) }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              {{ guard(once=true) }}
               <p class="small">This takes it off the family calendar for everyone.</p>
               <button class="btn btn--danger btn--sm" type="submit">Yes, cancel it</button>
             </form>
@@ -320,7 +326,7 @@
 {# "How did it go?" for one plan: three faces, each a word as well as a picture. They post to the idea's own outcome form, keeping the plan, and come back to `back`. #}
 {% macro faces(row, back, month='') -%}
   <form method="post" action="{{ url_for('edits.record_outcome', idea_id=row.idea_id) }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+    {{ guard(once=true) }}
     <input type="hidden" name="plan_id" value="{{ row.plan_id }}" /><input type="hidden" name="happened_on" value="{{ row.day }}" />
     <input type="hidden" name="back" value="{{ back }}" />{% if month %}<input type="hidden" name="month" value="{{ month }}" />{% endif %}
     <span class="faces">
@@ -378,7 +384,7 @@
   </article>
 {%- endmacro %}
 
-{# The map of how far each idea is from home, drawn twice from the same data so names stay readable: wide for a desktop, narrow for a phone. `plot` is `views.places_map(...)["wide"]` or `["narrow"]`. #}
+{# The map of how far each idea is from home, drawn twice from the same data so names stay readable: wide for a desktop, narrow for a phone. `plot` is `map_view.places_map(...)["wide"]` or `["narrow"]`. #}
 {% macro map_plot(plot, which) -%}
   <svg class="radar radar--{{ which }}" viewBox="0 0 {{ plot.width }} {{ plot.height }}" aria-hidden="true" focusable="false">
     {%- for ring in plot.rings %}<circle class="ring" cx="{{ plot.cx }}" cy="{{ plot.cy }}" r="{{ ring.r }}"/><text class="rl" x="{{ ring.x }}" y="{{ ring.y }}" text-anchor="{{ ring.anchor }}">{{ ring.name }}</text>{% endfor -%}

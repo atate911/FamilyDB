@@ -25,7 +25,7 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-from familydb.errors import ConfigError
+from familydb.base.errors import ConfigError
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
 # Strength in the order each company prices them (agent/providers/catalog.py).
@@ -35,6 +35,83 @@ Level = Literal["everyday", "better", "best"]
 BUILT_IN_COMPANIES = ("anthropic", "openai", "gemini")
 # What the family has Vera do, each with one choice of company and model (agent/uses.py).
 USE_KEYS = ("chat", "digest", "choose", "lookup", "onnear", "hear", "look", "judge")
+# The keys an older FamilyDB chose models with. Still read from the environment (`.env`, the
+# installer's PROVIDER line) and from an older database once (store/settings.upgrade), and turned
+# into the choices the AI model page keeps (`older_to_choices`); nothing else reads them, held by
+# tests/test_config.py.
+OLDER = (
+    "provider",
+    "worker_provider",
+    "provider_fallback",
+    "chat_level",
+    "digest_level",
+    "lookup_level",
+    "choose_level",
+    "judgement_level",
+    "choosing",
+    "judgements",
+    "voice_notes",
+    "photos",
+    "transcribe_provider",
+    "openai_transcribe_model",
+    "gemini_transcribe_model",
+)
+# The older settings naming each built-in company's models, read from the environment only
+# (`Settings.env_company_models`); the page's own are `Settings.company_models`.
+MODEL_FIELDS = ("model", "worker_model", "better_model", "best_model")
+OLDER_MODEL_BOXES: dict[str, tuple[str, str, str, str]] = {
+    "openai": ("openai_model", "openai_worker_model", "openai_better_model", "openai_best_model"),
+    "anthropic": (
+        "anthropic_model",
+        "worker_model",  # the first company, so unprefixed
+        "anthropic_better_model",
+        "anthropic_best_model",
+    ),
+    "gemini": ("gemini_model", "gemini_worker_model", "gemini_better_model", "gemini_best_model"),
+}
+OLDER_MODELS: tuple[str, ...] = tuple(
+    name for names in OLDER_MODEL_BOXES.values() for name in names
+)
+DEFAULT_COMPANY = "openai"
+EVERYDAY = "everyday"
+
+
+def older_to_choices(older: Mapping[str, Any]) -> tuple[dict[str, str], bool]:
+    """What the older keys say, as the page's choices (`<company>:<model or level>`, `same:<use>`,
+    `off`) for the uses they change, and whether a company may stand in for another. A value at
+    its old default says nothing, so a use it leaves alone keeps the page's own default."""
+    company = str(older.get("provider") or DEFAULT_COMPANY)
+    worker = str(older.get("worker_provider") or company)
+    chat_level = str(older.get("chat_level") or EVERYDAY)
+    digest_level = str(older.get("digest_level") or EVERYDAY)
+    lookup_level = str(older.get("lookup_level") or EVERYDAY)
+    choose_level = str(older.get("choose_level") or "best")
+    judgement_level = str(older.get("judgement_level") or "best")
+    choices: dict[str, str] = {}
+    if company != DEFAULT_COMPANY or chat_level != EVERYDAY:
+        choices["chat"] = f"{company}:{chat_level}"
+    if digest_level != chat_level:
+        choices["digest"] = f"{company}:{digest_level}"
+    if worker != company or lookup_level != EVERYDAY:
+        choices["lookup"] = f"{worker}:{lookup_level}"
+    if older.get("choosing") is False:
+        choices["choose"] = "off"
+    elif choose_level != "best":
+        choices["choose"] = f"{company}:{choose_level}"
+    if older.get("judgements"):
+        choices["judge"] = f"{worker}:{judgement_level}"
+    hears = str(older.get("transcribe_provider") or "")
+    if older.get("voice_notes") is False:
+        choices["hear"] = "off"
+    elif hears:
+        model = str(older.get(f"{hears}_transcribe_model") or EVERYDAY)
+        choices["hear"] = f"{hears}:{model}"
+    if older.get("photos") is False:
+        choices["look"] = "off"
+    stand_in = older.get("provider_fallback")
+    return choices, True if stand_in is None else bool(stand_in)
+
+
 CacheTTL = Literal["5m", "1h"]
 LookupsWhen = Literal["evening", "asap"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -148,6 +225,41 @@ class CompanyOptions(BaseModel):
     monthly_limit: float | None = Field(default=None, ge=0, le=100_000)
 
 
+class CompanyModels(BaseModel):
+    """One company's models by strength: its everyday chat and lookup models, and the family's
+    own better and best. Empty is "as the environment, the definition or this version's lineup
+    says"; an empty lookup model is the chat model."""
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    model: str = Field(default="", max_length=120)
+    worker_model: str = Field(default="", max_length=120)
+    better_model: str = Field(default="", max_length=120)
+    best_model: str = Field(default="", max_length=120)
+
+    @field_validator("model", "worker_model", "better_model", "best_model")
+    @classmethod
+    def _one_line(cls, value: str) -> str:
+        return one_line(value)
+
+    def laid_over(self, under: CompanyModels) -> CompanyModels:
+        """These where they say something, the ones under where they do not."""
+        return CompanyModels(
+            **{name: getattr(self, name) or getattr(under, name) for name in MODEL_FIELDS}
+        )
+
+    @property
+    def empty(self) -> bool:
+        return not any(getattr(self, name) for name in MODEL_FIELDS)
+
+
+def one_line(value: str) -> str:
+    text = value.strip()
+    if any(unicodedata.category(character) in ("Cc", "Zl", "Zp") for character in text):
+        raise ValueError("goes on one line, with no control characters in it")
+    return text
+
+
 MAX_EXTRA_BODY = 2_000
 
 
@@ -200,10 +312,11 @@ class CompanyDef(BaseModel):
     @field_validator("label", "model", "worker_model", "better_model", "best_model")
     @classmethod
     def _one_line(cls, value: str) -> str:
-        text = value.strip()
-        if any(unicodedata.category(character) in ("Cc", "Zl", "Zp") for character in text):
-            raise ValueError("goes on one line, with no control characters in it")
-        return text
+        return one_line(value)
+
+    @property
+    def own_models(self) -> CompanyModels:
+        return CompanyModels(**{name: getattr(self, name) for name in MODEL_FIELDS})
 
     @field_validator("reasoning_fields")
     @classmethod
@@ -254,6 +367,19 @@ class CompanyDef(BaseModel):
         return tuple(dict.fromkeys(name for name in named if name))
 
 
+def _readable(value: Any, kind: type[BaseModel]) -> dict[str, Any]:
+    """The entries of a mapping by slug that this version can read as `kind`."""
+    if not isinstance(value, Mapping):
+        return {}
+    kept: dict[str, Any] = {}
+    for slug, entry in value.items():
+        try:
+            kept[str(slug)] = entry if isinstance(entry, kind) else kind.model_validate(entry)
+        except ValidationError:
+            continue
+    return kept
+
+
 def _field_names(cls: type[BaseSettings]) -> dict[str, str]:
     names: dict[str, str] = {}
     for name, field in cls.model_fields.items():
@@ -288,17 +414,29 @@ class Settings(BaseSettings):
     use_effort: dict[str, Effort] = Field(default_factory=dict)
     # Each company's own switches from the page, by slug (`CompanyOptions`).
     company_options: dict[str, CompanyOptions] = Field(default_factory=dict)
+    # Each company's models from the page, by slug (`CompanyModels`), laid over what the
+    # environment (below) or, for an added company, its definition says.
+    company_models: dict[str, CompanyModels] = Field(default_factory=dict)
     provider_fallback: bool = True
     # Model strength per situation, whichever company: `everyday` is the company's model named
     # below, `better` and `best` its stronger ones (catalog.py).
     chat_level: Level = "everyday"
     digest_level: Level = "everyday"
     lookup_level: Level = "everyday"
-    # A company's better and best models in place of the lineup's; empty uses the lineup's.
+    # The built-in companies' models from the environment (`OLDER_MODEL_BOXES`): each one's
+    # everyday chat and lookup models (its cheapest unless told otherwise; an empty lookup model
+    # is the chat model), and better and best in place of the lineup's (empty uses the lineup's).
+    # Read only into `env_company_models`, under the page's `company_models`.
+    openai_model: str = "gpt-6-luna"
+    openai_worker_model: str = "gpt-6-luna"
     openai_better_model: str = ""
     openai_best_model: str = ""
+    anthropic_model: str = "claude-haiku-4-5"
+    worker_model: str = "claude-haiku-4-5"
     anthropic_better_model: str = ""
     anthropic_best_model: str = ""
+    gemini_model: str = "gemini-3.1-flash-lite"
+    gemini_worker_model: str = "gemini-3.1-flash-lite"
     gemini_better_model: str = ""
     gemini_best_model: str = ""
     # Judgement calls (judgement.py): a stronger model is asked, rarely, when a change needs
@@ -327,15 +465,8 @@ class Settings(BaseSettings):
     choose_max_iterations: int = Field(default=2, ge=1, le=5)
 
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-3.1-flash-lite"
-    gemini_worker_model: str = "gemini-3.1-flash-lite"
-
     openai_api_key: str | None = None
-    openai_model: str = "gpt-6-luna"
-    openai_worker_model: str = "gpt-6-luna"
-
     anthropic_api_key: str | None = None
-    anthropic_model: str = "claude-haiku-4-5"
     # A persona's folder in familydb/personas, or "none". Not empty for none: empty means "the
     # default" everywhere else and would bring her back. `personas.active` lays the settings below
     # over her own.
@@ -435,9 +566,6 @@ class Settings(BaseSettings):
     place_stale_days: int = Field(default=30, ge=1, le=3650)
     worker_max_iterations: int = Field(default=12, ge=1, le=30)
     # Lookups and discovery are extraction, not judgement, so they run with less thinking.
-    # `worker_model` is Anthropic's lookup model, as `openai_worker_model` and `gemini_worker_model`
-    # are the others'; empty uses `anthropic_model`.
-    worker_model: str = "claude-haiku-4-5"
     worker_effort: Effort = "low"
     travel_speed_kmh: float = Field(default=50.0, gt=0, le=200)
     road_factor: float = Field(default=1.3, ge=1, le=3)
@@ -653,19 +781,25 @@ class Settings(BaseSettings):
     def _readable_options(cls, value: Any) -> Any:
         """Options that cannot be read are dropped, as a choice for a use this version does not
         know is: a value from another version must never stop the app."""
-        if not isinstance(value, Mapping):
-            return {}
-        kept: dict[str, Any] = {}
-        for slug, entry in value.items():
-            try:
-                kept[str(slug)] = (
-                    entry
-                    if isinstance(entry, CompanyOptions)
-                    else CompanyOptions.model_validate(entry)
-                )
-            except ValidationError:
-                continue
-        return kept
+        return _readable(value, CompanyOptions)
+
+    @field_validator("company_models", mode="before")
+    @classmethod
+    def _readable_models(cls, value: Any) -> Any:
+        return _readable(value, CompanyModels)
+
+    @property
+    def env_company_models(self) -> dict[str, CompanyModels]:
+        """What the environment says each built-in company's models are (`OLDER_MODEL_BOXES`)."""
+        return {
+            slug: CompanyModels(
+                **{
+                    field: getattr(self, name)
+                    for field, name in zip(MODEL_FIELDS, names, strict=True)
+                }
+            )
+            for slug, names in OLDER_MODEL_BOXES.items()
+        }
 
     @model_validator(mode="after")
     def _companies_exist(self) -> Settings:
@@ -678,6 +812,20 @@ class Settings(BaseSettings):
             if value and value not in known:
                 raise ValueError(f"{name} is {value!r}; use one of {', '.join(known)}")
         return self
+
+    @property
+    def env_choices(self) -> dict[str, str]:
+        """The choices the environment made with the older keys (`OLDER`, read as choices by
+        `older_to_choices`): what a use falls back to when the page has no choice for it. Worked
+        out on each read, so a copy with a key changed says so; nothing downstream reads the keys
+        themselves."""
+        return older_to_choices({name: getattr(self, name) for name in OLDER})[0]
+
+    @property
+    def env_stand_in(self) -> bool:
+        """Whether a company may answer for another, as the environment said (PROVIDER_FALLBACK),
+        for a company the page has not told."""
+        return older_to_choices({name: getattr(self, name) for name in OLDER})[1]
 
     @model_validator(mode="after")
     def _resolve_timezone(self) -> Settings:

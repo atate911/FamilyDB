@@ -15,8 +15,8 @@ from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.providers import build
 from familydb.agent.render import render_user_turn
 from familydb.app import App
+from familydb.base.errors import AgentError
 from familydb.channels.base import IncomingMessage
-from familydb.errors import AgentError
 from familydb.jobs.tidy import run_tidy
 from familydb.pipeline import handle_incoming
 from familydb.store import ai_texts, db, members, problems

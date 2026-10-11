@@ -16,13 +16,14 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
+import time
 import uuid
 from collections.abc import Callable, Iterator
 from contextlib import closing, contextmanager
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from familydb.dates import utc_iso
+from familydb.base.dates import utc_iso
 from familydb.store import messages
 from familydb.store.db import transaction
 
@@ -44,64 +45,92 @@ class Claim:
         return self.token is not None
 
 
+class Renewer:
+    """One thread renews every claim this process holds, every `RENEW_SECONDS`, on one
+    connection a round: a long model turn keeps its claim, and a hundred deliveries do not mean a
+    hundred threads. Started on the first claim; a daemon, so it never holds the process up."""
+
+    def __init__(self) -> None:
+        self._held: dict[str, App] = {}
+        self._lock = threading.Lock()
+        self._thread: threading.Thread | None = None
+
+    def add(self, app: App, token: str) -> None:
+        with self._lock:
+            self._held[token] = app
+            if self._thread is None or not self._thread.is_alive():
+                self._thread = threading.Thread(
+                    target=self._run, name="familydb-claims", daemon=True
+                )
+                self._thread.start()
+
+    def drop(self, token: str) -> None:
+        with self._lock:
+            self._held.pop(token, None)
+
+    def holding(self) -> int:
+        with self._lock:
+            return len(self._held)
+
+    def renew_all(self) -> None:
+        """Every claim held, kept for another `LEASE_SECONDS` from now; a round that fails is
+        logged and tried again next time (the claim lapses only after `LEASE_SECONDS`)."""
+        with self._lock:
+            by_app: dict[int, tuple[App, list[str]]] = {}
+            for token, app in self._held.items():
+                by_app.setdefault(id(app), (app, []))[1].append(token)
+        for app, tokens in by_app.values():
+            try:
+                with closing(app.connect()) as own, transaction(own):
+                    until = utc_iso(app.clock.now() + timedelta(seconds=LEASE_SECONDS))
+                    for token in tokens:
+                        messages.renew_claim(own, token, until=until)
+            except Exception:
+                log.exception("could not renew %d message claim(s)", len(tokens))
+
+    def _run(self) -> None:
+        while True:
+            time.sleep(RENEW_SECONDS)
+            self.renew_all()
+
+
+RENEWER = Renewer()
+
+
 @contextmanager
 def lease(app: App, conn: sqlite3.Connection, message_id: int) -> Iterator[Claim]:
     """Claim one message for as long as the block runs; yields a false Claim when someone else has
     it. A message held for gathering is taken over.
 
-    Renewed on its own thread and connection so a long model turn keeps its claim; released at
-    the end, success or not, with every row taken under it (`claim_also`).
+    Renewed by the process's one `Renewer` so a long model turn keeps its claim; released at the
+    end, success or not, with every row taken under it (`claim_also`).
     """
     token = uuid.uuid4().hex
     now = utc_iso(app.clock.now())
     until = utc_iso(app.clock.now() + timedelta(seconds=LEASE_SECONDS))
     with transaction(conn):
-        won = (
-            conn.execute(
-                "UPDATE messages SET claim_token = ?, claim_until = ? "
-                "WHERE id = ? AND (claim_until IS NULL OR claim_until <= ? OR claim_token = ?)",
-                (token, until, message_id, now, GATHER),
-            ).rowcount
-            == 1
-        )
+        won = messages.claim(conn, message_id, token=token, until=until, now=now, held_as=GATHER)
     if not won:
         yield Claim(None)
         return
-    stop = threading.Event()
-
-    def renew() -> None:
-        while not stop.wait(RENEW_SECONDS):
-            try:
-                with closing(app.connect()) as own, transaction(own):
-                    own.execute(
-                        "UPDATE messages SET claim_until = ? WHERE claim_token = ?",
-                        (utc_iso(app.clock.now() + timedelta(seconds=LEASE_SECONDS)), token),
-                    )
-            except Exception:
-                log.exception("could not renew message claim %s", message_id)
-
-    thread = threading.Thread(target=renew, daemon=True)
-    thread.start()
+    RENEWER.add(app, token)
     try:
         yield Claim(token)
     finally:
-        stop.set()
-        thread.join(timeout=10)
-        with transaction(conn):
-            conn.execute(
-                "UPDATE messages SET claim_token = NULL, claim_until = NULL WHERE claim_token = ?",
-                (token,),
-            )
+        RENEWER.drop(token)
+        try:
+            with transaction(conn):
+                messages.release_claim(conn, token)
+        except sqlite3.Error:
+            # The claim lapses by itself; what the turn raised is what matters.
+            log.exception("could not let go of message claim %s", message_id)
 
 
 def hold_for_gathering(conn: sqlite3.Connection, message_id: int, *, until: str) -> None:
     """Keep a stored message from the retry job while it waits to be answered with the ones after
     it. Call inside a transaction.
     """
-    conn.execute(
-        "UPDATE messages SET claim_token = ?, claim_until = ? WHERE id = ?",
-        (GATHER, until, message_id),
-    )
+    messages.hold(conn, message_id, mark=GATHER, until=until)
 
 
 def claim_also(
@@ -114,11 +143,7 @@ def claim_also(
     taken = []
     with transaction(conn):
         for message_id in message_ids:
-            if conn.execute(
-                "UPDATE messages SET claim_token = ?, claim_until = ? "
-                "WHERE id = ? AND claim_token = ?",
-                (claim.token, until, message_id, GATHER),
-            ).rowcount:
+            if messages.take_held(conn, message_id, mark=GATHER, token=claim.token, until=until):
                 taken.append(message_id)
     return taken
 
@@ -148,10 +173,7 @@ def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
             log.exception("delivery pending for message %s", message_id)
             return False
         with transaction(conn):
-            conn.execute(
-                "UPDATE messages SET delivered_at = ? WHERE id = ?",
-                (utc_iso(app.clock.now()), message_id),
-            )
+            messages.mark_delivered(conn, [message_id], now=utc_iso(app.clock.now()))
         # One she sent of her own accord: the channel may tell a device too (push.py). Whatever
         # becomes of that, the message is delivered.
         notify = app.notifiers.get(row.channel) if row.sent_as else None
@@ -165,12 +187,6 @@ def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
 
 def run_deliveries(app: App) -> int:
     with closing(app.connect()) as conn:
-        ids = [
-            r[0]
-            for r in conn.execute(
-                "SELECT id FROM messages WHERE direction = 'out' "
-                "AND delivered_at IS NULL AND cancelled_at IS NULL ORDER BY id"
-            )
-        ]
+        ids = messages.undelivered(conn)
     now = app.clock.now()
     return sum(deliver(app, i) for i in ids if not app.held.is_held(i, now))

@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, vera_screen, faces, who, todo with context %}
+{% from "_ui.html" import icon, avatar, vera_screen, faces, who, todo, guard with context %}
 {% from "_dest.html" import pick_tile %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-now{% endblock %}
@@ -38,7 +38,7 @@
             {{ faces(q, 'home') }}
           {% elif q.kind == 'wish' %}
             <form method="post" action="{{ url_for('edits.answer_wish', wish_id=q.wish_id) }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              {{ guard(once=true) }}
               <input type="hidden" name="kid" value="{{ q.kid_id }}" /><input type="hidden" name="back" value="home" />
               <button class="btn btn--sm" type="submit" name="status" value="granted">Yes</button>
               <button class="btn btn--sm btn--quiet" type="submit" name="status" value="declined">Not this time</button>
@@ -47,7 +47,7 @@
           {% elif q.kind == 'pitch' %}
             <a class="btn btn--sm" href="{{ url_for('web.idea', idea_id=q.idea_id) }}">See it</a>
             <form method="post" action="{{ url_for('web.later') }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="idea" value="{{ q.idea_id }}" />
+              {{ guard() }}<input type="hidden" name="idea" value="{{ q.idea_id }}" />
               <button class="q__lnk" type="submit">Later</button>
             </form>
           {% endif %}

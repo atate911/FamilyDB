@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from familydb.app import App
-from familydb.errors import ToolError
+from familydb.base.errors import ToolError
 from familydb.store import ideas, messages, outcomes, plans
 from familydb.web import create_app
 from familydb.web.once import Once

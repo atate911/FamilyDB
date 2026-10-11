@@ -13,8 +13,8 @@ import pytest
 from familydb.agent import uses
 from familydb.agent.providers import prices
 from familydb.app import App
-from familydb.config import CompanyDef, CompanyOptions
-from familydb.dates import utc_iso
+from familydb.base.config import CompanyDef, CompanyOptions
+from familydb.base.dates import utc_iso
 from familydb.store import calls
 from familydb.store import settings as settings_store
 from familydb.web import create_app, models_page
@@ -264,7 +264,7 @@ def test_a_model_typed_in_needs_a_name_and_is_kept_as_typed(page, conn):
 def test_thinking_is_stored_only_when_it_is_not_the_default(page, conn):
     post(page, effort_chat="high", effort_lookup="")
     assert settings_store.get(conn, "use_effort") == {"chat": "high"}
-    assert uses.overlay(page.app.settings, "chat").settings.effort == "high"
+    assert uses.answering(page.app.settings, "chat").effort == "high"
     assert post(page, effort_chat="loud").status_code == 400
     post(page, effort_chat="")
     assert settings_store.get(conn, "use_effort") is None

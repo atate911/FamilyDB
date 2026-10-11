@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from familydb.config import Settings
+from familydb.base.config import Settings
 
 LOOPBACK_HOSTS = frozenset({"", "localhost", "127.0.0.1", "::1", "[::1]"})
 

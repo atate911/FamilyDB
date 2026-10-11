@@ -20,10 +20,11 @@ from typing import Any
 
 from familydb.agent import gateway, providers, spending, uses
 from familydb.agent.providers import catalog, companies, prices
-from familydb.config import CompanyOptions, Settings
-from familydb.dates import parse_datetime, utc_iso
+from familydb.base.config import MODEL_FIELDS, CompanyOptions, Settings
+from familydb.base.dates import parse_datetime, utc_iso
 from familydb.store import calls
 from familydb.store import model_watch as model_store
+from familydb.store import settings as settings_store
 from familydb.web import fields, views
 
 WINDOW_DAYS = 30
@@ -313,10 +314,6 @@ class Pricer:
 # -- the page -------------------------------------------------------------------------------------
 
 
-def money(v: float) -> str:
-    return "<$0.01" if 0 < v < 0.005 else f"${v:,.2f}"
-
-
 def calls_said(use: uses.Use, n: int) -> str:
     if n == 0:
         return "none in 30 days"
@@ -389,7 +386,7 @@ def _advice(use: uses.Use, ladder: list[float]) -> str:
             f"{ladder[1] / ladder[0]:.0f} times everyday and best about "
             f"{ladder[2] / ladder[0]:.0f} times. Worth trying if replies start to feel off."
         )
-    return f"Everyday to best adds {money(ladder[2] - ladder[0])} a month at this use."
+    return f"Everyday to best adds {views.money_text(ladder[2] - ladder[0])} a month at this use."
 
 
 SHORT = {"chat": "chat", "lookup": "lookups"}
@@ -469,7 +466,7 @@ def _use_view(
     month_since: str,
     set_here: dict[str, Any],
 ) -> dict[str, Any]:
-    pricer = Pricer(use, days, settings.anthropic_cache_ttl)
+    pricer = Pricer(use, days, providers.cache_ttl(settings))
     stored = _stored_choice(settings, use.key)
     default = uses.default_choice(settings, use.key)
     resolved = uses.resolve(settings, use.key)
@@ -551,7 +548,7 @@ def _use_view(
         "default": default,
         "default_text": default_text(default),
         "by_company": _defaults_by_company(settings, use, every, default),
-        "deflevel": str(getattr(settings, use.level_setting)),
+        "deflevel": uses.default_level(settings, use.key),
         "anchor": use.anchor,
         "hassame": bool(use.exact and use.anchor),
         "hasoff": bool(use.off),
@@ -635,30 +632,36 @@ class Built:
     presets: dict[str, dict[str, str]] = field(default_factory=lambda: PRESETS)
 
 
-def lineup_rows(settings: Settings, base: Settings, stored: dict[str, Any]) -> list[dict[str, Any]]:
+LINEUP_CELLS = (
+    ("Everyday", "model", "everyday"),
+    ("Everyday, lookups", "worker_model", ""),
+    ("Better", "better_model", "better"),
+    ("Best", "best_model", "best"),
+)
+
+
+def lineup_rows(settings: Settings, stored: dict[str, Any]) -> list[dict[str, Any]]:
     """The everyday, better and best models of each company that has a module of its own, as
-    boxes: what is set, what it falls back to, what is offered."""
+    boxes (`Company.box`): what the page set (`company_models`), what it falls back to (the
+    environment's, else this version's lineup), what is offered."""
     rows = []
+    page = stored.get("company_models") or {}
     for company in companies.BUILT_IN:
         offered = [
             (name, label_of(company.slug, name)) for name in prices.suggestions(company.slug)
         ]
+        under = company.under(settings)
         cells = []
-        for head, setting, level in (
-            ("Everyday", company.chat_setting, "everyday"),
-            ("Everyday, lookups", company.worker_setting, ""),
-            ("Better", company.better_setting, "better"),
-            ("Best", company.best_setting, "best"),
-        ):
-            built = getattr(base, setting, "") or (
+        for head, part, level in LINEUP_CELLS:
+            built = getattr(under, part) or (
                 catalog.at(company.slug, level).name
                 if level and catalog.at(company.slug, level)
                 else ""
             )
-            current = stored.get(setting) or ""
+            current = (page.get(company.slug) or {}).get(part) or ""
             cells.append(
                 {
-                    "setting": setting,
+                    "setting": company.box(part),
                     "head": head,
                     "value": current,
                     "default": built,
@@ -717,8 +720,6 @@ def _picked(
 
 def build(app: Any, conn: sqlite3.Connection, typed: Any = None) -> Built:
     """Everything the page draws, from the settings in force and the last 30 days of calls."""
-    from familydb.store import settings as settings_store
-
     settings: Settings = app.settings
     now = app.clock.now()
     days, per_day = tallies(conn, settings, now)
@@ -779,7 +780,7 @@ def build(app: Any, conn: sqlite3.Connection, typed: Any = None) -> Built:
         "uses": [{k: one[k] for k in DATA_KEYS} for one in views_],
         "presets": PRESETS,
     }
-    lineup = lineup_rows(settings, app.base_settings, stored)
+    lineup = lineup_rows(settings, stored)
     _picked(typed, views_, rows, lineup, checked)
     return Built(
         data=data,
@@ -845,7 +846,7 @@ def read_form(form: Any, live: Settings, base: Settings, stored: dict[str, Any])
     """The posted page as settings to store. A part the form did not carry is left alone."""
     reading = Reading()
     every = companies.every(live)
-    # The plain boxes: the budgets and the lineup, read as every other settings page reads them.
+    # The plain boxes, the budgets, read as every other settings page reads them.
     values, problems = fields.read_form(form)
     # A box that says what the server already does is not an override.
     for key, value in values.items():
@@ -853,6 +854,24 @@ def read_form(form: Any, live: Settings, base: Settings, stored: dict[str, Any])
             values[key] = None
     reading.values.update(values)
     reading.problems.update(problems)
+
+    # The lineup: each built-in company's models by strength, stored together as the page's
+    # `company_models` (an added company's are in its own definition).
+    boxes: dict[str, str] = {}
+    for company in companies.BUILT_IN:
+        for part in MODEL_FIELDS:
+            box = company.box(part)
+            if box not in form:
+                continue
+            name = form[box].strip()
+            if len(name) > MOST_NAME or any(character.isspace() for character in name):
+                reading.problems[box] = NAME_SHAPE
+            else:
+                boxes[box] = name
+    if boxes:
+        reading.values["company_models"] = (
+            companies.models_with(live, stored.get("company_models"), boxes) or None
+        )
 
     choices: dict[str, str] = {}
     saw_choices = False

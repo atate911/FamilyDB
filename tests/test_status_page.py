@@ -6,7 +6,7 @@ import pytest
 
 from familydb.agent.providers import owner
 from familydb.app import App
-from familydb.dates import utc_iso
+from familydb.base.dates import utc_iso
 from familydb.store import calls, db, ideas, messages
 from familydb.store import settings as settings_store
 from familydb.web import create_app
@@ -55,9 +55,8 @@ def test_it_says_who_answers_and_where_each_key_came_from(status, conn, settings
             conn,
             {
                 "gemini_api_key": "gm-never-shown",
-                "provider": "gemini",
-                "gemini_worker_model": "gemini-3.8-flash",
-                "digest_level": "best",
+                "model_choices": {"chat": "gemini:everyday", "digest": "gemini:best"},
+                "company_models": {"gemini": {"worker_model": "gemini-3.8-flash"}},
             },
         )
     text = _flat(status.get("/status"))

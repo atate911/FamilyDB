@@ -11,7 +11,7 @@ import anthropic
 import httpx2
 from anthropic.types.beta import BetaMessage
 
-from familydb.errors import ToolUnavailable
+from familydb.base.errors import ToolUnavailable
 from familydb.integrations.geocode import GeoPoint
 from familydb.integrations.google_calendar import CalendarChanges, CalendarEvent
 from familydb.integrations.open_meteo import DayForecast

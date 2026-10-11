@@ -13,9 +13,9 @@ import pytest
 
 import familydb.web as web_module
 from familydb.app import App
-from familydb.errors import ConfigError
+from familydb.base.errors import ConfigError
 from familydb.store import db, ideas, outcomes, places, plans
-from familydb.web import check_configuration, create_app, views
+from familydb.web import check_configuration, create_app, map_view, views
 from tests.conftest import NOW_ISO
 
 PASSWORD = "open sesame please"  # at least MIN_PASSWORD characters
@@ -312,26 +312,29 @@ def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
 
 
 def test_where_a_place_lies_from_home_in_words_and_on_the_dial() -> None:
-    assert [round(views.bearing(45, -122, *there)) for there in ((46, -122), (45, -121))] == [0, 90]
-    assert [round(views.bearing(45, -122, *there)) for there in ((44, -122), (45, -123))] == [
+    assert [round(map_view.bearing(45, -122, *there)) for there in ((46, -122), (45, -121))] == [
+        0,
+        90,
+    ]
+    assert [round(map_view.bearing(45, -122, *there)) for there in ((44, -122), (45, -123))] == [
         180,
         270,
     ]
-    assert [views.drive_text(m) for m in (12, 58, 60, 97, 150)] == [
+    assert [map_view.drive_text(m) for m in (12, 58, 60, 97, 150)] == [
         "12 min",
         "58 min",
         "1 h",
         "1 h 35 min",
         "2 h 30 min",
     ]
-    assert views.Away(12, 44.0).text == "about 12 min north-east of home (estimate)"
-    assert views.Away(3, 200.0).text == "under 5 min from home (estimate)"
-    assert views.places_map([]) is None
-    mountain = (SimpleNamespace(id=2, title="Mount St Helens day trip"), views.Away(150, 0.0))
-    ramen = (SimpleNamespace(id=3, title="Ramen at Afuri"), views.Away(12, 90.0))
-    park = (SimpleNamespace(id=4, title="Corner park"), views.Away(3, 225.0))
-    assert views.places_map([ramen, park]) is None  # all inside the first ring: the cards say it
-    drawn = views.places_map([mountain, ramen, park])
+    assert map_view.Away(12, 44.0).text == "about 12 min north-east of home (estimate)"
+    assert map_view.Away(3, 200.0).text == "under 5 min from home (estimate)"
+    assert map_view.places_map([]) is None
+    mountain = (SimpleNamespace(id=2, title="Mount St Helens day trip"), map_view.Away(150, 0.0))
+    ramen = (SimpleNamespace(id=3, title="Ramen at Afuri"), map_view.Away(12, 90.0))
+    park = (SimpleNamespace(id=4, title="Corner park"), map_view.Away(3, 225.0))
+    assert map_view.places_map([ramen, park]) is None  # all inside the first ring: the cards say it
+    drawn = map_view.places_map([mountain, ramen, park])
     assert drawn["count"] == 3
     wide = drawn["wide"]
     by_name = {dot["name"]: dot for dot in wide["dots"]}
@@ -348,7 +351,7 @@ def test_where_a_place_lies_from_home_in_words_and_on_the_dial() -> None:
         ("W", 222),
         ("E", 638),
     ]
-    assert views.map_share(0) == 0 and views.map_share(500) == 1.0
+    assert map_view.map_share(0) == 0 and map_view.map_share(500) == 1.0
 
 
 def test_a_dot_is_named_by_the_first_words_of_its_idea() -> None:
@@ -362,23 +365,23 @@ def test_a_dot_is_named_by_the_first_words_of_its_idea() -> None:
         "Ramen at Afuri": "Ramen at Afuri",  # a head too short to name it alone
         "Pho Oregon": "Pho Oregon",
     }
-    assert {title: views.short_name(title) for title in names} == names
+    assert {title: map_view.short_name(title) for title in names} == names
 
 
 def test_a_name_goes_where_it_fits_and_clear_of_the_compass_letters() -> None:
-    near_west = views.Away(180, 270.0)  # three hours west: out at the edge, on the axis
+    near_west = map_view.Away(180, 270.0)  # three hours west: out at the edge, on the axis
     cannon = SimpleNamespace(id=1, title="Cannon Beach weekend")
-    drawn = views.places_map([(cannon, near_west)])
+    drawn = map_view.places_map([(cannon, near_west)])
     wide, narrow = drawn["wide"]["dots"][0], drawn["narrow"]["dots"][0]
     assert (wide["label_x"], wide["label_y"], wide["anchor"]) == (222.0, 202.0, "end")  # above
     assert narrow["anchor"] == "start" and narrow["label_y"] > narrow["y"]  # no room: below
-    east = views.places_map([(cannon, views.Away(120, 100.0))])["wide"]["dots"][0]
+    east = map_view.places_map([(cannon, map_view.Away(120, 100.0))])["wide"]["dots"][0]
     assert east["anchor"] == "start" and east["label_x"] > east["x"]  # on the right, beside it
 
 
 def test_no_two_names_on_the_map_sit_on_each_other_or_on_home() -> None:
     def put(idea_id, title, minutes, degrees):
-        return (SimpleNamespace(id=idea_id, title=title), views.Away(minutes, degrees))
+        return (SimpleNamespace(id=idea_id, title=title), map_view.Away(minutes, degrees))
 
     crowded = [
         put(1, "Pumpkin patch at Bi-Mart farm", 23, 316.0),
@@ -388,7 +391,7 @@ def test_no_two_names_on_the_map_sit_on_each_other_or_on_home() -> None:
         put(5, "Lava tubes at Ape Cave", 115, 40.0),
     ]
     for size in ("wide", "narrow"):
-        plot = views.places_map(crowded)[size]
+        plot = map_view.places_map(crowded)[size]
         text_size = 15 if size == "wide" else 14
         boxes = []
         for dot in plot["dots"]:
@@ -516,7 +519,6 @@ def test_view_helpers_word_things_for_people() -> None:
 
     from familydb.store.ideas import Idea
     from familydb.store.places import Place
-    from familydb.web import views
 
     def idea(**fields):
         return Idea(id=1, kind="activity", title="t", created_at="", updated_at="", **fields)
@@ -695,81 +697,83 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
     assert lockout.locked("198.51.100.4", now)
 
 
-def test_no_page_reaches_a_table_to_write_to_it() -> None:
-    """No module in the package may write to a table itself, the four that change things included:
-    the chat page hands a message to the pipeline, the edit forms call the tools, the family page
-    uses the family rules, the settings page one repository.
+def test_no_page_writes_but_through_the_four_doors() -> None:
+    """No module in the package writes to a table, the four that change things included: the chat
+    page hands a message to the channel, the edit forms dispatch a tool, the family page and the
+    Look page go through the family rules, the settings page through one repository (and has the
+    daily check read a company it was just given).
+
+    Which functions write is read off the source (`tests/writes.py`: a transaction, a statement
+    that changes a table, a dispatch, or a call to one of those, followed through the package),
+    so a store's or a service's new writer is refused however it is imported or named here.
     """
+    from tests import writes
+
+    allowed = {
+        "edits.py": {"dispatch()"},
+        "family.py": {
+            f"familydb.family.{name}"
+            for name in (
+                "add",
+                "change",
+                "choose_password",
+                "claim",
+                "give_starting_password",
+                "invite",
+                "pin",
+                "remove",
+                "remove_login",
+                "subscribe_push",
+                "unpin",
+                "unsubscribe_push",
+            )
+        },
+        "look.py": {"familydb.family.choose_look"},
+        "settings.py": {
+            "familydb.store.settings.set_many",
+            "transaction()",
+            "familydb.model_watch.check_added",
+        },
+    }
+    folder = Path(web_module.__file__).parent
+    for module in sorted(folder.glob("*.py")):
+        found = writes.writes_called(module)
+        may = allowed.get(module.name, set())
+        assert found <= may, f"{module.name} writes through {sorted(found - may)}"
+        assert found == may, f"{module.name} no longer writes through {sorted(may - found)}"
+
+
+FAMILY_PAGES = {
+    "routes.py",
+    "ideas_page.py",
+    "plans_page.py",
+    "tasks_page.py",
+    "wishes_page.py",
+    "lists_page.py",
+    "destinations.py",
+    "now.py",
+    "chat.py",
+}
+
+
+def test_every_family_page_is_drawn_through_answer() -> None:
+    """The family's pages (on the frame) are drawn from their view-model in one place,
+    `answers.answer`; the back office draws its own. A page family that bypasses it fails here."""
     import ast
 
     import familydb.web as package
 
-    stores = {
-        "db",
-        "ideas",
-        "places",
-        "plans",
-        "outcomes",
-        "members",
-        "messages",
-        "calls",
-        "suggestions",
-        "logins",
-        "idea_store",
-        "place_store",
-        "plan_store",
-        "outcome_store",
-        "login_store",
-        "member_store",
-        "memories",
-        "memory_store",
-        "finds",
-        "find_store",
-    }
-    writes = {
-        "insert",
-        "insert_in",
-        "insert_out",
-        "update",
-        "delete",
-        "transaction",
-        "migrate",
-        "apply_outcome",
-        "requeue_enrichment",
-        "mark_followed_up",
-        "set_reply",
-        "set_active",
-        "mark_processed",
-        "set_text",
-        "firm_up",
-        "replace",
-        "forget",
-        "mark_failed",
-        "give_up",
-        "reset_retries",
-        "add",
-        "set_many",
-        "clear",
-        "put",
-        "remove",
-        "update_profile",
-    }
-    stores.add("settings_store")
-    for module in sorted(Path(package.__file__).parent.glob("*.py")):
-        if module.name == "settings.py":
-            continue  # app_settings is its own table; the next test pins how far it goes
-        tree = ast.parse(module.read_text("utf-8"), filename=module.name)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
-                "familydb.store"
-            ):
-                for alias in node.names:
-                    assert alias.name not in writes, f"{module.name} imports {alias.name}"
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-                base = node.func.value
-                called = node.func.attr
-                writing = isinstance(base, ast.Name) and base.id in stores and called in writes
-                assert not writing, f"{module.name}:{node.lineno} calls {called} on a store"
+    folder = Path(package.__file__).parent
+    for name in sorted(FAMILY_PAGES):
+        tree = ast.parse((folder / name).read_text("utf-8"), filename=name)
+        direct = [
+            node.lineno
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and (getattr(node.func, "id", None) or getattr(node.func, "attr", None))
+            == "render_template"
+        ]
+        assert direct == [], f"{name} renders directly at {direct}; use answers.answer"
 
 
 def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
@@ -789,24 +793,33 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         for module in sorted(folder.glob("*.py"))
     }
 
-    # The chat page hands a message over, and the handing over is all it does.
-    chat = trees["chat.py"]
-    assert {
-        f"{node.module}.{alias.name}"
-        for node in ast.walk(chat)
-        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.channels")
-        for alias in node.names
-    } == {
+    # The chat page hands a message over, through the channel `conversation.py` holds, and the
+    # handing over is all it does.
+    def channel_imports(name: str) -> set[str]:
+        return {
+            f"{node.module}.{alias.name}"
+            for node in ast.walk(trees[name])
+            if isinstance(node, ast.ImportFrom)
+            and (node.module or "").startswith("familydb.channels")
+            for alias in node.names
+        }
+
+    assert channel_imports("chat.py") == {
+        "familydb.channels.web.DEFAULT_CHAT",
+        "familydb.channels.web.MAX_MESSAGE",  # how long a question handed over may be
+    }
+    assert channel_imports("conversation.py") == {
         "familydb.channels.web.DEFAULT_CHAT",
         "familydb.channels.web.Handing",  # a message being handed over, drawn until it is stored
-        "familydb.channels.web.MAX_MESSAGE",  # how long a question handed over may be
         "familydb.channels.web.WebChat",
     }
-    assert not [
-        node
-        for node in ast.walk(chat)
-        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.pipeline")
-    ], "chat.py reaches the pipeline through the channel, not around it"
+    for name in ("chat.py", "conversation.py"):
+        assert not [
+            node
+            for node in ast.walk(trees[name])
+            if isinstance(node, ast.ImportFrom)
+            and (node.module or "").startswith("familydb.pipeline")
+        ], f"{name} reaches the pipeline through the channel, not around it"
 
     # The edit forms may run these tools and no others. A new one is a deliberate line here.
     edits = trees["edits.py"]
@@ -874,8 +887,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     assert ruled <= allowed, ruled
     assert {"add", "change"} | signing_in | linking | removing | pushing | pinning <= ruled
 
-    # The doors are shut to everything else, but not whole packages: `views.py` reads opening hours
-    # from `tools.places` and tidies links with `tools.urls`, which write nothing.
+    # The doors are shut to everything else.
     for name, tree in trees.items():
         reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
         dispatches = any(
@@ -904,10 +916,20 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
                 for node in ast.walk(tree)
             )
             assert not family_rules, f"{name} reaches the family rules"
-        if name not in {"chat.py", "__init__.py"}:  # the factory builds the thing chat.py uses
+        # The factory builds the channel, conversation.py holds it, and chat.py hands over to it.
+        if name not in {"chat.py", "conversation.py", "__init__.py"}:
             assert not any(module.startswith("familydb.channels") for module in reached), name
+        # A page may read the forecast the tools read; the machinery that runs one is the edit
+        # forms' alone.
+        tools_read = {
+            "destinations.py": {"familydb.tools.weather"},
+            "edits.py": {"familydb.tools"},
+        }
+        tools_reached = {
+            m for m in reached if m == "familydb.tools" or m.startswith("familydb.tools.")
+        }
+        assert tools_reached <= tools_read.get(name, set()), f"{name} imports {tools_reached}"
         if name != "edits.py":
-            assert "familydb.tools" not in reached, f"{name} imports the tool machinery"
             assert not dispatches, f"{name} dispatches a tool"
 
 
@@ -1200,7 +1222,6 @@ def test_on_now_the_setup_strip_comes_after_the_box_and_before_the_rest(
 
 
 def test_a_place_s_phone_number_is_a_link_a_phone_can_dial() -> None:
-    from familydb.web import views
 
     assert views.phone_href("(503) 555-0142") == "tel:5035550142"
     assert views.phone_href("+1 503 555 0142") == "tel:+15035550142"

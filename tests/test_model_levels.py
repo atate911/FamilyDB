@@ -11,8 +11,8 @@ from familydb.agent.providers.openai import reasoning_effort
 from familydb.agent.render import render_user_turn
 from familydb.agent.worker import run_worker_turn
 from familydb.app import App
+from familydb.base.config import Settings
 from familydb.channels.base import IncomingMessage
-from familydb.config import Settings
 from familydb.jobs.enrich import render_enrich_request
 from familydb.pipeline import DIGEST_UPDATE, handle_incoming, handle_synthetic, retry_message
 from familydb.store import ideas

@@ -27,12 +27,12 @@ import sqlite3
 from datetime import datetime, time
 from typing import Any
 
-from familydb import roles
 from familydb.agent import gateway, spending, uses
 from familydb.agent.prompt import load_prompt
 from familydb.agent.worker import worker_turn
-from familydb.dates import utc_iso
-from familydb.errors import AgentError
+from familydb.base import roles
+from familydb.base.dates import utc_iso
+from familydb.base.errors import AgentError
 from familydb.store import calls, suggestions
 from familydb.store.db import transaction
 from familydb.suggest import dossier as dossiers
@@ -134,9 +134,7 @@ def _choose(ctx: ToolContext, args: SuggestInput, a: Any) -> Chosen | None:
     fresh = _fresh(ctx, made, a)
     if not _made_before(ctx, fresh):
         now = ctx.clock.now()
-        if spent_this_month(ctx.conn, ctx.settings, now) + _estimate(ctx, made) > (
-            ctx.settings.choose_budget
-        ):
+        if not gateway.month_room(ctx.conn, ctx.settings, KIND, now, estimate=_estimate(ctx, made)):
             log.info("not choosing: this month's budget for it would be passed")
             return None
         try:

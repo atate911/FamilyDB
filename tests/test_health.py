@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 from familydb import health
 from familydb.app import App
-from familydb.clock import FixedClock
+from familydb.base.clock import FixedClock
 from familydb.store import heartbeat
 
 

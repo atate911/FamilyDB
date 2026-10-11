@@ -6,8 +6,8 @@ import re
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from familydb.clock import Clock
-from familydb.errors import ToolError
+from familydb.base.clock import Clock
+from familydb.base.errors import ToolError
 
 
 def parse_date(value: str) -> date:
@@ -91,6 +91,13 @@ def next_birthday(birth_date: str | None, today: date) -> date | None:
         if day >= today:
             return day
     raise AssertionError("a birthday comes round within a year")
+
+
+def fmt_minutes(minutes: int) -> str:
+    """A length of time as the family reads it: "45 min", "1.5 h"."""
+    if minutes < 60:
+        return f"{minutes} min"
+    return f"{minutes / 60:g} h"
 
 
 def clock_time(value: datetime | time | str) -> str:

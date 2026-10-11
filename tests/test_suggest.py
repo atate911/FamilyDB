@@ -425,7 +425,7 @@ def test_suggest_end_to_end_with_verdicts(
 def test_suggest_requeues_stale_places_when_web_is_on(
     registry, conn, full_settings, thursday_clock, family, monkeypatch
 ) -> None:
-    from familydb.errors import AgentError
+    from familydb.base.errors import AgentError
 
     def unavailable(**kwargs):
         raise AgentError("test worker unavailable", retryable=False)
@@ -644,9 +644,10 @@ def test_discovery_uses_configured_provider_without_injected_api(env, monkeypatc
     from familydb.agent.providers import build
 
     api = FakeMessagesAPI(*discover_script([]))
+    # The company the use resolves to, built with the fake behind it, as a test's own would be.
     monkeypatch.setattr(
-        "familydb.agent.gateway.for_surface",
-        lambda settings, surface, api=None, **_: build("anthropic", settings, api=fake),
+        "familydb.agent.providers.build",
+        lambda name, settings, api=None, **_: build(name, settings, api=fake),
     )
     fake = api
     context = build_context(env.ctx, (date(2026, 9, 26), date(2026, 9, 27)))

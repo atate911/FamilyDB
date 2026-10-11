@@ -18,7 +18,6 @@ from familydb import (
     family,
     memory,
     personas,
-    roles,
     routing,
     undo,
     voice,
@@ -41,11 +40,12 @@ from familydb.agent.render import (
 )
 from familydb.agent.spending import CompanyLimitReached, SpendingLimitReached
 from familydb.app import App
+from familydb.base import roles
+from familydb.base.clock import FixedClock
+from familydb.base.dates import utc_iso
+from familydb.base.errors import AgentError
 from familydb.channels.base import IncomingMessage, OutgoingMessage, PhotoNote
-from familydb.clock import FixedClock
-from familydb.dates import utc_iso
 from familydb.delivery import claim_also, deliver, hold_for_gathering, lease
-from familydb.errors import AgentError
 from familydb.store import calls, knocks, members, messages, suggestions, wishes
 from familydb.store.db import transaction
 from familydb.store.members import Member
@@ -352,9 +352,7 @@ def _run(
             if row.retries >= app.settings.retry_max_attempts:
                 return None
             with transaction(conn):
-                conn.execute(
-                    "UPDATE messages SET retries = retries + 1 WHERE id = ?", (inbound_id,)
-                )
+                messages.bump_retries(conn, inbound_id)
         if folded:
             msg = dataclasses.replace(msg, text="\n".join([*(f.text for f in folded), msg.text]))
         return _run_owned(

@@ -6,7 +6,7 @@ from datetime import datetime, time
 
 import pytest
 
-from familydb.dates import clock_time, hour_words, spoken_times
+from familydb.base.dates import clock_time, hour_words, spoken_times
 
 NB = chr(0xA0)  # a no-break space
 

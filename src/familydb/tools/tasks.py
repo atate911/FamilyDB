@@ -10,14 +10,14 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
-from familydb import personas, presents, roles, routing, task_service, windows
-from familydb import undo as taking_back
-from familydb.dates import parse_datetime, utc_iso
-from familydb.errors import ToolError
+from familydb import personas, presents, routing, task_service, windows
+from familydb.base import roles
+from familydb.base.dates import parse_datetime, utc_iso
+from familydb.base.errors import ToolError
 from familydb.store import members, messages, tasks
 from familydb.store.db import to_json
 from familydb.store.tasks import Task
-from familydb.tools.registry import ToolContext, tool
+from familydb.tools.registry import ToolContext, keep_undo, tool
 
 
 class AddTaskInput(BaseModel):
@@ -185,7 +185,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         now=ctx.now_iso(),
         repeat=_repeat(args),
     )
-    taking_back.keep(
+    keep_undo(
         ctx,
         "cancel_task",
         f"added task #{task.id} {task.title}",
@@ -283,7 +283,7 @@ def _keep_undo(
     about = f"changed {name}"
     if ended:
         about = f"marked {name} done" if after.status == "done" else f"cancelled {name}"
-    taking_back.keep(
+    keep_undo(
         ctx,
         "restore_task",
         about,

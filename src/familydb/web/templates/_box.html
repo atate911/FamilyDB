@@ -1,4 +1,4 @@
-{% from "_ui.html" import icon, avatar, vera_screen, undo_form, badge, pin_form, pin_shelf %}
+{% from "_ui.html" import icon, avatar, vera_screen, undo_form, badge, pin_form, pin_shelf, guard %}
 {# The box (docs/INTERFACE.md section 6): one line, the mic and a lit Send, in the same place on every page. It posts to
    the chat and comes back here (`back`). Under it: the message on its way, what she did (a receipt) or said (her reply
    over the page). Everything it needs is the page's box (chat.page_box, read with page_box()): family, who, send_where,
@@ -6,7 +6,7 @@
    dictate.js look for stay: #ask, #text, #ask-mic, #locate, #where. #}
 {% set b = page_box() %}
 <form class="bar{% if b.scope %} bar--scoped{% endif %}" id="ask" method="post" action="{{ url_for('chat.send') }}" data-find="{{ url_for('api.find') }}"{% if b.look_again %} data-refresh="{{ b.look_again }}"{% endif %}>
-  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+  {{ guard() }}
   <input type="hidden" name="once" value="{{ once_token() }}" />
   <input type="hidden" name="lat" value="" /><input type="hidden" name="lon" value="" />
   <input type="hidden" name="back" value="{{ request.path }}" />

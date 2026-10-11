@@ -15,6 +15,11 @@ class ToolUnavailable(ToolError):
     """The tool exists but its backing service is not configured yet."""
 
 
+class MigrationError(FamilyDBError):
+    """The bundled migrations and the database's record of them disagree: one applied was
+    changed since, or one numbered below the newest applied was never applied."""
+
+
 class ConfigError(FamilyDBError):
     """A setting is missing or contradictory, and the thing it configures cannot start."""
 

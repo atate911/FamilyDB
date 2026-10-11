@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 from familydb import happening
 from familydb.app import App
-from familydb.config import Settings
+from familydb.base.config import Settings
 from familydb.store import finds
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction

@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from familydb import agenda
 from familydb import family as rules
 from familydb.app import App
 from familydb.store import db, ideas, messages, outcomes, plans, tasks, wishes
@@ -190,6 +191,11 @@ def test_browsing_asks_nothing_of_a_model(settings, clock, conn, family) -> None
         "/wiki/_search?q=start",
     ):
         assert client.get(path).status_code == 200, path
+    # And every page without an id in its address, whatever it is (a new one is covered the day
+    # it is added): answered, redirected or refused, never by asking a model.
+    for rule in client.application.url_map.iter_rules():
+        if "GET" in rule.methods and not rule.arguments:
+            assert client.get(rule.rule).status_code < 500, rule.rule
     assert api.requests == []
     assert conn.execute("SELECT count(*) FROM llm_calls").fetchone()[0] == 0
 
@@ -636,15 +642,28 @@ def test_the_context_line_is_the_moment_and_one_fact() -> None:
     )
 
 
+def _on(title: str, start: str, *, all_day: bool = False, status: str = "confirmed"):
+    entry = agenda.Entry(
+        title=title,
+        start=start,
+        end=None,
+        all_day=all_day,
+        location=None,
+        notes=None,
+        status=status,
+        plan_id=None,
+        idea_id=None,
+    )
+    return views.entry_row(entry, date(2026, 9, 21))
+
+
 def test_a_days_line_names_what_is_on_in_order_and_links_to_the_day() -> None:
-    rows = [{"title": "Dentist", "time": "9\u00a0am"}, {"title": "Swim", "time": "4\u00a0pm"}]
+    rows = [_on("Dentist", "2026-09-21T09:00"), _on("Swim", "2026-09-21T16:00")]
     parts = views.day_line(rows, "/week/2026-09-21")
     assert [p["text"] for p in parts] == ["Dentist 9\u00a0am, then Swim 4\u00a0pm", "."]
     assert parts[0]["href"] == "/week/2026-09-21"
-    assert (
-        views.day_line([{"title": "Fair", "time": None, "status": "tentative"}], "/x")[0]["text"]
-        == "Fair (tentative)"
-    )
+    fair = _on("Fair", "2026-09-21", all_day=True, status="tentative")
+    assert views.day_line([fair], "/x")[0]["text"] == "Fair (tentative)"
     assert views.day_line([], "/x") == [{"text": "Free.", "href": None}]
 
 

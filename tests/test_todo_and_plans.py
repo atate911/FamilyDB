@@ -3,31 +3,47 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from datetime import date
 
 from familydb.store import db, ideas, outcomes, plans, tasks
-from familydb.web import views
+from familydb.web import calendar_view, views
+from familydb.web.rows import PlanRow
 from tests.conftest import NOW_ISO
 from tests.test_web_edits import _client
 
 
-def _row(day, end=None, *, title="Event", slot=1, rid=1):
-    return {
-        "id": rid,
-        "title": title,
-        "day": day,
-        "end": end or day,
-        "people": [{"name": "Sam", "slot": slot, "initial": "S"}],
-        "who": "Sam",
-        "time": "",
-    }
+def _row(day, end=None, *, title="Event", slot=1, rid=1, people=None, who="Sam"):
+    return PlanRow(
+        id=rid,
+        idea_id=None,
+        title=title,
+        when=day,
+        time=None,
+        relative=None,
+        chip=None,
+        on_today=False,
+        all_day=True,
+        location=None,
+        notes=None,
+        status="confirmed",
+        from_google=False,
+        start_value=f"{day}T09:00",
+        end_value=None,
+        people=people or [{"name": "Sam", "slot": slot, "initial": "S"}],
+        who=who,
+        away=None,
+        day=day,
+        end=end or day,
+        short=day,
+    )
 
 
 # -- the month
 
 
 def test_a_plan_over_a_week_end_is_cut_into_one_bar_to_each_week() -> None:
-    weeks = views.month_calendar(
+    weeks = calendar_view.month_calendar(
         [_row("2026-10-02", "2026-10-06", title="Camping")], date(2026, 10, 1), date(2026, 10, 20)
     )
     bars = [(w["events"][0]["column"], w["events"][0]["length"]) for w in weeks if w["events"]]
@@ -40,7 +56,9 @@ def test_a_plan_over_a_week_end_is_cut_into_one_bar_to_each_week() -> None:
 def test_a_fourth_plan_on_a_day_is_counted_not_drawn() -> None:
     rows = [_row("2026-10-07", title=f"Plan {n}", rid=n) for n in range(1, 6)]
     week = next(
-        w for w in views.month_calendar(rows, date(2026, 10, 1), date(2026, 10, 1)) if w["events"]
+        w
+        for w in calendar_view.month_calendar(rows, date(2026, 10, 1), date(2026, 10, 1))
+        if w["events"]
     )
     assert [e["lane"] for e in week["events"]] == [1, 2, 3]
     assert week["more"] == [{"column": 3, "count": 2}]  # the Wednesday
@@ -48,7 +66,7 @@ def test_a_fourth_plan_on_a_day_is_counted_not_drawn() -> None:
 
 def test_a_day_says_what_is_on_it_and_what_is_still_to_rate() -> None:
     rows = [_row("2026-10-07", title="Roller rink", rid=7)]
-    weeks = views.month_calendar(rows, date(2026, 10, 1), date(2026, 10, 20), {7})
+    weeks = calendar_view.month_calendar(rows, date(2026, 10, 1), date(2026, 10, 20), {7})
     day = next(d for w in weeks for d in w["days"] if d["iso"] == "2026-10-07")
     assert "Roller rink" in day["label"] and "Not rated yet" in day["label"]
     assert day["rate"] == 7 and day["dots"][0]["slot"] == 1
@@ -57,14 +75,21 @@ def test_a_day_says_what_is_on_it_and_what_is_still_to_rate() -> None:
 
 
 def test_a_day_draws_a_dot_for_each_person_and_the_house_only_for_everyone() -> None:
-    two = {**_row("2026-10-04", title="Roller rink", rid=1)}
-    two["people"] = [
-        {"name": "Maya", "slot": 3, "initial": "M"},
-        {"name": "Theo", "slot": 4, "initial": "T"},
-    ]
-    everyone = {**_row("2026-10-05", title="Picnic", rid=2)}
-    everyone["people"] = [{"name": views.EVERYONE, "slot": 0, "initial": ""}]
-    weeks = views.month_calendar([two, everyone], date(2026, 10, 1), date(2026, 10, 20))
+    two = replace(
+        _row("2026-10-04", title="Roller rink", rid=1),
+        people=[
+            {"name": "Maya", "slot": 3, "initial": "M"},
+            {"name": "Theo", "slot": 4, "initial": "T"},
+        ],
+    )
+    everyone = _row(
+        "2026-10-05",
+        title="Picnic",
+        rid=2,
+        people=[{"name": views.EVERYONE, "slot": 0, "initial": ""}],
+        who=views.EVERYONE,
+    )
+    weeks = calendar_view.month_calendar([two, everyone], date(2026, 10, 1), date(2026, 10, 20))
     days = {d["iso"]: d for w in weeks for d in w["days"]}
     assert [dot["initial"] for dot in days["2026-10-04"]["dots"]] == ["M", "T"]
     assert [dot["name"] for dot in days["2026-10-05"]["dots"]] == [views.EVERYONE]

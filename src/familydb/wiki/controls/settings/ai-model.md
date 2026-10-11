@@ -36,7 +36,7 @@ The **Save** bar stays in view. It says what is unsaved ("Answering the family �
 
 ### Settings an older page drew
 
-Earlier versions drew a box for each of these. They are still read, as what a row falls back to when nothing is chosen for it, so an install that never uses the page behaves as it always did; they come from `.env` or an older save and are not drawn.
+Earlier versions drew a box for each of these. They are read from `.env` as the choice a row falls back to when nothing is chosen for it on this page (so an install that never uses the page behaves as its `.env` says), and what an older version stored became this page's choices once, on upgrade. They are not drawn, and the page never stores them.
 
 | `key` | What it was |
 |---|---|
@@ -74,16 +74,19 @@ Paste a company's key into **Every company's key** at the bottom of the page. A 
 
 Folded under **More settings**. Every company has a lineup of three: **everyday** (its cheapest model unless you choose another), **better** and **best**; a stronger level is never cheaper than everyday. The lineup is what a stand-in answers with at the strength of the model it replaces, what **Presets** and **Use for everything** fill from, and what changing a row's company keeps.
 
-| Label (`key`) | Default |
-|---|---|
-| OpenAI everyday chat model (`openai_model`) | `gpt-6-luna` |
-| OpenAI everyday lookup model (`openai_worker_model`) | `gpt-6-luna` |
-| Claude everyday chat model (`anthropic_model`) | `claude-haiku-4-5` |
-| Claude everyday lookup model (`worker_model`) | `claude-haiku-4-5` |
-| Gemini everyday chat model (`gemini_model`) | `gemini-3.1-flash-lite` |
-| Gemini everyday lookup model (`gemini_worker_model`) | `gemini-3.1-flash-lite` |
+Each company's models are kept together, as its own (`company_models`): an everyday chat model and an everyday lookup model, and better and best in place of the ones this version knows. A company you add keeps the same four in its own card. Empty is the default in the table below; a judgment (below) may suggest newer ones. A name a company says it does not have is refused; any name is accepted when the company cannot be asked. A model the lineup has no place for can still be chosen for a row with **Other…**.
 
-Better and best are `anthropic_better_model`, `anthropic_best_model`, `openai_better_model`, `openai_best_model`, `gemini_better_model` and `gemini_best_model`. Empty uses the ones this version knows; a judgment (below) may suggest newer ones. A name a company says it does not have is refused; any name is accepted when the company cannot be asked. A model the lineup has no place for can still be chosen for a row with **Other…**.
+| Company, model | Default | In `.env` |
+|---|---|---|
+| OpenAI, everyday chat | `gpt-6-luna` | `OPENAI_MODEL` |
+| OpenAI, everyday lookups | `gpt-6-luna` | `OPENAI_WORKER_MODEL` |
+| Claude, everyday chat | `claude-haiku-4-5` | `ANTHROPIC_MODEL` |
+| Claude, everyday lookups | `claude-haiku-4-5` | `WORKER_MODEL` |
+| Gemini, everyday chat | `gemini-3.1-flash-lite` | `GEMINI_MODEL` |
+| Gemini, everyday lookups | `gemini-3.1-flash-lite` | `GEMINI_WORKER_MODEL` |
+| Better and best, each company | this version's lineup | `OPENAI_BETTER_MODEL`, `OPENAI_BEST_MODEL`, `ANTHROPIC_BETTER_MODEL`, `ANTHROPIC_BEST_MODEL`, `GEMINI_BETTER_MODEL`, `GEMINI_BEST_MODEL` |
+
+A model named in `.env` is the default the page shows for that box; what the page saves wins over it. An older FamilyDB stored these as separate settings: on upgrade they become the company's own, once.
 
 ## Keeping up with the companies
 

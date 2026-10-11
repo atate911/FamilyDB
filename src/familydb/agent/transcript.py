@@ -11,7 +11,7 @@ from datetime import datetime
 
 from familydb import logs
 from familydb.agent.providers.base import ModelReply, TurnRequest
-from familydb.config import Settings
+from familydb.base.config import Settings
 from familydb.store import ai_texts, problems
 from familydb.store.db import transaction
 

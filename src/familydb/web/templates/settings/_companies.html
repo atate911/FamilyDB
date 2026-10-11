@@ -1,5 +1,5 @@
 {# Companies beyond the three: any service that speaks the OpenAI chat protocol. Added, changed, chosen and taken away by plain forms; each posts to its own address (web/settings.py). #}
-{% from "_ui.html" import icon with context %}
+{% from "_ui.html" import icon, guard with context %}
 <section class="card sgroup" id="companies" aria-labelledby="g-companies">
   <h2 class="sgroup__h" id="g-companies">Other companies</h2>
   <p class="sgroup__note">
@@ -21,7 +21,7 @@
         {% if one.template and one.protected %}<p class="small muted">{{ one.template.line }}</p>
         {% elif one.template %}<p class="small muted">Added from {{ one.template.label }}'s template, but its extra request fields no longer ask {{ one.template.label }} to use only companies that keep and train on nothing: what you write may go to ones that do.</p>{% endif %}
         <form class="form form--tight" method="post" action="{{ url_for('settings.save_company', slug=one.slug) }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          {{ guard() }}
           <input type="hidden" name="section" value="model" />
           <div class="sgrid">
             <div class="field">
@@ -83,13 +83,13 @@
         <div class="actions mt-3">
           {% if not one.answering %}
             <form method="post" action="{{ url_for('settings.use_company', slug=one.slug) }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              {{ guard() }}
               <input type="hidden" name="section" value="model" />
               <button class="btn" type="submit">Answer with {{ one.label }}</button>
             </form>
           {% endif %}
           <form method="post" action="{{ url_for('settings.remove_company', slug=one.slug) }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            {{ guard() }}
             <input type="hidden" name="section" value="model" />
             <button class="btn" type="submit"{% if one.used_by %} disabled aria-describedby="c-{{ one.slug }}-kept"{% endif %}>Take {{ one.label }} away, with its key</button>
           </form>
@@ -102,7 +102,7 @@
   {% if room_for_more %}
     {% for template in templates %}
       <form class="form form--tight mt-4" method="post" action="{{ url_for('settings.add_company') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        {{ guard() }}
         <input type="hidden" name="section" value="model" />
         <input type="hidden" name="template" value="{{ template.key }}" />
         <h3 class="sgroup__h">Add {{ template.label }}</h3>
@@ -125,7 +125,7 @@
       <div class="fieldfold__body">
         <p class="small muted">DeepSeek, Moonshot (Kimi), Z.ai (GLM), MiniMax, Alibaba (Qwen), or a model you run yourself: anything with a chat address that follows the OpenAI protocol. Its own guide gives the address, the key and the model’s name.</p>
         <form class="form form--tight" method="post" action="{{ url_for('settings.add_company') }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          {{ guard() }}
           <input type="hidden" name="section" value="model" />
           <div class="sgrid">
             <div class="field">

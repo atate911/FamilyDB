@@ -14,7 +14,7 @@ from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
 
-from familydb.agent.providers import parts
+from familydb.agent.providers import companies, parts
 from familydb.agent.providers.base import (
     LOOK_TOKENS,
     Audio,
@@ -31,8 +31,8 @@ from familydb.agent.providers.base import (
     TurnRequest,
     WebAccess,
 )
-from familydb.config import Settings
-from familydb.errors import AgentError
+from familydb.base.config import Settings
+from familydb.base.errors import AgentError
 
 log = logging.getLogger(__name__)
 
@@ -137,8 +137,11 @@ class GeminiProvider:
 
     def model_for(self, surface: Surface) -> str:
         if surface == "worker":
-            return self.settings.gemini_worker_model or self.settings.gemini_model
-        return self.settings.gemini_model
+            return companies.GEMINI.worker_model(self.settings)
+        return companies.GEMINI.chat_model(self.settings)
+
+    def cache_ttl(self) -> str:
+        return ""
 
     def instructions(self, system: list[SystemBlock]) -> str:
         return "\n\n".join(block.text for block in system if block.text)
@@ -147,7 +150,7 @@ class GeminiProvider:
         """Our tools in one group, hosted search as its own. Only Gemini 3 takes both, so an older
         web worker is refused here, before anything is sent."""
         tools: list[dict[str, Any]] = []
-        model = request.model or self.settings.gemini_model
+        model = request.model or self.model_for("chat")
         if request.web is not None and request.tools and not current(model):
             raise AgentError(
                 "Gemini web workers require a Gemini 3 model; set GEMINI_WORKER_MODEL",
@@ -187,7 +190,7 @@ class GeminiProvider:
     def config(self, request: TurnRequest) -> dict[str, Any]:
         settings = self.settings
         effort = request.effort or settings.effort
-        model = request.model or settings.gemini_model
+        model = request.model or companies.GEMINI.chat_model(settings)
         left_out = parts.left_out(NAME, model)
         budget = THINKING.get(effort, -1)
         if budget == 0 and THINKING_OFF.name in left_out:
@@ -211,7 +214,7 @@ class GeminiProvider:
 
     def payload(self, request: TurnRequest) -> dict[str, Any]:
         return {
-            "model": request.model or self.settings.gemini_model,
+            "model": request.model or self.model_for("chat"),
             "contents": self.transcript(request),
             "config": self.config(request),
         }
@@ -351,11 +354,10 @@ class GeminiProvider:
                 raise _failure(exc) from exc
 
     def listener(self) -> str | None:
-        return self.settings.gemini_transcribe_model or self.model_for("worker")
+        return self.model_for("worker")
 
-    def hearing(self, audio: Audio, hints: str) -> dict[str, Any]:
-
-        model = self.listener() or self.settings.gemini_model
+    def hearing(self, audio: Audio, hints: str, model: str | None = None) -> dict[str, Any]:
+        model = model or self.listener() or self.model_for("chat")
         ask = f"{HEAR} {hints}".strip()
         budget = HEARD_TOKENS + HEARD_TOKENS_PER_SECOND * max(audio.seconds, 1)
         shape = TurnRequest(system=[], messages=[], model=model, effort="low", max_tokens=budget)
@@ -375,8 +377,8 @@ class GeminiProvider:
             "config": config,
         }
 
-    def transcribe(self, audio: Audio, hints: str) -> Heard:
-        response, dropped = self._create(lambda: self.hearing(audio, hints))
+    def transcribe(self, audio: Audio, hints: str, model: str | None = None) -> Heard:
+        response, dropped = self._create(lambda: self.hearing(audio, hints, model))
         reply = self.reply(response)
         return Heard(
             text=reply.text,
@@ -393,9 +395,8 @@ class GeminiProvider:
     def viewer(self) -> str | None:
         return self.model_for("worker")
 
-    def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
-
-        model = self.viewer() or self.settings.gemini_model
+    def seeing(self, picture: Picture, ask: str, model: str | None = None) -> dict[str, Any]:
+        model = model or self.viewer() or self.model_for("chat")
         shape = TurnRequest(
             system=[], messages=[], model=model, effort="low", max_tokens=LOOK_TOKENS
         )
@@ -413,8 +414,8 @@ class GeminiProvider:
             "config": self.config(shape),
         }
 
-    def describe(self, picture: Picture, ask: str) -> Seen:
-        response, dropped = self._create(lambda: self.seeing(picture, ask))
+    def describe(self, picture: Picture, ask: str, model: str | None = None) -> Seen:
+        response, dropped = self._create(lambda: self.seeing(picture, ask, model))
         reply = self.reply(response)
         return Seen(
             text=reply.text,

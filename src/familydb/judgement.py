@@ -34,8 +34,8 @@ from familydb.agent import gateway, spending, uses
 from familydb.agent.loop import MessagesAPI
 from familydb.agent.providers import catalog, companies, prices
 from familydb.agent.worker import worker_turn
-from familydb.dates import utc_iso
-from familydb.errors import AgentError
+from familydb.base.dates import utc_iso
+from familydb.base.errors import AgentError
 from familydb.integrations.price_lists import Prices
 from familydb.store import calls
 from familydb.store import judgements as store
@@ -60,10 +60,7 @@ MOST_PRICE_CHECKS = 2
 LEVELS_ASKED = ("everyday", "better", "best")
 MOST_OPTIONS = 8
 MOST_TRIES = 2
-LEVEL_KEYS = {
-    company.slug: (company.chat_setting, company.better_setting, company.best_setting)
-    for company in companies.BUILT_IN
-}
+LEVEL_FIELDS = ("model", "better_model", "best_model")
 SOURCE = "judgement"
 
 
@@ -222,8 +219,7 @@ def spent_this_month(conn: sqlite3.Connection, settings: Any, now: datetime) -> 
 
 
 def _room(conn: sqlite3.Connection, settings: Any, now: datetime) -> bool:
-    budget = settings.judgement_budget
-    if not budget or spent_this_month(conn, settings, now) + CALL_ALLOWANCE > budget:
+    if not gateway.month_room(conn, settings, "judge", now, estimate=CALL_ALLOWANCE):
         return False
     return not spending.used_up(conn, settings, now)
 
@@ -434,26 +430,30 @@ class Done:
         self.waiting: dict[str, str] = waiting or {}
 
 
-def _put_in(app: Any, conn: sqlite3.Connection, values: dict[str, str]) -> dict[str, str]:
-    """Save settings a judgement may change by itself, logged as the judgement's. Returns each one's
-    previous value (empty for the default), to put back.
+def _put_in(app: Any, conn: sqlite3.Connection, boxes: dict[str, str]) -> dict[str, str]:
+    """Put a model in the boxes a judgement may change by itself (`Company.box`, stored as the
+    page's `company_models`), logged as the judgement's. Returns what each box held on the page
+    before (empty for the default), to put back.
     """
     with transaction(conn):
-        before = settings_store.overrides(conn)
-        changed = settings_store.set_many(conn, values, source=SOURCE)
-    if changed:
-        app.refresh(conn)
-    return {key: str(before.get(key) or "") for key in changed}
+        before = settings_store.get(conn, "company_models") or {}
+        after = companies.models_with(app.settings, before, boxes)
+        changed = settings_store.set_many(conn, {"company_models": after or None}, source=SOURCE)
+    if not changed:
+        return {}
+    app.refresh(conn)
+    held = {}
+    for box in boxes:
+        found = companies.box_of(box, app.settings)
+        if found is not None:
+            held[box] = str((before.get(found[0].slug) or {}).get(found[1]) or "")
+    return held
 
 
 def _boxes_naming(settings: Any, company: str, name: str) -> list[str]:
-    from familydb.web import fields
-
-    return [
-        one.key
-        for one in fields.FIELDS
-        if one.company == company and str(getattr(settings, one.key, "") or "").lower() == name
-    ]
+    """The boxes holding this model of the company's."""
+    found = companies.get(company, settings)
+    return found.boxes_naming(settings, name) if found else []
 
 
 def _replacement(app: Any, conn: sqlite3.Connection, facts: dict[str, Any], choice: str) -> Done:
@@ -475,7 +475,12 @@ def _lineup(
     app: Any, conn: sqlite3.Connection, facts: dict[str, Any], answer: dict[str, str]
 ) -> Done:
     company = facts["company"]
-    keys = dict(zip(LEVELS_ASKED, LEVEL_KEYS[company], strict=True))
+    found = companies.get(company, app.settings)
+    if found is None:
+        return Done("the company is no longer one FamilyDB asks")
+    keys = {
+        level: found.box(field) for level, field in zip(LEVELS_ASKED, LEVEL_FIELDS, strict=True)
+    }
     moved = {level: name for level, name in answer.items() if name != facts["now"][level]}
     if not moved:
         return Done("the models at each level stay as they are")

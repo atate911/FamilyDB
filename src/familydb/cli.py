@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 import signal
@@ -16,7 +17,7 @@ from uuid import uuid4
 
 import typer
 
-from familydb import __version__, memory, passwords, privacy, roles
+from familydb import __version__, memory, passwords, privacy
 from familydb import family as family_rules
 from familydb.agent import uses
 from familydb.agent.history import load_history
@@ -36,10 +37,11 @@ from familydb.availability import (
     web_available,
     web_tools_available,
 )
+from familydb.base import roles
+from familydb.base.config import Settings, apply_overrides, load_settings
+from familydb.base.dates import utc_iso
+from familydb.base.errors import ConfigError, FamilyDBError
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
-from familydb.config import Settings, apply_overrides, load_settings
-from familydb.dates import utc_iso
-from familydb.errors import ConfigError, FamilyDBError
 from familydb.integrations import google_calendar
 from familydb.store import calls, db, ideas, logins, members, messages
 from familydb.store import settings as settings_store
@@ -106,7 +108,7 @@ def _push_key(application: App) -> None:
     """The key that signs pushes to the family's devices, made once at start (push.py), never on
     a page view."""
     from familydb import push
-    from familydb.dates import utc_iso
+    from familydb.base.dates import utc_iso
 
     with closing(application.connect()) as conn:
         push.ensure_key(conn, utc_iso(application.clock.now()))
@@ -279,7 +281,7 @@ def db_backup(dest: Path = typer.Argument(..., help="Path of the backup file to 
     with closing(application.connect()) as conn, closing(sqlite3.connect(str(dest))) as target:
         conn.backup(target)
         # The copy itself is read back: a backup nobody can restore is no backup.
-        verdict = str(target.execute("PRAGMA quick_check").fetchone()[0])
+        verdict = db.quick_check(target)[0]
     ok = verdict == "ok"
     from familydb.store import backups
 
@@ -407,7 +409,7 @@ def tool_cmd(
     if spec is None:
         raise typer.BadParameter(f"unknown tool {name!r}; see --list")
     if schema:
-        typer.echo(json.dumps(spec.api_definition(), indent=2, ensure_ascii=False))
+        typer.echo(json.dumps(dataclasses.asdict(spec.definition()), indent=2, ensure_ascii=False))
         return
     raw = sys.stdin.read() if stdin else (json_input or "{}")
     try:
@@ -493,9 +495,8 @@ def debug_prompt(
         request = gateway.build_request(
             kind,
             conn=conn,
-            settings=uses.overlay(settings, kind).settings,
+            settings=settings,
             registry=application.registry,
-            provider=provider,
             current=current,
             history=history,
         ).request
@@ -548,8 +549,8 @@ def debug_cost(
             "  but nothing can look things up: the company that would cannot search the web, and "
             "no other that can has a key (or asking another company is off)"
         )
-    if chat_provider.name == "anthropic":
-        typer.echo(f"  the prefix above is cached for {settings.anthropic_cache_ttl}")
+    if ttl := chat_provider.cache_ttl():
+        typer.echo(f"  the prefix above is cached for {ttl}")
     spare = application.fallback("chat", chat_provider.name)
     if spare is not None:
         typer.echo(f"  {spare.name} answers when {chat_provider.name} cannot")

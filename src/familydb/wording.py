@@ -13,8 +13,8 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from typing import Literal
 
-from familydb.config import Settings
-from familydb.dates import utc_iso
+from familydb.base.config import Settings
+from familydb.base.dates import utc_iso
 from familydb.store import messages, wishes
 from familydb.store.db import transaction
 

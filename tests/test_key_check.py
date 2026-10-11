@@ -15,7 +15,7 @@ from familydb.agent import providers
 from familydb.agent.providers import anthropic as anthropic_provider
 from familydb.agent.providers import gemini as gemini_provider
 from familydb.agent.providers import openai as openai_provider
-from familydb.errors import AgentError
+from familydb.base.errors import AgentError
 
 REQUEST = httpx.Request("GET", "https://api.example.com/v1/models/x")
 

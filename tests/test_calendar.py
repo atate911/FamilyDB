@@ -359,7 +359,7 @@ def test_google_delete_tolerates_missing_events(calendar_settings) -> None:
     import httplib2
     from googleapiclient.errors import HttpError
 
-    from familydb.errors import ToolError
+    from familydb.base.errors import ToolError
     from familydb.integrations.google_calendar import GoogleCalendar
 
     class Request:
@@ -538,7 +538,7 @@ def test_reading_the_calendar_rewrites_nothing_that_did_not_change(env):
 
 
 def test_the_page_asks_google_at_most_once_a_minute_and_sees_the_bot_s_writes_at_once(env):
-    from familydb.errors import ToolError
+    from familydb.base.errors import ToolError
     from familydb.integrations.google_calendar import PAGE_READ_SECONDS, GoogleCalendar
 
     client = GoogleCalendar(env.settings)
@@ -827,7 +827,7 @@ def _google_that_answers(statuses: dict[str, int], calendar_settings):
 def test_google_reads_a_missing_event_as_deleted_only_while_the_calendar_is_there(
     calendar_settings, gone
 ) -> None:
-    from familydb.errors import ToolUnavailable
+    from familydb.base.errors import ToolUnavailable
     from familydb.integrations.google_calendar import LOST_ACCESS
 
     said = []

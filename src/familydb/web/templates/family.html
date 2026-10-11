@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, avatar, page_head with context %}
+{% from "_ui.html" import icon, avatar, page_head, guard with context %}
 {% block title %}Family · {{ site_title }}{% endblock %}
 {% block content %}
   {% call page_head('Family', 'Who ' ~ assistant ~ ' talks to. Each person signs in as themselves, with a password of their own: open somebody to give them a starting password.') %}
@@ -50,7 +50,7 @@
           <p class="small muted mb-4">People who messaged {{ assistant }} on Telegram and were turned away, newest first. Add the ones you know; ignore the rest, and they drop off this list after a month.</p>
           {% for knock in knocks %}
             <form class="form__row form__row--3 knock-form" method="post" action="{{ url_for('family.add') }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              {{ guard(once=true) }}
               <input type="hidden" name="telegram_id" value="{{ knock.telegram_id }}" />
               <div class="field"><label class="field__label" for="knock-name-{{ loop.index }}">Name</label>
                 <input id="knock-name-{{ loop.index }}" type="text" name="name" required maxlength="80" value="{{ knock.name }}" placeholder="Alex" aria-describedby="knock-{{ loop.index }}-h" /></div>
@@ -71,7 +71,7 @@
       <section class="rail__sec" id="add" aria-labelledby="h-add-p">
         <div class="rail__head"><h2 class="overline" id="h-add-p">Add somebody</h2></div>
         <form class="form form--tight" method="post" action="{{ url_for('family.add') }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          {{ guard(once=true) }}
           <div class="form__row">
             <div class="field"><label class="field__label" for="f-name">Name</label><input id="f-name" type="text" name="name" required maxlength="80" placeholder="e.g. Grandma" /></div>
             <div class="field"><label class="field__label" for="f-role">Role</label>

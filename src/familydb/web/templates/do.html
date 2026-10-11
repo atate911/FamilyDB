@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, who, map_plot with context %}
+{% from "_ui.html" import icon, avatar, who, map_plot, guard with context %}
 {% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty, by_hand %}
 {% block title %}What could we do? · {{ site_title }}{% endblock %}
 {% block body_class %}page-do{% endblock %}
@@ -28,7 +28,7 @@
           {% if r.still_want %}
             {# Three months untouched: keep it (it stops fading) or let it go (under Dropped, never gone). #}
             <form class="r__ask" method="post" action="{{ url_for('edits.set_status', idea_id=r.id) }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              {{ guard(once=true) }}
               <input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}" />
               <span>Still want this?</span>
               <button class="q__lnk" type="submit" name="status" value="idea">Keep<span class="sr"> {{ r.title }}</span></button>

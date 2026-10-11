@@ -18,10 +18,8 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, Field
 
 from familydb import plan_service, routing, saved_plans, task_service
-from familydb import undo as taking_back
 from familydb.availability import calendar_available
-from familydb.calendar_sync import adopt, event_changes, refresh_plan, sync_plans
-from familydb.dates import (
+from familydb.base.dates import (
     ensure_not_past,
     iso_date,
     iso_datetime,
@@ -30,14 +28,15 @@ from familydb.dates import (
     parse_datetime,
     utc_iso,
 )
-from familydb.errors import ToolError, ToolUnavailable
+from familydb.base.errors import ToolError, ToolUnavailable
+from familydb.calendar_sync import adopt, event_changes, refresh_plan, sync_plans
 from familydb.free_time import events_by_day, free_blocks
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
 from familydb.plan_service import RemindBefore
 from familydb.saved_plans import SavedPlans
 from familydb.store import calendar_ops, ideas, messages, plans, tasks
 from familydb.store.db import to_json, transaction
-from familydb.tools.registry import ToolContext, tool
+from familydb.tools.registry import ToolContext, keep_undo, tool
 
 log = logging.getLogger(__name__)
 
@@ -121,17 +120,10 @@ def search_plans(ctx: ToolContext, args: SearchPlansInput) -> dict[str, Any]:
         sync_plans(
             ctx.conn, ctx.calendar, ctx.settings.google_calendar_id, ctx.now_iso(), tz=ctx.clock.tz
         )
-    rows = ctx.conn.execute(
-        "SELECT * FROM plans WHERE lower(title) LIKE ? AND (? OR status != 'cancelled') "
-        "ORDER BY start DESC LIMIT 50",
-        ("%" + args.query.strip().lower() + "%", args.include_cancelled),
-    )
+    found = plans.search(ctx.conn, args.query, include_cancelled=args.include_cancelled)
     return {
         "calendar_checked": checked,
-        "plans": [
-            {"plan_id": row["id"], **plans.Plan.from_row(row).model_dump(mode="json")}
-            for row in rows
-        ],
+        "plans": [{"plan_id": plan.id, **plan.model_dump(mode="json")} for plan in found],
     }
 
 
@@ -371,7 +363,7 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             if args.idea_id is not None:
                 ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
     if made:
-        taking_back.keep(
+        keep_undo(
             ctx,
             "cancel_plan",
             f"put {plan.title} on the calendar (plan #{plan.id})",
@@ -574,7 +566,7 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
             if updated is not None:
                 plan_service.changed(ctx.conn, plan, updated, now=ctx.now_iso(), tz=ctx.clock.tz)
         if updated is not None and set(changes) <= MOVES:
-            taking_back.keep(
+            keep_undo(
                 ctx,
                 "restore_plan",
                 f"changed plan #{plan.id} {plan.title}",

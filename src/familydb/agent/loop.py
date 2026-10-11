@@ -24,8 +24,8 @@ from familydb.agent.providers.base import (
     TurnRequest,
     WebAccess,
 )
-from familydb.config import Settings
-from familydb.errors import AgentError
+from familydb.base.config import Settings
+from familydb.base.errors import AgentError
 from familydb.store import calls
 from familydb.store.calls import USAGE_KEYS
 from familydb.store.db import transaction
@@ -206,7 +206,7 @@ def run_turn(
             active.name,
             priced_as,
             reply.usage,
-            cache_ttl=settings.anthropic_cache_ttl,
+            cache_ttl=active.cache_ttl(),
         )
         with transaction(ctx.conn):
             call_id = calls.log_llm_call(
@@ -353,7 +353,7 @@ def _estimate(request: TurnRequest, provider: Provider, surface: str, settings: 
         input_chars=chars,
         max_tokens=request.max_tokens or settings.max_output_tokens,
         searches=(request.web.max_uses or 0) if request.web else 0,
-        cache_ttl=settings.anthropic_cache_ttl,
+        cache_ttl=provider.cache_ttl(),
     )
 
 

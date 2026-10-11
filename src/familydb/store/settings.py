@@ -6,21 +6,9 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from familydb.store.db import from_json, to_json, utcnow_iso
+from familydb.store.db import from_json, to_json, transaction, utcnow_iso
 
 BEHAVIOUR = (
-    "provider",
-    "worker_provider",
-    "provider_fallback",
-    "chat_level",
-    "digest_level",
-    "lookup_level",
-    "anthropic_model",
-    "worker_model",
-    "openai_model",
-    "openai_worker_model",
-    "gemini_model",
-    "gemini_worker_model",
     "effort",
     "worker_effort",
     "max_output_tokens",
@@ -61,20 +49,10 @@ BEHAVIOUR = (
     "find_places",
     "admin_alerts",
     "model_watch",
-    "judgements",
-    "judgement_level",
     "judgement_acts",
     "judgement_budget",
-    "choosing",
-    "choose_level",
     "picks",
     "choose_budget",
-    "openai_better_model",
-    "openai_best_model",
-    "anthropic_better_model",
-    "anthropic_best_model",
-    "gemini_better_model",
-    "gemini_best_model",
     "plan_checks",
     "plan_check_hour",
     "morning_hour",
@@ -90,12 +68,7 @@ BEHAVIOUR = (
     "private_when_personal",
     "family_chat_id",
     "gather_seconds",
-    "voice_notes",
     "voice_max_minutes",
-    "photos",
-    "transcribe_provider",
-    "openai_transcribe_model",
-    "gemini_transcribe_model",
     "web_title",
     "web_dictation",
     "web_session_days",
@@ -121,9 +94,10 @@ SECRETS = (
 # Companies without a module of their own, and their keys (config.CompanyDef); written by the
 # companies form alone. The keys never reach the change log.
 COMPANIES = ("companies", "company_keys")
-# The page's choice of company and model for each use, and how much each thinks
-# (agent/uses.py); written by the models form alone.
-MODELS = ("model_choices", "use_effort", "company_options")
+# The page's choice of company and model for each use, how much each thinks, what each company
+# may do and each company's models by strength (agent/uses.py, agent/providers/companies.py);
+# written by the models form alone, and by a judgement putting a model in.
+MODELS = ("model_choices", "use_effort", "company_options", "company_models")
 HIDDEN = ("company_keys",)
 # Who the assistant and the family are (/settings/personality); long texts show as "rewritten"
 # in the change list (web/views.py `LONG_SETTINGS`).
@@ -146,6 +120,65 @@ EDITABLE = (
     | frozenset(COMPANIES)
     | frozenset(MODELS)
 )
+
+
+def upgrade(conn: sqlite3.Connection, base: Any, *, now: str | None = None) -> bool:
+    """An older FamilyDB stored model choices as `config.OLDER` keys and each company's models
+    as `config.OLDER_MODELS`. Once, they become the page's choices (`model_choices`, where the
+    page has none), each company's say on standing in and its models (`company_models`), and the
+    keys are dropped; the environment's own go on being read at load. True when it did."""
+    from familydb.base.config import (
+        BUILT_IN_COMPANIES,
+        MODEL_FIELDS,
+        OLDER,
+        OLDER_MODEL_BOXES,
+        OLDER_MODELS,
+        older_to_choices,
+    )
+
+    keys = (*OLDER, *OLDER_MODELS)
+    marks = ", ".join("?" for _ in keys)
+    rows = conn.execute(
+        f"SELECT key, value FROM app_settings WHERE key IN ({marks})", keys
+    ).fetchall()
+    if not rows:
+        return False
+    stored = {row["key"]: from_json(row["value"]) for row in rows}
+    values: dict[str, Any] = {}
+    if any(key in stored for key in OLDER):
+        older = {name: getattr(base, name) for name in OLDER}
+        older |= {key: value for key, value in stored.items() if key in OLDER}
+        choices, stand_in = older_to_choices(older)
+        kept = get(conn, "model_choices") or {}
+        values["model_choices"] = {**choices, **kept} or None
+        if not stand_in:
+            options = dict(get(conn, "company_options") or {})
+            for slug in BUILT_IN_COMPANIES:
+                said = dict(options.get(slug) or {})
+                said.setdefault("stand_in", False)
+                options[slug] = said
+            values["company_options"] = options
+    if any(key in stored for key in OLDER_MODELS):
+        models = dict(get(conn, "company_models") or {})
+        for slug, names in OLDER_MODEL_BOXES.items():
+            entry = dict(models.get(slug) or {})
+            for field, key in zip(MODEL_FIELDS, names, strict=True):
+                if stored.get(key) and not entry.get(field):
+                    entry[field] = str(stored[key])
+            if any(entry.values()):
+                models[slug] = entry
+        values["company_models"] = models or None
+    stamped = now or utcnow_iso()
+    with transaction(conn):
+        set_many(conn, values, source="upgrade", now=stamped)
+        for key in stored:
+            conn.execute("DELETE FROM app_settings WHERE key = ?", (key,))
+            conn.execute(
+                "INSERT INTO settings_log (key, old_value, new_value, secret, changed_at, "
+                "changed_by, source) VALUES (?, ?, NULL, 0, ?, NULL, 'upgrade')",
+                (key, to_json(stored[key]), stamped),
+            )
+    return True
 
 
 def overrides(conn: sqlite3.Connection) -> dict[str, Any]:

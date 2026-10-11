@@ -14,7 +14,7 @@ from typing import Any
 
 import openai
 
-from familydb.agent.providers import parts
+from familydb.agent.providers import companies, parts
 from familydb.agent.providers.base import (
     LOOK_TOKENS,
     Audio,
@@ -30,8 +30,8 @@ from familydb.agent.providers.base import (
     TurnRequest,
     WebAccess,
 )
-from familydb.config import Settings
-from familydb.errors import AgentError
+from familydb.base.config import Settings
+from familydb.base.errors import AgentError
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +40,9 @@ NO_CREDENTIALS = "no OpenAI credentials configured: set OPENAI_API_KEY (see .env
 # GPT-6 takes all five effort names; older reasoning models stop at high (xhigh is a 400), and
 # GPT-4o/4.1 take no `reasoning`. Older models are named, so a later release gets everything.
 EFFORT = {"low": "low", "medium": "medium", "high": "high", "xhigh": "high", "max": "high"}
+# What hears a voice note when the family chose no other (the page offers the rest).
+HEARING_MODEL = "gpt-4o-mini-transcribe"
+
 HIGH_AT_MOST_MODELS = ("gpt-5", "o1", "o3", "o4")
 NO_REASONING_MODELS = ("gpt-3", "gpt-4", "chatgpt-")
 
@@ -156,8 +159,11 @@ class OpenAIProvider:
 
     def model_for(self, surface: Surface) -> str:
         if surface == "worker":
-            return self.settings.openai_worker_model or self.settings.openai_model
-        return self.settings.openai_model
+            return companies.OPENAI.worker_model(self.settings)
+        return companies.OPENAI.chat_model(self.settings)
+
+    def cache_ttl(self) -> str:
+        return ""
 
     def instructions(self, system: list[SystemBlock]) -> str:
         return "\n\n".join(block.text for block in system if block.text)
@@ -235,7 +241,7 @@ class OpenAIProvider:
 
     def payload(self, request: TurnRequest) -> dict[str, Any]:
         settings = self.settings
-        model = request.model or settings.openai_model
+        model = request.model or companies.OPENAI.chat_model(settings)
         payload: dict[str, Any] = {
             "model": model,
             "instructions": self.instructions(request.system),
@@ -401,11 +407,10 @@ class OpenAIProvider:
                 raise _failure(exc) from exc
 
     def listener(self) -> str | None:
-        return self.settings.openai_transcribe_model or None
+        return HEARING_MODEL
 
-    def transcribe(self, audio: Audio, hints: str) -> Heard:
-
-        model = self.listener()
+    def transcribe(self, audio: Audio, hints: str, model: str | None = None) -> Heard:
+        model = model or self.listener()
         if model is None:
             raise AgentError("no OpenAI model is set to hear voice notes", retryable=False)
         payload: dict[str, Any] = {
@@ -438,10 +443,14 @@ class OpenAIProvider:
     def viewer(self) -> str | None:
         return self.model_for("worker")
 
-    def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
-        """The request for one picture, to the lookup model at low effort."""
+    def seeing(self, picture: Picture, ask: str, model: str | None = None) -> dict[str, Any]:
+        """The request for one picture, to the lookup model (or `model`) at low effort."""
         shape = TurnRequest(
-            system=[], messages=[], model=self.viewer(), effort="low", max_tokens=LOOK_TOKENS
+            system=[],
+            messages=[],
+            model=model or self.viewer(),
+            effort="low",
+            max_tokens=LOOK_TOKENS,
         )
         payload = {
             key: value for key, value in self.payload(shape).items() if value not in ("", [])
@@ -458,8 +467,8 @@ class OpenAIProvider:
         ]
         return payload
 
-    def describe(self, picture: Picture, ask: str) -> Seen:
-        response, dropped = self._create(lambda: self.seeing(picture, ask))
+    def describe(self, picture: Picture, ask: str, model: str | None = None) -> Seen:
+        response, dropped = self._create(lambda: self.seeing(picture, ask, model))
         reply = self.reply(response)
         return Seen(
             text=reply.text,

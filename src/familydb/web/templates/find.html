@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon %}
+{% from "_ui.html" import icon, guard %}
 {% from "_dest.html" import dest_head %}
 {% block title %}{{ find.title }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-find{% endblock %}
@@ -23,7 +23,7 @@
   {% if visitor().may('change') and not over %}
     <div class="acts">
       <form method="post" action="{{ url_for('edits.add_idea') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        {{ guard(once=true) }}
         <input type="hidden" name="title" value="{{ find.title }}" /><input type="hidden" name="kind" value="event" />
         <input type="hidden" name="happens_from" value="{{ first }}" /><input type="hidden" name="happens_time" value="{{ time }}" />
         <input type="hidden" name="happens_until" value="{{ last }}" /><input type="hidden" name="location_name" value="{{ where }}" />
@@ -33,7 +33,7 @@
       <details class="fold fold--quiet" id="plan-it">
         <summary class="q__lnk">Put it on the calendar</summary>
         <form class="form fold__body" method="post" action="{{ url_for('edits.add_plan') }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          {{ guard(once=true) }}
           <input type="hidden" name="title" value="{{ find.title }}" /><input type="hidden" name="location" value="{{ where }}" />
           <input type="hidden" name="back" value="{{ request.path }}" />
           <div class="field"><label class="field__label" for="start">When</label>

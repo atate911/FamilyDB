@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 import pytest
 
 from familydb.app import App
+from familydb.base.config import apply_overrides
 from familydb.channels.base import IncomingMessage
-from familydb.config import apply_overrides
 from familydb.store import db, plans
 from familydb.store import settings as settings_store
 from familydb.tools import ToolContext
@@ -22,12 +22,12 @@ def _store(conn, values, **kwargs) -> list[str]:
 
 
 def test_a_stored_setting_wins_over_the_environment(conn, settings) -> None:
-    assert settings.provider == "anthropic"
-    assert _store(conn, {"provider": "gemini", "effort": "low"}) == ["provider", "effort"]
+    assert settings.digest_hour != 19
+    assert _store(conn, {"digest_hour": 19, "effort": "low"}) == ["digest_hour", "effort"]
     layered = apply_overrides(settings, settings_store.overrides(conn))
-    assert layered.provider == "gemini" and layered.effort == "low"
+    assert layered.digest_hour == 19 and layered.effort == "low"
     assert layered.anthropic_api_key == settings.anthropic_api_key  # the rest is untouched
-    assert settings.provider == "anthropic"  # and the environment's own object never changes
+    assert settings.digest_hour != 19  # and the environment's own object never changes
 
 
 def test_only_named_settings_can_be_stored(conn) -> None:
@@ -87,9 +87,9 @@ def test_the_app_picks_a_change_up_and_forgets_what_it_built(conn, settings, clo
     weather = app.weather
     assert weather is not None and app.weather is weather
 
-    _store(conn, {"provider": "gemini", "home_lat": -33.9})
+    _store(conn, {"digest_hour": 19, "home_lat": -33.9})
     assert app.refresh() is True
-    assert app.settings.provider == "gemini"
+    assert app.settings.digest_hour == 19
     assert app.weather is not weather  # built from the old coordinates
     assert app.clock.southern is True  # and so was the season
     assert app.refresh() is False  # the stamp has not moved, so nothing is read
@@ -178,7 +178,13 @@ def test_a_message_uses_the_settings_in_force(conn, settings, clock, family) -> 
     assert api.requests[0]["model"] == settings.anthropic_model
     assert api.requests[0]["max_tokens"] == settings.max_output_tokens
 
-    _store(conn, {"anthropic_model": "claude-haiku-4-5-20251001", "max_output_tokens": 2000})
+    _store(
+        conn,
+        {
+            "company_models": {"anthropic": {"model": "claude-haiku-4-5-20251001"}},
+            "max_output_tokens": 2000,
+        },
+    )
     second = IncomingMessage("telegram", "2", "chat-1", "1001", "and again")
     handle_incoming(app, second, api=api, conn=conn)
     assert api.requests[1]["model"] == "claude-haiku-4-5-20251001"

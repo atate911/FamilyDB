@@ -10,8 +10,8 @@ from typing import Any, Literal
 from familydb.agent import gateway
 from familydb.agent.loop import MessagesAPI, TurnResult
 from familydb.agent.providers import Provider
-from familydb.clock import Clock
-from familydb.config import Settings
+from familydb.base.clock import Clock
+from familydb.base.config import Settings
 from familydb.tools import ToolContext, ToolRegistry
 
 WorkerKind = Literal["enrich", "discover", "places", "scout", "find_feeds"]

@@ -84,9 +84,15 @@ chosen on the row, and everything else a click away.
 ### 1. Resolution (`agent/uses.py`)
 
 - **One choice per row**, stored as `same:<row>`, `off` or `<company>:<model>`, replacing `chat_level`,
-  `digest_level`, `lookup_level`, `judgement_level`, `choose_level` and the everyday boxes. Existing
-  installs are read forward from their old settings, so nothing changes on upgrade. The everyday,
-  better and best lineup stays, because stand-ins, presets and switching company use it.
+  `digest_level`, `lookup_level`, `judgement_level`, `choose_level` and the everyday boxes. The
+  older keys are read from the environment as choices (`config.older_to_choices`, under the
+  page's own), and what an older database stored becomes the page's choices once on upgrade
+  (`store.settings.upgrade`), so nothing changes on upgrade. The everyday,
+  better and best lineup stays, because stand-ins, presets and switching company use it, kept per
+  company as `Settings.company_models` (`config.CompanyModels`, the same four names an added
+  company's definition has) over what the environment says (`config.OLDER_MODELS`, read only into
+  `env_company_models`); a lineup box is `Company.box(field)`, and the page, a judgement and the
+  Status page's buttons write it through `companies.models_with`.
 - **`gateway.KINDS`** gains the row each kind belongs to; `gateway.answering` resolves through it.
 - **Per-row thinking effort** (`Settings.use_effort`), laid over `effort` and `worker_effort`, which
   stay on Spending as what a row uses when it says nothing.
@@ -196,7 +202,7 @@ from `static/style.css`, and the PR that builds the page replaces it.
 
 ## Still open
 
-- A model chosen on a row is not moved by a judgement: `judgement._boxes_naming` finds only settings boxes. A model that has gone is still answered by its replacement while it costs no more than `SWAP_DEARER` times as much (`prices.swapped`); the row's choice stays until a person changes it.
+- A model chosen on a row is not moved by a judgement: `judgement._boxes_naming` finds only lineup boxes. A model that has gone is still answered by its replacement while it costs no more than `SWAP_DEARER` times as much (`prices.swapped`); the row's choice stays until a person changes it.
 
 - Should an unsaved row be marked beyond its difference, and how loudly?
 - Are per-call models inside a row worth their cost in controls?

@@ -10,8 +10,8 @@ import pytest
 from familydb import wording
 from familydb.agent.render import render_kid_line
 from familydb.app import App
+from familydb.base.dates import utc_iso
 from familydb.channels.base import IncomingMessage
-from familydb.dates import utc_iso
 from familydb.pipeline import handle_incoming
 from familydb.store import db, members, wishes
 from familydb.tools.registry import ToolContext

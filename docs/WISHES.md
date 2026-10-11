@@ -17,7 +17,7 @@ This file is what the family decided and how it is built.
 - **The girls use iPads, through the page.** No Telegram for them. Each has a private conversation
   with Vera that the parents can read. Everything goes through tools, so another home app can be
   connected later.
-- **What a kid may do** (`roles.py`): sign in, read the ideas and plans (a present hidden from her excepted), talk to Vera,
+- **What a kid may do** (`base/roles.py`): sign in, read the ideas and plans (a present hidden from her excepted), talk to Vera,
   keep her own wishes, and see and tick off her own things to do. Nothing else changes from her
   screen.
 - **Everyday wishes** have daily rules. **Christmas and birthday wishes** are flagged (`occasion`),
@@ -51,7 +51,7 @@ This file is what the family decided and how it is built.
 
 ### Permissions
 
-`roles.py` gives each role its permissions; the page asks for a permission, never a role.
+`base/roles.py` gives each role its permissions; the page asks for a permission, never a role.
 
 | Permission | Means | Admin | Parent | Kid |
 | --- | --- | --- | --- | --- |

@@ -8,8 +8,8 @@ from typing import Literal
 from pydantic import BaseModel
 
 # Re-exported: everything that knows a member knows their role by these names.
-from familydb.roles import ROLES as ROLES
-from familydb.roles import Role as Role
+from familydb.base.roles import ROLES as ROLES
+from familydb.base.roles import Role as Role
 from familydb.store.db import utcnow_iso
 
 # Channels that name a member by display name, not a channel user id.

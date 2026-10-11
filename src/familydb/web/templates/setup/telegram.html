@@ -1,4 +1,4 @@
-{% from "_ui.html" import icon with context %}
+{% from "_ui.html" import icon, guard with context %}
 <p class="lede">With Telegram, everyone can message {{ site_title }} from their phone the way they would text a person, and it can send reminders and the weekend’s ideas. Telegram is free. Skip this if you would rather not: the family can use the <a href="{{ url_for('chat.show') }}">Chat page</a> instead, and you can come back to it at any time.</p>
 
 {% if stage in ('token', 'refused') %}
@@ -18,7 +18,7 @@
       <li><div><p>It replies with a <b>token</b>, a long line like <code class="cmd-inline">7123456789:AAH4k…</code>. Press on it to copy all of it, and paste it below. It is the key to your bot, so keep it to yourself.</p></div></li>
     </ol>
     <form class="form form--tight mt-4" method="post" action="{{ url_for('settings.save_keys') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      {{ guard() }}
       <input type="hidden" name="then" value="{{ then }}" />
       <div class="field"><label class="field__label" for="bot-token">The token BotFather sent</label>
         <input id="bot-token" name="telegram_bot_token" type="password" autocomplete="off" spellcheck="false" required placeholder="7123456789:AA…" /></div>
@@ -55,7 +55,7 @@
             <li class="knock">
               <div><b>{{ knock.name or 'Somebody' }}</b><span class="small muted"> {% if knock.handle %}{{ knock.handle }} · {% endif %}{{ knock.when | figs }}</span></div>
               <form method="post" action="{{ url_for('family.link_telegram', member_id=admin.id) }}">
-                <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+                {{ guard() }}
                 <input type="hidden" name="once" value="{{ once_token() }}" />
                 <input type="hidden" name="then" value="{{ then }}" />
                 <input type="hidden" name="telegram_id" value="{{ knock.telegram_id }}" />
@@ -79,7 +79,7 @@
         <h2 class="card__head" id="h-digest">The weekend ideas, on Telegram</h2>
         <p class="small muted mb-4">Every {{ digest_day }} {{ site_title }} sends ideas for the weekend. At the moment they go to the Chat page, where nobody might see them.</p>
         <form class="form" method="post" action="{{ url_for('settings.save') }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          {{ guard() }}
           <input type="hidden" name="then" value="{{ then }}" />
           <input type="hidden" name="digest_chat_id" value="{{ admin.channel_user_id }}" />
           <div class="actions"><button class="btn btn--quiet" type="submit">{{ icon('send') }}Send them to me on Telegram</button></div>
@@ -106,7 +106,7 @@
   <details class="fieldfold">
     <summary>Use a different bot{{ icon('chev', size='sm', cls='chev') }}</summary>
     <form class="fieldfold__body" method="post" action="{{ url_for('settings.save_keys') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      {{ guard() }}
       <input type="hidden" name="then" value="{{ then }}" />
       <div class="field"><label class="field__label" for="bot-token-new">A new token from BotFather</label>
         <input id="bot-token-new" name="telegram_bot_token" type="password" autocomplete="off" spellcheck="false" required /></div>

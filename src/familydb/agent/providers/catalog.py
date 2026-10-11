@@ -11,7 +11,7 @@ import typing
 from dataclasses import dataclass
 
 from familydb.agent.providers.prices import Price, price
-from familydb.config import Level
+from familydb.base.config import Level
 
 LEVELS: tuple[Level, ...] = typing.get_args(Level)
 EVERYDAY: Level = "everyday"

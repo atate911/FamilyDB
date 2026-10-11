@@ -224,7 +224,7 @@ def test_a_vendor_that_will_not_describe_it_is_paid_for_and_not_taken_at_its_wor
 ) -> None:
     """A refusal is billed like any answer, so it counts against the day's limit before it is
     turned into a failure not worth trying again."""
-    from familydb.errors import AgentError
+    from familydb.base.errors import AgentError
 
     refused = fakes.FakeResponsesAPI(fakes.oa_response([fakes.oa_refusal()]))
     on_openai = settings.model_copy(update={"openai_api_key": "k", "provider": "openai"})

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from familydb.agent import providers
 from familydb.agent.providers import companies, prices
-from familydb.config import CompanyDef, ModelPrice, Settings
+from familydb.base.config import CompanyDef, ModelPrice, Settings
 from familydb.store import settings as settings_store
 
 

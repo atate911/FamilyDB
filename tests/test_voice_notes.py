@@ -8,12 +8,12 @@ from types import SimpleNamespace
 import pytest
 
 from familydb import voice
-from familydb.agent import gateway, spending
-from familydb.agent.providers import Audio, build, hearers, prices
+from familydb.agent import gateway, spending, uses
+from familydb.agent.providers import Audio, build, prices
 from familydb.app import App
+from familydb.base.errors import AgentError
 from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
 from familydb.channels.telegram import TelegramChannel, incoming_voice
-from familydb.errors import AgentError
 from familydb.pipeline import handle_incoming, retry_message
 from familydb.store import calls, messages
 from familydb.store.db import transaction
@@ -221,8 +221,8 @@ def _keys(settings, **overrides):
 
 
 def test_who_hears_a_voice_note(settings) -> None:
-    def names(**overrides):
-        return [p.name for p in hearers(_keys(settings, **overrides))]
+    def names(**overrides):  # in the order the use asks them (uses.hearing)
+        return [p.name for p, _ in uses.hearing(_keys(settings, **overrides))]
 
     # Claude alone cannot hear, and nobody else has a key.
     assert names() == []
@@ -245,7 +245,11 @@ def test_listen_hands_over_when_the_first_cannot(settings, clock, conn, monkeypa
     busy = build("openai", both, audio=fakes.FakeTranscriptionsAPI(fakes.openai_rate_limit()))
     spare_api = fakes.FakeGeminiAPI(fakes.gm_response([fakes.gm_text("see you at the zoo")]))
     spare = build("gemini", both, api=spare_api)
-    monkeypatch.setattr(gateway, "hearers", lambda _settings, audio=None: [busy, spare])
+    monkeypatch.setattr(
+        gateway.uses,
+        "hearing",
+        lambda _settings, audio=None: [(busy, busy.listener()), (spare, spare.listener())],
+    )
     heard = gateway.listen(
         settings=both, conn=conn, clock=clock, audio=Audio(OGG, "audio/ogg", 12), hints=""
     )

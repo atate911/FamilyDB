@@ -11,7 +11,7 @@ from typing import Any
 from waitress import create_server as _create_server
 
 from familydb.app import App
-from familydb.errors import ConfigError, FamilyDBError
+from familydb.base.errors import ConfigError, FamilyDBError
 from familydb.web import MAX_UPLOAD_BYTES, create_app
 
 log = logging.getLogger(__name__)
@@ -45,6 +45,12 @@ def proxy_options(settings: Any) -> dict[str, Any]:
     }
 
 
+# Requests answered at once: the family's phones and a kitchen board, each page a few quick reads
+# (a chat turn runs on the web chat's own thread, so it holds none of these). Waitress's default
+# of four left a tablet's page waiting behind three phones' at breakfast.
+THREADS = 8
+
+
 def create_server(app: App) -> Any:
     """A waitress server with the socket already bound, so a clash is reported here."""
     settings = app.settings
@@ -53,6 +59,7 @@ def create_server(app: App) -> Any:
         host=settings.web_host,
         port=settings.web_port,
         ident=IDENT,
+        threads=THREADS,
         # Flask refuses an oversize body only after waitress has read it (default 1 GB): the most
         # any request may carry, a photo in the chat's box, and Flask refuses more than a form's
         # anywhere else.

@@ -14,7 +14,7 @@ from datetime import date, timedelta
 from evals.harness import GROUP, Call, Case, Check, Run
 from evals.household import NOW, NOW_ISO, Household
 from familydb import personas, windows
-from familydb.errors import ToolError
+from familydb.base.errors import ToolError
 from familydb.routing import is_confirmation
 from familydb.store import db, members, memories
 from familydb.suggest.engine import resolve_window

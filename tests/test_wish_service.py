@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from familydb import wish_service as ws
-from familydb.errors import ToolError
+from familydb.base.errors import ToolError
 from familydb.store import db, members
 from tests.conftest import NOW_ISO, TZ
 

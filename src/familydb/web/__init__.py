@@ -18,9 +18,9 @@ from werkzeug.security import safe_join
 from familydb import __version__, happening, personas
 from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
+from familydb.base.config import Settings
+from familydb.base.errors import ConfigError
 from familydb.channels.web import WebChat
-from familydb.config import Settings
-from familydb.errors import ConfigError
 from familydb.web import (
     activity,
     auth,
@@ -29,20 +29,25 @@ from familydb.web import (
     edits,
     family,
     fields,
+    ideas_page,
     links,
+    lists_page,
     look,
     looks,
     once,
+    pages,
+    plans_page,
     routes,
     setup,
     shell,
+    tasks_page,
     troubleshooting,
     views,
     wiki,
+    wishes_page,
 )
 from familydb.web import api as api_page
 from familydb.web import settings as settings_page
-from familydb.web import status as status_page
 from familydb.web.auth import MIN_PASSWORD
 from familydb.web.keys import session_secret
 
@@ -191,7 +196,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["links"] = links.LINKS
     web.jinja_env.globals["settings_sections"] = fields.SECTIONS
     # The new frame's pill and counts, read only by a page built on base.html.
-    web.jinja_env.globals["shell_frame"] = lambda: shell.frame(app)
+    web.jinja_env.globals["shell_frame"] = lambda: shell.current(app)
     # The row of destinations at the foot of the family's pages (frame.html).
     web.jinja_env.globals["destinations"] = shell.destinations
     # The box on a page built on the frame, as its view set it or the plain one (chat.current_box).
@@ -208,13 +213,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
         # A kid sees nothing of how it works, its version included (roles.py `browse`).
         who = auth.visitor()
         plain = who.member is not None and not who.may("browse")
-        light = None
-        if who.may("manage"):
-            try:
-                with closing(app.connect()) as conn:
-                    light = status_page.light(app, conn)
-            except sqlite3.Error:
-                log.debug("the status light is off: the troubles could not be read", exc_info=True)
+        light = shell.current(app).light
         return {
             "site_title": app.settings.web_title,
             "footer": views.footer(__version__, plain=plain),
@@ -230,7 +229,9 @@ def create_app(app: App, *, api: Any = None) -> Flask:
 
     web.context_processor(every_page)
     web.register_blueprint(auth.bp)
-    web.register_blueprint(routes.bp)
+    # Imported for their routes, which register on the one blueprint as each module loads.
+    _ = (routes, ideas_page, lists_page, plans_page, tasks_page, wishes_page)
+    web.register_blueprint(pages.bp)
     web.register_blueprint(activity.bp)
     web.register_blueprint(troubleshooting.bp)
     web.register_blueprint(chat.bp)

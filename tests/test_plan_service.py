@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from familydb import plan_service
-from familydb.errors import ToolError
+from familydb.base.errors import ToolError
 from familydb.jobs.reminders import run_reminders
 from familydb.store import db, ideas, places, plans, tasks
 from tests.conftest import NOW_ISO, TZ, call

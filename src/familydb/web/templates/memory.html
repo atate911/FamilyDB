@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, page_head with context %}
+{% from "_ui.html" import icon, avatar, page_head, guard with context %}
 {% block title %}What {{ assistant }} knows · {{ site_title }}{% endblock %}
 {# What she has been told about the family: a must is weighed as a rule, a guess only leans. Forgetting keeps the words, marked, so they are never saved again; the forms are edits.py's, through `remember`. #}
 {% block content %}
@@ -27,7 +27,7 @@
                 </div>
                 {% if visitor().may('change') %}
                   <form method="post" action="{{ url_for('edits.forget_memory', memory_id=row.id) }}">
-                    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                    {{ guard(once=true) }}
                     <button class="textbtn textbtn--quiet" type="submit">{{ icon('x', size='sm') }}Forget<span class="sr"> {{ row.fact }}</span></button>
                   </form>
                 {% endif %}
@@ -45,7 +45,7 @@
         <section class="sec" id="tell" aria-labelledby="h-tell">
           <div class="sec__label"><h2 class="label" id="h-tell">Tell {{ assistant }}</h2></div>
           <form class="form form--tight" method="post" action="{{ url_for('edits.add_memory') }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+            {{ guard(once=true) }}
             <div class="field"><label class="field__label" for="m-fact">What to remember</label>
               <input id="m-fact" type="text" name="fact" required maxlength="200" placeholder="e.g. vegetarian" data-dictate /></div>
             <div class="field"><label class="field__label" for="m-about">About</label>

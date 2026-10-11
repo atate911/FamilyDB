@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import sqlite3
 
-from familydb import roles
-from familydb.roles import Permission
+from familydb.base import roles
+from familydb.base.roles import Permission
 from familydb.store import members
 from familydb.store.members import Member
 

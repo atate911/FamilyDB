@@ -12,7 +12,7 @@ from typing import Any
 
 import anthropic
 
-from familydb.agent.providers import parts
+from familydb.agent.providers import companies, parts
 from familydb.agent.providers.base import (
     LOOK_TOKENS,
     Audio,
@@ -27,8 +27,8 @@ from familydb.agent.providers.base import (
     TurnRequest,
     WebAccess,
 )
-from familydb.config import Settings
-from familydb.errors import AgentError
+from familydb.base.config import Settings
+from familydb.base.errors import AgentError
 from familydb.store.calls import USAGE_KEYS
 
 log = logging.getLogger(__name__)
@@ -206,8 +206,11 @@ class AnthropicProvider:
 
     def model_for(self, surface: Surface) -> str:
         if surface == "worker":
-            return self.settings.worker_model or self.settings.anthropic_model
-        return self.settings.anthropic_model
+            return companies.ANTHROPIC.worker_model(self.settings)
+        return companies.ANTHROPIC.chat_model(self.settings)
+
+    def cache_ttl(self) -> str:
+        return self.settings.anthropic_cache_ttl
 
     def cache_marker(self) -> dict[str, str]:
         if self.settings.anthropic_cache_ttl == "1h":
@@ -232,7 +235,7 @@ class AnthropicProvider:
             }
             for tool in request.tools
         ]
-        model = request.model or settings.anthropic_model
+        model = request.model or companies.ANTHROPIC.chat_model(settings)
         if request.web is not None:
             tools += web_tools(request.web, model)
 
@@ -373,7 +376,7 @@ class AnthropicProvider:
     def listener(self) -> str | None:
         return None  # Claude takes text, images and documents, but no recordings
 
-    def transcribe(self, audio: Audio, hints: str) -> Heard:
+    def transcribe(self, audio: Audio, hints: str, model: str | None = None) -> Heard:
         raise AgentError("Claude cannot hear recordings; OpenAI or Gemini can", retryable=False)
 
     def count_tokens(self, request: TurnRequest) -> int:
@@ -391,10 +394,14 @@ class AnthropicProvider:
     def viewer(self) -> str | None:
         return self.model_for("worker")
 
-    def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
-        """The request for one picture, to the lookup model at low effort."""
+    def seeing(self, picture: Picture, ask: str, model: str | None = None) -> dict[str, Any]:
+        """The request for one picture, to the lookup model (or `model`) at low effort."""
         shape = TurnRequest(
-            system=[], messages=[], model=self.viewer(), effort="low", max_tokens=LOOK_TOKENS
+            system=[],
+            messages=[],
+            model=model or self.viewer(),
+            effort="low",
+            max_tokens=LOOK_TOKENS,
         )
         payload = {key: value for key, value in self.payload(shape).items() if value != []}
         image = base64.b64encode(picture.data).decode("ascii")
@@ -412,8 +419,8 @@ class AnthropicProvider:
         ]
         return payload
 
-    def describe(self, picture: Picture, ask: str) -> Seen:
-        response, dropped = self._create(lambda: self.seeing(picture, ask))
+    def describe(self, picture: Picture, ask: str, model: str | None = None) -> Seen:
+        response, dropped = self._create(lambda: self.seeing(picture, ask, model))
         reply = self.reply(response)
         return Seen(
             text=reply.text,

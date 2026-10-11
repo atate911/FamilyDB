@@ -192,7 +192,7 @@ def test_a_link_that_is_gone_or_has_moved_is_said(settings) -> None:
 def _later(settings, clock, minutes: int) -> App:
     from datetime import timedelta
 
-    from familydb.clock import FixedClock
+    from familydb.base.clock import FixedClock
 
     return App(settings, FixedClock(clock.now() + timedelta(minutes=minutes), clock.tz))
 
@@ -218,7 +218,7 @@ def test_the_report_is_filed_under_headings_a_page_of_it_can_be_read_by(
 def test_a_family_that_never_chose_a_time_zone_is_told_the_servers_is_utc(
     settings, clock, conn, family, monkeypatch
 ) -> None:
-    from familydb.config import Settings
+    from familydb.base.config import Settings
 
     monkeypatch.delenv("TZ", raising=False)
     bare = Settings(
@@ -322,7 +322,7 @@ def test_a_scheduler_that_is_up_but_quiet_is_a_failure_with_the_command(
 def _stuck(conn, family, update_id: str, *, minutes_ago: int, state: str = "received", **more):
     from datetime import UTC, datetime, timedelta
 
-    from familydb.dates import utc_iso
+    from familydb.base.dates import utc_iso
     from familydb.store import messages
 
     when = utc_iso(datetime(2026, 9, 20, 21, 3, tzinfo=UTC) - timedelta(minutes=minutes_ago))
@@ -471,7 +471,7 @@ def test_a_name_in_env_that_nothing_reads_is_said_with_the_one_it_is_close_to(
 
 
 def _with_company(settings, *, key="sk-or-1", **more):
-    from familydb.config import CompanyDef
+    from familydb.base.config import CompanyDef
 
     one = CompanyDef(
         slug="openrouter",

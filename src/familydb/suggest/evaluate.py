@@ -5,8 +5,9 @@ from __future__ import annotations
 import sqlite3
 from datetime import date, datetime
 
-from familydb.clock import Clock
-from familydb.config import Settings
+from familydb.base.clock import Clock
+from familydb.base.config import Settings
+from familydb.hours import checked_days_ago, format_ranges, is_stale, open_on
 from familydb.integrations.geocode import estimate_travel
 from familydb.store import places
 from familydb.store.places import Place
@@ -18,7 +19,6 @@ from familydb.suggest.types import (
     Shortlisted,
     clock,
 )
-from familydb.tools.places import checked_days_ago, format_ranges, is_stale, open_on
 
 MIN_VISIT_MINUTES = 60
 

@@ -102,7 +102,7 @@ def test_the_choice_is_the_same_in_every_process(settings) -> None:
     script = (
         "import json\n"
         "from familydb import voice\n"
-        "from familydb.config import Settings\n"
+        "from familydb.base.config import Settings\n"
         f"lines = {{'follow_up': {THREE!r}}}\n"
         "own = Settings(_env_file=None, persona='default', voice_lines=lines)\n"
         "said = [voice.say(own, 'follow_up', seed=n, plan='Hopscotch') for n in range(20)]\n"

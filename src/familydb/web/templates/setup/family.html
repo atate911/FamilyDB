@@ -1,4 +1,4 @@
-{% from "_ui.html" import icon, avatar with context %}
+{% from "_ui.html" import icon, avatar, guard with context %}
 <p class="lede">Add the people {{ site_title }} should know. Everyone who will message it needs to be on the list. Children can be added too, so plans can include them, even if they never message it.</p>
 
 <section class="card setup-card" aria-labelledby="h-onlist">
@@ -26,7 +26,7 @@
     <p class="small muted mb-4">They messaged @{{ bot }} and were told it does not know them yet. Add the ones you know.</p>
     {% for knock in knocks %}
       <form class="form__row form__row--3 knock-form" method="post" action="{{ url_for('family.add') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        {{ guard() }}
         <input type="hidden" name="once" value="{{ once_token() }}" />
         <input type="hidden" name="then" value="{{ then }}" />
         <input type="hidden" name="telegram_id" value="{{ knock.telegram_id }}" />
@@ -49,7 +49,7 @@
     <p class="small mb-4">The easy way for anyone with Telegram: send them the link <a href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">t.me/{{ bot }}</a>. When they open it and press Start, they appear above, ready to let in. Or, for somebody already on the list, open them on the <a href="{{ url_for('family.show') }}">Family page</a> and make them a link of their own, which links their Telegram as they press Start.</p>
   {% endif %}
   <form class="form__row form__row--3" method="post" action="{{ url_for('family.add') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {{ guard() }}
     <input type="hidden" name="once" value="{{ once_token() }}" />
     <input type="hidden" name="then" value="{{ then }}" />
     <div class="field"><label class="field__label" for="add-name">Name</label>

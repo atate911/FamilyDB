@@ -13,7 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from familydb.config import Settings
+from familydb.base.config import Settings
 
 log = logging.getLogger(__name__)
 

@@ -14,6 +14,7 @@ import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
+from familydb.store.ideas import Idea
 from familydb.store.members import Member
 
 # Anybody at all: an idea for the whole family fits whoever is coming.
@@ -109,3 +110,33 @@ def _group(text: str, people: Sequence[Member]) -> set[int] | None:
         elif text in GROWN_UPS:
             found = {member.id for member in people if member.role != "kid"}
     return found or None
+
+
+# Words in an idea's "for" that mean the family, or the kids, or the grown-ups alone.
+EVERYONE_WORDS = frozenset({"everyone", "family", "the family", "whole family", "all", "us all"})
+KIDS_WORDS = frozenset({"kids", "the kids", "children", "the children", "the girls", "the boys"})
+ADULT_WORDS = frozenset({"adults", "the adults", "parents", "the parents", "just us", "date night"})
+
+
+def with_the_kids(idea: Idea, people: Sequence[Member]) -> bool:
+    """Whether an idea is for the kids too: it names nobody (so everyone), the family, the kids,
+    or a kid by name."""
+    if not idea.participants:
+        return True
+    kids = {p.display_name.casefold() for p in people if p.role == "kid"}
+    for one in idea.participants:
+        word = one.casefold().strip()
+        if word in EVERYONE_WORDS or word in KIDS_WORDS or word in kids:
+            return True
+    return False
+
+
+def just_us(idea: Idea, people: Sequence[Member]) -> bool:
+    """Whether an idea is the grown-ups' alone: it names only grown-ups, or says so."""
+    if not idea.participants:
+        return False
+    grown = {p.display_name.casefold() for p in people if p.role != "kid"}
+    return all(
+        one.casefold().strip() in ADULT_WORDS or one.casefold().strip() in grown
+        for one in idea.participants
+    )

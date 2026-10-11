@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, avatar with context %}
+{% from "_ui.html" import icon, avatar, guard with context %}
 {% block title %}{{ person.name }} · {{ site_title }}{% endblock %}
 {% block content %}
   <a class="crumb" href="{{ url_for('family.show') }}">{{ icon('chevl', size='sm') }}Family</a>
@@ -31,7 +31,7 @@
   <div class="stack mt-4">
     <form class="card form form--tight" method="post" action="{{ url_for('family.change', member_id=person.id) }}" aria-labelledby="h-prof">
       <h2 class="card__head" id="h-prof">About {{ person.name }}</h2>
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+      {{ guard(once=true) }}
       {# What the profile was when this was drawn: a save on top of somebody else's is refused. #}
       <input type="hidden" name="revision" value="{{ person.revision }}" />
       <div class="form__row">
@@ -82,11 +82,11 @@
             {%- else %}Cannot sign in to this page yet.{% endif %}</p>
           <div class="stack-actions">
             <form method="post" action="{{ url_for('family.sign_in_for', member_id=person.id) }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="action" value="start" />
+              {{ guard(once=true) }}<input type="hidden" name="action" value="start" />
               <button class="btn btn--quiet btn--sm" type="submit">{{ icon('lock', size='sm') }}{{ 'Make a new starting password' if person.sign_in else 'Make a starting password' }}</button></form>
             {% if person.sign_in %}
               <form method="post" action="{{ url_for('family.sign_in_for', member_id=person.id) }}">
-                <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="action" value="remove" />
+                {{ guard(once=true) }}<input type="hidden" name="action" value="remove" />
                 <button class="textbtn textbtn--danger" type="submit">Take their password away</button></form>
             {% endif %}
           </div>
@@ -105,7 +105,7 @@
             {%- else %}Instead of looking up their Telegram id, make {{ person.name }} a link:{% endif %}
             opened on their phone, pressing Start links their Telegram to them. It works once, for {{ invite_hours }} hours, and a new one replaces the last.</p>
           <form method="post" action="{{ url_for('family.invite', member_id=person.id) }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+            {{ guard(once=true) }}
             <button class="btn btn--quiet btn--sm" type="submit">{{ icon('send', size='sm') }}Make a link for {{ person.name }}</button></form>
         {% else %}
           <p class="small">Once the Telegram bot is connected, a link can be made here that links {{ person.name }}’s Telegram when they open it and press Start.</p>
@@ -118,7 +118,7 @@
         <details class="rail__sec fold fold--danger" id="remove">
           <summary><h2 class="rail__q">Take {{ person.name }} off the list for good</h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
           <form class="fold__body" method="post" action="{{ url_for('family.remove', member_id=person.id) }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="revision" value="{{ person.revision }}" />
+            {{ guard(once=true) }}<input type="hidden" name="revision" value="{{ person.revision }}" />
             <p class="small">Their name, how they sign in, their Telegram link, where they last were, what {{ assistant }} remembers about them and, for a kid, her wish lists are deleted. Their open things to do and reminders are canceled, in their own chat and wherever they asked for one outside a group. What they said stays in the chat without their name, so conversations still read, and the ideas, plans and group things to do they added stay, as the family’s. This can’t be undone: to stop {{ assistant }} answering them for now, switch them off instead.</p>
             <label class="check"><input type="checkbox" name="sure" value="yes" required />I’m sure: take {{ person.name }} off for good</label>
             <div class="actions"><button class="btn btn--danger" type="submit">{{ icon('x') }}Take {{ person.name }} off</button></div>

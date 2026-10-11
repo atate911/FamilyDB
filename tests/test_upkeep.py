@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 
 from familydb import alerts, upkeep
 from familydb.app import App
-from familydb.clock import FixedClock
+from familydb.base.clock import FixedClock
 from familydb.store import alerts as alert_store
 from familydb.store import backups, db
 from familydb.upkeep import run_upkeep

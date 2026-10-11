@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from pydantic import BaseModel
 
-from familydb.dates import utc_iso
+from familydb.base.dates import utc_iso
 
 KEEP = 200
 KEEP_DAYS = 30
