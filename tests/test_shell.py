@@ -166,8 +166,10 @@ def test_late_to_dos_are_counted_for_a_grown_up_and_a_kid_counts_only_her_own(
     _late_task(conn, family["alex"].id, "Renew the car")
     _late_task(conn, family["girls"].id, "Feed the fish")
     assert 'badge--late" title="3 late">3<span class="sr"> late</span>' in _sidebar(sam)
-    assert 'badge--late" title="1 late">1<span class="sr"> late</span>' in _sidebar(girl)
     assert '3<span class="sr"> late</span>' in _row(sam)
+    # A kid's menu is her row: My week carries no count, as her to-dos and her Now say nothing late
+    # (docs/STYLE.md, "A kid's screen"); her own late one is on her Now with its tick.
+    assert "badge--late" not in _sidebar(girl) and "late" not in _row(girl)
 
 
 def test_nothing_is_counted_when_nothing_is_late(sam) -> None:
@@ -264,11 +266,11 @@ def test_a_plan_made_for_a_present_is_not_asked_about_where_the_present_is_hidde
                 all_day=False,
                 idea_id=idea.id,
             )
-    # Sam may know of it; Alex, whom it is for, sees neither the title nor the count of it.
-    assert "How did Scarf for Alex go?" in sam.get("/").text
-    assert 'badge--quiet" title="2 to rate">2<' in _sidebar(sam)
+    # Sam may know of it; Alex, whom it is for, never sees it among what is still to say.
+    assert "How did Scarf for Alex go?" in sam.get("/did").text
     assert "Scarf for Alex" in sam.get("/plans/month?month=2026-09").text
-    for page in ("/", "/plans/month?month=2026-09"):
+    for page in ("/", "/did", "/plans/month?month=2026-09"):
         assert "Scarf for Alex" not in alex.get(page).text
     assert "How did Silver Falls hike go?" in alex.get("/").text
-    assert 'badge--quiet" title="1 to rate">1<' in _sidebar(alex)
+    # How a plan went is never a count in the menu or the row: it is asked, never owed.
+    assert "to rate" not in _sidebar(sam) and "to rate" not in sam.get("/").text

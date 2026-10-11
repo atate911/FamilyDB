@@ -96,13 +96,13 @@ Now is the first screen. It is not a menu and not a dashboard: it is the box, th
 
 **The picks** are the What about set described in section 4: one of each kind for this moment, each with a reason, made ahead and refreshed on open when stale (more than a few hours old and the budget allows). "Different ones" is a call made on purpose. Tapping a pick opens the thing with Plan it ready; swiping it away is "not now".
 
-**Her questions** are the only interruption: a kid's pitch, a plan to set, how an outing went. Each with its origin and its buttons. The same ones reach Telegram.
+**Her questions** are the only interruption: a kid's pitch, a plan to set, how an outing went. Each with its origin and its buttons. The same ones reach Telegram. How an outing went is asked, never owed: one at a time, after what only a parent can answer, nothing counts it, and the family can turn the asking off (`follow_ups`), leaving the plan's own page to take it.
 
 **Today's line** is the coordination that fits in one line. The week is one tap away in the row.
 
 **Search** is inside the box: typing a name shows matches above the keyboard before anything is sent.
 
-**On a big screen** the destination row becomes the left rail, Now fills the center, and Vera's reply and thread are the right column. **On the kitchen tablet** Now becomes the board (section 8). **A kid's Now** is in section 9.
+**On a big screen** the destination row becomes the menu on the left (the back office's too: one menu on every page), Now fills the center, and Vera's reply and thread are the right column. **On the kitchen tablet** Now becomes the board (section 8). **A kid's Now** is in section 9.
 
 ## 4. The destinations
 
@@ -248,7 +248,7 @@ Vera has no tile. She is the box, her reply, her questions, her notes, and her r
 
 - **Persistent controls, two:** the box at the top and the destination row at the bottom. In the same place on every screen. The row's first item is Now.
 - **Tap** opens. **Chips** narrow, always in the same place. **Back** goes up one level, and from a destination it goes to Now.
-- **The row is the only menu.** Seven short names and Now. There is no second menu anywhere, because two menus showing different subsets of the same places is what made the current page confusing.
+- **The row is the only menu.** Seven short names and Now. There is no second menu anywhere, because two menus showing different subsets of the same places is what made the current page confusing. A family that does not use a place can take it out of the row on Settings, General (`row_hidden`); its pages stay, reached from a link, and with Now taken out the home address opens the first place left.
 - **Deep links** are the paths in section 2. A push, a Telegram link, the tablet and the installed page all land on them. Opening a deep link from outside shows the item with the row beneath it, never a dead end.
 - **Scoped box state** is per screen: leaving a destination clears its scope.
 - **A reply over a screen** never navigates on its own. Only its pointer does, and only when tapped.
@@ -279,7 +279,7 @@ The reference layout and the one most used. Now as drawn in section 3, the box a
 └──────────┴─────────────────────────────────┴──────────────────┘
 ```
 
-The rail is the destination row with hints, Now fills the center, and the right column is Vera's: her reply as a live object, the thread behind it, and a reply can be pinned to the rail as a shelf of this person's own. Selecting an item narrows the right column to it. The frame grows in steps as today, never by stretching words. This is also where the admin works, with the back office behind the avatar.
+The rail is the menu every page shares: the destination row with hints, then Chat, what she knows and, for a grown-up, the back office (Status, the guide, Settings, the family) and who is signed in, so going from Settings to Now never loses the way back. Now fills the center, and the right column is Vera's: her reply as a live object, the thread behind it, and a reply can be pinned to the rail as a shelf of this person's own. Selecting an item narrows the right column to it. The frame grows in steps as today, never by stretching words. This is also where the admin works, with the back office behind the avatar.
 
 ### The kitchen tablet
 
@@ -343,7 +343,7 @@ Threads are per person. What anyone captures is shared with the family unless th
 
 - **The first day.** Now is the box with "A place your family would happily go back to", one line from Vera introducing herself, and the destination row. No picks until she has something to pick from; she says when she will. Nothing is empty-with-chrome.
 - **A new tile's empty state** is one sentence and the box. Never a diagram of what will be here.
-- **Vera can't answer** (no key, out of credit, the company is down). The status line says so in plain words. Every destination still works, because they are code. The box still accepts instructions: they are kept as scraps and filed when she is back, and the receipt says "Kept. I'll sort it when I'm back." Nothing a person types is ever lost.
+- **Vera can't answer** (no key, out of credit, the company is down). The status line says so in plain words, and why: under the box on every page and above the conversation, "Vera can't answer right now: OpenAI refused its key", with the way to what to do. Only what stops the chat counts: trouble with a company the chat does not use, or one another may stand in for, is worth a look, not "can't answer". A kid is not told the workings. Every destination still works, because they are code. The box still accepts instructions: they are kept as scraps and filed when she is back, and the receipt says "Kept. I'll sort it when I'm back." Nothing a person types is ever lost.
 - **No calendar connected.** This week shows the plans made here and says so once.
 - **No kids.** The kids tile is absent. The kid chips are absent everywhere.
 - **Offline.** The page needs the server, so a phone with no signal shows the browser's own page. What a person typed is not lost: the box keeps an unsent message in the tab (`ask.js`) until it is sent, and Telegram queues on the phone.

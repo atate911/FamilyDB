@@ -4,6 +4,41 @@
 
 ### New since v0.5.0
 
+- **The menu on the left is the same on every page.** On a computer or a tablet, opening Now, Eat or
+  Kids from Settings or Status swapped the menu for a bare list of places, without the mark, how
+  Vera is, What Vera knows or Behind the scenes, and the only way back was the small picture at the
+  top. Every page now has the one menu, which also leaves out the places the family took out of
+  the row. Phones keep the row at the foot, and the kitchen board its own.
+- **When she cannot answer, the page says why, and only then.** It now names the trouble
+  ("Anthropic refused its key") on Status, under the box on every page and above the
+  conversation in Chat, with what to do: the steps for an admin, and that an admin can put it
+  right for a parent. Trouble with a company the chat does not use, or one another company may
+  stand in for, no longer says she cannot answer; it stays under Needs a look. A limit raised
+  since it was hit lets her answer at once. Kids see none of it.
+- **How hard each use thinks shows on its row.** Settings, AI model says "thinking: medium" under
+  each use that thinks, without opening it, and follows a change before it is saved. Weighing
+  changes has a Thinking box of its own now; it took the chat's. Chat thinking and Lookup thinking
+  on Spending say they are the defaults the AI model page can set apart for each use.
+- **How a plan went is asked, never owed.** Now asks about one plan at a time, after the kids'
+  asks and pitches, and Did no longer carries a count of plans to rate in the row or the menu.
+  **Ask how a plan went** (Settings, Messages) now covers the page too: off, nobody is asked
+  anywhere, not on Now, Did, a past day or the month, and how it went can still be told on the
+  plan's own page or to her. What is said keeps a place the family did not enjoy out of
+  suggestions and puts favorites first.
+- **A day's own page opens when something is on it.** `/week/DATE` failed for a day whose line
+  named the next plan.
+- **The family chooses which places are in the row.** Settings, General has a tick for each place
+  in the row at the foot of every page (down the left on a wider screen): Now, Eat, Do, Week, Kids,
+  Soon, Lists and Did. Untick one the family does not use and it leaves the row, for a kid's row too;
+  nothing is deleted, and its pages still open from a link. With Now unticked the page opens on the
+  first place left, and with every one unticked Now stays (`row_hidden`).
+- **The family's pages, smoothed on a phone.** What's going down? drew each event a word a line
+  behind its source's tag; each is one line now, at 6 pm rather than 18:00. Chat lists the
+  conversations at every width again, so a parent on a tablet or a computer can read along with a
+  kid's, and the pinned replies fold to one line so the conversation keeps its room. Plan it on a
+  place's page could hardly be read, a to-do's title sat a thumb's width from its tick, a list's
+  things had no box to tick, a restaurant's page marked Do in the row, and a kid was offered "Share
+  where I am", which her pages never meant to ask.
 - **`maintain.sh upgrade` follows the default branch, not only tagged releases.** Once a version had
   a date in this file, an upgrade followed its release tag and ignored later commits, so a fix merged
   after v0.4.0 never arrived until the next version number did, and an upgrade answered "Already up to

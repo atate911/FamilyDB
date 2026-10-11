@@ -19,7 +19,6 @@ from familydb.app import App
 from familydb.base import roles
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
-from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store import wishes as wish_store
 from familydb.web import auth, conversation, views
@@ -28,8 +27,6 @@ from familydb.web import status as status_page
 
 log = logging.getLogger(__name__)
 
-# How far back a plan still waits to be rated; the follow-up job asks about the same ones.
-RATE_DAYS = 14
 ROLE_WORDS = {"admin": "Admin", "parent": "Parent", "kid": "Kid"}
 
 
@@ -51,7 +48,6 @@ class Frame:
     pill: status_page.Pill | None = None
     late: int = 0
     decide: int = 0
-    rate: int = 0
     check: int = 0
     # Her messages in this visitor's page conversation since this browser last looked.
     unread: int = 0
@@ -62,12 +58,14 @@ class Frame:
     kids: bool = False
     # The Status tile's light, for an admin: "bad", "warn" or None (status.light).
     light: str | None = None
+    # The places the family took out of the row (`Settings.row_hidden`).
+    hidden: frozenset[str] = frozenset()
 
     @property
     def look_at(self) -> int:
         """Things worth a look now; the phone's picture carries a dot while there are any. (What
         she said that is new has its own count on Chat.)"""
-        return self.late + self.decide + self.rate + self.check
+        return self.late + self.decide + self.check
 
     @property
     def menu_label(self) -> str:
@@ -92,14 +90,14 @@ def frame(app: App, conn: sqlite3.Connection) -> Frame:
     page builds it through `chat.page_box`, the back office through `current`."""
     visitor = auth.visitor()
     me = _me()
+    hidden = app.settings.row_hidden_places
     if visitor.kind == "stranger":
-        return Frame(me)
+        return Frame(me, hidden=hidden)
     today = app.clock.today()
     tz = app.settings.tzinfo
     try:
         late = _late(conn, visitor, tz, today)
         decide = _to_decide(conn, visitor, today)
-        rate = _to_rate(conn, visitor, today)
         check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
         pill = _pill(app, conn, visitor) if visitor.may("browse") else None
         unread = _unread(conn) if visitor.may("chat") else 0
@@ -114,8 +112,8 @@ def frame(app: App, conn: sqlite3.Connection) -> Frame:
         # A database not yet migrated: the frame is drawn without counts, so a page that says
         # "not found" or "not yours" never fails itself.
         log.warning("the menu's counts could not be read", exc_info=True)
-        return Frame(me)
-    return Frame(me, pill, late, decide, rate, check, unread, family, kids, light)
+        return Frame(me, hidden=hidden)
+    return Frame(me, pill, late, decide, check, unread, family, kids, light, hidden)
 
 
 def current(app: App) -> Frame:
@@ -191,15 +189,6 @@ def wishes_waiting(conn: sqlite3.Connection, today: Any) -> list[dict[str, Any]]
     return rows
 
 
-def _to_rate(conn: sqlite3.Connection, visitor: auth.Visitor, today: Any) -> int:
-    """Plans of the last two weeks nobody has said how they went."""
-    if not visitor.may("change"):
-        return 0
-    since = today - timedelta(days=RATE_DAYS)
-    waiting = plan_store.unrated(conn, today=today.isoformat(), since=since.isoformat())
-    return len(presents.without(waiting, presents.kept_ids(conn, visitor.member)))
-
-
 def _pill(app: App, conn: sqlite3.Connection, visitor: auth.Visitor) -> status_page.Pill:
     name = personas.active(app.settings).name
     chat_id = conversation.my_chat()
@@ -247,11 +236,19 @@ OWNS: dict[str, frozenset[str]] = {
 }
 
 
+def belongs_to(key: str) -> None:
+    """Say which place in the row this page is under when its endpoint alone cannot: one idea's
+    page is Eat's for a restaurant and Do's for anything else, as its way back says."""
+    g.destination = key
+
+
 def destinations(frame: Frame) -> list[Destination]:
     """The row for this visitor: a grown-up's eight places, a kid's four (docs/INTERFACE.md
-    section 9). Each is a want, not a table: Eat, Do, Week."""
+    section 9), less those the family took out on the settings (`Settings.row_hidden`); with
+    every one taken out, Now stays. Each is a want, not a table: Eat, Do, Week."""
     visitor = auth.visitor()
     here = request.endpoint or ""
+    chosen = g.get("destination")
     grown_up = visitor.may("browse")
     places: list[tuple[str, str, str, int, str]] = [("now", "Now", url_for("web.home"), 0, "")]
     if grown_up:
@@ -263,13 +260,29 @@ def destinations(frame: Frame) -> list[Destination]:
         places.append(("soon", "Soon", url_for("web.happening_page"), 0, ""))
         if visitor.may("change"):
             places.append(("lists", "Lists", url_for("web.lists_page"), 0, ""))
-        places.append(("did", "Did", url_for("go.did"), frame.rate, "to rate"))
+        # How a plan went is never counted here: it is asked on Now, at most once (now.py).
+        places.append(("did", "Did", url_for("go.did"), 0, ""))
     else:
         places.append(("do", "Do", url_for("web.ideas"), 0, ""))
         places.append(("week", "My week", url_for("go.week"), 0, ""))
         if visitor.may("wish") and visitor.member is not None:
             places.append(("kids", "My list", url_for("web.wishes"), 0, ""))
+    places = [place for place in places if place[0] not in frame.hidden] or places[:1]
     return [
-        Destination(key, label, href, here in OWNS.get(key, frozenset()), count, word)
+        Destination(
+            key,
+            label,
+            href,
+            key == chosen if chosen else here in OWNS.get(key, frozenset()),
+            count,
+            word,
+        )
         for key, label, href, count, word in places
     ]
+
+
+def elsewhere(frame: Frame) -> str | None:
+    """Where the home address sends this visitor when the family took Now out of the row: the
+    first place left in theirs. None while Now is in it."""
+    row = destinations(frame)
+    return None if any(place.key == "now" for place in row) else row[0].href

@@ -79,5 +79,5 @@ def lists_page(name: str | None = None) -> str:
         shown=current,
         lists=shown,
         chips=chips if len(shown) > 1 else [],
-        summary=views.lists_summary(shown),
+        summary=views.lists_summary(shown, current),
     )

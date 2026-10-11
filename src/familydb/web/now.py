@@ -72,6 +72,11 @@ def show() -> Response | str:
         progress = status_page.setup_progress(app, conn)
         if visitor.manages and not status_page.ready_to_answer(progress):
             return redirect(url_for("setup.overview"))
+        # The family took Now out of the row: the page opens on the first place left in it.
+        if "now" in app.settings.row_hidden_places and (
+            away := shell.elsewhere(shell.frame(app, conn))
+        ):
+            return redirect(away)
         people, slots, kept = household.read(conn, visitor.member)
         seen = agenda.read(app, conn, today, today + timedelta(days=DAYS_AHEAD))
         on = presents.without(seen.entries, kept)
@@ -194,22 +199,24 @@ def questions(
     slots: dict[str, int],
     people: list[Member],
 ) -> list[dict[str, Any]]:
-    """What waits on this person, oldest first: a plan to say how it went, a kid's request to
-    answer, a kid's pitch to look at. A kid is asked nothing here: her questions reach her chat."""
+    """What waits on this person, oldest first: a kid's request to answer, a kid's pitch to look
+    at; then one plan to say how it went, the oldest, while the family has asking on
+    (`follow_ups`), so it never crowds out what only a parent can answer. A kid is asked nothing
+    here: her questions reach her chat."""
     if not visitor.may("change"):
         return []
     tz = app.settings.tzinfo
     asked: list[dict[str, Any]] = []
-    for row in page_rows.unrated(conn, today, slots, visitor.member):
-        asked.append(
-            {
-                "kind": "rate",
-                "text": f"How did {row.title} go?",
-                "origin": row.when,
-                "sort": row.day,
-                **rows_.as_dict(row),
-            }
-        )
+    went = [
+        {
+            "kind": "rate",
+            "text": f"How did {row.title} go?",
+            "origin": row.when,
+            "sort": row.day,
+            **rows_.as_dict(row),
+        }
+        for row in page_rows.to_ask(app, conn, today, slots, visitor.member)[:1]
+    ]
     if visitor.may("decide"):
         names = {person.id: person for person in people}
         glance = shell.wishes_waiting(conn, today)
@@ -234,7 +241,7 @@ def questions(
             )
         asked.extend(_pitches(conn, app, today, people, tz))
     asked.sort(key=lambda q: q["sort"])
-    return asked
+    return asked + went
 
 
 def _pitches(

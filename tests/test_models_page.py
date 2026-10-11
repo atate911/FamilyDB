@@ -270,6 +270,23 @@ def test_thinking_is_stored_only_when_it_is_not_the_default(page, conn):
     assert settings_store.get(conn, "use_effort") is None
 
 
+def test_each_use_that_thinks_has_its_box_and_says_it_on_its_line(page, conn):
+    """Every use that thinks has a Thinking box (weighing changes too), and its line says how
+    hard it thinks with the row closed; voice notes and photos have none."""
+    text = page.get("/settings/model").text
+    for use in ("chat", "digest", "choose", "judge", "lookup", "onnear"):
+        assert f'name="effort_{use}"' in text, use
+    for use in ("hear", "look"):
+        assert f'name="effort_{use}"' not in text, use
+    line = re.search(r'data-thinks="chat"[^>]*>([^<]+)<', text).group(1)
+    assert line == " · thinking: medium"  # Chat thinking's default
+    post(page, effort_judge="high", effort_chat="low")
+    assert settings_store.get(conn, "use_effort") == {"chat": "low", "judge": "high"}
+    assert uses.answering(page.app.settings, "judge").effort == "high"
+    again = page.get("/settings/model").text
+    assert re.search(r'data-thinks="chat"[^>]*>([^<]+)<', again).group(1) == " · thinking: low"
+
+
 def test_what_a_company_may_do_is_stored_as_the_difference_from_the_default(page, conn):
     form = {"company": ["openai", "anthropic", "gemini"]}
     # Nothing different from the default: nothing stored.

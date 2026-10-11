@@ -1,4 +1,4 @@
-{% from "_ui.html" import icon, avatar, vera_screen, undo_form, badge, pin_form, pin_shelf, guard %}
+{% from "_ui.html" import icon, avatar, vera_screen, undo_form, badge, pin_form, pin_shelf, guard, cannot_answer with context %}
 {# The box (docs/INTERFACE.md section 6): one line, the mic and a lit Send, in the same place on every page. It posts to
    the chat and comes back here (`back`). Under it: the message on its way, what she did (a receipt) or said (her reply
    over the page). Everything it needs is the page's box (chat.page_box, read with page_box()): family, who, send_where,
@@ -43,12 +43,16 @@
   {% if b.starters %}
     <p class="starters starters--bar">{% for say in b.starters %}<a class="chip chip--say" href="#text" data-say="{{ say }}">{{ say }}</a>{% endfor %}</p>
   {% endif %}
-  {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. #}
+  {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. A kid is not asked
+     (docs/STYLE.md, "A kid's screen"). #}
+  {% if visitor().may('browse') %}
   <div class="bar__where" id="locate" hidden>
     <label class="check"><input type="checkbox" name="send_where" value="1" {{ 'checked' if b.send_where }} /> {{ icon('pin', size='sm') }}Share where I am with this message</label>
   </div>
+  {% endif %}
   <p id="where" class="small muted"></p>
 </form>
+{{ cannot_answer(shell.pill) }}
 {# What came back from the last message: on its way (she is answering, the page looks again), what she did, or what she said. #}
 {% if b.pending %}
   <div class="rcpt rcpt--pending" role="status">{{ vera_screen('', 'busy' if b.pending.state == 'thinking' else '') }}<p>{{ b.pending.text }}{% if b.pending.state == 'thinking' %}<span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>{% endif %} <a href="{{ b.pending.check }}">Look again</a></p></div>

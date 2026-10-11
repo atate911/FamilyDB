@@ -20,7 +20,7 @@ Everyone signed in sees Now and may chat ([Roles and permissions](/wiki/model/fa
 | The box | Ask, save an idea or set a reminder. Under it, what the last message brought back (below) |
 | The line | The day and the time, then how the day stands: "Free this evening", "Swim lesson 4:30 pm" |
 | Finish setting up | The steps left, for admins only, until they are done |
-| Her questions | At most three things waiting on you: a plan to rate (Loved it, OK, Not great), a kid's ask to answer (Yes, Not this time), a kid's pitch for an outing (See it, or Later, which rests it for a week) |
+| Her questions | At most three things waiting on you: a kid's ask to answer (Yes, Not this time), a kid's pitch for an outing (See it, or Later, which rests it for a week), and after them one plan to say how it went (Loved it, OK, Not great), while [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) is on |
 | On your plate | What is late or due today, each with its tick; a kid sees all of her own things to do |
 | What about… | Her picks, chosen ahead by code, with when they were chosen. "Different ones" asks her for others, which is a message like any other |
 | My list | A kid's wishes, with the countdowns to Christmas and her birthday |
@@ -63,15 +63,15 @@ On Eat, Do, Week, Kids, Soon, Lists and Did the box says what it is about ("abou
 
 ## On a big screen, and the kitchen tablet
 
-From a tablet's width up, the row of destinations stands down the left. From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and the last lines of your conversation under it, so her answer stays in view while you move between pages.
+From a tablet's width up, the row of destinations stands down the left as the menu, the same one Status, Settings and the guide have: your places, Chat, What Vera knows and, for grown-ups, Behind the scenes, with who is signed in at the foot. An admin can take a place the family does not use out of the row on [General](/wiki/controls/settings/general#this-page). From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and the last lines of your conversation under it, so her answer stays in view while you move between pages.
 
-**Pin** under one of her replies keeps it at hand: signed in as yourself, it stays at the top of that column on a desk and at the top of Chat on any screen, newest first, until you press **Unpin** there (or **Pinned** under the reply) to take it off. A shelf holds eight; pinning a ninth lets the oldest go. Your pins are yours alone, and go with you if you are taken off the family list.
+**Pin** under one of her replies keeps it at hand: signed in as yourself, it stays at the top of that column on a desk and under **Pinned** at the top of Chat on any screen (one line; open it to read them), newest first, until you press **Unpin** there (or **Pinned** under the reply) to take it off. A shelf holds eight; pinning a ninth lets the oldest go. Your pins are yours alone, and go with you if you are taken off the family list.
 
 **The board** (the menu behind your picture, or `/board`) is Now for a tablet on the kitchen wall: a large box; today and tomorrow in the middle, the nearer day largest; what waits on someone and the shopping list in places of their own; her picks, the weekend's from Thursday; and the saved ideas along the bottom, the ones nobody has touched fading. It shows no costs and nothing of the back office. While the family shares one password, the box has a face for each person along its top: tap yours before you send, and it holds for a minute, so the next person who walks up is not taken for you.
 
 ## Chat, top to bottom
 
-Chat is the thread behind the box. From the top: what you pinned of hers, the conversations (for admins and parents when there are kids: the family's and each kid's, as a row of pills), the room's header, the thread and the box. A kid sees one conversation, her own, and the list shows when a kid last wrote, not what she said. Opening a kid's conversation shows her words, with no box, although the list itself withholds them.
+Chat is the thread behind the box. From the top: the conversations (for admins and parents when there are kids: the family's and each kid's, as a row of pills on every screen), who can read this one, what you pinned of hers folded to one line, the room's header, the thread and the box. A kid sees one conversation, her own, and the list shows when a kid last wrote, not what she said. Opening a kid's conversation shows her words, with no box, although the list itself withholds them.
 
 The thread holds the latest 60 messages, with the day marked where it changes and "Earlier messages" to go back. Under the assistant's answers, admins and parents see what the message tried to change ("Saved an idea", "Remembered something"), even if it was refused. Telegram conversations are separate and do not appear here.
 
@@ -99,7 +99,7 @@ A kid has two limits, a message count and a daily share. What each is, and what 
 
 ## Share where I am
 
-Tick **Share where I am with this message** to let the assistant use your position for "near here" and "open now". It starts unticked and remembers your last choice while you stay signed in on that browser, so check it before you send. For the next 3 hours the assistant sees the place name and coordinates with each message you send, here or on Telegram. **The coordinates also go to the model company.** If the browser gives no position, suggestions start from home. What is kept, who sees it and how to stop is on [Shared location](/wiki/model/location).
+Tick **Share where I am with this message** to let the assistant use your position for "near here" and "open now". A kid is not offered it. It starts unticked and remembers your last choice while you stay signed in on that browser, so check it before you send. For the next 3 hours the assistant sees the place name and coordinates with each message you send, here or on Telegram. **The coordinates also go to the model company.** If the browser gives no position, suggestions start from home. What is kept, who sees it and how to stop is on [Shared location](/wiki/model/location).
 
 ## The mic
 

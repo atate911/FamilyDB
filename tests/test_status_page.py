@@ -7,6 +7,7 @@ import pytest
 from familydb.agent.providers import owner
 from familydb.app import App
 from familydb.base.dates import utc_iso
+from familydb.store import alerts as alert_store
 from familydb.store import calls, db, ideas, messages
 from familydb.store import settings as settings_store
 from familydb.web import create_app
@@ -299,5 +300,65 @@ def test_the_verdict_is_built_from_the_parts_it_sits_over() -> None:
     )
     down = verdict(parts, name="Vera", standing=Pill("down", "", ""), spent=0.0, thirty=0.0)
     assert down["tone"] == "alert" and down["heading"] == "Vera can\u2019t answer right now."
+    # With the trouble that stops her, the heading says why and the line what to do, by role.
+    refused = alert_store.Alert(
+        kind="key",
+        subject="openai",
+        detail="401",
+        first_at=NOW_ISO,
+        last_at=NOW_ISO,
+        times=1,
+        told_at=None,
+    )
+    stopped = Pill("down", "", "", refused)
+    said = verdict(parts, name="Vera", standing=stopped, spent=0.0, thirty=0.0)
+    assert said["heading"] == "Vera can\u2019t answer right now: OpenAI refused its key."
+    assert said["text"].startswith("Check OpenAI\u2019s key on Settings, AI model")
+    asked = verdict(parts, name="Vera", standing=stopped, spent=0.0, thirty=0.0, manages=False)
+    assert asked["text"].startswith("An admin can put it right.")
     rest = verdict(parts, name="Vera", standing=Pill("rest", "", ""), spent=2.0, thirty=3.0)
     assert rest["tone"] == "warn" and "About $2.00 spent today" in rest["text"]
+
+
+def test_she_cannot_answer_only_for_what_stops_the_chat_and_says_why(
+    settings, clock, conn, family
+) -> None:
+    """A company out of credit or refusing its key stops her only if it answers the chat and no
+    other may stand in; then every grown-up is told why where they write, and a kid nothing."""
+    from familydb import alerts
+    from familydb import family as rules
+    from familydb.web import status as status_page
+
+    app = App(settings.model_copy(update={"web_password": "installer-made-password-1"}), clock)
+    words = {"Sam": "sam likes long sentences", "the girls": "a kid can choose one too"}
+    for key, name in (("sam", "Sam"), ("girls", "the girls")):
+        rules.choose_password(conn, family[key].id, words[name], now=NOW_ISO)
+
+    def signed_in(name: str):
+        client = create_app(app).test_client()
+        assert (
+            client.post("/login", data={"name": name, "password": words[name]}).status_code == 302
+        )
+        return client
+
+    sam = signed_in("Sam")
+    # A company the chat does not use (the settings pin Claude): worth a look, not "can't answer".
+    alerts.note(conn, "key", "openai", "401", clock.now())
+    assert status_page.stopping(app, conn) is None and status_page.light(app, conn) == "warn"
+    status = sam.get("/status").text
+    assert "can\u2019t answer" not in status and "OpenAI refused its key" in status
+    # The chat's own company, with nobody free to stand in: she cannot, and every page says why.
+    alerts.note(conn, "key", "anthropic", "401", clock.now())
+    assert status_page.light(app, conn) == "bad"
+    said = "Vera can\u2019t answer right now: Anthropic refused its key."
+    for page in ("/", "/chat", "/eat"):
+        assert said in sam.get(page).text, page
+    assert 'title="Anthropic refused its key"' in sam.get("/status").text  # on the pill too
+    kid = signed_in("the girls")
+    for page in ("/", "/chat"):
+        assert "refused its key" not in kid.get(page).text, page
+    # Another company keyed and free to stand in answers for it: worth a look, not stopped.
+    spare = App(settings.model_copy(update={"openai_api_key": "sk-test-spare"}), clock)
+    with db.transaction(conn):
+        conn.execute("DELETE FROM alerts WHERE subject = 'openai'")
+    assert status_page.stopping(spare, conn) is None and status_page.light(spare, conn) == "warn"

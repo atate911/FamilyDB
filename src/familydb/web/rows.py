@@ -52,7 +52,6 @@ class ToRate:
     when: str
     people: list[dict[str, Any]]
     glyph: str
-    more: int = 0  # how many others wait behind it, where only the first is shown
 
 
 def as_dict(row: Any) -> dict[str, Any]:

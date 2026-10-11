@@ -31,6 +31,9 @@ FamilyDB guesses how long a journey takes from the position, the speed and the d
 |---|---|---|---|
 | Name of this page (`web_title`) | FamilyDB | Shown in the bar, on the sign-in page and in the browser's tab. A family name works well. | Any text |
 | A mic to speak instead of typing (`web_dictation`) | on | Puts a mic beside each box that takes words, in a browser that has speech recognition. Off removes it. | on or off |
+| Places in the row (`row_hidden`) | every place ticked | A tick for each place in the row at the foot of every page (down the left on a wider screen): Now, Eat, Do, Week, Kids, Soon, Lists and Did. Untick one the family does not use to take it out of the row. | Any of them; with every one unticked, Now stays |
+
+Taking a place out of the row deletes nothing and turns nothing off: its pages still open from a link (a line on Now, search in the box, a message from her), and its jobs and messages go on as before. Unticking **Week** and **Kids** takes a kid's **My week** and **My list** out of hers too. With **Now** unticked, the page opens on the first place left in the row.
 
 The mic uses the browser's own speech recognition: Safari sends the sound to Apple and Chrome to Google, as a phone keyboard's mic does, and Firefox has no mic. The sound never passes through FamilyDB, costs nothing, and is not a message until you press the form's button. Where the mic appears is on [Home and Chat](/wiki/controls/home-and-chat#the-mic).
 
