@@ -4,6 +4,10 @@
 
 ### New since v0.5.0
 
+- **How hard each use thinks shows on its row.** Settings, AI model says "thinking: medium" under
+  each use that thinks, without opening it, and follows a change before it is saved. Weighing
+  changes has a Thinking box of its own now; it took the chat's. Chat thinking and Lookup thinking
+  on Spending say they are the defaults the AI model page can set apart for each use.
 - **How a plan went is asked, never owed.** Now asks about one plan at a time, after the kids'
   asks and pitches, and Did no longer carries a count of plans to rate in the row or the menu.
   **Ask how a plan went** (Settings, Messages) now covers the page too: off, nobody is asked

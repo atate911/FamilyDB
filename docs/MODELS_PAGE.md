@@ -30,7 +30,7 @@ chosen on the row, and everything else a click away.
 | Part | What it is |
 |---|---|
 | **Header** | Three company cards (status, what each answers now and costs, a Settings control) beside the last 30 days' cost, as a daily chart. Pending changes show on the chart before they are saved. |
-| **What does what** | Eight rows in five groups. Each: name, company dropdown, model dropdown, cost. A one-line description and the month's calls sit under the name. |
+| **What does what** | Eight rows in five groups. Each: name, company dropdown, model dropdown, cost. A one-line description, the month's calls and, for a use that thinks, how hard ("thinking: medium", following the open row's box before a save) sit under the name. |
 | **A row, opened** | The default and guidance, what it sees and which company gets it, thinking, stand-in and cap settings, a cost-a-day chart, a closed **Compare models** fold, and a closed fold of calls, notes and a command to measure it. |
 | **A company, opened** | Let it answer; may stand in; most to spend a month; **Use for everything**; key check, replace, remove; a link to its everyday, better and best models. |
 | **More settings** | The daily price check, the lineup of everyday, better and best models per company, and every key. |
@@ -95,7 +95,9 @@ chosen on the row, and everything else a click away.
   Status page's buttons write it through `companies.models_with`.
 - **`gateway.KINDS`** gains the row each kind belongs to; `gateway.answering` resolves through it.
 - **Per-row thinking effort** (`Settings.use_effort`), laid over `effort` and `worker_effort`, which
-  stay on Spending as what a row uses when it says nothing.
+  stay on Spending as what a row uses when it says nothing. Every use that thinks has one
+  (`models_page.THINKS`), weighing changes included; voice notes and photos do not (a transcript
+  is not thought about, and each company reads a photo at low effort in `seeing`).
 - **Companies come from the registry.** The cards, the company dropdowns and "Use for everything" list
   `companies.every(settings)` (`docs/COMPANIES.md`), so a company an admin has added is a card and an
   option like the three built in, greyed where it cannot do a row (an added company has no hosted

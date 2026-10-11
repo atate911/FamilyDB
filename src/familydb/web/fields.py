@@ -458,11 +458,18 @@ GROUPS: tuple[Group, ...] = (
         "How long the model may think before it answers. More helps with hard questions, and "
         "costs more.",
         (
-            field("effort", "Chat thinking", words=EFFORT),
+            field(
+                "effort",
+                "Chat thinking",
+                "How hard answering, the digest, choosing and weighing changes think, unless "
+                "the AI model page sets one of them its own.",
+                words=EFFORT,
+            ),
             field(
                 "worker_effort",
                 "Lookup thinking",
-                "Looking a place up needs little: low is usually plenty.",
+                "Looking a place up needs little: low is usually plenty. The AI model page can "
+                "set looking things up and what is on near home each its own.",
                 words=EFFORT,
             ),
         ),

@@ -388,6 +388,13 @@
         const co = companyOf(eff(j, raw));
         goes.textContent = co ? cname(co) : "nobody";
       }
+      // How hard it thinks, said on the row's line so it shows with the row closed.
+      const th = $(`[data-thinks="${j.id}"]`);
+      const ts = $(`select[name="effort_${j.id}"]`);
+      if (th && ts) {
+        th.hidden = eff(j, raw) === "off";
+        th.textContent = " · thinking: " + ts.options[ts.selectedIndex].textContent.replace(/ · default$/, "").toLowerCase();
+      }
       const st = $(`[data-standin="${j.id}"]`);
       if (st) {
         const co = companyOf(eff(j, raw));

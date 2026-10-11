@@ -31,12 +31,12 @@ Christmas and birthday lists have no daily count, and a wish turned away shows o
 
 ## Thinking
 
-How long the model may think before it answers. More helps with hard questions and costs more.
+How long the model may think before it answers. More helps with hard questions and costs more. These two are the defaults: each use that thinks can be given its own on the [AI model](/wiki/controls/settings/ai-model#what-does-what) page, and its row says what it thinks at.
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
-| Chat thinking (`effort`) | medium | How hard the model thinks about a message. | low, medium, high, xhigh or max |
-| Lookup thinking (`worker_effort`) | low | How hard it thinks when it looks a place up, which needs little. | low, medium, high, xhigh or max |
+| Chat thinking (`effort`) | medium | How hard the model thinks about a message, the digest, choosing suggestions and weighing changes. | low, medium, high, xhigh or max |
+| Lookup thinking (`worker_effort`) | low | How hard it thinks when it looks a place up or searches for what is on near home, which needs little. | low, medium, high, xhigh or max |
 
 ## What one message may use
 

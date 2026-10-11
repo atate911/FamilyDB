@@ -39,10 +39,14 @@ EFFORTS = (
     ("max", "Most"),
 )
 # The uses that think, and the setting each takes its thinking from when the page said nothing.
+# Weighing a change thinks as the chat does (`gateway.KINDS` "judge" names no effort of its own).
+# Voice notes are written down, not thought about, and a photo is read at low thinking by each
+# company's own request (`seeing`), so neither has a Thinking box.
 THINKS = {
     "chat": "effort",
     "digest": "effort",
     "choose": "effort",
+    "judge": "effort",
     "lookup": "worker_effort",
     "onnear": "worker_effort",
 }
