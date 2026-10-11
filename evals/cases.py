@@ -907,6 +907,21 @@ CASES: tuple[Case, ...] = (
         "An idea and something to remember in one breath: both kept, the allergy as a must.",
     ),
     Case(
+        "rain_does_not_stop_us",
+        ("for the record we're a rain-or-shine family, a bit of drizzle never stopped us",),
+        (
+            remembered(
+                lambda change: (
+                    (change.get("rule") or {}).get("rain_ok") is True
+                    and str(change.get("about", "family")).casefold() in ("family", "the family")
+                ),
+                "about the family, with rain_ok",
+            ),
+            wrote_only("remember"),
+        ),
+        "The family's taste in weather is kept as a rule the engine holds: rain lowers nothing.",
+    ),
+    Case(
         "feedback_is_not_a_dislike",
         ("the ramen place was a bit disappointing this time, 6/10",),
         (

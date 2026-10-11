@@ -22,7 +22,7 @@ Time is counted in minutes. Each day runs from 08:00 to 22:00 unless the questio
 
 ## What is checked for each idea
 
-Two kinds of check. A fact rules an idea out. A matter of taste only makes it possible, with the reason said first, and the choice is left to the family and to the [stronger call](#choosing-what-to-suggest), which sees their ratings and what they have told the assistant. What the family plans anyway shows on [Status](/wiki/controls/status#what-came-of-her-suggestions).
+Two kinds of check. A fact rules an idea out. A matter of taste only makes it possible, with the reason said first, and the choice is left to the family and to the [stronger call](#choosing-what-to-suggest), which sees their ratings and what they have told the assistant. What the family plans anyway shows on [Status](/wiki/controls/status#what-came-of-her-suggestions), and the family can change the rest and the rain for themselves by saying so, which the assistant keeps as a [rule](/wiki/model/memory#rules-suggestions-keep-to).
 
 | Check | Result when it fails |
 |---|---|

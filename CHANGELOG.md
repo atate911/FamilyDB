@@ -84,6 +84,11 @@
   call decides; what was done lately still comes last and is never one of her picks on Now. Facts
   still rule out: already planned, for somebody not coming, closed, no snow for a snow idea, not
   enough time, too late to book, too far.
+- **The family can set how soon things come round and whether rain matters.** Say "we're a
+  rain-or-shine family" or "we'd happily eat out at the same place every week" and the assistant
+  keeps it as a rule the suggestions hold: rain stops lowering outdoor ideas (the rain is still
+  said), and what was done comes up again after the rest the family named, for everything or one
+  kind. Held for anything said outright about the family, must or not; the Memory page shows it.
 
 ## v0.5.0 — beta (2026-10-11)
 

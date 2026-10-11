@@ -164,6 +164,10 @@ class Constraints:
     max_duration_minutes: int | None = None
     topic: str = ""  # what the family asked for, for discovery only
     avoid: list[str] = field(default_factory=list)  # idea tags a firm rule leaves out
+    # The family's taste, said outright (suggest/rules.py): rain lowers nothing, and how many
+    # days a done idea rests, by kind ("*" for every kind).
+    rain_ok: bool = False
+    rest: dict[str, int] = field(default_factory=dict)
     # The memory behind each limit a firm rule set (suggest/rules.py), by the limit's name, or
     # "avoid:<tag>": {"max_travel_minutes": 4}.
     held_by: dict[str, int] = field(default_factory=dict)
@@ -254,3 +258,5 @@ class Shortlisted:
     # Done or planned lately and resting (shortlist.rest_days): it comes last among the possible,
     # and her picks made ahead leave it out (familydb/picks.py).
     resting: bool = False
+    # Said after the caveats and lowering nothing: rain the family said is fine.
+    notes: list[str] = field(default_factory=list)

@@ -72,11 +72,14 @@ def day_has_snow(forecast: DayForecast | None) -> bool | None:
     return forecast.code in SNOW_CODES
 
 
-def rest_days(idea: Idea, prefer: str = "new") -> int:
-    """How long this idea rests once done before it is offered again."""
-    if prefer == "favorites":
-        return FAVORITE_REST_DAYS
-    return REST_BY_KIND.get(idea.kind.casefold(), REST_DAYS)
+def rest_days(idea: Idea, prefer: str = "new", rest: Mapping[str, int] | None = None) -> int:
+    """How long this idea rests once done before it is offered again: what the family said for
+    its kind, or for every kind (`rest`, suggest/rules.py), else by kind; asked for favorites,
+    a week at most."""
+    kind = idea.kind.casefold()
+    said = (rest or {}).get(kind, (rest or {}).get("*"))
+    days = said if said is not None else REST_BY_KIND.get(kind, REST_DAYS)
+    return min(days, FAVORITE_REST_DAYS) if prefer == "favorites" else days
 
 
 def _status_reason(
@@ -233,11 +236,14 @@ def _constraint_reason(idea: Idea, constraints: Constraints) -> str | None:
 
 
 def _weather_fit(
-    idea: Idea, context: Context, settings: Settings
-) -> tuple[list[date], str, str | None, str | None]:
-    """(fitting days, weather state, why it is out, what to say of it). A day that fails only for
-    rain or cold still fits, the weather poor and said, when no day fits outright: some families
-    go out in the rain. No snow for a snow idea is a fact: a day without it never fits."""
+    idea: Idea, context: Context, settings: Settings, rain_ok: str | None = None
+) -> tuple[list[date], str, str | None, str | None, str | None]:
+    """(fitting days, weather state, why it is out, what to say of it, a word that lowers
+    nothing). A day that fails only for rain or cold still fits, the weather poor and said, when
+    no day fits outright: some families go out in the rain. When the family said rain is fine
+    (`rain_ok` names the memory, suggest/rules.py), a wet day fits and the rain is said with
+    the memory, lowering nothing. No snow for a snow idea is a fact: a day without it never
+    fits."""
     needs_dry = idea.setting == "outdoor" or idea.weather == "dry"
     needs_warm = idea.weather == "warm"
     needs_snow = idea.weather == "snow"
@@ -246,6 +252,7 @@ def _weather_fit(
     known = False
     bad: list[str] = []
     snowless: list[str] = []
+    rained: list[str] = []  # wet days that fit because the family said rain is fine
     for day in context.days:
         if not idea.on(day.date):
             continue
@@ -253,10 +260,12 @@ def _weather_fit(
         if forecast is not None:
             known = True
         taste: str | None = None
+        rain: str | None = None
         if needs_dry and day_is_dry(forecast) is False:
             chance = f" ({forecast.rain_chance}%)" if forecast and forecast.rain_chance else ""
-            taste = f"rain likely {day.date:%A}{chance}"
-        elif needs_warm and day_is_warm(forecast, settings) is False:
+            rain = f"rain likely {day.date:%A}{chance}"
+            taste = None if rain_ok else rain
+        if taste is None and needs_warm and day_is_warm(forecast, settings) is False:
             taste = f"not warm enough {day.date:%A}"
         if needs_snow and day_has_snow(forecast) is False:
             snowless.append(f"no snow forecast {day.date:%A}")
@@ -266,12 +275,16 @@ def _weather_fit(
             bad.append(taste)
             wet.append(day.date)
             continue
+        if rain:
+            rained.append(rain)
         fits.append(day.date)
     if fits:
-        return fits, ("ok" if known else "unknown"), None, None
+        if rained:
+            return fits, "poor", None, None, f"{'; '.join(rained)}, and {rain_ok} says rain is fine"
+        return fits, ("ok" if known else "unknown"), None, None, None
     if wet:
-        return wet, "poor", None, "; ".join(bad)
-    return [], "poor", "; ".join(snowless or bad) or "weather does not fit", None
+        return wet, "poor", None, "; ".join(bad), None
+    return [], "poor", "; ".join(snowless or bad) or "weather does not fit", None, None
 
 
 # Said of a long day out on a day with something else on it, but time enough around it.
@@ -350,7 +363,10 @@ def shortlist(
         # What is said first and makes it possible at best; a later fact still rules it out.
         caveats: list[str] = []
         reason, resting = _status_reason(
-            idea, context.today, (plans or {}).get(idea.id), rest_days(idea, prefer)
+            idea,
+            context.today,
+            (plans or {}).get(idea.id),
+            rest_days(idea, prefer, constraints.rest),
         )
         if reason:
             out(idea, reason)
@@ -381,12 +397,15 @@ def shortlist(
         if context.window is None:
             kept.append(Shortlisted(idea, [], "unknown", caveats, resting=bool(resting)))
             continue
-        fits, weather_state, reason, said = _weather_fit(idea, context, settings)
+        fits, weather_state, reason, said, note = _weather_fit(
+            idea, context, settings, constraints.because("rain_ok") if constraints.rain_ok else None
+        )
         if reason:
             out(idea, reason)
             continue
         if said:
             caveats.append(said)
+        notes = [note] if note else []
         fits, reason, said = _duration_fit(idea, fits, context)
         if reason:
             out(idea, reason)
@@ -394,6 +413,6 @@ def shortlist(
         if said:
             caveats.append(said)
         kept.append(
-            Shortlisted(idea, fits, weather_state, caveats, resting=bool(resting))  # type: ignore[arg-type]
+            Shortlisted(idea, fits, weather_state, caveats, resting=bool(resting), notes=notes)  # type: ignore[arg-type]
         )
     return kept, ruled_out

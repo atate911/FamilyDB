@@ -432,7 +432,7 @@ def test_a_must_keeps_a_rule_and_a_taste_or_a_guess_does_not(registry, said) -> 
     loud = {**BACK, "fact": "hates loud places", "rule": {"avoid_tags": [" Loud ", "loud"]}}
     _, data = _call(registry, said, changes=[{**loud, "firm": False}])
     taste = data["remembered"][0]
-    assert "held" not in taste and taste["rule"].startswith("a rule is held only for a must")
+    assert "held" not in taste and taste["rule"].startswith("a limit is held only for a must")
     assert memories.get(said.conn, taste["id"]).rule is None
     _, data = _call(registry, said, changes=[{**loud, "firm": True, "inferred": True}])
     assert "held" not in data["remembered"][0]
@@ -448,3 +448,58 @@ def test_a_must_keeps_a_rule_and_a_taste_or_a_guess_does_not(registry, said) -> 
     ]
     refused, data = _call(registry, said, changes=[{**BACK, "rule": {"max_travel_minutes": 0}}])
     assert refused.is_error and "max_travel_minutes" in data["error"]
+
+
+def test_the_family_s_rest_and_rain_hold_when_said_outright(registry, said) -> None:
+    """Rest and rain ease or tighten a matter of taste, so a taste said outright about the family
+    holds them; a guess holds nothing, and a person's own is refused with what would do."""
+    rainy = {
+        "action": "add",
+        "about": "family",
+        "category": "activities",
+        "fact": "rain or shine family",
+        "rule": {"rain_ok": True, "rest_days": 10, "rest_kind": "restaurant"},
+    }
+    _, data = _call(registry, said, changes=[rainy])
+    done = data["remembered"][0]
+    assert done["held"] == {"rain_ok": True, "rest_days": 10, "rest_kind": "restaurant"}
+    assert "rule" not in done
+    # A limit asked of a taste is not held, and the answer says so; its taste rule still is.
+    mixed = {**rainy, "fact": "short drives", "rule": {"max_travel_minutes": 20, "rain_ok": True}}
+    _, data = _call(registry, said, changes=[mixed])
+    assert data["remembered"][0]["held"] == {"rain_ok": True}
+    assert data["remembered"][0]["rule"].startswith("a limit is held only for a must")
+    _, data = _call(registry, said, changes=[{**rainy, "fact": "maybe", "inferred": True}])
+    assert "held" not in data["remembered"][0]
+    assert data["remembered"][0]["rule"].startswith("a rule is held only when said outright")
+    held = memories.held(said.conn, today=said.clock.today())
+    assert [m.fact for m in held] == ["rain or shine family", "short drives"]
+    refused, data = _call(registry, said, changes=[{**rainy, "about": "Sam", "fact": "puddles"}])
+    assert refused.is_error and "the family's" in data["error"]
+    refused, data = _call(
+        registry, said, changes=[{**rainy, "fact": "x", "rule": {"rest_kind": "restaurant"}}]
+    )
+    assert refused.is_error and "rest_kind needs rest_days" in data["error"]
+    refused, data = _call(
+        registry, said, changes=[{**rainy, "fact": "y", "rule": {"rest_days": 400}}]
+    )
+    assert refused.is_error and "rest_days must be 0 to 365" in data["error"]
+
+
+def test_a_rule_is_worded_for_the_memory_page() -> None:
+    from familydb.web.views import rule_text
+
+    assert rule_text({"rain_ok": True}) == "held to: rain is fine"
+    assert rule_text({"rest_days": 7, "rest_kind": "day_trip"}) == (
+        "held to: day trips again after 7 days"
+    )
+    assert rule_text({"rest_days": 1}) == "held to: anything done again after 1 day"
+
+
+def test_the_kinds_a_rest_names_are_the_ideas_kinds_but_a_present() -> None:
+    from typing import get_args
+
+    from familydb.store.ideas import GIFT, KIND_SUGGESTIONS
+    from familydb.tools.memory import RestKind
+
+    assert set(get_args(RestKind)) == set(KIND_SUGGESTIONS) - {GIFT}

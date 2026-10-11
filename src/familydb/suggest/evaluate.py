@@ -207,7 +207,7 @@ def evaluate(
         checks = Checks(weather=item.weather, resting=item.resting)
         # A matter of taste the shortlist found (done lately, a disappointment, rain) is said
         # first, and it is possible at best.
-        reasons: list[str] = list(item.caveats)
+        reasons: list[str] = [*item.caveats, *item.notes]
         hard_fail = False
         # What rules it out, said first: only the first three reasons are shown (compose.py).
         out: list[str] = []

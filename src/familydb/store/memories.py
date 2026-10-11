@@ -49,8 +49,9 @@ class Memory(BaseModel):
     forgotten_at: str | None = None
     forgotten_by: int | None = None
     forgotten_by_name: str | None = None
-    # What code holds suggestions to, for a firm one (suggest/rules.py): max_travel_minutes,
-    # max_cost_level, setting, avoid.
+    # What code holds suggestions to (suggest/rules.py). For a must: max_travel_minutes,
+    # max_cost_level, setting, avoid. For the family's own taste, said outright: rain_ok,
+    # rest_days and rest_kind, which ease or tighten the engine's taste rules.
     rule: dict[str, Any] | None = None
 
     @classmethod
@@ -164,9 +165,11 @@ def active(conn: sqlite3.Connection, *, today: date) -> list[Memory]:
 
 
 def held(conn: sqlite3.Connection, *, today: date) -> list[Memory]:
-    """The firm memories in force today with a rule code holds suggestions to, oldest first."""
+    """The memories in force today, said outright, with a rule code holds suggestions to, oldest
+    first. The `remember` tool keeps a limit only on a must, and the rest and rain of the
+    family's taste on any it was told outright (tools/memory.py)."""
     rows = conn.execute(
-        f"{_SELECT} WHERE r.status = 'active' AND r.firm = 1 AND r.rule IS NOT NULL "
+        f"{_SELECT} WHERE r.status = 'active' AND r.inferred = 0 AND r.rule IS NOT NULL "
         "AND (r.until IS NULL OR r.until >= ?) ORDER BY r.id",
         (today.isoformat(),),
     )

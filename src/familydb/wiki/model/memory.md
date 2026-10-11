@@ -40,7 +40,19 @@ Code chooses, and no model is asked. It looks only at memories in force: not rep
 
 Each goes as one line with its number, marked "must", "a guess" or "until <date>", and one more line says how many were left out. This block goes in the current turn, which is not cached, so adding or forgetting a memory never breaks the [prompt cache](/wiki/reference/glossary#prompt-cache). The cost is input tokens, bounded by the budget except that Musts are not cut for room.
 
-A Must reaching the model does not force it to obey. The product's rules tell the assistant never to offer what breaks one and to say when one ruled something out, and code does not filter suggestions by Musts.
+A Must reaching the model does not force it to obey. The product's rules tell the assistant never to offer what breaks one and to say when one ruled something out.
+
+### Rules suggestions keep to
+
+Some memories also carry a rule that the suggestion engine holds by code, whatever the model does. The Memory page shows each as "held to: ...".
+
+| Rule | Held for | What it does |
+|---|---|---|
+| The longest drive, the dearest cost, indoors or outdoors only, tags to leave out | A Must said outright, about whoever is coming or the family | Rules out what breaks it, and the reason names the memory ("further than m4 allows") |
+| Rain is fine | Anything said outright about the family | Rain no longer lowers an outdoor idea; a wet day is said with the memory ("and m7 says rain is fine") |
+| How soon something done comes up again, for every kind or one kind | Anything said outright about the family | Replaces the usual rest (a restaurant 21 days, an activity 30, a day trip 180), the latest said winning |
+
+A guess holds no rule. Rain and rest are the family's: said about one person they are refused, with a word to keep it about the family. What each rest is by default, and what rain does without the rule, is on [Suggestions](/wiki/behavior/suggestions#what-is-checked-for-each-idea).
 
 Code does not look at who is asking or who will read the reply. Memories reach every chat, a kid's included, so an adult's Must can reach a kid's chat. The only guard is the product's instruction to ask before putting a sensitive detail in a shared chat. There are no private memories.
 

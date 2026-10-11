@@ -324,8 +324,8 @@ def excerpt(text: str, fact: str, room: int = SOURCE_CHARS) -> str:
 
 
 def rule_text(rule: dict[str, Any] | None) -> str | None:
-    """What suggestions are held to by a firm memory's rule (suggest/rules.py), in a few words:
-    "held to: a 30 min drive at most, indoors"."""
+    """What suggestions are held to by a memory's rule (suggest/rules.py), in a few words:
+    "held to: a 30 min drive at most, indoors", "held to: rain is fine"."""
     if not rule:
         return None
     said = []
@@ -337,6 +337,12 @@ def rule_text(rule: dict[str, Any] | None) -> str | None:
         said.append(f"{setting}s")
     if avoid := rule.get("avoid"):
         said.append("nothing " + " or ".join(avoid))
+    if rule.get("rain_ok"):
+        said.append("rain is fine")
+    if (days := rule.get("rest_days")) is not None:
+        kind = rule.get("rest_kind")
+        what = f"{kind.replace('_', ' ')}s" if kind else "anything done"
+        said.append(f"{what} again after {days} day{'' if days == 1 else 's'}")
     return "held to: " + ", ".join(said) if said else None
 
 

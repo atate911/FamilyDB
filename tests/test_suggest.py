@@ -1322,6 +1322,68 @@ def test_a_firm_rule_is_held_by_code_and_named(env, family) -> None:
     assert said[dear.id].verdict == "ruled_out"
 
 
+def _taste(conn, family, fact, rule, *, who=None, inferred=False):
+    """A memory said outright that is not a must, with a rule of the family's taste."""
+    from familydb.store import memories
+
+    with db.transaction(conn):
+        return memories.insert(
+            conn,
+            member_id=family[who].id if who else None,
+            category="activities",
+            fact=fact,
+            firm=False,
+            inferred=inferred,
+            until=None,
+            source_message_id=None,
+            said_by=family["sam"].id,
+            now=NOW_ISO,
+            rule=rule,
+        )
+
+
+def test_the_family_can_say_rain_does_not_stop_them(env, family) -> None:
+    """Rain on both days lowers the hike, the rain said first; once the family said rain is fine,
+    the rain is said with that memory and lowers nothing. A guess, or a person's own, holds
+    nothing."""
+    env.ctx.weather = fakes.FakeForecast(
+        [DayForecast(SAT, 63, "rain", 12.0, 7.0, 90, 9.0), WET_SUN]
+    )
+    hike = _idea(env.conn, "The falls hike", setting="outdoor", duration_min=120)
+    asked = SuggestInput(window="this_weekend", discover=False, question="?")
+    said = {c.idea_id: c for c in run(env.ctx, asked).candidates}[hike.id]
+    assert said.verdict == "possible" and said.reasons[0].startswith("rain likely Saturday")
+    _taste(env.conn, family, "we read rain as a challenge", {"rain_ok": True}, inferred=True)
+    _taste(env.conn, family, "Alex loves puddles", {"rain_ok": True}, who="alex")
+    said = {c.idea_id: c for c in run(env.ctx, asked).candidates}[hike.id]
+    assert said.reasons[0] == "rain likely Saturday (90%); rain likely Sunday (80%)"
+    rain = _taste(env.conn, family, "rain or shine family", {"rain_ok": True})
+    said = {c.idea_id: c for c in run(env.ctx, asked).candidates}[hike.id]
+    # Possible only for its hours, which nobody looked up; the rain is said, lowering nothing,
+    # and never "weather looks fine" on a wet weekend.
+    assert said.reasons == [
+        f"rain likely Saturday (90%); rain likely Sunday (80%), and m{rain.id} says rain is fine",
+        "hours unknown (details pending)",
+    ]
+    assert said.checks.weather == "poor" and said.fits_days == ["2026-09-26", "2026-09-27"]
+
+
+def test_the_family_can_say_how_long_a_done_idea_rests(env, family) -> None:
+    """A restaurant rests 21 days and an activity 30. Told restaurants may come round after 3
+    days, and everything else after 90, the engine keeps to what they said."""
+    taco = _done(env.conn, "Taco place", "restaurant", 5, setting="indoor")
+    zoo = _done(env.conn, "Zoo", "activity", 40, setting="indoor")
+    asked = SuggestInput(window="this_weekend", discover=False, question="?")
+    said = {c.idea_id: c for c in run(env.ctx, asked).candidates}
+    assert said[taco.id].checks.resting and not said[zoo.id].checks.resting
+    _taste(env.conn, family, "tacos any week", {"rest_days": 3, "rest_kind": "restaurant"})
+    _taste(env.conn, family, "we like to space things out", {"rest_days": 90})
+    said = {c.idea_id: c for c in run(env.ctx, asked).candidates}
+    assert not said[taco.id].checks.resting  # possible only for its hours, not looked up
+    assert said[taco.id].reasons == ["hours unknown (details pending)"]
+    assert said[zoo.id].checks.resting and said[zoo.id].reasons[0] == "done 5 weeks ago"
+
+
 def test_an_idea_a_kid_coming_is_too_young_for_is_left_out(env, family) -> None:
     """Ages come from the family list (a birthday, never sent); who is coming as the question
     says, or every kid when it names nobody."""
