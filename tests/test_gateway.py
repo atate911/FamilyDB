@@ -13,8 +13,8 @@ from familydb.agent.worker import run_worker_turn, worker_turn
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.channels.console import one_shot
-from familydb.jobs.enrich import render_enrich_request
 from familydb.pipeline import handle_incoming, handle_synthetic, retry_message
+from familydb.scouting.fill import render_enrich_request
 from familydb.store import ideas
 from familydb.store.db import transaction
 from tests import fakes

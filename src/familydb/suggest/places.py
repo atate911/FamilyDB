@@ -13,24 +13,19 @@ about a hundred metres, so the same ask within the hour is one search.
 
 from __future__ import annotations
 
-import sqlite3
 from collections.abc import Sequence
-from urllib.parse import urlsplit
 
-from familydb.agent import gateway
 from familydb.availability import web_tools_available
 from familydb.base.config import Settings
-from familydb.store import ideas, places
-from familydb.suggest.discover import search
-from familydb.suggest.types import Candidate, Constraints, Context, WebFind, clock
+from familydb.scouting import search
+from familydb.scouting.reach import Reach
+from familydb.scouting.search import saved as saved
+from familydb.suggest.types import Candidate, Constraints, Context, WebFind
 from familydb.tools import ToolContext
 
 # Now, today, or a window that starts within this many days: a place found for next month may be
 # gone by then, and the family can save it as an idea to be looked up properly.
 AHEAD_DAYS = 2
-# A place's hours change slowly; the request's hour keeps "open now" honest.
-PLACES_CACHE_SECONDS = 3600
-NOTE_FAILED = "place search failed"
 
 
 def wanted(
@@ -49,78 +44,10 @@ def wanted(
     return not any(c.idea_id in framed and c.verdict != "ruled_out" for c in candidates)
 
 
-def render_places_request(context: Context, constraints: Constraints, settings: Settings) -> str:
-    """What the worker is asked, from the framing only, so the same ask in other words is one
-    search: what, when (to the hour), where, and the limits."""
-    lines = [f"Find places for: {constraints.topic}."]
-    if context.window is not None:
-        start, end = context.window
-        days = [day for day in context.days if day.bounds[1] > day.bounds[0]]
-        if days and start == end:
-            first, last = days[0].bounds
-            hours = f"{clock(first // 60 * 60)}-{clock(min(24 * 60, -(-last // 60) * 60))}"
-            lines.append(f"Open: {start:%A %d %B %Y}, {hours}.")
-        else:
-            lines.append(f"Open: {start:%A %d %B} to {end:%A %d %B %Y}.")
-    lines.append(f"Home area: {settings.home_area or 'not set'}.")
-    if context.origin is not None:
-        origin = context.origin
-        lines.append(f"They are near: {origin.label} ({origin.lat:.3f}, {origin.lon:.3f}).")
-    limits = {
-        "max_cost_level": constraints.max_cost_level,
-        "setting": constraints.setting,
-        "max_travel_minutes": constraints.max_travel_minutes,
-        "avoid": constraints.avoid or None,
-    }
-    said = [
-        f"{key} {', '.join(value) if isinstance(value, list) else value}"
-        for key, value in limits.items()
-        if value is not None
-    ]
-    if said:
-        lines.append("Keep to: " + "; ".join(said) + ".")
-    return "\n".join(lines)
-
-
 def find_places(
     ctx: ToolContext, context: Context, constraints: Constraints
 ) -> tuple[list[WebFind], str | None]:
-    """Places found for the topic, each marked when already saved; a note when none could be."""
-    if not gateway.can_ask(ctx.settings, "places", api=ctx.api):
-        return [], "place search waits for a model key"
-    request = render_places_request(context, constraints, ctx.settings)
-    found, note = search(
-        ctx,
-        "places",
-        "places",
-        request,
-        f"places for {constraints.topic}",
-        failed=NOTE_FAILED,
-        seconds=PLACES_CACHE_SECONDS,
-    )
-    return saved(ctx.conn, found), note
-
-
-def _host(url: str | None) -> str | None:
-    host = urlsplit(url).hostname if url else None
-    return host.removeprefix("www.") if host else None
-
-
-def saved(conn: sqlite3.Connection, finds: list[WebFind]) -> list[WebFind]:
-    """Each find already on the list marked with its idea's number, by its name or its site."""
-    if not finds:
-        return finds
-    sites: dict[str, int] = {}
-    for idea in ideas.list_all(conn):
-        if idea.status == "dropped":
-            continue
-        place = places.get(conn, idea.place_id) if idea.place_id else None
-        for url in (idea.url, place.website if place else None):
-            if host := _host(url):
-                sites.setdefault(host, idea.id)
-    marked = []
-    for find in finds:
-        same = ideas.find_similar_title(conn, find.title)
-        number = same.id if same is not None and same.status != "dropped" else None
-        marked.append(find.model_copy(update={"saved_as": number or sites.get(_host(find.url))}))
-    return marked
+    """Places found for the topic, each marked when already saved; a note when none could be
+    (scouting/search.py `find_places`)."""
+    found, note = search.find_places(Reach.of(ctx), context, constraints)
+    return [WebFind(**one.model_dump()) for one in found], note

@@ -4,9 +4,9 @@ checked, and marked when it is already on the list."""
 
 from __future__ import annotations
 
+from familydb.scouting.search import render_places_request
 from familydb.store import db, ideas
 from familydb.suggest.engine import run
-from familydb.suggest.places import render_places_request
 from familydb.suggest.types import SuggestInput
 from familydb.tools import ToolContext
 from tests import fakes

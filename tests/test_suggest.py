@@ -4,9 +4,10 @@ from datetime import date, datetime, timedelta
 
 from familydb.free_time import free_blocks
 from familydb.integrations.open_meteo import DayForecast
+from familydb.scouting.search import DISCOVER_CACHE_SECONDS
 from familydb.store import db, ideas, outcomes, places, plans, suggestions
 from familydb.suggest.context import build_context
-from familydb.suggest.discover import DISCOVER_CACHE_SECONDS, discover
+from familydb.suggest.discover import discover
 from familydb.suggest.engine import resolve_window, run
 from familydb.suggest.evaluate import doable, in_daylight
 from familydb.suggest.shortlist import participants_match, shortlist
@@ -481,7 +482,7 @@ def test_suggest_requeues_stale_places_when_web_is_on(
     def unavailable(**kwargs):
         raise AgentError("test worker unavailable", retryable=False)
 
-    monkeypatch.setattr("familydb.suggest.discover.run_worker_turn", unavailable)
+    monkeypatch.setattr("familydb.scouting.reach.run_worker_turn", unavailable)
     web_on = full_settings.model_copy(update={"web_tools_enabled": True})
     ctx = _ctx(
         conn,
@@ -666,7 +667,7 @@ def test_discovery_failures_become_notes_and_are_not_cached(
 
 
 def test_discovery_request_for_someday(conn, settings, thursday_clock, family) -> None:
-    from familydb.suggest.discover import cache_key, render_discover_request
+    from familydb.scouting.search import cache_key, render_discover_request
 
     context = build_context(_ctx(conn, settings, thursday_clock, family), None)
     text = render_discover_request(context, Constraints(), settings)
@@ -724,7 +725,7 @@ def test_discovery_cache_follows_the_constraints_not_the_wording(env):
 
 
 def test_discovery_keeps_the_subject_and_the_hours(env):
-    from familydb.suggest.discover import render_discover_request
+    from familydb.scouting.search import render_discover_request
     from familydb.suggest.types import DayBounds
 
     weekend = (date(2026, 9, 26), date(2026, 9, 27))

@@ -21,6 +21,7 @@ from familydb.moment import (
     Origin,
     clock,
 )
+from familydb.scouting.types import Found
 from familydb.store.ideas import Idea
 
 Verdict = Literal["good", "possible", "ruled_out"]
@@ -96,22 +97,8 @@ class Candidate(BaseModel):
     checks: Checks = Field(default_factory=Checks)
 
 
-class WebFind(BaseModel):
-    title: str
-    url: str
-    dates: str | None = None
-    summary: str = ""
-    source: str | None = None
-    # When it starts, as code reads it ("YYYY-MM-DD" or "YYYY-MM-DDTHH:MM"), when known.
-    starts: str | None = None
-    # A place found for what nothing saved fits (suggest/places.py): never checked here.
-    kind: str | None = None
-    hours: str | None = None  # as the page writes them
-    address: str | None = None
-    saved_as: int | None = None  # already on the list, as this idea
-    # The stored find this is, for one the family's sources list (store/finds.py), so her picks
-    # can lead to its page; never sent to the model (tools/suggest.py leaves it out).
-    find_id: int | None = None
+class WebFind(Found):
+    """Something found outside the list, as the engine offers it (scouting/types.Found)."""
 
 
 class DaySummary(BaseModel):

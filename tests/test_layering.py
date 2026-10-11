@@ -29,6 +29,7 @@ ORDER = [
     "domain",
     "tools",
     "agent",
+    "scouting",
     "suggest",
     "orchestration",
     "channels",

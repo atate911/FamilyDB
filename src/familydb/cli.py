@@ -451,8 +451,8 @@ def debug_prompt(
     """
     from familydb.agent import gateway
     from familydb.agent.worker import worker_turn
-    from familydb.jobs.enrich import render_enrich_request
     from familydb.jobs.weekend_digest import digest_channel
+    from familydb.scouting.fill import render_enrich_request
     from familydb.store import places
 
     if kind not in gateway.KINDS or kind in ("discover", "places", "scout", "find_feeds"):

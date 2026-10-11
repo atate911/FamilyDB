@@ -342,7 +342,8 @@ def test_render_place_note_without_details(settings) -> None:
 def test_home_ideas_with_nothing_to_look_up_are_skipped_without_a_call(
     settings, clock, conn, family
 ) -> None:
-    from familydb.jobs.enrich import NO_LOOKUP_NOTE, needs_lookup
+    from familydb.scouting.fill import NO_LOOKUP_NOTE
+    from familydb.store.ideas import needs_lookup
 
     app = _web_app(settings, clock)
     chores, _ = _captured_idea(conn, family, title="Paint the fence")
@@ -361,7 +362,7 @@ def test_home_ideas_with_nothing_to_look_up_are_skipped_without_a_call(
 
 
 def test_a_gift_is_looked_up_only_when_it_names_a_place(conn, family) -> None:
-    from familydb.jobs.enrich import needs_lookup
+    from familydb.store.ideas import needs_lookup
 
     apron, _ = _captured_idea(conn, family, title="A gardening apron")
     pottery, _ = _captured_idea(conn, family, title="A pottery class")

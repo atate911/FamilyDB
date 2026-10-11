@@ -28,17 +28,17 @@ from typing import Any
 from familydb import alerts, happening
 from familydb.agent import gateway, spending
 from familydb.agent.loop import MessagesAPI
-from familydb.agent.worker import home_location, run_worker_turn
 from familydb.availability import (
     happening_available,
     happening_search_available,
     ticketmaster_available,
 )
 from familydb.base.dates import utc_iso
-from familydb.base.errors import AgentError
 from familydb.integrations.events import FoundEvent
 from familydb.integrations.ical import FeedAPI, FeedError, IcalFeeds, parse_feed
 from familydb.integrations.ticketmaster import Ticketmaster, TicketmasterAPI
+from familydb.scouting import near_home
+from familydb.scouting.reach import Reach
 from familydb.store import finds as store
 from familydb.store.db import transaction
 
@@ -155,103 +155,17 @@ def _keep(
     return added, updated, dropped
 
 
-def render_scout_request(settings: Any, start: date, end: date) -> str:
-    """The weekly search, in the discovery worker's terms: the window and the home area, and
-    nothing about the family."""
-    return "\n".join(
-        [
-            "Find time-bound things a family could go to near home.",
-            f"Window: {start:%A %d %B} to {end:%A %d %B %Y}.",
-            f"Home area: {settings.home_area or 'not set'}.",
-        ]
-    )
-
-
-def render_feeds_request(settings: Any, known: list[str], stopped: list[str]) -> str:
-    lines = [
-        "Find public event calendars near home that a family could subscribe to.",
-        f"Home area: {settings.home_area}.",
-    ]
-    if known:
-        lines.append("Already known, do not report:")
-        lines.extend(f"- {url}" for url in known)
-    if stopped:
-        lines.append("Stopped answering; another address for the same calendar is welcome:")
-        lines.extend(f"- {url}" for url in stopped)
-    return "\n".join(lines)
-
-
-def scout_events(
-    found: list[dict[str, Any]], *, tz: Any, start: date, end: date
-) -> list[FoundEvent]:
-    """The search's finds that say when they start, inside the days searched."""
-    events = []
-    for one in found:
-        starts_text = one.get("starts")
-        if not starts_text:
-            continue
-        try:
-            if "T" in starts_text:
-                starts: datetime | date = datetime.fromisoformat(starts_text).replace(tzinfo=tz)
-            else:
-                starts = date.fromisoformat(starts_text)
-        except ValueError:
-            continue
-        day = starts.date() if isinstance(starts, datetime) else starts
-        if not start <= day <= end:
-            continue
-        summary = one.get("summary") or ""
-        if one.get("dates"):
-            summary = f"{summary} ({one['dates']})".strip()
-        events.append(
-            FoundEvent(
-                external_id=one["url"],
-                title=one.get("title") or one["url"],
-                starts=starts,
-                all_day=not isinstance(starts, datetime),
-                url=one["url"],
-                summary=summary or None,
-            )
-        )
-    return events
-
-
-def _ask(app: Any, conn: sqlite3.Connection, kind: str, request: str, about: str, api: Any) -> Any:
-    """One worker turn; None when it did not hand back."""
-    try:
-        turn = run_worker_turn(
-            kind=kind,
-            api=api,
-            settings=app.settings,
-            clock=app.clock,
-            registry=app.registry,
-            conn=conn,
-            request=request,
-            user_location=home_location(app.settings),
-            about=about,
-        )
-    except AgentError as exc:
-        log.warning("%s turn failed: %s", kind, exc)
-        return str(exc)
-    if turn.result.status != "ok" or not turn.handed_back():
-        return turn.result.error or turn.result.status or "ended without handing back"
-    return turn
-
-
 def search_web(
     app: Any, conn: sqlite3.Connection, *, start: date, end: date, now: datetime, api: Any
 ) -> tuple[int, int]:
     """The weekly search near home. Returns (finds kept, 1 when it ran)."""
     settings = app.settings
-    turn = _ask(
-        app, conn, "scout", render_scout_request(settings, start, end), "what is on near home", api
-    )
-    if isinstance(turn, str):
-        _answered(conn, happening.WEB_SOURCE, happening.WEB, ok=False, note=turn, found=0, now=now)
+    events = near_home.scout(Reach.of_app(app, conn, api), start=start, end=end)
+    if isinstance(events, str):
+        _answered(
+            conn, happening.WEB_SOURCE, happening.WEB, ok=False, note=events, found=0, now=now
+        )
         return 0, 1
-    events = scout_events(
-        list(turn.ctx.scratch.get("finds", [])), tz=settings.tzinfo, start=start, end=end
-    )
     added, updated, _ = _keep(
         conn,
         happening.WEB_SOURCE,
@@ -302,18 +216,10 @@ def propose_feeds(
         if s.source.startswith(happening.FEED_PREFIX) and s.failures >= SOURCE_FAILURES
     ]
     known = sorted(set(before) | set(reading))
-    turn = _ask(
-        app,
-        conn,
-        "find_feeds",
-        render_feeds_request(settings, known, stopped),
-        "event calendars near home",
-        api,
-    )
-    if isinstance(turn, str):
-        _answered(conn, source, "proposals", ok=False, note=turn, found=0, now=now)
+    handed = near_home.look_for_calendars(Reach.of_app(app, conn, api), known, stopped)
+    if isinstance(handed, str):
+        _answered(conn, source, "proposals", ok=False, note=handed, found=0, now=now)
         return 0
-    handed = {one["url"]: one for one in turn.ctx.scratch.get("feeds", [])}
     readable: list[store.Readable] = []
     for url, one in before.items():  # those offered before, read again to see they still are
         events = _readable(feeds, url, tz=tz, today=today)
