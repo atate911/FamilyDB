@@ -10,6 +10,8 @@
   anywhere, not on Now, Did, a past day or the month, and how it went can still be told on the
   plan's own page or to her. What is said keeps a place the family did not enjoy out of
   suggestions and puts favorites first.
+- **A day's own page opens when something is on it.** `/week/DATE` failed for a day whose line
+  named the next plan.
 - **The family chooses which places are in the row.** Settings, General has a tick for each place
   in the row at the foot of every page (down the left on a wider screen): Now, Eat, Do, Week, Kids,
   Soon, Lists and Did. Untick one the family does not use and it leaves the row, for a kid's row too;

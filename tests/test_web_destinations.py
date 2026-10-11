@@ -140,6 +140,18 @@ def test_a_day_of_the_week_has_its_own_page_and_the_week_links_to_it(
     question, _ = _head(page)
     assert question == "Thursday 17 September" and 'href="/week"' in page
     assert "Zoo" in page and "Loved it" in page and "the girls loved it" in page
+    # A coming weekday with a plan on it opens (its summary reads a plan row by its fields).
+    with db.transaction(conn):
+        plans.insert(
+            conn,
+            title="Dentist",
+            start="2026-09-23T15:30",
+            end="2026-09-23T16:15",
+            all_day=False,
+            idea_id=None,
+        )
+    coming = client.get("/week/2026-09-23")
+    assert coming.status_code == 200 and "Dentist" in coming.text
     assert client.get("/week/not-a-day").status_code == 404
     assert client.get("/week?from=1900-01-01").status_code == 404
 

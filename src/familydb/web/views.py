@@ -685,7 +685,7 @@ def week_summary(days: Sequence[dict[str, Any]], plate: Sequence[Any], grown_up:
     else:
         nxt = next((r for d in days if not d["past"] for r in d["rows"]), None)
         if nxt:
-            said.append(f"Next: {nxt['title']}")
+            said.append(f"Next: {nxt.title}")
         else:
             said.append("Nothing on this week")
     if grown_up and plate:
