@@ -31,7 +31,7 @@ JAZZ = {
     "url": "https://club.example.com/jazz",
     "summary": "A trio at ten.",
     "starts_on": "2026-09-20",
-    "starts_time": "22:00",
+    "starts_time": "20:00",
     "for_whom": ["grown-ups"],
     "why": "A night out for two.",
 }
@@ -79,14 +79,15 @@ def test_a_planning_question_searches_with_everything_known_and_keeps_it(
     api = fakes.FakeMessagesAPI(*fakes.discover_script([THAI, JAZZ]))
     ctx = _ctx(conn, full_settings, clock, family, api, {})
     result = run(ctx, SuggestInput(**ASKED))
-    thai, jazz = result.web_finds
+    jazz, thai = result.web_finds  # on in the free time, before a place whose hours are unknown
+    assert (jazz.verdict, thai.verdict) == ("good", "possible")
     assert (thai.title, thai.any_time, thai.for_whom, thai.why) == (
         "Thai Bloom",
         True,
         ["whole family"],
         "They love noodles.",
     )
-    assert jazz.starts == "2026-09-20T22:00" and jazz.find_id is not None
+    assert jazz.starts == "2026-09-20T20:00" and jazz.find_id is not None
     asked = str(api.requests[0]["messages"])
     assert "They asked: Anything Thai for us today?" in asked
     assert "Looking for: thai food." in asked and "Musts (keep to these)" in asked

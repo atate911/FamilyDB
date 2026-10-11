@@ -172,6 +172,11 @@ def _place(plan: Plan, names: set[str], suggestion: Suggestion) -> Took | None:
             source = "held_back"
         else:
             source = "good" if verdict == "good" else "possible"
+    elif find is not None and find.get("verdict") == "ruled_out":
+        # Checked as an idea is (suggest/pocket.py), ruled out, and planned anyway.
+        source = "ruled_out"
+        reasons = find.get("reasons") or []
+        reason = str(reasons[0]) if reasons else None
     else:
         source = "find"
     return Took(

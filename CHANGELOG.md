@@ -128,6 +128,10 @@
   little or a topic was named, and looked for a place only with `find_places` on; that setting is
   gone. Each search costs a cent or two within the daily limit and adds 10 to 40 seconds to the
   answer, as the family decided.
+- **What she found is checked as your ideas are.** A show at seven when you are busy, a pumpkin patch
+  on a rainy day, a wine walk when the girls are coming, a loud gig when you said no loud places, a
+  fair two hours away: each now gets the same verdict and reasons as an idea on your list, by the
+  same code, and what is ruled out is no longer offered.
 
 ## v0.5.0 — beta (2026-10-11)
 

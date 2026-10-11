@@ -614,7 +614,15 @@ def test_discovery_runs_a_worker_turn_and_caches_the_finds(
     ctx = _web_ctx(conn, full_settings, thursday_clock, family, api, cache)
     _idea(conn, "Cafe A", setting="indoor")
     _, data = _suggest(registry, ctx, discover=True)
-    assert data["web_finds"] == [{**FIND, "source": "example.com"}]
+    # Its day only in words: offered as possible, its day not checked (suggest/pocket.py).
+    assert data["web_finds"] == [
+        {
+            **FIND,
+            "source": "example.com",
+            "verdict": "possible",
+            "reasons": ["day as the page says it, not checked"],
+        }
+    ]
     assert "web discovery" not in " ".join(data["skipped_checks"])
     request = api.requests[0]
     assert [t["name"] for t in request["tools"]] == ["report_finds", "web_search", "web_fetch"]

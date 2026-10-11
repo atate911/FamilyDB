@@ -23,6 +23,7 @@ from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.origin import resolve as resolve_origin
+from familydb.suggest.pocket import check_finds
 from familydb.suggest.rules import fold
 from familydb.suggest.shortlist import FAVORITE_RATING, RATING_DAYS, shortlist
 from familydb.suggest.types import (
@@ -254,21 +255,33 @@ def assess(
 
     # Her back pocket for these days costs nothing to read. Somebody asked, so the web is
     # searched too, with everything known (docs/FINDS.md), once a message, and a few places she
-    # found to go any time are offered; code asking for itself (her picks, /now, the jobs)
-    # gets neither until finds are checked as ideas are.
+    # found to go any time are offered; code asking for itself (her picks, /now, the jobs) is
+    # offered only what is on for the days.
     stored = listing.listed(ctx, context)
     if args.discover:
         stored += listing.anytime(ctx, constraints)
-    finds: list[WebFind] = []
+    searched: list[WebFind] = []
     if web and args.discover:
-        finds, note = discover(ctx, context, constraints, args.question)
+        searched, note = discover(ctx, context, constraints, args.question)
         if note:
             skipped.append(note)
+    found = searched + [listing.to_web_find(one) for one in stored]
+    searched_urls = {one.url.lower() for one in searched}
     if kid_reads(ctx):
         # As for ideas: what is for the grown-ups alone is left out, not ruled out.
-        stored = [one for one in stored if not who.grown_ups_only(one.participants, people)]
-        finds = [one for one in finds if not who.grown_ups_only(one.for_whom, people)]
-    finds, more = listing.merge_finds(stored, finds)
+        found = [one for one in found if not who.grown_ups_only(one.for_whom, people)]
+    # Every find is checked as an idea is (suggest/pocket.py); the ruled out are logged, never
+    # offered, and the good come before the possible.
+    found = check_finds(
+        ctx.conn, found, context, constraints, ctx.settings, ctx.clock, people=people
+    )
+    finds_out = [one for one in found if one.verdict == "ruled_out"]
+    # What the search found for this question first, then the pocket; the good first in each.
+    offered = sorted(
+        (one for one in found if one.verdict != "ruled_out"),
+        key=lambda one: (one.url.lower() not in searched_urls, one.verdict != "good"),
+    )
+    finds, more = listing.merge_finds(offered)
     # What the family already saved is marked, so nothing offers it again as new.
     finds = saved(ctx.conn, finds)
     if more:
@@ -282,7 +295,7 @@ def assess(
             window_end=window[1].isoformat() if window else None,
             candidates=candidates,
             shown=on_show,
-            finds=finds,
+            finds=finds + finds_out,
             now=ctx.now_iso(),
         )
         if record

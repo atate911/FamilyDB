@@ -100,7 +100,12 @@ class Candidate(BaseModel):
 
 
 class WebFind(Found):
-    """Something found outside the list, as the engine offers it (scouting/types.Found)."""
+    """Something found outside the list, as the engine offers it (scouting/types.Found), with
+    what checking it said (suggest/pocket.py)."""
+
+    verdict: Verdict | None = None
+    reasons: list[str] = Field(default_factory=list)
+    fits_days: list[str] = Field(default_factory=list)
 
 
 class DaySummary(BaseModel):

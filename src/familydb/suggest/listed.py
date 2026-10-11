@@ -2,11 +2,10 @@
 no model and no network: what the family's sources list near home (jobs/happening.py) and what
 earlier searches found for those days, and a few places she found to go any time.
 
-Listed only, for now: each is offered as a web find is, with when it is on and who listed it,
-for the model to name as not on the list. They are not yet checked against the free time,
-the forecast or the travel as saved ideas are (shortlist, evaluate); that is the next step, and
-this is where it goes in. What is said of each is code's: the day and time in the family's
-words, and the name of the calendar, Ticketmaster, or the site a search read.
+Each is offered as a web find is, with when it is on and who listed it, for the model to name as
+not on the list, once checked as the ideas are (suggest/pocket.py). What is said of each is
+code's: the day and time in the family's words, and the name of the calendar, Ticketmaster, or
+the site a search read.
 """
 
 from __future__ import annotations
@@ -116,20 +115,19 @@ def listed(ctx: ToolContext, context: Context) -> list[Find]:
     return [find for find in found if _in_hours(find, context)]
 
 
-def merge_finds(stored: list[Find], searched: list[WebFind]) -> tuple[list[WebFind], int]:
-    """The search's finds first (asked for this question), then the pocket's, one of each page,
-    up to MAX_LISTED. Returns them and how many were left out."""
-    merged = list(searched[:MAX_LISTED])
-    seen = {find.url.lower() for find in merged}
+def merge_finds(found: list[WebFind]) -> tuple[list[WebFind], int]:
+    """The finds in the order given, one of each page, up to MAX_LISTED. Returns them and how
+    many were left out."""
+    merged: list[WebFind] = []
+    seen: set[str] = set()
     left = 0
-    for one in stored:
-        shown = to_web_find(one)
-        if shown.url and shown.url.lower() in seen:
+    for one in found:
+        if one.url and one.url.lower() in seen:
             continue
         if len(merged) >= MAX_LISTED:
             left += 1
             continue
-        if shown.url:
-            seen.add(shown.url.lower())
-        merged.append(shown)
+        if one.url:
+            seen.add(one.url.lower())
+        merged.append(one)
     return merged, left

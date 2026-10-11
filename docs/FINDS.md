@@ -14,7 +14,7 @@ to come, this document is, until the code and the guide catch up and this note i
 | **Scouting** | The nightly AI search that fills the back pocket, aimed at this family. | `scout`, weekly, knowing nothing of the family |
 | **Searching on request** | The AI search made while answering somebody who asked, with everything known about the question and the family. | `discover`: every planning question, events and places, with the question and the family's brief; what it finds is kept |
 | **Filling in** | An AI lookup that completes the details of an idea or a find: address, hours, price, ages, indoor or outdoor, booking. Ideas and finds end up with the same facts. | `enrich`, ideas only |
-| **Checking** | Code testing ideas and finds against the family and a moment: firm rules, who is coming and their ages, the drive, free time, weather, opening hours. Each gets a verdict (good, possible, ruled out) and its reasons. No AI. | the suggestion engine, ideas only |
+| **Checking** | Code testing ideas and finds against the family and a moment: firm rules, who is coming and their ages, the drive, free time, weather, opening hours. Each gets a verdict (good, possible, ruled out) and its reasons. No AI. | the suggestion engine, ideas and finds alike (`suggest/pocket.py`) |
 | **Choosing** | AI judgement on what suits this family at this moment, among what checking kept, each choice with a reason. | `choose` |
 | **Suggestion** | What she offers when somebody asks. | the `suggest` tool and its log |
 | **Recommendation** | What she puts forward without being asked, in a place in the interface. | "her picks" on Now, made by code |

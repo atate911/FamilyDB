@@ -164,3 +164,20 @@ def test_an_ignored_good_idea_comes_back_sooner_than_one_passed_over(conn) -> No
     _asked(conn, "2026-09-01T10:00:00Z", [{"idea_id": long_ago, "verdict": "good"}])
     now = datetime(2026, 9, 20, 21, 3, tzinfo=UTC)
     assert taken.sinking(conn, now=now) == {lately, passed}
+
+
+def test_a_find_ruled_out_and_planned_anyway_says_why(conn) -> None:
+    _asked(
+        conn,
+        "2026-09-20T10:00:00Z",
+        [],
+        finds=[
+            {"title": "Late show", "verdict": "ruled_out", "reasons": ["busy while it is on"]},
+            {"title": "Matinee", "verdict": "good", "reasons": ["on Saturday 14:00-16:00"]},
+        ],
+    )
+    _plan(conn, "Late show", "2026-09-20T12:00:00Z")
+    _plan(conn, "Matinee", "2026-09-20T12:05:00Z")
+    found = taken.report(conn, since="2026-09-01T00:00:00Z")
+    where = {one.title: (one.source, one.reason) for one in found.took}
+    assert where == {"Late show": ("ruled_out", "busy while it is on"), "Matinee": ("find", None)}
