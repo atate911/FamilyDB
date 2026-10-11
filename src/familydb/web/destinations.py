@@ -29,7 +29,17 @@ from familydb.store import tasks as task_store
 from familydb.store.members import Member
 from familydb.suggest.types import DAY_END, DAY_START
 from familydb.tools.weather import forecast_days
-from familydb.web import auth, chat, household, ideas_page, map_view, now, page_rows, views
+from familydb.web import (
+    auth,
+    chat,
+    conversation,
+    household,
+    ideas_page,
+    map_view,
+    now,
+    page_rows,
+    views,
+)
 from familydb.web.answers import answer
 from familydb.web.rows import PlanRow
 
@@ -329,7 +339,7 @@ def board() -> str:
     with closing(app.connect()) as conn:
         people, slots, kept = household.read(conn, visitor.member)
         questions = now.questions(conn, app, visitor, today, slots, people)[: now.MOST_QUESTIONS]
-        mine = visitor.member.id if chat.is_kid() and visitor.member else None
+        mine = visitor.member.id if conversation.is_kid() and visitor.member else None
         window = "weekend" if today.weekday() >= WEEKEND_FROM else "now"
         found = pick_store.latest(conn, window=window, member_id=mine)
         if found is None or found.window_end < today.isoformat():
@@ -385,7 +395,7 @@ def about() -> str:
     app = _app()
     today = app.clock.today()
     visitor = auth.visitor()
-    mine = visitor.member.id if chat.is_kid() and visitor.member else None
+    mine = visitor.member.id if conversation.is_kid() and visitor.member else None
     with closing(app.connect()) as conn:
         kept = presents.kept_ids(conn, visitor.member)
         sets = []

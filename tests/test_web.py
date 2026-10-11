@@ -793,24 +793,33 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         for module in sorted(folder.glob("*.py"))
     }
 
-    # The chat page hands a message over, and the handing over is all it does.
-    chat = trees["chat.py"]
-    assert {
-        f"{node.module}.{alias.name}"
-        for node in ast.walk(chat)
-        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.channels")
-        for alias in node.names
-    } == {
+    # The chat page hands a message over, through the channel `conversation.py` holds, and the
+    # handing over is all it does.
+    def channel_imports(name: str) -> set[str]:
+        return {
+            f"{node.module}.{alias.name}"
+            for node in ast.walk(trees[name])
+            if isinstance(node, ast.ImportFrom)
+            and (node.module or "").startswith("familydb.channels")
+            for alias in node.names
+        }
+
+    assert channel_imports("chat.py") == {
+        "familydb.channels.web.DEFAULT_CHAT",
+        "familydb.channels.web.MAX_MESSAGE",  # how long a question handed over may be
+    }
+    assert channel_imports("conversation.py") == {
         "familydb.channels.web.DEFAULT_CHAT",
         "familydb.channels.web.Handing",  # a message being handed over, drawn until it is stored
-        "familydb.channels.web.MAX_MESSAGE",  # how long a question handed over may be
         "familydb.channels.web.WebChat",
     }
-    assert not [
-        node
-        for node in ast.walk(chat)
-        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.pipeline")
-    ], "chat.py reaches the pipeline through the channel, not around it"
+    for name in ("chat.py", "conversation.py"):
+        assert not [
+            node
+            for node in ast.walk(trees[name])
+            if isinstance(node, ast.ImportFrom)
+            and (node.module or "").startswith("familydb.pipeline")
+        ], f"{name} reaches the pipeline through the channel, not around it"
 
     # The edit forms may run these tools and no others. A new one is a deliberate line here.
     edits = trees["edits.py"]
@@ -907,7 +916,8 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
                 for node in ast.walk(tree)
             )
             assert not family_rules, f"{name} reaches the family rules"
-        if name not in {"chat.py", "__init__.py"}:  # the factory builds the thing chat.py uses
+        # The factory builds the channel, conversation.py holds it, and chat.py hands over to it.
+        if name not in {"chat.py", "conversation.py", "__init__.py"}:
             assert not any(module.startswith("familydb.channels") for module in reached), name
         # A page may read the forecast the tools read; the machinery that runs one is the edit
         # forms' alone.

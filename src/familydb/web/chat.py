@@ -1,6 +1,7 @@
 """The chat page and the box Home shares with it. The form hands the message to the web channel,
 which answers on its own thread; this page only reads the message log (`glance` is Home's brief
-view of it) and, while an answer is on its way, asks the browser to fetch it again."""
+view of it; which conversation and how it stands is `conversation.py`) and, while an answer is on
+its way, asks the browser to fetch it again."""
 
 from __future__ import annotations
 
@@ -23,22 +24,29 @@ from flask import (
     url_for,
 )
 
-from familydb import audience, buttons, personas, undo
+from familydb import buttons, personas, undo
 from familydb.agent import spending
 from familydb.app import App
 from familydb.base import roles
-from familydb.base.config import Settings
 from familydb.base.dates import utc_iso
-from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
+from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE
 from familydb.store import calls
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store import pins as pin_store
 from familydb.store import tasks as task_store
 from familydb.store.messages import Message
-from familydb.web import auth, views
+from familydb.web import auth, shell, views
 from familydb.web import status as status_page
 from familydb.web.answers import answer
+from familydb.web.conversation import (
+    GLANCE_LIMIT,
+    SEEN_KEY,
+    channel,
+    my_chat,
+    private_chat,
+    standing,
+)
 from familydb.web.once import once
 
 log = logging.getLogger(__name__)
@@ -55,7 +63,6 @@ FACE_LAPSE_SECONDS = 60
 WHERE_KEY = "send_where"
 # The newest of her messages this browser has seen, and in which conversation: the Chat link's
 # "2 new" (shell.py). Kept in the session cookie, so per device and never a write.
-SEEN_KEY = "seen"
 THREAD_LIMIT = 60
 # While an answer is on its way a page asks again soon, then less often, then stops and leaves a
 # visible link: a page left open does not ask all night. Seconds before each next look, by what the
@@ -71,7 +78,7 @@ RETRY_REFRESH_SECONDS = REFRESH_STEPS["retrying"][0]
 # `n` this far along asks no more: the page's own "Stop updating" link.
 STOP_LOOKING = len(REFRESH_STEPS["thinking"])
 # Slack on top of every attempt the settings allow, a retry interval apart.
-RETRY_SLACK_MINUTES = 5
+
 # A page's scope for a message, at most ("About #57 Kenji's Ramen:").
 MAX_SCOPE = 120
 # The most any request may carry, a photo in this box (the server's read limit too).
@@ -109,20 +116,10 @@ AT_HOME = {
 }
 AT_HOME_PLAIN = {**AT_HOME, "retrying": "{name} will answer your message soon."}
 RECENT = timedelta(hours=24)
-GLANCE_LIMIT = 12
 
 
 def _app() -> App:
     return current_app.config["FAMILYDB_APP"]
-
-
-def _chat() -> WebChat:
-    return current_app.config["FAMILYDB_CHAT"]
-
-
-def private_chat(member_id: int) -> str:
-    """A kid's own conversation, which a parent may read (docs/WISHES.md; audience.py)."""
-    return audience.private_chat(member_id)
 
 
 def messages_left(app: App, conn: Any, member: member_store.Member | None) -> int | None:
@@ -133,21 +130,6 @@ def messages_left(app: App, conn: Any, member: member_store.Member | None) -> in
         return None
     since = spending.day_start(app.settings, app.clock.now())
     return max(0, limit - calls.answered_for(conn, member.id, since=since))
-
-
-def is_kid() -> bool:
-    """A kid, by roles.py: keeps a wish list and decides on nobody's."""
-    visitor = auth.visitor()
-    return visitor.member is not None and visitor.may("wish") and not visitor.may("decide")
-
-
-def my_chat() -> str:
-    """A kid talks in her own conversation; everybody else in the family's (audience.page_chat,
-    which routing.py also asks, so the page and what is sent to it cannot disagree)."""
-    visitor = auth.visitor()
-    if visitor.member is not None and not visitor.may("decide"):
-        return private_chat(visitor.member.id)
-    return DEFAULT_CHAT
 
 
 def _who(names: list[str], *, lapse: bool = False) -> str | None:
@@ -165,27 +147,6 @@ def _lapsed() -> bool:
     at = session.get(WHO_AT)
     now = _app().clock.now().timestamp()
     return not isinstance(at, int | float) or now - at > FACE_LAPSE_SECONDS
-
-
-def waiting_on(
-    last: Message | None, answered: set[int], *, busy: bool, now: datetime, settings: Settings
-) -> str | None:
-    """What the newest message is waiting for: None, "thinking", "retrying" or "lost". A message
-    nothing is running for was interrupted by a restart; the retry job picks it up while it has
-    attempts left, after which the page hands the text back."""
-    if last is None or last.direction != "in" or last.id in answered:
-        return None
-    if busy:
-        return "thinking"
-    received = datetime.fromisoformat(last.received_at.replace("Z", "+00:00"))
-    window = timedelta(
-        minutes=settings.retry_interval_minutes * (settings.retry_max_attempts + 1)
-        + RETRY_SLACK_MINUTES
-    )
-    attempts_left = not last.give_up and last.retries < settings.retry_max_attempts
-    if attempts_left and now - received < window:
-        return "retrying"
-    return "lost"
 
 
 def box(
@@ -214,24 +175,6 @@ def asked() -> str | None:
     shared = dict.fromkeys(part for key in SHARED if (part := request.args.get(key, "").strip()))
     words = request.args.get("ask", "") or "\n".join(shared)
     return words[:MAX_MESSAGE].strip() or None
-
-
-def standing(
-    app: App, thread: list[Message], chat_id: str = DEFAULT_CHAT
-) -> tuple[str | None, Handing | None]:
-    """How the newest message stands (see `waiting_on`), and a message just handed over that the
-    log does not hold yet: the turn stores it a moment after the browser is back, so until then
-    the page draws it from the channel's memory."""
-    chat = _chat()
-    handing = chat.handing_over(chat_id)
-    if handing is not None and any(m.channel_update_id == handing.update_id for m in thread):
-        handing = None  # stored: the log shows it now
-    if handing is not None:
-        return "thinking", handing
-    answered = {message.reply_to for message in thread if message.reply_to is not None}
-    last = thread[-1] if thread else None
-    busy = chat.busy(chat_id)
-    return waiting_on(last, answered, busy=busy, now=app.clock.now(), settings=app.settings), None
 
 
 def glance(app: App, conn: Any) -> dict[str, Any]:
@@ -357,8 +300,10 @@ def page_box(
 ) -> dict[str, Any]:
     """Everything a page built on the frame gives its box: the box itself, closed while an
     answer is on its way, what came back under it, and the scope this page gives a message.
-    Kept on the request (`g.box`), so the frame reads it wherever it draws it."""
+    Kept on the request (`g.box`), so the frame reads it wherever it draws it; the frame itself
+    (`shell.frame`) is built here too, on the same connection."""
     visitor = auth.visitor()
+    g.frame = shell.frame(app, conn)
     if not visitor.may("chat"):
         g.box = NO_BOX
         return NO_BOX
@@ -472,6 +417,7 @@ def page(
     assistant = personas.active(app.settings).name
     kid_chat = chat_id != DEFAULT_CHAT and reading is None
     with closing(app.connect()) as conn:
+        g.frame = shell.frame(app, conn)
         family = member_store.list_all(conn)
         thread = message_store.last_for_chat(conn, chat_id, limit=THREAD_LIMIT, before=before)
         older = bool(thread) and message_store.has_before(conn, chat_id, thread[0].id)
@@ -814,7 +760,7 @@ def send() -> Response | Any:
         session[WHO_AT] = _app().clock.now().timestamp()
     session[WHERE_KEY] = request.form.get(WHERE_KEY) == "1"  # the box stays as they left it
     sent = _framed(text, request.form)
-    asked = _chat().ask(sent, who, my_chat(), _position(request.form), photo=photo)
+    asked = channel().ask(sent, who, my_chat(), _position(request.form), photo=photo)
     if (complaint := asked) is not None:
         return page(error=complaint, typed=text, status=400)
     log.info("web chat: %s asked something", who)
@@ -822,7 +768,7 @@ def send() -> Response | Any:
     # was on, which shows the answer under it, or to the thread.
     back = request.form.get("back", "")
     if _on_site(back) and back != "/chat":
-        handing = _chat().handing_over(my_chat())
+        handing = channel().handing_over(my_chat())
         asked = {ASKED: handing.update_id} if handing is not None else {}
         return redirect(f"{back}?{urlencode(asked)}#{SAID}" if asked else back)
     return redirect(url_for("chat.show", _anchor=LATEST))

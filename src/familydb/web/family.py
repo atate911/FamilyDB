@@ -33,7 +33,7 @@ from familydb.store import logins as login_store
 from familydb.store import members as member_store
 from familydb.store import push as push_store
 from familydb.store.logins import Login
-from familydb.web import auth, views
+from familydb.web import auth, conversation, views
 from familydb.web import status as status_page
 from familydb.web.once import once
 
@@ -371,7 +371,6 @@ def _message_id() -> int | None:
 def pin() -> Response:
     """Pin under her reply: kept at hand for whoever is signed in as themselves, in the column
     beside the box on a big screen and at the top of the conversation (familydb/family.py)."""
-    from familydb.web import chat  # the conversation this person reads
 
     member = auth.visitor().member
     message_id = _message_id()
@@ -383,7 +382,9 @@ def pin() -> Response:
         app = _app()
         try:
             with closing(app.connect()) as conn:
-                rules.pin(conn, member, message_id, chat_id=chat.my_chat(), now=app.clock.now())
+                rules.pin(
+                    conn, member, message_id, chat_id=conversation.my_chat(), now=app.clock.now()
+                )
         except rules.PinRefused as refused:
             _say(str(refused).capitalize() + ".")
     return _pinned_back()

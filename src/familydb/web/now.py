@@ -21,7 +21,7 @@ from familydb.store import ideas as idea_store
 from familydb.store import picks as pick_store
 from familydb.store import tasks as task_store
 from familydb.store.members import Member
-from familydb.web import auth, chat, household, page_rows, shell, views, wishes_view
+from familydb.web import auth, chat, conversation, household, page_rows, shell, views, wishes_view
 from familydb.web import rows as rows_
 from familydb.web import status as status_page
 from familydb.web.answers import answer
@@ -67,7 +67,7 @@ def show() -> Response | str:
     tz = app.settings.tzinfo
     visitor = auth.visitor()
     grown_up = visitor.may("browse")
-    kid = chat.is_kid()
+    kid = conversation.is_kid()
     with closing(app.connect()) as conn:
         progress = status_page.setup_progress(app, conn)
         if visitor.manages and not status_page.ready_to_answer(progress):
@@ -305,7 +305,7 @@ def _picks(
 ) -> dict[str, Any] | None:
     """The set made for this moment (familydb/picks.py), as tiles: one of each kind, with its
     reason, never a present kept from this person. None when there is no set yet."""
-    mine = visitor.member.id if chat.is_kid() and visitor.member else None
+    mine = visitor.member.id if conversation.is_kid() and visitor.member else None
     found = pick_store.current(conn, member_id=mine, today=today.isoformat())
     return pick_set(app, found, kept) if found is not None else None
 

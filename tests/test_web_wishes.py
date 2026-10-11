@@ -352,9 +352,9 @@ def test_a_kid_never_sees_the_tools_a_turn_ran(app, family, sam, girls) -> None:
 
 
 def wish_service_chat(member_id: int) -> str:
-    from familydb.web import chat
+    from familydb.web import conversation
 
-    return chat.private_chat(member_id)
+    return conversation.private_chat(member_id)
 
 
 def test_a_kid_sees_what_she_ticked_lately_and_can_undo_it(app, family, girls) -> None:  # noqa: F811

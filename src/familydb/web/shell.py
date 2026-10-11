@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
-from flask import request, session, url_for
+from flask import g, request, session, url_for
 
 from familydb import personas, presents
 from familydb.app import App
@@ -22,7 +22,7 @@ from familydb.store import messages as message_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store import wishes as wish_store
-from familydb.web import auth, chat, views
+from familydb.web import auth, conversation, views
 from familydb.web import settings as settings_page
 from familydb.web import status as status_page
 
@@ -60,6 +60,8 @@ class Frame:
     family: tuple[dict[str, Any], ...] = ()
     # Whether anybody on the list is a kid: without one there is no Kids in the row.
     kids: bool = False
+    # The Status tile's light, for an admin: "bad", "warn" or None (status.light).
+    light: str | None = None
 
     @property
     def look_at(self) -> int:
@@ -85,8 +87,9 @@ def _me() -> Me:
     return Me(member.display_name, member.display_name[:1].upper(), member.slot or 0, member.role)
 
 
-def frame(app: App) -> Frame:
-    """The frame for this visitor on this request."""
+def frame(app: App, conn: sqlite3.Connection) -> Frame:
+    """The frame for this visitor on this request, read on the page's own connection. A family
+    page builds it through `chat.page_box`, the back office through `current`."""
     visitor = auth.visitor()
     me = _me()
     if visitor.kind == "stranger":
@@ -94,34 +97,43 @@ def frame(app: App) -> Frame:
     today = app.clock.today()
     tz = app.settings.tzinfo
     try:
-        with closing(app.connect()) as conn:
-            late = _late(conn, visitor, tz, today)
-            decide = _to_decide(conn, visitor, today)
-            rate = _to_rate(conn, visitor, today)
-            check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
-            pill = _pill(app, conn, visitor) if visitor.may("browse") else None
-            unread = _unread(conn) if visitor.may("chat") else 0
-            everyone = member_store.list_all(conn)
-            family = tuple(
-                {"name": m.display_name, "slot": m.slot or 0, "initial": m.display_name[:1].upper()}
-                for m in everyone
-            )
-            kids = any(m.active and m.role == "kid" for m in everyone)
-    except sqlite3.OperationalError:
+        late = _late(conn, visitor, tz, today)
+        decide = _to_decide(conn, visitor, today)
+        rate = _to_rate(conn, visitor, today)
+        check = settings_page.needs_look(app, conn) if visitor.may("manage") else 0
+        pill = _pill(app, conn, visitor) if visitor.may("browse") else None
+        unread = _unread(conn) if visitor.may("chat") else 0
+        light = status_page.light(app, conn) if visitor.may("manage") else None
+        everyone = member_store.list_all(conn)
+        family = tuple(
+            {"name": m.display_name, "slot": m.slot or 0, "initial": m.display_name[:1].upper()}
+            for m in everyone
+        )
+        kids = any(m.active and m.role == "kid" for m in everyone)
+    except sqlite3.Error:
         # A database not yet migrated: the frame is drawn without counts, so a page that says
         # "not found" or "not yours" never fails itself.
         log.warning("the menu's counts could not be read", exc_info=True)
         return Frame(me)
-    return Frame(me, pill, late, decide, rate, check, unread, family, kids)
+    return Frame(me, pill, late, decide, rate, check, unread, family, kids, light)
+
+
+def current(app: App) -> Frame:
+    """This request's frame: the one the page built on its connection, else one read now (the
+    back office, and a page that drew no box), kept on the request."""
+    if "frame" not in g:
+        with closing(app.connect()) as conn:
+            g.frame = frame(app, conn)
+    return g.frame
 
 
 def _unread(conn: sqlite3.Connection) -> int:
     """Her messages in this visitor's conversation since this browser last saw it. A browser
     that never looked starts from now, not from everything ever said."""
-    chat_id = chat.my_chat()
-    seen = session.get(chat.SEEN_KEY)
+    chat_id = conversation.my_chat()
+    seen = session.get(conversation.SEEN_KEY)
     if not isinstance(seen, dict) or seen.get("chat") != chat_id:
-        session[chat.SEEN_KEY] = {
+        session[conversation.SEEN_KEY] = {
             "chat": chat_id,
             "id": message_store.newest_from_her(conn, chat_id),
         }
@@ -190,9 +202,9 @@ def _to_rate(conn: sqlite3.Connection, visitor: auth.Visitor, today: Any) -> int
 
 def _pill(app: App, conn: sqlite3.Connection, visitor: auth.Visitor) -> status_page.Pill:
     name = personas.active(app.settings).name
-    chat_id = chat.my_chat()
-    thread = message_store.last_for_chat(conn, chat_id, limit=chat.GLANCE_LIMIT)
-    state, _ = chat.standing(app, thread, chat_id)
+    chat_id = conversation.my_chat()
+    thread = message_store.last_for_chat(conn, chat_id, limit=conversation.GLANCE_LIMIT)
+    state, _ = conversation.standing(app, thread, chat_id)
     return status_page.pill(app, conn, name=name, busy=state == "thinking")
 
 
