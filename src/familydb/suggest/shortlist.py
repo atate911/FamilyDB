@@ -11,7 +11,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date
 
 from familydb.base.config import Settings
-from familydb.base.dates import age_on
+from familydb.base.dates import age_on, fmt_minutes
 from familydb.integrations.open_meteo import DayForecast
 from familydb.store.ideas import GIFT, Idea, ages_text
 from familydb.store.members import Member
@@ -39,12 +39,6 @@ WARM_F = 64.0
 LONG_IDEA_MINUTES = 480
 # The least free time worth offering an idea of unknown length for.
 SHORT_VISIT_MINUTES = 60
-
-
-def fmt_minutes(minutes: int) -> str:
-    if minutes < 60:
-        return f"{minutes} min"
-    return f"{minutes / 60:g} h"
 
 
 def day_is_dry(forecast: DayForecast | None) -> bool | None:

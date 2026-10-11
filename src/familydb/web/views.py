@@ -24,7 +24,9 @@ from familydb.agenda import Entry
 from familydb.agent.providers import catalog, companies, prices
 from familydb.availability import happening_search_available, ticketmaster_available
 from familydb.base.config import Settings
-from familydb.base.dates import clock_time, hour_words
+from familydb.base.dates import clock_time, fmt_minutes, hour_words
+from familydb.base.urls import clean_url
+from familydb.hours import DAYS, checked_days_ago, format_ranges, is_stale, open_on
 from familydb.integrations.geocode import estimate_travel
 from familydb.memory import words
 from familydb.store.ideas import Idea, ages_text
@@ -35,9 +37,7 @@ from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
 from familydb.store.tasks import Task
-from familydb.suggest.shortlist import fmt_minutes
-from familydb.tools.places import DAYS, checked_days_ago, format_ranges, is_stale, open_on
-from familydb.tools.urls import clean_url
+from familydb.suggest.types import DAY_END, DAY_START
 
 DAY_NAMES = {
     "mon": "Monday",
@@ -651,8 +651,6 @@ def _minute_clock(minute: int) -> str:
 def free_words(spans: Sequence[tuple[int, int]], *, whole: bool = False) -> str:
     """A day's free time as words: "Free all day", "Free till 4 pm", "Free from 1 pm", "Free 1 pm
     to 4 pm, then from 6 pm"; nothing when nothing is free."""
-    from familydb.suggest.types import DAY_END, DAY_START
-
     if whole or (len(spans) == 1 and spans[0] == (DAY_START, DAY_END)):
         return "Free all day"
     if not spans:

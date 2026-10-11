@@ -843,8 +843,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     assert ruled <= allowed, ruled
     assert {"add", "change"} | signing_in | linking | removing | pushing | pinning <= ruled
 
-    # The doors are shut to everything else, but not whole packages: `views.py` reads opening hours
-    # from `tools.places` and tidies links with `tools.urls`, which write nothing.
+    # The doors are shut to everything else.
     for name, tree in trees.items():
         reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
         dispatches = any(
@@ -875,12 +874,11 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
             assert not family_rules, f"{name} reaches the family rules"
         if name not in {"chat.py", "__init__.py"}:  # the factory builds the thing chat.py uses
             assert not any(module.startswith("familydb.channels") for module in reached), name
-        # A page may read a few things the tools work out (opening hours, a tidy link, the
-        # forecast); the machinery that runs one is the edit forms' alone.
+        # A page may read the forecast the tools read; the machinery that runs one is the edit
+        # forms' alone.
         tools_read = {
             "destinations.py": {"familydb.tools.weather"},
             "edits.py": {"familydb.tools"},
-            "views.py": {"familydb.tools.places", "familydb.tools.urls"},
         }
         tools_reached = {
             m for m in reached if m == "familydb.tools" or m.startswith("familydb.tools.")

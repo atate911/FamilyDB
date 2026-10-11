@@ -10,24 +10,19 @@ from typing import Any
 from familydb.availability import calendar_available, weather_available, web_tools_available
 from familydb.base.clock import Clock
 from familydb.base.config import Settings
+from familydb.base.dates import fmt_minutes
 from familydb.memory import Chosen, line_of
 from familydb.routing import CONFIRMED
 from familydb.store.ideas import Idea, ages_text
 from familydb.store.members import Member
 
 
-def _fmt_minutes(minutes: int) -> str:
-    if minutes < 60:
-        return f"{minutes} min"
-    return f"{minutes / 60:g} h"
-
-
 def _duration(idea: Idea) -> str | None:
     low, high = idea.duration_min, idea.duration_max
     if low is not None and high is not None and low != high:
-        return f"{_fmt_minutes(low)} to {_fmt_minutes(high)}"
+        return f"{fmt_minutes(low)} to {fmt_minutes(high)}"
     if low is not None or high is not None:
-        return f"about {_fmt_minutes(low if low is not None else high or 0)}"
+        return f"about {fmt_minutes(low if low is not None else high or 0)}"
     return None
 
 

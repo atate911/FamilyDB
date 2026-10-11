@@ -10,9 +10,9 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, Field
 
 from familydb.base.errors import ToolError
+from familydb.base.urls import clean_url
 from familydb.suggest.types import SuggestInput
 from familydb.tools.registry import ToolContext, tool
-from familydb.tools.urls import clean_url
 
 MAX_FINDS = 6
 MAX_FEEDS = 10

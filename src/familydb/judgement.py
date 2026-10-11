@@ -447,12 +447,14 @@ def _put_in(app: Any, conn: sqlite3.Connection, values: dict[str, str]) -> dict[
 
 
 def _boxes_naming(settings: Any, company: str, name: str) -> list[str]:
-    from familydb.web import fields
-
+    """The settings naming this model of the company's (the registry says which name its models)."""
+    found = companies.get(company, settings)
+    if found is None:
+        return []
     return [
-        one.key
-        for one in fields.FIELDS
-        if one.company == company and str(getattr(settings, one.key, "") or "").lower() == name
+        key
+        for key in found.model_settings()
+        if str(getattr(settings, key, "") or "").lower() == name
     ]
 
 

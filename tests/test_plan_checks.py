@@ -6,11 +6,11 @@ from datetime import date, datetime, timedelta
 
 from familydb.app import App
 from familydb.base.clock import FixedClock
+from familydb.hours import DAYS
 from familydb.integrations.open_meteo import DayForecast
 from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.store import db, ideas, places, plans
-from familydb.tools.places import DAYS
 from tests import fakes
 from tests.conftest import NOW_ISO, TZ
 

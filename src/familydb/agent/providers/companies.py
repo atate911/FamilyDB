@@ -35,6 +35,7 @@ class Company:
     worker_setting: str = ""  # and its everyday lookup model
     better_setting: str = ""  # and the family's own better and best models
     best_setting: str = ""
+    transcribe_setting: str = ""  # and its hearing model, where it can hear
     owns: tuple[str, ...] = ()  # prefixes of the model names that are its own
     litellm: str = ""  # LiteLLM's name for the company
     openrouter: str = ""  # the maker's name in OpenRouter's model ids
@@ -67,6 +68,21 @@ class Company:
             return str(getattr(settings, name, "") or "") if name else ""
         return {"better": self.defined.better_model, "best": self.defined.best_model}.get(level, "")
 
+    def model_settings(self) -> tuple[str, ...]:
+        """The settings that name one of its models, for a built-in company (an added one keeps
+        its models in its definition)."""
+        return tuple(
+            name
+            for name in (
+                self.chat_setting,
+                self.worker_setting,
+                self.better_setting,
+                self.best_setting,
+                self.transcribe_setting,
+            )
+            if name
+        )
+
     def known_models(self) -> tuple[str, ...]:
         """The model names its definition knows; a built-in company is known by prefix instead."""
         return self.defined.models if self.defined else ()
@@ -85,6 +101,7 @@ OPENAI = Company(
     worker_setting="openai_worker_model",
     better_setting="openai_better_model",
     best_setting="openai_best_model",
+    transcribe_setting="openai_transcribe_model",
     owns=("gpt", "o1", "o3", "o4", "chatgpt"),
     litellm="openai",
     openrouter="openai",
@@ -119,6 +136,7 @@ GEMINI = Company(
     worker_setting="gemini_worker_model",
     better_setting="gemini_better_model",
     best_setting="gemini_best_model",
+    transcribe_setting="gemini_transcribe_model",
     owns=("gemini",),
     litellm="gemini",
     openrouter="google",

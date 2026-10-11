@@ -16,6 +16,7 @@ from familydb import voice
 from familydb.app import App
 from familydb.base.dates import spoken_times, utc_iso
 from familydb.calendar_sync import sync_plans
+from familydb.hours import format_ranges, open_on
 from familydb.integrations.open_meteo import DayForecast
 from familydb.store import ideas, messages, places, plans
 from familydb.store.db import transaction
@@ -25,7 +26,6 @@ from familydb.suggest.engine import run as suggest
 from familydb.suggest.evaluate import doable
 from familydb.suggest.shortlist import day_is_dry
 from familydb.suggest.types import DAY_END, DAY_START, SuggestInput, clock
-from familydb.tools.places import format_ranges, open_on
 from familydb.tools.registry import ToolContext
 from familydb.tools.weather import forecast_days
 

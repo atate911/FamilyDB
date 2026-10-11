@@ -13,11 +13,11 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 from familydb import happening
+from familydb.base.urls import clean_url
 from familydb.store import finds
 from familydb.store.finds import Find
 from familydb.suggest.types import Context, WebFind
 from familydb.tools import ToolContext
-from familydb.tools.urls import clean_url
 
 # The most offered with one answer, the discovery worker's own finds among them: the result is
 # sent to the model and sent again with its reply.

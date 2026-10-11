@@ -4,26 +4,26 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from familydb.availability import enrichment_available
 from familydb.base import roles
-from familydb.base.dates import clock_time, parse_date
+from familydb.base.dates import parse_date
 from familydb.base.errors import ToolError
+from familydb.base.urls import clean_url
+from familydb.hours import checked_days_ago, format_ranges, is_stale, open_on
 from familydb.integrations.geocode import estimate_travel
 from familydb.store import ideas, places
 from familydb.store.db import transaction
 from familydb.store.places import Place
 from familydb.tools.registry import ToolContext, tool
-from familydb.tools.urls import clean_url
 
 log = logging.getLogger(__name__)
 
 Day = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-DAYS: tuple[str, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
@@ -147,42 +147,6 @@ def hours_dict(entries: list[OpeningHours], closed_days: list[str]) -> dict[str,
     for day in closed_days:
         out.setdefault(day, [])
     return out or None
-
-
-def open_on(place: Place | None, day: date) -> tuple[str, list[dict[str, str]]]:
-    """('open' | 'closed' | 'unknown', ranges) for a date, from the cached hours."""
-    if place is None or not place.hours:
-        return "unknown", []
-    key = DAYS[day.weekday()]
-    if key not in place.hours:
-        return "unknown", []
-    ranges = list(place.hours.get(key) or [])
-    return ("open" if ranges else "closed"), ranges
-
-
-def format_ranges(ranges: list[dict[str, str]], *, spoken: bool = False) -> str | None:
-    """The hours as stored ("11:30-21:00", for the model) or, `spoken`, as the family reads them
-    ("11:30 am to 9 pm")."""
-    if not ranges:
-        return None
-    if spoken:
-        return ", ".join(f"{clock_time(r['open'])} to {clock_time(r['close'])}" for r in ranges)
-    return ", ".join(f"{r['open']}-{r['close']}" for r in ranges)
-
-
-def checked_days_ago(place: Place | None, now: datetime) -> int | None:
-    if place is None or not place.last_checked_at:
-        return None
-    try:
-        checked = datetime.strptime(place.last_checked_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
-    except ValueError:
-        return None
-    return max(0, (now.astimezone(UTC) - checked).days)
-
-
-def is_stale(place: Place | None, now: datetime, stale_days: int) -> bool:
-    days = checked_days_ago(place, now)
-    return days is None or days > stale_days
 
 
 def place_summary(place: Place, ctx: ToolContext) -> dict[str, Any]:

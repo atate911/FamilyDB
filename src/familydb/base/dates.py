@@ -93,6 +93,13 @@ def next_birthday(birth_date: str | None, today: date) -> date | None:
     raise AssertionError("a birthday comes round within a year")
 
 
+def fmt_minutes(minutes: int) -> str:
+    """A length of time as the family reads it: "45 min", "1.5 h"."""
+    if minutes < 60:
+        return f"{minutes} min"
+    return f"{minutes / 60:g} h"
+
+
 def clock_time(value: datetime | time | str) -> str:
     """A time of day as the family reads it: "9 am", "1:30 pm", "12 pm". The number is held to
     am or pm by a no-break space. Takes a time, a datetime (its wall time as it is) or an
