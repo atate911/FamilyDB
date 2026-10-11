@@ -47,7 +47,11 @@ THINKS = {
     "onnear": "worker_effort",
 }
 # The plain settings that belong to one use: read as every other settings box is read.
-EXTRAS = {"hear": ("voice_max_minutes",), "judge": ("judgement_acts",)}
+EXTRAS = {
+    "hear": ("voice_max_minutes",),
+    "judge": ("judgement_acts",),
+    "choose": ("choose_now",),
+}
 # A cap drawn on another page (its box is there, and a setting is on one page only): this page
 # shows it and says where.
 CAP_ELSEWHERE = {"onnear": "happening"}

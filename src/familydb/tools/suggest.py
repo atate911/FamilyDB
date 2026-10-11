@@ -1,5 +1,6 @@
 """Suggestion tools: `suggest` for the chat model, `report_finds` for the discovery worker and
-the weekly search near home, and `report_feeds` for the lookup that finds calendars near home."""
+the weekly search near home, `report_feeds` for the lookup that finds calendars near home, and
+`give_picks` and `reframe` for the call that chooses what to suggest."""
 
 from __future__ import annotations
 
@@ -229,6 +230,45 @@ def _pick_day(pick: PickInput, option: Any, window: tuple[date, date] | None) ->
     return day.isoformat()
 
 
+class ReframeInput(BaseModel):
+    window: Literal["today", "this_weekend", "next_weekend", "dates"] | None = None
+    start: str | None = Field(default=None, description="YYYY-MM-DD, for window=dates.")
+    end: str | None = Field(default=None, description="YYYY-MM-DD, for window=dates.")
+    from_time: str | None = Field(default=None, description="HH:MM each day starts.")
+    until_time: str | None = Field(default=None, description="HH:MM each day ends.")
+    participants: list[str] | None = Field(default=None, description="Who is coming, as said.")
+    prefer: Literal["new", "favorites"] | None = None
+    why: str = Field(description="Under 200 characters: what the framing misread.")
+
+
+@tool(
+    name="reframe",
+    description=(
+        "Used by the call that chooses what to suggest, once, when the question was plainly "
+        "framed wrong (the days, the part of a day, who is coming, favorites): code checks every "
+        "option again in the corrected framing and hands back the new dossier. Not for chat."
+    ),
+    worker_only=True,
+)
+def reframe(ctx: ToolContext, args: ReframeInput) -> dict[str, Any]:
+    """The framing corrected once, checked again by code with no search (suggest/choosing.py);
+    the picks that follow are checked against the new options."""
+    again = ctx.scratch.get("reframe")
+    if again is None:
+        raise ToolError("there is no question to reframe here")
+    if "reframed" in ctx.scratch:
+        raise ToolError("the framing was corrected once already: pick from the options given")
+    why = " ".join(args.why.split())
+    if not why or len(why) > MOST_WORDS:
+        raise ToolError(f"say why in 1 to {MOST_WORDS} characters")
+    changes = args.model_dump(exclude={"why"}, exclude_none=True)
+    if not changes:
+        raise ToolError("say what to change: the window, its hours, who is coming or prefer")
+    made = again(changes)
+    ctx.scratch["reframed"] = {"changes": changes, "why": why}
+    return {"dossier": made.text}
+
+
 @tool(
     name="suggest",
     description=(
@@ -246,6 +286,8 @@ def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
     # whenever it cannot, the engine's own order.
     assessed = assess(ctx, args)
     chosen = None if choosing.reason_not_to(ctx, args) else choosing.choose(ctx, args, assessed)
+    if chosen is not None and chosen.reframed is not None:
+        assessed = chosen.reframed  # the question as the stronger call corrected it
     # Uncached and resent with the reply: leaving nulls out roughly halves it. A listed find's
     # row id is the page's, not the model's.
     return result_of(assessed, chosen).model_dump(

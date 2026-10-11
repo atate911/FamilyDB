@@ -366,6 +366,12 @@ GROUPS: tuple[Group, ...] = (
                 "before until the month turns. 0 chooses nothing.",
             ),
             field(
+                "choose_now",
+                "Choose for questions about right now too",
+                '"Anything to do this afternoon?" waits a few seconds more for the stronger '
+                "model, within the same monthly cap. Status shows how long choosing takes.",
+            ),
+            field(
                 "voice_max_minutes",
                 "Longest voice note heard (minutes)",
                 "A longer one is not heard at all, since every minute is paid for.",

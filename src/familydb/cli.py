@@ -611,6 +611,11 @@ def debug_suggestions(
     )
     if found.unoffered:
         typer.echo(f"{found.unoffered:,d} plan(s) were made that no suggestion had offered.")
+    if found.choosing_calls:
+        typer.echo(
+            f"Choosing took {found.choosing_wait:.1f} s a call on average "
+            f"({found.choosing_calls:,d} call{'' if found.choosing_calls == 1 else 's'})."
+        )
     sources = found.sources()
     if sources:
         typer.echo(f"\n  {'what was planned':<30} {'plans':>6} {'rated':>6} {'average':>8}")

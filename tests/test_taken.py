@@ -116,3 +116,26 @@ def test_a_pick_counts_as_the_stronger_calls_and_a_late_plan_as_nobodys(conn) ->
 def test_nothing_asked_is_an_empty_report(conn) -> None:
     found = taken.report(conn, since="2026-09-01T00:00:00Z")
     assert (found.asked, found.take_rate, found.sources(), found.against()) == (0, 0, [], [])
+
+
+def test_the_wait_for_choosing_is_reported(conn) -> None:
+    """Turning choosing on for "right now" adds the stronger call's wait: the report says it."""
+    from familydb.store import calls
+
+    with db.transaction(conn):
+        for ms in (3000, 5400):
+            calls.log_llm_call(
+                conn,
+                message_id=None,
+                iteration=1,
+                model="claude-opus-5",
+                served_model=None,
+                request_id=None,
+                stop_reason="tool_use",
+                usage={},
+                duration_ms=ms,
+                now="2026-09-20T10:00:00Z",
+                kind="choose",
+            )
+    found = taken.report(conn, since="2026-09-01T00:00:00Z")
+    assert (found.choosing_calls, found.choosing_wait) == (2, 4.2)

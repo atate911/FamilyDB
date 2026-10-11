@@ -128,10 +128,11 @@ A judgment never changes a setting by itself except under "within cost"; a deare
 
 The **Choosing suggestions** row. For a planning question from a grown-up, such as "what should we do this weekend?" or "where should we eat tonight?", and for the weekend ideas, a stronger model picks first and the assistant then says the picks in her words. FamilyDB gives it what the family has told the assistant and done that bears on the question: ratings and notes, what the assistant remembers, the weeks before and after, and that chat's last few days. It picks a favorite, something new and a wildcard, each with a reason, and FamilyDB checks every pick against the options it was given. The call goes to the company that answers the chat unless you choose another for the row, and nowhere else.
 
-A question about right now, a kid's question and any command such as `/now` are answered as before, at no extra cost. When choosing is off, over its budget or fails, the suggestions come in FamilyDB's own order and nobody is told. About 3 to 13 cents a planning question, depending on the company.
+A kid's question and any command such as `/now` are answered as before, at no extra cost, and so is a question about right now unless you turn that on below. When the question was plainly framed wrong for what was asked, such as the whole weekend for "Saturday morning", the stronger model may correct it once before it picks; FamilyDB checks everything again in the corrected terms without searching the web, and the reply says what was looked at. When choosing is off, over its budget or fails, the suggestions come in FamilyDB's own order and nobody is told. About 3 to 13 cents a planning question, depending on the company.
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
+| Choose for questions about right now too (`choose_now`) | No | "Anything to do this afternoon?" is chosen for as well, within the same monthly cap. The answer waits a few seconds more for the stronger model; [Status](/wiki/controls/status#what-came-of-her-suggestions) shows how long choosing takes. | Yes or No |
 | Most to spend on choosing suggestions in a month (`choose_budget`) | US$5 | The monthly cap in the row. Counted within the daily limit too, over the calendar month in the family's time zone. Once it is spent, suggestions go back to FamilyDB's own order until the month turns. 0 chooses nothing. | 0 to 50 |
 
 ## Voice notes and photos

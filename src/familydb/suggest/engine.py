@@ -157,12 +157,19 @@ def result_of(a: Assessment, chosen: Chosen | None = None) -> SuggestResult:
 
 
 def assess(
-    ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True, record: bool = True
+    ctx: ToolContext,
+    args: SuggestInput,
+    *,
+    refresh_stale: bool = True,
+    record: bool = True,
+    web: bool = True,
 ) -> Assessment:
     """Every stage but the last: the window, the context, the rules, the checks, the engine's own
     cut, the finds and the log. Without `record` nothing is logged as suggested: the picks made
     ahead for Now (familydb/picks.py) are not a suggestion anybody asked for, so they must not
-    sink the same ideas in the next real question."""
+    sink the same ideas in the next real question. Without `web` nothing is searched (discovery,
+    a place), only what is kept is read: the choice corrected by the stronger call
+    (suggest/choosing.py) costs no further search."""
     window, label, bounds = resolve_window(args, ctx.clock.now())
     context = build_context(ctx, window, bounds)
     context.origin, where_note = resolve_origin(ctx, args.near, args.window)
@@ -242,11 +249,11 @@ def assess(
     stored = listing.listed(ctx, context)
     finds, note = ([], None)
     # A place nothing saved fits, found on the web, when the family has it on (suggest/places.py).
-    if places_wanted(context, constraints, candidates, ctx.settings):
+    if web and places_wanted(context, constraints, candidates, ctx.settings):
         finds, note = find_places(ctx, context, constraints)
         if note:
             skipped.append(note)
-    if args.discover and (constraints.topic or len(stored) < listing.COVERED):
+    if web and args.discover and (constraints.topic or len(stored) < listing.COVERED):
         events, note = discover(ctx, context, constraints)
         finds = finds + events
         if note:

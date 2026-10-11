@@ -153,4 +153,5 @@ def compose(
         suggestion={"id": suggestion_id} if suggestion_id is not None else None,
         picks=chosen.picks if chosen and chosen.picks else None,
         framing=chosen.framing if chosen and chosen.picks else None,
+        reframed=chosen.why if chosen else None,
     )

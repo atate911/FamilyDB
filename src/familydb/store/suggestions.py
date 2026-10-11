@@ -75,6 +75,24 @@ def set_picks(conn: sqlite3.Connection, suggestion_id: int, picks: dict[str, Any
     conn.execute("UPDATE suggestions SET picks = ? WHERE id = ?", (to_json(picks), suggestion_id))
 
 
+def reframe(
+    conn: sqlite3.Connection,
+    suggestion_id: int,
+    *,
+    window_start: str | None,
+    window_end: str | None,
+    candidates: list[dict[str, Any]],
+    web_finds: list[dict[str, Any]],
+) -> None:
+    """A suggestion's window and verdicts after the stronger call corrected its framing
+    (suggest/choosing.py). Call inside a transaction."""
+    conn.execute(
+        "UPDATE suggestions SET window_start = ?, window_end = ?, candidates = ?, web_finds = ? "
+        "WHERE id = ?",
+        (window_start, window_end, to_json(candidates), to_json(web_finds), suggestion_id),
+    )
+
+
 def picked_since(conn: sqlite3.Connection, *, since: str) -> list[Suggestion]:
     """Suggestions made at or after `since` that a choice was made for, newest first."""
     rows = conn.execute(

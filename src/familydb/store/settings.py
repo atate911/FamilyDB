@@ -53,6 +53,7 @@ BEHAVIOUR = (
     "judgement_budget",
     "picks",
     "choose_budget",
+    "choose_now",
     "plan_checks",
     "plan_check_hour",
     "morning_hour",

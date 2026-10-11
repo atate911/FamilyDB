@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -137,6 +137,10 @@ class Pick(BaseModel):
 class Chosen:
     picks: list[Pick]
     framing: str | None = None
+    # When the stronger call corrected the question's framing (suggest/choosing.py): the
+    # engine's assessment of the corrected question, and why, in its words.
+    reframed: Any = None
+    why: str | None = None
 
 
 class SuggestResult(BaseModel):
@@ -152,6 +156,9 @@ class SuggestResult(BaseModel):
     # a result nobody chose for is what it always was.
     picks: list[Pick] | None = None
     framing: str | None = None
+    # Why the question was checked in other terms than first framed, when the stronger call
+    # corrected it: the reply should say what was looked at.
+    reframed: str | None = None
 
 
 @dataclass

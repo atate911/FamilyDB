@@ -72,7 +72,9 @@ A missing service does not fail the answer: the engine notes it, and the model i
 
 For a planning question from a grown-up, the engine's checked options go to a stronger model before the chat model answers. Code gathers everything that bears on the question: who asks and who reads, the days, every option with what was checked, how each went before, what the family has told the assistant, the weeks before and after, what was picked lately and the chat's last three days. The stronger model picks up to five, usually a favorite, something new and a wildcard, each with a reason that cites what it rests on. Code checks every pick against the options and the citations, and the chat model leads its reply with them.
 
-It never runs for a question about right now, a kid's question, `/now`, the evening check or the command line. When it is off, over its monthly budget or fails, the engine's own order is the answer and nobody is told. The row, the budget and what it costs are on [AI model](/wiki/controls/settings/ai-model#choosing-the-suggestions).
+If the chat model framed the question plainly wrong, such as the whole weekend for "Saturday morning", the stronger model may correct the days, the hours, who is coming or favorites once before it picks. Code runs the checks again in the corrected terms, without searching the web, and the reply says what was looked at.
+
+It never runs for a kid's question, `/now`, the evening check or the command line, nor for a question about right now unless `choose_now` is on. When it is off, over its monthly budget or fails, the engine's own order is the answer and nobody is told. The row, the budget and what it costs are on [AI model](/wiki/controls/settings/ai-model#choosing-the-suggestions).
 
 ## Web discovery
 

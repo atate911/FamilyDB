@@ -89,6 +89,13 @@
   keeps it as a rule the suggestions hold: rain stops lowering outdoor ideas (the rain is still
   said), and what was done comes up again after the rest the family named, for everything or one
   kind. Held for anything said outright about the family, must or not; the Memory page shows it.
+- **The stronger call can correct the question before it picks.** When the chat model framed a
+  question plainly wrong (the whole weekend for "Saturday morning", nobody for "with the girls"), the
+  call that chooses may correct the days, the hours, who is coming or favorites once; code checks
+  everything again in the corrected terms without searching the web, and the reply says what was
+  looked at. A new setting on the AI model page, **Choose for questions about right now too**, off
+  by default, lets it choose for "anything to do this afternoon?" within the same monthly cap;
+  Status shows how long choosing takes, to judge the wait by.
 
 ## v0.5.0 — beta (2026-10-11)
 

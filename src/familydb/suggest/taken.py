@@ -20,7 +20,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 
-from familydb.store import ideas, outcomes, plans, suggestions
+from familydb.store import calls, ideas, outcomes, plans, suggestions
 from familydb.store.ideas import normalize_title
 from familydb.store.plans import Plan
 from familydb.store.suggestions import Suggestion
@@ -68,6 +68,8 @@ class Report:
     chosen: int = 0  # of which the stronger call chose for
     took: list[Took] = field(default_factory=list)
     unoffered: int = 0  # plans made in the period that no suggestion offered
+    choosing_calls: int = 0  # the stronger call's model calls in the period
+    choosing_wait: float = 0.0  # their average time, seconds: what `choose_now` adds to "now"
 
     @property
     def led_to_plan(self) -> int:
@@ -204,6 +206,7 @@ def report(conn: sqlite3.Connection, *, since: str) -> Report:
     titles = {idea.id: idea.title for idea in ideas.list_all(conn, include_dropped=True)}
     said = outcomes.recent(conn, since=since[:10])
     found = Report(asked=len(asked), chosen=sum(1 for s in asked if s.picks))
+    found.choosing_calls, found.choosing_wait = calls.waits(conn, "choose", since=since)
     window = timedelta(days=ATTRIBUTE_DAYS)
     for plan in made:
         names = _names(plan, titles)

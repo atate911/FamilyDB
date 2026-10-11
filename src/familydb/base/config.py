@@ -460,8 +460,13 @@ class Settings(BaseSettings):
     # never a model call; off leaves Now with her questions and the day's line.
     picks: bool = True
     choose_budget: float = Field(default=5.0, ge=0, le=50)
-    # Model calls one choice may take: the answer, and one more if code refused a pick in it.
-    # Each re-sends the whole dossier at the strong level, so it stays small.
+    # Choosing for a question about right now too ("anything to do this afternoon?"): off until
+    # the family turns it on, since it adds a strong call's wait to an answer wanted at once.
+    # Within `choose_budget`; the wait is shown on Status (suggest/taken.py) to judge it by.
+    choose_now: bool = False
+    # Model calls one choice may take: the answer, and one more if code refused a pick in it,
+    # or corrected the framing (`reframe`). Each re-sends the whole dossier at the strong level,
+    # so it stays small.
     choose_max_iterations: int = Field(default=2, ge=1, le=5)
 
     gemini_api_key: str | None = None
