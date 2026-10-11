@@ -62,7 +62,7 @@ A reminder's page says when, whose, the window it suits, how it repeats and wher
 
 ## Soon
 
-What is on near home in the weeks ahead, by day, with the family's own things that have a closing date among them and the free time on each day. It is read from the family's sources, the calendars and the listings set on [its settings page](/wiki/controls/settings/happening), with no model call. The chips are **This weekend**, **Free** (only days with free time) and each source.
+What is on near home in the weeks ahead, by day, with the family's own things that have a closing date among them. It is read from the family's sources, the calendars and the listings set on [its settings page](/wiki/controls/settings/happening), with no model call. Each row is the name and one line: the time (or all day), where, the cost and who listed it; tap it for the listing's own words, **Save it** and **Put it on the calendar**. The chips are **This weekend**, **Free** (only what costs nothing) and each source.
 
 Each find has a page of its own: its day, place and cost, the listing in its own words and a link to it, and who listed it. **Save it** keeps it as an idea with its dates and place (the tool the assistant would call); **Put it on the calendar** adds it as a plan. Once it is over, the page says so.
 

@@ -57,7 +57,7 @@ def test_what_is_on_is_listed_by_day_with_who_listed_it(page, conn) -> None:
     assert "javascript:" not in text
     assert "listed by library.example.org" in text
     assert text.index("Today") < text.index("Saturday 26 September")
-    assert "until Thu 1 Oct" in text and "10:30" in text
+    assert "until Thu 1 Oct" in text and '<span class="fig">10:30\u00a0am</span>' in text
     # Each opens a page of its own: the listing's link there, never one that is no web address.
     story, exhibit = (finds.get(conn, number) for number in (1, 2))
     assert story is not None and exhibit is not None and 'href="/soon/1"' in text
@@ -76,3 +76,27 @@ def test_the_page_is_soon_in_the_row_and_beside_list_and_month(page) -> None:
     text = page.get("/happening").text
     assert 'href="/soon" aria-current="page"' in text
     assert "Nothing near home is read yet." in text
+
+
+def test_a_row_is_one_line_in_the_familys_clock(page, conn) -> None:
+    """Each row says when, where, cost and who listed it on one line, the time as the family
+    reads it, all-day things before timed ones and timed ones by the clock (6 pm after 10 am);
+    what the listing says is on its own page."""
+    _listed(
+        conn,
+        FoundEvent(
+            external_id="late",
+            title="Lantern walk",
+            starts=datetime(2026, 9, 26, 18, 0, tzinfo=TZ),
+            summary="Bring a lantern or make one at the craft tent.",
+        ),
+        FoundEvent(
+            external_id="early", title="Story time", starts=datetime(2026, 9, 26, 10, 0, tzinfo=TZ)
+        ),
+        FoundEvent(external_id="day", title="Book sale", starts=date(2026, 9, 26), all_day=True),
+    )
+    text = page.get("/happening").text
+    assert text.index("Book sale") < text.index("Story time") < text.index("Lantern walk")
+    assert "6\u00a0pm" in text and "18:00" not in text
+    assert "Bring a lantern" not in text and "Bring a lantern" in page.get("/soon/1").text
+    assert '<span class="tag tag--off">listed by' not in text
