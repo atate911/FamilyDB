@@ -34,7 +34,7 @@ from familydb.availability import (
 )
 from familydb.base.dates import utc_iso
 from familydb.store import alerts as alert_store
-from familydb.store import db, members, problems
+from familydb.store import db, members, messages, problems
 
 OK = "ok"
 WARN = "warn"
@@ -279,8 +279,7 @@ def check_database(app: App, report: Report) -> sqlite3.Connection | None:
 
     try:
         with closing(app.connect()) as probe:
-            probe.execute("CREATE TABLE IF NOT EXISTS _doctor_write_probe (x INTEGER)")
-            probe.execute("DROP TABLE _doctor_write_probe")
+            db.write_probe(probe)
         report.add("database writable", OK, "a write succeeded")
     except sqlite3.Error as exc:
         report.add(
@@ -338,7 +337,7 @@ def check_integrity(app: App, conn: sqlite3.Connection, report: Report) -> None:
     message that happens to need it."""
     path = Path(app.settings.familydb_path)
     try:
-        found = [row[0] for row in conn.execute("PRAGMA quick_check").fetchall()]
+        found = db.quick_check(conn)
     except sqlite3.Error as exc:
         report.add("integrity", FAIL, f"the check itself failed: {exc}", _RESTORE)
         return
@@ -450,27 +449,10 @@ def check_messages(app: App, conn: sqlite3.Connection | None, report: Report) ->
     now = app.clock.now()
     attempts = app.settings.retry_max_attempts
     try:
-        waiting = conn.execute(
-            "SELECT count(*) AS n FROM messages WHERE direction = 'in' "
-            "AND status IN ('received', 'failed') AND give_up = 0 AND retries < ? "
-            "AND received_at < ?",
-            (attempts, utc_iso(now - WAITING)),
-        ).fetchone()["n"]
-        unsent = conn.execute(
-            "SELECT count(*) AS n FROM messages WHERE direction = 'out' AND delivered_at IS NULL "
-            "AND cancelled_at IS NULL AND received_at < ?",
-            (utc_iso(now - UNSENT),),
-        ).fetchone()["n"]
-        gave_up = conn.execute(
-            "SELECT count(*) AS n, max(id) AS newest FROM messages WHERE direction = 'in' "
-            "AND status = 'failed' AND (give_up = 1 OR retries >= ?) "
-            "AND coalesce(error, '') != 'member_inactive' AND processed_at >= ?",
-            (attempts, utc_iso(now - GAVE_UP)),
-        ).fetchone()
-        why = (
-            conn.execute("SELECT error FROM messages WHERE id = ?", (gave_up["newest"],)).fetchone()
-            if gave_up["newest"]
-            else None
+        waiting = messages.waiting_count(conn, max_retries=attempts, before=utc_iso(now - WAITING))
+        unsent = messages.unsent_count(conn, before=utc_iso(now - UNSENT))
+        given_up, why = messages.given_up_since(
+            conn, max_retries=attempts, since=utc_iso(now - GAVE_UP)
         )
     except sqlite3.Error:
         report.add("messages", SKIP, "the database is not up to date yet")
@@ -491,16 +473,15 @@ def check_messages(app: App, conn: sqlite3.Connection | None, report: Report) ->
             "them or is not connected",
             "Check the Telegram token on the settings page; the retry job resends once it works",
         )
-    if gave_up["n"]:
-        error = ((why["error"] if why else "") or "no reason kept").strip().splitlines()[0][:100]
+    if given_up:
+        error = (why or "no reason kept").strip().splitlines()[0][:100]
         report.add(
             "given-up messages",
             WARN,
-            f"{gave_up['n']} message(s) in the last week were given up on, the newest because: "
-            f"{error}",
+            f"{given_up} message(s) in the last week were given up on, the newest because: {error}",
             "Fix the cause, then: familydb db retry-failed --reset (the Status page lists them)",
         )
-    if not (waiting or unsent or gave_up["n"]):
+    if not (waiting or unsent or given_up):
         report.add("messages", OK, "none waiting, no reply unsent, none given up on this week")
 
 

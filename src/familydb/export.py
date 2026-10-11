@@ -23,7 +23,7 @@ from typing import Any
 from familydb import __version__
 from familydb.base.config import Settings
 from familydb.base.dates import parse_datetime
-from familydb.store import ideas, plans, tasks
+from familydb.store import db, ideas, plans, tasks
 
 # A line of a calendar file is at most this many bytes, then folded (RFC 5545, 3.1).
 FOLD = 75
@@ -192,7 +192,7 @@ def everything(conn: sqlite3.Connection, now: datetime) -> dict[str, Any]:
         "exported_at": now.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     for table, columns in TABLES.items():
-        rows = [dict(row) for row in conn.execute(f"SELECT * FROM {table} ORDER BY id")]
+        rows = db.dump_table(conn, table)
         if table in KEPT_ONLY:
             rows = [{key: row.get(key) for key in columns} for row in rows]
         else:

@@ -280,7 +280,7 @@ def db_backup(dest: Path = typer.Argument(..., help="Path of the backup file to 
     with closing(application.connect()) as conn, closing(sqlite3.connect(str(dest))) as target:
         conn.backup(target)
         # The copy itself is read back: a backup nobody can restore is no backup.
-        verdict = str(target.execute("PRAGMA quick_check").fetchone()[0])
+        verdict = db.quick_check(target)[0]
     ok = verdict == "ok"
     from familydb.store import backups
 

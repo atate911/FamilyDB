@@ -352,9 +352,7 @@ def _run(
             if row.retries >= app.settings.retry_max_attempts:
                 return None
             with transaction(conn):
-                conn.execute(
-                    "UPDATE messages SET retries = retries + 1 WHERE id = ?", (inbound_id,)
-                )
+                messages.bump_retries(conn, inbound_id)
         if folded:
             msg = dataclasses.replace(msg, text="\n".join([*(f.text for f in folded), msg.text]))
         return _run_owned(

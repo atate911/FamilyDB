@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from familydb.base.dates import utc_iso
-from familydb.store import heartbeat
+from familydb.store import db, heartbeat
 from familydb.store.db import transaction
 
 log = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def check(app: Any) -> tuple[bool, str]:
     """(well, what to say): "ok", or what is wrong."""
     try:
         with closing(app.connect()) as conn:
-            conn.execute("SELECT 1").fetchone()
+            db.answers(conn)
             try:
                 beat = heartbeat.read(conn)
             except sqlite3.OperationalError:

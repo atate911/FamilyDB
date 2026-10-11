@@ -149,13 +149,7 @@ def sync_plans(
     # Plans kept here before Google was connected go on it first, so Google's answer holds them.
     adopt_local(conn, calendar, calendar_id, now)
     changed = calendar.changes(calendar_sync_state.get(conn, calendar_id))
-    live = conn.execute(
-        "SELECT * FROM plans WHERE calendar_id = ? AND google_event_id IS NOT NULL "
-        "AND status != 'cancelled' AND followed_up_at IS NULL",
-        (calendar_id,),
-    ).fetchall()
-    for row in live:
-        plan = Plan.from_row(row)
+    for plan in plans.live_on(conn, calendar_id):
         if plan.google_event_id in changed.events:
             apply_event(conn, plan, changed.events[plan.google_event_id], now, tz=tz)
         elif changed.full:

@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import sqlite3
 
+from familydb.store import messages
+
 GONE = "[place forgotten]"
 # A shorter name would match too much of what others said to be taken out of it by sight.
 LEAST_CHARS = 3
@@ -67,11 +69,10 @@ def forget_of_member(conn: sqlite3.Connection, member_id: int) -> int:
 def _scrub(conn: sqlite3.Connection, row: sqlite3.Row) -> None:
     label = row["label"]
     if row["message_id"] is not None:
-        said = conn.execute("SELECT text FROM messages WHERE id = ?", (row["message_id"],))
-        found = said.fetchone()
-        if found is not None and label in found["text"]:
-            text = found["text"].replace(f" ({label})", "").replace(label, GONE)
-            conn.execute("UPDATE messages SET text = ? WHERE id = ?", (text, row["message_id"]))
+        said = messages.get(conn, int(row["message_id"]))
+        if said is not None and label in said.text:
+            text = said.text.replace(f" ({label})", "").replace(label, GONE)
+            messages.set_text(conn, said.id, text)
     quoted = json.dumps(label, ensure_ascii=False)[1:-1]  # as it reads inside a JSON string
     for table, column, made, as_json in HELD_IN if len(label) >= LEAST_CHARS else ():
         for form in dict.fromkeys((quoted,) if as_json else (label, quoted)):

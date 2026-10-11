@@ -164,6 +164,29 @@ def overlapping(conn: sqlite3.Connection, first: str, last: str) -> list[Plan]:
     return [Plan.from_row(row) for row in rows]
 
 
+def search(
+    conn: sqlite3.Connection, query: str, *, include_cancelled: bool, limit: int = 50
+) -> list[Plan]:
+    """Plans whose title has the words, newest first; cancelled ones only when asked."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE lower(title) LIKE ? AND (? OR status != 'cancelled') "
+        "ORDER BY start DESC LIMIT ?",
+        ("%" + query.strip().lower() + "%", include_cancelled, limit),
+    )
+    return [Plan.from_row(row) for row in rows]
+
+
+def live_on(conn: sqlite3.Connection, calendar_id: str) -> list[Plan]:
+    """The plans on this Google calendar still to come to anything: not cancelled, not yet
+    followed up."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE calendar_id = ? AND google_event_id IS NOT NULL "
+        "AND status != 'cancelled' AND followed_up_at IS NULL",
+        (calendar_id,),
+    )
+    return [Plan.from_row(row) for row in rows]
+
+
 def for_event(conn: sqlite3.Connection, event_id: str) -> Plan | None:
     """The plan that holds a Google event, if any does."""
     row = conn.execute("SELECT * FROM plans WHERE google_event_id = ?", (event_id,)).fetchone()

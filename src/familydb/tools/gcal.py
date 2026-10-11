@@ -120,17 +120,10 @@ def search_plans(ctx: ToolContext, args: SearchPlansInput) -> dict[str, Any]:
         sync_plans(
             ctx.conn, ctx.calendar, ctx.settings.google_calendar_id, ctx.now_iso(), tz=ctx.clock.tz
         )
-    rows = ctx.conn.execute(
-        "SELECT * FROM plans WHERE lower(title) LIKE ? AND (? OR status != 'cancelled') "
-        "ORDER BY start DESC LIMIT 50",
-        ("%" + args.query.strip().lower() + "%", args.include_cancelled),
-    )
+    found = plans.search(ctx.conn, args.query, include_cancelled=args.include_cancelled)
     return {
         "calendar_checked": checked,
-        "plans": [
-            {"plan_id": row["id"], **plans.Plan.from_row(row).model_dump(mode="json")}
-            for row in rows
-        ],
+        "plans": [{"plan_id": plan.id, **plan.model_dump(mode="json")} for plan in found],
     }
 
 

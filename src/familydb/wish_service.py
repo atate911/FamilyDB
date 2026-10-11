@@ -158,11 +158,7 @@ def _tell_parents(
 
 
 def waiting_for_parents(conn: sqlite3.Connection) -> list[int]:
-    rows = conn.execute(
-        "SELECT id FROM messages WHERE direction = 'out' AND delivered_at IS NULL "
-        "AND cancelled_at IS NULL AND buttons LIKE '%\"wish_yes:%' ORDER BY id"
-    )
-    return [int(row[0]) for row in rows]
+    return messages.undelivered_with_button(conn, "wish_yes:")
 
 
 def _tell_kid(
@@ -468,19 +464,11 @@ def turn_away(
     week_ago = utc_iso(now - timedelta(days=7))
     with transaction(conn):
         if message_id is not None:
-            row = conn.execute(
-                "SELECT id FROM wishes WHERE source_message_id = ? AND status = 'turned_away' "
-                "AND concern = ?",
-                (message_id, concern),
-            ).fetchone()
-            if row is not None:
-                kept = _get(conn, int(row[0]))
+            kept_id = wishes.turned_away_for(conn, message_id, concern)
+            if kept_id is not None:
+                kept = _get(conn, kept_id)
                 return TurnedAway(kept, tell_parents=False, may_ask_parent=False)
-        asked = conn.execute(
-            "SELECT count(*) FROM wishes WHERE member_id = ? AND parent_review != 'none' "
-            "AND updated_at >= ?",
-            (owner.id, week_ago),
-        ).fetchone()[0]
+        asked = wishes.parent_asks_since(conn, owner.id, week_ago)
         offered = (
             reviewable and concern != "inappropriate" and asked < settings.parent_asks_per_week
         )

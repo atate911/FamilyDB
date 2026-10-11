@@ -56,14 +56,7 @@ def lease(app: App, conn: sqlite3.Connection, message_id: int) -> Iterator[Claim
     now = utc_iso(app.clock.now())
     until = utc_iso(app.clock.now() + timedelta(seconds=LEASE_SECONDS))
     with transaction(conn):
-        won = (
-            conn.execute(
-                "UPDATE messages SET claim_token = ?, claim_until = ? "
-                "WHERE id = ? AND (claim_until IS NULL OR claim_until <= ? OR claim_token = ?)",
-                (token, until, message_id, now, GATHER),
-            ).rowcount
-            == 1
-        )
+        won = messages.claim(conn, message_id, token=token, until=until, now=now, held_as=GATHER)
     if not won:
         yield Claim(None)
         return
@@ -73,10 +66,8 @@ def lease(app: App, conn: sqlite3.Connection, message_id: int) -> Iterator[Claim
         while not stop.wait(RENEW_SECONDS):
             try:
                 with closing(app.connect()) as own, transaction(own):
-                    own.execute(
-                        "UPDATE messages SET claim_until = ? WHERE claim_token = ?",
-                        (utc_iso(app.clock.now() + timedelta(seconds=LEASE_SECONDS)), token),
-                    )
+                    later = utc_iso(app.clock.now() + timedelta(seconds=LEASE_SECONDS))
+                    messages.renew_claim(own, token, until=later)
             except Exception:
                 log.exception("could not renew message claim %s", message_id)
 
@@ -88,20 +79,14 @@ def lease(app: App, conn: sqlite3.Connection, message_id: int) -> Iterator[Claim
         stop.set()
         thread.join(timeout=10)
         with transaction(conn):
-            conn.execute(
-                "UPDATE messages SET claim_token = NULL, claim_until = NULL WHERE claim_token = ?",
-                (token,),
-            )
+            messages.release_claim(conn, token)
 
 
 def hold_for_gathering(conn: sqlite3.Connection, message_id: int, *, until: str) -> None:
     """Keep a stored message from the retry job while it waits to be answered with the ones after
     it. Call inside a transaction.
     """
-    conn.execute(
-        "UPDATE messages SET claim_token = ?, claim_until = ? WHERE id = ?",
-        (GATHER, until, message_id),
-    )
+    messages.hold(conn, message_id, mark=GATHER, until=until)
 
 
 def claim_also(
@@ -114,11 +99,7 @@ def claim_also(
     taken = []
     with transaction(conn):
         for message_id in message_ids:
-            if conn.execute(
-                "UPDATE messages SET claim_token = ?, claim_until = ? "
-                "WHERE id = ? AND claim_token = ?",
-                (claim.token, until, message_id, GATHER),
-            ).rowcount:
+            if messages.take_held(conn, message_id, mark=GATHER, token=claim.token, until=until):
                 taken.append(message_id)
     return taken
 
@@ -148,10 +129,7 @@ def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
             log.exception("delivery pending for message %s", message_id)
             return False
         with transaction(conn):
-            conn.execute(
-                "UPDATE messages SET delivered_at = ? WHERE id = ?",
-                (utc_iso(app.clock.now()), message_id),
-            )
+            messages.mark_delivered(conn, [message_id], now=utc_iso(app.clock.now()))
         # One she sent of her own accord: the channel may tell a device too (push.py). Whatever
         # becomes of that, the message is delivered.
         notify = app.notifiers.get(row.channel) if row.sent_as else None
@@ -165,12 +143,6 @@ def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
 
 def run_deliveries(app: App) -> int:
     with closing(app.connect()) as conn:
-        ids = [
-            r[0]
-            for r in conn.execute(
-                "SELECT id FROM messages WHERE direction = 'out' "
-                "AND delivered_at IS NULL AND cancelled_at IS NULL ORDER BY id"
-            )
-        ]
+        ids = messages.undelivered(conn)
     now = app.clock.now()
     return sum(deliver(app, i) for i in ids if not app.held.is_held(i, now))

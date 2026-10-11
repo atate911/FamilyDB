@@ -156,6 +156,27 @@ def for_member(conn: sqlite3.Connection, member_id: int, *, limit: int = 200) ->
     return [Wish.from_row(row) for row in rows]
 
 
+def turned_away_for(conn: sqlite3.Connection, message_id: int, concern: str) -> int | None:
+    """The wish already kept as turned away for this message and concern, if any."""
+    row = conn.execute(
+        "SELECT id FROM wishes WHERE source_message_id = ? AND status = 'turned_away' "
+        "AND concern = ?",
+        (message_id, concern),
+    ).fetchone()
+    return int(row[0]) if row is not None else None
+
+
+def parent_asks_since(conn: sqlite3.Connection, member_id: int, since: str) -> int:
+    """How many of the kid's wishes went to a parent since `since`."""
+    return int(
+        conn.execute(
+            "SELECT count(*) FROM wishes WHERE member_id = ? AND parent_review != 'none' "
+            "AND updated_at >= ?",
+            (member_id, since),
+        ).fetchone()[0]
+    )
+
+
 def day_of(conn: sqlite3.Connection, member_id: int, day: str) -> tuple[int, int]:
     """Her everyday asks that day, and her moves."""
     row = conn.execute(

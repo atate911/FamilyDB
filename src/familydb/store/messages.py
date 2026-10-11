@@ -337,6 +337,119 @@ def sent_on_their_own_counts(conn: sqlite3.Connection, *, since: str) -> dict[st
     return {row["sent_as"]: (int(row["n"]), row["last"]) for row in rows}
 
 
+def claim(
+    conn: sqlite3.Connection, message_id: int, *, token: str, until: str, now: str, held_as: str
+) -> bool:
+    """Take the message for a worker: free, lapsed, or held under `held_as` (delivery.GATHER).
+    True when this call took it. Call inside a transaction."""
+    return (
+        conn.execute(
+            "UPDATE messages SET claim_token = ?, claim_until = ? "
+            "WHERE id = ? AND (claim_until IS NULL OR claim_until <= ? OR claim_token = ?)",
+            (token, until, message_id, now, held_as),
+        ).rowcount
+        == 1
+    )
+
+
+def renew_claim(conn: sqlite3.Connection, token: str, *, until: str) -> None:
+    """Every message under the claim is kept until `until`. Call inside a transaction."""
+    conn.execute("UPDATE messages SET claim_until = ? WHERE claim_token = ?", (until, token))
+
+
+def release_claim(conn: sqlite3.Connection, token: str) -> None:
+    """Let go of every message under the claim. Call inside a transaction."""
+    conn.execute(
+        "UPDATE messages SET claim_token = NULL, claim_until = NULL WHERE claim_token = ?",
+        (token,),
+    )
+
+
+def hold(conn: sqlite3.Connection, message_id: int, *, mark: str, until: str) -> None:
+    """Keep a message under a mark (delivery.GATHER) until `until`, whatever held it. Call inside
+    a transaction."""
+    conn.execute(
+        "UPDATE messages SET claim_token = ?, claim_until = ? WHERE id = ?",
+        (mark, until, message_id),
+    )
+
+
+def take_held(
+    conn: sqlite3.Connection, message_id: int, *, mark: str, token: str, until: str
+) -> bool:
+    """Move a message held under `mark` to the claim `token`; True when it was still held so.
+    Call inside a transaction."""
+    return bool(
+        conn.execute(
+            "UPDATE messages SET claim_token = ?, claim_until = ? WHERE id = ? AND claim_token = ?",
+            (token, until, message_id, mark),
+        ).rowcount
+    )
+
+
+def bump_retries(conn: sqlite3.Connection, message_id: int) -> None:
+    conn.execute("UPDATE messages SET retries = retries + 1 WHERE id = ?", (message_id,))
+
+
+def undelivered(conn: sqlite3.Connection) -> list[int]:
+    """Her messages stored and not yet sent, oldest first."""
+    rows = conn.execute(
+        "SELECT id FROM messages WHERE direction = 'out' "
+        "AND delivered_at IS NULL AND cancelled_at IS NULL ORDER BY id"
+    )
+    return [int(row[0]) for row in rows]
+
+
+def undelivered_with_button(conn: sqlite3.Connection, button: str) -> list[int]:
+    """Her messages not yet sent that carry a button whose action starts with `button`."""
+    rows = conn.execute(
+        "SELECT id FROM messages WHERE direction = 'out' AND delivered_at IS NULL "
+        "AND cancelled_at IS NULL AND buttons LIKE ? ORDER BY id",
+        (f'%"{button}%',),
+    )
+    return [int(row[0]) for row in rows]
+
+
+def waiting_count(conn: sqlite3.Connection, *, max_retries: int, before: str) -> int:
+    """How many messages in got no answer and were received before `before`."""
+    return int(
+        conn.execute(
+            "SELECT count(*) FROM messages WHERE direction = 'in' "
+            "AND status IN ('received', 'failed') AND give_up = 0 AND retries < ? "
+            "AND received_at < ?",
+            (max_retries, before),
+        ).fetchone()[0]
+    )
+
+
+def unsent_count(conn: sqlite3.Connection, *, before: str) -> int:
+    """How many of her messages stored before `before` were never delivered."""
+    return int(
+        conn.execute(
+            "SELECT count(*) FROM messages WHERE direction = 'out' AND delivered_at IS NULL "
+            "AND cancelled_at IS NULL AND received_at < ?",
+            (before,),
+        ).fetchone()[0]
+    )
+
+
+def given_up_since(
+    conn: sqlite3.Connection, *, max_retries: int, since: str
+) -> tuple[int, str | None]:
+    """How many messages in were given up on since `since` (a sender gone inactive aside), and
+    the error kept with the newest."""
+    row = conn.execute(
+        "SELECT count(*) AS n, max(id) AS newest FROM messages WHERE direction = 'in' "
+        "AND status = 'failed' AND (give_up = 1 OR retries >= ?) "
+        "AND coalesce(error, '') != 'member_inactive' AND processed_at >= ?",
+        (max_retries, since),
+    ).fetchone()
+    if not row["n"]:
+        return 0, None
+    newest = conn.execute("SELECT error FROM messages WHERE id = ?", (row["newest"],)).fetchone()
+    return int(row["n"]), (newest["error"] if newest else None)
+
+
 def mark_delivered(conn: sqlite3.Connection, message_ids: list[int], *, now: str) -> None:
     """Carried by another message (a reply that mentioned it), so there is nothing to send."""
     conn.executemany(

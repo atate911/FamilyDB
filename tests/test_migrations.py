@@ -35,7 +35,55 @@ def test_fresh_database_reaches_latest_version(settings: Settings) -> None:
 
 # 0007 stays unused: a database may have run a 0007_web.sql that FamilyDB never kept, and must
 # not mistake a new 0007 for it.
-RETIRED = {7}
+RETIRED = set(db.RESERVED)
+
+
+def test_an_applied_migration_changed_since_is_refused(tmp_path, monkeypatch):
+    """Each file is recorded as applied by its checksum; an edit after the fact stops the bot
+    before it runs on a database the file no longer describes."""
+    import pytest
+
+    from familydb.base.errors import MigrationError
+
+    conn = db.connect(tmp_path / "edited.sqlite3")
+    db.migrate(conn)
+    every = db.list_migrations()
+    version, name, _ = every[10]
+    edited = [
+        (v, n, s + "\n-- a line added later\n") if v == version else (v, n, s) for v, n, s in every
+    ]
+    monkeypatch.setattr(db, "list_migrations", lambda: edited)
+    with pytest.raises(MigrationError, match=name):
+        db.migrate(conn)
+    monkeypatch.setattr(db, "list_migrations", lambda: every)
+    assert db.migrate(conn) == []
+
+
+def test_a_migration_from_before_checksums_is_taken_on_trust_once(tmp_path):
+    """A database migrated by an older FamilyDB has no checksums: the files in hand are recorded
+    as what was applied, and held from then on."""
+    conn = db.connect(tmp_path / "older.sqlite3")
+    db.migrate(conn)
+    conn.execute("DELETE FROM schema_checksums")
+    assert db.migrate(conn) == []
+    recorded = {row[0] for row in conn.execute("SELECT version FROM schema_checksums")}
+    assert recorded == {v for v, _, _ in db.list_migrations()}
+
+
+def test_a_migration_numbered_below_the_newest_applied_is_refused(tmp_path):
+    """One merged late, numbered below what a server already ran, is never run after them:
+    it gets the next number instead (0007 is the one gap, reserved)."""
+    import pytest
+
+    from familydb.base.errors import MigrationError
+
+    conn = db.connect(tmp_path / "late.sqlite3")
+    db.migrate(conn)
+    conn.execute("DELETE FROM schema_version WHERE version = 20")
+    conn.execute("DELETE FROM schema_checksums WHERE version = 20")
+    gone = next(name for version, name, _ in db.list_migrations() if version == 20)
+    with pytest.raises(MigrationError, match=gone):
+        db.migrate(conn)
 
 
 def test_migration_files_are_well_formed() -> None:
