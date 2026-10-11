@@ -102,6 +102,7 @@ def _hours_check(
     partial = False
     soft = False
     hours_text = None
+    hours_day: date | None = None  # the first day the hours are known for
     today_text = None
     for day in fits:
         status, ranges = open_on(place, day)
@@ -127,7 +128,7 @@ def _hours_check(
             else:
                 continue
         if hours_text is None:
-            hours_text = format_ranges(ranges)
+            hours_text, hours_day = format_ranges(ranges), day
         if day == context.today and today_text is None:
             usable = [(a, b) for a, b in stretches if b - a >= need]
             if usable:
@@ -145,8 +146,8 @@ def _hours_check(
     checks.hours = hours_text
     if today_text and open_days[0] == context.today:
         reasons.append(today_text)
-    elif hours_text:
-        reasons.append(f"open {open_days[0]:%A} {hours_text}")
+    elif hours_text and hours_day is not None:
+        reasons.append(f"open {hours_day:%A} {hours_text}")
     if partial:
         soft = True
         reasons.append("open only part of the free time")

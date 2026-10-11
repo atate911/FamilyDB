@@ -1335,3 +1335,25 @@ def test_a_saved_plan_without_an_offset_is_busy_at_its_wall_time(
         datetime(2026, 9, 26, tzinfo=TZ), datetime(2026, 9, 27, tzinfo=TZ)
     )
     assert (event.start.hour, event.end.hour) == (9, 10)
+
+
+def test_the_hours_said_are_the_day_they_are_known_for(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    """A place whose Saturday is not in its hours and whose Sunday is open: the reason names
+    Sunday's hours as Sunday's, not Saturday's."""
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    cafe = _idea(conn, "Sunday cafe", setting="indoor")
+    with db.transaction(conn):
+        place = places.insert(
+            conn,
+            name="Sunday cafe",
+            now=NOW_ISO,
+            hours={"sun": [{"open": "10:00", "close": "16:00"}]},
+            last_checked_at=NOW_ISO,
+        )
+        ideas.update(conn, cafe.id, {"place_id": place.id, "enrichment": "done"}, now=NOW_ISO)
+    _, data = _suggest(registry, ctx)
+    verdicts = {c["idea_id"]: c for c in data["candidates"]}
+    assert "open Sunday 10:00-16:00" in verdicts[cafe.id]["reasons"]
+    assert verdicts[cafe.id]["fits_days"] == ["2026-09-26", "2026-09-27"]

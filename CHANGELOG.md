@@ -69,7 +69,9 @@
 - **A stay-at-home idea is not held to opening hours.** A board game night, or anything of kind
   home with no place or link, has nothing to look up, so the lookups skipped it and the engine then
   called it possible for ever, "hours unknown (details skipped)", under every idea whose place is
-  known. It is now good when nothing else is against it, and says nothing of hours.
+  known. It is now good when nothing else is against it, and says nothing of hours. The hours
+  a reason quotes are named for the day they are known for, not the first day the place might be
+  open.
 
 ## v0.5.0 — beta (2026-10-11)
 
