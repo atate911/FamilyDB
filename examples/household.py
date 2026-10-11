@@ -30,6 +30,7 @@ from familydb.store import (
     memories,
     messages,
     outcomes,
+    pins,
     places,
     plans,
     tasks,
@@ -563,6 +564,9 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
         )
         tasks.add_reminder(conn, bins, iso(local(date(2026, 10, 22), 19)))
         todo("Call about the gutter", alex, None, "gutter", window="some Saturday morning")
+        # Everyone's, so a grown-up may say I'll handle it: one late, one for some weekend.
+        todo("Sign Maya's field trip form", None, local(date(2026, 10, 15), 20), "form")
+        todo("Fix the wobbly kitchen chair", None, None, "chair", window="some weekend")
 
         # -- lists
         for name, things in (
@@ -571,8 +575,9 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
             ("camping", ["tent stakes", "headlamps"]),
         ):
             ref = lists.list_id(conn, name, ago(days=20))
-            for thing in things:
-                lists.add(conn, ref, thing, by=alex.id, now=ago(days=2))
+            for n, thing in enumerate(things):
+                # Who put each there shows at the end of its row.
+                lists.add(conn, ref, thing, by=(alex, sam)[n % 2].id, now=ago(days=2))
 
         # -- the kids' wish lists
         wishes.insert(
@@ -733,7 +738,7 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
         )
 
         # -- the conversations
-        _said(
+        tomorrow = _said(
             conn,
             alex,
             "anything for tomorrow evening after soccer?",
@@ -741,6 +746,9 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
             "free; it should stay dry. Or Kenji's Ramen is 12 minutes away and open till 9.",
             ago(hours=2),
         )
+        # Sam kept that one at hand: the top of Chat, and of her column on a desk.
+        kept = messages.replies_to(conn, tomorrow.id)[-1]
+        pins.pin(conn, sam.id, kept.id, now=ago(hours=1.5))
         reply_on_eat = REPLY_ON_EAT
         _said(
             conn,

@@ -147,6 +147,9 @@ DOES = (
     ("/undo", "take the change back"),
     ("/wish", "change the list"),
     ("/memory", "remember or forget it"),
+    ("/mine", "make it yours: I'll handle it"),
+    ("/unpin", "take her reply off your pinned ones"),
+    ("/pin", "keep her reply at hand, pinned beside the box and at the top of Chat"),
 )
 
 

@@ -26,6 +26,13 @@
   script signed in as a person may send a message (`/api/say`) and use any form the page has
   (`/api/act`), with that person's permissions. No model call for a read. There is no native phone
   app: the page added to the home screen is the phone app. The guide's Reference has The API.
+- **Questions code can answer are answered at once.** "What's on this week?", "what's on my plate?",
+  "what's on the shopping list?", "what now?" and "undo that", as the whole message, get the same
+  answer as Telegram's commands, on the page and in Telegram alike, free and with no wait.
+- **I'll handle it, pins and who added what.** A to-do that is everyone's has I'll handle it beside
+  it on the plate and under its reminder on Telegram, which makes it yours. Pin under one of her
+  replies keeps it at hand, at the top of Chat and beside the box on a desk. Each thing on a list
+  carries the mark of whoever put it there.
 
 ## v0.4.0 — beta (2026-10-09)
 
