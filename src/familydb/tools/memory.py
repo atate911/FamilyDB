@@ -11,11 +11,11 @@ from pydantic import BaseModel, Field
 
 from familydb.base.dates import parse_date
 from familydb.base.errors import ToolError
+from familydb.moment import CostLevel
 from familydb.store import members
 from familydb.store import memories as store
 from familydb.store.db import transaction
 from familydb.store.memories import Category
-from familydb.suggest.types import CostLevel
 from familydb.tools.registry import ToolContext, keep_undo, tool
 
 MAX_CHANGES = 5

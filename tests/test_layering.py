@@ -70,7 +70,6 @@ EXCEPTIONS: dict[tuple[str, str], str] = {
     ): "the buttons under a wish message are declared in buttons.py",
     ("tools/registry.py", "agent"): "ToolDef, the provider-neutral declaration a tool becomes",
     ("tools/ideas.py", "agent"): "an idea is echoed as the line the prompt renders it as",
-    ("tools/memory.py", "suggest"): "CostLevel, the type a memory's rule is read as",
     ("tools/suggest.py", "suggest"): "the tool that runs the engine",
     ("tools/undo.py", "orchestration"): "the tool that takes a change back (undo.take_back)",
     ("pipeline.py", "channels"): "channels.base holds the message dataclasses",
