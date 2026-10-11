@@ -83,6 +83,24 @@
   </form>
 {%- endmacro %}
 
+{# Pin or Unpin under one of her replies (docs/INTERFACE.md section 8): kept at hand for whoever is signed in as themselves. `pin` is {id, pinned}; `back` where the form returns. #}
+{% macro pin_form(pin, back) -%}
+  <form class="pin-form" method="post" action="{{ url_for('family.unpin' if pin.pinned else 'family.pin') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="message" value="{{ pin.id }}" /><input type="hidden" name="back" value="{{ back }}" />
+    <button class="btn btn--quiet btn--sm" type="submit"{% if pin.pinned %} aria-pressed="true"{% endif %}>{{ icon('pin', size='sm') }}{{ 'Pinned' if pin.pinned else 'Pin' }}</button>
+  </form>
+{%- endmacro %}
+
+{# Her replies a person keeps at hand, newest first, each with Unpin. `pins` from chat.pinned. #}
+{% macro pin_shelf(pins, back) -%}
+  <ul class="pins">
+    {% for one in pins %}
+      <li class="pins__one"><span class="pins__text">{{ one.text | truncate(280) }}</span>
+        <span class="pins__foot"><time>{{ one.when | figs }}</time>{{ pin_form({'id': one.id, 'pinned': true}, back) }}</span></li>
+    {% endfor %}
+  </ul>
+{%- endmacro %}
 
 {# Vera: never drawn, only her screen, a small pane of glass with lines of light and her lit prompt. `size` is '', 'lg' or 'xl'; `state` is '' (ready), 'hello' (types in once, on Home), 'busy' (typing on a loop while she writes back) or 'off' (cannot answer). The drawings are the design's. #}
 {% macro vera_screen(size='', state='') -%}

@@ -1,4 +1,4 @@
-{% from "_ui.html" import icon, avatar, vera_screen, undo_form, badge %}
+{% from "_ui.html" import icon, avatar, vera_screen, undo_form, badge, pin_form, pin_shelf %}
 {# The box (docs/INTERFACE.md section 6): one line, the mic and a lit Send, in the same place on every page. It posts to
    the chat and comes back here (`back`). Under it: the message on its way, what she did (a receipt) or said (her reply
    over the page). Everything it needs is the page's box (chat.page_box, read with page_box()): family, who, send_where,
@@ -60,17 +60,23 @@
   <div class="said-sheet" role="status" id="said">
     <div class="said-sheet__you"><span class="sr">You said: </span>{{ b.said.asked }}</div>
     <div class="said-sheet__her">{{ vera_screen() }}<div><p class="said-sheet__by">{{ assistant }}</p><div class="said-sheet__text">{{ b.said.text }}</div>
-      {% if b.said.undo %}<div class="said-sheet__acts">{{ undo_form(b.said.undo, request.path) }}</div>{% endif %}</div></div>
+      {% if b.said.undo or b.said.pin %}<div class="said-sheet__acts">
+        {%- if b.said.undo %}{{ undo_form(b.said.undo, request.path) }}{% endif %}
+        {%- if b.said.pin %}{{ pin_form(b.said.pin, request.full_path.rstrip('?') ~ '#said') }}{% endif %}</div>{% endif %}</div></div>
     <p class="said-sheet__foot"><a href="{{ url_for('chat.show', _anchor='latest') }}">Earlier</a>{% if b.said.pointer %}<a href="{{ b.said.pointer.href }}">{{ b.said.pointer.label }} {{ icon('chev', size='sm') }}</a>{% endif %}</p>
   </div>
 {% elif shell.unread %}
   {# Somebody who uses only the page would not know she had written: her new messages, until the thread is opened. #}
   <p class="rcpt rcpt--new"><a href="{{ url_for('chat.show', _anchor='latest') }}">{{ badge('act', shell.unread, 'new') }}<span>{{ assistant }} wrote {{ 'something' if shell.unread == 1 else shell.unread ~ ' new messages' }}</span></a></p>
 {% endif %}
-{# Vera's column on a big screen (docs/INTERFACE.md section 8): the thread behind her reply, its last lines, drawn only
-   where the box has a column of its own. #}
-{% if b.recent %}
+{# Vera's column on a big screen (docs/INTERFACE.md section 8): what this person pinned of hers, then the thread behind
+   her reply, its last lines, drawn only where the box has a column of its own. #}
+{% if b.recent or b.pinned %}
   <section class="vc" aria-labelledby="vc-h">
+    {% if b.pinned %}
+      <h2 class="label" id="vc-pins">Pinned</h2>
+      {{ pin_shelf(b.pinned, request.full_path.rstrip('?')) }}
+    {% endif %}
     <h2 class="label" id="vc-h">Earlier with {{ assistant }}</h2>
     <ol class="vc__lines">
       {% for line in b.recent %}

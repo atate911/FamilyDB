@@ -65,11 +65,13 @@ On Eat, Do, Week, Kids, Soon, Lists and Did the box says what it is about ("abou
 
 From a tablet's width up, the row of destinations stands down the left. From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and the last lines of your conversation under it, so her answer stays in view while you move between pages.
 
+**Pin** under one of her replies keeps it at hand: signed in as yourself, it stays at the top of that column on a desk and at the top of Chat on any screen, newest first, until you press **Pinned** to take it off. A shelf holds eight; pinning a ninth lets the oldest go. Your pins are yours alone, and go with you if you are taken off the family list.
+
 **The board** (the menu behind your picture, or `/board`) is Now for a tablet on the kitchen wall: a large box; today and tomorrow in the middle, the nearer day largest; what waits on someone and the shopping list in places of their own; her picks, the weekend's from Thursday; and the saved ideas along the bottom, the ones nobody has touched fading. It shows no costs and nothing of the back office. While the family shares one password, the box has a face for each person along its top: tap yours before you send, and it holds for a minute, so the next person who walks up is not taken for you.
 
 ## Chat, top to bottom
 
-Chat is the thread behind the box. From the top: the conversations (for admins and parents when there are kids: the family's and each kid's, as a row of pills), the room's header, the thread and the box. A kid sees one conversation, her own, and the list shows when a kid last wrote, not what she said. Opening a kid's conversation shows her words, with no box, although the list itself withholds them.
+Chat is the thread behind the box. From the top: what you pinned of hers, the conversations (for admins and parents when there are kids: the family's and each kid's, as a row of pills), the room's header, the thread and the box. A kid sees one conversation, her own, and the list shows when a kid last wrote, not what she said. Opening a kid's conversation shows her words, with no box, although the list itself withholds them.
 
 The thread holds the latest 60 messages, with the day marked where it changes and "Earlier messages" to go back. Under the assistant's answers, admins and parents see what the message tried to change ("Saved an idea", "Remembered something"), even if it was refused. Telegram conversations are separate and do not appear here.
 

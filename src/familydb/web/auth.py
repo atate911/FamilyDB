@@ -143,6 +143,9 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     # Notices on one's own devices, for anybody signed in as themselves (push.py).
     "family.push_on": "sign_in",
     "family.push_off": "sign_in",
+    # Her replies kept at hand: anybody who talks to her, their own (familydb/family.py `pin`).
+    "family.pin": "chat",
+    "family.unpin": "chat",
 }
 EVERYBODY_S_OWN = CHOOSING
 HOME = "/"

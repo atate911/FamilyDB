@@ -869,8 +869,11 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     removing = {"remove"}
     # Notices on one's own devices, turned on and off on Your password (familydb/push.py).
     pushing = {"subscribe_push", "unsubscribe_push"}
-    assert ruled <= {"add", "change"} | reading | signing_in | linking | removing | pushing, ruled
-    assert {"add", "change"} | signing_in | linking | removing | pushing <= ruled
+    # Her replies kept at hand, each person's own shelf (docs/INTERFACE.md section 8).
+    pinning = {"pin", "unpin"}
+    allowed = {"add", "change"} | reading | signing_in | linking | removing | pushing | pinning
+    assert ruled <= allowed, ruled
+    assert {"add", "change"} | signing_in | linking | removing | pushing | pinning <= ruled
 
     # The doors are shut to everything else, but not whole packages: `views.py` reads opening hours
     # from `tools.places` and tidies links with `tools.urls`, which write nothing.

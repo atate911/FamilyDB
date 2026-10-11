@@ -30,6 +30,7 @@ from familydb.dates import age_on as age_on
 from familydb.dates import next_birthday as next_birthday
 from familydb.dates import utc_iso
 from familydb.store import invites, logins, members, messages, plans, tasks
+from familydb.store import pins as pin_store
 from familydb.store import push as push_store
 from familydb.store.db import transaction
 from familydb.store.members import Gender, Member, Role
@@ -521,6 +522,39 @@ def subscribe_push(
         push_store.subscribe(
             conn, member.id, endpoint=endpoint, p256dh=p256dh, auth=auth, now=utc_iso(now)
         )
+
+
+# Her replies a person keeps at hand (docs/INTERFACE.md section 8): at most this many, the oldest
+# going when another is pinned.
+PINS_MOST = pin_store.MOST
+
+
+class PinRefused(Exception):
+    """Why a message was not pinned: only one of her replies in a conversation the person reads."""
+
+
+def pin(
+    conn: sqlite3.Connection, member: Member, message_id: int, *, chat_id: str, now: datetime
+) -> None:
+    """Keep one of her replies at hand for this person, on a shelf of their own: a reply of hers,
+    with words, in `chat_id`, the conversation they read on the page."""
+    message = messages.get(conn, message_id)
+    if (
+        message is None
+        or message.direction != "out"
+        or message.chat_id != chat_id
+        or not message.text.strip()
+    ):
+        raise PinRefused("only one of her replies to you can be pinned")
+    with transaction(conn):
+        pin_store.pin(conn, member.id, message_id, now=utc_iso(now))
+        pin_store.keep_newest(conn, member.id, PINS_MOST)
+
+
+def unpin(conn: sqlite3.Connection, member: Member, message_id: int) -> bool:
+    """Off this person's shelf; False when it was not on it."""
+    with transaction(conn):
+        return pin_store.unpin(conn, member.id, message_id) > 0
 
 
 def unsubscribe_push(conn: sqlite3.Connection, member: Member, *, endpoint: str) -> bool:

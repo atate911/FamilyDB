@@ -85,8 +85,8 @@ what to check when a new page "feels off".
 There are two frames. **The family's frame** (`frame.html`, docs/INTERFACE.md) carries Now, the
 destinations and each thing's own page: the box first, the page, and the row of destinations,
 fixed at the foot on a phone, a rail on the left from a tablet up, and from a desk up a third
-column on the right for the box and what the last message brought back, kept in view while the
-page scrolls. **The back office's frame** (`base.html`) carries Status, Settings, Family, the
+column on the right for the box and what the last message brought back, with what the person
+pinned of hers above the conversation's last lines, kept in view while the page scrolls. **The back office's frame** (`base.html`) carries Status, Settings, Family, the
 guide and the account pages: **the menu, the main column, and the rail**, as below. The two share
 the type, the tokens, the parts and the steps the columns grow in.
 

@@ -716,3 +716,73 @@ def test_a_face_is_a_rating_on_the_same_scale_as_the_longer_form() -> None:
     from familydb.web import edits
 
     assert edits.FACES == {"loved": 9, "ok": 6, "not-great": 3}
+
+
+# -- her replies kept at hand
+
+
+def test_a_reply_is_pinned_kept_beside_the_box_and_on_the_chat_and_unpinned(
+    app, conn, family
+) -> None:
+    from familydb import family as family_rules
+
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Kenji's is open till nine.")]))
+    web = create_app(app, api=api)
+    client = web.test_client()
+    assert client.post("/login", data={"name": "Sam", "password": "sam likes long sentences"})
+    sent = _say(client, client.get("/").text, "is kenji's open late?")
+    assert web.config["FAMILYDB_CHAT"].wait(10)
+    back = client.get(sent.headers["Location"].split("#")[0]).text
+    sheet = re.search(r'<div class="said-sheet".*?Earlier</a>', back, re.S).group(0)
+    form = re.search(r'<form class="pin-form" [^>]*action="/pin">.*?</form>', sheet, re.S)
+    assert form is not None and ">Pin</button>" in form.group(0)
+    fields = dict(re.findall(r'name="(csrf|once|message|back)" value="([^"]*)"', form.group(0)))
+    reply = messages.get(conn, int(fields["message"]))
+    assert reply.direction == "out" and reply.text == "Kenji's is open till nine."
+    pinned = client.post("/pin", data=fields)
+    assert pinned.status_code == 302 and pinned.headers["Location"].endswith("#said")
+    # Beside the box on a big screen, whatever page; at the top of the conversation.
+    column = re.search(r'<section class="vc".*?</section>', client.get("/week").text, re.S)
+    assert column is not None and "Pinned" in column.group(0)
+    assert "Kenji's is open till nine." in column.group(0).replace("&#39;", "'")
+    chat = client.get("/chat").text
+    shelf = re.search(r'<section class="card pinned".*?</section>', chat, re.S).group(0)
+    assert "Kenji" in shelf and 'action="/unpin"' in shelf
+    # Pinned again it stays where it was; Unpin takes it off.
+    unpin = dict(re.findall(r'name="(csrf|once|message|back)" value="([^"]*)"', shelf))
+    assert client.post("/unpin", data=unpin).status_code == 302
+    assert 'class="card pinned"' not in client.get("/chat").text
+    assert family_rules.PINS_MOST == 8
+
+
+def test_only_her_replies_in_your_own_conversation_are_pinned(app, conn, family) -> None:
+    from familydb import family as family_rules
+
+    with db.transaction(conn):
+        hers = messages.insert_out(
+            conn, channel="telegram", chat_id="42", text="Somebody else's", now=NOW_ISO
+        )
+    sam = _in_as(app, "Sam", "sam likes long sentences")
+    page = sam.get("/").text
+    token = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', page))
+    refused = sam.post("/pin", data={**token, "message": hers.id}, follow_redirects=True)
+    assert "Only one of her replies to you can be pinned." in refused.text
+    with pytest.raises(family_rules.PinRefused):
+        family_rules.pin(conn, family["sam"], hers.id, chat_id="web", now=datetime.now(TZ))
+
+
+def test_a_shelf_keeps_the_newest_few(conn, family) -> None:
+    from familydb import family as family_rules
+    from familydb.store import pins
+
+    said = []
+    with db.transaction(conn):
+        for n in range(family_rules.PINS_MOST + 1):
+            said.append(
+                messages.insert_out(conn, channel="web", chat_id="web", text=f"#{n}", now=NOW_ISO)
+            )
+    for n, one in enumerate(said):
+        at = datetime(2026, 9, 20, 12, n, tzinfo=TZ)
+        family_rules.pin(conn, family["sam"], one.id, chat_id="web", now=at)
+    kept = pins.for_member(conn, family["sam"].id, limit=20)
+    assert [one.text for one in kept] == [f"#{n}" for n in range(family_rules.PINS_MOST, 0, -1)]

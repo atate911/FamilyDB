@@ -1905,6 +1905,7 @@ li:target { border-radius: var(--r-md); }
 .said-sheet__her > div { flex: 1; min-width: 0; display: grid; gap: var(--s2); }
 .said-sheet__by { font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
 .said-sheet__text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.said-sheet__acts { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .said-sheet__acts form { margin: 0; }
 .said-sheet__foot { display: flex; justify-content: space-between; gap: var(--s3); font-size: var(--t-meta); color: var(--ink-2); }
 .said-sheet__foot a { display: inline-flex; align-items: center; gap: 2px; min-height: 32px; }
@@ -2097,6 +2098,15 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .box-finds a:hover, .box-finds a:focus-visible { background: var(--paper-2); }
 .box-finds__t { min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
 .box-finds__k { flex: none; font-size: var(--t-meta); color: var(--ink-2); }
+
+/* Her replies kept at hand (docs/INTERFACE.md section 8): a shelf of the person's own, in her column beside the box and
+   at the top of the conversation; each with when she said it and Unpin. */
+.pins { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+.pins__one { display: grid; gap: var(--s1); padding-left: var(--s3); border-left: 2px solid var(--primary); }
+.pins__text { font-size: var(--t-meta); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pins__foot { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-xs); color: var(--ink-2); }
+.pin-form { margin: 0; }
+.pinned { display: grid; gap: var(--s2); margin-bottom: var(--s4); }
 
 /* Vera's column: the last lines of the thread behind her reply, only where the box has a column of its own */
 .vc { display: none; }

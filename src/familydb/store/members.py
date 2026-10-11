@@ -158,6 +158,8 @@ POINTING_AT = {
     ("messages", "member_id"): "unname",
     ("outcomes", "recorded_by"): "unname",
     ("pick_sets", "member_id"): "delete",
+    # Her replies somebody kept at hand are theirs alone (familydb/family.py `pin`).
+    ("pins", "member_id"): "delete",
     ("plans", "created_by"): "unname",
     ("settings_log", "changed_by"): "unname",
     ("suggestions", "asked_by"): "unname",

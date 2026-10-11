@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, tag, page_head, msg, msg_pending %}
+{% from "_ui.html" import icon, avatar, tag, page_head, msg, msg_pending, pin_shelf %}
 {% block title %}{{ 'Chat with ' ~ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-chat{% endblock %}
 {# While an answer is on its way a meta refresh fetches the page again (works without scripts), soon at first and then less often, and stops, leaving the visible link. Only set while something really is being thought about, and never on a page holding typed words, which it would take with it. While a turn runs the box is closed; waiting on the retry job it stays open and ask.js looks again instead. #}
@@ -44,6 +44,13 @@
       {% elif convos | length > 1 %}
         <p class="privacy privacy--room">{{ icon('eye', size='sm') }}<span>Parents can read the kids’ chats. The kids see a note saying so.</span></p>
       {% endif %}
+    {% endif %}
+
+    {% if pinned %}
+      <section class="card pinned" aria-labelledby="h-pinned">
+        <h2 class="label" id="h-pinned">Pinned</h2>
+        {{ pin_shelf(pinned, url_for('chat.show')) }}
+      </section>
     {% endif %}
 
     <section class="card room" aria-labelledby="h-room">

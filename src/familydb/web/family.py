@@ -349,6 +349,58 @@ def _notices(app: App, conn: Any) -> dict[str, Any] | None:
     }
 
 
+# -- her replies kept at hand (docs/INTERFACE.md section 8) -------------------------------------
+
+
+def _pinned_back() -> Response:
+    """Back to the page the form named, a path on this site, else the conversation."""
+    back = request.form.get("back", "")
+    if not back.startswith("/") or back.startswith("//") or "\\" in back:
+        back = url_for("chat.show", _anchor="latest")
+    return redirect(back)
+
+
+def _message_id() -> int | None:
+    given = request.form.get("message", "")
+    return int(given) if given.isascii() and given.isdigit() and len(given) <= 18 else None
+
+
+@bp.post("/pin")
+@once
+def pin() -> Response:
+    """Pin under her reply: kept at hand for whoever is signed in as themselves, in the column
+    beside the box on a big screen and at the top of the conversation (familydb/family.py)."""
+    from familydb.web import chat  # the conversation this person reads
+
+    member = auth.visitor().member
+    message_id = _message_id()
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif member is None:
+        _say("Sign in as yourself to pin her replies.")
+    elif message_id is not None:
+        app = _app()
+        try:
+            with closing(app.connect()) as conn:
+                rules.pin(conn, member, message_id, chat_id=chat.my_chat(), now=app.clock.now())
+        except rules.PinRefused as refused:
+            _say(str(refused).capitalize() + ".")
+    return _pinned_back()
+
+
+@bp.post("/unpin")
+@once
+def unpin() -> Response:
+    member = auth.visitor().member
+    message_id = _message_id()
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif member is not None and message_id is not None:
+        with closing(_app().connect()) as conn:
+            rules.unpin(conn, member, message_id)
+    return _pinned_back()
+
+
 @bp.post("/you/push")
 def push_on() -> tuple[str, int]:
     """This device, to be told when she writes (static/push.js posts it, with the CSRF token)."""

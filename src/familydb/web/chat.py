@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import closing
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from functools import wraps
 from typing import Any
 from urllib.parse import urlencode
@@ -34,6 +34,7 @@ from familydb.dates import utc_iso
 from familydb.store import calls
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
+from familydb.store import pins as pin_store
 from familydb.store import tasks as task_store
 from familydb.store.messages import Message
 from familydb.web import answers, auth, views
@@ -329,6 +330,10 @@ def under_box(app: App, conn: Any, chat_id: str, visitor: auth.Visitor) -> dict[
             "text": reply.text,
             "undo": undo,
             "pointer": None,
+            # Pin, for somebody signed in as themselves: kept at hand beside the box.
+            "pin": {"id": reply.id, "pinned": reply.id in _pinned_ids(conn, visitor)}
+            if visitor.member is not None
+            else None,
         }
     log.debug("under the box on %s: %s", here, "receipt" if did else "said")
     return shown
@@ -373,6 +378,7 @@ def page_box(
         "scope": scope,
         "no_box": False,
         "recent": recent,
+        "pinned": pinned(app, conn, visitor),
         **under,
     }
     return g.box
@@ -380,6 +386,30 @@ def page_box(
 
 # Vera's column on a big screen shows the thread behind her reply: this many of its last lines.
 COLUMN_LINES = 6
+
+
+def pinned(app: App, conn: Any, visitor: auth.Visitor) -> list[dict[str, Any]]:
+    """Her replies this person keeps at hand (familydb/family.py `pin`), newest first, as the
+    column beside the box and the top of the conversation draw them. None under the shared
+    password, where nobody in particular is reading."""
+    if visitor.member is None:
+        return []
+    tz = app.settings.tzinfo
+    return [
+        {
+            "id": one.message_id,
+            "text": one.text,
+            "when": views.day_short(date.fromisoformat(views.local_day(one.said_at, tz))),
+        }
+        for one in pin_store.for_member(conn, visitor.member.id, limit=pin_store.MOST)
+    ]
+
+
+def _pinned_ids(conn: Any, visitor: auth.Visitor) -> set[int]:
+    if visitor.member is None:
+        return set()
+    found = pin_store.for_member(conn, visitor.member.id, limit=pin_store.MOST)
+    return {one.message_id for one in found}
 
 
 def _recent(app: App, conn: Any, people: list[member_store.Member]) -> list[dict[str, Any]]:
@@ -469,6 +499,7 @@ def page(
                 "id": message_store.newest_from_her(conn, chat_id),
             }
         undoing = {} if reading is not None else _undoable(app, conn, thread, visitor)
+        kept = [] if reading is not None else pinned(app, conn, visitor)
     # The log keeps a turn's tool calls against the question; the page shows them under the
     # answer to those who browse the household. A kid never sees how it works (DESIGN.md 16).
     answered = {message.reply_to for message in thread if message.reply_to is not None}
@@ -545,6 +576,7 @@ def page(
             me=_me(visitor, slots),
             left=left,
             presses=PAGE_BUTTONS,
+            pinned=kept,
         ),
         status,
     )
