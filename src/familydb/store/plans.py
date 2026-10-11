@@ -136,6 +136,17 @@ def latest_by_idea(conn: sqlite3.Connection) -> dict[int, tuple[date, date]]:
     }
 
 
+def made_since(conn: sqlite3.Connection, *, since: str) -> list[Plan]:
+    """Plans made at or after `since` (UTC ISO) and not cancelled, oldest first: what the report on
+    what came of a suggestion reads (suggest/taken.py)."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE created_at >= ? AND status != 'cancelled' "
+        "ORDER BY created_at, id",
+        (since,),
+    )
+    return [Plan.from_row(row) for row in rows]
+
+
 def everything(conn: sqlite3.Connection) -> list[Plan]:
     """Every plan not cancelled, earliest first: for the calendar file (export.py)."""
     rows = conn.execute("SELECT * FROM plans WHERE status != 'cancelled' ORDER BY start, id")

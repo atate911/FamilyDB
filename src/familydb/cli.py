@@ -590,6 +590,43 @@ def debug_cost(
             typer.echo(f"  {part['label']:<42} ~{part['tokens']:>7,d} tokens  {part['share']:>3d}%")
 
 
+@debug_app.command("suggestions")
+def debug_suggestions(
+    days: int = typer.Option(90, "--days", help="How far back to look."),
+) -> None:
+    """What came of her suggestions: which the family planned, from where, and how it went."""
+    from familydb.suggest import taken
+
+    application = build_app()
+    with closing(_ready(application)) as conn:
+        since = utc_iso(application.clock.now() - timedelta(days=days))
+        found = taken.report(conn, since=since)
+    if not found.asked:
+        typer.echo(f"No suggestions in the last {days} days.")
+        return
+    typer.echo(
+        f"{found.asked:,d} suggestion{'' if found.asked == 1 else 's'} in the last {days} days, "
+        f"{found.chosen:,d} with picks from the stronger call; {found.led_to_plan:,d} led to a "
+        f"plan within {taken.ATTRIBUTE_DAYS} days ({found.take_rate}%)."
+    )
+    if found.unoffered:
+        typer.echo(f"{found.unoffered:,d} plan(s) were made that no suggestion had offered.")
+    sources = found.sources()
+    if sources:
+        typer.echo(f"\n  {'what was planned':<30} {'plans':>6} {'rated':>6} {'average':>8}")
+        for one in sources:
+            average = f"{one.average:.1f}/10" if one.average is not None else "-"
+            typer.echo(f"  {one.label:<30} {one.planned:>6,d} {one.rated:>6,d} {average:>8}")
+    against = found.against()
+    if against:
+        typer.echo(
+            "\nPlanned though the engine had ruled it out (a rule that was wrong for them?):"
+        )
+        for one in against:
+            rated = f", rated {one.rating}/10" if one.rating is not None else ""
+            typer.echo(f"  plan #{one.plan_id} {one.title}: {one.reason or 'ruled out'}{rated}")
+
+
 @debug_app.command("validate-tools")
 def debug_validate_tools() -> None:
     """Have the API validate the tool schemas via count_tokens (no generation, needs a key)."""

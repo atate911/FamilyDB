@@ -47,7 +47,7 @@ Where a person is comes from the place they name or from [Shared location](/wiki
 
 A reply carries at most 3 reasons each, in the order good, possible, ruled out. Within a group, ideas suggested as good in the last 2 weeks come last; then never-done ideas first, and a higher rating before a lower.
 
-The engine logs every idea's verdict and reasons, any web finds, who asked, the window and, for a chat answer, its reply. No page lists the log. Every run adds a row, including `/now`, the command line and each evening-before backup, and the good verdicts in any of them push those ideas to the back of real answers for 14 days.
+The engine logs every idea's verdict and reasons, any web finds, who asked, the window and, for a chat answer, its reply. [Status](/wiki/controls/status#what-came-of-her-suggestions) reads it against the plans made afterwards and how they went. Every run adds a row, including `/now`, the command line and each evening-before backup, and the good verdicts in any of them push those ideas to the back of real answers for 14 days.
 
 The `someday` window is thin: with no dates there is no weather, free-time, hours, daylight or travel-fit check, only status, who, season, dates and the limits asked for.
 
@@ -61,6 +61,12 @@ A missing service does not fail the answer: the engine notes it, and the model i
 | No home position, or no forecast | Weather is unchecked and the verdict is not lowered | "weather not configured", "forecast failed: ..." or "no forecast for those dates" |
 | A place they named that cannot be found, or "here" with no fresh shared position | Travel is counted from home | "could not place ...", "no location shared in the last 3 hours, so travel is from home" |
 | An idea number that is not on the list | The check widens to every idea when none is left | "no idea #N on the list" |
+
+## Choosing what to suggest
+
+For a planning question from a grown-up, the engine's checked options go to a stronger model before the chat model answers. Code gathers everything that bears on the question: who asks and who reads, the days, every option with what was checked, how each went before, what the family has told the assistant, the weeks before and after, what was picked lately and the chat's last three days. The stronger model picks up to five, usually a favorite, something new and a wildcard, each with a reason that cites what it rests on. Code checks every pick against the options and the citations, and the chat model leads its reply with them.
+
+It never runs for a question about right now, a kid's question, `/now`, the evening check or the command line. When it is off, over its monthly budget or fails, the engine's own order is the answer and nobody is told. The row, the budget and what it costs are on [AI model](/wiki/controls/settings/ai-model#choosing-the-suggestions).
 
 ## Web discovery
 

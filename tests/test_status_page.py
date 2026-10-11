@@ -91,6 +91,44 @@ def test_it_adds_up_what_the_models_cost(status, conn) -> None:
     assert "gemini-3.8-flash (Google Gemini)" in text  # the last one, and who served it
 
 
+def test_it_shows_what_came_of_her_suggestions(status, conn) -> None:
+    from familydb.store import plans, suggestions
+
+    with db.transaction(conn):
+        kites = ideas.insert(conn, title="Kites", kind="outing", now=NOW_ISO)
+        suggestions.insert(
+            conn,
+            asked_by=None,
+            window_start=None,
+            window_end=None,
+            candidates=[
+                {"idea_id": kites.id, "verdict": "ruled_out", "reasons": ["rain likely Sunday"]}
+            ],
+            web_finds=[],
+            now="2026-09-19T10:00:00Z",
+        )
+        plans.insert(
+            conn,
+            title="Kites in the rain",
+            start="2026-09-20T10:00",
+            end=None,
+            all_day=False,
+            idea_id=kites.id,
+            now="2026-09-19T11:00:00Z",
+        )
+    text = _flat(status.get("/status"))
+    assert "What came of her suggestions" in text
+    assert (
+        '1 suggestion; <span class="fig">1</span> led to a plan within a few days (100%).' in text
+    )
+    assert "Ruled out, planned anyway" in text
+    assert "Kites in the rain (rain likely Sunday)" in text
+
+
+def test_nobody_asking_says_so(status) -> None:
+    assert "Nobody has asked her what to do in the last 90 days." in _flat(status.get("/status"))
+
+
 def test_it_shows_what_is_waiting(status, conn, family) -> None:
     with db.transaction(conn):
         for number in range(3):

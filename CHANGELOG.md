@@ -72,6 +72,12 @@
   known. It is now good when nothing else is against it, and says nothing of hours. The hours
   a reason quotes are named for the day they are known for, not the first day the place might be
   open.
+- **What came of her suggestions, on Status.** Every suggestion was logged and every outing rated,
+  but nothing joined them. Status, and `familydb debug suggestions`, now say how many suggestions led
+  to a plan within three days, where what was planned stood (picked by the stronger call, offered as
+  good or possible, checked but not shown, found outside the list, ruled out) and how it was rated,
+  and name what the family planned though it was ruled out. Read from what is kept: no migration and
+  no model call.
 
 ## v0.5.0 — beta (2026-10-11)
 

@@ -84,6 +84,15 @@ def picked_since(conn: sqlite3.Connection, *, since: str) -> list[Suggestion]:
     return [Suggestion.from_row(row) for row in rows]
 
 
+def since(conn: sqlite3.Connection, *, since: str) -> list[Suggestion]:
+    """Every suggestion asked at or after `since` (UTC ISO), oldest first: what the report on
+    what came of them reads (suggest/taken.py)."""
+    rows = conn.execute(
+        "SELECT * FROM suggestions WHERE asked_at >= ? ORDER BY asked_at, id", (since,)
+    ).fetchall()
+    return [Suggestion.from_row(row) for row in rows]
+
+
 def list_recent(conn: sqlite3.Connection, *, limit: int = 10) -> list[Suggestion]:
     rows = conn.execute("SELECT * FROM suggestions ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     return [Suggestion.from_row(row) for row in rows]

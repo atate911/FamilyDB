@@ -44,6 +44,16 @@ Every figure is **an estimate worked out from each call's size and a price table
 - **Last 30 days** shows the cost, the usual day (the average over the days in those 30 that had any calls) and "Questions answered".
 - **Where the money went** gives calls and dollars by kind of call, and how much of what was sent came back from the [prompt cache](/wiki/reference/glossary#prompt-cache), which costs less.
 
+## What came of her suggestions
+
+What the family planned from what she suggested over the last 90 days, read from what is already kept, with no model call. A plan counts for a suggestion when that suggestion offered its idea, or a find of the same name, in the 3 days before the plan was made, whoever asked.
+
+- The first line says how many suggestions there were, how many led to a plan, and how many had picks from the [stronger call](/wiki/behavior/suggestions#choosing-what-to-suggest).
+- The table says where each plan stood in its suggestion (picked by the stronger call, offered as good or possible, checked but not shown, found outside the list, or ruled out) and how the family rated it afterwards.
+- **Planned though she had ruled it out** names what the family did anyway, with the reason she gave. A reason that keeps coming up is a rule that does not suit this family: a [firm memory](/wiki/model/memory) can change it for them.
+
+`familydb debug suggestions [--days N]` prints the same on the [command line](/wiki/operations/command-line).
+
 ## How each part is doing
 
 Every row has a tag in words, never color alone, and an admin gets a button beside a row that needs something.

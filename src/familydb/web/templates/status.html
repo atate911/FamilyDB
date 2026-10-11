@@ -138,6 +138,34 @@
       {% endif %}
     </section>
 
+    <section class="card" aria-labelledby="h-taken">
+      <div class="card__head"><h2 id="h-taken">{{ icon('sparkle') }}What came of her suggestions</h2><span class="small muted">last {{ taken_days }} days</span></div>
+      {% if taken.asked %}
+        <p>{{ "{:,}".format(taken.asked) }} suggestion{{ "" if taken.asked == 1 else "s" }}; <span class="fig">{{ taken.led_to_plan }}</span> led to a plan within a few days ({{ taken.take_rate }}%).{% if taken.chosen %} {{ taken.chosen }} had picks from the stronger call.{% endif %}</p>
+        {% set sources = taken.sources() %}
+        {% if sources %}
+          <div class="scroll">
+            <table class="data">
+              <thead><tr><th scope="col">What was planned</th><th scope="col" class="num">Plans</th><th scope="col" class="num">How it went</th></tr></thead>
+              <tbody>
+                {% for one in sources %}
+                  <tr><td>{{ one.label }}</td><td class="num">{{ one.planned }}</td><td class="num">{% if one.average is not none %}{{ "%.1f"|format(one.average) }}/10 ({{ one.rated }} rated){% else %}not rated{% endif %}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+        {% set against = taken.against() %}
+        {% if against %}
+          <p class="small mt-3"><b>Planned though she had ruled it out:</b>
+            {% for one in against %}{{ one.title }} ({{ one.reason or 'ruled out' }}{% if one.rating is not none %}, rated {{ one.rating }}/10{% endif %}){{ "; " if not loop.last else "." }}{% endfor %}</p>
+        {% endif %}
+        {% if taken.unoffered %}<p class="small muted mt-3">{{ taken.unoffered }} plan{{ "" if taken.unoffered == 1 else "s" }} came from somewhere else.</p>{% endif %}
+      {% else %}
+        <p class="muted">Nobody has asked her what to do in the last {{ taken_days }} days.</p>
+      {% endif %}
+    </section>
+
     {# Admins only: the words here come from every chat. Each line opens its history in full. #}
     {% if visitor().may('manage') %}
       <section class="card span-all" id="activity" aria-labelledby="h-act">
