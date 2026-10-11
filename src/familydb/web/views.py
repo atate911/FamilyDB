@@ -1771,7 +1771,7 @@ def happening_state(settings: Any) -> str:
     if ticketmaster_available(settings):
         parts.append("Ticketmaster")
     if happening_search_available(settings):
-        parts.append("a weekly search")
+        parts.append("her scouting each evening")
     if not parts:
         return "Nothing read yet: turn on web lookups, or add a calendar or a Ticketmaster key."
     listed = ", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0]

@@ -610,13 +610,14 @@ class Settings(BaseSettings):
     # Ticketmaster's events within this many kilometers of home, with its free key.
     ticketmaster_api_key: str | None = None
     happening_radius_km: int = Field(default=80, ge=5, le=300)
-    # A web search for what is on near home over the next four weeks, once a week, and a lookup
-    # for event calendars near home every `happening_refind_days` days. Both are model calls, held
-    # with the rest of the job's to `happening_budget` US$ a month, within the daily
-    # limit; 0 makes none.
+    # Scouting each evening for new things the family would enjoy near home over the next four
+    # weeks (docs/FINDS.md), and a lookup for event calendars near home every
+    # `happening_refind_days` days. Both are model calls, held with the rest of the job's to
+    # `happening_budget` US$ a month (about US$2, the family's decision), within the daily limit;
+    # 0 makes none.
     happening_search: bool = True
     happening_refind_days: int = Field(default=30, ge=7, le=90)
-    happening_budget: float = Field(default=1.0, ge=0, le=20)
+    happening_budget: float = Field(default=2.0, ge=0, le=20)
 
     web_enabled: bool = False
     web_host: str = "127.0.0.1"

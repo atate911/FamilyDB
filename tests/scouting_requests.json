@@ -14,6 +14,5 @@
  "enrich/bare": "Idea #9: Zoo\nKind: outing\nHome area: Vancouver, WA\nHand back with save_place (idea_id=9) or skip_place (idea_id=9).",
  "enrich/full": "Idea #7: Kenji's Ramen\nKind: restaurant\nLocation as the family said it: SE Larkspur St\nDescription: the girls loved it\nLink the family gave: https://kenji.example\nFor: whole family\nHome area: Vancouver, WA\nPreviously saved details, to re-check and update: {\"address\": \"1 Main St\", \"booking_url\": null, \"hours\": {\"sat\": [{\"close\": \"21:00\", \"open\": \"11:00\"}]}, \"name\": \"Kenji's Ramen\", \"website\": \"https://kenji.example\"}\nHand back with save_place (idea_id=7) or skip_place (idea_id=7).",
  "feeds": "Find public event calendars near home that a family could subscribe to.\nHome area: Vancouver, WA.\nAlready known, do not report:\n- https://a.example/ics\nStopped answering; another address for the same calendar is welcome:\n- https://b.example/ics",
- "feeds/none": "Find public event calendars near home that a family could subscribe to.\nHome area: Vancouver, WA.",
- "scout": "Find time-bound things a family could go to near home.\nWindow: Saturday 26 September to Thursday 22 October 2026.\nHome area: Vancouver, WA."
+ "feeds/none": "Find public event calendars near home that a family could subscribe to.\nHome area: Vancouver, WA."
 }

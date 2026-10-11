@@ -229,7 +229,7 @@ SECTIONS: tuple[Section, ...] = (
         "happening",
         happening.NAME,
         "ticket",
-        "What is on near home: the calendars it reads, Ticketmaster, and a weekly search.",
+        "What is on near home: the calendars it reads, Ticketmaster, and her scouting.",
     ),
     Section(
         "personality",
@@ -764,12 +764,13 @@ GROUPS: tuple[Group, ...] = (
         "happening",
         "search",
         "Looking on its own",
-        "Once a week it searches the web for what is on near home over the next four weeks, and "
-        "every so often it looks for calendars near home to offer you above. Both are model calls "
-        "with the web, a few cents each, held to the month's budget here and the daily limit. "
-        "They need web lookups on, under Lookups.",
+        "Each evening she scouts the web for new things you would enjoy near home over the next "
+        "four weeks, on a theme that turns with the week, and every so often she looks for "
+        "calendars near home to offer you above. Both are model calls with the web, a few cents "
+        "each, held to the month's budget here (a night's share of what is left) and the daily "
+        "limit. They need web lookups on, under Lookups.",
         (
-            field("happening_search", "Search the web for what is on"),
+            field("happening_search", "Scout the web each evening"),
             field(
                 "happening_refind_days",
                 "Days between looking for calendars",

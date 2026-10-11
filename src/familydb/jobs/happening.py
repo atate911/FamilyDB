@@ -1,15 +1,17 @@
 """What is on near home, kept up to date (familydb/happening.py): the calendars the family reads,
-Ticketmaster, a weekly web search, and a lookup every few weeks for calendars to offer them.
+Ticketmaster, scouting each night, and a lookup every few weeks for calendars to offer them.
 
 Hourly, and each source only when it is due: a calendar and Ticketmaster once a day (`PULL_GAP`),
-the search once a week (`SEARCH_GAP`), the lookup for calendars every `happening_refind_days`
-and at once when the home area changes. An hour after a calendar is pasted it has been read; an
-idle tick reads the list of sources and returns.
+scouting once each evening after the evening's lookups (`lookup_hour`), the lookup for calendars
+every `happening_refind_days` and at once when the home area changes. An hour after a calendar
+is pasted it has been read; an idle tick reads the list of sources and returns.
 
-Reading a calendar or Ticketmaster is code, with no model, and costs nothing. The search and the
+Reading a calendar or Ticketmaster is code, with no model, and costs nothing. Scouting and the
 calendar lookup are worker turns (agent/gateway.KINDS `scout` and `find_feeds`), made only while
 web lookups are on, home is set, a worker key is there, and both the day's limit and the job's
-own monthly budget (`happening_budget`) have room. No transaction is open around a turn.
+own monthly budget (`happening_budget`) have room. Scouting is rationed besides: a night's share
+is what is left of the month over the nights left, and it runs only when a scouting turn, as
+they have cost lately, fits it (`affordable`). No transaction is open around a turn.
 
 A source that cannot be read is retried the next day, and told to admins once it has failed
 three days running (alerts `happening`), forgotten when it reads again. Calendars the lookup
@@ -33,19 +35,25 @@ from familydb.availability import (
     happening_search_available,
     ticketmaster_available,
 )
-from familydb.base.dates import utc_iso
+from familydb.base.dates import last_hour_passed, utc_iso
 from familydb.integrations.events import FoundEvent
 from familydb.integrations.ical import FeedAPI, FeedError, IcalFeeds, parse_feed
 from familydb.integrations.ticketmaster import Ticketmaster, TicketmasterAPI
-from familydb.scouting import near_home
+from familydb.scouting import near_home, search
 from familydb.scouting.reach import Reach
+from familydb.store import calls
 from familydb.store import finds as store
 from familydb.store.db import transaction
 
 log = logging.getLogger(__name__)
 
 PULL_GAP = timedelta(hours=23)
-SEARCH_GAP = timedelta(days=6, hours=12)
+# A calendar lookup that failed is tried again after this long.
+RETRY_GAP = timedelta(days=6, hours=12)
+# What a night's scouting is taken to cost until some have been measured, and how far back
+# they are measured.
+SCOUT_ESTIMATE = 0.05
+MEASURED_DAYS = 30
 SOURCE_FAILURES = 3
 KEEP_PAST_DAYS = 3
 # How far ahead a proposed calendar must list something to be offered.
@@ -90,8 +98,31 @@ def _look_due(settings: Any, last: dict[str, store.FindSource], now: datetime) -
         return False
     look = last.get(happening.proposals_source(settings.home_area))
     if look is not None and not look.ok:
-        return due(look, SEARCH_GAP, now)
+        return due(look, RETRY_GAP, now)
     return due(look, timedelta(days=settings.happening_refind_days), now)
+
+
+def scout_due(settings: Any, last: store.FindSource | None, now: datetime) -> bool:
+    """Not yet scouted since this evening's lookups began (`lookup_hour`), however it went."""
+    checked = _when(last.checked_at) if last else None
+    return checked is None or checked < last_hour_passed(now, settings.lookup_hour, settings.tzinfo)
+
+
+def night_share(conn: sqlite3.Connection, settings: Any, now: datetime) -> float:
+    """What a night may spend: what is left of the month's budget over the nights left in it,
+    tonight among them."""
+    local = now.astimezone(settings.tzinfo).date()
+    month_end = (local.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    left = settings.happening_budget - happening.spent_this_month(conn, settings, now)
+    return max(0.0, left) / ((month_end - local).days + 1)
+
+
+def affordable(conn: sqlite3.Connection, settings: Any, now: datetime) -> bool:
+    """Whether a night's scouting, at what it has cost lately, fits the night's share."""
+    since = utc_iso(now - timedelta(days=MEASURED_DAYS))
+    turns, average = calls.average_turn_cost(conn, "scout", since=since)
+    likely = average if turns else SCOUT_ESTIMATE
+    return likely <= night_share(conn, settings, now)
 
 
 def within_budget(conn: sqlite3.Connection, settings: Any, now: datetime) -> bool:
@@ -158,35 +189,25 @@ def _keep(
 def search_web(
     app: Any, conn: sqlite3.Connection, *, start: date, end: date, now: datetime, api: Any
 ) -> tuple[int, int]:
-    """The weekly search near home. Returns (finds kept, 1 when it ran)."""
-    settings = app.settings
-    events = near_home.scout(Reach.of_app(app, conn, api), start=start, end=end)
-    if isinstance(events, str):
-        _answered(
-            conn, happening.WEB_SOURCE, happening.WEB, ok=False, note=events, found=0, now=now
-        )
+    """The night's scouting, on the theme of the day. Returns (new finds kept, 1 when it ran)."""
+    theme = near_home.theme_for(start)
+    found = near_home.scout(Reach.of_app(app, conn, api), start=start, end=end, theme=theme)
+    if isinstance(found, str):
+        _answered(conn, happening.WEB_SOURCE, happening.WEB, ok=False, note=found, found=0, now=now)
         return 0, 1
-    added, updated, _ = _keep(
-        conn,
-        happening.WEB_SOURCE,
-        happening.WEB,
-        events,
-        tz=settings.tzinfo,
-        start=start,
-        end=end,
-        now=now,
-        gone=False,  # a week's search finds what it finds; last week's are still on
-    )
+    keeping = [new for new in (search.as_new(one) for one in found) if new is not None]
+    with transaction(conn):
+        _, added = store.keep(conn, happening.WEB_SOURCE, happening.WEB, keeping, now=utc_iso(now))
     _answered(
         conn,
         happening.WEB_SOURCE,
         happening.WEB,
         ok=True,
-        note=f"{len(events)} dated",
-        found=len(events),
+        note=f"{len(keeping)} found, on {theme.split(':')[0]}",
+        found=len(keeping),
         now=now,
     )
-    return added + updated, 1
+    return added, 1
 
 
 def _readable(feeds: FeedAPI, url: str, *, tz: Any, today: date) -> int | None:
@@ -350,13 +371,17 @@ def run_happening(
 
         if happening.WEB_SOURCE in wanted:
             look_due = _look_due(settings, last, now)
-            search_due = due(last.get(happening.WEB_SOURCE), SEARCH_GAP, now)
+            search_due = scout_due(settings, last.get(happening.WEB_SOURCE), now)
             if (look_due or search_due) and app.can_ask("worker", api=api, kind="scout"):
                 if look_due and within_budget(conn, settings, now):
                     counts["proposed"] = propose_feeds(
                         app, conn, feeds, today=today, now=now, api=api
                     )
-                if search_due and within_budget(conn, settings, now):
+                if (
+                    search_due
+                    and within_budget(conn, settings, now)
+                    and affordable(conn, settings, now)
+                ):
                     kept, ran = search_web(app, conn, start=start, end=end, now=now, api=api)
                     counts["added"] += kept
                     counts["searched"] += ran

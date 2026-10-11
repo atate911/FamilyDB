@@ -32,7 +32,7 @@ def ticketmaster_available(settings: Settings) -> bool:
 
 
 def happening_search_available(settings: Settings) -> bool:
-    """The weekly search near home, and the lookup that proposes calendars: model calls with
+    """Scouting each evening, and the lookup that proposes calendars: model calls with
     the web, so they need the web tools, home, and a monthly budget above nothing."""
     return (
         settings.happening_search

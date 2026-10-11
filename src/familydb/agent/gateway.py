@@ -118,9 +118,10 @@ KINDS: dict[str, CallSpec] = {
             web_searches=4,
             **_WORKER,
         ),
-        # The weekly search for what is on near home over the next four weeks (jobs/happening.py):
-        # a prompt of its own and discovery's hand-back, a kind of its own so its cost is held
-        # to the family's monthly budget for it rather than counted with the chat's.
+        # Scouting each evening for new things the family would enjoy over the next four weeks
+        # (jobs/happening.py), on the night's theme with the family's brief: a prompt of its own
+        # and discovery's hand-back, a kind of its own so its cost is held to the family's
+        # monthly budget for it rather than counted with the chat's.
         CallSpec(
             "scout",
             "searching for what is on near home",

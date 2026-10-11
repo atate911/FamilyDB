@@ -170,26 +170,80 @@ def _looked(conn, at: str = "2026-09-20T12:00:00Z") -> None:
         finds.source_answered(conn, source, "proposals", ok=True, note="", found=0, at=at)
 
 
-def test_the_weekly_search_keeps_what_says_when_it_is_on(settings, conn) -> None:
+def test_scouting_runs_each_evening_and_keeps_what_is_new(settings, conn) -> None:
     _looked(conn)
-    api = fakes.FakeMessagesAPI(*fakes.discover_script(DATED))
+    rose = {
+        "title": "Rose garden",
+        "url": "https://parks.example.org/roses",
+        "summary": "Free, open daily.",
+        "any_time": True,
+        "for_whom": ["whole family"],
+        "why": "They loved the tulip farm.",
+    }
+    api = fakes.FakeMessagesAPI(*fakes.discover_script([*DATED, rose]))
     counts = run_happening(_app(settings, **SEARCHING), api=api)
-    assert counts["searched"] == 1
+    assert counts["searched"] == 1 and counts["added"] == 2
     [lantern] = _upcoming(conn)
     assert (lantern.title, lantern.starts_at, lantern.kind) == (
         "Lantern walk",
         "2026-10-09T19:00",
         "web",
     )
+    # A place to go any time is kept too; what has no day code can read, or is past the
+    # weeks searched, is not.
+    [garden] = finds.anytime(conn, limit=5)
+    assert (garden.title, garden.why, garden.kind) == (
+        "Rose garden",
+        "They loved the tulip farm.",
+        "web",
+    )
     asked = api.requests[0]["messages"][0]["content"][1]["text"]
+    assert "Tonight's theme: the weeks ahead" in asked  # a Sunday
     assert "Home area: Vancouver, WA." in asked and "Window: Sunday 20 September" in asked
+    assert "About the family:" in asked and "Who they are:" in asked
 
+    # Once an evening: not again before tonight's lookup hour, and again after it.
     quiet = fakes.FakeMessagesAPI()
-    assert run_happening(_app(settings, day=25, **SEARCHING), api=quiet)["searched"] == 0
+    hour = settings.lookup_hour
+    assert run_happening(_app(settings, hour=hour - 1, **SEARCHING), api=quiet)["searched"] == 0
     assert quiet.requests == []
-    _looked(conn, at="2026-09-27T12:00:00Z")
     again = fakes.FakeMessagesAPI(*fakes.discover_script([]))
-    assert run_happening(_app(settings, day=27, **SEARCHING), api=again)["searched"] == 1
+    assert run_happening(_app(settings, hour=hour + 1, **SEARCHING), api=again)["searched"] == 1
+
+
+def _spent(app: App, conn, cost: float, *, kind: str = "scout", at: str | None = None) -> None:
+    with transaction(conn):
+        calls.log_llm_call(
+            conn,
+            message_id=None,
+            iteration=1,
+            model="gpt-6-luna",
+            served_model=None,
+            request_id=None,
+            stop_reason="end",
+            usage={},
+            duration_ms=1,
+            now=at or utc_iso(app.clock.now()),
+            provider="openai",
+            cost_usd=cost,
+            cost_estimated=False,
+            kind=kind,
+            turn=f"t-{cost}",
+        )
+
+
+def test_a_night_scouts_only_within_its_share_of_the_month(settings, conn) -> None:
+    _looked(conn)
+    # US$2 a month; the 20th, eleven nights left. A scout that costs half a dollar does not
+    # fit what is left over them (1.50 / 11); one at a dime does (1.90 / 11).
+    dear = _app(settings, **SEARCHING)
+    _spent(dear, conn, 0.5, at="2026-09-15T05:00:00Z")
+    assert run_happening(dear, api=fakes.FakeMessagesAPI())["searched"] == 0
+    conn.execute("DELETE FROM llm_calls")
+    conn.commit()
+    _spent(dear, conn, 0.1, at="2026-09-15T05:00:00Z")
+    api = fakes.FakeMessagesAPI(*fakes.discover_script([]))
+    assert run_happening(_app(settings, **SEARCHING), api=api)["searched"] == 1
 
 
 @pytest.mark.parametrize(
@@ -207,24 +261,7 @@ def test_no_search_without_the_budget_the_setting_or_the_web(settings, conn, hel
 
 def test_a_month_s_budget_spent_stops_the_search_but_not_the_calendars(settings, conn) -> None:
     app = _app(settings, event_feeds=LIBRARY, **SEARCHING)
-    with transaction(conn):  # one search this month already cost nearly all of the budget
-        calls.log_llm_call(
-            conn,
-            message_id=None,
-            iteration=1,
-            model="gpt-6-luna",
-            served_model=None,
-            request_id=None,
-            stop_reason="end",
-            usage={},
-            duration_ms=1,
-            now=utc_iso(app.clock.now()),
-            provider="openai",
-            cost_usd=0.95,
-            cost_estimated=False,
-            kind="scout",
-            turn="t-spent",
-        )
+    _spent(app, conn, 1.95)  # scouting this month already cost nearly all of the budget
     api = fakes.FakeMessagesAPI()
     counts = run_happening(
         app,

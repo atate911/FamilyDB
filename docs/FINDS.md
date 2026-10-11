@@ -11,7 +11,7 @@ to come, this document is, until the code and the guide catch up and this note i
 |---|---|---|
 | **Idea** | Something the family put on their own list: a place, an activity, an event on a date, a project at home. Always the first thing offered. | `ideas` |
 | **Find** | Something the app found on its own and keeps apart from the ideas: an event on a date, or a place to go any time. It becomes an idea when the family saves it, and goes when they say "not for us" or its date passes. Together the finds are her back pocket. | `finds`: events, and places to go any time; what became of each (saved, passed on) is kept. Searches do not keep theirs yet |
-| **Scouting** | The nightly AI search that fills the back pocket, aimed at this family. | `scout`, weekly, knowing nothing of the family |
+| **Scouting** | The nightly AI search that fills the back pocket, aimed at this family. | `scout`, each evening, on a weekday's theme with the family's brief, rationed to about US$2 a month |
 | **Searching on request** | The AI search made while answering somebody who asked, with everything known about the question and the family. | `discover`: every planning question, events and places, with the question and the family's brief; what it finds is kept |
 | **Filling in** | An AI lookup that completes the details of an idea or a find: address, hours, price, ages, indoor or outdoor, booking. Ideas and finds end up with the same facts. | `enrich`, ideas only |
 | **Checking** | Code testing ideas and finds against the family and a moment: firm rules, who is coming and their ages, the drive, free time, weather, opening hours. Each gets a verdict (good, possible, ruled out) and its reasons. No AI. | the suggestion engine, ideas and finds alike (`suggest/pocket.py`) |

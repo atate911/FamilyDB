@@ -133,6 +133,13 @@
   fair two hours away: each now gets the same verdict and reasons as an idea on your list, by the
   same code, and what is ruled out is no longer offered. Her picks on Now, and the stronger model
   choosing for you, see each find's verdict.
+- **She scouts each evening, aimed at your family.** The weekly search for what is on near home,
+  which knew nothing of you, is now scouting each evening after the lookups, on a theme that turns
+  with the week (food and drink, outdoors, shows and music, grown-ups' evenings, the weekend ahead,
+  classes and clubs, the weeks ahead), for grown-ups as well as kids and for places as well as
+  events, told what she knows of the family. What it finds is sorted by code and kept with her
+  finds. **The monthly budget for it doubles, on purpose, to US$2** (the family's decision); each
+  evening may spend only its share of what is left of the month, so the budget holds.
 
 ## v0.5.0 — beta (2026-10-11)
 

@@ -398,6 +398,18 @@ def warm_starts(conn: sqlite3.Connection, kind: str, *, since: str) -> tuple[int
     return int(row["n"]), int(row["warm"])
 
 
+def average_turn_cost(conn: sqlite3.Connection, kind: str, *, since: str) -> tuple[int, float]:
+    """How many turns of a kind since a timestamp, and what one cost on average, every call of
+    it counted (a worker's search and its hand-back alike): what the next is likely to cost."""
+    row = conn.execute(
+        "SELECT coalesce(sum(CASE WHEN iteration = 1 THEN 1 ELSE 0 END), 0) AS turns, "
+        "coalesce(sum(cost_usd), 0) AS spent FROM llm_calls WHERE kind = ? AND created_at >= ?",
+        (kind, since),
+    ).fetchone()
+    turns = int(row["turns"])
+    return turns, (float(row["spent"]) / turns if turns else 0.0)
+
+
 def waits(conn: sqlite3.Connection, kind: str, *, since: str) -> tuple[int, float]:
     """How many calls of a kind since a timestamp, and their average time in seconds: what a
     family waits for one (the choosing call, suggest/taken.py)."""

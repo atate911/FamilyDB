@@ -175,26 +175,30 @@ def search(
     return [Found(**find) for find in found], None
 
 
+def as_new(one: Found) -> finds.NewFind | None:
+    """A search's find as the back pocket keeps it; None for one whose day code cannot read
+    (dates only as words): kept with no day it would read as any time."""
+    if not (one.starts or one.any_time):
+        return None
+    return finds.NewFind(
+        title=one.title,
+        url=one.url,
+        starts=one.starts,
+        address=one.address,
+        summary=one.summary or None,
+        category=one.kind,
+        participants=one.for_whom,
+        why=one.why,
+        min_age=one.min_age,
+        max_age=one.max_age,
+    )
+
+
 def keep(reach: Reach, found: list[Found]) -> list[Found]:
-    """Keep what a search found in the back pocket, each with its find's number; what the
-    family passed on is left out of the answer. One whose day code cannot read (dates only as
-    words) is offered but not kept: kept with no day it would read as any time."""
-    keeping = [
-        finds.NewFind(
-            title=one.title,
-            url=one.url,
-            starts=one.starts,
-            address=one.address,
-            summary=one.summary or None,
-            category=one.kind,
-            participants=one.for_whom,
-            why=one.why,
-            min_age=one.min_age,
-            max_age=one.max_age,
-        )
-        for one in found
-        if one.starts or one.any_time
-    ]
+    """Keep what a search on request found in the back pocket, each with its find's number;
+    what the family passed on is left out of the answer, and one that cannot be kept
+    (`as_new`) is offered all the same."""
+    keeping = [new for new in (as_new(one) for one in found) if new is not None]
     if not keeping:
         return found
     with transaction(reach.conn):

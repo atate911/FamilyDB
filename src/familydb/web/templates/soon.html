@@ -26,7 +26,7 @@
     {% if reading %}
       {{ dest_empty('Nothing listed for the next ' ~ ahead ~ ' days yet. The calendars and Ticketmaster are read once a day.', 'ticket') }}
     {% else %}
-      <p class="empty">{{ icon('ticket') }}<span>Nothing near home is read yet.{% if visitor().may('manage') %} Add a calendar, a Ticketmaster key or the weekly search <a href="{{ url_for('settings.section', name='happening') }}">in the settings</a>.{% endif %}</span></p>
+      <p class="empty">{{ icon('ticket') }}<span>Nothing near home is read yet.{% if visitor().may('manage') %} Add a calendar, a Ticketmaster key or her scouting <a href="{{ url_for('settings.section', name='happening') }}">in the settings</a>.{% endif %}</span></p>
     {% endif %}
   {% endfor %}
   {% if days %}<p class="sec__note">Not on your list: tell {{ assistant }} to save one, or to put it on the calendar.</p>{% endif %}

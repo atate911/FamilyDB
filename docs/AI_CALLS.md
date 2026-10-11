@@ -110,7 +110,7 @@ Context has three layers, and every piece of information belongs to exactly one:
 | Retry | every 5 minutes, for a failed message other than the digest, 3 times at most; never after running out of steps | chat model, chat level | the chat context, plus which writes already ran | the chat tools | a reply |
 | Enrich | by default the evening's lookups after `lookup_hour`, up to 40 ideas in one run with one note per chat; an idea asked for with `look_up_now` on the next run, with a note of its own; with `lookups_when` "asap", up to `enrich_batch` each run (every `enrich_interval_minutes`); a home idea with no place, link or location, and a gift that names no place, are skipped in code (`store.ideas.needs_lookup`) | worker model, lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record, and the idea's empty details |
 | Discover | every planning question: a `suggest` call that may search (`discover`, true unless they asked for their own list alone), while web lookups are on; once a turn; cached 12 hours by window, framing and the steady part of the family's brief, so the same ask in other words is one search | worker model, lookup level | `prompts/discover.md`; home area and where they are, the window, its hours, the constraints and topic, the question in their words, and the family's brief (`scouting/brief.py`): who they are without a name, their musts, what they like and loved, the areas they go to, and what is on their list, already found and passed on | web search (4), `report_finds` | up to 6 finds, events and places alike, each with who it suits and why, kept in `finds` as `request` |
-| Scout | the hourly job for what is on near home (`jobs/happening.py`), at most once in six and a half days, while the weekly search is on, web lookups are on, home is set, and the month's `happening_budget` and the day's limit allow | worker model, lookup level | `prompts/scout.md` (the discover prompt as it was); home area, the next 28 days, no constraints | web search (4), `report_finds` | up to 6 dated finds, kept in `finds` |
+| Scout | the hourly job for what is on near home (`jobs/happening.py`), once an evening after `lookup_hour`, while scouting is on (`happening_search`), web lookups are on, home is set, the month's `happening_budget` and the day's limit allow, and a scouting turn at what they have cost lately fits the night's share (what is left of the month over the nights left) | worker model, lookup level | `prompts/scout.md`; the night's theme (one a weekday), home area, the next 28 days, and the family's brief (`scouting/brief.py`) | web search (4), `report_finds` | up to 6 finds, events and places, each with who it suits and why; sorted by code and kept in `finds` as `web` |
 | Find feeds | the same job, every `happening_refind_days` days and at once when the home area changes, under the same conditions | worker model, lookup level | `prompts/find_feeds.md`; home area, the calendars already known and those that stopped answering | web search (6), `report_feeds` | up to 10 calendar addresses, each read by code before it is offered |
 | Transcribe | a voice note from somebody on the family list, before its chat turn | the hearing model: OpenAI's speech-to-text or a Gemini model; never Claude, which takes no recordings | the recording, and one line naming the family, her and home so they are spelled right | nothing | its words, which become the message |
 | Judge | a question code filed when a change needs weighing (a model in use going with several to take its place, new models for a company in use, a refusal nobody could read), only while `judgements` is on; the day's questions together with the evening's lookups, a refusal at once; within `judgement_budget` a month | the model at `judgement_level` (best by default) of the lookup company | `prompts/judge.md`; model names, prices, releases, what the family's calls use a model for, a refusal's status and error text; never the family's messages | `give_judgement` only, choosing among the options code gave | one choice per question, which code checks and acts on within `judgement_acts` |
@@ -146,15 +146,20 @@ or picture is not kept. What the table does not say:
 
 **Looking for what is on near home** is two calls made for the household rather than a message
 (`jobs/happening.py`), and the only scheduled calls besides the evening lookups. Their five
-answers: asked only while the family has the search on, web lookups are on, home is set and
-the job's own monthly budget (`happening_budget`, US$1 by default, counted from `llm_calls`
-under `scout` and `find_feeds`) and the day's limit both have room, the search once a week and
-the calendar lookup every few weeks, and on an idle tick never; they see the home area, the
-dates and, for the calendar lookup, the addresses already known, never a message or a memory;
-they may only hand back finds or addresses; what comes back is checked by code (a find's day
-must read as one, a calendar must read as a calendar before anyone is offered it) and the
-family decides which calendars are read; and each is one bounded worker turn, a few cents.
-Reading the calendars and Ticketmaster is code, with no model, and costs nothing.
+answers: asked only while the family has scouting on, web lookups are on, home is set and the
+job's own monthly budget (`happening_budget`, US$2 by default, counted from `llm_calls` under
+`scout` and `find_feeds`) and the day's limit both have room; scouting once an evening, after the
+lookups, and only when a scouting turn, at what they have cost in the last 30 days (5 cents until
+one is measured), fits the night's share of what is left of the month; the calendar lookup every
+few weeks; and on an idle tick never. Scouting sees the night's theme, the home area, the dates
+and the family's brief (as the search on request does, never a name, a present or a position);
+the calendar lookup the home area and the addresses already known. They may only hand back finds
+or addresses; what comes back is sorted or checked by code (a find's day must read as one, inside
+the weeks searched, or it must be a place to go any time; nothing already on the list, saved,
+planned or passed on, nor anything a firm rule avoids; a calendar must read as a calendar before
+anyone is offered it) and the family decides which calendars are read; and each is one bounded
+worker turn, a few cents. Reading the calendars and Ticketmaster is code, with no model, and
+costs nothing.
 
 **Choosing what to suggest** is the call the family pays for on purpose (`suggest/choosing.py`,
 kind `choose`, "choosing what to suggest"). Its five answers: asked by code from inside the chat's

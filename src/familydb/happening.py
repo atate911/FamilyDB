@@ -36,7 +36,7 @@ REQUEST = "request"
 # Kinds a search found, named by the page they were found on rather than a source.
 SEARCHED = (WEB, REQUEST)
 # The source names kept in find_sources: one per calendar, one for Ticketmaster, one for the
-# weekly search, and one per home area for the lookup that proposes calendars.
+# scouting each evening, and one per home area for the lookup that proposes calendars.
 FEED_PREFIX = "feed:"
 TICKETMASTER_SOURCE = "ticketmaster"
 WEB_SOURCE = "web:near-home"
@@ -89,7 +89,7 @@ def source_name(source: str) -> str:
         return "Ticketmaster"
     if kind == "proposals":
         return "looking for calendars near home"
-    return "the weekly search"
+    return "her scouting"
 
 
 def spent_this_month(conn: sqlite3.Connection, settings: Settings, now: datetime) -> float:

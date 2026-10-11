@@ -9,7 +9,7 @@ Settings is where an admin changes how FamilyDB behaves, one card at a time, wit
 | [Spending](/wiki/controls/settings/spending) | The daily limit, each kid's limits, the wish-list limits, thinking and size limits |
 | [Messages](/wiki/controls/settings/messages) | What is sent without being asked, and when, including the morning message and notices on phones |
 | [Lookups](/wiki/controls/settings/lookups) | Filling ideas in from the web, places on the web, and taking off what is over |
-| [What is on near home](/wiki/controls/settings/happening) | The calendars, Ticketmaster and weekly search that find what is on near home |
+| [What is on near home](/wiki/controls/settings/happening) | The calendars, Ticketmaster and the scouting each evening that find what is on near home |
 | [Personality and family](/wiki/controls/settings/personality) | Who the assistant is, and the family's own words about itself |
 | [Connections](/wiki/controls/settings/connections) | Telegram, the family's chat and Google Calendar |
 | [Sign-in and security](/wiki/controls/settings/sign-in) | How long a sign-in lasts, how long messages are kept, seeing a key, signing everyone out |

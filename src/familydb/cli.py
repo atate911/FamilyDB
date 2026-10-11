@@ -1136,7 +1136,7 @@ def happening_now(
 ) -> None:
     """Read what is on near home now (the running bot does this hourly, each source when due).
 
-    With --now the weekly search and the lookup for calendars run too, within the month's
+    With --now the scouting and the lookup for calendars run too, within the month's
     budget for them."""
     from familydb.jobs.happening import run_happening
 

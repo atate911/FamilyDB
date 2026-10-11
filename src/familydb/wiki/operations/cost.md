@@ -8,7 +8,7 @@ To see what a message pays for on your install, run `familydb debug cost`. It pr
 
 Every chat message starts with the same front part: the character, the instructions, the family context, the idea list and the definitions of the assistant's tools. Your family's text and up to 150 idea lines (`prompt_idea_limit`) add to it. The uncached part comes on top: recent conversation, the date, memories and the message itself. A tool step is another call that carries the turn's earlier steps again, so a message that uses three tools pays for four calls.
 
-Answers and thinking are extra. Only lookups, the search made when somebody asks for suggestions, the weekly search and price checks search the web, at about US$0.01 a search on OpenAI and Claude and US$0.014 on Gemini. The chat model never searches.
+Answers and thinking are extra. Only lookups, the search made when somebody asks for suggestions, the scouting each evening and price checks search the web, at about US$0.01 a search on OpenAI and Claude and US$0.014 on Gemini. The chat model never searches.
 
 ## What the cache does
 
