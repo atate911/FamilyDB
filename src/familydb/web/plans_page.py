@@ -28,6 +28,7 @@ from familydb.web import (
 )
 from familydb.web.answers import answer
 from familydb.web.pages import MAX_ID, bp, familydb_app, who_asks
+from familydb.web.rows import PlanRow
 
 PLANS_AHEAD_DAYS = 90
 
@@ -52,11 +53,11 @@ def _month(asked: str | None, today: date) -> date:
     return first
 
 
-def _months(rows: list[dict[str, Any]], today: date) -> list[dict[str, Any]]:
+def _months(rows: list[PlanRow], today: date) -> list[dict[str, Any]]:
     """Plans under the month they begin in ("October", and the year when it is not this one)."""
     groups: list[dict[str, Any]] = []
     for row in rows:
-        day = date.fromisoformat(row["day"])
+        day = date.fromisoformat(row.day)
         title = f"{day:%B}" + (f" {day.year}" if day.year != today.year else "")
         if not groups or groups[-1]["title"] != title:
             groups.append({"title": title, "rows": []})
@@ -81,8 +82,8 @@ def plans() -> str:
         rows = page_rows.plan_rows(conn, app, on, today, views.slot_map(people), None, past=True)
         asking = who_asks(conn)
     horizon = today.isoformat()
-    upcoming = [row for row in rows if row["end"] >= horizon]
-    recent = [row for row in rows if row["end"] < horizon][::-1]
+    upcoming = [row for row in rows if row.end >= horizon]
+    recent = [row for row in rows if row.end < horizon][::-1]
     return answer(
         "plans.html",
         months=_months(upcoming, today),
@@ -236,14 +237,12 @@ def plans_month() -> str:
         )
     previous = (first - timedelta(days=1)).replace(day=1)
     following = last_day + timedelta(days=1)
-    weeks = calendar_view.month_calendar(rows, first, today, {row["plan_id"] for row in rate})
+    weeks = calendar_view.month_calendar(rows, first, today, {row.plan_id for row in rate})
     start = max(today, first).isoformat()
     coming = [
         row
         for row in rows
-        if row["end"] >= start
-        and row["day"] <= last_day.isoformat()
-        and row["end"] >= first.isoformat()
+        if row.end >= start and row.day <= last_day.isoformat() and row.end >= first.isoformat()
     ]
     return answer(
         "plans_month.html",

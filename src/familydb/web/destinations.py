@@ -31,6 +31,7 @@ from familydb.suggest.types import DAY_END, DAY_START
 from familydb.tools.weather import forecast_days
 from familydb.web import auth, chat, household, ideas_page, map_view, now, page_rows, views
 from familydb.web.answers import answer
+from familydb.web.rows import PlanRow
 
 log = logging.getLogger(__name__)
 
@@ -105,7 +106,7 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
         on = presents.without(seen.entries, kept)
         rows = page_rows.plan_rows(conn, app, on, today, slots, only_for, past=True)
         if who:
-            rows = [row for row in rows if views.names_in(row["people"], _named(people, who))]
+            rows = [row for row in rows if views.names_in(row.people, _named(people, who))]
         due = _due(conn, visitor, first, last, tz, today, slots, grown_up)
         plate = (
             _plate(conn, visitor, today, tz, slots) if grown_up and first <= today <= last else []
@@ -121,7 +122,7 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
     for offset in range((last - first).days + 1):
         when = first + timedelta(days=offset)
         iso = when.isoformat()
-        todays = [row for row in rows if row["day"] <= iso <= row["end"]]
+        todays = [row for row in rows if row.day <= iso <= row.end]
         free = _free(todays, when, iso)
         forecast = forecasts.get(when)
         days.append(
@@ -137,7 +138,7 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
                 "forecast": views.forecast_words(forecast, app.settings) if forecast else None,
                 "pencil": pencil if pencil and pencil["day"] == iso and free else None,
                 "went": [row for row in went if row["day"] == iso],
-                "rate": [row for row in rate if row["day"] == iso],
+                "rate": [row for row in rate if row.day == iso],
                 "href": url_for("go.day", day=iso),
             }
         )
@@ -179,20 +180,20 @@ def _named(people: list[Member], name: str) -> Member | None:
     return next((p for p in people if p.display_name.casefold() == name.casefold()), None)
 
 
-def _free(rows: list[dict[str, Any]], when: date, iso: str) -> list[tuple[int, int]]:
+def _free(rows: list[PlanRow], when: date, iso: str) -> list[tuple[int, int]]:
     """The free stretches of a day between the day's bounds, the plans on it taken out: a
     timed plan takes its own time (two hours when it has no end), an all-day one the day."""
-    if any(row["all_day"] and row["status"] != "cancelled" for row in rows):
+    if any(row.all_day and row.status != "cancelled" for row in rows):
         return []
     busy = []
     for row in rows:
-        if row["all_day"] or row["status"] == "cancelled":
+        if row.all_day or row.status == "cancelled":
             continue
         # A plan over several days takes this one from its start, or from midnight, to its end,
         # or to midnight.
-        start = _minutes(row["start_value"]) if row["start_value"][:10] == iso else 0
-        if row.get("end_value"):
-            end = _minutes(row["end_value"]) if row["end_value"][:10] == iso else 24 * 60
+        start = _minutes(row.start_value) if row.start_value[:10] == iso else 0
+        if row.end_value:
+            end = _minutes(row.end_value) if row.end_value[:10] == iso else 24 * 60
         else:
             end = start + ASSUMED_MINUTES
         busy.append((start, min(end, 24 * 60)))
@@ -486,7 +487,7 @@ def plan(plan_id: int) -> str:
             [
                 r
                 for r in page_rows.unrated(conn, today, slots, visitor.member)
-                if r["plan_id"] == plan_id
+                if r.plan_id == plan_id
             ]
             if visitor.may("change")
             else []
@@ -501,7 +502,7 @@ def plan(plan_id: int) -> str:
                 "text": f"About the plan {found.title} ({found.start[:10]}):",
             },
         )
-    row = views.plan_row(found, today)
+    row = views.entry_row(agenda.entry_of(found), today, linked=idea is not None)
     away = map_view.away_from_home(place, app.settings)
     who = views.people_for(idea, slots)
     return answer(

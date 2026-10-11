@@ -62,7 +62,8 @@ class Agenda:
     source: Source
 
 
-def _from_plan(plan: Plan) -> Entry:
+def entry_of(plan: Plan) -> Entry:
+    """A plan kept here as an entry, so a page draws it as it draws what is on."""
     return Entry(
         title=plan.title,
         start=plan.start,
@@ -78,7 +79,7 @@ def _from_plan(plan: Plan) -> Entry:
 
 def read(app: App, conn: sqlite3.Connection, first: date, last: date) -> Agenda:
     kept = plan_store.overlapping(conn, str(first), str(last))
-    saved = [_from_plan(plan) for plan in kept]
+    saved = [entry_of(plan) for plan in kept]
     calendar = app.calendar
     if calendar is None:
         return Agenda(saved, "saved")
@@ -110,7 +111,7 @@ def read(app: App, conn: sqlite3.Connection, first: date, last: date) -> Agenda:
             )
         )
     # Kept here before Google was connected, and not on it yet (calendar_sync.adopt_local).
-    entries += [_from_plan(plan) for plan in kept if plan.calendar_id is None]
+    entries += [entry_of(plan) for plan in kept if plan.calendar_id is None]
     return Agenda(sorted(entries, key=lambda entry: entry.start), "google")
 
 

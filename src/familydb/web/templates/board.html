@@ -20,7 +20,7 @@
           {% for r in day.rows %}
             <div class="set{{ ' set--off' if r.status == 'cancelled' }}">
               <span class="set__num num">{{ (r.time | figs) if r.time else 'All day' }}</span>
-              <div class="set__text"><span class="set__t">{% if r.plan_id %}<a href="{{ url_for('go.plan', plan_id=r.plan_id) }}">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</span>
+              <div class="set__text"><span class="set__t">{% if r.id %}<a href="{{ url_for('go.plan', plan_id=r.id) }}">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</span>
                 {% if r.location %}<span class="set__m">{{ r.location }}</span>{% endif %}</div>
               {{ who(r.people, r.who, shell.family) }}
             </div>

@@ -16,14 +16,16 @@ from flask import Response, abort, current_app, redirect, request, session, url_
 from familydb import agenda, personas, presents
 from familydb.app import App
 from familydb.base import roles
-from familydb.base.dates import clock_time, utc_iso
+from familydb.base.dates import utc_iso
 from familydb.store import ideas as idea_store
 from familydb.store import picks as pick_store
 from familydb.store import tasks as task_store
 from familydb.store.members import Member
 from familydb.web import auth, chat, household, page_rows, shell, views, wishes_view
+from familydb.web import rows as rows_
 from familydb.web import status as status_page
 from familydb.web.answers import answer
+from familydb.web.rows import PlanRow
 
 log = logging.getLogger(__name__)
 
@@ -73,7 +75,7 @@ def show() -> Response | str:
         people, slots, kept = household.read(conn, visitor.member)
         seen = agenda.read(app, conn, today, today + timedelta(days=DAYS_AHEAD))
         on = presents.without(seen.entries, kept)
-        rows = _rows(conn, on, visitor.member if not grown_up else None, today, slots)
+        rows = _rows(conn, app, on, visitor.member if not grown_up else None, today, slots)
         asked = questions(conn, app, visitor, today, slots, people)[:MOST_QUESTIONS]
         todo = _todo(conn, app, visitor, today, slots, grown_up)
         picks = _picks(conn, app, visitor, kept, today)
@@ -112,39 +114,24 @@ def show() -> Response | str:
 
 def _rows(
     conn: Any,
+    app: App,
     entries: list[agenda.Entry],
     only_for: Member | None,
     today: date,
     slots: dict[str, int],
-) -> list[dict[str, Any]]:
-    """What is on, as rows, without the days gone; for a kid, the ones that name her or nobody."""
-    rows = []
-    for entry in entries:
-        if entry.days()[-1] < today or entry.status == "cancelled":
-            continue
-        idea = idea_store.get(conn, entry.idea_id) if entry.idea_id else None
-        if only_for is not None and not views.names_in(views.people_for(idea, slots), only_for):
-            continue
-        rows.append(
-            {
-                "title": entry.title,
-                "day": entry.days()[0].isoformat(),
-                "end": entry.days()[-1].isoformat(),
-                "time": None if entry.all_day else clock_time(entry.start),
-                "all_day": entry.all_day,
-                "status": entry.status,
-                "idea_id": entry.idea_id,
-            }
-        )
-    return rows
+) -> list[PlanRow]:
+    """What is on, as rows, without the days gone or the cancelled; for a kid, the ones that name
+    her or nobody."""
+    rows = page_rows.plan_rows(conn, app, entries, today, slots, only_for)
+    return [row for row in rows if row.status != "cancelled"]
 
 
-def _days(rows: list[dict[str, Any]], today: date, grown_up: bool) -> list[dict[str, Any]]:
+def _days(rows: list[PlanRow], today: date, grown_up: bool) -> list[dict[str, Any]]:
     """Today's and tomorrow's lines: what is on each, in a sentence, or that nothing is."""
     lines = []
     for offset, label in ((0, "Today"), (1, "Tomorrow")):
         day = today + timedelta(days=offset)
-        on = [row for row in rows if row["day"] <= day.isoformat() <= row["end"]]
+        on = [row for row in rows if row.day <= day.isoformat() <= row.end]
         lines.append(
             {"label": label, "parts": views.day_line(on, url_for("go.day", day=day.isoformat()))}
         )
@@ -217,10 +204,10 @@ def questions(
         asked.append(
             {
                 "kind": "rate",
-                "text": f"How did {row['title']} go?",
-                "origin": row["when"],
-                "sort": row["day"],
-                **row,
+                "text": f"How did {row.title} go?",
+                "origin": row.when,
+                "sort": row.day,
+                **rows_.as_dict(row),
             }
         )
     if visitor.may("decide"):

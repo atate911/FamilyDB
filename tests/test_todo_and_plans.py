@@ -3,24 +3,40 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from datetime import date
 
 from familydb.store import db, ideas, outcomes, plans, tasks
 from familydb.web import calendar_view, views
+from familydb.web.rows import PlanRow
 from tests.conftest import NOW_ISO
 from tests.test_web_edits import _client
 
 
-def _row(day, end=None, *, title="Event", slot=1, rid=1):
-    return {
-        "id": rid,
-        "title": title,
-        "day": day,
-        "end": end or day,
-        "people": [{"name": "Sam", "slot": slot, "initial": "S"}],
-        "who": "Sam",
-        "time": "",
-    }
+def _row(day, end=None, *, title="Event", slot=1, rid=1, people=None, who="Sam"):
+    return PlanRow(
+        id=rid,
+        idea_id=None,
+        title=title,
+        when=day,
+        time=None,
+        relative=None,
+        chip=None,
+        on_today=False,
+        all_day=True,
+        location=None,
+        notes=None,
+        status="confirmed",
+        from_google=False,
+        start_value=f"{day}T09:00",
+        end_value=None,
+        people=people or [{"name": "Sam", "slot": slot, "initial": "S"}],
+        who=who,
+        away=None,
+        day=day,
+        end=end or day,
+        short=day,
+    )
 
 
 # -- the month
@@ -59,13 +75,20 @@ def test_a_day_says_what_is_on_it_and_what_is_still_to_rate() -> None:
 
 
 def test_a_day_draws_a_dot_for_each_person_and_the_house_only_for_everyone() -> None:
-    two = {**_row("2026-10-04", title="Roller rink", rid=1)}
-    two["people"] = [
-        {"name": "Maya", "slot": 3, "initial": "M"},
-        {"name": "Theo", "slot": 4, "initial": "T"},
-    ]
-    everyone = {**_row("2026-10-05", title="Picnic", rid=2)}
-    everyone["people"] = [{"name": views.EVERYONE, "slot": 0, "initial": ""}]
+    two = replace(
+        _row("2026-10-04", title="Roller rink", rid=1),
+        people=[
+            {"name": "Maya", "slot": 3, "initial": "M"},
+            {"name": "Theo", "slot": 4, "initial": "T"},
+        ],
+    )
+    everyone = _row(
+        "2026-10-05",
+        title="Picnic",
+        rid=2,
+        people=[{"name": views.EVERYONE, "slot": 0, "initial": ""}],
+        who=views.EVERYONE,
+    )
     weeks = calendar_view.month_calendar([two, everyone], date(2026, 10, 1), date(2026, 10, 20))
     days = {d["iso"]: d for w in weeks for d in w["days"]}
     assert [dot["initial"] for dot in days["2026-10-04"]["dots"]] == ["M", "T"]

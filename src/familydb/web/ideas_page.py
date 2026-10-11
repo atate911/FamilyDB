@@ -32,6 +32,7 @@ from familydb.web import (
     auth,
     chat,
     map_view,
+    page_rows,
     views,
 )
 from familydb.web.answers import answer
@@ -299,6 +300,7 @@ def idea(idea_id: int) -> str:
         family = member_store.list_all(conn)
         slots = views.slot_map(family)
         kept = presents.of_presents(conn, [record], family).get(idea_id)
+        planned = [page_rows.plan_card(conn, app, p, today, slots) for p in reversed(plans)]
         box = chat.page_box(
             app,
             conn,
@@ -330,7 +332,7 @@ def idea(idea_id: int) -> str:
         weather=views.WEATHER.get(record.weather),
         place=views.place_panel(place, now, settings.place_stale_days, today),
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
-        plans=[views.plan_row(p, today) for p in reversed(plans)],
+        plans=planned,
         changed=views.changed_line(
             changed, settings.tzinfo, assistant=personas.active(settings).name
         ),

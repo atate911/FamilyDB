@@ -7,49 +7,48 @@ import calendar as months
 from datetime import date
 from typing import Any
 
+from familydb.web.rows import PlanRow, as_dict
 from familydb.web.views import EVERYONE, day_short
 
 LANES = 3
 MORE_LANE = LANES + 1
 
 
-def _event_slot(row: dict[str, Any]) -> int:
+def _event_slot(row: PlanRow) -> int:
     """An event wears one person's colour; with several people, or everyone, it is neutral."""
-    people = row["people"]
+    people = row.people
     return people[0]["slot"] if len(people) == 1 else 0
 
 
-def _spoken(day: date, rows: list[dict[str, Any]], unrated: set[int]) -> str:
+def _spoken(day: date, rows: list[PlanRow], unrated: set[int]) -> str:
     """What a day's cell says to a screen reader, as there is no room to write it: "Sun 4 Oct:
     Oaks Park roller rink, 13:00, for Maya and Theo"."""
     parts = []
     for row in rows:
-        said = f"{row['title']}, {row['time']}, " if row["time"] else f"{row['title']}, "
-        said += f"for {row['who'] if row['who'] != EVERYONE else 'everyone'}"
-        if row["id"] in unrated:
+        said = f"{row.title}, {row.time}, " if row.time else f"{row.title}, "
+        said += f"for {row.who if row.who != EVERYONE else 'everyone'}"
+        if row.id in unrated:
             said += ". Not rated yet"
         parts.append(said)
     return f"{day_short(day)}: " + "; ".join(parts)
 
 
 def month_calendar(
-    rows: list[dict[str, Any]], first: date, today: date, unrated: set[int] | None = None
+    rows: list[PlanRow], first: date, today: date, unrated: set[int] | None = None
 ) -> list[dict[str, Any]]:
     """A month as whole weeks, Monday first. Each week carries its seven days and the events that
     touch it, each placed by the column it starts in, how many days it runs inside the week and
     which of three lanes it sits in (an event over three deep is counted on its days instead). A
     plan that crosses a week is cut: one bar to each week, `to` where it goes on and `before` where
-    it came from. `rows` are plan rows (`entry_row`)."""
+    it came from."""
     unrated = unrated or set()
     grid = months.Calendar(firstweekday=0).monthdatescalendar(first.year, first.month)
     weeks = []
     for number, week in enumerate(grid):
         start, end = week[0], week[-1]
-        spans = [
-            (date.fromisoformat(row["day"]), date.fromisoformat(row["end"]), row) for row in rows
-        ]
+        spans = [(date.fromisoformat(row.day), date.fromisoformat(row.end), row) for row in rows]
         inside = [one for one in spans if one[0] <= end and one[1] >= start]
-        inside.sort(key=lambda one: (one[0], -(one[1] - one[0]).days, one[2]["title"]))
+        inside.sort(key=lambda one: (one[0], -(one[1] - one[0]).days, one[2].title))
         taken: list[list[tuple[int, int]]] = [[] for _ in range(LANES)]
         events: list[dict[str, Any]] = []
         overflow = [0] * 7
@@ -71,7 +70,7 @@ def month_calendar(
             taken[lane - 1].append((left, right))
             events.append(
                 {
-                    **row,
+                    **as_dict(row),
                     "column": left,
                     "lane": lane,
                     "length": right - left + 1,
@@ -79,7 +78,7 @@ def month_calendar(
                     "before": began < start,
                     "slot": _event_slot(row),
                     "past": ended < today,
-                    "unrated": row["id"] in unrated,
+                    "unrated": row.id in unrated,
                 }
             )
         days = []
@@ -98,11 +97,11 @@ def month_calendar(
                     "dots": [
                         {**person, "past": day < today}
                         for r in today_rows
-                        for person in (r["people"] or [people_dot()])
+                        for person in (r.people or [people_dot()])
                     ][:3],
                     "label": _spoken(day, today_rows, unrated) if today_rows else None,
                     # The first plan that day still to be rated, so the day links to its faces.
-                    "rate": next((r["id"] for r in today_rows if r["id"] in unrated), None),
+                    "rate": next((r.id for r in today_rows if r.id in unrated), None),
                 }
             )
         weeks.append(

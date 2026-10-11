@@ -35,6 +35,7 @@ from familydb.store.plans import Plan
 from familydb.store.tasks import Task
 from familydb.suggest.types import DAY_END, DAY_START
 from familydb.web.map_view import Away, drive_text
+from familydb.web.rows import PlanRow
 
 DAY_NAMES = {
     "mon": "Monday",
@@ -614,15 +615,15 @@ def context_line(local_now: datetime, fact: str | None = None) -> str:
     return f"{when} · {fact}" if fact else when
 
 
-def day_line(rows: Sequence[dict[str, Any]], href: str) -> list[dict[str, str | None]]:
+def day_line(rows: Sequence[PlanRow], href: str) -> list[dict[str, str | None]]:
     """What is on one day as the parts of a sentence, the plans a link to the day: "Swim lesson
     4:30 pm, then Night Market 5 pm." or "Free." when nothing is."""
     if not rows:
         return [{"text": "Free.", "href": None}]
     said = []
     for row in rows:
-        title = row["title"] + (f" {row['time']}" if row.get("time") else "")
-        if row.get("status") == "tentative":
+        title = row.title + (f" {row.time}" if row.time else "")
+        if row.status == "tentative":
             title += " (tentative)"
         said.append(title)
     text = said[0] if len(said) == 1 else ", ".join(said[:-1]) + f", then {said[-1]}"
@@ -1221,31 +1222,16 @@ def relative_text(value: str, today: date) -> str | None:
     return f"in {unit}" if ahead else f"{unit} ago"
 
 
-def plan_row(plan: Plan, today: date) -> dict[str, Any]:
-    return {
-        "id": plan.id,
-        "idea_id": plan.idea_id,
-        "title": plan.title,
-        "when": day_text(plan.start) if not plan.all_day else day_text(plan.start[:10]),
-        "relative": relative_text(plan.start, today),
-        "chip": date_chip(plan.start),
-        "all_day": plan.all_day,
-        # A datetime-local box wants "2026-09-26T18:30", with no offset (it shows nothing with one):
-        # plans are stored in the family's own time, so that is the first sixteen characters.
-        "start_value": plan.start[:16] if len(plan.start) > 10 else f"{plan.start[:10]}T09:00",
-        "location": plan.location,
-        "notes": plan.notes,
-        "status": plan.status,
-    }
-
-
 def entry_row(
     entry: Entry,
     today: date,
     *,
     people: Sequence[dict[str, Any]] | None = None,
     away: Away | None = None,
-) -> dict[str, Any]:
+    linked: bool = True,
+) -> PlanRow:
+    """What is on, as the pages draw it (`rows.PlanRow`); a plan kept here through
+    `agenda.entry_of`."""
     days = entry.days()
     when = day_text(entry.start[:10] if entry.all_day else entry.start)
     if entry.all_day and len(days) > 1:
@@ -1255,31 +1241,33 @@ def entry_row(
             when = f"{first:%A} {first.day} to {day_text(last.isoformat())}"
         else:
             when = f"{day_text(first.isoformat())} to {day_text(last.isoformat())}"
-    return {
-        "id": entry.plan_id,
-        "idea_id": entry.idea_id,
-        "title": entry.title,
-        "when": when,
-        "time": None if entry.all_day else clock_time(entry.start),
-        "relative": "now" if days[0] < today <= days[-1] else relative_text(entry.start, today),
-        "chip": date_chip(entry.start),
-        "on_today": days[0] <= today <= days[-1],
-        "all_day": entry.all_day,
-        "location": entry.location,
-        "notes": entry.notes,
-        "status": entry.status,
-        # Made elsewhere: shown, not movable here.
-        "from_google": entry.plan_id is None,
-        "start_value": entry.start[:16] if not entry.all_day else f"{entry.start[:10]}T09:00",
-        "end_value": entry.end[:16] if entry.end and not entry.all_day else None,
+    return PlanRow(
+        id=entry.plan_id,
+        idea_id=entry.idea_id,
+        title=entry.title,
+        when=when,
+        time=None if entry.all_day else clock_time(entry.start),
+        relative="now" if days[0] < today <= days[-1] else relative_text(entry.start, today),
+        chip=date_chip(entry.start),
+        on_today=days[0] <= today <= days[-1],
+        all_day=entry.all_day,
+        location=entry.location,
+        notes=entry.notes,
+        status=entry.status,
+        from_google=entry.plan_id is None,
+        # A datetime-local box wants "2026-09-26T18:30", with no offset (it shows nothing with
+        # one): plans are kept in the family's own time, so that is the first sixteen characters.
+        start_value=entry.start[:16] if not entry.all_day else f"{entry.start[:10]}T09:00",
+        end_value=entry.end[:16] if entry.end and not entry.all_day else None,
         # Who it is for (each with their colour; Everyone when nobody is named) and how far.
-        "people": list(people) if people is not None else [person_of(None, {})],
-        "who": names_text(people) if people is not None else EVERYONE,
-        "away": away.words if away else None,
-        "day": days[0].isoformat(),
-        "end": days[-1].isoformat(),
-        "short": day_short(days[0]),
-    }
+        people=list(people) if people is not None else [person_of(None, {})],
+        who=names_text(people) if people is not None else EVERYONE,
+        away=away.words if away else None,
+        day=days[0].isoformat(),
+        end=days[-1].isoformat(),
+        short=day_short(days[0]),
+        linked=linked,
+    )
 
 
 AGENDA_NOTES = {

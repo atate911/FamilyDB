@@ -3,6 +3,7 @@ nobody has said how they went, an idea's small row. Built here once so the pages
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, timedelta
 from typing import Any
 
@@ -13,6 +14,7 @@ from familydb.store import members as member_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.web import map_view, shell, views
+from familydb.web.rows import PlanRow, ToRate
 
 
 def plan_rows(
@@ -24,10 +26,10 @@ def plan_rows(
     only_for: member_store.Member | None,
     *,
     past: bool = False,
-) -> list[dict[str, Any]]:
+) -> list[PlanRow]:
     """What is on, with whom it is for and how far it is: what is coming, and what was too when
     `past`. With `only_for` (a kid), the ones that name her, or nobody (so everybody)."""
-    rows = []
+    rows: list[PlanRow] = []
     for entry in entries:
         if entry.days()[-1] < today and not past:
             continue
@@ -37,20 +39,34 @@ def plan_rows(
             continue
         place = place_store.get(conn, idea.place_id) if idea and idea.place_id else None
         away = map_view.away_from_home(place, app.settings)
-        row = views.entry_row(entry, today, people=people, away=away)
         # A plan whose idea has since gone is still a plan, with no page to link to.
-        row["linked"] = idea is not None
-        rows.append(row)
+        rows.append(
+            views.entry_row(entry, today, people=people, away=away, linked=idea is not None)
+        )
     seen: set[str] = set()
+    anchored = []
     for row in rows:  # the first plan of a day is what a link to that day lands on
-        row["anchor"] = row["day"] not in seen
-        seen.add(row["day"])
-    return rows
+        anchored.append(replace(row, anchor=row.day not in seen))
+        seen.add(row.day)
+    return anchored
+
+
+def plan_card(
+    conn: Any, app: App, plan: plan_store.Plan, today: date, slots: dict[str, int]
+) -> PlanRow:
+    """One plan kept here as its row, for its own page and its idea's."""
+    idea = idea_store.get(conn, plan.idea_id) if plan.idea_id else None
+    place = place_store.get(conn, idea.place_id) if idea and idea.place_id else None
+    away = map_view.away_from_home(place, app.settings)
+    people = views.people_for(idea, slots)
+    return views.entry_row(
+        agenda.entry_of(plan), today, people=people, away=away, linked=idea is not None
+    )
 
 
 def unrated(
     conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
-) -> list[dict[str, Any]]:
+) -> list[ToRate]:
     """Every plan of the last two weeks nobody has said how it went, oldest first, without the
     ones made from a present kept from `who`."""
     waiting = presents.without(
@@ -66,25 +82,25 @@ def unrated(
         idea = idea_store.get(conn, plan.idea_id) if plan.idea_id else None
         day = date.fromisoformat(plan.start[:10])
         found.append(
-            {
-                "plan_id": plan.id,
-                "idea_id": plan.idea_id,
-                "title": plan.title,
-                "day": plan.start[:10],
-                "when": views.day_short(day),
-                "people": views.people_for(idea, slots),
-                "glyph": views.glyph_for(idea.kind if idea else None),
-            }
+            ToRate(
+                plan_id=plan.id,
+                idea_id=plan.idea_id,
+                title=plan.title,
+                day=plan.start[:10],
+                when=views.day_short(day),
+                people=views.people_for(idea, slots),
+                glyph=views.glyph_for(idea.kind if idea else None),
+            )
         )
     return found
 
 
 def to_rate(
     conn: Any, today: date, slots: dict[str, int], who: member_store.Member | None
-) -> dict[str, Any] | None:
+) -> ToRate | None:
     """The oldest plan nobody has said how it went, for Home's three faces, and how many more."""
     waiting = unrated(conn, today, slots, who)
-    return {**waiting[0], "more": len(waiting) - 1} if waiting else None
+    return replace(waiting[0], more=len(waiting) - 1) if waiting else None
 
 
 def idea_mini(conn: Any, app: App, idea: Any) -> dict[str, Any]:
