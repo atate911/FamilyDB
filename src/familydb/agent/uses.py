@@ -10,11 +10,11 @@ A choice is one of:
 - nothing: the use's *default*, which is what the older settings said, so an install that never
   touches the page behaves as it always did.
 
-`resolve` says what a use is answered with. `overlay` hands back the settings as the existing
-machinery (`providers.for_surface`, `providers.model_at`, the loop's stand-in) reads them for that
-use, so the gateway, the request builder and the daily check need only ask here, not learn a new
-way to choose a model. A stand-in answers at the chosen model's *level* in its company's lineup
-(`catalog`), or everyday for a model nobody listed.
+`resolve` says what a use is answered with. `answering` (and `hearing`, `looking`) turns that into
+who is asked and for which model, once at the gateway's door, so the gateway, the request builder
+and the daily check need only ask here, not learn a new way to choose a model; the older settings
+are read by `_default` alone. A stand-in answers at the chosen model's *level* in its company's
+lineup (`catalog`), or everyday for a model nobody listed.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from typing import Any
 
 from familydb import happening
 from familydb.agent import providers
-from familydb.agent.providers import catalog, companies
+from familydb.agent.providers import Provider, catalog, companies, prices
 from familydb.base.config import USE_KEYS, Settings
 
 SAME = "same"
@@ -294,7 +294,7 @@ def _default(settings: Settings, use: Use, seen: tuple[str, ...]) -> Resolution:
         provider = providers.for_surface(settings, "chat" if use.surface == "chat" else "worker")
     model = providers.model_at(provider, "chat" if use.surface == "chat" else "worker", level)
     # It answers on the company another use was chosen to, so the older settings alone no longer
-    # say who: the overlay must put that company in.
+    # say who: `answering` builds that company's provider.
     anchored = company is not None and anchor is not None and anchor.explicit
     return Resolution(
         use.key,
@@ -342,51 +342,82 @@ def on(settings: Settings, use_key: str) -> bool:
     return not resolve(settings, use_key).off
 
 
-def _with_model(settings: Settings, company: str, surface: str, model: str) -> Settings:
-    """The settings with this company's everyday model for a surface set to `model`."""
-    found = companies.get(company, settings)
-    if found is None:
-        return settings
-    if found.defined is None:
-        name = found.chat_setting if surface == "chat" else found.worker_setting
-        return settings.model_copy(update={name: model})
-    changed = [
-        one.model_copy(update={"model": model} if surface == "chat" else {"worker_model": model})
-        if one.slug == company
-        else one
-        for one in settings.companies
-    ]
-    return settings.model_copy(update={"companies": changed})
-
-
 @dataclass(frozen=True)
-class Overlaid:
-    settings: Settings
+class Answering:
+    """Who answers a kind of call, worked out once at the gateway's door: the company's provider,
+    the model it answers with, the lineup level a stand-in answers at, and the use's own thinking
+    (None: the setting's)."""
+
+    provider: Provider
+    model: str
+    level: str
+    effort: str | None
     resolution: Resolution
 
 
-def overlay(settings: Settings, kind: str) -> Overlaid:
-    """The settings as the older machinery reads them for a call of this kind: the company and
-    model this use is answered with, at everyday (its model *is* the everyday one), with the use's
-    own thinking. The settings are returned as given when the use is the default and has nothing
-    else to say, so an install that never chose anything is untouched."""
+def _surface(use: Use) -> str:
+    return "chat" if use.surface == "chat" else "worker"
+
+
+def answering(settings: Settings, kind: str, *, api: Any = None) -> Answering:
+    """Who answers a call of this kind, and with which model: the family's choice for its use,
+    else what the older settings say (`resolve`). A chosen company that cannot search is passed
+    over for a lookup as `providers.with_search` says; a chosen model gone is swapped for the
+    daily check's replacement as any model is (`prices.swapped`). An injected `api` (a test's
+    fake) means the company as chosen, whatever it can do."""
     use = use_of(kind)
     res = resolve(settings, use.key)
-    update: dict[str, Any] = {}
-    effort = settings.use_effort.get(use.key)
-    if effort:
-        update |= {"effort": effort, "worker_effort": effort}
-    if res.off or res.company is None or res.model is None or not (res.explicit or effort):
-        out = settings.model_copy(update=update) if update else settings
-        return Overlaid(out, res)
-    out = settings
-    if use.key == "hear":
-        update["transcribe_provider"] = res.company if res.company in ("openai", "gemini") else ""
-        if res.company in ("openai", "gemini"):
-            update[f"{res.company}_transcribe_model"] = res.model
-    else:
-        surface = "chat" if use.surface == "chat" else "worker"
-        update["provider" if surface == "chat" else "worker_provider"] = res.company
-        update[use.level_setting] = catalog.EVERYDAY
-        out = _with_model(settings, res.company, surface, res.model)
-    return Overlaid(out.model_copy(update=update), res)
+    surface = _surface(use)
+    effort = settings.use_effort.get(use.key) or None
+    if res.off or res.company is None or res.model is None:
+        # Off, or nothing can do it: the older machinery's answer stands, as it always did (an
+        # unconfigured provider is refused at the door, `can_ask`).
+        provider = providers.for_surface(settings, surface, api=api, web=use.needs == "search")
+        level = str(getattr(settings, use.level_setting))
+        return Answering(provider, providers.model_at(provider, surface, level), level, effort, res)
+    provider = providers.build(res.company, settings, api=api)
+    level = res.level if res.explicit else str(getattr(settings, use.level_setting))
+    if use.needs == "search" and api is None:
+        provider = providers.with_search(settings, provider, surface)
+    if provider.name != res.company:
+        return Answering(provider, providers.model_at(provider, surface, level), level, effort, res)
+    return Answering(provider, prices.swapped(provider.name, res.model), level, effort, res)
+
+
+def hearing(settings: Settings, *, audio: Any = None) -> list[tuple[Provider, str | None]]:
+    """Who may hear a voice note, in the order to ask, each with the model: the company and model
+    chosen for it first, then (unless an `audio` stand-in is injected) any other that can hear
+    and the family let stand in; with nothing chosen, `providers.hearers` and each one's own."""
+    res = resolve(settings, "hear")
+    if res.off:
+        return []
+    if not (res.explicit and res.company):
+        return [(one, one.listener()) for one in providers.hearers(settings, audio=audio)]
+    first = providers.build(res.company, settings, audio=audio)
+    if audio is not None:
+        return [(first, res.model)] if first.listener() or res.model else []
+    spares = [
+        (one, one.listener())
+        for one in providers.hearers(settings)
+        if one.name != res.company and companies.may_stand_in(one.name, settings)
+    ]
+    return [(first, res.model), *spares] if first.configured() else spares
+
+
+def looking(settings: Settings, *, api: Any = None) -> list[tuple[Provider, str | None]]:
+    """Who may look at a photo, in the order to ask, each with the model: as `hearing`, for the
+    photos use (which follows the lookups unless chosen apart)."""
+    res = resolve(settings, "look")
+    if res.off:
+        return []
+    if not (res.explicit and res.company):
+        return [(one, one.viewer()) for one in providers.lookers(settings, api=api)]
+    first = providers.build(res.company, settings, api=api)
+    if api is not None:
+        return [(first, res.model)]
+    spares = [
+        (one, one.viewer())
+        for one in providers.lookers(settings)
+        if one.name != res.company and companies.may_stand_in(one.name, settings)
+    ]
+    return [(first, res.model), *spares] if first.configured() and first.viewer() else spares

@@ -356,9 +356,8 @@ class GeminiProvider:
     def listener(self) -> str | None:
         return self.settings.gemini_transcribe_model or self.model_for("worker")
 
-    def hearing(self, audio: Audio, hints: str) -> dict[str, Any]:
-
-        model = self.listener() or self.settings.gemini_model
+    def hearing(self, audio: Audio, hints: str, model: str | None = None) -> dict[str, Any]:
+        model = model or self.listener() or self.settings.gemini_model
         ask = f"{HEAR} {hints}".strip()
         budget = HEARD_TOKENS + HEARD_TOKENS_PER_SECOND * max(audio.seconds, 1)
         shape = TurnRequest(system=[], messages=[], model=model, effort="low", max_tokens=budget)
@@ -378,8 +377,8 @@ class GeminiProvider:
             "config": config,
         }
 
-    def transcribe(self, audio: Audio, hints: str) -> Heard:
-        response, dropped = self._create(lambda: self.hearing(audio, hints))
+    def transcribe(self, audio: Audio, hints: str, model: str | None = None) -> Heard:
+        response, dropped = self._create(lambda: self.hearing(audio, hints, model))
         reply = self.reply(response)
         return Heard(
             text=reply.text,
@@ -396,9 +395,8 @@ class GeminiProvider:
     def viewer(self) -> str | None:
         return self.model_for("worker")
 
-    def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
-
-        model = self.viewer() or self.settings.gemini_model
+    def seeing(self, picture: Picture, ask: str, model: str | None = None) -> dict[str, Any]:
+        model = model or self.viewer() or self.settings.gemini_model
         shape = TurnRequest(
             system=[], messages=[], model=model, effort="low", max_tokens=LOOK_TOKENS
         )
@@ -416,8 +414,8 @@ class GeminiProvider:
             "config": self.config(shape),
         }
 
-    def describe(self, picture: Picture, ask: str) -> Seen:
-        response, dropped = self._create(lambda: self.seeing(picture, ask))
+    def describe(self, picture: Picture, ask: str, model: str | None = None) -> Seen:
+        response, dropped = self._create(lambda: self.seeing(picture, ask, model))
         reply = self.reply(response)
         return Seen(
             text=reply.text,

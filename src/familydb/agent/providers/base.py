@@ -183,7 +183,7 @@ class Provider(Protocol):
         """The model that hears recordings, or None."""
         ...
 
-    def transcribe(self, audio: Audio, hints: str) -> Heard:
+    def transcribe(self, audio: Audio, hints: str, model: str | None = None) -> Heard:
         """The words in a recording; `hints` names people and places. A declined request comes
         back with its `stop`."""
         ...
@@ -192,7 +192,7 @@ class Provider(Protocol):
         """The model that looks at pictures (the lookup model), or None."""
         ...
 
-    def describe(self, picture: Picture, ask: str) -> Seen:
+    def describe(self, picture: Picture, ask: str, model: str | None = None) -> Seen:
         """What a picture shows, as `ask` asks, in one request; a declined one comes back with its
         `stop`."""
         ...

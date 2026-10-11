@@ -14,12 +14,10 @@ from familydb.agent.history import HistoryTurn
 from familydb.agent.prompt import build_messages, chat_blocks, chat_prefix, load_prompt
 from familydb.agent.providers import (
     Exchange,
-    Provider,
     SystemBlock,
     ToolDef,
     TurnRequest,
     WebAccess,
-    model_at,
 )
 from familydb.base.config import Settings
 from familydb.tools import ToolRegistry
@@ -86,7 +84,8 @@ def compose(
     conn: sqlite3.Connection,
     settings: Settings,
     registry: ToolRegistry,
-    provider: Provider,
+    model: str,
+    effort: str | None,
     current: list[str],
     history: Sequence[HistoryTurn] = (),
     user_location: dict[str, Any] | None = None,
@@ -109,8 +108,8 @@ def compose(
         messages=messages,
         tools=tools,
         web=web,
-        model=model_at(provider, call.surface, getattr(settings, call.level)),
-        effort=getattr(settings, call.effort) if call.effort else None,
+        model=model,
+        effort=effort or (getattr(settings, call.effort) if call.effort else None),
     )
     return Composed(request, {name: size for name, size in sections.items() if size})
 

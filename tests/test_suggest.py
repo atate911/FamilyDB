@@ -644,9 +644,10 @@ def test_discovery_uses_configured_provider_without_injected_api(env, monkeypatc
     from familydb.agent.providers import build
 
     api = FakeMessagesAPI(*discover_script([]))
+    # The company the use resolves to, built with the fake behind it, as a test's own would be.
     monkeypatch.setattr(
-        "familydb.agent.gateway.for_surface",
-        lambda settings, surface, api=None, **_: build("anthropic", settings, api=fake),
+        "familydb.agent.providers.build",
+        lambda name, settings, api=None, **_: build(name, settings, api=fake),
     )
     fake = api
     context = build_context(env.ctx, (date(2026, 9, 26), date(2026, 9, 27)))

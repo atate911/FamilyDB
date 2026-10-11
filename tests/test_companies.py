@@ -61,7 +61,6 @@ NAMED_OUTSIDE = {
     "web/models_page.py": "which companies can hear a recording, and the example choice",
     "voice.py": "the example facts under her lines",
     "integrations/price_lists.py": "the two public lists' own naming of the three",
-    "agent/uses.py": "the overlay writes the older hearing settings (goes with it)",
 }
 COMPANY_WORD = re.compile(
     # The word, a model name's start, or a setting's start (`openai_api_key`); not CLAUDE.md.

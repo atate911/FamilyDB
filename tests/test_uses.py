@@ -94,10 +94,19 @@ def test_a_use_that_is_switched_off_by_an_older_toggle_defaults_to_off(settings)
     assert not gateway.can_ask(live, "choose")
 
 
-def test_the_overlay_hands_the_settings_back_untouched_when_nothing_was_said(settings):
+def test_with_nothing_said_who_answers_is_what_the_older_machinery_said(settings):
+    from familydb.agent import providers
+
     live = keyed(settings)
-    for kind in (*gateway.KINDS, gateway.LISTEN, gateway.LOOK):
-        assert uses.overlay(live, kind).settings is live, kind
+    for kind in gateway.KINDS:
+        call = gateway.spec(kind)
+        who = uses.answering(live, kind)
+        older = providers.for_surface(live, call.surface, web=call.web_searches is not None)
+        assert who.provider.name == older.name, kind
+        assert who.model == providers.model_at(older, call.surface, getattr(live, call.level)), kind
+        assert who.effort is None, kind
+    assert [p.name for p, _ in uses.hearing(live)] == [p.name for p in providers.hearers(live)]
+    assert [p.name for p, _ in uses.looking(live)] == [p.name for p in providers.lookers(live)]
 
 
 # -- choosing --------------------------------------------------------------------------------
@@ -141,7 +150,8 @@ def test_the_lookups_follow_what_they_were_chosen_to_and_so_do_photos(settings):
     assert answered(live, "enrich") == ("gemini", "gemini-3.8-flash")
     assert answered(live, "find_feeds") == ("gemini", "gemini-3.8-flash")  # What's going down?
     assert uses.resolve(live, "look").followed == "lookup"
-    assert uses.overlay(live, gateway.LOOK).settings.worker_provider == "gemini"
+    looker, model = uses.looking(live)[0]
+    assert (looker.name, model) == ("gemini", "gemini-3.8-flash")
 
 
 def test_off_stops_a_use_that_can_be_off_and_is_ignored_for_one_that_cannot(settings):
@@ -162,10 +172,8 @@ def test_a_company_that_is_not_there_is_the_default(settings):
 
 def test_a_chosen_voice_model_is_what_hears(settings):
     live = keyed(settings, model_choices={"hear": "openai:whisper-1"})
-    overlaid = uses.overlay(live, gateway.LISTEN).settings
-    assert (
-        overlaid.transcribe_provider == "openai" and overlaid.openai_transcribe_model == "whisper-1"
-    )
+    hearer, model = uses.hearing(live)[0]
+    assert (hearer.name, model) == ("openai", "whisper-1")
     assert gateway.can_listen(live)
     claude_only = keyed(settings, openai_api_key=None, gemini_api_key=None)
     assert not gateway.can_listen(claude_only)  # Claude hears nothing
@@ -173,9 +181,9 @@ def test_a_chosen_voice_model_is_what_hears(settings):
 
 def test_each_use_thinks_as_much_as_the_page_said(settings):
     live = keyed(settings, use_effort={"chat": "high", "lookup": "low"})
-    assert uses.overlay(live, "chat").settings.effort == "high"
-    assert uses.overlay(live, "enrich").settings.worker_effort == "low"
-    assert uses.overlay(live, "digest").settings is live  # nothing said for it
+    assert uses.answering(live, "chat").effort == "high"
+    assert uses.answering(live, "enrich").effort == "low"
+    assert uses.answering(live, "digest").effort is None  # nothing said for it
 
 
 # -- the stand-in --------------------------------------------------------------------------------

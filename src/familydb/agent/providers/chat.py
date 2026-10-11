@@ -392,13 +392,13 @@ class ChatProvider:
     def listener(self) -> str | None:
         return None
 
-    def transcribe(self, audio: Audio, hints: str) -> Heard:
+    def transcribe(self, audio: Audio, hints: str, model: str | None = None) -> Heard:
         raise AgentError(f"{self.company.label} is not set up to hear voice notes", retryable=False)
 
     def viewer(self) -> str | None:
         return None
 
-    def describe(self, picture: Picture, ask: str) -> Seen:
+    def describe(self, picture: Picture, ask: str, model: str | None = None) -> Seen:
         raise AgentError(f"{self.company.label} is not set up to look at photos", retryable=False)
 
 

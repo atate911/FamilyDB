@@ -406,9 +406,8 @@ class OpenAIProvider:
     def listener(self) -> str | None:
         return self.settings.openai_transcribe_model or None
 
-    def transcribe(self, audio: Audio, hints: str) -> Heard:
-
-        model = self.listener()
+    def transcribe(self, audio: Audio, hints: str, model: str | None = None) -> Heard:
+        model = model or self.listener()
         if model is None:
             raise AgentError("no OpenAI model is set to hear voice notes", retryable=False)
         payload: dict[str, Any] = {
@@ -441,10 +440,14 @@ class OpenAIProvider:
     def viewer(self) -> str | None:
         return self.model_for("worker")
 
-    def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
-        """The request for one picture, to the lookup model at low effort."""
+    def seeing(self, picture: Picture, ask: str, model: str | None = None) -> dict[str, Any]:
+        """The request for one picture, to the lookup model (or `model`) at low effort."""
         shape = TurnRequest(
-            system=[], messages=[], model=self.viewer(), effort="low", max_tokens=LOOK_TOKENS
+            system=[],
+            messages=[],
+            model=model or self.viewer(),
+            effort="low",
+            max_tokens=LOOK_TOKENS,
         )
         payload = {
             key: value for key, value in self.payload(shape).items() if value not in ("", [])
@@ -461,8 +464,8 @@ class OpenAIProvider:
         ]
         return payload
 
-    def describe(self, picture: Picture, ask: str) -> Seen:
-        response, dropped = self._create(lambda: self.seeing(picture, ask))
+    def describe(self, picture: Picture, ask: str, model: str | None = None) -> Seen:
+        response, dropped = self._create(lambda: self.seeing(picture, ask, model))
         reply = self.reply(response)
         return Seen(
             text=reply.text,

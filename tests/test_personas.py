@@ -7,7 +7,7 @@ from dataclasses import replace
 import pytest
 
 from familydb import personas
-from familydb.agent import gateway, providers
+from familydb.agent import gateway
 from familydb.agent.history import HistoryTurn
 from familydb.agent.prompt import JOB_HEADER, PERSONA_HEADER, load_system_prompt
 from familydb.agent.render import render_user_turn
@@ -50,8 +50,8 @@ def test_she_changes_only_the_persona_part_of_the_request(
             conn=conn,
             settings=settings.model_copy(update={"persona": persona}),
             registry=registry,
-            provider=providers.build("anthropic", settings, api=object()),
             current=render_user_turn("Sam", "what should we do?", clock),
+            api=object(),
             history=[HistoryTurn("user", "[Sam] hello"), HistoryTurn("assistant", "Hi.")],
         ).request
 

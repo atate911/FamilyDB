@@ -245,7 +245,11 @@ def test_listen_hands_over_when_the_first_cannot(settings, clock, conn, monkeypa
     busy = build("openai", both, audio=fakes.FakeTranscriptionsAPI(fakes.openai_rate_limit()))
     spare_api = fakes.FakeGeminiAPI(fakes.gm_response([fakes.gm_text("see you at the zoo")]))
     spare = build("gemini", both, api=spare_api)
-    monkeypatch.setattr(gateway, "hearers", lambda _settings, audio=None: [busy, spare])
+    monkeypatch.setattr(
+        gateway.uses,
+        "hearing",
+        lambda _settings, audio=None: [(busy, busy.listener()), (spare, spare.listener())],
+    )
     heard = gateway.listen(
         settings=both, conn=conn, clock=clock, audio=Audio(OGG, "audio/ogg", 12), hints=""
     )

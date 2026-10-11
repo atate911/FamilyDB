@@ -309,31 +309,19 @@ def models_in_use(settings: Any) -> set[tuple[str, str]]:
     used: set[tuple[str, str]] = set()
     for kind in gateway.KINDS:
         call = gateway.spec(kind)
-        chosen = uses.overlay(settings, kind)
-        as_read = chosen.settings
+        who = uses.answering(settings, kind)
+        used.add((who.provider.name, who.model.lower()))
         # A stand-in answers at the level of the model chosen, as the loop does.
-        level = (
-            chosen.resolution.level if chosen.resolution.explicit else getattr(settings, call.level)
-        )
         web = call.web_searches is not None
-        primary = providers.for_surface(as_read, call.surface, web=web)
-        used.add(
-            (
-                primary.name,
-                providers.model_at(primary, call.surface, getattr(as_read, call.level)).lower(),
-            )
-        )
-        spare = providers.fallback_for(as_read, call.surface, primary.name, web=web)
+        spare = providers.fallback_for(settings, call.surface, who.provider.name, web=web)
         if spare is not None:
-            used.add((spare.name, providers.model_at(spare, call.surface, level).lower()))
-    heard = uses.overlay(settings, gateway.LISTEN).settings
-    for hearer in providers.hearers(heard):
-        if hearer.listener():
-            used.add((hearer.name, str(hearer.listener()).lower()))
-    seen = uses.overlay(settings, gateway.LOOK).settings
-    for looker in providers.lookers(seen):
-        if looker.viewer():
-            used.add((looker.name, str(looker.viewer()).lower()))
+            used.add((spare.name, providers.model_at(spare, call.surface, who.level).lower()))
+    for hearer, model in uses.hearing(settings):
+        if model:
+            used.add((hearer.name, str(model).lower()))
+    for looker, model in uses.looking(settings):
+        if model:
+            used.add((looker.name, str(model).lower()))
     return used
 
 
@@ -678,11 +666,11 @@ def uses_of(settings: Any, company: str, name: str) -> list[str]:
         provider, model = gateway.answering(settings, kind)
         if provider.name == company and model == name:
             found.append(gateway.spec(kind).purpose)
-    for hearer in providers.hearers(uses.overlay(settings, gateway.LISTEN).settings):
-        if hearer.name == company and str(hearer.listener()).lower() == name:
+    for hearer, model in uses.hearing(settings):
+        if hearer.name == company and str(model).lower() == name:
             found.append(gateway.LISTEN_PURPOSE)
-    for looker in providers.lookers(uses.overlay(settings, gateway.LOOK).settings):
-        if looker.name == company and str(looker.viewer()).lower() == name:
+    for looker, model in uses.looking(settings):
+        if looker.name == company and str(model).lower() == name:
             found.append(gateway.LOOK_PURPOSE)
     return sorted(set(found))
 

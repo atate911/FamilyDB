@@ -137,8 +137,8 @@ def test_a_lookup_is_recorded_as_one_and_sends_what_debug_prompt_shows(
         conn=conn,
         settings=settings,
         registry=registry,
-        provider=provider,
         current=worker_turn(clock, request),
+        api=api,
     )
     assert provider.payload(shown.request) == api.requests[0]
 

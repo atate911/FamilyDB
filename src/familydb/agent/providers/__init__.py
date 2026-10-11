@@ -68,10 +68,10 @@ class Withheld:
     def send(self, request: Any) -> Any:
         raise self._refuse()
 
-    def transcribe(self, audio: Any, hints: str) -> Any:
+    def transcribe(self, audio: Any, hints: str, model: str | None = None) -> Any:
         raise self._refuse()
 
-    def describe(self, picture: Any, ask: str) -> Any:
+    def describe(self, picture: Any, ask: str, model: str | None = None) -> Any:
         raise self._refuse()
 
     def __getattr__(self, attribute: str) -> Any:
@@ -182,18 +182,22 @@ def for_surface(
     searches the web (`web`), a chosen company without hosted search is passed over for the first
     other that has it and a key: the family's lookups do not stop for the chat company's sake."""
     primary = build(chosen(settings, surface), settings, api=api)
-    if web and api is None and not can_search(primary):
-        # Only a company the family let stand in: with none, one company sees their words, and a
-        # lookup waits rather than go to another (or one is chosen for lookups).
-        able = [
-            spare
-            for spare in (build(name, settings) for name in others(primary.name, settings))
-            if can_search(spare)
-            and spare.configured()
-            and companies.may_stand_in(spare.name, settings)
-        ]
-        if able:
-            return min(able, key=lambda spare: _everyday_output(spare, surface))
+    return with_search(settings, primary, surface) if web and api is None else primary
+
+
+def with_search(settings: Settings, primary: Provider, surface: Surface) -> Provider:
+    """The company to send a call that searches the web to: `primary` when it can, else the
+    cheapest other that can, has a key and the family let stand in. With none, `primary` (one
+    company sees their words, and a lookup waits rather than go to another)."""
+    if can_search(primary):
+        return primary
+    able = [
+        spare
+        for spare in (build(name, settings) for name in others(primary.name, settings))
+        if can_search(spare) and spare.configured() and companies.may_stand_in(spare.name, settings)
+    ]
+    if able:
+        return min(able, key=lambda spare: _everyday_output(spare, surface))
     return primary
 
 
@@ -307,4 +311,5 @@ __all__ = [
     "model_at",
     "others",
     "owner",
+    "with_search",
 ]

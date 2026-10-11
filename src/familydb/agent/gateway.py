@@ -4,6 +4,7 @@ turns, but are limited and recorded the same way. What an answer means stays wit
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import sqlite3
 import time
@@ -27,13 +28,10 @@ from familydb.agent.providers import (
     Seen,
     Surface,
     Withheld,
+    can_search,
     fallback_for,
-    for_surface,
-    hearers,
-    lookers,
     model_at,
     prices,
-    ready,
 )
 from familydb.base.clock import Clock
 from familydb.base.config import Settings
@@ -222,10 +220,8 @@ def answering(
     settings: Settings, kind: str, api: MessagesAPI | None = None
 ) -> tuple[Provider, str]:
     """Who answers this kind of call first, and with which model, without asking a model."""
-    call = spec(kind)
-    settings = uses.overlay(settings, kind).settings
-    provider = for_surface(settings, call.surface, api=api, web=call.web_searches is not None)
-    return provider, model_at(provider, call.surface, getattr(settings, call.level))
+    who = uses.answering(settings, kind, api=api)
+    return who.provider, who.model
 
 
 def can_ask(settings: Settings, kind: str, api: MessagesAPI | None = None) -> bool:
@@ -233,8 +229,14 @@ def can_ask(settings: Settings, kind: str, api: MessagesAPI | None = None) -> bo
     call = spec(kind)
     if not uses.on(settings, uses.use_of(kind).key):
         return False
-    settings = uses.overlay(settings, kind).settings
-    return ready(settings, call.surface, api=api, web=call.web_searches is not None)
+    web = call.web_searches is not None
+    primary = uses.answering(settings, kind, api=api).provider
+    if web and api is None and not can_search(primary):
+        return False
+    return (
+        primary.configured()
+        or fallback_for(settings, call.surface, primary.name, web=web) is not None
+    )
 
 
 def build_request(
@@ -243,19 +245,23 @@ def build_request(
     conn: sqlite3.Connection,
     settings: Settings,
     registry: ToolRegistry,
-    provider: Provider,
     current: list[str],
     history: Sequence[HistoryTurn] = (),
     user_location: dict[str, Any] | None = None,
+    who: uses.Answering | None = None,
+    api: MessagesAPI | None = None,
 ) -> Composed:
-    """The request `ask` would open with (`debug prompt` prints it), and each part's size."""
+    """The request `ask` would open with (`debug prompt` prints it), and each part's size. `who`
+    is who answers it (`uses.answering`), worked out here when not given."""
     call = spec(kind)
+    who = who or uses.answering(settings, kind, api=api)
     composed = compose.compose(
         call,
         conn=conn,
         settings=settings,
         registry=registry,
-        provider=provider,
+        model=who.model,
+        effort=who.effort,
         current=current,
         history=history,
         user_location=user_location,
@@ -281,15 +287,15 @@ def ask(
     """One turn of `kind`, run to its answer, every call recorded. `current` is the uncached turn
     (date, sender, message). An injected `api` (a test's fake) means no spare provider."""
     call = spec(kind)
-    # The settings as this use reads them, laid over once here and passed on whole; a stand-in
-    # answers at the level of the model the use was chosen to, not the setting's.
-    overlaid = uses.overlay(settings, kind)
-    level = (
-        overlaid.resolution.level if overlaid.resolution.explicit else getattr(settings, call.level)
-    )
-    settings = overlaid.settings
+    # Who answers, worked out once here and passed on whole; a stand-in answers at the level of
+    # the model the use was chosen to, not the setting's.
+    who = uses.answering(settings, kind, api=api)
     web = call.web_searches is not None
-    chosen = provider or for_surface(settings, call.surface, api=api, web=web)
+    chosen = provider or who.provider
+    if chosen.name != who.provider.name:  # a caller's own provider: its model at the level
+        who = dataclasses.replace(
+            who, provider=chosen, model=model_at(chosen, call.surface, who.level)
+        )
     spare = fallback
     if spare is None and api is None:
         spare = fallback_for(settings, call.surface, chosen.name, web=web)
@@ -303,16 +309,16 @@ def ask(
         conn=ctx.conn,
         settings=settings,
         registry=registry,
-        provider=chosen,
         current=current,
         history=history,
         user_location=user_location,
+        who=who,
     )
     request = composed.request
     return run_turn(
         provider=chosen,
         surface=call.surface,
-        level=level,
+        level=who.level,
         fallback=spare,
         settings=settings,
         registry=registry,
@@ -340,8 +346,7 @@ def handed_back(call: CallSpec, result: TurnResult, tool: str | None = None) -> 
 
 def can_listen(settings: Settings, audio: Any = None) -> bool:
     """Whether any model can hear a voice note: one that can hear, with a key, is switched on."""
-    settings = uses.overlay(settings, LISTEN).settings
-    return bool(hearers(settings, audio=audio))
+    return bool(uses.hearing(settings, audio=audio))
 
 
 def listen(
@@ -355,8 +360,7 @@ def listen(
     api: Any = None,
 ) -> Heard:
     """Hear one recording, limit-checked and recorded; `hearers` order, next on failure."""
-    settings = uses.overlay(settings, LISTEN).settings
-    candidates = hearers(settings, audio=api)
+    candidates = uses.hearing(settings, audio=api)
     if not candidates:
         raise AgentError("no model that can hear voice notes has a key", retryable=False)
     return _written_down(
@@ -369,18 +373,16 @@ def listen(
         sent=f"[a voice note, {audio.seconds} seconds, {audio.mime}; the recording is not kept]"
         + (f"\n[hints] {hints}" if hints else ""),
         doing="hear a voice note",
-        model_of=lambda provider: provider.listener(),
         estimate=lambda provider, model: spending.estimate_hearing(
             provider.name, model, audio.seconds
         ),
-        request=lambda provider: provider.transcribe(audio, hints),
+        request=lambda provider, model: provider.transcribe(audio, hints, model),
     )
 
 
 def can_look(settings: Settings, api: Any = None) -> bool:
     """Whether any model can look at a photo: one with a key, which all three can."""
-    settings = uses.overlay(settings, LOOK).settings
-    return bool(lookers(settings, api=api))
+    return bool(uses.looking(settings, api=api))
 
 
 def look(
@@ -395,8 +397,7 @@ def look(
 ) -> Seen:
     """Write down what one photo shows (`prompts/look.md`), limit-checked and recorded;
     `providers.lookers` order, next on failure."""
-    settings = uses.overlay(settings, LOOK).settings
-    candidates = lookers(settings, api=api)
+    candidates = uses.looking(settings, api=api)
     if not candidates:
         raise AgentError("no model that can look at photos has a key", retryable=False)
     ask = " ".join(part for part in (load_prompt("look").strip(), hints) if part)
@@ -409,14 +410,13 @@ def look(
         kind=LOOK,
         sent=f"[a photo, {picture.mime}; the picture is not kept]\n[asked] {ask}",
         doing="look at a photo",
-        model_of=lambda provider: provider.viewer(),
         estimate=lambda provider, model: spending.estimate_looking(provider.name, model),
-        request=lambda provider: provider.describe(picture, ask),
+        request=lambda provider, model: provider.describe(picture, ask, model),
     )
 
 
 def _written_down(
-    candidates: list[Provider],
+    candidates: list[tuple[Provider, str | None]],
     *,
     settings: Settings,
     conn: sqlite3.Connection,
@@ -425,15 +425,14 @@ def _written_down(
     kind: str,
     sent: str,
     doing: str,
-    model_of: Callable[[Provider], str | None],
     estimate: Callable[[Provider, str | None], float],
-    request: Callable[[Provider], Heard],
+    request: Callable[[Provider, str | None], Heard],
 ) -> Heard:
-    """One request to the first candidate that takes it: cost held before sending, next candidate
-    when busy or out of reach. A refusal is recorded first (it was paid for), then raised."""
+    """One request to the first candidate (a provider and the model to ask it for) that takes it:
+    cost held before sending, next candidate when busy or out of reach. A refusal is recorded
+    first (it was paid for), then raised."""
     failure: AgentError | None = None
-    for provider in candidates:
-        model = model_of(provider)
+    for provider, model in candidates:
         try:
             held = spending.admit(
                 conn, settings, clock.now(), estimate(provider, model), company=provider.name
@@ -443,7 +442,7 @@ def _written_down(
             continue
         started = time.monotonic()
         try:
-            written = request(provider)
+            written = request(provider, model)
         except AgentError as exc:
             _let_go(conn, held, clock.now())
             alerts.noticed(conn, exc, provider=provider.name, now=clock.now(), model=model)

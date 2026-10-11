@@ -494,9 +494,8 @@ def debug_prompt(
         request = gateway.build_request(
             kind,
             conn=conn,
-            settings=uses.overlay(settings, kind).settings,
+            settings=settings,
             registry=application.registry,
-            provider=provider,
             current=current,
             history=history,
         ).request
