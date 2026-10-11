@@ -2107,6 +2107,7 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .pins__foot { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-xs); color: var(--ink-2); }
 .pin-form { margin: 0; }
 .pinned { display: grid; gap: var(--s2); margin-bottom: var(--s4); }
+.vc .pins + .label { margin-top: var(--s3); }
 
 /* Vera's column: the last lines of the thread behind her reply, only where the box has a column of its own */
 .vc { display: none; }

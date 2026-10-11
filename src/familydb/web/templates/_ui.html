@@ -83,12 +83,16 @@
   </form>
 {%- endmacro %}
 
-{# Pin or Unpin under one of her replies (docs/INTERFACE.md section 8): kept at hand for whoever is signed in as themselves. `pin` is {id, pinned}; `back` where the form returns. #}
-{% macro pin_form(pin, back) -%}
+{# Pin under one of her replies (docs/INTERFACE.md section 8), a toggle that reads Pinned once kept at hand for whoever is signed in as themselves; on the shelf (`shelf`) it reads Unpin. `pin` is {id, pinned}; `back` where the form returns. #}
+{% macro pin_form(pin, back, shelf=false) -%}
   <form class="pin-form" method="post" action="{{ url_for('family.unpin' if pin.pinned else 'family.pin') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
     <input type="hidden" name="message" value="{{ pin.id }}" /><input type="hidden" name="back" value="{{ back }}" />
-    <button class="btn btn--quiet btn--sm" type="submit"{% if pin.pinned %} aria-pressed="true"{% endif %}>{{ icon('pin', size='sm') }}{{ 'Pinned' if pin.pinned else 'Pin' }}</button>
+    {% if shelf -%}
+    <button class="btn btn--quiet btn--sm" type="submit">{{ icon('x', size='sm') }}Unpin</button>
+    {%- else -%}
+    <button class="btn btn--quiet btn--sm" type="submit" aria-pressed="{{ 'true' if pin.pinned else 'false' }}">{{ icon('pin', size='sm') }}{{ 'Pinned' if pin.pinned else 'Pin' }}</button>
+    {%- endif %}
   </form>
 {%- endmacro %}
 
@@ -97,7 +101,7 @@
   <ul class="pins">
     {% for one in pins %}
       <li class="pins__one"><span class="pins__text">{{ one.text | truncate(280) }}</span>
-        <span class="pins__foot"><time>{{ one.when | figs }}</time>{{ pin_form({'id': one.id, 'pinned': true}, back) }}</span></li>
+        <span class="pins__foot"><time>{{ one.when | figs }}</time>{{ pin_form({'id': one.id, 'pinned': true}, back, shelf=true) }}</span></li>
     {% endfor %}
   </ul>
 {%- endmacro %}
