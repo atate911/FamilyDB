@@ -99,7 +99,7 @@ A kid has two limits, a message count and a daily share. What each is, and what 
 
 ## Share where I am
 
-Tick **Share where I am with this message** to let the assistant use your position for "near here" and "open now". It starts unticked and remembers your last choice while you stay signed in on that browser, so check it before you send. For the next 3 hours the assistant sees the place name and coordinates with each message you send, here or on Telegram. **The coordinates also go to the model company.** If the browser gives no position, suggestions start from home. What is kept, who sees it and how to stop is on [Shared location](/wiki/model/location).
+Tick **Share where I am with this message** to let the assistant use your position for "near here" and "open now". A kid is not offered it. It starts unticked and remembers your last choice while you stay signed in on that browser, so check it before you send. For the next 3 hours the assistant sees the place name and coordinates with each message you send, here or on Telegram. **The coordinates also go to the model company.** If the browser gives no position, suggestions start from home. What is kept, who sees it and how to stop is on [Shared location](/wiki/model/location).
 
 ## The mic
 

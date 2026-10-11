@@ -623,6 +623,8 @@ def test_a_kid_sees_only_what_is_hers_and_nothing_of_how_it_works(app, conn, fam
         assert hidden not in home, hidden
     assert not re.search(r"\blate\b", home)
     assert "Sam and Alex can read this" in home and "20 messages left today." in home
+    # Nobody asks a kid to send where she is, on Now or in her chat (docs/STYLE.md).
+    assert 'name="send_where"' not in home and 'name="send_where"' not in kid.get("/chat").text
     assert re.findall(r"<a [^>]*>([^<]+)(?:<span|</a>)", _row(home)) == [
         "Now",
         "Do",

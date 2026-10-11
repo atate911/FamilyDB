@@ -43,10 +43,13 @@
   {% if b.starters %}
     <p class="starters starters--bar">{% for say in b.starters %}<a class="chip chip--say" href="#text" data-say="{{ say }}">{{ say }}</a>{% endfor %}</p>
   {% endif %}
-  {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. #}
+  {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. A kid is not asked
+     (docs/STYLE.md, "A kid's screen"). #}
+  {% if visitor().may('browse') %}
   <div class="bar__where" id="locate" hidden>
     <label class="check"><input type="checkbox" name="send_where" value="1" {{ 'checked' if b.send_where }} /> {{ icon('pin', size='sm') }}Share where I am with this message</label>
   </div>
+  {% endif %}
   <p id="where" class="small muted"></p>
 </form>
 {# What came back from the last message: on its way (she is answering, the page looks again), what she did, or what she said. #}
