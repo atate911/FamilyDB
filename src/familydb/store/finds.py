@@ -72,6 +72,8 @@ class Find(BaseModel):
     passed_at: str | None = None
     passed_by: int | None = None
     passed_why: str | None = None
+    filled_at: str | None = None  # when a lookup last tried it
+    fill_note: str | None = None
     first_seen_at: str
     last_seen_at: str
     gone: bool = False
@@ -405,6 +407,100 @@ def restore(conn: sqlite3.Connection, find_id: int, before: dict[str, object]) -
         "passed_why = ? WHERE id = ?",
         (*(before.get(key) for key in FATE), find_id),
     )
+
+
+# Still hers to offer, on no day past: what the evening's fills and judging look at.
+_POCKET = (
+    "gone = 0 AND state IN ('new', 'recommended') "
+    "AND (starts_at IS NULL OR coalesce(ends_at, starts_at) >= ?)"
+)
+
+
+def pocket(conn: sqlite3.Connection, *, today: date, limit: int) -> list[Find]:
+    """Her back pocket: what is still hers to offer, soonest first, places to go any time after."""
+    rows = conn.execute(
+        f"SELECT * FROM finds WHERE {_POCKET} "
+        "ORDER BY starts_at IS NULL, starts_at, first_seen_at DESC, id LIMIT ?",
+        (today.isoformat(), limit),
+    ).fetchall()
+    return [Find.from_row(row) for row in rows]
+
+
+def to_fill(conn: sqlite3.Connection, *, today: date, limit: int) -> list[Find]:
+    """What a lookup has never tried, newest first: what scouting and searches found lately."""
+    rows = conn.execute(
+        f"SELECT * FROM finds WHERE {_POCKET} AND filled_at IS NULL AND place_id IS NULL "
+        "AND url IS NOT NULL ORDER BY first_seen_at DESC, id DESC LIMIT ?",
+        (today.isoformat(), limit),
+    ).fetchall()
+    return [Find.from_row(row) for row in rows]
+
+
+# What a lookup may fill in on a find; what the search already said stays.
+FACTS = ("setting", "cost_level", "duration_min", "min_age", "max_age", "needs_booking")
+
+
+def mark_filled(
+    conn: sqlite3.Connection,
+    find_id: int,
+    *,
+    place_id: int | None,
+    facts: dict[str, object],
+    note: str | None,
+    now: str,
+) -> None:
+    """A lookup tried it: its place when it found one, and the facts it found where none were."""
+    said = {key: facts.get(key) for key in FACTS}
+    conn.execute(
+        "UPDATE finds SET place_id = coalesce(?, place_id), filled_at = ?, fill_note = ?, "
+        + ", ".join(f"{key} = coalesce({key}, ?)" for key in FACTS)
+        + " WHERE id = ?",
+        (place_id, now, _cut(note, NOTE_MAX), *said.values(), find_id),
+    )
+
+
+def judging_due(conn: sqlite3.Connection, *, today: date) -> bool:
+    """Whether anything in the pocket is new to the judging, or filled in since it was judged."""
+    row = conn.execute(
+        f"SELECT 1 FROM finds WHERE {_POCKET} AND (judged_at IS NULL "
+        "OR (filled_at IS NOT NULL AND filled_at > judged_at)) LIMIT 1",
+        (today.isoformat(),),
+    ).fetchone()
+    return row is not None
+
+
+def judged(
+    conn: sqlite3.Connection,
+    looked_at: list[int],
+    chosen: dict[int, dict[str, str | None]],
+    *,
+    now: str,
+) -> None:
+    """The evening's judgement of the pocket: each find looked at is judged now; those chosen are
+    recommended, with why, when and the days to put them forward; one recommended before and not
+    chosen again is hers to offer still, no longer recommended."""
+    for find_id in looked_at:
+        said = chosen.get(find_id)
+        if said is None:
+            conn.execute(
+                "UPDATE finds SET judged_at = ?, judged_why = NULL, judged_when = NULL, "
+                "put_from = NULL, put_until = NULL, "
+                "state = CASE WHEN state = 'recommended' THEN 'new' ELSE state END WHERE id = ?",
+                (now, find_id),
+            )
+            continue
+        conn.execute(
+            "UPDATE finds SET judged_at = ?, judged_why = ?, judged_when = ?, put_from = ?, "
+            "put_until = ?, state = 'recommended' WHERE id = ? AND state IN ('new', 'recommended')",
+            (
+                now,
+                _cut(said.get("why"), NOTE_MAX),
+                _cut(said.get("when"), TITLE_MAX),
+                said.get("put_from"),
+                said.get("put_until"),
+                find_id,
+            ),
+        )
 
 
 def prune(conn: sqlite3.Connection, *, before: date) -> int:

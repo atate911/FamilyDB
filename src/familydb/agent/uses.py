@@ -99,8 +99,8 @@ USES: tuple[Use, ...] = (
     Use(
         "onnear",
         happening.NAME,
-        "Looks for what is on near home.",
-        ("scout", "find_feeds"),
+        "Looks for what is on near home, fills in what it finds and judges what to put forward.",
+        ("scout", "find_feeds", "fill_find", "curate"),
         "worker",
         "everyday",
         "search",

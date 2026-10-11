@@ -26,7 +26,7 @@ NAME = "What's going down?"
 HORIZON_DAYS = 28
 # The model calls made for it, recorded under these kinds (agent/gateway.KINDS) and held to
 # `happening_budget` a month together.
-KINDS = ("scout", "find_feeds")
+KINDS = ("scout", "find_feeds", "fill_find", "curate")
 
 FEED = "feed"
 TICKETMASTER = "ticketmaster"

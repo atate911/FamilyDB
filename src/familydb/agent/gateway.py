@@ -51,6 +51,8 @@ Kind = Literal[
     "discover",
     "scout",
     "find_feeds",
+    "fill_find",
+    "curate",
     "choose",
     "judge",
     "price_check",
@@ -142,6 +144,30 @@ KINDS: dict[str, CallSpec] = {
             tools=("report_feeds",),
             hand_back=("report_feeds",),
             web_searches=6,
+            **_WORKER,
+        ),
+        # Filling in something scouting or a search found (jobs/happening.py, scouting/fill.py),
+        # a few an evening: an idea's lookup for a find, writing that find alone
+        # (`ToolContext.worker_find_id`), held to the budget for what is on near home.
+        CallSpec(
+            "fill_find",
+            "filling in what she found",
+            budget="happening_budget",
+            prompt="fill_find",
+            tools=("save_find", "skip_find"),
+            hand_back=("save_find", "skip_find"),
+            web_searches=3,
+            **_WORKER,
+        ),
+        # Judging the pocket each evening (scouting/judging.py): which finds, already checked
+        # by code, to put forward and when. No web; it hands back find numbers code checks.
+        CallSpec(
+            "curate",
+            "judging what she found",
+            budget="happening_budget",
+            prompt="curate",
+            tools=("recommend_finds",),
+            hand_back=("recommend_finds",),
             **_WORKER,
         ),
         # Choosing what to suggest for a planning question (suggest/choosing.py): the family's own

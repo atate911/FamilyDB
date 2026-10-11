@@ -255,19 +255,13 @@ def check_open(ctx: ToolContext, args: CheckOpenInput) -> dict[str, Any]:
     }
 
 
-@tool(
-    name="save_place",
-    description=(
-        "Store looked-up details for an idea's place and mark the idea as filled in. Used by the "
-        "enrichment worker; give only facts the pages state."
-    ),
-    writes=True,
-    worker_only=True,
-)
-def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
-    idea = ideas.get(ctx.conn, args.idea_id)
-    if idea is None:
-        raise ToolError(f"no idea #{args.idea_id}")
+def place_fields(
+    ctx: ToolContext, args: Any, *, area: str | None, about: str
+) -> tuple[dict[str, Any], str | None, bool]:
+    """A looked-up place as `places` keeps it, from a hand-back (`save_place`, `save_find`):
+    geocoded when the page gave no position, the drive from home estimated, and only real web
+    addresses kept. Returns the fields, a note when it could not be placed, and whether it was
+    geocoded here. Reaches the geocoder, so it is called before any transaction."""
     hours = hours_dict(args.hours, args.closed_days)
     lat, lon = args.lat, args.lon
     geocoded = False
@@ -276,7 +270,6 @@ def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
         if ctx.geocoder is None:
             note = "no geocoder configured"
         else:
-            area = idea.location_name or ctx.settings.home_area
             query = args.address or ", ".join(p for p in (args.name, area) if p)
             point = ctx.geocoder.geocode(query)
             if point is not None:
@@ -292,10 +285,7 @@ def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
     dropped = sum(1 for v in (args.website, args.booking_url) if v) + len(args.source_urls)
     dropped -= sum(1 for v in (website, booking_url) if v) + len(source_urls)
     if dropped:
-        log.warning(
-            "save_place for idea %s dropped %d link(s) that were not URLs", idea.id, dropped
-        )
-    now = ctx.now_iso()
+        log.warning("a lookup for %s dropped %d link(s) that were not URLs", about, dropped)
     fields: dict[str, Any] = {
         "summary": args.summary,
         "address": args.address,
@@ -309,17 +299,53 @@ def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
         "travel_minutes": travel[0] if travel else None,
         "travel_km": travel[1] if travel else None,
         "source_urls": source_urls,
-        "last_checked_at": now,
+        "last_checked_at": ctx.now_iso(),
     }
+    return fields, note, geocoded
+
+
+def travel_of(fields: dict[str, Any]) -> dict[str, Any] | None:
+    """The drive a hand-back is told of, from the place's fields."""
+    if fields["travel_minutes"] is None:
+        return None
+    return {"minutes": fields["travel_minutes"], "km": fields["travel_km"], "estimate": True}
+
+
+def store_place(
+    ctx: ToolContext, name: str, fields: dict[str, Any], *, place_id: int | None
+) -> places.Place:
+    """Keep a looked-up place: the one already known by its id or its name, brought up to
+    date, else a new one. Inside the caller's transaction."""
+    now = ctx.now_iso()
+    existing = places.get(ctx.conn, place_id) if place_id else None
+    if existing is None:
+        existing = places.find_by_name(ctx.conn, name)
+    if existing is not None:
+        place = places.update(ctx.conn, existing.id, {"name": name, **fields}, now=now)
+    else:
+        place = places.insert(ctx.conn, name=name, now=now, **fields)
+    assert place is not None
+    return place
+
+
+@tool(
+    name="save_place",
+    description=(
+        "Store looked-up details for an idea's place and mark the idea as filled in. Used by the "
+        "enrichment worker; give only facts the pages state."
+    ),
+    writes=True,
+    worker_only=True,
+)
+def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
+    idea = ideas.get(ctx.conn, args.idea_id)
+    if idea is None:
+        raise ToolError(f"no idea #{args.idea_id}")
+    area = idea.location_name or ctx.settings.home_area
+    fields, note, geocoded = place_fields(ctx, args, area=area, about=f"idea {idea.id}")
+    now = ctx.now_iso()
     with transaction(ctx.conn):
-        existing = places.get(ctx.conn, idea.place_id) if idea.place_id else None
-        if existing is None:
-            existing = places.find_by_name(ctx.conn, args.name)
-        if existing is not None:
-            place = places.update(ctx.conn, existing.id, {"name": args.name, **fields}, now=now)
-        else:
-            place = places.insert(ctx.conn, name=args.name, now=now, **fields)
-        assert place is not None
+        place = store_place(ctx, args.name, fields, place_id=idea.place_id)
         filled = filled_in(idea, args, ctx.clock.today())
         changes: dict[str, Any] = {
             "place_id": place.id,
@@ -336,7 +362,7 @@ def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
         "idea": updated.model_dump(mode="json") if updated else None,
         "filled": sorted(filled),
         "geocoded": geocoded,
-        "travel": {"minutes": travel[0], "km": travel[1], "estimate": True} if travel else None,
+        "travel": travel_of(fields),
         "note": note,
     }
 

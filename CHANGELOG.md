@@ -140,6 +140,11 @@
   events, told what she knows of the family. What it finds is sorted by code and kept with her
   finds. **The monthly budget for it doubles, on purpose, to US$2** (the family's decision); each
   evening may spend only its share of what is left of the month, so the budget holds.
+- **What she finds is filled in, and the best of it chosen, each evening.** After scouting, up to
+  three new finds are looked up as your ideas are (address, hours, price, the drive), and when
+  something is new, her whole pocket is checked against your calendar, the forecast and your musts,
+  and one call chooses up to five worth putting forward, each with why and when. Both are within the
+  same monthly budget, and a quiet evening makes no call. This is migration 0062.
 
 ## v0.5.0 — beta (2026-10-11)
 

@@ -180,9 +180,19 @@ def test_scouting_runs_each_evening_and_keeps_what_is_new(settings, conn) -> Non
         "for_whom": ["whole family"],
         "why": "They loved the tulip farm.",
     }
-    api = fakes.FakeMessagesAPI(*fakes.discover_script([*DATED, rose]))
+    api = fakes.FakeMessagesAPI(
+        *fakes.discover_script([*DATED, rose]),
+        # Then the evening fills in the newest finds, and judges the pocket.
+        _handing("skip_find", {"find_id": 2, "reason": "Nothing more than the listing."}),
+        _handing("skip_find", {"find_id": 1, "reason": "Nothing more than the listing."}),
+        _handing(
+            "recommend_finds",
+            {"picks": [{"find_id": 2, "why": "Like the tulip farm.", "when": "a dry afternoon"}]},
+        ),
+    )
     counts = run_happening(_app(settings, **SEARCHING), api=api)
     assert counts["searched"] == 1 and counts["added"] == 2
+    assert (counts["filled"], counts["judged"]) == (2, 1)
     [lantern] = _upcoming(conn)
     assert (lantern.title, lantern.starts_at, lantern.kind) == (
         "Lantern walk",
@@ -197,6 +207,9 @@ def test_scouting_runs_each_evening_and_keeps_what_is_new(settings, conn) -> Non
         "They loved the tulip farm.",
         "web",
     )
+    assert (garden.state, garden.judged_when) == ("recommended", "a dry afternoon")
+    walk = finds.get(conn, lantern.id)  # tried, nothing more found, and not put forward
+    assert (walk.state, walk.fill_note) == ("new", "Nothing more than the listing.")
     asked = api.requests[0]["messages"][0]["content"][1]["text"]
     assert "Tonight's theme: the weeks ahead" in asked  # a Sunday
     assert "Home area: Vancouver, WA." in asked and "Window: Sunday 20 September" in asked
@@ -209,6 +222,11 @@ def test_scouting_runs_each_evening_and_keeps_what_is_new(settings, conn) -> Non
     assert quiet.requests == []
     again = fakes.FakeMessagesAPI(*fakes.discover_script([]))
     assert run_happening(_app(settings, hour=hour + 1, **SEARCHING), api=again)["searched"] == 1
+
+
+def _handing(tool: str, payload: dict) -> object:
+    """A worker that hands back at once."""
+    return fakes.message([fakes.tool_use(f"tu_{tool}", tool, payload)], stop_reason="tool_use")
 
 
 def _spent(app: App, conn, cost: float, *, kind: str = "scout", at: str | None = None) -> None:

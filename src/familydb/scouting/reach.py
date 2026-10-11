@@ -64,6 +64,7 @@ def turn(
     about: str,
     *,
     idea_id: int | None = None,
+    find_id: int | None = None,
     geocoder: bool = False,
 ) -> WorkerTurn:
     """One worker turn of `kind`, searching from home; raises what the turn raises. `geocoder`
@@ -79,6 +80,7 @@ def turn(
         message_id=reach.message_id,
         user_location=home_location(reach.settings),
         idea_id=idea_id,
+        find_id=find_id,
         about=about,
         geocoder=reach.geocoder if geocoder else None,
     )

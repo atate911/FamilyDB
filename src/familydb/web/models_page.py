@@ -74,6 +74,8 @@ TYPICAL_MONTH: dict[str, tuple[int, int, int, int, float]] = {
     "price_check": (2, 2500, 0, 300, 2),
     "scout": (5, 4000, 0, 1200, 4),
     "find_feeds": (1, 3000, 0, 800, 5),
+    "fill_find": (30, 3500, 0, 600, 2.5),
+    "curate": (20, 4000, 0, 500, 0),
     "look": (9, 1600, 0, 120, 0),
     "judge": (1, 2500, 0, 400, 0),
     gateway.LISTEN: (22, 0, 0, 0, 0),

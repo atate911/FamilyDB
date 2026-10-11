@@ -16,7 +16,7 @@ There are eight rows. Each has a **company** dropdown and a **model** dropdown, 
 | **The weekend digest** | The weekly ideas | The same model as chat, for as long as the two strengths agree |
 | **Choosing suggestions** | The stronger model that [picks what to suggest](#choosing-the-suggestions) | Best, on the company that answers the chat; off while `choosing` is off |
 | **Looking things up** | Filling in an idea, finding what is on, a disputed price | Everyday on the lookup company |
-| **What is on near home** (under the family's own name for it) | Scouting each evening for what is on near home | The same as looking things up |
+| **What is on near home** (under the family's own name for it) | Scouting each evening for what is on near home, filling in what it finds and judging which to put forward | The same as looking things up |
 | **Voice notes** | Writing a [voice note](#voice-notes-and-photos) down | OpenAI's `gpt-4o-mini-transcribe` |
 | **Photos** | Reading a poster, a menu or a ticket | The same as looking things up |
 | **Weighing changes** | A [judgment](#asking-a-stronger-model-to-weigh-a-change) about a model that is going or a price that moved | Off |

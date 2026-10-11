@@ -455,7 +455,13 @@ def debug_prompt(
     from familydb.scouting.fill import render_enrich_request
     from familydb.store import places
 
-    if kind not in gateway.KINDS or kind in ("discover", "scout", "find_feeds"):
+    if kind not in gateway.KINDS or kind in (
+        "discover",
+        "scout",
+        "find_feeds",
+        "fill_find",
+        "curate",
+    ):
         typer.echo("--kind is one of chat, digest, retry or enrich", err=True)
         raise typer.Exit(code=2)
     application = build_app()
