@@ -18,9 +18,10 @@ from familydb.integrations.geocode import GeoPoint
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.weekend_digest import run_digest
 from familydb.pipeline import handle_incoming
+from familydb.scouting.search import NOTE_NO_KEY
 from familydb.store import db, ideas, messages
 from familydb.suggest.context import build_context
-from familydb.suggest.discover import NOTE_NO_KEY, discover
+from familydb.suggest.discover import discover
 from familydb.suggest.types import Constraints
 from familydb.tools import ToolContext
 from familydb.web import create_app

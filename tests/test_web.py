@@ -847,6 +847,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         "delete_event",
         "remember",  # what the family types on the memory page, and forgetting
         "look_up_now",  # the buttons that look an idea, or every one waiting, up now
+        "pass_find",  # Not for us on something she found (docs/FINDS.md)
         # A kid's wish lists and a parent's answers (docs/WISHES.md).
         "add_wish",
         "update_wish",

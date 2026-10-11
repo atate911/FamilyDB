@@ -5,76 +5,31 @@ comes."""
 
 from __future__ import annotations
 
-import json
 import logging
 from collections import defaultdict
 from contextlib import closing
-from datetime import datetime, time, timedelta
+from datetime import datetime
 from typing import Any
 
 from familydb import routing, voice
 from familydb.agent import spending
 from familydb.agent.loop import MessagesAPI
-from familydb.agent.spending import LIMITS
-from familydb.agent.worker import WorkerTurn, home_location, run_worker_turn
 from familydb.app import App
 from familydb.availability import enrichment_available
 from familydb.base.config import Settings
-from familydb.base.dates import utc_iso
-from familydb.base.errors import AgentError
+from familydb.base.dates import last_hour_passed, utc_iso
+from familydb.scouting import fill
+from familydb.scouting.fill import OUTCOMES
+from familydb.scouting.reach import Reach
 from familydb.store import ideas, messages, places
 from familydb.store.db import transaction
-from familydb.store.ideas import GIFT, Idea
+from familydb.store.ideas import Idea
 from familydb.store.places import Place
 
 log = logging.getLogger(__name__)
 
-OUTCOMES = ("done", "skipped", "failed", "deferred")
 # The most one evening looks up; the rest wait.
 EVENING_MOST = 40
-# Kinds that are never a place. Narrow on purpose (a title can name a place, "Pizza Luna"): only
-# while no location, link or place is attached. A gift's link is to the thing itself, so only a
-# place named for it is looked up.
-NO_LOOKUP_KINDS = frozenset({"home", GIFT})
-NO_LOOKUP_NOTE = "nothing to look up: a {kind} idea with no place or link"
-
-
-def needs_lookup(idea: Idea) -> bool:
-    """Whether a worker turn could find anything for this idea (decided in code)."""
-    if idea.kind not in NO_LOOKUP_KINDS:
-        return True
-    link = idea.url if idea.kind != GIFT else None
-    return bool(idea.location_name or link or idea.place_id)
-
-
-def render_enrich_request(idea: Idea, place: Place | None, settings: Settings) -> str:
-
-    lines = [f"Idea #{idea.id}: {idea.title}", f"Kind: {idea.kind}"]
-    if idea.location_name:
-        lines.append(f"Location as the family said it: {idea.location_name}")
-    if idea.description:
-        lines.append(f"Description: {idea.description}")
-    if idea.url:
-        lines.append(f"Link the family gave: {idea.url}")
-    if idea.participants:
-        lines.append(f"For: {', '.join(idea.participants)}")
-    lines.append(f"Home area: {settings.home_area or 'not set'}")
-    if place is not None:
-        known = {
-            "name": place.name,
-            "address": place.address,
-            "website": place.website,
-            "hours": place.hours,
-            "booking_url": place.booking_url,
-        }
-        lines.append(
-            "Previously saved details, to re-check and update: "
-            + json.dumps(known, ensure_ascii=False, sort_keys=True)
-        )
-    lines.append(
-        f"Hand back with save_place (idea_id={idea.id}) or skip_place (idea_id={idea.id})."
-    )
-    return "\n".join(lines)
 
 
 def lookups_due_before(settings: Settings, now: datetime) -> str | None:
@@ -82,14 +37,7 @@ def lookups_due_before(settings: Settings, now: datetime) -> str | None:
     as a UTC stamp: ideas waiting since before it are due."""
     if settings.lookups_when == "asap":
         return None
-    zone = settings.tzinfo
-    local = now.astimezone(zone)
-    evening = datetime.combine(local.date(), time(settings.lookup_hour), tzinfo=zone)
-    if local < evening:
-        evening = datetime.combine(
-            local.date() - timedelta(days=1), time(settings.lookup_hour), tzinfo=zone
-        )
-    return utc_iso(evening)
+    return utc_iso(last_hour_passed(now, settings.lookup_hour, settings.tzinfo))
 
 
 def render_place_note(idea: Idea, place: Place, settings: Any) -> str:
@@ -130,17 +78,6 @@ def place_details(place: Place) -> str:
     if place.price_note:
         parts.append(place.price_note)
     return " · ".join(parts).rstrip(".")
-
-
-def _mark(conn: Any, app: App, idea_id: int, status: str, note: str | None) -> None:
-    now = utc_iso(app.clock.now())
-    with transaction(conn):
-        ideas.update(
-            conn,
-            idea_id,
-            {"enrichment": status, "enriched_at": now, "enrichment_note": note},
-            now=now,
-        )
 
 
 def _origin(app: App, conn: Any, idea: Idea) -> tuple[Any, Place] | None:
@@ -210,58 +147,16 @@ def _send_note(
 def enrich_idea(
     app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = None, note: bool = True
 ) -> str:
-    """Look one idea up; returns done, skipped, failed or deferred. With `note` off (the
-    evening's lookups) the run says it all at once."""
-    if not needs_lookup(idea):
-        _mark(conn, app, idea.id, "skipped", NO_LOOKUP_NOTE.format(kind=idea.kind))
-        log.info("idea %s enrichment skipped without a model call", idea.id)
-        return "skipped"
-    place = places.get(conn, idea.place_id) if idea.place_id else None
-    request = render_enrich_request(idea, place, app.settings)
-    try:
-        turn: WorkerTurn = run_worker_turn(
-            kind="enrich",
-            idea_id=idea.id,
-            about=f"#{idea.id} {idea.title}",
-            api=api,
-            settings=app.settings,
-            clock=app.clock,
-            registry=app.registry,
-            conn=conn,
-            request=request,
-            geocoder=app.geocoder,
-            user_location=home_location(app.settings),
-        )
-    except AgentError as exc:
-        if exc.retryable or isinstance(exc, LIMITS):
-            log.warning("enrichment of idea %s deferred: %s", idea.id, exc)
-            return "deferred"
-        _mark(conn, app, idea.id, "failed", f"worker: {exc}")
-        return "failed"
-    except Exception as exc:
-        # Left pending it would burn a model call every run.
-        log.exception("enrichment of idea %s crashed", idea.id)
-        _mark(conn, app, idea.id, "failed", f"error: {type(exc).__name__}: {exc}")
-        return "failed"
-
-    if turn.handed_back():
-        current = ideas.get(conn, idea.id)
-        status = current.enrichment if current else "failed"
-        if status == "done" and current is not None and note:
-            try:
-                _notify(app, conn, current)
-            except Exception:
-                log.exception("could not note the enrichment of idea %s", idea.id)
-        log.info("idea %s enrichment %s", idea.id, status)
-        return status if status in OUTCOMES else "done"
-
-    if turn.result.status != "ok":
-        note = f"worker: {turn.result.error or turn.result.status}"
-    else:
-        note = "worker ended without saving"
-    _mark(conn, app, idea.id, "failed", note)
-    log.warning("idea %s enrichment failed: %s", idea.id, note)
-    return "failed"
+    """Look one idea up (scouting/fill.py); returns done, skipped, failed or deferred. With
+    `note` off (the evening's lookups) the run says it all at once."""
+    status = fill.fill_in(Reach.of_app(app, conn, api), idea)
+    current = ideas.get(conn, idea.id) if status == "done" and note else None
+    if current is not None and current.enrichment == "done":
+        try:
+            _notify(app, conn, current)
+        except Exception:
+            log.exception("could not note the enrichment of idea %s", idea.id)
+    return status
 
 
 def run_enrichment(

@@ -405,6 +405,13 @@ def test_debug_cost_reports_the_prefix_and_what_was_spent(env: Path) -> None:
     assert "No model calls in the last 30 days." in result.output
 
 
+def test_debug_suggestions_says_when_there_were_none(env: Path) -> None:
+    runner.invoke(app, ["db", "migrate"])
+    result = runner.invoke(app, ["debug", "suggestions", "--days", "30"])
+    assert result.exit_code == 0, result.output
+    assert "No suggestions in the last 30 days." in result.output
+
+
 def test_a_command_reports_the_settings_in_force_not_the_file_s(env: Path) -> None:
     """A stored setting is what the bot is doing, so it is what a command should say."""
     from contextlib import closing

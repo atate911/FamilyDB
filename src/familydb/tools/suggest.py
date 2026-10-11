@@ -1,5 +1,6 @@
-"""Suggestion tools: `suggest` for the chat model, `report_finds` for the discovery worker and
-the weekly search near home, and `report_feeds` for the lookup that finds calendars near home."""
+"""Suggestion tools: `suggest` for the chat model, `report_finds` for the searches (on request
+and near home), `report_feeds` for the lookup that finds calendars near home, and
+`give_picks` and `reframe` for the call that chooses what to suggest."""
 
 from __future__ import annotations
 
@@ -30,10 +31,17 @@ class Find(BaseModel):
         default=None, description="HH:MM, 24-hour, when it starts, when the page says."
     )
     summary: str = Field(description="One line.")
-    # For a place (the places worker): what it is, and where and when, as the page writes them.
+    # For a place: what it is, and where and when, as the page writes them.
     kind: str | None = Field(default=None, description="For a place: restaurant, park, ...")
     hours: str | None = Field(default=None, description="For a place: opening hours as written.")
     address: str | None = Field(default=None, description="For a place: its street address.")
+    any_time: bool = Field(default=False, description="A place to go any day, with no date.")
+    for_whom: list[str] = Field(
+        default_factory=list, description="Who it suits: 'whole family', 'grown-ups', 'kids'."
+    )
+    why: str | None = Field(default=None, description="One line: why it suits this family.")
+    min_age: int | None = None
+    max_age: int | None = None
 
 
 class ReportFindsInput(BaseModel):
@@ -44,10 +52,7 @@ class ReportFindsInput(BaseModel):
 
 @tool(
     name="report_finds",
-    description=(
-        "Used by the discovery and places workers to hand back what they found on the web. "
-        "Not for chat."
-    ),
+    description="Used by the search workers to hand back what they found on the web. Not for chat.",
     worker_only=True,
 )
 def report_finds(ctx: ToolContext, args: ReportFindsInput) -> dict[str, Any]:
@@ -81,10 +86,33 @@ def report_finds(ctx: ToolContext, args: ReportFindsInput) -> dict[str, Any]:
                     if value and value.strip()
                 },
                 **({"starts": starts} if starts else {}),
+                **_for_whom(find, dated=bool(starts)),
             }
         )
         recorded += 1
     return {"recorded": recorded, "rejected": rejected, "total": len(finds)}
+
+
+# The most age a find may name: anything older is no age at all.
+OLDEST = 120
+MAX_FOR_WHOM = 4
+
+
+def _for_whom(find: Find, *, dated: bool) -> dict[str, Any]:
+    """Who it suits, why, the ages, and whether it is any time (never when it has a day), each
+    only when said and sane; nothing for a find that says none of it."""
+    said: dict[str, Any] = {}
+    whom = [one.strip()[:MAX_FIELD] for one in find.for_whom if one.strip()][:MAX_FOR_WHOM]
+    if whom:
+        said["for_whom"] = whom
+    if find.why and find.why.strip():
+        said["why"] = find.why.strip()[:MAX_FIELD]
+    for key, age in (("min_age", find.min_age), ("max_age", find.max_age)):
+        if age is not None and 0 <= age <= OLDEST:
+            said[key] = age
+    if find.any_time and not dated:
+        said["any_time"] = True
+    return said
 
 
 def _starts(find: Find) -> str | bool | None:
@@ -229,13 +257,53 @@ def _pick_day(pick: PickInput, option: Any, window: tuple[date, date] | None) ->
     return day.isoformat()
 
 
+class ReframeInput(BaseModel):
+    window: Literal["today", "this_weekend", "next_weekend", "dates"] | None = None
+    start: str | None = Field(default=None, description="YYYY-MM-DD, for window=dates.")
+    end: str | None = Field(default=None, description="YYYY-MM-DD, for window=dates.")
+    from_time: str | None = Field(default=None, description="HH:MM each day starts.")
+    until_time: str | None = Field(default=None, description="HH:MM each day ends.")
+    participants: list[str] | None = Field(default=None, description="Who is coming, as said.")
+    prefer: Literal["new", "favorites"] | None = None
+    why: str = Field(description="Under 200 characters: what the framing misread.")
+
+
+@tool(
+    name="reframe",
+    description=(
+        "Used by the call that chooses what to suggest, once, when the question was plainly "
+        "framed wrong (the days, the part of a day, who is coming, favorites): code checks every "
+        "option again in the corrected framing and hands back the new dossier. Not for chat."
+    ),
+    worker_only=True,
+)
+def reframe(ctx: ToolContext, args: ReframeInput) -> dict[str, Any]:
+    """The framing corrected once, checked again by code with no search (suggest/choosing.py);
+    the picks that follow are checked against the new options."""
+    again = ctx.scratch.get("reframe")
+    if again is None:
+        raise ToolError("there is no question to reframe here")
+    if "reframed" in ctx.scratch:
+        raise ToolError("the framing was corrected once already: pick from the options given")
+    why = " ".join(args.why.split())
+    if not why or len(why) > MOST_WORDS:
+        raise ToolError(f"say why in 1 to {MOST_WORDS} characters")
+    changes = args.model_dump(exclude={"why"}, exclude_none=True)
+    if not changes:
+        raise ToolError("say what to change: the window, its hours, who is coming or prefer")
+    made = again(changes)
+    ctx.scratch["reframed"] = {"changes": changes, "why": why}
+    return {"dossier": made.text}
+
+
 @tool(
     name="suggest",
     description=(
         "Checked suggestions for a window: looks at the calendar's free time, the forecast, every "
         "idea on the list and the cached place details, and returns candidates with a verdict "
-        "(good, possible, ruled_out) and the reasons, plus time-bound web finds when discovery "
-        "is on. Call it once for 'what should we do' questions, then write the reply from it."
+        "(good, possible, ruled_out) and the reasons, plus events and places a web search "
+        "found for them. Call it once for 'what should we do' questions, then write the reply "
+        "from it."
     ),
 )
 def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
@@ -246,5 +314,14 @@ def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
     # whenever it cannot, the engine's own order.
     assessed = assess(ctx, args)
     chosen = None if choosing.reason_not_to(ctx, args) else choosing.choose(ctx, args, assessed)
-    # Uncached and resent with the reply: leaving nulls out roughly halves it.
-    return result_of(assessed, chosen).model_dump(mode="json", exclude_none=True)
+    if chosen is not None and chosen.reframed is not None:
+        assessed = chosen.reframed  # the question as the stronger call corrected it
+    # Uncached and resent with the reply: leaving out nulls and what is as it always is (a check
+    # not made, no booking needed, travel from home) roughly halves it, and the reasons say what
+    # matters. A listed find's row id is the page's, not the model's.
+    return result_of(assessed, chosen).model_dump(
+        mode="json",
+        exclude_none=True,
+        exclude_defaults=True,
+        exclude={"web_finds": {"__all__": {"find_id"}}, "picks": {"__all__": {"find_id"}}},
+    )

@@ -7,20 +7,23 @@ from datetime import date, datetime, time, timedelta
 
 from familydb import happening
 from familydb.availability import enrichment_available
-from familydb.base.dates import parse_date_range, utc_iso, weekend_window
+from familydb.base import roles
+from familydb.base.dates import parse_date_range, weekend_window
 from familydb.base.errors import ToolError
-from familydb.store import ideas, members, memories, outcomes, plans, suggestions
+from familydb.scouting.search import saved
+from familydb.store import ideas, members, memories, outcomes, plans
 from familydb.store.db import transaction
 from familydb.store.ideas import Idea
 from familydb.suggest import listed as listing
+from familydb.suggest import people as who
+from familydb.suggest import taken
 from familydb.suggest.compose import choose, compose
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.origin import resolve as resolve_origin
-from familydb.suggest.places import find_places
-from familydb.suggest.places import wanted as places_wanted
+from familydb.suggest.pocket import check_finds
 from familydb.suggest.rules import fold
 from familydb.suggest.shortlist import FAVORITE_RATING, RATING_DAYS, shortlist
 from familydb.suggest.types import (
@@ -37,9 +40,6 @@ from familydb.suggest.types import (
     clock,
 )
 from familydb.tools import ToolContext
-
-RECENT_SUGGESTION_DAYS = 14
-
 
 NOW_HOURS = 4
 MAX_TOPIC = 80
@@ -135,6 +135,11 @@ class Assessment:
     kid_names: dict[int, str] = field(default_factory=dict)
 
 
+def kid_reads(ctx: ToolContext) -> bool:
+    """Whether a kid will read this answer: a kid asking, or a chat a kid is in (audience.py)."""
+    return ctx.plain or (ctx.member is not None and roles.daily_limited(ctx.member.role))
+
+
 def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> SuggestResult:
     """The whole engine for one question; returns the structured result the chat model composes.
     `refresh_stale` queues a paid lookup per stale place; code running with no model call
@@ -151,24 +156,48 @@ def result_of(a: Assessment, chosen: Chosen | None = None) -> SuggestResult:
         shown, held_back = choose(
             a.candidates, a.by_id, a.recently, prefer=a.args.prefer, loved=a.loved, picked=picked
         )
-    return compose(
+    result = compose(
         a.context, a.label, shown, held_back, a.finds, a.skipped, a.suggestion_id, chosen
     )
+    result.new_find = new_find(result.web_finds)
+    return result
+
+
+def new_find(found: list[WebFind]) -> str | None:
+    """The one find worth a word after what is theirs: one the evening's judgement put forward,
+    else the first checked good; never one already saved."""
+    fresh = [one for one in found if one.saved_as is None]
+    best = next((one for one in fresh if one.recommended), None) or next(
+        (one for one in fresh if one.verdict == "good"), None
+    )
+    return best.title if best is not None else None
 
 
 def assess(
-    ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True, record: bool = True
+    ctx: ToolContext,
+    args: SuggestInput,
+    *,
+    refresh_stale: bool = True,
+    record: bool = True,
+    web: bool = True,
 ) -> Assessment:
     """Every stage but the last: the window, the context, the rules, the checks, the engine's own
     cut, the finds and the log. Without `record` nothing is logged as suggested: the picks made
     ahead for Now (familydb/picks.py) are not a suggestion anybody asked for, so they must not
-    sink the same ideas in the next real question."""
+    sink the same ideas in the next real question. Without `web` nothing is searched (discovery,
+    a place), only what is kept is read: the choice corrected by the stronger call
+    (suggest/choosing.py) costs no further search."""
     window, label, bounds = resolve_window(args, ctx.clock.now())
     context = build_context(ctx, window, bounds)
     context.origin, where_note = resolve_origin(ctx, args.near, args.window)
     if where_note:
         context.skipped.append(where_note)
+    people = members.list_all(ctx.conn)
     all_ideas = ideas.list_all(ctx.conn)
+    if kid_reads(ctx):
+        # Where a kid reads, an idea for the grown-ups alone is left out, not ruled out: the
+        # ruled-out are shown to the model, and a kid hears nothing of date nights.
+        all_ideas = [idea for idea in all_ideas if not who.just_us(idea, people)]
     listed = {idea.id for idea in all_ideas if idea.status != "dropped"}
     unknown = sorted(set(args.idea_ids) - listed)
     idea_ids = [idea_id for idea_id in args.idea_ids if idea_id in listed]
@@ -183,7 +212,6 @@ def assess(
         topic=" ".join(args.topic.casefold().split())[:MAX_TOPIC],
     )
     # The family's firm rules for who is coming, held by code (suggest/rules.py).
-    people = members.list_all(ctx.conn)
     held = memories.held(ctx.conn, today=ctx.clock.today())
     constraints = fold(constraints, held, people, ctx.member)
     # What the family said of what they did: "not again" leaves it out, a rating counts for a
@@ -219,8 +247,8 @@ def assess(
     )
     evaluated, stale_ids = evaluate(ctx.conn, kept, context, constraints, ctx.settings, ctx.clock)
     candidates = evaluated + ruled_out
-    since = utc_iso(ctx.clock.now() - timedelta(days=RECENT_SUGGESTION_DAYS))
-    recently = suggestions.recently_suggested(ctx.conn, since=since)
+    # Shown lately and passed over, or shown in the last few days: sinks for variety.
+    recently = taken.sinking(ctx.conn, now=ctx.clock.now())
     by_id = {idea.id: idea for idea in all_ideas}
     shown, held_back = choose(candidates, by_id, recently, prefer=args.prefer, loved=loved)
     skipped = list(context.skipped)
@@ -237,21 +265,39 @@ def assess(
             ideas.requeue_enrichment(ctx.conn, stale_shown, now=ctx.now_iso())
         skipped.append("stale place details re-queued for a refresh")
 
-    # What the family's sources already list for these days costs nothing to read; when they
-    # list enough, the web is not searched again, unless the question asks for something.
+    # Her back pocket for these days costs nothing to read. Somebody asked, so the web is
+    # searched too, with everything known (docs/FINDS.md), once a message, and a few places she
+    # found to go any time are offered; code asking for itself (her picks, /now, the jobs) is
+    # offered what is on for the days, and the places to go the evening's judgement put forward.
     stored = listing.listed(ctx, context)
-    finds, note = ([], None)
-    # A place nothing saved fits, found on the web, when the family has it on (suggest/places.py).
-    if places_wanted(context, constraints, candidates, ctx.settings):
-        finds, note = find_places(ctx, context, constraints)
+    if args.discover:
+        stored += listing.anytime(ctx, constraints)
+    else:
+        stored += listing.recommended_anytime(ctx)
+    searched: list[WebFind] = []
+    if web and args.discover:
+        searched, note = discover(ctx, context, constraints, args.question)
         if note:
             skipped.append(note)
-    if args.discover and (constraints.topic or len(stored) < listing.COVERED):
-        events, note = discover(ctx, context, constraints)
-        finds = finds + events
-        if note:
-            skipped.append(note)
-    finds, more = listing.merge_finds(stored, finds)
+    found = searched + [listing.to_web_find(one) for one in stored]
+    searched_urls = {one.url.lower() for one in searched}
+    if kid_reads(ctx):
+        # As for ideas: what is for the grown-ups alone is left out, not ruled out.
+        found = [one for one in found if not who.grown_ups_only(one.for_whom, people)]
+    # Every find is checked as an idea is (suggest/pocket.py); the ruled out are logged, never
+    # offered, and the good come before the possible.
+    found = check_finds(
+        ctx.conn, found, context, constraints, ctx.settings, ctx.clock, people=people
+    )
+    finds_out = [one for one in found if one.verdict == "ruled_out"]
+    # What the search found for this question first, then the pocket; the good first in each.
+    offered = sorted(
+        (one for one in found if one.verdict != "ruled_out"),
+        key=lambda one: (one.url.lower() not in searched_urls, one.verdict != "good"),
+    )
+    finds, more = listing.merge_finds(offered)
+    # What the family already saved is marked, so nothing offers it again as new.
+    finds = saved(ctx.conn, finds)
     if more:
         skipped.append(f"{more} more listed for these days on the page {happening.NAME}")
 
@@ -263,7 +309,7 @@ def assess(
             window_end=window[1].isoformat() if window else None,
             candidates=candidates,
             shown=on_show,
-            finds=finds,
+            finds=finds + finds_out,
             now=ctx.now_iso(),
         )
         if record

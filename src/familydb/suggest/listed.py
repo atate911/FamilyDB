@@ -1,11 +1,11 @@
-"""Stage: what the family's sources list near home for the days asked (jobs/happening.py), read
-from the `finds` table, with no model and no network.
+"""Stage: her back pocket for the days asked (docs/FINDS.md), read from the `finds` table with
+no model and no network: what the family's sources list near home (jobs/happening.py) and what
+earlier searches found for those days, and a few places she found to go any time.
 
-Listed only, for now: each is offered as a web find is, with when it is on and who listed it,
-for the model to name as not on the list. They are not yet checked against the free time,
-the forecast or the travel as saved ideas are (shortlist, evaluate); that is the next step, and
-this is where it goes in. What is said of each is code's: the day and time in the family's
-words, and the name of the calendar, Ticketmaster, or the site the weekly search read.
+Each is offered as a web find is, with when it is on and who listed it, for the model to name as
+not on the list, once checked as the ideas are (suggest/pocket.py). What is said of each is
+code's: the day and time in the family's words, and the name of the calendar, Ticketmaster, or
+the site a search read.
 """
 
 from __future__ import annotations
@@ -16,16 +16,18 @@ from familydb import happening
 from familydb.base.urls import clean_url
 from familydb.store import finds
 from familydb.store.finds import Find
-from familydb.suggest.types import Context, WebFind
+from familydb.suggest.types import Constraints, Context, WebFind
 from familydb.tools import ToolContext
 
 # The most offered with one answer, the discovery worker's own finds among them: the result is
 # sent to the model and sent again with its reply.
 MAX_LISTED = 8
 SUMMARY_MAX = 100
-# A window that is already this well covered by what the sources list asks the web nothing
-# more, unless the question is about something in particular.
-COVERED = 3
+# Places she found to go any time, offered with one answer at most, and read to choose them.
+ANYTIME_MOST = 3
+ANYTIME_READ = 30
+# A word of the topic this short says nothing of what a place is.
+TOPIC_WORD_LEAST = 3
 
 
 def window_for(context: Context) -> tuple[date, date]:
@@ -40,7 +42,10 @@ def _day(text: str) -> date:
 
 
 def when_text(find: Find) -> str:
-    """When it is on, as the family would say it: "Sat 10 Oct 19:30", "Sat 10 to Sun 11 Oct"."""
+    """When it is on, as the family would say it: "Sat 10 Oct 19:30", "Sat 10 to Sun 11 Oct",
+    "any time" for a place."""
+    if find.starts_at is None:
+        return "any time"
     first = _day(find.starts_at)
     said = f"{first:%a} {first.day} {first:%b}"
     if "T" in find.starts_at:
@@ -53,9 +58,7 @@ def when_text(find: Find) -> str:
 
 def _who(find: Find) -> str:
     """Who listed it: the calendar's site, Ticketmaster, or the page the search found."""
-    if find.kind == happening.WEB and find.url:
-        return happening.host(find.url)
-    return happening.source_name(find.source)
+    return happening.listed_by(find.kind, find.source, find.url)
 
 
 def to_web_find(find: Find) -> WebFind:
@@ -69,13 +72,20 @@ def to_web_find(find: Find) -> WebFind:
         summary=summary,
         source=f"listed by {_who(find)}",
         starts=find.starts_at,
+        find_id=find.id,
+        for_whom=find.participants,
+        why=find.why,
+        min_age=find.min_age,
+        max_age=find.max_age,
+        any_time=find.any_time,
+        recommended=find.state == "recommended",
     )
 
 
 def _in_hours(find: Find, context: Context) -> bool:
     """A timed thing starts inside the part of its day asked about (tonight, the rest of today);
     an all-day one, or a day not in the window, is kept."""
-    if "T" not in find.starts_at:
+    if find.starts_at is None or "T" not in find.starts_at:
         return True
     starts = datetime.fromisoformat(find.starts_at)
     day = context.day(starts.date())
@@ -85,6 +95,27 @@ def _in_hours(find: Find, context: Context) -> bool:
     return day.bounds[0] <= minute < day.bounds[1]
 
 
+def anytime(ctx: ToolContext, constraints: Constraints) -> list[Find]:
+    """A few places she found to go any time, newest first; about the topic when one was asked."""
+    found = finds.anytime(ctx.conn, limit=ANYTIME_READ)
+    words = [w for w in constraints.topic.split() if len(w) >= TOPIC_WORD_LEAST]
+    if words:
+        found = [one for one in found if any(w in _words_of(one) for w in words)]
+    return found[:ANYTIME_MOST]
+
+
+def recommended_anytime(ctx: ToolContext) -> list[Find]:
+    """The places to go any time the evening's judgement put forward (docs/FINDS.md): what code
+    asking for itself (her picks) may offer beside what is on for the days."""
+    found = finds.anytime(ctx.conn, limit=ANYTIME_READ)
+    return [one for one in found if one.state == "recommended"][:ANYTIME_MOST]
+
+
+def _words_of(find: Find) -> str:
+    parts = (find.title, find.summary, find.category, find.why)
+    return " ".join(part for part in parts if part).casefold()
+
+
 def listed(ctx: ToolContext, context: Context) -> list[Find]:
     """What the sources list for the days asked, soonest first, inside the hours asked."""
     start, end = window_for(context)
@@ -92,20 +123,19 @@ def listed(ctx: ToolContext, context: Context) -> list[Find]:
     return [find for find in found if _in_hours(find, context)]
 
 
-def merge_finds(stored: list[Find], searched: list[WebFind]) -> tuple[list[WebFind], int]:
-    """The discovery worker's finds first (asked for this question), then what the sources
-    list, one of each page, up to MAX_LISTED. Returns them and how many were left out."""
-    merged = list(searched[:MAX_LISTED])
-    seen = {find.url.lower() for find in merged}
+def merge_finds(found: list[WebFind]) -> tuple[list[WebFind], int]:
+    """The finds in the order given, one of each page, up to MAX_LISTED. Returns them and how
+    many were left out."""
+    merged: list[WebFind] = []
+    seen: set[str] = set()
     left = 0
-    for one in stored:
-        shown = to_web_find(one)
-        if shown.url and shown.url.lower() in seen:
+    for one in found:
+        if one.url and one.url.lower() in seen:
             continue
         if len(merged) >= MAX_LISTED:
             left += 1
             continue
-        if shown.url:
-            seen.add(shown.url.lower())
-        merged.append(shown)
+        if one.url:
+            seen.add(one.url.lower())
+        merged.append(one)
     return merged, left

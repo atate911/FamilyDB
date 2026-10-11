@@ -11,11 +11,11 @@ from pydantic import BaseModel, Field
 
 from familydb.base.dates import parse_date
 from familydb.base.errors import ToolError
+from familydb.moment import CostLevel
 from familydb.store import members
 from familydb.store import memories as store
 from familydb.store.db import transaction
 from familydb.store.memories import Category
-from familydb.suggest.types import CostLevel
 from familydb.tools.registry import ToolContext, keep_undo, tool
 
 MAX_CHANGES = 5
@@ -25,7 +25,24 @@ MAX_REPLY = 2000
 MAX_DRIVE = 600
 MAX_AVOID = 5
 MAX_TAG = 40
-NOT_HELD = "a rule is held only for a must said outright; kept as a taste"
+NOT_HELD = "a limit is held only for a must said outright; kept as a taste"
+NOT_SAID = "a rule is held only when said outright, not read between the lines"
+FAMILY_ONLY = "rest_days and rain_ok are the family's: keep that memory about the family"
+# The longest an idea may be told to rest once done, in days.
+MAX_REST = 365
+# What an idea may be (store.ideas.KIND_SUGGESTIONS), a present aside, which is never offered.
+RestKind = Literal[
+    "restaurant",
+    "activity",
+    "outing",
+    "day_trip",
+    "trip",
+    "show",
+    "event",
+    "seasonal",
+    "home",
+    "other",
+]
 FAMILY = frozenset({"family", "the family", "everyone", "household", "us", "we", "all of us"})
 
 
@@ -37,6 +54,12 @@ class Rule(BaseModel):
     max_cost_level: CostLevel | None = None
     setting: Literal["indoor", "outdoor"] | None = None
     avoid_tags: list[str] = []
+    # The family's taste rather than a limit: held when said outright, must or not.
+    rain_ok: bool | None = Field(default=None, description="Rain does not stop them going out.")
+    rest_days: int | None = Field(
+        default=None, description="Days a done idea rests before it is offered again."
+    )
+    rest_kind: RestKind | None = Field(default=None, description="Only for ideas of this kind.")
 
 
 class Change(BaseModel):
@@ -98,12 +121,38 @@ def _fact(change: Change) -> str:
     return fact
 
 
-def _rule(change: Change, firm: bool) -> dict[str, Any] | None:
-    """What suggestions are held to by code: only for a must (a guess or a taste only leans)."""
+def _limits_given(rule: Rule) -> bool:
+    return any(
+        value not in (None, [])
+        for value in (rule.max_travel_minutes, rule.max_cost_level, rule.setting, rule.avoid_tags)
+    )
+
+
+def _rule(change: Change, firm: bool, family: bool) -> tuple[dict[str, Any] | None, str | None]:
+    """What suggestions are held to by code, and why part of what was asked is not. A limit holds
+    only for a must (a guess or a taste only leans); the family's rest and rain, which ease or
+    tighten a matter of taste, hold for anything said outright about the family."""
     rule = change.rule
-    if rule is None or not firm:
-        return None
+    if rule is None:
+        return None, None
+    if change.inferred:
+        return None, NOT_SAID
     held: dict[str, Any] = {}
+    if rule.rain_ok or rule.rest_days is not None or rule.rest_kind is not None:
+        if not family:
+            raise ToolError(FAMILY_ONLY)
+        if rule.rest_kind is not None and rule.rest_days is None:
+            raise ToolError("rest_kind needs rest_days: how many days that kind rests")
+        if rule.rest_days is not None:
+            if not 0 <= rule.rest_days <= MAX_REST:
+                raise ToolError(f"rest_days must be 0 to {MAX_REST}")
+            held["rest_days"] = rule.rest_days
+            if rule.rest_kind is not None:
+                held["rest_kind"] = rule.rest_kind
+        if rule.rain_ok:
+            held["rain_ok"] = True
+    if not firm:
+        return held or None, (NOT_HELD if _limits_given(rule) else None)
     if rule.max_travel_minutes is not None:
         if not 1 <= rule.max_travel_minutes <= MAX_DRIVE:
             raise ToolError(f"max_travel_minutes must be 1 to {MAX_DRIVE}")
@@ -117,7 +166,7 @@ def _rule(change: Change, firm: bool) -> dict[str, Any] | None:
         raise ToolError(f"avoid at most {MAX_AVOID} tags, each a word or two")
     if tags:
         held["avoid"] = tags
-    return held or None
+    return held or None, None
 
 
 def _existing(ctx: ToolContext, memory_id: int | None, action: str) -> store.Memory:
@@ -148,8 +197,8 @@ def _add(ctx: ToolContext, change: Change, *, replacing: store.Memory | None = N
     about = _about(ctx, change.about)
     until = _until(ctx, change.until)
     firm = change.firm and not change.inferred  # a guess is never a must
-    rule = _rule(change, firm)
-    unheld = {"rule": NOT_HELD} if change.rule is not None and rule is None else {}
+    rule, why_not = _rule(change, firm, family=about is None)
+    unheld = {"rule": why_not} if why_not else {}
     now = ctx.now_iso()
     same = store.matching(ctx.conn, about, fact, "active")
     if same is not None and (replacing is None or same.id != replacing.id):

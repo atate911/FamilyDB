@@ -51,7 +51,11 @@ THINKS = {
     "onnear": "worker_effort",
 }
 # The plain settings that belong to one use: read as every other settings box is read.
-EXTRAS = {"hear": ("voice_max_minutes",), "judge": ("judgement_acts",)}
+EXTRAS = {
+    "hear": ("voice_max_minutes",),
+    "judge": ("judgement_acts",),
+    "choose": ("choose_now",),
+}
 # A cap drawn on another page (its box is there, and a setting is on one page only): this page
 # shows it and says where.
 CAP_ELSEWHERE = {"onnear": "happening"}
@@ -70,11 +74,12 @@ TYPICAL_MONTH: dict[str, tuple[int, int, int, int, float]] = {
     "digest": (12, 4000, 6000, 700, 0),
     "choose": (10, 9000, 0, 1500, 0),
     "enrich": (28, 3500, 0, 600, 2.5),
-    "discover": (8, 3500, 0, 700, 3),
-    "places": (2, 3500, 0, 700, 3),
+    "discover": (40, 4500, 0, 900, 4),
     "price_check": (2, 2500, 0, 300, 2),
     "scout": (5, 4000, 0, 1200, 4),
     "find_feeds": (1, 3000, 0, 800, 5),
+    "fill_find": (30, 3500, 0, 600, 2.5),
+    "curate": (20, 4000, 0, 500, 0),
     "look": (9, 1600, 0, 120, 0),
     "judge": (1, 2500, 0, 400, 0),
     gateway.LISTEN: (22, 0, 0, 0, 0),

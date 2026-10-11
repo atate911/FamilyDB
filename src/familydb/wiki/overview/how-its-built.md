@@ -29,7 +29,7 @@ FamilyDB is one program on one machine with one database file. A restart is safe
 
 A **channel** is an adapter for one way of talking: Telegram, the page's chat, or the console (`familydb chat`). The **pipeline** handles one inbound message from arrival to stored reply. The **gateway** is the one door to a model company, and the **agent loop** runs a [turn](/wiki/reference/glossary#turn): ask the model, run the tools it names, ask again. **Tools** are small checked functions the model may call, and **engines** are the code behind them that weighs an idea against the calendar, forecast and opening hours. The **store** is the database.
 
-Two things sit alongside. The **web page** reads the store; its edits go through tools, its chat box goes through the pipeline, and family and settings changes have their own door. The **jobs** run on the timer, mostly without a model call. The weekend ideas job and the retry job go through the pipeline, and lookups go through the gateway as separate [worker turns](/wiki/reference/glossary#worker-turn).
+Two things sit alongside. The **web page** reads the store; its edits go through tools, its chat box goes through the pipeline, and family and settings changes have their own door. The **jobs** run on the timer, mostly without a model call. The weekend ideas job and the retry job go through the pipeline, and lookups go through the gateway as separate [worker turns](/wiki/reference/glossary#worker-turn). Every web search made to find something new, by a job or while answering, lives in one layer of its own, **scouting**, under the engines, so how the web is searched can change without touching the rest.
 
 ## The rules every layer follows
 

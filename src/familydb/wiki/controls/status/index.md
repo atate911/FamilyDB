@@ -42,7 +42,19 @@ Every figure is **an estimate worked out from each call's size and a price table
 
 - **Spent today** is what recorded calls have cost since midnight in the family's time zone, against the daily limit, with a line for a usual day. Admins get **Change the limit**.
 - **Last 30 days** shows the cost, the usual day (the average over the days in those 30 that had any calls) and "Questions answered".
-- **Where the money went** gives calls and dollars by kind of call, and how much of what was sent came back from the [prompt cache](/wiki/reference/glossary#prompt-cache), which costs less.
+- **Where the money went** gives calls and dollars by kind of call, and how much of what was sent came back from the [prompt cache](/wiki/reference/glossary#prompt-cache), which costs less. It also says how many of the messages answered found the start of the request still cached. The cache lasts an hour, so a family that writes a few times a day mostly misses it and pays the whole start of every request; then a shorter start, such as the brief [persona](/wiki/model/vera), saves more than the cache does.
+
+## What came of her suggestions
+
+What the family planned from what she suggested over the last 90 days, read from what is already kept, with no model call. A plan counts for a suggestion when that suggestion offered its idea, or a find of the same name, in the 3 days before the plan was made, whoever asked.
+
+- The first line says how many suggestions there were, how many led to a plan, and how many had picks from the [stronger call](/wiki/behavior/suggestions#choosing-what-to-suggest).
+- The table says where each plan stood in its suggestion (picked by the stronger call, offered as good or possible, checked but not shown, found outside the list, or ruled out) and how the family rated it afterwards.
+- **Planned though she had ruled it out** names what the family did anyway, with the reason she gave. A reason that keeps coming up is a rule that does not suit this family: a [firm memory](/wiki/model/memory) can change it for them.
+
+**What she found** follows: for each place things come from (the calendars, Ticketmaster, her scouting each evening, and the searches made when somebody asks), how many were found, put forward, saved, planned and passed on as "not for us", and how the outings made of them were rated; then what scouting, filling in and judging cost in the period. Together they say whether scouting earns its budget ([What is on near home](/wiki/controls/settings/happening)).
+
+`familydb debug suggestions [--days N]` prints the same on the [command line](/wiki/operations/command-line).
 
 ## How each part is doing
 

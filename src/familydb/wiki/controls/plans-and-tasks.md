@@ -64,7 +64,7 @@ A reminder's page says when, whose, the window it suits, how it repeats and wher
 
 What is on near home in the weeks ahead, by day, with the family's own things that have a closing date among them. It is read from the family's sources, the calendars and the listings set on [its settings page](/wiki/controls/settings/happening), with no model call. Each row is the name and one line: the time (or all day), where, the cost and who listed it; tap it for the listing's own words, **Save it** and **Put it on the calendar**. The chips are **This weekend**, **Free** (only what costs nothing) and each source.
 
-Each find has a page of its own: its day, place and cost, the listing in its own words and a link to it, and who listed it. **Save it** keeps it as an idea with its dates and place (the tool the assistant would call); **Put it on the calendar** adds it as a plan. Once it is over, the page says so.
+Each find has a page of its own: its day (or **Any time**, for a place the assistant found rather than an event), place and cost, the listing in its own words and a link to it, and who listed it. **Save it** keeps it as an idea with its dates and place (the tool the assistant would call), and the page then links to that idea; **Not for us** tells the assistant to stop offering it, and the page says so (saying "not for us" about it in the chat does the same, and either is taken back by Undo). Both are for grown-ups: a kid sees the find and neither button. **Put it on the calendar** adds it as a plan. Once it is over, the page says so.
 
 ## Lists
 

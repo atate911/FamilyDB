@@ -11,7 +11,7 @@ from familydb import presents
 from familydb.agent.render import render_idea_line
 from familydb.base.dates import parse_date, parse_datetime
 from familydb.base.errors import ToolError
-from familydb.store import ideas, members, messages, outcomes, places
+from familydb.store import finds, ideas, members, messages, outcomes, places
 from familydb.store.db import transaction
 from familydb.store.ideas import KIND_SUGGESTIONS
 from familydb.tools.registry import ToolContext, keep_undo, tool
@@ -76,6 +76,9 @@ class AddIdeaInput(BaseModel):
     suggested_by: str | None = Field(
         default=None,
         description="Family member's name, only when someone other than the sender suggested it.",
+    )
+    find_id: int | None = Field(
+        default=None, description="When saving something she found, its find number."
     )
 
 
@@ -227,10 +230,14 @@ def _keep_presents(ctx: ToolContext, idea: ideas.Idea) -> None:
     writes=True,
 )
 def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
+    found = _found(ctx, args)
     existing = ideas.find_similar_title(ctx.conn, args.title)
     if _kept_from(ctx, existing):
         raise ToolError("that is already on the grown-ups' list; nothing was added")
     if existing is not None:
+        if found is not None and found.idea_id is None:
+            with transaction(ctx.conn):
+                finds.mark_saved(ctx.conn, found.id, idea_id=existing.id, now=ctx.now_iso())
         return {
             "duplicate_of": existing.id,
             "note": "An idea with this title already exists; nothing was added.",
@@ -238,7 +245,7 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
         }
     suggested_by = _resolve_member_name(ctx, args.suggested_by)
     _ages(args.min_age, args.max_age)
-    fields = args.model_dump(exclude={"title", "kind", "suggested_by", *DATES})
+    fields = args.model_dump(exclude={"title", "kind", "suggested_by", "find_id", *DATES})
     fields |= _dated(ctx, args.happens_from, args.happens_until)
     with transaction(ctx.conn):
         idea = ideas.insert(
@@ -251,10 +258,31 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
             **fields,
         )
         _keep_presents(ctx, idea)
+        if found is not None:
+            finds.mark_saved(ctx.conn, found.id, idea_id=idea.id, now=ctx.now_iso())
     keep_undo(
-        ctx, "drop_idea", f"added idea #{idea.id} {idea.title}", idea=idea.id, status=idea.status
+        ctx,
+        "drop_idea",
+        f"added idea #{idea.id} {idea.title}",
+        idea=idea.id,
+        status=idea.status,
+        **({"find": found.id, "find_before": finds.fate(found)} if found is not None else {}),
     )
     return idea.model_dump(mode="json")
+
+
+def _found(ctx: ToolContext, args: AddIdeaInput) -> finds.Find | None:
+    """The find this idea saves: the one named, else a find of the same page or exact title she
+    has not already seen saved, so "save the lantern walk" links without its number."""
+    if args.find_id is not None:
+        found = finds.get(ctx.conn, args.find_id)
+        if found is None:
+            raise ToolError(f"no find {args.find_id}")
+        return found
+    found = finds.by_url_or_title(ctx.conn, args.url, args.title)
+    if found is None or found.state in ("saved", "planned"):
+        return None
+    return found
 
 
 @tool(

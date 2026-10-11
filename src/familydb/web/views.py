@@ -324,8 +324,8 @@ def excerpt(text: str, fact: str, room: int = SOURCE_CHARS) -> str:
 
 
 def rule_text(rule: dict[str, Any] | None) -> str | None:
-    """What suggestions are held to by a firm memory's rule (suggest/rules.py), in a few words:
-    "held to: a 30 min drive at most, indoors"."""
+    """What suggestions are held to by a memory's rule (suggest/rules.py), in a few words:
+    "held to: a 30 min drive at most, indoors", "held to: rain is fine"."""
     if not rule:
         return None
     said = []
@@ -337,6 +337,12 @@ def rule_text(rule: dict[str, Any] | None) -> str | None:
         said.append(f"{setting}s")
     if avoid := rule.get("avoid"):
         said.append("nothing " + " or ".join(avoid))
+    if rule.get("rain_ok"):
+        said.append("rain is fine")
+    if (days := rule.get("rest_days")) is not None:
+        kind = rule.get("rest_kind")
+        what = f"{kind.replace('_', ' ')}s" if kind else "anything done"
+        said.append(f"{what} again after {days} day{'' if days == 1 else 's'}")
     return "held to: " + ", ".join(said) if said else None
 
 
@@ -863,7 +869,9 @@ def find_starters(find: Any, today: date) -> list[str]:
 
 def find_state(find: Any, today: date) -> str:
     """A happening's day in words: "Saturday 17 October, 6:30 pm", "Today at 6:30 pm", "On until
-    Sunday 18 October", "Was on Saturday 3 October"."""
+    Sunday 18 October", "Was on Saturday 3 October"; "Any time" for a place."""
+    if find.starts_at is None:
+        return "Any time"
     first = date.fromisoformat(find.starts_at[:10])
     last = date.fromisoformat(find.ends_at[:10]) if find.ends_at else first
     if last < today:
@@ -874,6 +882,40 @@ def find_state(find: Any, today: date) -> str:
         return f"Today at {clock_time(find.starts_at)}" if "T" in find.starts_at else "Today"
     said = day_text(find.starts_at)
     return said if last == first else f"{said} to {day_text(last.isoformat())}"
+
+
+def find_save_fields(find: Any) -> dict[str, str]:
+    """What Save it sends `add_idea` for a find (its page, New ideas): its dates, place and
+    words, and its number, so the find is marked saved as that idea."""
+    starts = find.starts_at or ""
+    first = starts[:10]
+    last = find.ends_at[:10] if find.ends_at else first
+    url = find.url if find.url and find.url.startswith(("https://", "http://")) else ""
+    return {
+        "find_id": str(find.id),
+        "title": find.title,
+        "kind": "event" if first else "outing",
+        "happens_from": first,
+        "happens_time": starts[11:16] if "T" in starts else "",
+        "happens_until": last if last != first else "",
+        "location_name": ", ".join(part for part in (find.venue, find.address) if part),
+        "url": url,
+        "description": find.summary or "",
+    }
+
+
+def new_idea_row(find: Any, today: date) -> dict[str, Any]:
+    """Something she found and judged worth putting forward, as New ideas lists it: when it is
+    on, when she would do it, and why it suits them."""
+    when = find_state(find, today)
+    if find.judged_when:
+        when = f"{when}; {find.judged_when}" if find.starts_at else find.judged_when
+    return {
+        "id": find.id,
+        "title": find.title,
+        "line": " · ".join(part for part in (when, find.judged_why or find.why) if part),
+        "save": find_save_fields(find),
+    }
 
 
 def slug(name: str) -> str:
@@ -1417,6 +1459,7 @@ DID_WORDS = {
     "remember": "Remembered something",
     "record_outcome": "Recorded how it went",
     "look_up_now": "Asked for a lookup",
+    "pass_find": "Passed on something she found",
     "add_wish": "Added a wish",
     "update_wish": "Changed a wish",
     "turn_away": "Turned down a request",
@@ -1522,22 +1565,21 @@ def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
 
 def find_row(find: Any, today: date) -> dict[str, Any]:
     """One thing near home as its page lists it."""
-    first = date.fromisoformat(find.starts_at[:10])
+    first = date.fromisoformat(find.starts_at[:10]) if find.starts_at else today
     last = date.fromisoformat(find.ends_at[:10]) if find.ends_at else first
-    if "T" in find.starts_at:
-        when = clock_time(find.starts_at)
+    starts = find.starts_at or ""
+    if not starts:
+        when = "any time"
+    elif "T" in starts:
+        when = clock_time(starts)
     elif last > first:
         when = f"until {last:%a} {last.day} {last:%b}" if first <= today else "all day"
     else:
         when = "all day"
-    who = (
-        happening.host(find.url)
-        if find.kind == happening.WEB and find.url
-        else happening.source_name(find.source)
-    )
+    who = happening.listed_by(find.kind, find.source, find.url)
     return {
         "when": when,
-        "at": find.starts_at[11:16] if "T" in find.starts_at else "",
+        "at": starts[11:16] if "T" in starts else "",
         "title": find.title,
         "url": find.url if find.url and find.url.startswith(("https://", "http://")) else None,
         "where": find.venue or find.address,
@@ -1560,6 +1602,8 @@ def happening_days(
     own words are on its page."""
     days: dict[date, list[dict[str, Any]]] = {}
     for find in found:
+        if find.starts_at is None:
+            continue  # a place to go any time is on no day
         day = max(date.fromisoformat(find.starts_at[:10]), today)
         row = find_row(find, today)
         row["source_words"] = None if kid else f"listed by {row['who']}"
@@ -1770,7 +1814,7 @@ def happening_state(settings: Any) -> str:
     if ticketmaster_available(settings):
         parts.append("Ticketmaster")
     if happening_search_available(settings):
-        parts.append("a weekly search")
+        parts.append("her scouting each evening")
     if not parts:
         return "Nothing read yet: turn on web lookups, or add a calendar or a Ticketmaster key."
     listed = ", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0]

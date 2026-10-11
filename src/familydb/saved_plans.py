@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from familydb.base.dates import parse_datetime
 from familydb.integrations.google_calendar import CalendarChanges, CalendarEvent
 from familydb.store import plans
 from familydb.store.plans import Plan
@@ -26,12 +27,9 @@ def as_event(plan: Plan, tz: ZoneInfo) -> CalendarEvent:
         start: datetime | date = first
         end: datetime | date = max(first, last) + timedelta(days=1)  # exclusive, as Google's
     else:
-        start = datetime.fromisoformat(plan.start).astimezone(tz)
-        end = (
-            datetime.fromisoformat(plan.end).astimezone(tz)
-            if plan.end
-            else start + timedelta(hours=2)
-        )
+        # The tools store a time with its offset; one without (seeded by hand) is wall time.
+        start = parse_datetime(plan.start, tz)
+        end = parse_datetime(plan.end, tz) if plan.end else start + timedelta(hours=2)
     return CalendarEvent(
         id=plan.google_event_id or f"plan-{plan.id}",
         title=plan.title,

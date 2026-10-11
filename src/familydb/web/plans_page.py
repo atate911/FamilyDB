@@ -173,11 +173,17 @@ def happening_page() -> str:
     )
 
 
+def _on(found: find_store.Find) -> str:
+    """Its day for the box's scope, or any time."""
+    return found.starts_at[:10] if found.starts_at else "any time"
+
+
 @bp.get(f"/soon/<int(max={MAX_ID}):find_id>")
 def find(find_id: int) -> str:
-    """A happening (docs/INTERFACE.md section 5): what a source listed near home, when and where,
-    the listing in its own words; Save it (`add_idea`) and Put it on the calendar
-    (`create_event`) as forms, for whoever may change things. A kid sees it without its source."""
+    """A happening (docs/INTERFACE.md section 5): what a source listed near home, or a place she
+    found to go any time, when and where, the listing in its own words; Save it (`add_idea`),
+    Not for us (`pass_find`) and Put it on the calendar (`create_event`) as forms, for whoever
+    may change things, while it is hers to offer. A kid sees it without its source."""
     app = familydb_app()
     today = app.clock.today()
     visitor = auth.visitor()
@@ -193,22 +199,25 @@ def find(find_id: int) -> str:
             prompt=chat.ITEM_PROMPT,
             scope={
                 "label": found.title,
-                "text": f"About {found.title} ({found.starts_at[:10]}), listed near home:",
+                "text": f"About {found.title} ({_on(found)}), listed near home:",
             },
         )
     box["starters"] = views.find_starters(found, today)
     row = views.find_row(found, today)
-    first = found.starts_at[:10]
+    starts = found.starts_at or ""
+    first = starts[:10]
     last = found.ends_at[:10] if found.ends_at else first
     return answer(
         "find.html",
         find=found,
         row=row,
         state=views.find_state(found, today),
-        over=last < today.isoformat(),
+        over=bool(first) and last < today.isoformat(),
+        offered=found.state in find_store.OFFERED,
+        save=views.find_save_fields(found),
         kid=not visitor.may("browse"),
         first=first,
-        time=found.starts_at[11:16] if "T" in found.starts_at else "",
+        time=starts[11:16] if "T" in starts else "",
         last=last if last != first else "",
         where=", ".join(part for part in (found.venue, found.address) if part),
         on_google=calendar_available(app.settings),

@@ -25,7 +25,7 @@ from familydb.base.dates import utc_iso
 from familydb.memory import line_of
 from familydb.store import ideas, members, memories, messages, outcomes, plans, suggestions
 from familydb.suggest.compose import LOVED, day_summaries, order_candidates
-from familydb.suggest.types import Candidate, SuggestInput, clock
+from familydb.suggest.types import SuggestInput, clock
 from familydb.tools import ToolContext
 
 # Characters per section. Their sum is the most a dossier is, firm memories aside.
@@ -60,6 +60,7 @@ class Option:
     title: str
     idea_id: int | None = None
     url: str | None = None
+    find_id: int | None = None  # the stored find, for one the sources list
     days: tuple[str, ...] = ()  # the days it fits, YYYY-MM-DD; empty when any day of the window
     done_before: bool = False
 
@@ -132,22 +133,6 @@ def _days(a) -> list[str]:
     return lines
 
 
-def _checks(candidate: Candidate) -> str:
-    checks = candidate.checks
-    said = []
-    if checks.hours:
-        said.append(f"hours {checks.hours}")
-    elif checks.open != "unknown":
-        said.append(checks.open)
-    if checks.travel_minutes is not None:
-        said.append(f"about {checks.travel_minutes} min away")
-    if checks.booking not in ("not_needed", "unknown"):
-        said.append(f"booking {checks.booking}")
-    if checks.weather != "unknown":
-        said.append(f"weather {checks.weather}")
-    return "; ".join(said)
-
-
 def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
     """The dossier for one question, from the engine's whole assessment of it."""
     conn = ctx.conn
@@ -191,13 +176,11 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
             done_before=bool(idea and idea.times_done),
         )
         cites.add(ref)
+        # The reasons already say the hours, the drive, the booking and the weather that matter.
         reasons = ([LOVED] if candidate.idea_id in a.loved else []) + candidate.reasons
-        line = f"{ref} {candidate.verdict}: " + "; ".join(reasons)
-        checked = _checks(candidate)
-        if checked:
-            line += f" [{checked}]"
+        line = f"{ref} {candidate.verdict}" + (": " + "; ".join(reasons) if reasons else "")
         if candidate.fits_days:
-            line += f" fits {', '.join(candidate.fits_days)}"
+            line += f" (fits {', '.join(candidate.fits_days)})"
         if idea is not None:
             line += f"\n  {render_idea_line(idea)}"
         last = latest.get(candidate.idea_id)
@@ -217,12 +200,28 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
             kind="find",
             title=find.title,
             url=find.url or None,
-            days=(find.starts[:10],) if find.starts else (),
+            find_id=find.find_id,
+            days=tuple(find.fits_days) or ((find.starts[:10],) if find.starts else ()),
         )
         cites.add(ref)
-        parts = (find.kind, find.dates, find.hours, find.address, find.source, find.summary)
+        # Checked as the ideas are (suggest/pocket.py): its verdict and reasons are code's.
+        line = f"{ref} {find.verdict or 'not checked'}"
+        line += (": " + "; ".join(find.reasons)) if find.reasons else ""
+        if find.fits_days:
+            line += f" (fits {', '.join(find.fits_days)})"
+        whom = ", ".join(find.for_whom)
+        parts = (
+            find.kind,
+            find.dates,
+            find.hours,
+            find.address,
+            f"for {whom}" if whom else None,
+            find.why,
+            find.source,
+            find.summary,
+        )
         said = " · ".join(part for part in parts if part)
-        option_lines.append(f"{ref} {find.title}: {said}")
+        option_lines.append(f"{line}\n  {find.title}: {said}")
     sections["options"] = option_lines
 
     ruled_out = [c for c in ordered if c.verdict == "ruled_out"][:RULED_OUT_SHOWN]

@@ -41,7 +41,10 @@ DONE = {
     "turn_away": ("Noted the request", "wish_id"),
     "save_place": ("Saved place details", "idea_id"),
     "skip_place": ("Marked lookup skipped", "idea_id"),
+    "save_find": ("Saved details of a find", "find_id"),
+    "skip_find": ("Marked a find's lookup skipped", "find_id"),
     "look_up_now": ("Asked for a lookup", "idea_id"),
+    "pass_find": ("Passed on find", "find_id"),
     "shopping_list": ("Changed a list", "list_id"),
     "undo": ("Took the last change back", "id"),
 }

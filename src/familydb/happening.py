@@ -26,13 +26,17 @@ NAME = "What's going down?"
 HORIZON_DAYS = 28
 # The model calls made for it, recorded under these kinds (agent/gateway.KINDS) and held to
 # `happening_budget` a month together.
-KINDS = ("scout", "find_feeds")
+KINDS = ("scout", "find_feeds", "fill_find", "curate")
 
 FEED = "feed"
 TICKETMASTER = "ticketmaster"
 WEB = "web"
+# Found while answering somebody who asked (docs/FINDS.md: searching on request).
+REQUEST = "request"
+# Kinds a search found, named by the page they were found on rather than a source.
+SEARCHED = (WEB, REQUEST)
 # The source names kept in find_sources: one per calendar, one for Ticketmaster, one for the
-# weekly search, and one per home area for the lookup that proposes calendars.
+# scouting each evening, and one per home area for the lookup that proposes calendars.
 FEED_PREFIX = "feed:"
 TICKETMASTER_SOURCE = "ticketmaster"
 WEB_SOURCE = "web:near-home"
@@ -69,6 +73,13 @@ def host(url: str) -> str:
     return name.removeprefix("www.")
 
 
+def listed_by(kind: str, source: str, url: str | None) -> str:
+    """Who listed a find, as the pages say it: the site a search found it on, else its source."""
+    if kind in SEARCHED and url:
+        return host(url)
+    return source_name(source)
+
+
 def source_name(source: str) -> str:
     """A source as the pages say it."""
     kind = source_kind(source)
@@ -78,7 +89,7 @@ def source_name(source: str) -> str:
         return "Ticketmaster"
     if kind == "proposals":
         return "looking for calendars near home"
-    return "the weekly search"
+    return "her scouting"
 
 
 def spent_this_month(conn: sqlite3.Connection, settings: Settings, now: datetime) -> float:

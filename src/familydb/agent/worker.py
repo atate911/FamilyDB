@@ -14,7 +14,7 @@ from familydb.base.clock import Clock
 from familydb.base.config import Settings
 from familydb.tools import ToolContext, ToolRegistry
 
-WorkerKind = Literal["enrich", "discover", "places", "scout", "find_feeds"]
+WorkerKind = Literal["enrich", "discover", "scout", "find_feeds", "fill_find", "curate"]
 
 
 @dataclass
@@ -59,6 +59,7 @@ def run_worker_turn(
     provider: Provider | None = None,
     fallback: Provider | None = None,
     idea_id: int | None = None,
+    find_id: int | None = None,
     about: str | None = None,
 ) -> WorkerTurn:
     """One worker turn; `message_id` ties the audit rows to a chat message."""
@@ -70,6 +71,7 @@ def run_worker_turn(
         message_id=message_id,
         geocoder=geocoder,
         worker_idea_id=idea_id,
+        worker_find_id=find_id,
         about=about,
         source="worker",
     )

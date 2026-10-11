@@ -1,15 +1,17 @@
 """What is on near home, kept up to date (familydb/happening.py): the calendars the family reads,
-Ticketmaster, a weekly web search, and a lookup every few weeks for calendars to offer them.
+Ticketmaster, scouting each night, and a lookup every few weeks for calendars to offer them.
 
 Hourly, and each source only when it is due: a calendar and Ticketmaster once a day (`PULL_GAP`),
-the search once a week (`SEARCH_GAP`), the lookup for calendars every `happening_refind_days`
-and at once when the home area changes. An hour after a calendar is pasted it has been read; an
-idle tick reads the list of sources and returns.
+scouting once each evening after the evening's lookups (`lookup_hour`), the lookup for calendars
+every `happening_refind_days` and at once when the home area changes. An hour after a calendar
+is pasted it has been read; an idle tick reads the list of sources and returns.
 
-Reading a calendar or Ticketmaster is code, with no model, and costs nothing. The search and the
+Reading a calendar or Ticketmaster is code, with no model, and costs nothing. Scouting and the
 calendar lookup are worker turns (agent/gateway.KINDS `scout` and `find_feeds`), made only while
 web lookups are on, home is set, a worker key is there, and both the day's limit and the job's
-own monthly budget (`happening_budget`) have room. No transaction is open around a turn.
+own monthly budget (`happening_budget`) have room. Scouting is rationed besides: a night's share
+is what is left of the month over the nights left, and it runs only when a scouting turn, as
+they have cost lately, fits it (`affordable`). No transaction is open around a turn.
 
 A source that cannot be read is retried the next day, and told to admins once it has failed
 three days running (alerts `happening`), forgotten when it reads again. Calendars the lookup
@@ -28,24 +30,38 @@ from typing import Any
 from familydb import alerts, happening
 from familydb.agent import gateway, spending
 from familydb.agent.loop import MessagesAPI
-from familydb.agent.worker import home_location, run_worker_turn
 from familydb.availability import (
+    calendar_available,
     happening_available,
     happening_search_available,
     ticketmaster_available,
+    weather_available,
 )
-from familydb.base.dates import utc_iso
-from familydb.base.errors import AgentError
+from familydb.base.dates import last_hour_passed, utc_iso
 from familydb.integrations.events import FoundEvent
 from familydb.integrations.ical import FeedAPI, FeedError, IcalFeeds, parse_feed
 from familydb.integrations.ticketmaster import Ticketmaster, TicketmasterAPI
+from familydb.scouting import fill, judging, near_home, search
+from familydb.scouting.brief import brief
+from familydb.scouting.reach import Reach
+from familydb.store import calls, memories
 from familydb.store import finds as store
+from familydb.store import members as member_store
 from familydb.store.db import transaction
+from familydb.tools import ToolContext
 
 log = logging.getLogger(__name__)
 
 PULL_GAP = timedelta(hours=23)
-SEARCH_GAP = timedelta(days=6, hours=12)
+# A calendar lookup that failed is tried again after this long.
+RETRY_GAP = timedelta(days=6, hours=12)
+# What each of an evening's calls is taken to cost until some have been measured, and how far
+# back they are measured.
+ESTIMATES = {"scout": 0.05, "fill_find": 0.03, "curate": 0.01}
+MEASURED_DAYS = 30
+# What an evening fills in at most, and how much of the pocket is checked and judged.
+FILLS_AN_EVENING = 3
+POCKET_MOST = 30
 SOURCE_FAILURES = 3
 KEEP_PAST_DAYS = 3
 # How far ahead a proposed calendar must list something to be offered.
@@ -53,7 +69,7 @@ PROPOSAL_DAYS = 60
 # A worker turn's cost is held before it is made and counted once it is recorded; this is the
 # room the budget must have for one more, so the last one of a month does not overrun it.
 CALL_ALLOWANCE = 0.12
-COUNTS = ("read", "failed", "added", "updated", "gone", "searched", "proposed")
+COUNTS = ("read", "failed", "added", "updated", "gone", "searched", "proposed", "filled", "judged")
 
 
 def configured_sources(settings: Any) -> dict[str, str]:
@@ -90,8 +106,34 @@ def _look_due(settings: Any, last: dict[str, store.FindSource], now: datetime) -
         return False
     look = last.get(happening.proposals_source(settings.home_area))
     if look is not None and not look.ok:
-        return due(look, SEARCH_GAP, now)
+        return due(look, RETRY_GAP, now)
     return due(look, timedelta(days=settings.happening_refind_days), now)
+
+
+def scout_due(settings: Any, last: store.FindSource | None, now: datetime) -> bool:
+    """Not yet scouted since this evening's lookups began (`lookup_hour`), however it went."""
+    checked = _when(last.checked_at) if last else None
+    return checked is None or checked < last_hour_passed(now, settings.lookup_hour, settings.tzinfo)
+
+
+def evening_room(conn: sqlite3.Connection, settings: Any, now: datetime) -> float:
+    """What is left to spend this evening: the evening's share of what was left of the month's
+    budget when it began (over the nights left, tonight among them), less what it has spent."""
+    evening = utc_iso(last_hour_passed(now, settings.lookup_hour, settings.tzinfo))
+    tonight = calls.spent_on(conn, happening.KINDS, since=evening)
+    local = now.astimezone(settings.tzinfo).date()
+    month_end = (local.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    before = happening.spent_this_month(conn, settings, now) - tonight
+    share = max(0.0, settings.happening_budget - before) / ((month_end - local).days + 1)
+    return share - tonight
+
+
+def affordable(conn: sqlite3.Connection, settings: Any, now: datetime, kind: str = "scout") -> bool:
+    """Whether one more call of this kind, at what it has cost lately, fits the evening's room."""
+    since = utc_iso(now - timedelta(days=MEASURED_DAYS))
+    turns, average = calls.average_turn_cost(conn, kind, since=since)
+    likely = average if turns else ESTIMATES[kind]
+    return likely <= evening_room(conn, settings, now)
 
 
 def within_budget(conn: sqlite3.Connection, settings: Any, now: datetime) -> bool:
@@ -155,124 +197,99 @@ def _keep(
     return added, updated, dropped
 
 
-def render_scout_request(settings: Any, start: date, end: date) -> str:
-    """The weekly search, in the discovery worker's terms: the window and the home area, and
-    nothing about the family."""
-    return "\n".join(
-        [
-            "Find time-bound things a family could go to near home.",
-            f"Window: {start:%A %d %B} to {end:%A %d %B %Y}.",
-            f"Home area: {settings.home_area or 'not set'}.",
-        ]
-    )
-
-
-def render_feeds_request(settings: Any, known: list[str], stopped: list[str]) -> str:
-    lines = [
-        "Find public event calendars near home that a family could subscribe to.",
-        f"Home area: {settings.home_area}.",
-    ]
-    if known:
-        lines.append("Already known, do not report:")
-        lines.extend(f"- {url}" for url in known)
-    if stopped:
-        lines.append("Stopped answering; another address for the same calendar is welcome:")
-        lines.extend(f"- {url}" for url in stopped)
-    return "\n".join(lines)
-
-
-def scout_events(
-    found: list[dict[str, Any]], *, tz: Any, start: date, end: date
-) -> list[FoundEvent]:
-    """The search's finds that say when they start, inside the days searched."""
-    events = []
-    for one in found:
-        starts_text = one.get("starts")
-        if not starts_text:
-            continue
-        try:
-            if "T" in starts_text:
-                starts: datetime | date = datetime.fromisoformat(starts_text).replace(tzinfo=tz)
-            else:
-                starts = date.fromisoformat(starts_text)
-        except ValueError:
-            continue
-        day = starts.date() if isinstance(starts, datetime) else starts
-        if not start <= day <= end:
-            continue
-        summary = one.get("summary") or ""
-        if one.get("dates"):
-            summary = f"{summary} ({one['dates']})".strip()
-        events.append(
-            FoundEvent(
-                external_id=one["url"],
-                title=one.get("title") or one["url"],
-                starts=starts,
-                all_day=not isinstance(starts, datetime),
-                url=one["url"],
-                summary=summary or None,
-            )
-        )
-    return events
-
-
-def _ask(app: Any, conn: sqlite3.Connection, kind: str, request: str, about: str, api: Any) -> Any:
-    """One worker turn; None when it did not hand back."""
-    try:
-        turn = run_worker_turn(
-            kind=kind,
-            api=api,
-            settings=app.settings,
-            clock=app.clock,
-            registry=app.registry,
-            conn=conn,
-            request=request,
-            user_location=home_location(app.settings),
-            about=about,
-        )
-    except AgentError as exc:
-        log.warning("%s turn failed: %s", kind, exc)
-        return str(exc)
-    if turn.result.status != "ok" or not turn.handed_back():
-        return turn.result.error or turn.result.status or "ended without handing back"
-    return turn
-
-
 def search_web(
     app: Any, conn: sqlite3.Connection, *, start: date, end: date, now: datetime, api: Any
 ) -> tuple[int, int]:
-    """The weekly search near home. Returns (finds kept, 1 when it ran)."""
-    settings = app.settings
-    turn = _ask(
-        app, conn, "scout", render_scout_request(settings, start, end), "what is on near home", api
-    )
-    if isinstance(turn, str):
-        _answered(conn, happening.WEB_SOURCE, happening.WEB, ok=False, note=turn, found=0, now=now)
+    """The night's scouting, on the theme of the day. Returns (new finds kept, 1 when it ran)."""
+    theme = near_home.theme_for(start)
+    found = near_home.scout(Reach.of_app(app, conn, api), start=start, end=end, theme=theme)
+    if isinstance(found, str):
+        _answered(conn, happening.WEB_SOURCE, happening.WEB, ok=False, note=found, found=0, now=now)
         return 0, 1
-    events = scout_events(
-        list(turn.ctx.scratch.get("finds", [])), tz=settings.tzinfo, start=start, end=end
-    )
-    added, updated, _ = _keep(
-        conn,
-        happening.WEB_SOURCE,
-        happening.WEB,
-        events,
-        tz=settings.tzinfo,
-        start=start,
-        end=end,
-        now=now,
-        gone=False,  # a week's search finds what it finds; last week's are still on
-    )
+    keeping = [new for new in (search.as_new(one) for one in found) if new is not None]
+    with transaction(conn):
+        _, added = store.keep(conn, happening.WEB_SOURCE, happening.WEB, keeping, now=utc_iso(now))
     _answered(
         conn,
         happening.WEB_SOURCE,
         happening.WEB,
         ok=True,
-        note=f"{len(events)} dated",
-        found=len(events),
+        note=f"{len(keeping)} found, on {theme.split(':')[0]}",
+        found=len(keeping),
         now=now,
     )
-    return added + updated, 1
+    return added, 1
+
+
+def _room(app: Any, conn: sqlite3.Connection, kind: str) -> bool:
+    now = app.clock.now()
+    return within_budget(conn, app.settings, now) and affordable(conn, app.settings, now, kind)
+
+
+def fill_finds(app: Any, conn: sqlite3.Connection, *, today: date, api: Any) -> int:
+    """Fill in the newest finds nobody has looked up, a few an evening, while it has room.
+    Returns how many were filled in or found to have nothing more."""
+    reach = Reach.of_app(app, conn, api)
+    done = 0
+    for found in store.to_fill(conn, today=today, limit=FILLS_AN_EVENING):
+        if not _room(app, conn, "fill_find"):
+            break
+        outcome = fill.fill_find(reach, found)
+        if outcome == "deferred":
+            break
+        done += outcome in ("done", "skipped")
+    return done
+
+
+def checked_pocket(app: Any, conn: sqlite3.Connection, *, today: date) -> list[Any]:
+    """The pocket as checked by code over the next weeks (suggest/pocket.py), against the
+    family's calendar, the forecast and their firm rules; what is ruled out is left out."""
+    from familydb.suggest.context import build_context
+    from familydb.suggest.listed import to_web_find
+    from familydb.suggest.pocket import check_finds
+    from familydb.suggest.rules import fold
+    from familydb.suggest.types import Constraints
+
+    settings = app.settings
+    ctx = ToolContext(
+        conn=conn,
+        settings=settings,
+        clock=app.clock,
+        calendar=app.calendar if calendar_available(settings) else None,
+        weather=app.weather if weather_available(settings) else None,
+        geocoder=app.geocoder,
+        source="job",
+    )
+    context = build_context(ctx, (today, today + timedelta(days=happening.HORIZON_DAYS)))
+    people = member_store.list_all(conn)
+    held = fold(Constraints(), memories.held(conn, today=today), people, None)
+    found = [to_web_find(one) for one in store.pocket(conn, today=today, limit=POCKET_MOST)]
+    checked = check_finds(conn, found, context, held, settings, app.clock, people=people)
+    return [one for one in checked if one.verdict != "ruled_out"]
+
+
+def judge_pocket(app: Any, conn: sqlite3.Connection, *, today: date, api: Any) -> int:
+    """Judge the pocket when something in it is new or newly filled in, while the evening has
+    room: which finds to put forward, and when. Returns how many were recommended."""
+    if not store.judging_due(conn, today=today) or not _room(app, conn, "curate"):
+        return 0
+    looked_at = [one.id for one in store.pocket(conn, today=today, limit=POCKET_MOST)]
+    chosen: dict[int, dict[str, str | None]] = {}
+    try:
+        pocket = checked_pocket(app, conn, today=today)
+        if pocket:
+            about = brief(conn, app.settings, today=today).text
+            said = judging.judge(Reach.of_app(app, conn, api), pocket, about)
+            if isinstance(said, str):
+                log.warning("the pocket was not judged: %s", said)
+                return 0
+            chosen = said
+    except Exception:  # the calendars and Ticketmaster were read; tomorrow evening tries again
+        log.exception("the pocket could not be judged")
+        return 0
+    with transaction(conn):
+        store.judged(conn, looked_at, chosen, now=utc_iso(app.clock.now()))
+    return len(chosen)
 
 
 def _readable(feeds: FeedAPI, url: str, *, tz: Any, today: date) -> int | None:
@@ -302,18 +319,10 @@ def propose_feeds(
         if s.source.startswith(happening.FEED_PREFIX) and s.failures >= SOURCE_FAILURES
     ]
     known = sorted(set(before) | set(reading))
-    turn = _ask(
-        app,
-        conn,
-        "find_feeds",
-        render_feeds_request(settings, known, stopped),
-        "event calendars near home",
-        api,
-    )
-    if isinstance(turn, str):
-        _answered(conn, source, "proposals", ok=False, note=turn, found=0, now=now)
+    handed = near_home.look_for_calendars(Reach.of_app(app, conn, api), known, stopped)
+    if isinstance(handed, str):
+        _answered(conn, source, "proposals", ok=False, note=handed, found=0, now=now)
         return 0
-    handed = {one["url"]: one for one in turn.ctx.scratch.get("feeds", [])}
     readable: list[store.Readable] = []
     for url, one in before.items():  # those offered before, read again to see they still are
         events = _readable(feeds, url, tz=tz, today=today)
@@ -444,16 +453,21 @@ def run_happening(
 
         if happening.WEB_SOURCE in wanted:
             look_due = _look_due(settings, last, now)
-            search_due = due(last.get(happening.WEB_SOURCE), SEARCH_GAP, now)
+            search_due = scout_due(settings, last.get(happening.WEB_SOURCE), now)
             if (look_due or search_due) and app.can_ask("worker", api=api, kind="scout"):
                 if look_due and within_budget(conn, settings, now):
                     counts["proposed"] = propose_feeds(
                         app, conn, feeds, today=today, now=now, api=api
                     )
                 if search_due and within_budget(conn, settings, now):
-                    kept, ran = search_web(app, conn, start=start, end=end, now=now, api=api)
-                    counts["added"] += kept
-                    counts["searched"] += ran
+                    if affordable(conn, settings, now):
+                        kept, ran = search_web(app, conn, start=start, end=end, now=now, api=api)
+                        counts["added"] += kept
+                        counts["searched"] += ran
+                    # Then, while the evening has room, a few finds filled in and the pocket
+                    # judged (docs/FINDS.md, "A night").
+                    counts["filled"] = fill_finds(app, conn, today=today, api=api)
+                    counts["judged"] = judge_pocket(app, conn, today=today, api=api)
 
         if counts["read"] or counts["searched"]:  # once a day, with the day's reads
             with transaction(conn):

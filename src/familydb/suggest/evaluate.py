@@ -1,8 +1,10 @@
-"""Stage: check each shortlisted idea against the places cache and the day's free time."""
+"""Stage: check each shortlisted idea against the places cache and the day's free time. Finds go
+through it too (suggest/pocket.py), as stand-in ideas whose place and hours it is handed."""
 
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from datetime import date, datetime
 
 from familydb.base.clock import Clock
@@ -10,6 +12,7 @@ from familydb.base.config import Settings
 from familydb.hours import checked_days_ago, format_ranges, is_stale, open_on
 from familydb.integrations.geocode import estimate_travel
 from familydb.store import places
+from familydb.store.ideas import Idea, needs_lookup
 from familydb.store.places import Place
 from familydb.suggest.types import (
     Candidate,
@@ -84,9 +87,15 @@ def _hours_check(
     checks: Checks,
     reasons: list[str],
     travel: int | None,
+    held: bool = True,
 ) -> tuple[list, bool, bool]:
-    """(fitting days after the hours check, hard_fail, soft)."""
+    """(fitting days after the hours check, hard_fail, soft). `held`: whether it has hours to
+    be held to at all."""
     fits = list(item.fits_days)
+    if not held and (place is None or not place.hours):
+        # A stay-at-home idea, or a find on all day, has no hours to be held to; nothing is
+        # unknown about it.
+        return fits, False, False
     if place is None or not place.hours:
         checks.open = "unknown"
         if item.idea.enrichment == "done":
@@ -98,6 +107,7 @@ def _hours_check(
     partial = False
     soft = False
     hours_text = None
+    hours_day: date | None = None  # the first day the hours are known for
     today_text = None
     for day in fits:
         status, ranges = open_on(place, day)
@@ -123,7 +133,7 @@ def _hours_check(
             else:
                 continue
         if hours_text is None:
-            hours_text = format_ranges(ranges)
+            hours_text, hours_day = format_ranges(ranges), day
         if day == context.today and today_text is None:
             usable = [(a, b) for a, b in stretches if b - a >= need]
             if usable:
@@ -141,8 +151,8 @@ def _hours_check(
     checks.hours = hours_text
     if today_text and open_days[0] == context.today:
         reasons.append(today_text)
-    elif hours_text:
-        reasons.append(f"open {open_days[0]:%A} {hours_text}")
+    elif hours_text and hours_day is not None:
+        reasons.append(f"open {hours_day:%A} {hours_text}")
     if partial:
         soft = True
         reasons.append("open only part of the free time")
@@ -191,27 +201,39 @@ def evaluate(
     constraints: Constraints,
     settings: Settings,
     clock: Clock,
+    *,
+    place_of: Callable[[Idea], Place | None] | None = None,
+    held_to_hours: Callable[[Idea], bool] = needs_lookup,
+    stale: bool = True,
 ) -> tuple[list[Candidate], list[int]]:
-    """Verdicts for the shortlist, and the ideas whose place details are stale."""
+    """Verdicts for the shortlist, and the ideas whose place details are stale. For finds
+    (suggest/pocket.py): `place_of` hands each its place rather than the cache, `held_to_hours`
+    says which have hours to be held to, and without `stale` nothing is looked at for its age."""
     now: datetime = clock.now()
     candidates: list[Candidate] = []
     stale_ids: list[int] = []
     for item in kept:
         idea = item.idea
-        place = places.get(conn, idea.place_id) if idea.place_id else None
-        checks = Checks(weather=item.weather)
-        # A disappointment last time is said first, and it is possible at best.
-        reasons: list[str] = [item.caveat] if item.caveat else []
+        if place_of is not None:
+            place = place_of(idea)
+        else:
+            place = places.get(conn, idea.place_id) if idea.place_id else None
+        checks = Checks(weather=item.weather, resting=item.resting)
+        # A matter of taste the shortlist found (done lately, a disappointment, rain) is said
+        # first, and it is possible at best.
+        reasons: list[str] = [*item.caveats, *item.notes]
         hard_fail = False
         # What rules it out, said first: only the first three reasons are shown (compose.py).
         out: list[str] = []
-        soft = item.caveat is not None
+        soft = bool(item.caveats)
         fits = list(item.fits_days)
         travel = travel_minutes(place, context, settings)
 
         if context.window is not None:
             said = len(reasons)
-            fits, hard, soft_hours = _hours_check(item, place, context, checks, reasons, travel)
+            fits, hard, soft_hours = _hours_check(
+                item, place, context, checks, reasons, travel, held_to_hours(idea)
+            )
             if hard:
                 out.extend(reasons[said:])
             hard_fail = hard_fail or hard
@@ -219,7 +241,7 @@ def evaluate(
             # Straight after the hours, so the reply's three reasons keep it.
             soft = _daylight_check(item, place, fits, context, reasons, travel) or soft
 
-        if place is not None and is_stale(place, now, settings.place_stale_days):
+        if stale and place is not None and is_stale(place, now, settings.place_stale_days):
             checks.stale = True
             soft = True
             days = checked_days_ago(place, now)

@@ -451,11 +451,17 @@ def debug_prompt(
     """
     from familydb.agent import gateway
     from familydb.agent.worker import worker_turn
-    from familydb.jobs.enrich import render_enrich_request
     from familydb.jobs.weekend_digest import digest_channel
+    from familydb.scouting.fill import render_enrich_request
     from familydb.store import places
 
-    if kind not in gateway.KINDS or kind in ("discover", "places", "scout", "find_feeds"):
+    if kind not in gateway.KINDS or kind in (
+        "discover",
+        "scout",
+        "find_feeds",
+        "fill_find",
+        "curate",
+    ):
         typer.echo("--kind is one of chat, digest, retry or enrich", err=True)
         raise typer.Exit(code=2)
     application = build_app()
@@ -522,6 +528,7 @@ def debug_cost(
         rows = calls.usage_since(conn, since=since)
         kinds = calls.usage_by_kind(conn, since=since)
         measured = calls.sections_since(conn, since=since)
+        turns, warm = calls.warm_starts(conn, "chat", since=since)
 
     system_tokens = sum(len(block.text) for block in blocks) // 4
     tool_tokens = len(_json.dumps([t.schema for t in tools], ensure_ascii=False)) // 4
@@ -577,6 +584,11 @@ def debug_cost(
     served = total_in + cached + sum(r["cache_write"] for r in rows)
     share = (cached / served * 100) if served else 0.0
     typer.echo(f"  {share:.0f}% of input tokens came from the cache at a tenth of the price.")
+    if turns:
+        typer.echo(
+            f"  {warm / turns * 100:.0f}% of {turns:,d} message(s) answered found the prefix still "
+            "cached on their first call; the rest paid for it in full."
+        )
     for kind in gateway.KINDS:
         split = compose.breakdown(row for row in measured if row["kind"] == kind)
         if not split:
@@ -588,6 +600,67 @@ def debug_cost(
         )
         for part in split:
             typer.echo(f"  {part['label']:<42} ~{part['tokens']:>7,d} tokens  {part['share']:>3d}%")
+
+
+@debug_app.command("suggestions")
+def debug_suggestions(
+    days: int = typer.Option(90, "--days", help="How far back to look."),
+) -> None:
+    """What came of her suggestions: which the family planned, from where, and how it went."""
+    from familydb.suggest import taken
+
+    application = build_app()
+    with closing(_ready(application)) as conn:
+        since = utc_iso(application.clock.now() - timedelta(days=days))
+        found = taken.report(conn, since=since)
+    if not found.asked:
+        typer.echo(f"No suggestions in the last {days} days.")
+        _what_she_found(found)
+        return
+    typer.echo(
+        f"{found.asked:,d} suggestion{'' if found.asked == 1 else 's'} in the last {days} days, "
+        f"{found.chosen:,d} with picks from the stronger call; {found.led_to_plan:,d} led to a "
+        f"plan within {taken.ATTRIBUTE_DAYS} days ({found.take_rate}%)."
+    )
+    if found.unoffered:
+        typer.echo(f"{found.unoffered:,d} plan(s) were made that no suggestion had offered.")
+    if found.choosing_calls:
+        typer.echo(
+            f"Choosing took {found.choosing_wait:.1f} s a call on average "
+            f"({found.choosing_calls:,d} call{'' if found.choosing_calls == 1 else 's'})."
+        )
+    sources = found.sources()
+    if sources:
+        typer.echo(f"\n  {'what was planned':<30} {'plans':>6} {'rated':>6} {'average':>8}")
+        for one in sources:
+            average = f"{one.average:.1f}/10" if one.average is not None else "-"
+            typer.echo(f"  {one.label:<30} {one.planned:>6,d} {one.rated:>6,d} {average:>8}")
+    against = found.against()
+    if against:
+        typer.echo(
+            "\nPlanned though the engine had ruled it out (a rule that was wrong for them?):"
+        )
+        for one in against:
+            rated = f", rated {one.rating}/10" if one.rating is not None else ""
+            typer.echo(f"  plan #{one.plan_id} {one.title}: {one.reason or 'ruled out'}{rated}")
+    _what_she_found(found)
+
+
+def _what_she_found(found: Any) -> None:
+    """What became of her finds by where they came from, and what scouting cost."""
+    if not found.origins:
+        return
+    typer.echo(
+        f"\n  {'found by':<22} {'found':>6} {'put fwd':>8} {'saved':>6} {'planned':>8} "
+        f"{'passed':>7} {'average':>8}"
+    )
+    for one in found.origins:
+        average = f"{one.average:.1f}/10" if one.average is not None else "-"
+        typer.echo(
+            f"  {one.label:<22} {one.found:>6,d} {one.recommended:>8,d} {one.saved:>6,d} "
+            f"{one.planned:>8,d} {one.passed:>7,d} {average:>8}"
+        )
+    typer.echo(f"Scouting, filling in and judging cost US${found.scouting_cost:.2f}.")
 
 
 @debug_app.command("validate-tools")
@@ -1088,7 +1161,7 @@ def happening_now(
 ) -> None:
     """Read what is on near home now (the running bot does this hourly, each source when due).
 
-    With --now the weekly search and the lookup for calendars run too, within the month's
+    With --now the scouting and the lookup for calendars run too, within the month's
     budget for them."""
     from familydb.jobs.happening import run_happening
 

@@ -147,3 +147,66 @@ def test_a_new_home_area_starts_the_proposals_again(conn: sqlite3.Connection) ->
     assert _propose(conn, "Portland, OR", "z") == (1, 0, 1)
     assert [p.url for p in finds.proposals(conn, "Portland, OR")] == ["z"]
     assert finds.proposals(conn, "Vancouver, WA") == []
+
+
+def _found(**fields) -> finds.NewFind:
+    values = {"title": "Lantern walk", "url": "https://parks.example/lanterns"}
+    values.update(fields)
+    return finds.NewFind(**values)
+
+
+def test_a_place_found_any_time_is_kept_once_by_its_page(conn: sqlite3.Connection) -> None:
+    with transaction(conn):
+        [first], added = finds.keep(
+            conn,
+            "request",
+            "request",
+            [_found(participants=["grown-ups"], why="a quiet night")],
+            now="2026-10-01T00:00:00Z",
+        )
+        assert added == 1 and first.any_time and first.participants == ["grown-ups"]
+        [again], added = finds.keep(
+            conn,
+            "web:near-home",
+            "web",
+            [_found(url="HTTPS://parks.example/lanterns")],
+            now="2026-10-02T00:00:00Z",
+        )
+    assert added == 0 and again.id == first.id and again.last_seen_at == "2026-10-02T00:00:00Z"
+    assert [one.id for one in finds.anytime(conn, limit=5)] == [first.id]
+    # An any-time place is on no day.
+    assert finds.count_upcoming(conn, start=SAT, end=SUN) == 0
+
+
+def test_what_the_family_said_of_a_find_outlasts_its_listing(conn: sqlite3.Connection) -> None:
+    _keep(conn, _show(), _show("b", title="Choir"))
+    choir, shown = finds.upcoming(conn, start=SAT, end=SUN, limit=5)  # by title on one start
+    with transaction(conn):
+        finds.mark_passed(conn, choir.id, by=None, why="  too  late ", now="2026-09-20T00:00:00Z")
+    _keep(conn, _show("b", title="Choir, again"))
+    before = finds.fate(finds.get(conn, shown.id))
+    with transaction(conn):
+        finds.mark_saved(conn, shown.id, idea_id=None, now="2026-09-20T00:00:00Z")
+    # Listed again, the family's word on it stands; passed on, it is not on any more.
+    choir = finds.get(conn, choir.id)
+    assert (choir.title, choir.state, choir.passed_why) == ("Choir, again", "passed", "too late")
+    assert [one.id for one in finds.upcoming(conn, start=SAT, end=SUN, limit=5)] == [shown.id]
+    assert [one.id for one in finds.passed(conn, since="2026-09-01")] == [choir.id]
+    with transaction(conn):
+        finds.restore(conn, shown.id, before)
+    assert finds.get(conn, shown.id).state == "new"
+    # Its source taken off the list, what the family said is kept, gone; the rest goes.
+    with transaction(conn):
+        finds.forget_sources(conn, set())
+    assert [(one.id, one.gone) for one in [finds.get(conn, choir.id)]] == [(choir.id, True)]
+    assert finds.get(conn, shown.id) is None
+
+
+def test_a_find_the_family_spoke_of_is_kept_a_year(conn: sqlite3.Connection) -> None:
+    _keep(conn, _show(starts=datetime(2025, 9, 1, 9, tzinfo=TZ), ends=None))
+    [old] = finds.upcoming(conn, start=date(2025, 9, 1), end=date(2025, 9, 1), limit=1)
+    with transaction(conn):
+        finds.mark_passed(conn, old.id, by=None, why=None, now="2025-09-02T00:00:00Z")
+        finds.keep(conn, "request", "request", [_found()], now="2026-05-01T00:00:00Z")
+        assert finds.prune(conn, before=date(2026, 7, 1)) == 0  # passed, and seen in May
+        assert finds.prune(conn, before=date(2026, 9, 20)) == 2

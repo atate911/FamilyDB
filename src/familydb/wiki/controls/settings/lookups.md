@@ -10,7 +10,6 @@ If looking ideas up is on but there is no key for the model company that does it
 |---|---|---|---|
 | Look ideas up on the web (`web_tools_enabled`) | off in the program; the installer turns it on | Off: the lookups job does not run, no idea is filled in, nothing new is discovered, and `/lookup` says lookups are switched off. With no key for the company that does it, ideas wait and are looked up once a key is added. | on or off |
 | Days before details look old (`place_stale_days`) | 30 | After this, an idea's hours and prices are marked as worth checking again, and looked up again the next time the idea is suggested (within the spending limit). | 1 to 3650 |
-| Look for a place when nothing saved fits (`find_places`) | off | Asked for a kind of place nothing on the list fits ("Thai food, what's open now?"), for now or the next 2 days, one lookup searches nearby and offers a few, said as found on the web. Each search is a small model call within the daily limit, so it stays off until you turn it on, and it needs the row above on. The same ask within the hour is searched once. | on or off |
 
 ## When
 

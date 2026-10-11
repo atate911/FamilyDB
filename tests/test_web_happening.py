@@ -78,6 +78,46 @@ def test_the_page_is_soon_in_the_row_and_beside_list_and_month(page) -> None:
     assert "Nothing near home is read yet." in text
 
 
+def _form(text: str, action: str) -> dict[str, str]:
+    """The tokens of the form posting to `action`."""
+    import re
+
+    form = text[text.index(f'action="{action}"') :]
+    form = form[: form.index("</form>")]
+    return dict(re.findall(r'name="(csrf|once|find_id|title|kind)" value="([^"]*)"', form))
+
+
+def test_something_she_found_is_saved_or_not_for_us_and_says_so(page, conn) -> None:
+    with transaction(conn):
+        finds.keep(
+            conn,
+            "request",
+            "request",
+            [
+                finds.NewFind(title="Rose garden", url="https://parks.example.org/roses"),
+                finds.NewFind(title="Night market", url="https://market.example.org/"),
+            ],
+            now="2026-09-20T12:00:00Z",
+        )
+    roses = page.get("/soon/1").text
+    # A place to go any time, named by the site the search found it on.
+    assert "Any time" in roses and "Listed by parks.example.org." in roses
+    assert "Not for us" in roses
+    saving = _form(roses, "/ideas/new")
+    assert (saving["find_id"], saving["kind"]) == ("1", "outing")
+    assert page.post("/ideas/new", data=saving).status_code == 302
+    saved = finds.get(conn, 1)
+    assert saved.state == "saved" and saved.idea_id is not None
+    after = page.get("/soon/1").text
+    assert f'href="/idea/{saved.idea_id}"' in after and "Not for us" not in after
+
+    market = page.get("/soon/2").text
+    assert page.post("/soon/2/pass", data=_form(market, "/soon/2/pass")).status_code == 302
+    assert finds.get(conn, 2).state == "passed"
+    after = page.get("/soon/2").text
+    assert "Not for you. It will not be offered again." in after and "Save it" not in after
+
+
 def test_a_row_is_one_line_in_the_familys_clock(page, conn) -> None:
     """Each row says when, where, cost and who listed it on one line, the time as the family
     reads it, all-day things before timed ones and timed ones by the clock (6 pm after 10 am);

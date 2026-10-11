@@ -6,7 +6,7 @@ FamilyDB does the following today. Where a row has a workaround, use it.
 
 ### Chat tools check only some roles
 
-In chat, a kid can add an idea, remember something and keep their own wishes and things to do; the family decided that. Code refuses a kid in chat the changes only a parent makes: editing an idea, saying how a plan went, and making, moving or cancelling a plan or calendar event. The assistant is told nothing was changed and to suggest asking a parent. The other tools still do not check who asks, so the assistant's judgment and the kids' daily limits are the brakes on those. See [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions) and [What a sign-in guards](/wiki/security/model#what-a-sign-in-guards).
+In chat, a kid can add an idea, remember something and keep their own wishes and things to do; the family decided that. Code refuses a kid in chat the changes only a parent makes: editing an idea, saying how a plan went, making, moving or cancelling a plan or calendar event, and passing on something the assistant found. The assistant is told nothing was changed and to suggest asking a parent. The other tools still do not check who asks, so the assistant's judgment and the kids' daily limits are the brakes on those. See [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions) and [What a sign-in guards](/wiki/security/model#what-a-sign-in-guards).
 
 ### A forgotten place can still show in kept texts
 

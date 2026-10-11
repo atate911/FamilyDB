@@ -1,21 +1,33 @@
-"""Data shapes shared by the suggestion stages, the `suggest` tool and the log."""
+"""Data shapes shared by the suggestion stages, the `suggest` tool and the log. The shapes of a
+moment (the days, the hours, who is coming, from where, the limits) live in familydb/moment.py,
+below the engine, so the scouting layer can read them too; they are named here as well."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb.integrations.open_meteo import DayForecast
+from familydb.moment import (
+    DAY_END,
+    DAY_START,
+    Constraints,
+    Context,
+    CostLevel,
+    DayBounds,
+    DayContext,
+    Origin,
+    clock,
+)
+from familydb.scouting.types import Found
 from familydb.store.ideas import Idea
 
 Verdict = Literal["good", "possible", "ruled_out"]
 # What a pick is for (suggest/choosing.py): one they know and love, one new to them, one
 # further out.
 Slot = Literal["favorite", "new", "wildcard"]
-CostLevel = Literal[0, 1, 2, 3, 4]
 WindowKind = Literal["now", "today", "this_weekend", "next_weekend", "dates", "someday"]
 
 
@@ -57,7 +69,9 @@ class SuggestInput(BaseModel):
         default="",
         description="What kind of thing, a few words: live jazz, puppet show. Empty for anything.",
     )
-    discover: bool = Field(default=True, description="Also look for time-bound events on the web.")
+    discover: bool = Field(
+        default=True, description="Also search the web; false only for their own list alone."
+    )
     prefer: Literal["new", "favorites"] = Field(
         default="new", description="favorites for what they loved before: 'our usual'."
     )
@@ -73,6 +87,7 @@ class Checks(BaseModel):
     booking: Literal["not_needed", "ok", "too_late", "unknown"] = "not_needed"
     booking_url: str | None = None
     weather: Literal["ok", "poor", "unknown"] = "unknown"
+    resting: bool = False  # done or planned lately (suggest/shortlist.py), said first
 
 
 class Candidate(BaseModel):
@@ -84,19 +99,13 @@ class Candidate(BaseModel):
     checks: Checks = Field(default_factory=Checks)
 
 
-class WebFind(BaseModel):
-    title: str
-    url: str
-    dates: str | None = None
-    summary: str = ""
-    source: str | None = None
-    # When it starts, as code reads it ("YYYY-MM-DD" or "YYYY-MM-DDTHH:MM"), when known.
-    starts: str | None = None
-    # A place found for what nothing saved fits (suggest/places.py): never checked here.
-    kind: str | None = None
-    hours: str | None = None  # as the page writes them
-    address: str | None = None
-    saved_as: int | None = None  # already on the list, as this idea
+class WebFind(Found):
+    """Something found outside the list, as the engine offers it (scouting/types.Found), with
+    what checking it said (suggest/pocket.py)."""
+
+    verdict: Verdict | None = None
+    reasons: list[str] = Field(default_factory=list)
+    fits_days: list[str] = Field(default_factory=list)
 
 
 class DaySummary(BaseModel):
@@ -127,12 +136,17 @@ class Pick(BaseModel):
     day: str | None = None  # YYYY-MM-DD, when it chose one
     idea_id: int | None = None
     url: str | None = None
+    find_id: int | None = None  # the stored find, so her picks on Now can lead to it
 
 
 @dataclass
 class Chosen:
     picks: list[Pick]
     framing: str | None = None
+    # When the stronger call corrected the question's framing (suggest/choosing.py): the
+    # engine's assessment of the corrected question, and why, in its words.
+    reframed: Any = None
+    why: str | None = None
 
 
 class SuggestResult(BaseModel):
@@ -148,95 +162,12 @@ class SuggestResult(BaseModel):
     # a result nobody chose for is what it always was.
     picks: list[Pick] | None = None
     framing: str | None = None
-
-
-@dataclass
-class Constraints:
-    idea_ids: list[int] = field(default_factory=list)
-    participants: list[str] = field(default_factory=list)
-    max_cost_level: int | None = None
-    setting: str | None = None
-    max_travel_minutes: int | None = None
-    max_duration_minutes: int | None = None
-    topic: str = ""  # what the family asked for, for discovery only
-    avoid: list[str] = field(default_factory=list)  # idea tags a firm rule leaves out
-    # The memory behind each limit a firm rule set (suggest/rules.py), by the limit's name, or
-    # "avoid:<tag>": {"max_travel_minutes": 4}.
-    held_by: dict[str, int] = field(default_factory=dict)
-
-    def because(self, name: str) -> str | None:
-        """'m4' when memory 4 set this limit, for a reason to name it."""
-        memory = self.held_by.get(name)
-        return f"m{memory}" if memory is not None else None
-
-
-# Minutes after midnight. Without a time given, a day is counted from 08:00 to 22:00.
-DAY_START = 8 * 60
-DAY_END = 22 * 60
-
-
-def clock(minutes: int) -> str:
-    """Minutes after midnight as HH:MM, midnight at the end of a day as 24:00."""
-    return f"{minutes // 60:02d}:{minutes % 60:02d}" if minutes < 24 * 60 else "24:00"
-
-
-@dataclass(frozen=True)
-class DayBounds:
-    """The part of each day asked about; `first_start` cuts the first day (today, or "now") and
-    `last_end` the last ("the next hours")."""
-
-    start: int = DAY_START
-    end: int = DAY_END
-    first_start: int | None = None
-    last_end: int | None = None
-
-    def for_day(self, day: date, first: date, last: date) -> tuple[int, int]:
-        start = max(self.start, self.first_start or 0) if day == first else self.start
-        end = min(self.end, self.last_end) if day == last and self.last_end else self.end
-        return start, max(start, end)
-
-
-@dataclass
-class DayContext:
-    date: date
-    spans: list[tuple[int, int]]  # free stretches within `bounds`, in minutes after midnight
-    free_known: bool
-    forecast: DayForecast | None
-    commitments: list[str] = field(default_factory=list)
-    bounds: tuple[int, int] = (DAY_START, DAY_END)
-
-    @property
-    def longest(self) -> int:
-        return max((b - a for a, b in self.spans), default=0)
-
-    @property
-    def whole(self) -> bool:
-
-        return self.longest >= self.bounds[1] - self.bounds[0] > 0
-
-
-@dataclass(frozen=True)
-class Origin:
-    """Where travel is estimated from when not at home."""
-
-    lat: float
-    lon: float
-    label: str  # how each reason names it: "Sam's shared location", "the Pearl"
-    detail: str  # how the result names it, with how old a shared location is
-    shared: bool = False  # from a location the phone sent, rather than a place named in words
-
-
-@dataclass
-class Context:
-    window: tuple[date, date] | None
-    days: list[DayContext]
-    season: str
-    today: date
-    skipped: list[str] = field(default_factory=list)
-    origin: Origin | None = None  # None: from home
-
-    def day(self, when: date) -> DayContext | None:
-        return next((d for d in self.days if d.date == when), None)
+    # Why the question was checked in other terms than first framed, when the stronger call
+    # corrected it: the reply should say what was looked at.
+    reframed: str | None = None
+    # The one find to mention after what is theirs (docs/FINDS.md): what the evening's judgement
+    # put forward, else the best checked; by its title, as `web_finds` lists it.
+    new_find: str | None = None
 
 
 @dataclass
@@ -244,5 +175,38 @@ class Shortlisted:
     idea: Idea
     fits_days: list[date]
     weather: Literal["ok", "poor", "unknown"]
-    # Said first and making it possible at best: one disappointing visit ("rated 3/10 last time").
-    caveat: str | None = None
+    # Said first and making it possible at best, a matter of taste rather than a fact: done
+    # lately, disappointing visits, rain or cold, a long day out with something else on the day.
+    caveats: list[str] = field(default_factory=list)
+    # Done or planned lately and resting (shortlist.rest_days): it comes last among the possible,
+    # and her picks made ahead leave it out (familydb/picks.py).
+    resting: bool = False
+    # Said after the caveats and lowering nothing: rain the family said is fine.
+    notes: list[str] = field(default_factory=list)
+
+
+# What this module offers, the moment's shapes among them (familydb/moment.py).
+__all__ = [
+    "DAY_END",
+    "DAY_START",
+    "Candidate",
+    "Checks",
+    "Chosen",
+    "Constraints",
+    "Context",
+    "CostLevel",
+    "DayBounds",
+    "DayContext",
+    "DaySummary",
+    "Origin",
+    "Pick",
+    "Shortlisted",
+    "Slot",
+    "SuggestInput",
+    "SuggestResult",
+    "Verdict",
+    "WebFind",
+    "Window",
+    "WindowKind",
+    "clock",
+]

@@ -237,7 +237,7 @@ SECTIONS: tuple[Section, ...] = (
         "happening",
         happening.NAME,
         "ticket",
-        "What is on near home: the calendars it reads, Ticketmaster, and a weekly search.",
+        "What is on near home: the calendars it reads, Ticketmaster, and her scouting.",
     ),
     Section(
         "personality",
@@ -276,6 +276,14 @@ GROUPS: tuple[Group, ...] = (
                 "Home town or area",
                 "As you would tell someone: a town, and a state or country. When it changes it is "
                 "looked up on the map, and the page says what it found.",
+            ),
+            field(
+                "scouting_areas",
+                "Other places you go",
+                "Neighborhoods or towns you often go to, one a line. When she searches the web "
+                "for things to do, she looks there as well as near home.",
+                unset="none",
+                lines=True,
             ),
             field(
                 "family_tz",
@@ -381,6 +389,12 @@ GROUPS: tuple[Group, ...] = (
                 "Most to spend on choosing suggestions in a month (US$)",
                 "Counted within the daily limit as well. Once it is spent, suggestions are made as "
                 "before until the month turns. 0 chooses nothing.",
+            ),
+            field(
+                "choose_now",
+                "Choose for questions about right now too",
+                '"Anything to do this afternoon?" waits a few seconds more for the stronger '
+                "model, within the same monthly cap. Status shows how long choosing takes.",
             ),
             field(
                 "voice_max_minutes",
@@ -696,14 +710,6 @@ GROUPS: tuple[Group, ...] = (
                 "Days before details look old",
                 "After this, an idea's hours and prices are marked as worth checking again.",
             ),
-            field(
-                "find_places",
-                "Look for a place when nothing saved fits",
-                "Asked for a kind of place nothing on the list fits (\u201cThai food, what\u2019s "
-                "open now?\u201d), for now or the next two days, a lookup searches nearby and "
-                "offers a few, said as found on the web. Each search costs a little, within the "
-                "daily limit; the same ask within the hour is searched once.",
-            ),
         ),
     ),
     Group(
@@ -784,12 +790,13 @@ GROUPS: tuple[Group, ...] = (
         "happening",
         "search",
         "Looking on its own",
-        "Once a week it searches the web for what is on near home over the next four weeks, and "
-        "every so often it looks for calendars near home to offer you above. Both are model calls "
-        "with the web, a few cents each, held to the month's budget here and the daily limit. "
-        "They need web lookups on, under Lookups.",
+        "Each evening she scouts the web for new things you would enjoy near home over the next "
+        "four weeks, on a theme that turns with the week, and every so often she looks for "
+        "calendars near home to offer you above. Both are model calls with the web, a few cents "
+        "each, held to the month's budget here (a night's share of what is left) and the daily "
+        "limit. They need web lookups on, under Lookups.",
         (
-            field("happening_search", "Search the web for what is on"),
+            field("happening_search", "Scout the web each evening"),
             field(
                 "happening_refind_days",
                 "Days between looking for calendars",

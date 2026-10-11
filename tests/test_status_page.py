@@ -88,8 +88,68 @@ def test_it_adds_up_what_the_models_cost(status, conn) -> None:
     text = _flat(status.get("/status"))
     assert "2 calls in 30 days" in text
     assert "44% of what was sent came back from the cache" in text
+    assert "answered found the start of the request" not in text  # no messages answered
     assert "4,800" in text and "claude-opus-5" in text
     assert "gemini-3.8-flash (Google Gemini)" in text  # the last one, and who served it
+
+
+def test_it_says_how_often_a_message_found_the_cache_warm(status, conn) -> None:
+    """Only a turn's first call says whether the cache lasted since the last message."""
+    for iteration, read in ((1, 0), (2, 9000), (1, 9000), (1, 0), (1, 0)):
+        with db.transaction(conn):
+            calls.log_llm_call(
+                conn,
+                message_id=None,
+                iteration=iteration,
+                model="claude-opus-5",
+                served_model=None,
+                request_id=None,
+                stop_reason="end",
+                usage={"input_tokens": 100, "cache_read_input_tokens": read},
+                duration_ms=1,
+                now=NOW_ISO,
+                kind="chat",
+            )
+    text = _flat(status.get("/status"))
+    assert "25% of the 4 messages answered found the start of the request still cached" in text
+
+
+def test_it_shows_what_came_of_her_suggestions(status, conn) -> None:
+    from familydb.store import plans, suggestions
+
+    with db.transaction(conn):
+        kites = ideas.insert(conn, title="Kites", kind="outing", now=NOW_ISO)
+        suggestions.insert(
+            conn,
+            asked_by=None,
+            window_start=None,
+            window_end=None,
+            candidates=[
+                {"idea_id": kites.id, "verdict": "ruled_out", "reasons": ["rain likely Sunday"]}
+            ],
+            web_finds=[],
+            now="2026-09-19T10:00:00Z",
+        )
+        plans.insert(
+            conn,
+            title="Kites in the rain",
+            start="2026-09-20T10:00",
+            end=None,
+            all_day=False,
+            idea_id=kites.id,
+            now="2026-09-19T11:00:00Z",
+        )
+    text = _flat(status.get("/status"))
+    assert "What came of her suggestions" in text
+    assert (
+        '1 suggestion; <span class="fig">1</span> led to a plan within a few days (100%).' in text
+    )
+    assert "Ruled out, planned anyway" in text
+    assert "Kites in the rain (rain likely Sunday)" in text
+
+
+def test_nobody_asking_says_so(status) -> None:
+    assert "Nobody has asked her what to do in the last 90 days." in _flat(status.get("/status"))
 
 
 def test_it_shows_what_is_waiting(status, conn, family) -> None:
@@ -318,6 +378,23 @@ def test_the_verdict_is_built_from_the_parts_it_sits_over() -> None:
     assert asked["text"].startswith("An admin can put it right.")
     rest = verdict(parts, name="Vera", standing=Pill("rest", "", ""), spent=2.0, thirty=3.0)
     assert rest["tone"] == "warn" and "About $2.00 spent today" in rest["text"]
+
+
+def test_it_shows_what_became_of_what_she_found(status, conn) -> None:
+    from familydb.store import finds
+
+    with db.transaction(conn):
+        [garden], _ = finds.keep(
+            conn,
+            "web:near-home",
+            "web",
+            [finds.NewFind(title="Rose garden", url="https://a.example/")],
+            now="2026-09-19T10:00:00Z",
+        )
+        finds.mark_passed(conn, garden.id, by=None, why=None, now="2026-09-19T12:00:00Z")
+    text = _flat(status.get("/status"))
+    assert "What she found" in text and "Her scouting" in text
+    assert "Scouting, filling in and judging cost US$0.00" in text
 
 
 def test_she_cannot_answer_only_for_what_stops_the_chat_and_says_why(

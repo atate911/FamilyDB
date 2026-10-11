@@ -92,6 +92,105 @@
   that stopped before the code moved no longer points a
   rollback at its older backup. An install with a broken virtualenv beside Docker is still treated as a
   virtualenv install to mend, not a Docker install to build.
+- **Her picks are made when the sources list something.** With fewer kinds of idea fitting the
+  weekend than tiles, the picks job filled the spare tile from what the family's calendars list and
+  crashed on it, so no set was made and Now kept the old one. The tile is made, and leads to the
+  happening's page.
+- **A saved plan's time is read as the family's clock.** With no Google calendar, the plans kept
+  here are the busy time. One stored without a time zone offset (the example household's) was read
+  as the server's clock, so a 9 am game counted as busy at 2 am and the morning as free; the tools
+  store an offset, so a real household was not affected. It is now read as wall time, as everything
+  else reads one.
+- **A stay-at-home idea is not held to opening hours.** A board game night, or anything of kind
+  home with no place or link, has nothing to look up, so the lookups skipped it and the engine then
+  called it possible for ever, "hours unknown (details skipped)", under every idea whose place is
+  known. It is now good when nothing else is against it, and says nothing of hours. The hours
+  a reason quotes are named for the day they are known for, not the first day the place might be
+  open.
+- **What came of her suggestions, on Status.** Every suggestion was logged and every outing rated,
+  but nothing joined them. Status, and `familydb debug suggestions`, now say how many suggestions led
+  to a plan within three days, where what was planned stood (picked by the stronger call, offered as
+  good or possible, checked but not shown, found outside the list, ruled out) and how it was rated,
+  and name what the family planned though it was ruled out. Read from what is kept: no migration and
+  no model call.
+- **A matter of taste no longer rules an idea out.** Done lately, two disappointing visits, rain or
+  cold in the forecast, and a day trip on a day with something else on it made an idea vanish from
+  every answer. Now they make it possible, with the reason said first, and the family or the stronger
+  call decides; what was done lately still comes last and is never one of her picks on Now. Facts
+  still rule out: already planned, for somebody not coming, closed, no snow for a snow idea, not
+  enough time, too late to book, too far.
+- **The family can set how soon things come round and whether rain matters.** Say "we're a
+  rain-or-shine family" or "we'd happily eat out at the same place every week" and the assistant
+  keeps it as a rule the suggestions hold: rain stops lowering outdoor ideas (the rain is still
+  said), and what was done comes up again after the rest the family named, for everything or one
+  kind. Held for anything said outright about the family, must or not; the Memory page shows it.
+- **The stronger call can correct the question before it picks.** When the chat model framed a
+  question plainly wrong (the whole weekend for "Saturday morning", nobody for "with the girls"), the
+  call that chooses may correct the days, the hours, who is coming or favorites once; code checks
+  everything again in the corrected terms without searching the web, and the reply says what was
+  looked at. A new setting on the AI model page, **Choose for questions about right now too**, off
+  by default, lets it choose for "anything to do this afternoon?" within the same monthly cap;
+  Status shows how long choosing takes, to judge the wait by.
+- **Status says how often a message finds the cache warm.** The cache share counted every call, and
+  the later calls of a turn always hit it. Status and `familydb debug cost` now also say how many of
+  the family's messages found the start of the request still cached on their first call, which is
+  what decides whether the prompt cache, or a shorter start, saves more on this install.
+- **Suggestions cost fewer tokens.** What the suggestion engine hands the model leaves out what is
+  as it always is (a check not made, no booking needed, travel from home), about a fifth less, sent
+  twice since it goes back with the reply; the stronger call's options no longer repeat their
+  reasons in brackets.
+- **A good idea nobody took up comes back sooner.** An idea shown as good sank to the back of every
+  answer for two weeks, whether the family passed it over or simply had no time. Now it sinks for
+  three days when nothing came of that suggestion, and two weeks only when they planned something
+  else from it.
+- **A kid never hears of what is for the grown-ups alone.** A date night or a wine tasting could be
+  one of a kid's own picks, or named in an answer a kid reads, even as "ruled out". Where a kid reads,
+  those ideas are now left out, and a kid's own set on Now holds at most two picks, as designed.
+- **Her picks offer a find only once.** Something the family's calendars listed kept coming back as
+  the **New** pick after it was saved as an idea; and when the stronger model chose one of the
+  listed things for the weekend, its choice was dropped. Both are fixed.
+- **Not for us.** A find's page has **Not for us** beside **Save it**, and saying it in the chat does
+  the same: she stops offering it, and Undo takes it back. Saving a find keeps which idea it became,
+  and the page links to it. Finds may now be places to go any time as well as dated events, and keep
+  who they are for and why they were found: the first step of her back pocket (`docs/FINDS.md`).
+  This is migration 0061, which rebuilds the `finds` table and keeps every row.
+- **Asked for ideas, she searches the web with everything she knows.** Every planning question now
+  also searches the web once, for events and places alike, told the question in your words and what
+  she knows of the family: how many grown-ups and the kids' ages, your musts and tastes, what you
+  loved, what is on your list and what you passed on, never a name, a present or a wish. What it
+  finds is kept with her finds rather than thrown away, and a new **Other places you go** setting
+  (Where home is) widens where she looks. Before, she searched only when your calendars listed
+  little or a topic was named, and looked for a place only with `find_places` on; that setting is
+  gone. Each search costs a cent or two within the daily limit and adds 10 to 40 seconds to the
+  answer, as the family decided.
+- **What she found is checked as your ideas are.** A show at seven when you are busy, a pumpkin patch
+  on a rainy day, a wine walk when the girls are coming, a loud gig when you said no loud places, a
+  fair two hours away: each now gets the same verdict and reasons as an idea on your list, by the
+  same code, and what is ruled out is no longer offered. Her picks on Now, and the stronger model
+  choosing for you, see each find's verdict.
+- **She scouts each evening, aimed at your family.** The weekly search for what is on near home,
+  which knew nothing of you, is now scouting each evening after the lookups, on a theme that turns
+  with the week (food and drink, outdoors, shows and music, grown-ups' evenings, the weekend ahead,
+  classes and clubs, the weeks ahead), for grown-ups as well as kids and for places as well as
+  events, told what she knows of the family. What it finds is sorted by code and kept with her
+  finds. **The monthly budget for it doubles, on purpose, to US$2** (the family's decision); each
+  evening may spend only its share of what is left of the month, so the budget holds.
+- **What she finds is filled in, and the best of it chosen, each evening.** After scouting, up to
+  three new finds are looked up as your ideas are (address, hours, price, the drive), and when
+  something is new, her whole pocket is checked against your calendar, the forecast and your musts,
+  and one call chooses up to five worth putting forward, each with why and when. Both are within the
+  same monthly budget, and a quiet evening makes no call. This is migration 0062.
+- **New ideas, and one new thing in her answers.** What could we do? now ends with **New ideas**:
+  what she found and judged worth putting forward, each with why, **Save it** and **Not for us**.
+  Her picks on Now offer one of them after your own ideas, on the days it suits, and not again
+  in another set within a week unless its day is near. When she answers a planning question, and
+  in the weekend digest, she mentions the one best new thing once, after what is yours.
+- **Status says what came of what she found.** Beside what came of her suggestions, Status (and
+  `familydb debug suggestions`) now shows, for the calendars, Ticketmaster, her scouting and the
+  searches made when asked, how many things were found, put forward, saved, planned and passed on,
+  how the outings went, and what scouting cost, to weigh it against its budget. Planning something
+  she found marks it planned, and her next searches lean towards what you saved and away from
+  what you passed on.
 
 ## v0.5.0 — beta (2026-10-11)
 

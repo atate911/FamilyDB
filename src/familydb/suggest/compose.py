@@ -69,9 +69,10 @@ def order_candidates(
     prefer: str = "new",
     loved: frozenset[int] | set[int] = frozenset(),
 ) -> list[Candidate]:
-    """Good first, then possible, then ruled out. Within each, recently suggested ideas sink for
-    variety; then, for something new, never done first and the best rated; asked for favorites,
-    the loved ones first (`loved`), then what they have done before, best rated first."""
+    """Good first, then possible, then ruled out. Within each, what was done lately and rests
+    comes last, then recently suggested ideas sink for variety; then, for something new, never
+    done first and the best rated; asked for favorites, the loved ones first (`loved`), then
+    what they have done before, best rated first."""
 
     def key(c: Candidate) -> tuple:
         idea = by_id.get(c.idea_id)
@@ -81,7 +82,14 @@ def order_candidates(
             liked: tuple = (c.idea_id not in loved, not done_before)
         else:
             liked = (done_before,)
-        return (VERDICT_ORDER[c.verdict], c.idea_id in recently, *liked, -rating, c.idea_id)
+        return (
+            VERDICT_ORDER[c.verdict],
+            c.checks.resting,
+            c.idea_id in recently,
+            *liked,
+            -rating,
+            c.idea_id,
+        )
 
     return sorted(candidates, key=key)
 
@@ -145,4 +153,5 @@ def compose(
         suggestion={"id": suggestion_id} if suggestion_id is not None else None,
         picks=chosen.picks if chosen and chosen.picks else None,
         framing=chosen.framing if chosen and chosen.picks else None,
+        reframed=chosen.why if chosen else None,
     )

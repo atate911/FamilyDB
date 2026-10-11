@@ -1981,6 +1981,10 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 /* an old idea's question on Do: one quiet line, Keep or Let go */
 .r__ask { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 0 var(--s3); margin: 0; font-size: var(--t-meta); color: var(--ink-2); }
 .r__ask .q__lnk { min-height: 32px; }
+/* Save it and Not for us under one of her new ideas (do.html), as on a find's page. */
+.r__acts { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s1); }
+.r__acts form { margin: 0; }
+.newideas { margin-top: var(--s6); }
 .chip--on:hover { color: var(--paper); }
 .chip__n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: var(--r-pill); background: var(--paper-2); color: var(--ink-2); font-size: 0.72rem; font-weight: 700; line-height: 1; }
 .chip--on .chip__n { background: var(--paper); color: var(--ink); }

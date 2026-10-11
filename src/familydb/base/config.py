@@ -463,8 +463,13 @@ class Settings(BaseSettings):
     # never a model call; off leaves Now with her questions and the day's line.
     picks: bool = True
     choose_budget: float = Field(default=5.0, ge=0, le=50)
-    # Model calls one choice may take: the answer, and one more if code refused a pick in it.
-    # Each re-sends the whole dossier at the strong level, so it stays small.
+    # Choosing for a question about right now too ("anything to do this afternoon?"): off until
+    # the family turns it on, since it adds a strong call's wait to an answer wanted at once.
+    # Within `choose_budget`; the wait is shown on Status (suggest/taken.py) to judge it by.
+    choose_now: bool = False
+    # Model calls one choice may take: the answer, and one more if code refused a pick in it,
+    # or corrected the framing (`reframe`). Each re-sends the whole dossier at the strong level,
+    # so it stays small.
     choose_max_iterations: int = Field(default=2, ge=1, le=5)
 
     gemini_api_key: str | None = None
@@ -532,6 +537,9 @@ class Settings(BaseSettings):
     home_lat: Latitude | None = None
     home_lon: Longitude | None = None
     home_area: str = ""
+    # Neighbourhoods and towns the family goes to besides home, one a line: a search for them
+    # looks there too (scouting/brief.py).
+    scouting_areas: str = Field(default="", max_length=500)
     weather_units: Literal["metric", "imperial"] = "metric"
 
     web_tools_enabled: bool = False
@@ -582,9 +590,6 @@ class Settings(BaseSettings):
     # How many days a message keeps its words (jobs/tidy.py); 0 keeps them for good, the default
     # and the family's to change (docs/DESIGN.md section 16).
     keep_messages_days: int = Field(default=0, ge=0, le=36500)
-    # A place nothing saved fits, looked for on the web (suggest/places.py). Spending, so the
-    # family's to turn on (docs/DESIGN.md section 16): off until they do.
-    find_places: bool = False
     follow_ups: bool = True
     plan_checks: bool = True
     plan_check_hour: int = Field(default=19, ge=0, le=23)
@@ -608,13 +613,14 @@ class Settings(BaseSettings):
     # Ticketmaster's events within this many kilometers of home, with its free key.
     ticketmaster_api_key: str | None = None
     happening_radius_km: int = Field(default=80, ge=5, le=300)
-    # A web search for what is on near home over the next four weeks, once a week, and a lookup
-    # for event calendars near home every `happening_refind_days` days. Both are model calls, held
-    # with the rest of the job's to `happening_budget` US$ a month, within the daily
-    # limit; 0 makes none.
+    # Scouting each evening for new things the family would enjoy near home over the next four
+    # weeks (docs/FINDS.md), and a lookup for event calendars near home every
+    # `happening_refind_days` days. Both are model calls, held with the rest of the job's to
+    # `happening_budget` US$ a month (about US$2, the family's decision), within the daily limit;
+    # 0 makes none.
     happening_search: bool = True
     happening_refind_days: int = Field(default=30, ge=7, le=90)
-    happening_budget: float = Field(default=1.0, ge=0, le=20)
+    happening_budget: float = Field(default=2.0, ge=0, le=20)
 
     web_enabled: bool = False
     web_host: str = "127.0.0.1"

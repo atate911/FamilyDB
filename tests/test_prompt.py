@@ -147,9 +147,10 @@ def test_the_request_is_the_same_one_this_api_always_received(conn, settings, fa
 def test_the_discovery_worker_is_told_to_use_what_its_request_carries() -> None:
     from familydb.agent.prompt import load_prompt
 
-    # suggest/discover.py writes these lines into the request; the prompt must say what they mean.
+    # scouting/search.py writes these lines into the request; the prompt must say what they mean.
     text = load_prompt("discover")
-    assert "Looking for:" in text and "its hours" in text
+    for line in ("Looking for:", "Hours:", "Constraints:", "must", "already found"):
+        assert line in text
 
 
 def test_vera_speaks_first_and_the_job_follows(conn, settings, family) -> None:

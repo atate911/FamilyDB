@@ -289,7 +289,7 @@ def test_plans_follow_up_queue(conn, family) -> None:
     assert plans.get(conn, done.id).followed_up_at == NOW_ISO
 
 
-def test_suggestions_reply_link_and_recent_good_ids(conn, family) -> None:
+def test_suggestions_reply_link_and_those_since(conn, family) -> None:
     from familydb.store import suggestions
 
     with db.transaction(conn):
@@ -307,8 +307,8 @@ def test_suggestions_reply_link_and_recent_good_ids(conn, family) -> None:
         )
         suggestions.set_reply(conn, row.id, reply.id)
     assert suggestions.get(conn, row.id).reply_message_id == reply.id
-    assert suggestions.recently_suggested(conn, since="2026-09-01T00:00:00Z") == {1}
-    assert suggestions.recently_suggested(conn, since="2026-10-01T00:00:00Z") == set()
+    assert [s.id for s in suggestions.since(conn, since="2026-09-01T00:00:00Z")] == [row.id]
+    assert suggestions.since(conn, since="2026-10-01T00:00:00Z") == []
     assert [s.id for s in suggestions.list_recent(conn, limit=5)] == [row.id]
 
 

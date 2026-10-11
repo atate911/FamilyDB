@@ -133,10 +133,18 @@ def with_the_kids(idea: Idea, people: Sequence[Member]) -> bool:
 
 def just_us(idea: Idea, people: Sequence[Member]) -> bool:
     """Whether an idea is the grown-ups' alone: it names only grown-ups, or says so."""
-    if not idea.participants:
+    return grown_ups_only(idea.participants, people)
+
+
+def grown_ups_only(participants: Sequence[str], people: Sequence[Member]) -> bool:
+    """Whether who something is for names only grown-ups, or says so ("grown-ups", "date
+    night"): an idea's participants, or who a find is for."""
+    if not participants:
         return False
     grown = {p.display_name.casefold() for p in people if p.role != "kid"}
-    return all(
-        one.casefold().strip() in ADULT_WORDS or one.casefold().strip() in grown
-        for one in idea.participants
-    )
+
+    def adult(one: str) -> bool:
+        said, bare = one.casefold().strip(), plain(one)
+        return said in ADULT_WORDS or said in grown or bare in GROWN_UPS or bare in grown
+
+    return all(adult(one) for one in participants)

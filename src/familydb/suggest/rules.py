@@ -7,6 +7,11 @@ it, so the reasons name it ("further than m4 allows") and the reply can say why.
 Who is coming is read as the question names them (suggest/people.py), with whoever asked. When it
 names nobody, or nobody on the family list, everybody's rules hold: a rule kept for somebody who
 might come is the safe side.
+
+The family's own taste, said outright, eases or tightens the engine's taste rules
+(suggest/shortlist.py): `rain_ok` lets rain lower nothing, and `rest_days` (for one kind with
+`rest_kind`) is how long a done idea rests, the latest said winning. Those are the family's, so
+only a memory about the family holds them, and they never make anything a fact.
 """
 
 from __future__ import annotations
@@ -42,9 +47,19 @@ def fold(
     """`constraints` tightened by the rules (`store.memories.held`) that apply to who is coming."""
     those = coming(constraints, people, asker)
     for memory in held:
+        rule = memory.rule or {}
+        if memory.member_id is None:
+            if rule.get("rain_ok"):
+                constraints.rain_ok = True
+                constraints.held_by["rain_ok"] = memory.id
+            if (days := rule.get("rest_days")) is not None:
+                kind = rule.get("rest_kind") or "*"
+                constraints.rest[kind] = int(days)
+                constraints.held_by[f"rest:{kind}"] = memory.id
+        if not memory.firm:
+            continue  # a taste said outright holds its rest and rain, never a limit
         if memory.member_id is not None and those is not None and memory.member_id not in those:
             continue
-        rule = memory.rule or {}
         for name in LIMITS:
             limit = rule.get(name)
             current = getattr(constraints, name)

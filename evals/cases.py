@@ -16,7 +16,7 @@ from evals.household import NOW, NOW_ISO, Household
 from familydb import personas, windows
 from familydb.base.errors import ToolError
 from familydb.routing import is_confirmation
-from familydb.store import db, members, memories
+from familydb.store import db, finds, members, memories
 from familydb.suggest.engine import resolve_window
 from familydb.suggest.types import SuggestInput
 from familydb.tools.registry import without_nulls
@@ -368,6 +368,26 @@ def _bad_back(conn: sqlite3.Connection, house: Household) -> None:
         )
 
 
+def _night_market(conn: sqlite3.Connection, house: Household) -> None:
+    """She found a late night market on a search for them the day before."""
+    with db.transaction(conn):
+        finds.keep(
+            conn,
+            "request",
+            "request",
+            [
+                finds.NewFind(
+                    title="Night market tour",
+                    url="https://market.example.org/night-tour",
+                    starts="2026-10-17T21:00",
+                    summary="A guided walk of the night market, 9pm to midnight.",
+                    participants=["whole family"],
+                )
+            ],
+            now=NOW_ISO,
+        )
+
+
 def _readable_window(call: Call) -> bool:
     """A task kept for a time code can bring it up at (windows.py), with nothing invented."""
     said = str(call.input.get("preferred_window") or "")
@@ -710,8 +730,8 @@ CASES: tuple[Case, ...] = (
             wrote_only(),
         ),
         "Nothing Thai is saved: the engine is asked about Thai for now, and nothing is invented. "
-        "With --web, a place is looked for (find_places), and what it finds is said as found.",
-        settings={"find_places": True},
+        "With --web, the search on request looks for a place too, and what it finds is said as "
+        "found.",
     ),
     Case(
         "kiggins_movie",
@@ -728,6 +748,17 @@ CASES: tuple[Case, ...] = (
             wrote_only("add_idea", "update_idea"),
         ),
         "No showtimes are known and nothing can be booked: none invented, none claimed.",
+    ),
+    Case(
+        "not_for_us",
+        ("That night market tour you found isn't for us, it's too late for the girls",),
+        (
+            called("pass_find", where=lambda c: "late" in str(c.input.get("why") or "")),
+            wrote_only("pass_find", "remember"),
+        ),
+        "Something she found is passed on, with why, so she stops offering it; remembering that "
+        "late nights are too late for the girls is fine too.",
+        seed=_night_market,
     ),
     Case(
         "must_is_respected",
@@ -905,6 +936,21 @@ CASES: tuple[Case, ...] = (
             wrote_only("remember", "add_idea"),
         ),
         "An idea and something to remember in one breath: both kept, the allergy as a must.",
+    ),
+    Case(
+        "rain_does_not_stop_us",
+        ("for the record we're a rain-or-shine family, a bit of drizzle never stopped us",),
+        (
+            remembered(
+                lambda change: (
+                    (change.get("rule") or {}).get("rain_ok") is True
+                    and str(change.get("about", "family")).casefold() in ("family", "the family")
+                ),
+                "about the family, with rain_ok",
+            ),
+            wrote_only("remember"),
+        ),
+        "The family's taste in weather is kept as a rule the engine holds: rain lowers nothing.",
     ),
     Case(
         "feedback_is_not_a_dislike",

@@ -33,7 +33,7 @@ There are three roles and one table of permissions. Each part of the web page na
 | decide | See every kid's wishes and answer them | yes | yes | no |
 | manage | Settings, Setup and Family | yes | no | no |
 
-The table covers the web page's forms. In chat, a kid can add ideas and remember things, and keep their own wishes and things to do. Editing an idea, saying how a plan went, and making, moving or cancelling a plan or calendar event need the change permission in chat too, and are refused to a kid. Lookups on demand and other people's things to do are held back as well. What a stolen sign-in gives away is on [Trust and threat model](/wiki/security/model#what-a-sign-in-guards), and the plain statement is under [Known limits](/wiki/reference/known-limits#chat-tools-check-only-some-roles).
+The table covers the web page's forms. In chat, a kid can add ideas and remember things, and keep their own wishes and things to do. Editing an idea, saying how a plan went, making, moving or cancelling a plan or calendar event, and passing on something the assistant found ("not for us") need the change permission in chat too, and are refused to a kid. Lookups on demand and other people's things to do are held back as well. What a stolen sign-in gives away is on [Trust and threat model](/wiki/security/model#what-a-sign-in-guards), and the plain statement is under [Known limits](/wiki/reference/known-limits#chat-tools-check-only-some-roles).
 
 ## Why the list is not a tool
 

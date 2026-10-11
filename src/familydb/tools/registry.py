@@ -62,6 +62,7 @@ class ToolContext:
     discover_cache: Any = None  # the App-level cache of discovery results
     allowed_tools: frozenset[str] | None = None
     worker_idea_id: int | None = None
+    worker_find_id: int | None = None  # a lookup filling in a find may write that find alone
     operation_id: str | None = None  # durable browser write operation, not model input
     resume_scope: str | None = None  # the browser session, to resume what a lost reply left
     idea_revision: str | None = None  # browser optimistic concurrency precondition
@@ -269,6 +270,8 @@ class ToolRegistry:
             return _unavailable(name, spec.unavailable_reason)
         if ctx.worker_idea_id is not None and getattr(args, "idea_id", None) != ctx.worker_idea_id:
             return _error(name, "worker may only write its assigned idea")
+        if ctx.worker_find_id is not None and getattr(args, "find_id", None) != ctx.worker_find_id:
+            return _error(name, "worker may only write its assigned find")
         try:
             result = spec.handler(ctx, args)
         except ToolUnavailable as exc:

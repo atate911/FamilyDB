@@ -13,8 +13,8 @@ from familydb.agent.worker import run_worker_turn, worker_turn
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.channels.console import one_shot
-from familydb.jobs.enrich import render_enrich_request
 from familydb.pipeline import handle_incoming, handle_synthetic, retry_message
+from familydb.scouting.fill import render_enrich_request
 from familydb.store import ideas
 from familydb.store.db import transaction
 from tests import fakes
@@ -253,5 +253,6 @@ def test_choosing_answers_on_the_chat_surface() -> None:
     """The dossier holds the family's words and memories: never to a different lookup company."""
     call = gateway.spec("choose")
     assert call.surface == "chat" and call.web_searches is None
-    assert call.tools == ("give_picks",) == call.hand_back
+    # It may correct the framing once (`reframe`, no search), but only picks end its turn.
+    assert call.tools == ("give_picks", "reframe") and call.hand_back == ("give_picks",)
     assert call.iterations == "choose_max_iterations"

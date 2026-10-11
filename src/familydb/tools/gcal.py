@@ -34,7 +34,7 @@ from familydb.free_time import events_by_day, free_blocks
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
 from familydb.plan_service import RemindBefore
 from familydb.saved_plans import SavedPlans
-from familydb.store import calendar_ops, ideas, messages, plans, tasks
+from familydb.store import calendar_ops, finds, ideas, messages, plans, tasks
 from familydb.store.db import to_json, transaction
 from familydb.tools.registry import ToolContext, keep_undo, tool
 
@@ -68,6 +68,9 @@ class CreateEventInput(BaseModel):
     location: str | None = None
     notes: str | None = None
     idea_id: int | None = Field(default=None, description="The idea this plan is for, if any.")
+    find_id: int | None = Field(
+        default=None, description="When planning something she found, its find number."
+    )
     remind_before: list[RemindBefore] = Field(default_factory=list, description=REMIND_HELP)
 
 
@@ -282,6 +285,8 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
     tz = ctx.clock.tz
     if args.idea_id is not None and ideas.get(ctx.conn, args.idea_id) is None:
         raise ToolError(f"no idea #{args.idea_id}")
+    if args.find_id is not None and finds.get(ctx.conn, args.find_id) is None:
+        raise ToolError(f"no find {args.find_id}")
     start, end, all_day, stored_start, stored_end = _timed_or_all_day(
         args.start, args.end, args.all_day, tz
     )
@@ -362,6 +367,11 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             )
             if args.idea_id is not None:
                 ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
+            if args.idea_id is not None or args.find_id is not None:
+                # What she found becomes a plan: kept with the find, for what came of it.
+                finds.mark_planned(
+                    ctx.conn, find_id=args.find_id, idea_id=args.idea_id, now=ctx.now_iso()
+                )
     if made:
         keep_undo(
             ctx,

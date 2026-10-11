@@ -34,6 +34,7 @@ from familydb.store import judgements as judgement_store
 from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
+from familydb.suggest import taken
 from familydb.web import views
 from familydb.web.auth import own_passwords, password_chosen, password_in_use, visitor
 
@@ -218,8 +219,13 @@ def spending(
     cached = sum(row["cache_read"] for row in rows)
     written = sum(row["cache_write"] for row in rows)
     served = fresh + cached + written
+    turns, warm = calls.warm_starts(conn, "chat", since=since)
     return {
         "rows": rows,
+        # Of the family's messages, how many found the cached start still there: whether the
+        # cache pays on this install's traffic, before anything is done to keep or cut it.
+        "turns": turns,
+        "warm_share": round(warm / turns * 100) if turns else 0,
         "kinds": kinds,
         "where": where,
         "calls": sum(row["calls"] for row in rows),
@@ -864,11 +870,22 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "attention": attention(app, conn),
         "model_watch": model_watch(app, conn),
         "happening": happening_status(app, conn),
+        "taken": came_of(app, conn),
+        "taken_days": TAKEN_DAYS,
         "activity": activity(app, conn),
         "activity_days": ACTIVITY_DAYS,
         "whats_new": whatsnew.latest(),
         **overview(app, conn, since),
     }
+
+
+# Suggestions are asked a few times a week: a season shows what came of them.
+TAKEN_DAYS = 90
+
+
+def came_of(app: App, conn: sqlite3.Connection) -> taken.Report:
+    """What came of her suggestions lately (suggest/taken.py): read, never a model call."""
+    return taken.report(conn, since=utc_iso(app.clock.now() - timedelta(days=TAKEN_DAYS)))
 
 
 def overview(app: App, conn: sqlite3.Connection, since: str) -> dict[str, Any]:

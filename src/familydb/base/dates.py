@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from zoneinfo import ZoneInfo
 
 from familydb.base.clock import Clock
@@ -134,3 +134,13 @@ def spoken_times(text: str) -> str:
         return f"{first} to {at(found[3], found[4])}" if found[3] else first
 
     return _HH_MM.sub(one, text)
+
+
+def last_hour_passed(now: datetime, hour: int, tz: tzinfo) -> datetime:
+    """The latest time it was `hour` o'clock in `tz`, at or before `now`: the evening the
+    lookups, the judgements and the scouting run after (`lookup_hour`)."""
+    local = now.astimezone(tz)
+    at = datetime.combine(local.date(), time(hour), tzinfo=tz)
+    if local < at:
+        at = datetime.combine(local.date() - timedelta(days=1), time(hour), tzinfo=tz)
+    return at

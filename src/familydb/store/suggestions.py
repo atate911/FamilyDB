@@ -75,6 +75,24 @@ def set_picks(conn: sqlite3.Connection, suggestion_id: int, picks: dict[str, Any
     conn.execute("UPDATE suggestions SET picks = ? WHERE id = ?", (to_json(picks), suggestion_id))
 
 
+def reframe(
+    conn: sqlite3.Connection,
+    suggestion_id: int,
+    *,
+    window_start: str | None,
+    window_end: str | None,
+    candidates: list[dict[str, Any]],
+    web_finds: list[dict[str, Any]],
+) -> None:
+    """A suggestion's window and verdicts after the stronger call corrected its framing
+    (suggest/choosing.py). Call inside a transaction."""
+    conn.execute(
+        "UPDATE suggestions SET window_start = ?, window_end = ?, candidates = ?, web_finds = ? "
+        "WHERE id = ?",
+        (window_start, window_end, to_json(candidates), to_json(web_finds), suggestion_id),
+    )
+
+
 def picked_since(conn: sqlite3.Connection, *, since: str) -> list[Suggestion]:
     """Suggestions made at or after `since` that a choice was made for, newest first."""
     rows = conn.execute(
@@ -84,24 +102,15 @@ def picked_since(conn: sqlite3.Connection, *, since: str) -> list[Suggestion]:
     return [Suggestion.from_row(row) for row in rows]
 
 
-def list_recent(conn: sqlite3.Connection, *, limit: int = 10) -> list[Suggestion]:
-    rows = conn.execute("SELECT * FROM suggestions ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+def since(conn: sqlite3.Connection, *, since: str) -> list[Suggestion]:
+    """Every suggestion asked at or after `since` (UTC ISO), oldest first: what the report on
+    what came of them reads (suggest/taken.py)."""
+    rows = conn.execute(
+        "SELECT * FROM suggestions WHERE asked_at >= ? ORDER BY asked_at, id", (since,)
+    ).fetchall()
     return [Suggestion.from_row(row) for row in rows]
 
 
-def recently_suggested(conn: sqlite3.Connection, *, since: str) -> set[int]:
-    """Idea ids shown as 'good' in any suggestion since `since`. Every verdict is logged, shown or
-    not; one logged before that was recorded counts as shown."""
-    rows = conn.execute("SELECT candidates FROM suggestions WHERE asked_at >= ?", (since,))
-    ids: set[int] = set()
-    for row in rows:
-        for candidate in from_json(row["candidates"], []) or []:
-            if (
-                isinstance(candidate, dict)
-                and candidate.get("verdict") == "good"
-                and candidate.get("shown", True)
-            ):
-                idea_id = candidate.get("idea_id")
-                if isinstance(idea_id, int):
-                    ids.add(idea_id)
-    return ids
+def list_recent(conn: sqlite3.Connection, *, limit: int = 10) -> list[Suggestion]:
+    rows = conn.execute("SELECT * FROM suggestions ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return [Suggestion.from_row(row) for row in rows]

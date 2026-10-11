@@ -131,10 +131,55 @@
           </table>
         </div>
         <p class="small muted mt-3">{{ "{:,}".format(spending.calls) }} call{{ "" if spending.calls == 1 else "s" }} in {{ days }} days; {{ spending.cache_share }}% of what was sent came back from the cache, at a tenth of the price.
+          {% if spending.turns %}{{ spending.warm_share }}% of the {{ "{:,}".format(spending.turns) }} message{{ "" if spending.turns == 1 else "s" }} answered found the start of the request still cached; the rest paid for it in full.{% endif %}
           {% if spending.estimated %}Some calls were to a model without a listed price and are counted high.{% endif %}
           {% if last %}The last call was {{ last.when | figs }}.{% endif %}</p>
       {% else %}
         <p class="muted">Nothing has been asked of a model in the last {{ days }} days.</p>
+      {% endif %}
+    </section>
+
+    <section class="card" aria-labelledby="h-taken">
+      <div class="card__head"><h2 id="h-taken">{{ icon('sparkle') }}What came of her suggestions</h2><span class="small muted">last {{ taken_days }} days</span></div>
+      {% if taken.asked %}
+        <p>{{ "{:,}".format(taken.asked) }} suggestion{{ "" if taken.asked == 1 else "s" }}; <span class="fig">{{ taken.led_to_plan }}</span> led to a plan within a few days ({{ taken.take_rate }}%).{% if taken.chosen %} {{ taken.chosen }} had picks from the stronger call.{% endif %}</p>
+        {% set sources = taken.sources() %}
+        {% if sources %}
+          <div class="scroll">
+            <table class="data">
+              <thead><tr><th scope="col">What was planned</th><th scope="col" class="num">Plans</th><th scope="col" class="num">How it went</th></tr></thead>
+              <tbody>
+                {% for one in sources %}
+                  <tr><td>{{ one.label }}</td><td class="num">{{ one.planned }}</td><td class="num">{% if one.average is not none %}{{ "%.1f"|format(one.average) }}/10 ({{ one.rated }} rated){% else %}not rated{% endif %}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+        {% set against = taken.against() %}
+        {% if against %}
+          <p class="small mt-3"><b>Planned though she had ruled it out:</b>
+            {% for one in against %}{{ one.title }} ({{ one.reason or 'ruled out' }}{% if one.rating is not none %}, rated {{ one.rating }}/10{% endif %}){{ "; " if not loop.last else "." }}{% endfor %}</p>
+        {% endif %}
+        {% if taken.choosing_calls %}<p class="small muted mt-3">Choosing took about {{ "%.1f"|format(taken.choosing_wait) }} seconds a call, over {{ taken.choosing_calls }} call{{ "" if taken.choosing_calls == 1 else "s" }}.</p>{% endif %}
+        {% if taken.unoffered %}<p class="small muted mt-3">{{ taken.unoffered }} plan{{ "" if taken.unoffered == 1 else "s" }} came from somewhere else.</p>{% endif %}
+      {% else %}
+        <p class="muted">Nobody has asked her what to do in the last {{ taken_days }} days.</p>
+      {% endif %}
+      {% if taken.origins %}
+        {# What became of what she found, by where it came from (docs/FINDS.md, "Learning"). #}
+        <h3 class="mt-4">What she found</h3>
+        <div class="scroll">
+          <table class="data">
+            <thead><tr><th scope="col">Found by</th><th scope="col" class="num">Found</th><th scope="col" class="num">Put forward</th><th scope="col" class="num">Saved</th><th scope="col" class="num">Planned</th><th scope="col" class="num">Not for us</th><th scope="col" class="num">How it went</th></tr></thead>
+            <tbody>
+              {% for one in taken.origins %}
+                <tr><td>{{ one.label }}</td><td class="num">{{ one.found }}</td><td class="num">{{ one.recommended }}</td><td class="num">{{ one.saved }}</td><td class="num">{{ one.planned }}</td><td class="num">{{ one.passed }}</td><td class="num">{% if one.average is not none %}{{ "%.1f"|format(one.average) }}/10 ({{ one.rated }} rated){% else %}not rated{% endif %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted mt-3">Scouting, filling in and judging cost US${{ "%.2f"|format(taken.scouting_cost) }} in these {{ taken_days }} days.</p>
       {% endif %}
     </section>
 

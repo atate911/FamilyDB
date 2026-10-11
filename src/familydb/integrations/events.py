@@ -1,5 +1,5 @@
 """The one shape every source of dated things near home hands back: a calendar feed,
-Ticketmaster, or a find from the weekly search. No SDK and no store here."""
+Ticketmaster, or a find from her scouting. No SDK and no store here."""
 
 from __future__ import annotations
 

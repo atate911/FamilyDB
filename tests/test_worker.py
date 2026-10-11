@@ -229,7 +229,7 @@ def test_the_weekly_search_is_discovery_under_a_kind_of_its_own(
     turn = _run("scout", api, settings, clock, registry, conn)
     request = api.requests[0]
     assert [t["name"] for t in request["tools"]] == ["report_finds", "web_search", "web_fetch"]
-    assert request["system"][0]["text"] == load_prompt("discover")
+    assert request["system"][0]["text"] == load_prompt("scout")
     assert turn.handed_back("report_finds")
     starts = [find.get("starts") for find in turn.ctx.scratch["finds"]]
     assert starts == ["2026-10-09T19:00", "2026-10-03"]  # the guess was refused

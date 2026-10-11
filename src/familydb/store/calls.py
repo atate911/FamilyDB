@@ -385,6 +385,42 @@ def usage_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]
     return [dict(row) for row in rows]
 
 
+def warm_starts(conn: sqlite3.Connection, kind: str, *, since: str) -> tuple[int, int]:
+    """Of the turns of a kind since a timestamp, how many there were and how many found the start
+    of the request still cached on their first call. Later calls in a turn always find it, so only
+    the first says whether the cache lasts from one message to the next."""
+    row = conn.execute(
+        "SELECT count(*) AS n, "
+        "coalesce(sum(CASE WHEN coalesce(cache_read_input_tokens, 0) > 0 THEN 1 ELSE 0 END), 0) "
+        "AS warm FROM llm_calls WHERE kind = ? AND iteration = 1 AND created_at >= ?",
+        (kind, since),
+    ).fetchone()
+    return int(row["n"]), int(row["warm"])
+
+
+def average_turn_cost(conn: sqlite3.Connection, kind: str, *, since: str) -> tuple[int, float]:
+    """How many turns of a kind since a timestamp, and what one cost on average, every call of
+    it counted (a worker's search and its hand-back alike): what the next is likely to cost."""
+    row = conn.execute(
+        "SELECT coalesce(sum(CASE WHEN iteration = 1 THEN 1 ELSE 0 END), 0) AS turns, "
+        "coalesce(sum(cost_usd), 0) AS spent FROM llm_calls WHERE kind = ? AND created_at >= ?",
+        (kind, since),
+    ).fetchone()
+    turns = int(row["turns"])
+    return turns, (float(row["spent"]) / turns if turns else 0.0)
+
+
+def waits(conn: sqlite3.Connection, kind: str, *, since: str) -> tuple[int, float]:
+    """How many calls of a kind since a timestamp, and their average time in seconds: what a
+    family waits for one (the choosing call, suggest/taken.py)."""
+    row = conn.execute(
+        "SELECT count(*) AS n, coalesce(avg(duration_ms), 0) AS ms FROM llm_calls "
+        "WHERE kind = ? AND created_at >= ? AND duration_ms IS NOT NULL",
+        (kind, since),
+    ).fetchone()
+    return int(row["n"]), round(float(row["ms"]) / 1000, 1)
+
+
 def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
     """Calls, tokens and estimated dollars per kind (`gateway.KINDS`) since a timestamp, dearest
     first."""

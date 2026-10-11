@@ -135,6 +135,7 @@ Nothing else appears on a destination. Her picks and her finds are marked as her
 - **Fading:** untouched things go paler after six weeks; at three months the row asks "still want this?" with keep and let go. Rested things are under the Dropped chip, never gone.
 - **Empty:** "Nothing saved yet. When someone says 'we should try…', it lands here."
 - **Kid:** her things and the family's, plain rows, nothing paler, no Dropped.
+- **New ideas:** under the pile, what she found on her own and judged worth putting forward (`docs/FINDS.md`), at most five, marked as found by her, each with when and why, **Save it** and **Not for us**. Not shown while a chip or a search narrows the page. A kid sees them without the buttons, never one for the grown-ups alone.
 
 ### What about… (`/about`)
 
@@ -215,7 +216,7 @@ Every item page reads in this order:
 | **A kid** | The kids | Her requests, her lists, her pitches, and for a parent her thread to read along. An admin sees the role and password forms here too. |
 | **A list** | Lists | The checklist itself is the page. |
 | **A reminder** | This week, On your plate, a receipt | When or on what condition, owner, repeats, delivery rules in words. |
-| **A happening** | Happening soon | Date, source, the original listing, Yes in pencil. |
+| **A happening** | Happening soon, her picks | Date (or any time, for a place she found), source, the original listing, Yes in pencil; **Save it** and **Not for us** while it is hers to offer, and once it is not, what became of it. |
 | **A memory** | What we did, a day | Faces, photo, what made it good, Again?. |
 
 ## 6. The Vera layer
@@ -328,7 +329,7 @@ Telegram stays the place where Vera may interrupt and where most capture happens
 
 | | Parent | Admin | Kid |
 |---|---|---|---|
-| First screen | Now, personal | Now, personal | A small Now: the box ("I want… / We should…"), her list with the answers on it, what's coming for her, and at most two picks |
+| First screen | Now, personal | Now, personal | A small Now: the box ("I want… / We should…"), her list with the answers on it, what's coming for her, and at most two picks (`picks.KID_MOST`), never one for the grown-ups alone |
 | The kids | yes | yes | no; her own things are on My list |
 | Costs, models, settings, status | no | behind the avatar | never |
 | The box | general and scoped | same | general and scoped, with a daily message count said gently |

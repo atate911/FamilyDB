@@ -131,8 +131,8 @@ def test_here_without_a_share_says_so(full_settings, clock, conn, family):
 
 
 def test_discovery_searches_near_where_the_phone_is(full_settings, clock, conn, family):
+    from familydb.scouting.search import render_discover_request
     from familydb.suggest.context import build_context
-    from familydb.suggest.discover import render_discover_request
     from familydb.suggest.origin import resolve
     from familydb.suggest.types import Constraints
 
