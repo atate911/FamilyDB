@@ -1298,3 +1298,24 @@ def test_now_is_judged_by_its_own_hours(conn, settings, clock, family) -> None:
     result = run(ctx, SuggestInput(window="today", discover=False, question="today?"))
     said = {c.idea_id: c for c in result.candidates}[kite.id]
     assert said.verdict == "ruled_out" and said.reasons[0].startswith("rain likely Sunday (90%)")
+
+
+def test_a_saved_plan_without_an_offset_is_busy_at_its_wall_time(
+    conn, settings, thursday_clock
+) -> None:
+    """The tools store a plan's time with its offset; one seeded without (the example household)
+    is family wall time, not the server's: a 09:00 game takes the morning, not the small hours."""
+    from familydb.saved_plans import SavedPlans
+
+    with db.transaction(conn):
+        plans.insert(
+            conn, title="Soccer", start="2026-09-26T09:00", end="2026-09-26T10:30", all_day=False
+        )
+    ctx = ToolContext(conn=conn, settings=settings, clock=thursday_clock, member=None)
+    assert ctx.calendar is None
+    context = build_context(ctx, (SAT, SAT))
+    assert context.days[0].free_known and context.days[0].spans == [(480, 540), (630, 1320)]
+    (event,) = SavedPlans(conn, TZ).list_events(
+        datetime(2026, 9, 26, tzinfo=TZ), datetime(2026, 9, 27, tzinfo=TZ)
+    )
+    assert (event.start.hour, event.end.hour) == (9, 10)

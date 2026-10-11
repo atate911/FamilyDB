@@ -61,6 +61,11 @@
   weekend than tiles, the picks job filled the spare tile from what the family's calendars list and
   crashed on it, so no set was made and Now kept the old one. The tile is made, and leads to the
   happening's page.
+- **A saved plan's time is read as the family's clock.** With no Google calendar, the plans kept
+  here are the busy time. One stored without a time zone offset (the example household's) was read
+  as the server's clock, so a 9 am game counted as busy at 2 am and the morning as free; the tools
+  store an offset, so a real household was not affected. It is now read as wall time, as everything
+  else reads one.
 
 ## v0.5.0 — beta (2026-10-11)
 
