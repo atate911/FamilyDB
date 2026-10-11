@@ -1,4 +1,4 @@
-{% from "_ui.html" import icon with context %}
+{% from "_ui.html" import icon, guard with context %}
 {% from "_settings.html" import setting with context %}
 {% if personal %}
   <section class="card sgroup" id="password" aria-labelledby="g-pw">
@@ -22,7 +22,7 @@
 <section class="card sgroup" id="{{ staying.group.name }}" aria-labelledby="g-stay">
   <h2 class="sgroup__h" id="g-stay">{{ icon('clock') }}{{ staying.group.title }}</h2>
   <form class="form form--tight mt-3" method="post" action="{{ url_for('settings.save') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="security" />
+    {{ guard() }}<input type="hidden" name="section" value="security" />
     <div class="sgrid">{% for one in staying.boxes %}{{ setting(one) }}{% endfor %}</div>
     <div><button class="btn btn--quiet btn--sm" type="submit">{{ icon('check', size='sm') }}Save</button></div>
   </form>
@@ -32,7 +32,7 @@
 <section class="card sgroup" id="{{ keeping.group.name }}" aria-labelledby="g-keep">
   <h2 class="sgroup__h" id="g-keep">{{ icon('clock') }}{{ keeping.group.title }}</h2>
   <form class="form form--tight mt-3" method="post" action="{{ url_for('settings.save') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="security" />
+    {{ guard() }}<input type="hidden" name="section" value="security" />
     <div class="sgrid">{% for one in keeping.boxes %}{{ setting(one) }}{% endfor %}</div>
     <div><button class="btn btn--quiet btn--sm" type="submit">{{ icon('check', size='sm') }}Save</button></div>
   </form>
@@ -51,7 +51,7 @@
     or device is ever in it.
   </p>
   <form class="form__row form__row--3 mt-3" method="post" action="{{ url_for('settings.export_everything') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {{ guard() }}
     {% if needs_password %}
       <div class="field"><label class="field__label" for="export-password">{{ 'Your password' if own_password else 'Family password' }}</label>
         <input id="export-password" name="password" type="password" autocomplete="current-password" /></div>
@@ -69,7 +69,7 @@
       {% else %}This page has no password, so a key is shown to anyone who can reach it.{% endif %}
     </p>
     <form class="form__row form__row--3 mt-3" method="post" action="{{ url_for('settings.reveal') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      {{ guard() }}
       <div class="field"><label class="field__label" for="reveal-key">Key</label>
         <select id="reveal-key" name="key">{% for row in saved %}<option value="{{ row.key }}" {% if row.revealed %}selected{% endif %}>{{ row.label }}</option>{% endfor %}</select></div>
       {% if needs_password %}
@@ -90,7 +90,7 @@
   <h2 class="sgroup__h" id="g-everyone">{{ icon('signout') }}Sign everyone out</h2>
   <p class="sgroup__note">Ends every sign-in on every phone and computer, this one included, and makes every browser a stranger again. For a lost phone or a password shared too widely; change the password too if it is the password that got out.</p>
   <form class="form__row form__row--3 mt-3" method="post" action="{{ url_for('settings.sign_out_everyone') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {{ guard() }}
     {% if needs_password %}
       <div class="field"><label class="field__label" for="everyone-password">{{ 'Your password' if own_password else 'Family password' }}</label>
         <input id="everyone-password" name="password" type="password" autocomplete="current-password" /></div>

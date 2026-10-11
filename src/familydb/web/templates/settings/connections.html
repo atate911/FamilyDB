@@ -1,4 +1,4 @@
-{% from "_ui.html" import icon with context %}
+{% from "_ui.html" import icon, guard with context %}
 {% from "_settings.html" import setting with context %}
 {% set token = keys.telegram_bot_token %}
 <section class="card sgroup" id="telegram" aria-labelledby="g-tg">
@@ -11,7 +11,7 @@
     {% else %}Not set up, so the family uses the chat on this page instead.{% endif %}
   </p>
   <form class="form form--tight mt-4" method="post" action="{{ url_for('settings.save_keys') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {{ guard() }}
     <input type="hidden" name="section" value="connections" />
     <div class="setting{{ ' setting--bad' if token.problem }}">
       <div class="setting__head">
@@ -32,7 +32,7 @@
 
   {% set answering = groups['telegram-answering'] %}
   <form class="sub-form" method="post" action="{{ url_for('settings.save') }}" aria-labelledby="{{ answering.group.name }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="connections" />
+    {{ guard() }}<input type="hidden" name="section" value="connections" />
     <h3 class="lines__h" id="{{ answering.group.name }}">{{ answering.group.title }}</h3>
     <div class="sgrid">{% for one in answering.boxes %}{{ setting(one) }}{% endfor %}</div>
     <button class="btn btn--quiet btn--sm" type="submit">{{ icon('check', size='sm') }}Save</button>
@@ -40,7 +40,7 @@
 
   {% set in_groups = groups['telegram-groups'] %}
   <form class="sub-form" method="post" action="{{ url_for('settings.save') }}" aria-labelledby="{{ in_groups.group.name }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="connections" />
+    {{ guard() }}<input type="hidden" name="section" value="connections" />
     <h3 class="lines__h" id="{{ in_groups.group.name }}">{{ in_groups.group.title }}</h3>
     {% if reads_groups %}
       <p class="state-line">It reads every message in the groups it is in.</p>
@@ -73,7 +73,7 @@
     <details class="fieldfold mt-3" id="google-disconnect">
       <summary>{{ icon('x', size='sm') }}Disconnect Google Calendar{{ icon('chev', size='sm', cls='chev') }}</summary>
       <form class="fieldfold__body" method="post" action="{{ url_for('settings.google_disconnect') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        {{ guard() }}
         <p class="small">This deletes the saved key and forgets the calendar’s id, so the bot stops reading and writing the calendar. Plans stay saved here, and nothing is taken off Google. The calendar can be connected again at any time, and the key may be deleted in Google Cloud as well.</p>
         <div><button class="btn btn--danger btn--sm" type="submit">{{ icon('x', size='sm') }}Yes, disconnect</button></div>
       </form>
@@ -83,7 +83,7 @@
   <details class="fieldfold mt-3"{% if calendar.open %} open{% endif %}>
     <summary>Use a calendar by its id{{ icon('chev', size='sm', cls='chev') }}</summary>
     <form class="fieldfold__body" method="post" action="{{ url_for('settings.save') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="connections" />
+      {{ guard() }}<input type="hidden" name="section" value="connections" />
       {% for one in calendar.boxes %}{{ setting(one) }}{% endfor %}
       <div><button class="btn btn--quiet btn--sm" type="submit">{{ icon('check', size='sm') }}Save the id</button></div>
     </form>

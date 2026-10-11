@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, who with context %}
+{% from "_ui.html" import icon, who, guard with context %}
 {% from "_dest.html" import dest_head %}
 {% block title %}{{ m.title }}, {{ m.when }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-outing{% endblock %}
@@ -42,7 +42,7 @@
     <section class="sec" aria-labelledby="h-good">
       <div class="sec__label"><h2 id="h-good" class="label">What made it good?</h2></div>
       <form class="chips chips--form" method="post" action="{{ url_for('edits.made_it_good', outcome_id=m.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        {{ guard(once=true) }}
         {% for reason in reasons %}<button class="chip" type="submit" name="reason" value="{{ reason }}">{{ reason }}</button>{% endfor %}
       </form>
       <p class="sec__note">{{ assistant }} remembers it, and leans that way next time.</p>
@@ -50,7 +50,7 @@
     {% if idea.status == 'done' %}
       <div class="acts">
         <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          {{ guard(once=true) }}
           <input type="hidden" name="status" value="idea" /><input type="hidden" name="back" value="{{ request.path }}" />
           <button class="btn btn--primary btn--sm" type="submit">Again?</button>
         </form>

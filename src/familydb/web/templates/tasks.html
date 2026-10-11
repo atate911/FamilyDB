@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, page_head, todo with context %}
+{% from "_ui.html" import icon, avatar, page_head, todo, guard with context %}
 {% block title %}{{ 'To do' if grownup else 'My to-dos' }} · {{ site_title }}{% endblock %}
 {# One person to choose, as a pill: their colour and their letter, then their name. `value` is what the form sends. #}
 {% macro who_choice(value, one, checked=false, label=none) %}
@@ -25,7 +25,7 @@
 
     {% if visitor().may('change') %}
       <form class="card adder adder--todo" method="post" action="{{ url_for('edits.add_task') }}" aria-labelledby="h-add" novalidate>
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        {{ guard(once=true) }}
         <h2 class="field__label" id="h-add">Add a to-do</h2>
         <div class="adder__row">
           <label class="sr" for="q-title">What needs doing</label>

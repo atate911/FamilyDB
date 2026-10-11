@@ -311,6 +311,7 @@ def idea(idea_id: int) -> str:
         box["starters"] = views.idea_starters(record, today)
     away = map_view.away_from_home(place, settings)
     card = _idea_card(record, settings, away, slots, kept)
+    place_panel = views.place_panel(place, now, settings.place_stale_days, today)
     by = next((m.display_name for m in family if m.id == record.suggested_by), None)
     return answer(
         "idea.html",
@@ -330,7 +331,8 @@ def idea(idea_id: int) -> str:
         row=card,
         setting=views.SETTINGS.get(record.setting, record.setting),
         weather=views.WEATHER.get(record.weather),
-        place=views.place_panel(place, now, settings.place_stale_days, today),
+        facts=views.idea_facts(record, card, place_panel, grown_up=visitor.may("browse")),
+        place=place_panel,
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
         plans=planned,
         changed=views.changed_line(

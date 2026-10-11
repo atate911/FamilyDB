@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, who %}
+{% from "_ui.html" import icon, who, guard %}
 {% from "_dest.html" import dest_head, chip_row, dest_empty %}
 {% block title %}Lists · {{ site_title }}{% endblock %}
 {% block body_class %}page-lists{% endblock %}
@@ -16,7 +16,7 @@
       {% for thing in one.to_get %}
         <li>
           <form method="post" action="{{ url_for('edits.change_list') }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+            {{ guard(once=true) }}
             <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing.text }}" /><input type="hidden" name="back" value="{{ one.name }}" />
             <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Got: {{ thing.text }}</span></button>
           </form>
@@ -30,7 +30,7 @@
     <details class="fold fold--quiet">
       <summary>Add by hand{{ icon('chev', size='sm', cls='chev') }}</summary>
       <form class="form fold__body" method="post" action="{{ url_for('edits.change_list') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        {{ guard(once=true) }}
         <input type="hidden" name="action" value="add" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="back" value="{{ one.name }}" />
         <div class="field"><label class="field__label" for="add-{{ one.name }}">Add to it (one a line)</label>
           <textarea id="add-{{ one.name }}" name="items" rows="2" maxlength="4000" required data-dictate></textarea></div>
@@ -44,7 +44,7 @@
           {% for thing in one.ticked %}
             <li>
               <form method="post" action="{{ url_for('edits.change_list') }}">
-                <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                {{ guard(once=true) }}
                 <input type="hidden" name="action" value="untick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing }}" /><input type="hidden" name="back" value="{{ one.name }}" />
                 <button class="linkbtn" type="submit">Put back</button>
               </form>
@@ -53,7 +53,7 @@
           {% endfor %}
         </ul>
         <form method="post" action="{{ url_for('edits.change_list') }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          {{ guard(once=true) }}
           <input type="hidden" name="action" value="clear_ticked" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="back" value="{{ one.name }}" />
           <button class="btn btn--quiet btn--sm" type="submit">Clear what was got</button>
         </form>

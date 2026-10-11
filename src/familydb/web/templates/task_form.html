@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, page_head, who with context %}
+{% from "_ui.html" import icon, avatar, page_head, who, guard with context %}
 {% from "_dest.html" import dest_head %}
 {% block title %}{{ task.title }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-reminder{% endblock %}
@@ -22,13 +22,13 @@
     <div class="acts">
       {% if task.status == 'open' %}
         <form method="post" action="{{ url_for('edits.finish_task', task_id=task.id) }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          {{ guard(once=true) }}
           <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="back" value="reminder" />
           <button class="btn btn--primary btn--sm" type="submit">{{ icon('check') }}Done</button>
         </form>
         {% for action, label in presses if action != 'done' %}
           <form method="post" action="{{ url_for('edits.snooze_task', task_id=task.id) }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+            {{ guard(once=true) }}
             <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="back" value="reminder" />
             <input type="hidden" name="when" value="{{ action }}" />
             <button class="btn btn--sm btn--quiet" type="submit">{{ label }}</button>
@@ -36,7 +36,7 @@
         {% endfor %}
       {% elif task.status == 'done' %}
         <form method="post" action="{{ url_for('edits.reopen_task', task_id=task.id) }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          {{ guard(once=true) }}
           <input type="hidden" name="back" value="reminder" />
           <button class="btn btn--sm btn--quiet" type="submit">Not done after all</button>
         </form>
@@ -48,7 +48,7 @@
   <div class="stack fold__body">
     <form class="card form" method="post" action="{{ url_for('edits.edit_task', task_id=task.id) }}" aria-labelledby="h-edit" novalidate>
       <h2 class="sr" id="h-edit">Edit</h2>
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+      {{ guard(once=true) }}
       <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="repeat_was" value="{{ row.repeat_was }}" />
       <fieldset class="fieldset">
         <legend>What needs doing</legend>

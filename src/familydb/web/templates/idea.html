@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, who, surprise with context %}
+{% from "_ui.html" import icon, avatar, who, surprise, guard with context %}
 {% from "_dest.html" import dest_head, by_hand %}
 {% block title %}{{ idea.title }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-place{% endblock %}
@@ -26,19 +26,7 @@
   </header>
   {% if idea.description %}<p>{{ idea.description }}</p>{% endif %}
 
-  {# The facts that decide: only the ones that exist. #}
-  {% set facts = [] %}
-  {% if place and place.today %}{% set _ = facts.append(('Today', place.today | capitalize, 'ok' if place.today.startswith('open') else '')) %}{% endif %}
-  {% if row.away %}{% set _ = facts.append(('From home', row.away, '')) %}{% elif place and place.travel %}{% set _ = facts.append(('From home', place.travel, '')) %}{% endif %}
-  {% if row.cost and grownup %}{% set _ = facts.append(('Cost', row.cost ~ (' · ' ~ place.price_note if place and place.price_note else ''), '')) %}{% elif place and place.price_note and grownup %}{% set _ = facts.append(('Cost', place.price_note, '')) %}{% endif %}
-  {% if idea.needs_booking %}{% set _ = facts.append(('Booking', 'Needed' ~ (', about ' ~ idea.lead_time_days ~ ' days ahead' if idea.lead_time_days else ''), '')) %}{% endif %}
-  {% set _ = facts.append(('For', row.who, '')) %}
-  {% if row.ages %}{% set _ = facts.append(('Ages', row.ages, '')) %}{% endif %}
-  {% if row.duration %}{% set _ = facts.append(('How long', row.duration, '')) %}{% endif %}
-  {% if idea.setting and idea.setting != 'either' %}{% set _ = facts.append(('Indoor or out', setting, '')) %}{% endif %}
-  {% if weather %}{% set _ = facts.append(('Weather', weather, '')) %}{% endif %}
-  {% if row.on %}{% set _ = facts.append(('On', row.on, '')) %}{% endif %}
-  {% if row.rating %}{% set _ = facts.append(('So far', row.rating, '')) %}{% endif %}
+  {# The facts that decide: only the ones that exist (views.idea_facts). #}
   <dl class="facts">
     {% for k, v, tone in facts %}<div><dt class="facts__k">{{ k }}</dt><dd class="facts__v{{ ' facts__v--ok' if tone == 'ok' }}">{{ v | figs }}</dd></div>{% endfor %}
   </dl>
@@ -117,7 +105,7 @@
       <details class="fold fold--quiet" id="plan-it">
         <summary class="btn btn--primary btn--sm">{{ icon('cal', size='sm') }}{{ 'Plan it again' if plans else 'Plan it' }}</summary>
         <form class="form fold__body" method="post" action="{{ url_for('edits.add_plan') }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          {{ guard(once=true) }}
           <input type="hidden" name="idea_id" value="{{ idea.id }}" /><input type="hidden" name="title" value="{{ idea.title }}" />
           <div class="field"><label class="field__label" for="start">When <span class="req">(required)</span></label>
             <input id="start" name="start" type="datetime-local" required value="{{ idea.happens_from if idea.happens_from and 'T' in idea.happens_from else '' }}" />
@@ -128,14 +116,14 @@
         </form>
       </details>
       <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        {{ guard(once=true) }}
         <input type="hidden" name="status" value="{{ 'idea' if idea.status == 'dropped' else 'dropped' }}" />
         <button class="q__lnk" type="submit" aria-describedby="drop-h">{{ 'Bring it back' if idea.status == 'dropped' else 'Drop it' }}</button>
       </form>
       <p class="sr" id="drop-h">{{ 'It comes up in suggestions again.' if idea.status == 'dropped' else 'It stops coming up in suggestions; you can bring it back.' }}</p>
       {% if can_look_up and not idea.lookup_wanted_at %}
         <form method="post" action="{{ url_for('edits.look_up', idea_id=idea.id) }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+          {{ guard(once=true) }}
           <button class="q__lnk" type="submit">{{ 'Look it up now' if idea.enrichment == 'pending' else 'Look it up again' }}</button>
         </form>
       {% endif %}
@@ -143,7 +131,7 @@
     <details class="fold fold--quiet">
       <summary>Record how it went by hand{{ icon('chev', size='sm', cls='chev') }}</summary>
       <form class="form fold__body" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+        {{ guard(once=true) }}
         <div class="form__row">
           <div class="field"><label class="field__label" for="happened_on">When</label><input id="happened_on" name="happened_on" type="date" value="{{ today }}" max="{{ today }}" /></div>
           <div class="field"><label class="field__label" for="rating">Out of ten</label>

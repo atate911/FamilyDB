@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, faces with context %}
+{% from "_ui.html" import icon, faces, guard with context %}
 {% from "_dest.html" import dest_head %}
 {% block title %}{{ plan.title }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-plan{% endblock %}
@@ -38,7 +38,7 @@
     <details class="fold fold--quiet">
       <summary>Move it{{ icon('chev', size='sm', cls='chev') }}</summary>
       <form class="form fold__body" method="post" action="{{ url_for('edits.move_plan', plan_id=plan.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="back" value="plan" />
+        {{ guard(once=true) }}<input type="hidden" name="back" value="plan" />
         <div class="field"><label class="field__label" for="start-{{ plan.id }}">New time</label>
           <input id="start-{{ plan.id }}" name="start" type="datetime-local" required value="{{ row.start_value }}" /></div>
         <label class="check"><input type="checkbox" name="all_day" value="yes"{{ ' checked' if row.all_day }} />All day</label>
@@ -48,7 +48,7 @@
     <details class="fold fold--quiet fold--danger">
       <summary>Take it off the calendar{{ icon('chev', size='sm', cls='chev') }}</summary>
       <form class="form fold__body" method="post" action="{{ url_for('edits.cancel_plan', plan_id=plan.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" /><input type="hidden" name="back" value="plan" />
+        {{ guard(once=true) }}<input type="hidden" name="back" value="plan" />
         <p class="small">{{ 'This takes it off the family calendar for everyone.' if on_google else 'This takes it off the plans for everyone.' }}</p>
         <button class="btn btn--danger btn--sm" type="submit">Yes, take it off</button>
       </form>

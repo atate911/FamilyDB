@@ -898,6 +898,46 @@ def task_starters(task: Task, today: date) -> list[str]:
     return [first, second, third]
 
 
+def idea_facts(
+    idea: Idea, card: dict[str, Any], place: dict[str, Any] | None, *, grown_up: bool
+) -> list[tuple[str, str, str]]:
+    """The facts that decide, on an idea's page: only the ones that exist, each a label, its
+    words and a tone ("ok" for a place open today). Cost is a grown-up's."""
+    facts: list[tuple[str, str, str]] = []
+    today = place.get("today") if place else None
+    if today:
+        facts.append(
+            ("Today", today[:1].upper() + today[1:], "ok" if today.startswith("open") else "")
+        )
+    if card.get("away"):
+        facts.append(("From home", card["away"], ""))
+    elif place and place.get("travel"):
+        facts.append(("From home", place["travel"], ""))
+    note = place.get("price_note") if place else None
+    if card.get("cost") and grown_up:
+        facts.append(("Cost", card["cost"] + (f" · {note}" if note else ""), ""))
+    elif note and grown_up:
+        facts.append(("Cost", note, ""))
+    if idea.needs_booking:
+        ahead = f", about {idea.lead_time_days} days ahead" if idea.lead_time_days else ""
+        facts.append(("Booking", "Needed" + ahead, ""))
+    facts.append(("For", card["who"], ""))
+    if card.get("ages"):
+        facts.append(("Ages", card["ages"], ""))
+    if card.get("duration"):
+        facts.append(("How long", card["duration"], ""))
+    if idea.setting and idea.setting != "either":
+        facts.append(("Indoor or out", SETTINGS.get(idea.setting, idea.setting), ""))
+    weather = WEATHER.get(idea.weather)
+    if weather:
+        facts.append(("Weather", weather, ""))
+    if card.get("on"):
+        facts.append(("On", card["on"], ""))
+    if card.get("rating"):
+        facts.append(("So far", card["rating"], ""))
+    return facts
+
+
 def plan_state(plan: Plan, today: date, tz: ZoneInfo) -> str:
     """A plan's state in words: "Planned for Saturday 3 October, 6:30 pm", "Today at 6:30 pm",
     "Was on Saturday 3 October", "Canceled", "Tentative for …"."""

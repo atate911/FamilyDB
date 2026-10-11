@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, who, faces with context %}
+{% from "_ui.html" import icon, avatar, who, faces, guard with context %}
 {% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty %}
 {% block title %}What we did · {{ site_title }}{% endblock %}
 {% block body_class %}page-did{% endblock %}
@@ -23,7 +23,7 @@
           <span class="r__tr">{{ who(m.people, m.who, shell.family) }}</span>
           {% if grownup and m.idea_id and visitor().may('change') and m.status == 'done' %}
             <form class="r__act" method="post" action="{{ url_for('edits.set_status', idea_id=m.idea_id) }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              {{ guard(once=true) }}
               <input type="hidden" name="status" value="idea" /><input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}" />
               <button class="q__lnk" type="submit">Again?<span class="sr"> {{ m.title }}: back among the things to do</span></button>
             </form>
