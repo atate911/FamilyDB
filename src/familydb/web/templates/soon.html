@@ -4,7 +4,8 @@
 {% block title %}{{ name }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-soon{% endblock %}
 {# Happening soon (docs/INTERFACE.md section 4): dated possibilities by date, what the sources list near home and the
-   family's own things with a closing date, each marked with where it came from. #}
+   family's own things with a closing date, each a title and one line: when, where, cost and where it came from. What
+   the listing says is on its own page, a tap away. #}
 {% block content %}
   {{ dest_head(name, summary) }}
   {{ chip_row(chips) }}
@@ -16,8 +17,7 @@
         {% for r in day.rows %}
           <div class="r">
             <span class="r__t">{% if r.href %}<a href="{{ r.href }}">{{ r.title }}</a>{% elif r.url %}<a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</span>
-            <span class="r__m">{{ r.when }}{% if r.where %} · {{ r.where }}{% endif %}{% if r.price %} · {{ r.price }}{% endif %}{% if r.summary %} · {{ r.summary }}{% endif %}</span>
-            <span class="r__tr"><span class="tag tag--off">{{ r.source_words }}</span></span>
+            <span class="r__m">{{ r.when | figs }}{% if r.where %} · {{ r.where }}{% endif %}{% if r.price %} · {{ r.price }}{% endif %}{% if r.source_words %} · {{ r.source_words }}{% endif %}</span>
           </div>
         {% endfor %}
       </div>

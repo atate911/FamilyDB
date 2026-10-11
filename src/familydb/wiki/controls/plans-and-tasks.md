@@ -10,7 +10,7 @@ Four destinations read the calendar, the [things to do](/wiki/reference/glossary
 | Kid | **My week**: the family's plans and her own things to do, which she ticks off herself; no plate, no pencil, no forms. She asks the assistant to add or change one | Not in her row | What we did, with no faces |
 | Anyone on the shared password | Everything | Everything | Everything |
 
-Who may change what is in [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions). Every page leaves out plans for a present hidden from you, and things to do about one ([Presents](/wiki/model/ideas-and-places#presents)). So do **How did it go?** and its "to rate" count.
+Who may change what is in [Roles and permissions](/wiki/model/family-and-roles#roles-and-permissions). Every page leaves out plans for a present hidden from you, and things to do about one ([Presents](/wiki/model/ideas-and-places#presents)). So does **How did it go?**
 
 ## Week
 
@@ -34,7 +34,7 @@ A plan's row opens its page: when, in words and how far off; the time to leave, 
 
 > **Taking a plan off deletes the event from Google Calendar for everyone.** FamilyDB keeps the plan marked canceled but cannot bring the event back: add a new plan instead.
 
-- **Rate a plan.** On Now, on Did, on the day's page or the plan's own, choose Loved it, OK or Not great. These record 9, 6 and 3 out of ten. The question asks about confirmed plans linked to an idea that ended in the last 14 days and have no rating, and counts them as "to rate" on Did.
+- **Rate a plan.** On Now, on Did, on the day's page or the plan's own, choose Loved it, OK or Not great. These record 9, 6 and 3 out of ten. The question asks about confirmed plans linked to an idea that ended in the last 14 days and have no rating; Now asks about one at a time, after the kids' asks, and nothing counts them. With [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) off, only the plan's own page offers the faces.
 
 ### Rules for plans
 
@@ -48,7 +48,7 @@ A plan's row opens its page: when, in words and how far off; the time to leave, 
 
 A reminder's page says when, whose, the window it suits, how it repeats and where it is sent, with **Done**, **In an hour** and **Tomorrow** under it, the buttons a reminder carries in the chat, by code; a done one offers **Not done after all**. The box is about the reminder, with three sentences that fill it ("Move it to Saturday", "Remind me the evening before", "Make it weekly"). **Edit by hand** is folded last: change any box, set Status, or choose **Cancel the pending reminder**; a new reminder time snoozes it, and emptying the deadline clears it.
 
-**All to-dos** is the full list. Each tab, **Open**, **Done**, **Canceled** or **All**, lists at most 100, soonest deadline first, and search matches words inside titles and notes. Open ones are grouped **Overdue** (the deadline's day has passed, in the family's time zone), **Coming up** and **No date**. A row shows the tick, title, who, when, the reminder (Scheduled, Waiting for delivery or Delivered) and any window or repeat. To add one by hand, type what needs doing there and choose **Add**; under "Who, when, reminder", choose who it is for, a deadline, a preferred window, a reminder time and a repeat. It is for you unless you choose someone else. Telling the assistant is the usual way: "remind me Tuesday at 5 to call the dentist".
+**All to-dos** is the full list. Each tab, **Open**, **Done**, **Canceled** or **All**, lists at most 100, soonest deadline first, and search matches words inside titles and notes. Open ones are grouped **Overdue** (the deadline's day has passed, in the family's time zone), **Coming up** and **No date**. A row shows the tick, title, who, when, the reminder if one is set (Scheduled, Waiting for delivery or Delivered) and any window or repeat; a thing with no date shows its window as its when. To add one by hand, type what needs doing there and choose **Add**; under "Who, when, reminder", choose who it is for, a deadline, a preferred window, a reminder time and a repeat. It is for you unless you choose someone else. Telling the assistant is the usual way: "remind me Tuesday at 5 to call the dentist".
 
 **Tick it off** on Now, Week, the list or its own page. **Undo** beside the receipt reopens it. To cancel one, use Edit by hand; a canceled one can be set back to Open. Reopening does not restore its reminders.
 
@@ -62,7 +62,7 @@ A reminder's page says when, whose, the window it suits, how it repeats and wher
 
 ## Soon
 
-What is on near home in the weeks ahead, by day, with the family's own things that have a closing date among them and the free time on each day. It is read from the family's sources, the calendars and the listings set on [its settings page](/wiki/controls/settings/happening), with no model call. The chips are **This weekend**, **Free** (only days with free time) and each source.
+What is on near home in the weeks ahead, by day, with the family's own things that have a closing date among them. It is read from the family's sources, the calendars and the listings set on [its settings page](/wiki/controls/settings/happening), with no model call. Each row is the name and one line: the time (or all day), where, the cost and who listed it; tap it for the listing's own words, **Save it** and **Put it on the calendar**. The chips are **This weekend**, **Free** (only what costs nothing) and each source.
 
 Each find has a page of its own: its day (or **Any time**, for a place the assistant found rather than an event), place and cost, the listing in its own words and a link to it, and who listed it. **Save it** keeps it as an idea with its dates and place (the tool the assistant would call), and the page then links to that idea; **Not for us** tells the assistant to stop offering it, and the page says so (saying "not for us" about it in the chat does the same, and either is taken back by Undo). Both are for grown-ups: a kid sees the find and neither button. **Put it on the calendar** adds it as a plan. Once it is over, the page says so.
 
@@ -72,7 +72,7 @@ The shopping list, always, and the family's other lists as chips, each at its ow
 
 ## Did
 
-What we did, newest first: each outing with its face (Loved it from 8 out of ten, OK from 5, Not great below), when, who went and the note. What is still to rate comes first, with the faces to say. **Loved** keeps only the loved ones; **Favorites** shows one row a place the family loved on average, with how many times; **This time last year** shows the month either side of the day a year ago; each person's chip, what they were at.
+What we did, newest first: each outing with its face (Loved it from 8 out of ten, OK from 5, Not great below), when, who went and the note. What is still to rate comes first, with the faces to say, while Ask how a plan went is on. **Loved** keeps only the loved ones; **Favorites** shows one row a place the family loved on average, with how many times; **This time last year** shows the month either side of the day a year ago; each person's chip, what they were at.
 
 Each outing opens a page of its own: when, who went, how it went out of ten and whether they would go again, the words said about it and who recorded it, and the other times at the same place. **What made it good?** offers a few chips (An early start, A friend came, Short, Cheap, Close to home, Outdoors); a tap becomes something the assistant remembers about the family, which you can see and forget on [What Vera knows](/wiki/controls/memory). **Again?** puts the place back among the things to do.
 

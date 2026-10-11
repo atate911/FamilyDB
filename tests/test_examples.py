@@ -36,7 +36,9 @@ def test_the_examples_are_written_with_links_that_hold(tmp_path: Path) -> None:
 def test_each_person_starts_where_they_would(tmp_path: Path) -> None:
     sam = export.crawl(export.PEOPLE[0], tmp_path / "sam")
     now = sam.pages["/"]
-    assert "How did Riverside Science Center go?" in now and "Maya asked for" in now
+    # The kids' asks fill Now; how an outing went waits behind them, on What we did.
+    assert "Maya asked for" in now and "How did Riverside Science Center go?" not in now
+    assert "How did Riverside Science Center go?" in sam.pages["/did"]
     assert "said-sheet" in sam.pages[f"/eat?asked={household.REPLY_ON_EAT}"]
     assert 'class="rcpt"' in sam.pages[f"/do?asked={household.RECEIPT_ON_DO}"]
     first = export.crawl(export.PEOPLE[3], tmp_path / "first")

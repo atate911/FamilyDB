@@ -16,17 +16,17 @@ The pill is the small state in the sidebar and the phone's top bar for parents a
 |---|---|
 | **Can't answer yet** | A step the assistant cannot work without is not done: an admin on the family list, or a model with a key. |
 | **Resting** | The daily limit is set and today's estimated spend has reached it. It lasts until midnight in the family's time zone. |
-| **Can't answer** | A stopping trouble is listed under Needs a look: a model company out of credit, a model company refusing its key, or today's limit row listed. |
+| **Can't answer** | Something stops the family being answered: the model company that answers the chat is out of credit or refusing its key, and no other company with a key may stand in for it. |
 | **Writing back** | A reply is being written in your own chat. |
 | **Ready** | None of the above. |
 
-The banner says "can't answer right now" for both kinds of Can't answer, "is resting until midnight" for Resting, and "is ready" otherwise; it never says Writing back. A line under it gives what was spent today, what the last 30 days cost, which parts need a look and which are not connected yet. Not connected is a choice, not a fault.
+The banner says "can't answer right now" for both kinds of Can't answer, with why where one trouble stops her ("can't answer right now: OpenAI refused its key."), "is resting until midnight" for Resting, and "is ready" otherwise; it never says Writing back. A line under it says what to do first (to an admin, where on the settings; to a parent, that an admin can put it right), then what was spent today, what the last 30 days cost, which parts need a look and which are not connected yet. Not connected is a choice, not a fault. While she cannot answer, the same why shows under the box on every page and above the conversation in Chat, with **What to do** opening this page, and on the pill when you point at it. Kids see none of it.
 
-The pill goes by the Needs a look list, not by whether anything is answering: a model company out of credit makes the pill read Can't answer even while the second company is answering. A limit row from an earlier day does not count: the pill goes by today's row only, and the first call let through after midnight forgets every limit row.
+The pill goes by whether the chat can be answered, not by the Needs a look list alone: a company the chat does not use, or one another company with a key may stand in for, is listed under Needs a look and makes the Status tile amber, but the pill stays Ready. A limit row counts only while today's spend is at the limit, so raising the limit lets her answer at once; a limit row from an earlier day never counts, and the first call let through forgets every limit row.
 
 ## Needs a look
 
-This lists what only an admin can fix, while it lasts. Each row says since when, how often, and whether admins were told on Telegram. If **Tell admins on Telegram** is on and an admin has a Telegram id, FamilyDB tells them within a minute, and again after 12 hours at the soonest while the trouble goes on. A row leaves when the thing works again, or after seven days without being seen again. Three rows stop answers:
+This lists what only an admin can fix, while it lasts. Each row says since when, how often, and whether admins were told on Telegram. If **Tell admins on Telegram** is on and an admin has a Telegram id, FamilyDB tells them within a minute, and again after 12 hours at the soonest while the trouble goes on. A row leaves when the thing works again, or after seven days without being seen again. Three rows can stop answers (a company's only when it answers the chat and no other company may stand in; the limit's only while today's spend is at it):
 
 | Row | It means | Goes away when | Do this |
 |---|---|---|---|
@@ -62,7 +62,7 @@ Every row has a tag in words, never color alone, and an admin gets a button besi
 
 | Row | Looks wrong when | Do this |
 |---|---|---|
-| **The assistant** (by its name) | **Can't answer** names the needed steps not done, or says something only an admin can fix is stopping it. **Resting** says the limit is spent. | **Open setup**, or read Needs a look. See [Setup](/wiki/controls/setup). |
+| **The assistant** (by its name) | **Can't answer** names the needed steps not done, or what stops it and what to do ("Anthropic refused its key. Check Anthropic's key on Settings, AI model, or choose another company there."). **Resting** says the limit is spent. | **Open setup**, or **Put it right** for an admin. See [Setup](/wiki/controls/setup). |
 | **Spending** | **Near the limit** from 75% of it, **Limit reached** at 100%, **No limit** when it is 0, which means nothing stops a runaway day. | **Set a limit**, or raise it on [Spending](/wiki/controls/settings/spending). |
 | **Sign-in** | **Needs a look** while everybody still shares one password or it is still the one FamilyDB started with. It is fine once an admin signs in as themselves, or when no password is set at all. | The Password step of [Setup](/wiki/controls/setup). |
 | **Backup** | **Optional** when no second company with a key can answer. It costs money only when used. | **Add a backup key** on [AI model](/wiki/controls/settings/ai-model#keys). |

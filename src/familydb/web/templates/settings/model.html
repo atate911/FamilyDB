@@ -115,7 +115,8 @@
                   <div class="mp-row__vendor" hidden><select data-setting="vendor" data-job="{{ j.id }}" aria-label="Company for {{ j.name | lower }}"></select></div>
                   <div class="mp-row__model" hidden><select data-setting="model" data-job="{{ j.id }}" aria-label="Model for {{ j.name | lower }}"></select></div>
                   <div class="mp-row__cost mp-r" data-cost="{{ j.id }}"><b class="fig">{{ 'off' if j.now.off else ('—' if not j.now.company else money(j.now.month)) }}</b></div>
-                  <p class="mp-row__blurb small muted">{{ j.blurb }} · {{ j.usage_label }}</p>
+                  <p class="mp-row__blurb small muted">{{ j.blurb }} · {{ j.usage_label }}
+                    {%- if j.effort %}<span class="mp-thinks" data-thinks="{{ j.id }}"{{ ' hidden' if j.now.off }}> · thinking: {{ dict(b.efforts)[j.effort.picked or j.effort.default] | lower }}</span>{% endif %}</p>
                   {% if problems.get('choice_' ~ j.id) %}<div class="mp-row__err"><p class="field__error" role="alert">{{ problems['choice_' ~ j.id] }}</p></div>{% endif %}
                   <div class="mp-row__note small" data-note="{{ j.id }}">
                     <p class="mp-n muted" data-n="off" hidden></p>

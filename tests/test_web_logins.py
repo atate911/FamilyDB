@@ -694,9 +694,11 @@ def test_the_health_pill_and_status_follow_what_is_wrong(app, sam, family, alex)
     from familydb.store import alerts as alert_store
     from familydb.web import status as status_page
 
-    def note(kind: str) -> None:
+    def note(kind: str, about: str = "") -> None:
         with closing(app.connect()) as conn, db.transaction(conn):
-            alert_store.note(conn, kind, "", "test", now=NOW_ISO, keep_after="2026-01-01T00:00:00Z")
+            alert_store.note(
+                conn, kind, about, "test", now=NOW_ISO, keep_after="2026-01-01T00:00:00Z"
+            )
 
     def pill(browser) -> str:
         found = re.search(
@@ -709,7 +711,7 @@ def test_the_health_pill_and_status_follow_what_is_wrong(app, sam, family, alex)
     assert "is ready" in pill(sam)
     note("calendar")
     assert "is ready" in pill(sam) and 'id="attention"' in sam.get("/status").text
-    note("key")
+    note("key", "anthropic")  # the company that answers the chat
     assert "can\u2019t answer right now" in pill(sam)
     assert "can\u2019t answer right now" in sam.get("/status").text
     assert "can\u2019t answer right now" in pill(

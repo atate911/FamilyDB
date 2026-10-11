@@ -34,6 +34,7 @@ from familydb.web import (
     chat,
     map_view,
     page_rows,
+    shell,
     views,
 )
 from familydb.web.answers import answer
@@ -300,6 +301,8 @@ def idea(idea_id: int) -> str:
         record = idea_store.get(conn, idea_id)
         if record is None or presents.is_kept_from(conn, record, visitor.member):
             abort(404)
+        if record.kind == RESTAURANT_KIND and visitor.may("browse"):
+            shell.belongs_to("eat")
         original = (
             message_store.get(conn, record.source_message_id) if record.source_message_id else None
         )

@@ -72,6 +72,8 @@ An [outcome](/wiki/reference/glossary#outcome) is one time the family did someth
 
 Recording one marks the idea done, adds one to its times done, and recomputes the average over the rated ones. The latest would-repeat answer decides: while it is "no" the idea stays out of suggestions, and an outcome with no answer changes nothing.
 
+What suggestions make of it: two ratings under 5 in the last year leave the idea out, and one is said as a caution; something never done comes before what was, and of what was, the best rated first; "our usual" and the Favorites chip on Did put what was loved ("again", or 8 or more last time) first; and the times done and the last visit are what "New to us" on Eat and "you haven't been" in her picks read. How long a done thing rests before it is offered again needs no answer: a plan's day counts as done once it is over.
+
 ## Presents
 
 An idea of kind `gift` is a present. It is hidden from every kid, always. It is also hidden from any grown-up named in its *For* list, matched as a whole word and ignoring capitals, unless a parent or admin chose a different list of grown-ups on the idea's edit form (even an empty one). Things to do about a present go with it and are hidden from the same people. Under the shared password nothing is hidden.

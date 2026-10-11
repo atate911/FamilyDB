@@ -24,7 +24,7 @@ FamilyDB words these from the assistant's lines, not a model, so they cost nothi
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
-| Ask how a plan went (`follow_ups`) | on | Asks once for each plan that ended before today (up to a week back), with buttons to answer in one tap, so the ideas list learns what you liked. Off means nobody is asked; how it went can still be told at any time. | on or off |
+| Ask how a plan went (`follow_ups`) | on | Asks once for each plan that ended before today (up to a week back), in a message with buttons to answer in one tap; on the page, one plan at a time on Now (after the kids' asks) and the rest on Did, a past day and the month. What you say keeps a place you did not enjoy out of suggestions and puts favorites first. Off means nobody is asked anywhere; how it went can still be told on the plan's own page, a place's page or to the assistant. | on or off |
 | Time to ask how a plan went (`follow_up_hour`) | 10 | The hour of the day after a plan. | 0 to 23 |
 | Check tomorrow's plans the evening before (`plan_checks`) | on | Speaks only when something is off, with another idea for the same time when one fits. Also covers a plan of today that has not begun. | on or off |
 | Time to check tomorrow's plans (`plan_check_hour`) | 19 | The hour of the evening before. The check runs every hour from then to 22:00, so a plan made later that evening is still checked. | 0 to 23 |

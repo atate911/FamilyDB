@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, tag, page_head, msg, msg_pending, pin_shelf %}
+{% from "_ui.html" import icon, avatar, tag, page_head, msg, msg_pending, pin_shelf, cannot_answer with context %}
 {% block title %}{{ 'Chat with ' ~ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-chat{% endblock %}
 {# While an answer is on its way a meta refresh fetches the page again (works without scripts), soon at first and then less often, and stops, leaving the visible link. Only set while something really is being thought about, and never on a page holding typed words, which it would take with it. While a turn runs the box is closed; waiting on the retry job it stays open and ask.js looks again instead. #}
@@ -10,20 +10,15 @@
     <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
   {% endif %}
 {% endblock %}
-{# The conversations: in the rail on a wide screen, a row of pills above the room on a phone (docs/STYLE.md, "Chat"). Drawn once for each, shown at its own width only. #}
-{% macro conversations(where) %}
-  <nav class="convos convos--{{ where }}" aria-label="Conversations">
-    {% if where == 'rail' %}<div class="rail__head"><h2 class="overline">Conversations</h2></div>{% endif %}
+{# The conversations, a row of pills above the room at every width (docs/STYLE.md, "Chat"); who can read the one open
+   is said under it. #}
+{% macro conversations() %}
+  <nav class="convos" aria-label="Conversations">
     {% for one in convos %}
       <a class="convo" href="{{ one.href }}"{% if one.current %} aria-current="page"{% endif %}>
         {{ avatar(one.slot, one.initial) }}<span><b>{{ one.name }}</b><small>{{ one.snippet }}</small></span></a>
       {% if loop.first and not private and convos | length > 1 %}<p class="convos__h">The kids’ conversations</p>{% endif %}
     {% endfor %}
-    {% if private %}
-      {% if readers %}<p class="privacy">{{ icon('eye', size='sm') }}<span>{{ readers }} can read your chat with {{ assistant }}.</span></p>{% endif %}
-    {% else %}
-      <p class="privacy">{{ icon('eye', size='sm') }}<span>Each kid talks to {{ assistant }} on her own. You can read along; the kids see a note saying so at the top of theirs.</span></p>
-    {% endif %}
   </nav>
 {% endmacro %}
 {% block content %}
@@ -38,7 +33,7 @@
 
   <div class="chat">
     {% if convos %}
-      {{ conversations('phone') }}
+      {{ conversations() }}
       {% if private and readers %}
         <p class="privacy privacy--room">{{ icon('eye', size='sm') }}<span>{{ readers }} can read your chat with {{ assistant }}.</span></p>
       {% elif convos | length > 1 %}
@@ -46,11 +41,15 @@
       {% endif %}
     {% endif %}
 
+    {{ cannot_answer(shell.pill) }}
+
+    {# What this person pinned of hers (as many as family.PINS_MOST), one line that opens, so the room keeps its
+       height. #}
     {% if pinned %}
-      <section class="card pinned" aria-labelledby="h-pinned">
-        <h2 class="label" id="h-pinned">Pinned</h2>
+      <details class="pinned-fold">
+        <summary>{{ icon('pin', size='sm') }}Pinned<span class="chip__n">{{ pinned | length }}</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
         {{ pin_shelf(pinned, url_for('chat.show')) }}
-      </section>
+      </details>
     {% endif %}
 
     <section class="card room" aria-labelledby="h-room">

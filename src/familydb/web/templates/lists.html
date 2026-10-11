@@ -18,7 +18,7 @@
           <form method="post" action="{{ url_for('edits.change_list') }}">
             {{ guard(once=true) }}
             <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing.text }}" /><input type="hidden" name="back" value="{{ one.name }}" />
-            <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Got: {{ thing.text }}</span></button>
+            <button class="tick" type="submit"><span>{{ icon('check') }}</span><span class="sr">Got: {{ thing.text }}</span></button>
           </form>
           <span>{{ thing.text }}</span>
           {% if thing.by %}{{ who([thing.by], 'Added by ' ~ thing.by.name) }}{% endif %}

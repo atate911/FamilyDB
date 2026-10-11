@@ -140,6 +140,18 @@ def test_a_day_of_the_week_has_its_own_page_and_the_week_links_to_it(
     question, _ = _head(page)
     assert question == "Thursday 17 September" and 'href="/week"' in page
     assert "Zoo" in page and "Loved it" in page and "the girls loved it" in page
+    # A coming weekday with a plan on it opens (its summary reads a plan row by its fields).
+    with db.transaction(conn):
+        plans.insert(
+            conn,
+            title="Dentist",
+            start="2026-09-23T15:30",
+            end="2026-09-23T16:15",
+            all_day=False,
+            idea_id=None,
+        )
+    coming = client.get("/week/2026-09-23")
+    assert coming.status_code == 200 and "Dentist" in coming.text
     assert client.get("/week/not-a-day").status_code == 404
     assert client.get("/week?from=1900-01-01").status_code == 404
 
@@ -358,7 +370,7 @@ def test_do_narrows_by_chips_and_leads_with_her_pick(settings, clock, conn, fami
             now=NOW_ISO,
         )
         ideas.insert(conn, title="Board games", kind="home", cost_level=0, now=NOW_ISO)
-        ideas.insert(conn, title="Ramen", kind="restaurant", now=NOW_ISO)  # Eat's, not here
+        ramen = ideas.insert(conn, title="Ramen", kind="restaurant", now=NOW_ISO)  # Eat's
         pick_store.insert(
             conn,
             member_id=None,
@@ -411,6 +423,10 @@ def test_do_narrows_by_chips_and_leads_with_her_pick(settings, clock, conn, fami
     )
     assert _chips(with_kids)[0] == "Everything"  # a way back
     assert "Show · " in client.get("/do?kind=show").text and f'href="/idea/{us.id}"' in just_us
+    # A place's page is under the place its way back names: Eat for a restaurant, Do for the rest.
+    assert 'aria-current="page">Do<' in client.get(f"/idea/{us.id}").text
+    eat = client.get(f"/idea/{ramen.id}").text
+    assert 'aria-current="page">Eat<' in eat and 'aria-current="page">Do<' not in eat
 
 
 def test_lists_shows_one_list_at_a_time_with_the_rest_as_chips(
@@ -426,12 +442,13 @@ def test_lists_shows_one_list_at_a_time_with_the_rest_as_chips(
         list_store.add(conn, camping, "torch", by=None, now=NOW_ISO)
     client = _client(settings, clock)
     page = client.get("/lists").text
-    assert _head(page) == ("Lists", "Shopping · 1 · Camping · 2 to get")
+    assert _head(page) == ("Lists", "1 to get. 2 more on Camping.")
     assert ">milk<" in page and ">tent<" not in page  # one list at a time
     chips = re.search(r'<nav class="chips".*?</nav>', page, re.S).group(0)
     assert 'href="/lists/camping"' in chips and 'class="chip chip--on"' in chips
     camping_page = client.get("/lists/camping").text
     assert ">tent<" in camping_page and ">milk<" not in camping_page
+    assert _head(camping_page) == ("Lists", "2 to get. 1 more on Shopping.")
     assert _scope(camping_page) == "About the camping list:"
     assert ">tent<" in client.get("/lists?list=camping").text  # the older address too
     assert client.get("/lists/nothing").status_code == 404

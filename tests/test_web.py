@@ -706,6 +706,10 @@ def test_no_page_writes_but_through_the_four_doors() -> None:
     Which functions write is read off the source (`tests/writes.py`: a transaction, a statement
     that changes a table, a dispatch, or a call to one of those, followed through the package),
     so a store's or a service's new writer is refused however it is imported or named here.
+
+    This holds an invariant (security, CLAUDE.md): what the page changes goes through the code
+    that owns the change and its checks. A new door that keeps that is a line here with its
+    reason, said in the PR; one that goes round the checks is not.
     """
     from tests import writes
 

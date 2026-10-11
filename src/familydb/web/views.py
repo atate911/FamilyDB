@@ -691,7 +691,7 @@ def week_summary(days: Sequence[dict[str, Any]], plate: Sequence[Any], grown_up:
     else:
         nxt = next((r for d in days if not d["past"] for r in d["rows"]), None)
         if nxt:
-            said.append(f"Next: {nxt['title']}")
+            said.append(f"Next: {nxt.title}")
         else:
             said.append("Nothing on this week")
     if grown_up and plate:
@@ -814,9 +814,16 @@ def soon_summary(days: Sequence[dict[str, Any]], today: date) -> str:
     return f"{total} in the next few weeks."
 
 
-def lists_summary(lists: Sequence[dict[str, Any]]) -> str:
-    parts = [f"{one['title'].removesuffix(' list')} · {len(one['to_get'])}" for one in lists]
-    return " · ".join(parts) + " to get"
+def lists_summary(lists: Sequence[dict[str, Any]], shown: dict[str, Any]) -> str:
+    """The list open, then what waits on the others: "6 to get. 5 more on Costco and Camping." """
+    here = len(shown["to_get"])
+    said = f"{here} to get." if here else "Nothing to get."
+    others = [one for one in lists if one["name"] != shown["name"] and one["to_get"]]
+    if others:
+        more = sum(len(one["to_get"]) for one in others)
+        names = names_text([{"name": one["title"].removesuffix(" list")} for one in others])
+        said += f" {more} more on {names}."
+    return said
 
 
 def kids_summary(kids: Sequence[dict[str, Any]], waiting: int) -> str:
@@ -1560,23 +1567,23 @@ def find_row(find: Any, today: date) -> dict[str, Any]:
     """One thing near home as its page lists it."""
     first = date.fromisoformat(find.starts_at[:10]) if find.starts_at else today
     last = date.fromisoformat(find.ends_at[:10]) if find.ends_at else first
-    if find.starts_at is None:
+    starts = find.starts_at or ""
+    if not starts:
         when = "any time"
-    elif "T" in find.starts_at:
-        when = find.starts_at[11:16]
+    elif "T" in starts:
+        when = clock_time(starts)
     elif last > first:
         when = f"until {last:%a} {last.day} {last:%b}" if first <= today else "all day"
     else:
         when = "all day"
     who = happening.listed_by(find.kind, find.source, find.url)
-    summary = find.summary or ""
     return {
         "when": when,
+        "at": starts[11:16] if "T" in starts else "",
         "title": find.title,
         "url": find.url if find.url and find.url.startswith(("https://", "http://")) else None,
         "where": find.venue or find.address,
         "price": find.price_note,
-        "summary": summary if len(summary) <= 160 else summary[:159].rstrip() + "…",
         "who": who,
     }
 
@@ -1590,14 +1597,16 @@ def happening_days(
 ) -> list[dict[str, Any]]:
     """What is on near home, by the day it starts, soonest first; what began before today and is
     still on goes under today. `own` are the family's own ideas with a closing date, listed under
-    the day they start (today once they have). A kid is told nothing of the sources."""
+    the day they start (today once they have), what lasts the day before what has a time. A kid is
+    told nothing of the sources. A row is one line under its title (docs/STYLE.md); the listing's
+    own words are on its page."""
     days: dict[date, list[dict[str, Any]]] = {}
     for find in found:
         if find.starts_at is None:
             continue  # a place to go any time is on no day
         day = max(date.fromisoformat(find.starts_at[:10]), today)
         row = find_row(find, today)
-        row["source_words"] = "listed near home" if kid else f"listed by {row['who']}"
+        row["source_words"] = None if kid else f"listed by {row['who']}"
         row["href"] = f"/soon/{find.id}"
         row["free"] = bool(row["price"]) and "free" in row["price"].casefold()
         days.setdefault(day, []).append(row)
@@ -1612,12 +1621,12 @@ def happening_days(
         days.setdefault(day, []).append(
             {
                 "when": when,
+                "at": "",
                 "title": idea.title,
                 "url": None,
                 "href": f"/idea/{idea.id}",
                 "where": idea.location_name,
                 "price": cost_text(idea.cost_level),
-                "summary": None,
                 "who": "you",
                 "source_words": "your idea",
                 "free": idea.cost_level == 0,
@@ -1628,7 +1637,7 @@ def happening_days(
             "iso": day.isoformat(),
             "label": "Today" if day == today else f"{day:%A} {day.day} {day:%B}",
             "today": day == today,
-            "rows": sorted(rows, key=lambda row: (row["when"][0].isdigit(), row["when"])),
+            "rows": sorted(rows, key=lambda row: (bool(row["at"]), row["at"])),
         }
         for day, rows in sorted(days.items())
     ]

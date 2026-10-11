@@ -11,6 +11,7 @@ from familydb.agent import spending
 from familydb.agent.providers import build
 from familydb.app import App
 from familydb.base.clock import FixedClock
+from familydb.base.dates import utc_iso
 from familydb.base.errors import AgentError, ToolUnavailable
 from familydb.store import alerts as alert_store
 from familydb.store import messages
@@ -149,13 +150,19 @@ def test_the_day_s_limit_is_noted_and_forgotten_once_a_call_is_let_through(conn,
 def test_yesterday_s_limit_note_is_not_today_s_trouble(settings, clock, conn) -> None:
     from familydb.web import status
 
-    app = App(settings, clock)
+    app = App(settings.model_copy(update={"daily_spend_limit": 0.01}), clock)
     yesterday = (clock.now() - timedelta(days=1)).date().isoformat()
     today = clock.now().date().isoformat()
     alerts.note(conn, "limit", yesterday, "used up", clock.now() - timedelta(days=1))
     assert status.light(app, conn) is None
     alerts.note(conn, "limit", today, "used up", clock.now())
-    assert status.light(app, conn) == "bad"
+    assert status.light(app, conn) == "warn"  # noted, but nothing is spent: she can answer
+    with transaction(conn):
+        conn.execute(
+            "INSERT INTO llm_calls (iteration, model, created_at, cost_usd) VALUES (1, 'm', ?, 1)",
+            (utc_iso(clock.now()),),
+        )
+    assert status.light(app, conn) == "bad"  # spent past it: nobody is answered until midnight
 
 
 def test_a_call_let_through_forgets_every_day_s_limit_note(conn, settings) -> None:

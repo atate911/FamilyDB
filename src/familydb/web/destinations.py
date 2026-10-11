@@ -124,7 +124,9 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
         pencil = _pencil(conn, kept, first, last, today) if grown_up else None
         went = _went(conn, first, last, slots) if last < today or first == last else []
         rate = (
-            page_rows.unrated(conn, today, slots, visitor.member) if visitor.may("change") else []
+            page_rows.to_ask(app, conn, today, slots, visitor.member)
+            if visitor.may("change")
+            else []
         )
         chat.page_box(app, conn, people, scope={"label": "This week", "text": "About this week:"})
     forecasts = _forecasts(app, first, last, today)
@@ -582,7 +584,9 @@ def did() -> str:
         if favorites:
             rows = _favorites(rows)
         rate = (
-            page_rows.unrated(conn, today, slots, visitor.member) if visitor.may("change") else []
+            page_rows.to_ask(app, conn, today, slots, visitor.member)
+            if visitor.may("change")
+            else []
         )
         chat.page_box(
             app, conn, people, scope={"label": "What we did", "text": "About what we did:"}

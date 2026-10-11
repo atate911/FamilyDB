@@ -30,10 +30,13 @@
     <span class="mic-slot" id="ask-mic"></span>
     <button class="btn composer__send" type="submit" {{ 'disabled' if locked or not family }}>{{ icon('send') }}<span class="lbl">Send</span></button>
   </div>
-  {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. #}
+  {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. A kid is not asked
+     (docs/STYLE.md, "A kid's screen"). #}
+  {% if visitor().may('browse') %}
   <div class="{{ 'composer__foot' if on_chat else 'composer__who' }}" id="locate" hidden>
     <label class="check"><input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} /> {{ icon('pin', size='sm') }}Share where I am with this message</label>
   </div>
+  {% endif %}
   {% if on_chat %}
     {# A photo with the message, or alone: looked at like one sent on Telegram, and never kept. #}
     <div class="composer__foot"><label class="composer__photo" for="photo">Add a photo</label>

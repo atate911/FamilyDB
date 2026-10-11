@@ -361,7 +361,8 @@ input[type="file"]::file-selector-button { font: inherit; font-weight: 700; min-
 
    composer's own parts take their places in the card's grid. */
 .card__foot--split { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s2) var(--s4); }
-.convos__h { margin: var(--s3) var(--s3) var(--s1); font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
+/* said to a screen reader between the family's conversation and the kids' */
+.convos__h { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .msg__text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg__did { margin-top: var(--s1); font-size: var(--t-sm); color: var(--ink-2); }
 .msg__buttons { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
@@ -924,18 +925,17 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .item > .who { justify-self: end; }
 
 /* Chat */
-/* the room is the main column; the conversations are in the rail (a row of pills above the room on a phone) */
-.chat { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); min-height: calc(100vh - 168px); }
-@media (min-width: 821px) { .chat .convos--phone { display: none; } }
-.convos { display: grid; gap: var(--s2); align-content: start; }
-.convo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); align-items: center; padding: var(--s2); border-radius: var(--r-md); border: 1px solid transparent; color: var(--ink); text-decoration: none; }
-.convo:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink); }
-.convo[aria-current="page"] { background: color-mix(in srgb, var(--ink) 7%, transparent); }
-.convo[aria-current="page"] b { font-weight: 700; }
-.convos--rail .convo b { font-weight: 400; }
+/* the room is the main column; above it the conversations, a row of pills at every width (the family's frame has no
+   rail of its own for them), who can read this one, and what this person pinned of hers folded to a line, so the
+   room keeps the height */
+.chat { display: flex; flex-direction: column; gap: var(--s3); min-height: calc(100vh - 168px); }
+.chat > .room { flex: 1 1 auto; }
+.convos { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.convo { display: inline-grid; grid-template-columns: auto auto; gap: var(--s2); align-items: center; padding: 4px var(--s4) 4px 4px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: var(--card); color: var(--ink); text-decoration: none; }
+.convo:hover { background: var(--paper-2); color: var(--ink); }
+.convo[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .convo b { display: block; line-height: 1.25; }
-.convo small { display: block; font-size: var(--t-sm); color: var(--ink-2); line-height: 1.35; margin-top: 2px; }
-.convos .privacy { padding: var(--s4) 0 0; margin-top: var(--s2); border-top: 1px solid var(--line); }
+.convo small { display: none; }
 .card.room { padding: 0; }
 .room { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
 .room__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
@@ -1238,7 +1238,9 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .adder__more[open] > summary .chev { transform: rotate(90deg); }
   .adder__more:not([open])::details-content { content-visibility: hidden; display: block; }
   .adder__more[open] .adder__more-body { padding-top: var(--s2); }
-  .todo { grid-template-columns: var(--target) minmax(0, 1fr) auto; padding: var(--s2) var(--s2) var(--s2) var(--s1); }
+  /* the checkbox keeps its one line, as on a desk (its hit area is the tick's own 44 pixels), so the title sits beside it
+     and the line under it starts at the row's edge */
+  .todo { padding: var(--s2) var(--s2) var(--s2) var(--s1); }
   .todo__edit .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
   .adder__opts { grid-template-columns: minmax(0, 1fr); }
   .todo-bar { margin-top: var(--s4); }
@@ -1329,15 +1331,10 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   /* Chat: an app-height room; the box is pinned, the thread opens at the newest */
   .page-chat .main { padding: 0; }
   .page-chat .foot { margin-left: var(--s4); margin-right: var(--s4); padding-bottom: var(--s4); }
-  .convos__h { display: none; }
   .page-chat .page-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
   .chat { display: flex; flex-direction: column; gap: 0; height: calc(100vh - var(--topbar-total) - var(--tabbar-total)); height: calc(100dvh - var(--topbar-total) - var(--tabbar-total)); min-height: 0; }
-  .convos { display: flex; gap: var(--s2); overflow-x: auto; padding: var(--s3) var(--s4) var(--s2); scrollbar-width: none; flex: none; }
-  .convo { flex: none; padding: 4px var(--s4) 4px 4px; border-radius: var(--r-pill); background: var(--card); border-color: var(--line-2); grid-template-columns: auto auto; gap: var(--s2); }
-  .convo small { display: none; }
-  .convo[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-  .convos .privacy { display: none; }
-  .chat .privacy--room { display: flex; }
+  .convos { flex-wrap: nowrap; overflow-x: auto; padding: var(--s3) var(--s4) var(--s2); scrollbar-width: none; flex: none; }
+  .convo { flex: none; }
   .room { flex: 1; border-radius: 0; border-left: 0; border-right: 0; border-bottom: 0; }
   .room__head { display: none; }
   .scroller { --tp: var(--s3); flex: 1 1 0; min-height: 0; overflow-y: auto; scroll-padding-top: 56px; }
@@ -1370,10 +1367,9 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .chat { height: max(480px, calc(100dvh - 296px)); min-height: 0; }
   .room { min-height: 0; }
   .scroller { flex: 1 1 0; min-height: 0; overflow-y: auto; scroll-padding-top: 56px; }
-  .convos { overflow-y: auto; min-height: 0; }
 }
-.privacy--room { display: none; padding: var(--s2) var(--s4) var(--s3); font-size: var(--t-sm); }
-@media (min-width: 821px) { .chat .privacy--room { display: none; } }
+.privacy--room { font-size: var(--t-sm); }
+@media (max-width: 820px) { .privacy--room { padding: var(--s2) var(--s4) var(--s3); } }
 
 /* ---------- 8. Forced colours: selection shown by background gets a border ---------- */
 @media (forced-colors: active) {
@@ -1535,6 +1531,8 @@ textarea.script { min-height: 16em; line-height: 1.55; }
 .knock-form .field__hint { margin-top: calc(var(--s2) * -1); }
 .sgroup > .setting, .sgroup__h + .sgrid { margin-top: var(--s4); }
 .setting--wide { grid-column: 1 / -1; }
+/* a tick for each choice, side by side while they fit */
+.ticks { display: flex; flex-wrap: wrap; gap: 0 var(--s5); }
 /* settings side by side line up row by row: label, box, help, extra */
 @supports (grid-template-rows: subgrid) {
   .sgrid { row-gap: 0; margin-bottom: calc(-1 * var(--s5)); }
@@ -1897,6 +1895,9 @@ li:target { border-radius: var(--r-md); }
 .rcpt .undo-form .btn { min-height: 32px; }
 .rcpt__more { align-self: center; white-space: nowrap; }
 .rcpt--pending p { color: var(--ink-2); }
+/* she cannot answer: why, in red words and mark, never a fill */
+.rcpt--down > .icon { color: var(--red); }
+.rcpt--down > span { flex: 1; min-width: 0; color: var(--ink); }
 .rcpt--new a { display: inline-flex; align-items: center; gap: var(--s2); min-height: 32px; color: var(--ink); text-decoration: none; }
 .rcpt--new a:hover span { text-decoration: underline; }
 .said-sheet { max-width: var(--center); width: 100%; margin: var(--s3) auto 0; padding: var(--s4); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); display: grid; gap: var(--s3); box-shadow: var(--shadow); }
@@ -2011,9 +2012,12 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .byhand a { color: var(--ink-2); text-decoration-color: var(--line-2); }
 .finder--line { display: flex; gap: var(--s2); align-items: center; }
 .finder--line .searchbox { flex: 1; min-width: 0; }
-.fold--quiet > summary { color: var(--ink-2); font-size: var(--t-meta); }
+/* a quiet fold's summary is a quiet line; one drawn as a button keeps the button's own colors */
+.fold--quiet > summary:where(:not(.btn)) { color: var(--ink-2); font-size: var(--t-meta); }
 .list-items--big li { min-height: 52px; font-size: 1.0625rem; }
 .list-items--big .tick { width: 28px; height: 28px; }
+.list-items--big .tick > span:not(.sr) { width: 24px; height: 24px; border-radius: 6px; }
+.list-items--big .tick .icon { width: 16px; height: 16px; }
 .set__text { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .set--off { opacity: .6; border-left-color: var(--line-2); }
 .set--done { border-left-color: var(--ok); }
@@ -2044,7 +2048,7 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 
 /* ---------- 19. Items: a place, a plan, a reminder (docs/INTERFACE.md section 5) ---------- */
 .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3) var(--s4); margin: 0; padding: var(--s4) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.facts > div { display: grid; gap: 2px; min-width: 0; }
+.facts > div { display: grid; gap: 2px; min-width: 0; align-content: start; }
 .facts__k { font-size: var(--t-xs); font-weight: 700; font-stretch: var(--w-label); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); line-height: 1.3; margin: 0; }
 .facts__v { font-weight: 700; line-height: 1.3; margin: 0; overflow-wrap: anywhere; }
 .facts__v--ok { color: var(--primary); }
@@ -2067,13 +2071,18 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .reminder__words { display: grid; gap: var(--s1); }
 
 /* ---------- 20. The big screen (docs/INTERFACE.md section 8) ---------- */
-/* From a tablet up the row of destinations is a rail on the left, under the wordmark, and the page fills the
-   middle; from a desk up the box and what came back from it are a column of their own on the right, Vera's,
-   kept in view while the page scrolls. The back office keeps its own menu there, so its row goes. Nothing is
-   stretched: the middle keeps the reading width (--center) and the columns grow in the same steps as the menu. */
+/* From a tablet up the menu every page shares (_side.html) stands on the left, as on the back office, so moving
+   between them keeps one left column; it has the mark, how she is and who is signed in, so the phone's top line and
+   its row go. The page fills the middle; from a desk up the box and what came back from it are a column of their own
+   on the right, Vera's, kept in view while the page scrolls. Nothing is stretched: the middle keeps the reading width
+   (--center) and the columns grow in the same steps as the menu. The kitchen board keeps its row (below). */
 @media (min-width: 821px) {
   body > .row { display: none; }
-  .nf { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "top top" "rail box" "rail main" "rail foot"; padding-bottom: 0; }
+  .nf { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "rail box" "rail main" "rail foot"; padding-bottom: 0; }
+  .nf > .side { grid-area: rail; border-right: 0; }
+  .nf:not(.nf--board) > .nf__top, .nf:not(.nf--board) > .row { display: none; }
+  /* what comes first beside the menu starts level with its mark, as on the back office: one top edge */
+  .nf:not(.nf--board) > .nf__box, .nf--nobox > .nf__main { padding-top: var(--s8); }
   .nf__top { grid-area: top; padding: var(--s4) var(--gutter) 0 var(--s5); }
   /* the line between the rail and the page is the page's, so it runs the page's whole height */
   .nf__box { grid-area: box; border-left: 1px solid var(--line); padding: var(--s4) var(--gutter) 0; }
@@ -2088,11 +2097,12 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
   .nf .said-sheet { padding: var(--s4); max-width: none; width: auto; }
 }
 @media (min-width: 1100px) {
-  .nf { grid-template-columns: var(--side) minmax(0, 1fr) minmax(300px, 380px); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "top top top" "rail main box" "rail foot box"; }
+  .nf { grid-template-columns: var(--side) minmax(0, 1fr) minmax(300px, 380px); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "rail main box" "rail foot box"; }
   .nf__box { position: sticky; top: var(--s4); align-self: start; max-height: calc(100vh - var(--s4) * 2); overflow: auto; padding: var(--s4) var(--gutter) var(--s5) var(--s5); border-left: 0; }
   .nf__main { padding-right: var(--s5); }
+  .nf:not(.nf--board) > .nf__main { padding-top: var(--s8); }
   /* the thread has no box of its own column: the page takes the width */
-  .nf--nobox { grid-template-columns: var(--side) minmax(0, 1fr); grid-template-areas: "top top" "rail main" "rail foot"; }
+  .nf--nobox { grid-template-columns: var(--side) minmax(0, 1fr); grid-template-areas: "rail main" "rail foot"; }
   .nf--nobox .nf__main { padding-right: var(--gutter); }
 }
 
@@ -2110,7 +2120,13 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .pins__text { font-size: var(--t-meta); white-space: pre-wrap; overflow-wrap: anywhere; }
 .pins__foot { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-xs); color: var(--ink-2); }
 .pin-form { margin: 0; }
-.pinned { display: grid; gap: var(--s2); margin-bottom: var(--s4); }
+.pinned-fold { flex: none; border-bottom: 1px solid var(--line); }
+.pinned-fold > summary { list-style: none; display: flex; align-items: center; gap: var(--s2); min-height: var(--target); cursor: pointer; font-size: var(--t-meta); font-weight: 700; color: var(--ink-2); }
+.pinned-fold > summary::-webkit-details-marker { display: none; }
+.pinned-fold > summary .chev { margin-left: auto; transition: transform .15s; }
+.pinned-fold[open] > summary .chev { transform: rotate(90deg); }
+.pinned-fold .pins { max-height: 40vh; overflow-y: auto; padding-bottom: var(--s3); }
+@media (max-width: 820px) { .pinned-fold { padding: 0 var(--s4); border-top: 1px solid var(--line); border-bottom: 0; } }
 .vc .pins + .label { margin-top: var(--s3); }
 
 /* Vera's column: the last lines of the thread behind her reply, only where the box has a column of its own */
@@ -2161,6 +2177,8 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .bd__idea--resting a { color: var(--ink-2); opacity: .7; }
 @media (min-width: 821px) {
   .nf--board { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto auto; grid-template-areas: "top" "box" "main" "rail" "foot"; }
+  /* the board is a shared screen: its row stays at the foot, small, and it has no menu */
+  .nf--board > .side { display: none; }
   .nf--board .nf__box { position: static; max-height: none; overflow: visible; border-left: 0; padding: var(--s4) var(--gutter) 0; }
   .nf--board .nf__main, .nf--board .nf__foot { border-left: 0; padding-left: var(--gutter); padding-right: var(--gutter); max-width: none; }
   .nf--board .row { position: static; max-height: none; flex-direction: row; justify-content: center; flex-wrap: wrap; gap: var(--s1) var(--s4); padding: var(--s3) var(--gutter); border-top: 1px solid var(--line); }

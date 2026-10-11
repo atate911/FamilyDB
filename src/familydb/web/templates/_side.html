@@ -1,0 +1,56 @@
+{% from "_ui.html" import icon, brand_mark, wordmark, avatar, badge, health_pill %}
+{# The menu down the left from a tablet's width up, one for every page, the family's and the back office's alike, so
+   moving between them keeps it: the mark, how she is, the family's places (the same list as the row at the foot,
+   `shell.destinations`, so it leaves out what the family took out and marks the place the row marks), Chat and What
+   she knows, the back office for a grown-up, and who is signed in. Needs base.html's `shell`, `viewer`, `grownup`,
+   `managing` and `ns.section`. #}
+{% set GLYPHS = {'now': 'home', 'eat': 'utensils', 'do': 'bulb', 'week': 'cal', 'kids': 'gift', 'soon': 'ticket', 'lists': 'list', 'did': 'smile'} %}
+{% set BADGES = {'week': 'late', 'kids': 'act'} %}
+{# One link of the menu. `count` is a ready-made badge. #}
+{% macro nav_item(label, target, current, glyph, count=none) %}
+  <li><a href="{{ target }}"{% if current %} aria-current="page"{% endif %}>
+    {{- icon(glyph) }}<span>{{ label }}</span>{{ count if count }}</a></li>
+{% endmacro %}
+{% set places = destinations(shell) %}
+<aside class="side" aria-label="Menu">
+  <div class="side__in">
+    <a class="brand" href="{{ url_for('web.home') }}" aria-label="{{ site_title }}, home">{{ brand_mark() }}{{ wordmark(site_title) }}</a>
+    {% if shell.pill %}{{ health_pill(shell.pill, url_for('web.status')) }}{% endif %}
+    <nav aria-label="Pages">
+      <ul class="nav">
+        {% for place in places %}
+          {{ nav_item(place.label, place.href, place.current, GLYPHS.get(place.key, 'chev'), count=(badge(BADGES.get(place.key, 'quiet'), place.count, place.word) if place.count else none)) }}
+          {# Chat sits under the first place, as it always has. #}
+          {% if loop.first and viewer.may('chat') %}{{ nav_item('Chat with ' ~ assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), ns.section == 'chat', 'chat', count=(badge('act', shell.unread, 'new') if shell.unread else none)) }}{% endif %}
+        {% endfor %}
+        {% if grownup %}{{ nav_item('What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', url_for('web.memory'), ns.section == 'memory', 'memory') }}{% endif %}
+      </ul>
+      {% if grownup %}
+        <p class="overline nav-group">Behind the scenes</p>
+        <ul class="nav">
+          {{ nav_item('Status', url_for('web.status'), ns.section == 'status', 'pulse') }}
+          {{ nav_item('Guide', url_for('wiki.home'), ns.section == 'wiki', 'info') }}
+          {% if managing %}
+            {{ nav_item('Settings', url_for('settings.show'), ns.section == 'settings', 'sliders', count=(badge('look', shell.check, 'to check') if shell.check else none)) }}
+            {{ nav_item('Family', url_for('family.show'), ns.section == 'family', 'people') }}
+          {% endif %}
+        </ul>
+      {% endif %}
+    </nav>
+    {# The account corner: who is signed in, and the things that are theirs. #}
+    <div class="me">
+      {{ avatar(shell.me.slot, shell.me.initial, 'lg') }}
+      <div>
+        <b>{{ shell.me.name or 'The family' }}</b>
+        <span>{{ shell.me.role | capitalize if shell.me.role else 'One shared password' }}</span>
+        <span class="me__acts">
+          <a href="{{ url_for('look.show') }}"{% if ns.section == 'look' %} aria-current="page"{% endif %}>Look</a>
+          {% if viewer.member %}<a href="{{ url_for('family.you') }}"{% if ns.section == 'you' %} aria-current="page"{% endif %}>Your password</a>{% endif %}
+          {% if viewer.signed_in %}
+            <form method="post" action="{{ url_for('auth.logout') }}"><button class="textbtn" type="submit">Sign out</button></form>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+</aside>

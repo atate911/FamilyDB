@@ -115,6 +115,9 @@ def older_to_choices(older: Mapping[str, Any]) -> tuple[dict[str, str], bool]:
 CacheTTL = Literal["5m", "1h"]
 LookupsWhen = Literal["evening", "asap"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+# The places in the row of destinations at the foot of every family page, in its order
+# (web/shell.py `destinations`); `row_hidden` names those the family took out.
+ROW_PLACES = ("now", "eat", "do", "week", "kids", "soon", "lists", "did")
 Latitude = Annotated[float, Field(ge=-90, le=90)]
 Longitude = Annotated[float, Field(ge=-180, le=180)]
 
@@ -635,6 +638,9 @@ class Settings(BaseSettings):
     # (static/dictate.js). The sound goes from the browser to its maker, never through FamilyDB:
     # what leaves the house is the family's decision (docs/DESIGN.md section 16).
     web_dictation: bool = True
+    # The places the family took out of the row of destinations (`ROW_PLACES`), a comma between
+    # them; empty shows them all. Only the row: a place taken out still opens from a link.
+    row_hidden: str = Field(default="", max_length=200)
 
     console_member: str | None = None
     log_level: str = "INFO"
@@ -761,6 +767,14 @@ class Settings(BaseSettings):
     def _upper(cls, value: str) -> str:
         return value.upper()
 
+    @field_validator("row_hidden")
+    @classmethod
+    def _row_places(cls, value: str) -> str:
+        """The places named, in the row's order, each once. A name this version does not know is
+        dropped, not refused: a value stored by another version must never stop the app."""
+        named = set(re.split(r"[\s,]+", value.strip().lower()))
+        return ",".join(place for place in ROW_PLACES if place in named)
+
     @field_validator("log_areas")
     @classmethod
     def _area_lines(cls, value: str) -> str:
@@ -793,6 +807,11 @@ class Settings(BaseSettings):
     @classmethod
     def _readable_models(cls, value: Any) -> Any:
         return _readable(value, CompanyModels)
+
+    @property
+    def row_hidden_places(self) -> frozenset[str]:
+        """The places taken out of the row, as `ROW_PLACES` names them."""
+        return frozenset(place for place in self.row_hidden.split(",") if place)
 
     @property
     def env_company_models(self) -> dict[str, CompanyModels]:

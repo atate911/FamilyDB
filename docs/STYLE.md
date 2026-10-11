@@ -3,8 +3,9 @@
 This is FamilyDB's design: what the page looks like, the few ideas that make it work, and how to
 draw any page from them. It was worked out on the first screen, screen by screen, until it looked
 *designed*: professional, modern, calm, a little technical, and unmistakably one thing. **Now is
-the model.** Every other page is drawn the way Now is, and where a page and this document
-disagree, the page is moved, not the document.
+the model.** Every other page is drawn the way Now is. Where a page and this document disagree,
+one of them is wrong: bring the page back into line, or, if the page has found something better,
+change this document, and the other pages with it, in the same change.
 
 The family's pages (Now, the destinations, each thing's own page) are built on it, on the frame
 `docs/INTERFACE.md` lays out; the back office (Status, Settings, Family, the guide) wears the same
@@ -82,13 +83,20 @@ what to check when a new page "feels off".
 
 ### The frame
 
-There are two frames. **The family's frame** (`frame.html`, docs/INTERFACE.md) carries Now, the
-destinations and each thing's own page: the box first, the page, and the row of destinations,
-fixed at the foot on a phone, a rail on the left from a tablet up, and from a desk up a third
-column on the right for the box and what the last message brought back, with what the person
-pinned of hers above the conversation's last lines, kept in view while the page scrolls. **The back office's frame** (`base.html`) carries Status, Settings, Family, the
-guide and the account pages: **the menu, the main column, and the rail**, as below. The two share
-the type, the tokens, the parts and the steps the columns grow in.
+There are two frames, with one menu. **The family's frame** (`frame.html`, docs/INTERFACE.md)
+carries Now, the destinations and each thing's own page: the box first, the page, and the row of
+destinations fixed at the foot on a phone; from a tablet up the menu stands on the left in the
+row's place, and from a desk up a third column on the right holds the box and what the last
+message brought back, with what the person pinned of hers above the conversation's last lines,
+kept in view while the page scrolls. **The back office's frame** (`base.html`) carries Status,
+Settings, Family, the guide and the account pages: **the menu, the main column, and the rail**,
+as below. **The menu** (`_side.html`) is the same in both, so moving from Settings to Now keeps
+the left column and the way back: the mark, how she is, the family's places from the row's own
+list (so it marks what the row marks and leaves out what the family took out), Chat and What she
+knows, Behind the scenes for a grown-up, and who is signed in. A page that kept the menu only in the
+back office left a person on Now with no way back but the small picture at the top. The two share
+the type, the tokens, the parts and the steps the columns grow in. The kitchen board keeps its row
+and no menu.
 
 - **The menu and the rail are the same width**, and the main column sits centered between them,
   with the same gap on either side. Both side columns sit on the page's own background, set off
@@ -250,7 +258,8 @@ template builds one by hand. Person classes are slots (`.p0` to `.p8`), never na
 - **The box** (`.bar` and `.box`, `_box.html`): the model for anywhere somebody writes to her, the
   same on every page of the family's. One line that grows, the mic in it and **Send** lit, the one
   glowing thing; above it "about:" and what this page is about, where a page gives the message a
-  scope; under it the quick sentences a thing's page offers as chips, the "Share where I am" line,
+  scope; under it, while she cannot answer, why in red words for a grown-up ("can't answer right
+  now: OpenAI refused its key", What to do); the quick sentences a thing's page offers as chips, the "Share where I am" line,
   and what the last message brought back: her screen and "thinking" while it is on its way, a
   receipt with Undo, or her reply as a sheet (`.said-sheet`: your words at the right, hers beside
   her screen). **From** (who is asking) sits above it while the family shares one password. Chat's
@@ -277,7 +286,7 @@ template builds one by hand. Person classes are slots (`.p0` to `.p8`), never na
 - **Owner mark** (`.who`): a 20-pixel circle in the person's color with their initial. Several
   people overlap, three shown and then "+N". The names are its accessible name and its tooltip.
 - **Count dot** (`.badge`): a 20-pixel circle with the number, at the item's right edge: red when
-  late, amber when it needs a look or a decision, neutral for a gentle count ("2 to rate"). Its
+  late, amber when it needs a look or a decision, neutral for a gentle count. How a plan went is never counted: it is asked, never owed. Its
   words ("2 to check") are said to a screen reader and shown on hover.
 - **State tag** (`.tag`): a short label in capitals on its signal's wash: Working, Ready, Needs a
   look, Off, Planned. A tag is a word or two; anything longer is a sentence beside it.
@@ -327,15 +336,17 @@ blinks for a few seconds and rests; the pill's dot breathes only while she write
 The frame folds in order, keeping the focal element first and whole.
 
 - **The family's frame, below 1100 pixels,** loses Vera's column: the box comes back to the top of
-  the page, under the wordmark, and the rail of destinations stays on the left.
+  the page, and the menu stays on the left.
 - **The back office, below about 1100 pixels,** moves the rail under the main column, its
   sections in the same order, and the menu stays.
 - **At 820 pixels and below** the family's frame is the phone's: the wordmark and the avatar, the
-  box, the page, and the row of destinations fixed at the foot (`--tabbar-total`), the current
+  box, the page, and the row of destinations (less any the family took out on Settings, General:
+  `row_hidden`) fixed at the foot (`--tabbar-total`), the current
   one in ink with a line under it, scrolling sideways if a kid's words are long. The back office is
-  one column under a top bar (the mark, the pill, the account) over the same row. Chat's
-  conversations and the guide's sections have their phone places in the page (a row of pills, a
-  Sections button), so the rail's copies are not drawn there.
+  one column under a top bar (the mark, the pill, the account) over the same row. The guide's
+  sections have their phone place in the page (a Sections button), so the rail's copy is not drawn
+  there; Chat's conversations are a row of pills above the room at every width, sliding sideways
+  on a phone.
 - **Nothing scrolls sideways** at 390 or 320 pixels, except a row of conversation pills. Labels
   that shorten keep the long one as the control's name.
 
@@ -352,8 +363,11 @@ Each page names its focal element, what the main column holds, and what the rail
   may not do is not offered.
 - **Chat.** The thread behind the box: the conversation, newest at the bottom, her messages beside
   her screen and the family's in their own color's soft; the conversations (the family's, and the
-  kids', which grown-ups may read along) as a row of pills, and who can read this one. The page
-  has its own box at the foot of the thread, so the frame draws none.
+  kids', which grown-ups may read along) as a row of pills at every width, since the family's
+  frame has no rail for them, and who can read this one; what the person pinned of hers folded to
+  one line ("Pinned 2"), so the thread keeps the room however many are kept. The room is the
+  window's height and the thread scrolls inside it. The page has its own box at the foot of the
+  thread, so the frame draws none.
 - **A destination** (section 4): the question as the title, one line of the answer, a row of chips,
   then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
   one fact line and the people's marks at the edge; "by hand" last, as a quiet link. **Eat**: the
@@ -479,8 +493,8 @@ knows, Status, Settings or Family, and no version in her footer.
 ## Still open
 
 - **The paper looks** (Kitchen Table, Ink and the rest) have been checked on Now only.
-- **Vera's column** on a desk holds the box, the last answer and the thread's last lines. A reply
-  pinned as a shelf (docs/INTERFACE.md section 8) is not drawn yet.
+- **Vera's column** on a desk holds the box, the last answer, what the person pinned of hers and the
+  thread's last lines.
 - **Everyone.** An owner mark for a plan that is everyone's shows all of them stacked. Showing no
   mark for the usual case is worth trying once a page has many such rows.
 - **A to-do's edit** moved from a link on every row to the row itself opening the to-do's page;
