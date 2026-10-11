@@ -358,7 +358,7 @@ def test_do_narrows_by_chips_and_leads_with_her_pick(settings, clock, conn, fami
             now=NOW_ISO,
         )
         ideas.insert(conn, title="Board games", kind="home", cost_level=0, now=NOW_ISO)
-        ideas.insert(conn, title="Ramen", kind="restaurant", now=NOW_ISO)  # Eat's, not here
+        ramen = ideas.insert(conn, title="Ramen", kind="restaurant", now=NOW_ISO)  # Eat's
         pick_store.insert(
             conn,
             member_id=None,
@@ -411,6 +411,10 @@ def test_do_narrows_by_chips_and_leads_with_her_pick(settings, clock, conn, fami
     )
     assert _chips(with_kids)[0] == "Everything"  # a way back
     assert "Show · " in client.get("/do?kind=show").text and f'href="/idea/{us.id}"' in just_us
+    # A place's page is under the place its way back names: Eat for a restaurant, Do for the rest.
+    assert 'aria-current="page">Do<' in client.get(f"/idea/{us.id}").text
+    eat = client.get(f"/idea/{ramen.id}").text
+    assert 'aria-current="page">Eat<' in eat and 'aria-current="page">Do<' not in eat
 
 
 def test_lists_shows_one_list_at_a_time_with_the_rest_as_chips(

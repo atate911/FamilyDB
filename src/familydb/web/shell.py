@@ -247,11 +247,18 @@ OWNS: dict[str, frozenset[str]] = {
 }
 
 
+def belongs_to(key: str) -> None:
+    """Say which place in the row this page is under when its endpoint alone cannot: one idea's
+    page is Eat's for a restaurant and Do's for anything else, as its way back says."""
+    g.destination = key
+
+
 def destinations(frame: Frame) -> list[Destination]:
     """The row for this visitor: a grown-up's eight places, a kid's four (docs/INTERFACE.md
     section 9). Each is a want, not a table: Eat, Do, Week."""
     visitor = auth.visitor()
     here = request.endpoint or ""
+    chosen = g.get("destination")
     grown_up = visitor.may("browse")
     places: list[tuple[str, str, str, int, str]] = [("now", "Now", url_for("web.home"), 0, "")]
     if grown_up:
@@ -270,6 +277,13 @@ def destinations(frame: Frame) -> list[Destination]:
         if visitor.may("wish") and visitor.member is not None:
             places.append(("kids", "My list", url_for("web.wishes"), 0, ""))
     return [
-        Destination(key, label, href, here in OWNS.get(key, frozenset()), count, word)
+        Destination(
+            key,
+            label,
+            href,
+            key == chosen if chosen else here in OWNS.get(key, frozenset()),
+            count,
+            word,
+        )
         for key, label, href, count, word in places
     ]
