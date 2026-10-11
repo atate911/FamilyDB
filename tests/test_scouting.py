@@ -1,6 +1,7 @@
 """The scouting layer (familydb/scouting): every web search to find something new goes through it.
 The move into it changed no request: each is byte-identical to what the code sent before
-(tests/scouting_requests.json, rendered from fixed inputs by the code as it was)."""
+(tests/scouting_requests.json, rendered from fixed inputs by the code as it was). Since, the
+search on request opens with its own first line, and the places search is gone into it."""
 
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ from familydb.moment import Constraints, Context, DayContext, Origin
 from familydb.scouting.fill import render_enrich_request
 from familydb.scouting.near_home import render_feeds_request, render_scout_request
 from familydb.scouting.reach import Reach
-from familydb.scouting.search import cache_key, render_discover_request, render_places_request
+from familydb.scouting.search import cache_key, render_discover_request
 from familydb.store.ideas import Idea
 from familydb.store.places import Place
 from familydb.tools import ToolContext
@@ -79,7 +80,6 @@ def test_the_searches_while_answering_ask_what_they_asked_before(name, held) -> 
     assert (
         render_discover_request(context, constraints, settings) == BEFORE[f"discover/{name}/{held}"]
     )
-    assert render_places_request(context, constraints, settings) == BEFORE[f"places/{name}/{held}"]
 
 
 def test_the_searches_near_home_and_the_lookups_ask_what_they_asked_before() -> None:

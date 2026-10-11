@@ -587,9 +587,6 @@ class Settings(BaseSettings):
     # How many days a message keeps its words (jobs/tidy.py); 0 keeps them for good, the default
     # and the family's to change (docs/DESIGN.md section 16).
     keep_messages_days: int = Field(default=0, ge=0, le=36500)
-    # A place nothing saved fits, looked for on the web (suggest/places.py). Spending, so the
-    # family's to turn on (docs/DESIGN.md section 16): off until they do.
-    find_places: bool = False
     follow_ups: bool = True
     plan_checks: bool = True
     plan_check_hour: int = Field(default=19, ge=0, le=23)

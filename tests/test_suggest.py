@@ -388,6 +388,8 @@ def _suggest(registry, ctx, **overrides):
         "discover": False,
         **overrides,
     }
+    # Each question is a turn of its own, with its own scratch (one search a turn).
+    ctx.scratch.clear()
     result = registry.dispatch("suggest", payload, ctx)
     return result, json.loads(result.content)
 
@@ -620,8 +622,9 @@ def test_discovery_runs_a_worker_turn_and_caches_the_finds(
     assert request["tools"][1]["user_location"]["city"] == "Vancouver"
     asked = request["messages"][0]["content"][1]["text"]
     assert "Window: Saturday 26 September to Sunday 27 September 2026." in asked
-    # The wording is not sent: the same window and constraints are the same search.
-    assert "Home area: Vancouver, WA." in asked and "what should we do" not in asked
+    # The wording is sent, but the cache knows the search by its framing and the family, so
+    # the same window and constraints in other words are the same search.
+    assert "Home area: Vancouver, WA." in asked and "They asked: what should we do" in asked
     assert len(cache) == 1
     # The suggestions log carries the finds too.
     row = suggestions.list_recent(conn, limit=1)[0]
@@ -719,6 +722,7 @@ def test_discovery_cache_follows_the_constraints_not_the_wording(env):
     assert discover(env.ctx, context, Constraints(participants=["adults"]))[1] is None
     assert len(env.ctx.api.requests) == first_calls
     toddlers = Constraints(participants=["toddler"], setting="indoor", max_cost_level=0)
+    env.ctx.scratch.clear()  # another question, another turn (one search a turn)
     assert discover(env.ctx, context, toddlers)[1] is None
     assert len(env.ctx.api.requests) > first_calls
     assert len(env.ctx.discover_cache) == 2
@@ -1041,7 +1045,7 @@ def test_the_topic_is_folded_so_the_same_subject_is_one_search(
 
     seen: list[str] = []
 
-    def record(ctx, context, constraints):
+    def record(ctx, context, constraints, question):
         seen.append(constraints.topic)
         return [], None
 
@@ -1112,20 +1116,18 @@ def test_tonight_lists_only_what_starts_tonight(
     assert {f["title"] for f in data["web_finds"]} == {"Evening concert", "Fair"}
 
 
-def test_a_well_listed_weekend_asks_the_web_nothing_unless_asked_for_something(
+def test_a_well_listed_weekend_is_still_searched_and_the_search_comes_first(
     registry, conn, full_settings, thursday_clock, family
 ) -> None:
+    # Somebody asked, so everything is engaged (docs/FINDS.md): the calendars' listings do not
+    # stand in for a search aimed at the question.
     _listed(
         conn, *[(f"Show {n}", datetime(2026, 9, 26, 10 + n, tzinfo=TZ), None) for n in range(3)]
     )
-    api = fakes.FakeMessagesAPI()
+    api = fakes.FakeMessagesAPI(*fakes.discover_script([FIND]))
     ctx = _web_ctx(conn, full_settings, thursday_clock, family, api, {})
-    _, data = _suggest(registry, ctx, discover=True)
-    assert len(data["web_finds"]) == 3 and api.requests == []
-
-    api.queue.extend(fakes.discover_script([FIND]))
     _, jazz = _suggest(registry, ctx, discover=True, topic="live jazz")
-    assert len(api.requests) == 2  # searched for jazz, which the calendars may not have
+    assert len(api.requests) == 2
     assert jazz["web_finds"][0]["url"] == FIND["url"]  # what was asked for comes first
     assert len(jazz["web_finds"]) == 4
 

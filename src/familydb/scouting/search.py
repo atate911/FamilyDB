@@ -1,10 +1,13 @@
-"""The searches made while answering somebody (docs/FINDS.md, "searching on request"): what is
-on for the days asked (`discover`) and a place nothing saved fits (`find_places`). Each is one
-worker turn that hands back with `report_finds`, kept in the shared cache under the request
-(with the day). The request is built from the framing, never the question's wording, so
-differently worded questions share one search. `saved` marks what the family already has.
+"""The search made while answering somebody (docs/FINDS.md, "searching on request"): one worker
+turn for events on the days asked and places to go alike, told the question in their words and
+everything known about the family (scouting/brief.py), that hands back with `report_finds`. What
+it finds is kept as finds (kind `request`) so nothing paid for is lost, and offered with the
+answer. One search a turn (noted in the turn's scratch), cached in the shared cache under the
+framing and the brief's steady part (with the day), so the same ask in other words is not
+searched again. `saved` marks what the family already has.
 
-When each is asked for is the engine's (suggest/engine.py, suggest/places.wanted)."""
+When it is asked for is the engine's (suggest/engine.py): every planning question, while web
+lookups are on."""
 
 from __future__ import annotations
 
@@ -13,30 +16,37 @@ import json
 import logging
 import sqlite3
 from datetime import date, timedelta
-from typing import Any, Literal, TypeVar
+from typing import Any, TypeVar
 from urllib.parse import urlsplit
 
 from familydb.agent import gateway
 from familydb.availability import web_tools_available
 from familydb.base.config import Settings
+from familydb.base.dates import utc_iso
 from familydb.base.errors import AgentError
 from familydb.moment import DAY_END, DAY_START, Constraints, Context, clock
+from familydb.scouting.brief import brief
 from familydb.scouting.reach import Reach
 from familydb.scouting.reach import turn as reach_turn
 from familydb.scouting.types import Found
-from familydb.store import ideas, places
+from familydb.store import finds, ideas, places
+from familydb.store.db import transaction
 
 log = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Found)
 
 DISCOVER_CACHE_SECONDS = 12 * 3600
+# The most of the question's words a search is told.
+QUESTION_MOST = 500
 NOTE_OFF = "web discovery off"
 NOTE_FAILED = "web discovery failed"
 NOTE_NO_KEY = "web discovery waits for a model key"
-# A place's hours change slowly; the request's hour keeps "open now" honest.
-PLACES_CACHE_SECONDS = 3600
-PLACE_NOTE_FAILED = "place search failed"
+NOTE_ONCE = "the web was searched once already for this message"
+# Where the turn notes the search it made (Reach.turn_notes).
+SEARCHED = "searched_for"
+# Kept as finds under this source and kind (store/finds.py).
+SOURCE = "request"
 
 
 def cache_key(window: tuple[date, date] | None) -> str:
@@ -52,9 +62,9 @@ def _hours(bounds: tuple[int, int]) -> str:
 
 
 def render_discover_request(context: Context, constraints: Constraints, settings: Settings) -> str:
-    """What the worker is asked (window, hours, home, where they are, topic), from the framing
-    only, so the same ask in other words shares one cached search."""
-    lines = ["Find time-bound things a family could go to near home."]
+    """The framing of the search (window, hours, home, where they are, topic, limits): with the
+    brief, what the cache knows it by, so the same ask in other words shares one search."""
+    lines = ["Find things this family would enjoy: events on these days, and places to go."]
     if constraints.topic:
         lines.append(f"Looking for: {constraints.topic}.")
     if context.window is None:
@@ -90,33 +100,53 @@ def render_discover_request(context: Context, constraints: Constraints, settings
     return "\n".join(lines)
 
 
-def discover(
-    reach: Reach, context: Context, constraints: Constraints
+def render_search_request(framing: str, question: str, about_family: str) -> str:
+    """What the worker is asked: the framing, the question in their words, and the family."""
+    said = " ".join(question.split())[:QUESTION_MOST]
+    return f"{framing}\nThey asked: {said}\n\nAbout the family:\n{about_family}"
+
+
+def search_for(
+    reach: Reach, context: Context, constraints: Constraints, question: str
 ) -> tuple[list[Found], str | None]:
-    """Finds for the window, plus a `skipped_checks` note when discovery did not run."""
+    """What suits them for the window, found on the web and kept as finds, plus a
+    `skipped_checks` note when no search ran."""
     if not web_tools_available(reach.settings):
         return [], NOTE_OFF
     if not gateway.can_ask(reach.settings, "discover", api=reach.api):
         return [], NOTE_NO_KEY
-    request = render_discover_request(context, constraints, reach.settings)
+    framing = render_discover_request(context, constraints, reach.settings)
+    about_family = brief(reach.conn, reach.settings, today=reach.clock.today())
     window = cache_key(context.window)
-    about = f"what is on, {window.replace(':', ' to ')}"
-    return search(reach, "discover", window, request, about, failed=NOTE_FAILED)
+    key = (
+        f"{window}:"
+        + hashlib.sha256(
+            (str(reach.clock.today()) + framing + about_family.steady).encode()
+        ).hexdigest()
+    )
+    # One search a turn: a second look at other days reads the pocket, not the web.
+    notes = reach.turn_notes if reach.turn_notes is not None else {}
+    if notes.get(SEARCHED, key) != key:
+        return [], NOTE_ONCE
+    request = render_search_request(framing, question, about_family.text)
+    about = f"what suits them, {window.replace(':', ' to ')}"
+    found, note = search(reach, key, request, about, failed=NOTE_FAILED)
+    if note is None:
+        notes[SEARCHED] = key
+    return keep(reach, found), note
 
 
 def search(
     reach: Reach,
-    kind: Literal["discover", "places"],
-    prefix: str,
+    key: str,
     request: str,
     about: str,
     *,
     failed: str,
     seconds: int = DISCOVER_CACHE_SECONDS,
 ) -> tuple[list[Found], str | None]:
-    """One worker turn of `kind` that hands back with `report_finds`, kept in the shared cache
-    under the request (with the day) for `seconds`; a failure is a note, never cached."""
-    key = f"{prefix}:" + hashlib.sha256((str(reach.clock.today()) + request).encode()).hexdigest()
+    """One `discover` worker turn that hands back with `report_finds`, kept in the shared cache
+    under `key` for `seconds`; a failure is a note, never cached."""
     # Shared by the chat and scheduler threads; a dict suffices (worst case one duplicate search).
     cache: dict[str, Any] = reach.cache if reach.cache is not None else {}
     now = reach.clock.now()
@@ -125,76 +155,59 @@ def search(
         return [Found(**find) for find in entry["finds"]], None
 
     try:
-        turn = reach_turn(reach, kind, request, about)
+        turn = reach_turn(reach, "discover", request, about)
     except AgentError as exc:
-        log.warning("%s failed for %s: %s", kind, key, exc)
+        log.warning("discover failed for %s: %s", key, exc)
         return [], f"{failed}: {exc}"
     except Exception as exc:  # must not fail the whole suggestion
-        log.exception("%s crashed for %s", kind, key)
+        log.exception("discover crashed for %s", key)
         return [], f"{failed}: {type(exc).__name__}: {exc}"
     if turn.result.status != "ok":
         reason = turn.result.error or turn.result.status
-        log.warning("%s turn for %s ended %s: %s", kind, key, turn.result.status, reason)
+        log.warning("discover turn for %s ended %s: %s", key, turn.result.status, reason)
         return [], f"{failed}: {reason}"
     if not turn.handed_back("report_finds"):
         return [], f"{failed}: worker ended without reporting"
 
-    finds: list[dict[str, Any]] = list(turn.ctx.scratch.get("finds", []))
-    cache[key] = {"expires_at": now + timedelta(seconds=seconds), "finds": finds}
-    log.info("%s for %s found %d item(s)", kind, key, len(finds))
-    return [Found(**find) for find in finds], None
+    found: list[dict[str, Any]] = list(turn.ctx.scratch.get("finds", []))
+    cache[key] = {"expires_at": now + timedelta(seconds=seconds), "finds": found}
+    log.info("discover for %s found %d item(s)", key, len(found))
+    return [Found(**find) for find in found], None
 
 
-def render_places_request(context: Context, constraints: Constraints, settings: Settings) -> str:
-    """What the worker is asked, from the framing only, so the same ask in other words is one
-    search: what, when (to the hour), where, and the limits."""
-    lines = [f"Find places for: {constraints.topic}."]
-    if context.window is not None:
-        start, end = context.window
-        days = [day for day in context.days if day.bounds[1] > day.bounds[0]]
-        if days and start == end:
-            first, last = days[0].bounds
-            hours = f"{clock(first // 60 * 60)}-{clock(min(24 * 60, -(-last // 60) * 60))}"
-            lines.append(f"Open: {start:%A %d %B %Y}, {hours}.")
-        else:
-            lines.append(f"Open: {start:%A %d %B} to {end:%A %d %B %Y}.")
-    lines.append(f"Home area: {settings.home_area or 'not set'}.")
-    if context.origin is not None:
-        origin = context.origin
-        lines.append(f"They are near: {origin.label} ({origin.lat:.3f}, {origin.lon:.3f}).")
-    limits = {
-        "max_cost_level": constraints.max_cost_level,
-        "setting": constraints.setting,
-        "max_travel_minutes": constraints.max_travel_minutes,
-        "avoid": constraints.avoid or None,
-    }
-    said = [
-        f"{key} {', '.join(value) if isinstance(value, list) else value}"
-        for key, value in limits.items()
-        if value is not None
+def keep(reach: Reach, found: list[Found]) -> list[Found]:
+    """Keep what a search found in the back pocket, each with its find's number; what the
+    family passed on is left out of the answer. One whose day code cannot read (dates only as
+    words) is offered but not kept: kept with no day it would read as any time."""
+    keeping = [
+        finds.NewFind(
+            title=one.title,
+            url=one.url,
+            starts=one.starts,
+            address=one.address,
+            summary=one.summary or None,
+            category=one.kind,
+            participants=one.for_whom,
+            why=one.why,
+            min_age=one.min_age,
+            max_age=one.max_age,
+        )
+        for one in found
+        if one.starts or one.any_time
     ]
-    if said:
-        lines.append("Keep to: " + "; ".join(said) + ".")
-    return "\n".join(lines)
-
-
-def find_places(
-    reach: Reach, context: Context, constraints: Constraints
-) -> tuple[list[Found], str | None]:
-    """Places found for the topic, each marked when already saved; a note when none could be."""
-    if not gateway.can_ask(reach.settings, "places", api=reach.api):
-        return [], "place search waits for a model key"
-    request = render_places_request(context, constraints, reach.settings)
-    found, note = search(
-        reach,
-        "places",
-        "places",
-        request,
-        f"places for {constraints.topic}",
-        failed=PLACE_NOTE_FAILED,
-        seconds=PLACES_CACHE_SECONDS,
-    )
-    return saved(reach.conn, found), note
+    if not keeping:
+        return found
+    with transaction(reach.conn):
+        kept, _ = finds.keep(reach.conn, SOURCE, SOURCE, keeping, now=utc_iso(reach.clock.now()))
+    by_url = {one.url.lower(): one for one in kept if one.url}
+    offered = []
+    for one in found:
+        row = by_url.get(one.url.lower())
+        if row is None:
+            offered.append(one)
+        elif row.state != "passed":
+            offered.append(one.model_copy(update={"find_id": row.id}))
+    return offered
 
 
 def _host(url: str | None) -> str | None:

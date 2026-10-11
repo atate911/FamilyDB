@@ -167,7 +167,7 @@ def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clo
     assert [a["tool"] for a in reply.actions] == ["suggest"]
     # The worker's requests sit between the two chat requests and use the discovery prompt.
     assert len(api.requests) == 4
-    assert api.requests[1]["system"][0]["text"].startswith("You are the discovery worker")
+    assert api.requests[1]["system"][0]["text"].startswith("You are the search worker")
     assert [t["name"] for t in api.requests[1]["tools"]] == [
         "report_finds",
         "web_search",

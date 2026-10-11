@@ -1,8 +1,9 @@
 """Scouting: finding things on the web for the family (docs/FINDS.md). Every web search made to
 find something new goes through here, and nothing else talks to the web to find things:
 
-- `search`: the searches made while answering somebody (`discover`, `find_places`), cached,
-  and `saved`, which marks what the family already has.
+- `search`: the search made while answering somebody (`search_for`), for events and places
+  alike, cached and kept as finds, and `saved`, which marks what the family already has.
+- `brief`: what a search is told about the family, built by code and capped.
 - `near_home`: the search for what is on near home, and the lookup for event calendars, which
   the hourly job runs (jobs/happening.py).
 - `fill`: filling in an idea's details from the web (the evening's lookups, jobs/enrich.py).

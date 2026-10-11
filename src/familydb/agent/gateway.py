@@ -49,7 +49,6 @@ Kind = Literal[
     "retry",
     "enrich",
     "discover",
-    "places",
     "scout",
     "find_feeds",
     "choose",
@@ -112,32 +111,21 @@ KINDS: dict[str, CallSpec] = {
         ),
         CallSpec(
             "discover",
-            "searching for what is on",
+            "searching for what suits them",
             prompt="discover",
-            tools=("report_finds",),
-            hand_back=("report_finds",),
-            web_searches=4,
-            **_WORKER,
-        ),
-        # A place nothing saved fits, found on the web for now or the next days, while the family
-        # has `find_places` on (suggest/places.py); never an event, which is discovery's.
-        CallSpec(
-            "places",
-            "searching for a place nothing saved fits",
-            prompt="places",
             tools=("report_finds",),
             hand_back=("report_finds",),
             web_searches=4,
             **_WORKER,
         ),
         # The weekly search for what is on near home over the next four weeks (jobs/happening.py):
-        # discovery's prompt and hand-back, a kind of its own so its cost is held to the
-        # family's monthly budget for it rather than counted with the chat's.
+        # a prompt of its own and discovery's hand-back, a kind of its own so its cost is held
+        # to the family's monthly budget for it rather than counted with the chat's.
         CallSpec(
             "scout",
             "searching for what is on near home",
             budget="happening_budget",
-            prompt="discover",
+            prompt="scout",
             tools=("report_finds",),
             hand_back=("report_finds",),
             web_searches=4,
@@ -196,6 +184,9 @@ KINDS: dict[str, CallSpec] = {
 }
 
 
+# Kinds no longer made, by what their recorded calls were for, so older rows still read.
+FORMER = {"places": "searching for a place nothing saved fits"}
+
 LISTEN = "transcribe"
 LISTEN_PURPOSE = "listening to voice notes"
 LOOK = "look"
@@ -217,6 +208,8 @@ def purpose(kind: str | None) -> str:
         return LISTEN_PURPOSE
     if kind == LOOK:
         return LOOK_PURPOSE
+    if kind in FORMER:
+        return FORMER[kind]
     return KINDS[kind].purpose if kind in KINDS else kind
 
 

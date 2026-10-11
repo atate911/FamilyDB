@@ -89,7 +89,7 @@ USES: tuple[Use, ...] = (
         "lookup",
         "Looking things up",
         "Fills ideas in on the web: hours, addresses, prices.",
-        ("enrich", "discover", "places", "price_check"),
+        ("enrich", "discover", "price_check"),
         "worker",
         "everyday",
         "search",

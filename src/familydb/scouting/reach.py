@@ -1,6 +1,7 @@
 """What a search reaches the world through, so the scouting layer never holds the App: the
 connection, the settings in force, the clock, the tools a worker may call, the model client (a
-fake in tests), the geocoder, the shared cache of searches, and the message it is made for."""
+fake in tests), the geocoder, the shared cache of searches, and the message and turn it is made
+for."""
 
 from __future__ import annotations
 
@@ -24,6 +25,9 @@ class Reach:
     geocoder: Any = None
     cache: dict[str, Any] | None = None  # the App's cache of searches (App.discover_cache)
     message_id: int | None = None
+    # The answering turn's own scratch (ToolContext.scratch), which lasts the turn: where a
+    # search made for it is noted, so a message searches once.
+    turn_notes: dict[str, Any] | None = None
 
     @classmethod
     def of(cls, ctx: ToolContext) -> Reach:
@@ -36,6 +40,7 @@ class Reach:
             api=ctx.api,
             cache=ctx.discover_cache,
             message_id=ctx.message_id,
+            turn_notes=ctx.scratch,
         )
 
     @classmethod

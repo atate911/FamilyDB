@@ -264,7 +264,7 @@ def test_calendars_found_near_home_are_offered_only_when_they_read(settings, con
     # Not asked again until the family's days between looks have passed: only the search.
     quiet = fakes.FakeMessagesAPI(*fakes.discover_script([]))
     run_happening(_app(settings, day=28, **SEARCHING), api=quiet, feeds=feeds)
-    assert {r["system"][0]["text"] for r in quiet.requests} == {load_prompt("discover")}
+    assert {r["system"][0]["text"] for r in quiet.requests} == {load_prompt("scout")}
     later = fakes.FakeMessagesAPI(*_feeds_script(), *fakes.discover_script([]))
     run_happening(_app(settings, day=50, **SEARCHING), api=later, feeds=feeds)
     asked = later.requests[0]["messages"][0]["content"][1]["text"]

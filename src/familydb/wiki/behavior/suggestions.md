@@ -76,15 +76,17 @@ If the chat model framed the question plainly wrong, such as the whole weekend f
 
 It never runs for a kid's question, `/now`, the evening check or the command line, nor for a question about right now unless `choose_now` is on. When it is off, over its monthly budget or fails, the engine's own order is the answer and nobody is told. The row, the budget and what it costs are on [AI model](/wiki/controls/settings/ai-model#choosing-the-suggestions).
 
-## Web discovery
+## Searching the web
 
-Discovery adds time-bound things that are not on the list: festivals, markets, shows. It is one worker turn on the lookup model, with up to 4 searches, that hands back up to 6 finds, offered with their link and marked as not on the list.
+When somebody asks for suggestions, the assistant also searches the web, so the answer is not limited to the list. It is one turn on the lookup model, with up to 4 searches, that hands back up to 6 things: events on the days asked and places to go alike, for the whole family, the grown-ups or the kids, each with its link, who it suits and one line of why. They are offered after the family's own ideas and marked as not on the list.
 
-It runs only when the call asks for it, lookups are on, and a key serves lookups. The chat model sets it: the tool's default is on, and the prompt says to leave it off for now or today unless asked what is on. When asked for but unable to run, the skipped checks say "web discovery off" or "web discovery waits for a model key".
+The search is told the question in your words and what is known about the family: how many grown-ups and the kids' ages, the musts and tastes you have told the assistant, the ideas you loved, home and the [other places you go](/wiki/controls/settings/general#where-home-is), what is on your list, what was found for you before and what you said is not for you. People are described as "a kid, 9" or "a grown-up", never by name, and presents, wishes and other chats' words are never sent ([What leaves the house](/wiki/security/what-leaves-the-house)).
 
-The request is built from the window, hours, home area, topic, constraints and, when set, where they are, never from the question's wording, so differently worded questions share one search. Results are kept 12 hours in memory, per window, request and day, and cleared on a restart or when a setting is saved. A failure is noted ("web discovery failed: ...") and not kept; an empty result is kept.
+What it finds is kept, so nothing paid for is lost: each thing with a day, or a place to go any time, joins the finds listed on [Soon](/wiki/controls/plans-and-tasks#soon), where **Not for us** keeps it from being offered again. Something you already saved is marked with its idea; something you passed on is left out; where a kid reads, something for the grown-ups alone is left out.
 
-It costs tokens plus a charge for each search, within the daily limit, recorded as "searching for what is on" ([Cost](/wiki/operations/cost)). A place or shared position goes into the search, name and coordinates, to the model company ([What leaves the house](/wiki/security/what-leaves-the-house)).
+It runs once for each message while lookups are on and a key serves lookups. The chat model can leave it off only when you ask for your own list alone. When it cannot run, the skipped checks say "web discovery off" or "web discovery waits for a model key". The same question in other words, for the same days, is searched once: results are kept 12 hours in memory and cleared on a restart or when a setting is saved. A failure is noted ("web discovery failed: ...") and not kept.
+
+It costs tokens plus a charge for each search, about a cent or two, within the daily limit, recorded as "searching for what suits them" ([Cost](/wiki/operations/cost)), and adds 10 to 40 seconds to the answer. A place or shared position goes into the search, name and coordinates, to the model company.
 
 ## Limits
 

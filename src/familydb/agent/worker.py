@@ -14,7 +14,7 @@ from familydb.base.clock import Clock
 from familydb.base.config import Settings
 from familydb.tools import ToolContext, ToolRegistry
 
-WorkerKind = Literal["enrich", "discover", "places", "scout", "find_feeds"]
+WorkerKind = Literal["enrich", "discover", "scout", "find_feeds"]
 
 
 @dataclass

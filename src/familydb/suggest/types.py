@@ -69,7 +69,9 @@ class SuggestInput(BaseModel):
         default="",
         description="What kind of thing, a few words: live jazz, puppet show. Empty for anything.",
     )
-    discover: bool = Field(default=True, description="Also look for time-bound events on the web.")
+    discover: bool = Field(
+        default=True, description="Also search the web; false only for their own list alone."
+    )
     prefer: Literal["new", "favorites"] = Field(
         default="new", description="favorites for what they loved before: 'our usual'."
     )

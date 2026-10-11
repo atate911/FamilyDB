@@ -119,6 +119,15 @@
   and the page links to it. Finds may now be places to go any time as well as dated events, and keep
   who they are for and why they were found: the first step of her back pocket (`docs/FINDS.md`).
   This is migration 0061, which rebuilds the `finds` table and keeps every row.
+- **Asked for ideas, she searches the web with everything she knows.** Every planning question now
+  also searches the web once, for events and places alike, told the question in your words and what
+  she knows of the family: how many grown-ups and the kids' ages, your musts and tastes, what you
+  loved, what is on your list and what you passed on, never a name, a present or a wish. What it
+  finds is kept with her finds rather than thrown away, and a new **Other places you go** setting
+  (Where home is) widens where she looks. Before, she searched only when your calendars listed
+  little or a topic was named, and looked for a place only with `find_places` on; that setting is
+  gone. Each search costs a cent or two within the daily limit and adds 10 to 40 seconds to the
+  answer, as the family decided.
 
 ## v0.5.0 — beta (2026-10-11)
 

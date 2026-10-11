@@ -1,5 +1,6 @@
-"""Stage: time-bound things found on the web for the window, through the scouting layer
-(scouting/search.py `discover`), as the engine's result rows."""
+"""Stage: the search made while answering (scouting/search.py `search_for`): what suits the
+family for the window, events and places alike, kept as finds and offered as the engine's result
+rows."""
 
 from __future__ import annotations
 
@@ -10,8 +11,8 @@ from familydb.tools import ToolContext
 
 
 def discover(
-    ctx: ToolContext, context: Context, constraints: Constraints
+    ctx: ToolContext, context: Context, constraints: Constraints, question: str = ""
 ) -> tuple[list[WebFind], str | None]:
-    """Finds for the window, plus a `skipped_checks` note when discovery did not run."""
-    found, note = search.discover(Reach.of(ctx), context, constraints)
+    """Finds for the window, plus a `skipped_checks` note when no search ran."""
+    found, note = search.search_for(Reach.of(ctx), context, constraints, question)
     return [WebFind(**one.model_dump()) for one in found], note

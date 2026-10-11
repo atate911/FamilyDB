@@ -10,6 +10,7 @@ from familydb.availability import enrichment_available
 from familydb.base import roles
 from familydb.base.dates import parse_date_range, weekend_window
 from familydb.base.errors import ToolError
+from familydb.scouting.search import saved
 from familydb.store import ideas, members, memories, outcomes, plans
 from familydb.store.db import transaction
 from familydb.store.ideas import Idea
@@ -22,8 +23,6 @@ from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.origin import resolve as resolve_origin
-from familydb.suggest.places import find_places, saved
-from familydb.suggest.places import wanted as places_wanted
 from familydb.suggest.rules import fold
 from familydb.suggest.shortlist import FAVORITE_RATING, RATING_DAYS, shortlist
 from familydb.suggest.types import (
@@ -253,20 +252,22 @@ def assess(
             ideas.requeue_enrichment(ctx.conn, stale_shown, now=ctx.now_iso())
         skipped.append("stale place details re-queued for a refresh")
 
-    # What the family's sources already list for these days costs nothing to read; when they
-    # list enough, the web is not searched again, unless the question asks for something.
+    # Her back pocket for these days costs nothing to read. Somebody asked, so the web is
+    # searched too, with everything known (docs/FINDS.md), once a message, and a few places she
+    # found to go any time are offered; code asking for itself (her picks, /now, the jobs)
+    # gets neither until finds are checked as ideas are.
     stored = listing.listed(ctx, context)
-    finds, note = ([], None)
-    # A place nothing saved fits, found on the web, when the family has it on (suggest/places.py).
-    if web and places_wanted(context, constraints, candidates, ctx.settings):
-        finds, note = find_places(ctx, context, constraints)
+    if args.discover:
+        stored += listing.anytime(ctx, constraints)
+    finds: list[WebFind] = []
+    if web and args.discover:
+        finds, note = discover(ctx, context, constraints, args.question)
         if note:
             skipped.append(note)
-    if web and args.discover and (constraints.topic or len(stored) < listing.COVERED):
-        events, note = discover(ctx, context, constraints)
-        finds = finds + events
-        if note:
-            skipped.append(note)
+    if kid_reads(ctx):
+        # As for ideas: what is for the grown-ups alone is left out, not ruled out.
+        stored = [one for one in stored if not who.grown_ups_only(one.participants, people)]
+        finds = [one for one in finds if not who.grown_ups_only(one.for_whom, people)]
     finds, more = listing.merge_finds(stored, finds)
     # What the family already saved is marked, so nothing offers it again as new.
     finds = saved(ctx.conn, finds)

@@ -20,6 +20,13 @@ class Found(BaseModel):
     kind: str | None = None
     hours: str | None = None  # as the page writes them
     address: str | None = None
+    # Who it is for and why it suits them, as the search said (docs/FINDS.md): "grown-ups",
+    # "whole family", a kid's age; a place to go any time has no day.
+    for_whom: list[str] = []
+    why: str | None = None
+    min_age: int | None = None
+    max_age: int | None = None
+    any_time: bool = False
     saved_as: int | None = None  # already on the list, as this idea
     # The stored find this is, for one the family's sources list (store/finds.py), so her picks
     # can lead to its page; never sent to the model (tools/suggest.py leaves it out).
