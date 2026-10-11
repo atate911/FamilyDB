@@ -29,7 +29,7 @@ from familydb.store import tasks as task_store
 from familydb.store.members import Member
 from familydb.suggest.types import DAY_END, DAY_START
 from familydb.tools.weather import forecast_days
-from familydb.web import auth, chat, household, map_view, now, page_rows, routes, views
+from familydb.web import auth, chat, household, ideas_page, map_view, now, page_rows, views
 from familydb.web.answers import answer
 
 log = logging.getLogger(__name__)
@@ -335,7 +335,7 @@ def board() -> str:
             found = pick_store.current(conn, member_id=mine, today=today.isoformat())
         picks = now.pick_set(app, found, kept) if found is not None else None
         shopping = _shopping(conn) if visitor.may("change") else None
-        stale = utc_iso(app.clock.now() - timedelta(days=routes.FADE_DAYS))
+        stale = utc_iso(app.clock.now() - timedelta(days=ideas_page.FADE_DAYS))
         saved = sorted(
             (
                 idea

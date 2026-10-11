@@ -29,16 +29,22 @@ from familydb.web import (
     edits,
     family,
     fields,
+    ideas_page,
     links,
+    lists_page,
     look,
     looks,
     once,
+    pages,
+    plans_page,
     routes,
     setup,
     shell,
+    tasks_page,
     troubleshooting,
     views,
     wiki,
+    wishes_page,
 )
 from familydb.web import api as api_page
 from familydb.web import settings as settings_page
@@ -230,7 +236,9 @@ def create_app(app: App, *, api: Any = None) -> Flask:
 
     web.context_processor(every_page)
     web.register_blueprint(auth.bp)
-    web.register_blueprint(routes.bp)
+    # Imported for their routes, which register on the one blueprint as each module loads.
+    _ = (routes, ideas_page, lists_page, plans_page, tasks_page, wishes_page)
+    web.register_blueprint(pages.bp)
     web.register_blueprint(activity.bp)
     web.register_blueprint(troubleshooting.bp)
     web.register_blueprint(chat.bp)

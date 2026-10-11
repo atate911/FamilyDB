@@ -743,6 +743,39 @@ def test_no_page_writes_but_through_the_four_doors() -> None:
         assert found == may, f"{module.name} no longer writes through {sorted(may - found)}"
 
 
+FAMILY_PAGES = {
+    "routes.py",
+    "ideas_page.py",
+    "plans_page.py",
+    "tasks_page.py",
+    "wishes_page.py",
+    "lists_page.py",
+    "destinations.py",
+    "now.py",
+    "chat.py",
+}
+
+
+def test_every_family_page_is_drawn_through_answer() -> None:
+    """The family's pages (on the frame) are drawn from their view-model in one place,
+    `answers.answer`; the back office draws its own. A page family that bypasses it fails here."""
+    import ast
+
+    import familydb.web as package
+
+    folder = Path(package.__file__).parent
+    for name in sorted(FAMILY_PAGES):
+        tree = ast.parse((folder / name).read_text("utf-8"), filename=name)
+        direct = [
+            node.lineno
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and (getattr(node.func, "id", None) or getattr(node.func, "attr", None))
+            == "render_template"
+        ]
+        assert direct == [], f"{name} renders directly at {direct}; use answers.answer"
+
+
 def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     """Which modules may cause a write, and what each may go through.
 
