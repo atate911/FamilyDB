@@ -45,7 +45,7 @@ from familydb.store import logins
 from familydb.store import members as member_store
 from familydb.store.logins import Login, SignIn
 from familydb.store.members import Member
-from familydb.web import answers, looks, views
+from familydb.web import looks, views
 
 log = logging.getLogger(__name__)
 
@@ -56,10 +56,6 @@ SESSION_KEY = "signed_in"
 # Signed in as this member id.
 MEMBER_KEY = "member"
 CSRF_KEY = "csrf"
-# Where a script (the API, docs/INTERFACE.md section 11) puts the same token a form carries.
-CSRF_HEADER = "X-CSRF-Token"
-# The API's writing doors, which are the page's own blueprints': answered as the API, in JSON.
-API_WRITES = frozenset({"chat.say", "edits.act"})
 # An HMAC (under the cookie signing key, so the cookie says nothing of the password) of the
 # password a session was opened with: changing the password ends every session using the old one.
 PASSWORD_KEY = "pw"
@@ -105,7 +101,7 @@ NEEDS: dict[str, roles.Permission] = {
     "wiki": "browse",
     # This week and What we did (web/destinations.py): everybody's, a kid's own things in them.
     "go": "sign_in",
-    # The API (web/api.py): each page it answers for asks that page's own permission.
+    # Search in the box (web/api.py): what each finds is held to what the visitor may see.
     "api": "sign_in",
 }
 # A page that needs something other than its blueprint's, asked before the blueprint is.
@@ -136,8 +132,6 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "edits.snooze_task": "own_tasks",
     # Taking back a change: anybody may try; undo.py says whose they may (a kid, her own tasks).
     "edits.undo": "own_tasks",
-    # Any of these forms from a script (the API): each asks its own form's permission.
-    "edits.act": "sign_in",
     # The lists are the grown-ups' until the family decides what a kid may do with them.
     "web.lists_page": "change",
     # Notices on one's own devices, for anybody signed in as themselves (push.py).
@@ -456,7 +450,7 @@ def refused() -> str | None:
     reported as a foreign origin: signing out and back in leaves an open page with one."""
     if not origin_ok():
         return BAD_ORIGIN
-    if not csrf_ok(request.form.get("csrf") or request.headers.get(CSRF_HEADER)):
+    if not csrf_ok(request.form.get("csrf")):
         return STALE_FORM
     return None
 
@@ -539,9 +533,9 @@ def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
 
 
 def for_a_script() -> bool:
-    """Whether this request is the API's, so it is answered in JSON, never sent to a page: its
-    own, or a page's view the API is running (which then says so on the request)."""
-    return bool(g.get(answers.API)) or request.blueprint == "api" or request.endpoint in API_WRITES
+    """Whether this request is the API's (search in the box), so it is answered in JSON, never
+    sent to a page."""
+    return request.blueprint == "api"
 
 
 def _told(words: str, status: int) -> Response:

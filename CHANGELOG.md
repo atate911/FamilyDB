@@ -21,11 +21,8 @@
   in the box shows what the family already has by it, before anything is sent. What we did narrows to
   Favorites and This time last year; an idea untouched for three months asks whether it is still
   wanted. A new install opens on her one line and a question in the box.
-- **The API.** Every family page is also data, at `/api` and the page's own address (`/api/now`,
-  `/api/eat`, `/api/place/57`), drawn by the same code as the page, so the two cannot disagree; a
-  script signed in as a person may send a message (`/api/say`) and use any form the page has
-  (`/api/act`), with that person's permissions. No model call for a read. There is no native phone
-  app: the page added to the home screen is the phone app. The guide's Reference has The API.
+- **No native phone app.** The page added to the home screen is the phone app; `docs/INTERFACE.md`
+  says what that gives up and why.
 - **Questions code can answer are answered at once.** "What's on this week?", "what's on my plate?",
   "what's on the shopping list?", "what now?" and "undo that", as the whole message, get the same
   answer as Telegram's commands, on the page and in Telegram alike, free and with no wait.

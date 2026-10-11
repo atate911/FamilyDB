@@ -10,7 +10,6 @@ from datetime import date, datetime, timedelta
 from functools import wraps
 from typing import Any
 from urllib.parse import urlencode
-from uuid import uuid4
 
 from flask import (
     Blueprint,
@@ -18,7 +17,6 @@ from flask import (
     abort,
     current_app,
     g,
-    jsonify,
     redirect,
     request,
     session,
@@ -28,7 +26,7 @@ from flask import (
 from familydb import audience, buttons, personas, roles, undo
 from familydb.agent import spending
 from familydb.app import App
-from familydb.channels.web import BUSY, DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
+from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.store import calls
@@ -37,7 +35,7 @@ from familydb.store import messages as message_store
 from familydb.store import pins as pin_store
 from familydb.store import tasks as task_store
 from familydb.store.messages import Message
-from familydb.web import answers, auth, views
+from familydb.web import auth, views
 from familydb.web import status as status_page
 from familydb.web.answers import answer
 from familydb.web.once import once
@@ -827,33 +825,3 @@ def send() -> Response | Any:
         asked = {ASKED: handing.update_id} if handing is not None else {}
         return redirect(f"{back}?{urlencode(asked)}#{SAID}" if asked else back)
     return redirect(url_for("chat.show", _anchor=LATEST))
-
-
-@bp.post("/api/say")
-@_roomy
-def say() -> tuple[Response, int]:
-    """The box, from a script (docs/INTERFACE.md section 11): one message, as whoever is signed in,
-    framed as the box frames it (`scope`, `intent`), from the page named in `page`. Answered at
-    once, before she is: `asked` is the message's id and `check` the page's answer that carries
-    what it brings back, as the page comes back to itself with ?asked=. JSON or a form; a photo
-    only in a form."""
-    if (complaint := auth.refused()) is not None:
-        return answers.told(complaint, 400)
-    form = answers.as_form()
-    text = form.get("text", "")
-    photo, complaint = _photo()
-    if complaint is not None:
-        return answers.told(complaint, 400)
-    who = auth.visitor().name or form.get("who", "").strip()
-    if not who:
-        return answers.told(NOBODY, 400)
-    update_id = uuid4().hex
-    complaint = _chat().ask(
-        _framed(text, form), who, my_chat(), _position(form), photo=photo, update_id=update_id
-    )
-    if complaint is not None:
-        return answers.told(complaint, 409 if complaint == BUSY else 400)
-    log.info("web chat: %s asked something through the API", who)
-    on = form.get("page", "").split("?", 1)[0].split("#", 1)[0]
-    on = on if _on_site(on) and on != "/" else "/now"
-    return jsonify({"asked": update_id, "check": f"/api{on}?{urlencode({ASKED: update_id})}"}), 202
