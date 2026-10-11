@@ -42,7 +42,7 @@ Every figure is **an estimate worked out from each call's size and a price table
 
 - **Spent today** is what recorded calls have cost since midnight in the family's time zone, against the daily limit, with a line for a usual day. Admins get **Change the limit**.
 - **Last 30 days** shows the cost, the usual day (the average over the days in those 30 that had any calls) and "Questions answered".
-- **Where the money went** gives calls and dollars by kind of call, and how much of what was sent came back from the [prompt cache](/wiki/reference/glossary#prompt-cache), which costs less.
+- **Where the money went** gives calls and dollars by kind of call, and how much of what was sent came back from the [prompt cache](/wiki/reference/glossary#prompt-cache), which costs less. It also says how many of the messages answered found the start of the request still cached. The cache lasts an hour, so a family that writes a few times a day mostly misses it and pays the whole start of every request; then a shorter start, such as the brief [persona](/wiki/model/vera), saves more than the cache does.
 
 ## What came of her suggestions
 

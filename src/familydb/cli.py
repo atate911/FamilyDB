@@ -522,6 +522,7 @@ def debug_cost(
         rows = calls.usage_since(conn, since=since)
         kinds = calls.usage_by_kind(conn, since=since)
         measured = calls.sections_since(conn, since=since)
+        turns, warm = calls.warm_starts(conn, "chat", since=since)
 
     system_tokens = sum(len(block.text) for block in blocks) // 4
     tool_tokens = len(_json.dumps([t.schema for t in tools], ensure_ascii=False)) // 4
@@ -577,6 +578,11 @@ def debug_cost(
     served = total_in + cached + sum(r["cache_write"] for r in rows)
     share = (cached / served * 100) if served else 0.0
     typer.echo(f"  {share:.0f}% of input tokens came from the cache at a tenth of the price.")
+    if turns:
+        typer.echo(
+            f"  {warm / turns * 100:.0f}% of {turns:,d} message(s) answered found the prefix still "
+            "cached on their first call; the rest paid for it in full."
+        )
     for kind in gateway.KINDS:
         split = compose.breakdown(row for row in measured if row["kind"] == kind)
         if not split:

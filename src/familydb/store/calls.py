@@ -385,6 +385,19 @@ def usage_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]
     return [dict(row) for row in rows]
 
 
+def warm_starts(conn: sqlite3.Connection, kind: str, *, since: str) -> tuple[int, int]:
+    """Of the turns of a kind since a timestamp, how many there were and how many found the start
+    of the request still cached on their first call. Later calls in a turn always find it, so only
+    the first says whether the cache lasts from one message to the next."""
+    row = conn.execute(
+        "SELECT count(*) AS n, "
+        "coalesce(sum(CASE WHEN coalesce(cache_read_input_tokens, 0) > 0 THEN 1 ELSE 0 END), 0) "
+        "AS warm FROM llm_calls WHERE kind = ? AND iteration = 1 AND created_at >= ?",
+        (kind, since),
+    ).fetchone()
+    return int(row["n"]), int(row["warm"])
+
+
 def waits(conn: sqlite3.Connection, kind: str, *, since: str) -> tuple[int, float]:
     """How many calls of a kind since a timestamp, and their average time in seconds: what a
     family waits for one (the choosing call, suggest/taken.py)."""

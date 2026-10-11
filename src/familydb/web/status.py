@@ -219,8 +219,13 @@ def spending(
     cached = sum(row["cache_read"] for row in rows)
     written = sum(row["cache_write"] for row in rows)
     served = fresh + cached + written
+    turns, warm = calls.warm_starts(conn, "chat", since=since)
     return {
         "rows": rows,
+        # Of the family's messages, how many found the cached start still there: whether the
+        # cache pays on this install's traffic, before anything is done to keep or cut it.
+        "turns": turns,
+        "warm_share": round(warm / turns * 100) if turns else 0,
         "kinds": kinds,
         "where": where,
         "calls": sum(row["calls"] for row in rows),

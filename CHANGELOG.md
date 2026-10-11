@@ -96,6 +96,10 @@
   looked at. A new setting on the AI model page, **Choose for questions about right now too**, off
   by default, lets it choose for "anything to do this afternoon?" within the same monthly cap;
   Status shows how long choosing takes, to judge the wait by.
+- **Status says how often a message finds the cache warm.** The cache share counted every call, and
+  the later calls of a turn always hit it. Status and `familydb debug cost` now also say how many of
+  the family's messages found the start of the request still cached on their first call, which is
+  what decides whether the prompt cache, or a shorter start, saves more on this install.
 
 ## v0.5.0 — beta (2026-10-11)
 
