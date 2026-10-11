@@ -201,12 +201,27 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
             title=find.title,
             url=find.url or None,
             find_id=find.find_id,
-            days=(find.starts[:10],) if find.starts else (),
+            days=tuple(find.fits_days) or ((find.starts[:10],) if find.starts else ()),
         )
         cites.add(ref)
-        parts = (find.kind, find.dates, find.hours, find.address, find.source, find.summary)
+        # Checked as the ideas are (suggest/pocket.py): its verdict and reasons are code's.
+        line = f"{ref} {find.verdict or 'not checked'}"
+        line += (": " + "; ".join(find.reasons)) if find.reasons else ""
+        if find.fits_days:
+            line += f" (fits {', '.join(find.fits_days)})"
+        whom = ", ".join(find.for_whom)
+        parts = (
+            find.kind,
+            find.dates,
+            find.hours,
+            find.address,
+            f"for {whom}" if whom else None,
+            find.why,
+            find.source,
+            find.summary,
+        )
         said = " · ".join(part for part in parts if part)
-        option_lines.append(f"{ref} {find.title}: {said}")
+        option_lines.append(f"{line}\n  {find.title}: {said}")
     sections["options"] = option_lines
 
     ruled_out = [c for c in ordered if c.verdict == "ruled_out"][:RULED_OUT_SHOWN]

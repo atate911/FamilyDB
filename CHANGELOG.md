@@ -131,7 +131,8 @@
 - **What she found is checked as your ideas are.** A show at seven when you are busy, a pumpkin patch
   on a rainy day, a wine walk when the girls are coming, a loud gig when you said no loud places, a
   fair two hours away: each now gets the same verdict and reasons as an idea on your list, by the
-  same code, and what is ruled out is no longer offered.
+  same code, and what is ruled out is no longer offered. Her picks on Now, and the stronger model
+  choosing for you, see each find's verdict.
 
 ## v0.5.0 — beta (2026-10-11)
 

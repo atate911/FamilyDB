@@ -220,7 +220,8 @@ def _tiles(
         for find in found.finds:
             if len(tiles) >= most:
                 break
-            if find.saved_as is not None:
+            # Theirs already, or not checked: the finds come checked, the good first.
+            if find.saved_as is not None or find.verdict not in ("good", "possible"):
                 continue
             tiles.append(_find_tile(find, ""))
             break  # one of hers: the rest are on Happening soon
