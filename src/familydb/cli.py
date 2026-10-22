@@ -460,6 +460,7 @@ def debug_prompt(
         "scout",
         "find_feeds",
         "fill_find",
+        "fill_recipe",
         "curate",
     ):
         typer.echo("--kind is one of chat, digest, retry or enrich", err=True)

@@ -605,6 +605,9 @@ class Settings(BaseSettings):
     google_calendar_id: str | None = None
     google_key_path: Path = Path("data/google_key.json")
     enrichment_notes: bool = True
+    # A recipe link the family pasted is read by this server, by code and for nothing, within a
+    # few minutes (docs/RECIPES.md); off, it waits for the evening's paid lookup like a place.
+    recipe_links: bool = True
 
     # Dated things near home, found by the app (familydb/happening.py, jobs/happening.py). The
     # calendars it reads, one address a line: those it proposed that an admin ticked, and any

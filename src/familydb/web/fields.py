@@ -700,6 +700,13 @@ GROUPS: tuple[Group, ...] = (
                 "Without it, no idea is filled in and nothing new is discovered.",
             ),
             field(
+                "recipe_links",
+                "Read a pasted recipe link straight away",
+                "This server reads the recipe's page itself within a few minutes, sending nothing "
+                "of the family, and keeps its ingredients and steps: no model call, so it costs "
+                "nothing. A page it cannot read waits for the evening's lookups.",
+            ),
+            field(
                 "picks",
                 "Keep a few picks ready on Now (What about…)",
                 "Worked out by code every few hours from the family's ideas and what is on near "
