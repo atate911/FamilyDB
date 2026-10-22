@@ -180,8 +180,9 @@ def migrate(conn: sqlite3.Connection) -> list[int]:
 
 
 def dump_table(conn: sqlite3.Connection, table: str) -> list[dict[str, Any]]:
-    """Every row of a table by id, as dicts: for the family's export."""
-    return [dict(row) for row in conn.execute(f"SELECT * FROM {table} ORDER BY id")]
+    """Every row of a table in the order kept (its id, or a recipe's idea), as dicts: for the
+    family's export."""
+    return [dict(row) for row in conn.execute(f"SELECT * FROM {table} ORDER BY rowid")]
 
 
 def answers(conn: sqlite3.Connection) -> bool:

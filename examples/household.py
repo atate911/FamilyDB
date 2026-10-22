@@ -16,6 +16,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from familydb import family as rules
+from familydb import meals
 from familydb.app import App
 from familydb.base.clock import FixedClock
 from familydb.base.config import Settings
@@ -33,6 +34,7 @@ from familydb.store import (
     pins,
     places,
     plans,
+    recipes,
     tasks,
     wishes,
 )
@@ -297,6 +299,136 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
             cost_level=2,
             tags=["pizza"],
             now=ago(days=60),
+        )
+
+        # -- what to cook (docs/RECIPES.md): a link read from its page, one said, one guessed
+        fajitas_link = "https://recipes.example/sheet-pan-chicken-fajitas"
+        fajitas = ideas.insert(
+            conn,
+            title="Sheet-Pan Chicken Fajitas",
+            kind="recipe",
+            url=fajitas_link,
+            tags=["mexican", "sheet pan"],
+            suggested_by=alex.id,
+            participants=["whole family"],
+            enrichment="done",
+            now=ago(days=40),
+        )
+        meals.keep(
+            conn,
+            fajitas,
+            {
+                "source_url": fajitas_link,
+                "source_site": "recipes.example",
+                "name": "Sheet-Pan Chicken Fajitas",
+                "total_minutes": 35,
+                "active_minutes": 15,
+                "serves": 4,
+                "occasions": ["weeknight"],
+                "ingredients": [
+                    "1 1/2 pounds boneless skinless chicken thighs",
+                    "2 red bell peppers, sliced",
+                    "1 large onion, sliced",
+                    "2 tbsp olive oil",
+                    "1 tbsp chili powder",
+                    "Juice of 1 lime",
+                    "8 small flour tortillas",
+                    "Sour cream, for serving",
+                ],
+                "steps": [
+                    "Heat the oven to 425°F.",
+                    "Toss the chicken, peppers and onion with the oil and chili powder.",
+                    "Roast on one sheet for 20 minutes, then squeeze over the lime.",
+                    "Warm the tortillas and serve with sour cream.",
+                ],
+            },
+            by="family",
+            now=ago(days=40),
+        )
+        recipes.upsert(
+            conn, fajitas.id, {"filled_at": ago(days=40), "filled_by": "page"}, now=ago(days=40)
+        )
+        for days, rating in ((30, 9), (9, 8)):
+            outcomes.insert(
+                conn,
+                idea_id=fajitas.id,
+                plan_id=None,
+                happened_on=(TODAY - timedelta(days=days)).isoformat(),
+                rating=rating,
+                would_repeat=True,
+                notes=None,
+                recorded_by=alex.id,
+                now=ago(days=days),
+            )
+        for days, average in ((30, 9.0), (9, 8.5)):
+            ideas.apply_outcome(
+                conn,
+                fajitas.id,
+                happened_on=(TODAY - timedelta(days=days)).isoformat(),
+                avg_rating=average,
+                now=ago(days=days),
+            )
+        chili = ideas.insert(
+            conn,
+            title="Slow-cooker chili",
+            kind="recipe",
+            description="Sam's, from the camping trip. Makes a lot.",
+            suggested_by=sam.id,
+            enrichment="skipped",
+            now=ago(days=75),
+        )
+        meals.keep(
+            conn,
+            chili,
+            {
+                "total_minutes": 360,
+                "active_minutes": 20,
+                "serves": 8,
+                "ingredients": [
+                    "2 lb ground beef",
+                    "2 (15-oz) cans kidney beans, drained",
+                    "1 (28-oz) can crushed tomatoes",
+                    "1 onion, diced",
+                    "3 cloves garlic, minced",
+                    "2 tbsp chili powder",
+                ],
+                "steps": [
+                    "Brown the beef with the onion and garlic.",
+                    "Put everything in the slow cooker on low for 6 hours.",
+                    "Freezes well in portions.",
+                ],
+            },
+            by="family",
+            now=ago(days=75),
+        )
+        oats = ideas.insert(
+            conn,
+            title="Overnight oats",
+            kind="recipe",
+            description="For school mornings.",
+            suggested_by=maya.id,
+            participants=["the kids"],
+            enrichment="skipped",
+            now=ago(days=12),
+        )
+        meals.keep(
+            conn,
+            oats,
+            {
+                "total_minutes": 5,
+                "serves": 2,
+                "occasions": ["prep_ahead", "kids_cook"],
+                "prep_note": "Make it the night before",
+                "ingredients": [
+                    "1 cup rolled oats",
+                    "1 cup milk",
+                    "2 tbsp maple syrup",
+                    "1 banana",
+                ],
+                "steps": ["Stir it all together in two jars.", "Refrigerate overnight."],
+            },
+            by="family",
+            now=ago(days=12),
         )
 
         # -- things to do
