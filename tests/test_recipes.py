@@ -370,3 +370,84 @@ def test_a_recipe_with_no_ingredients_yet_says_so(settings, clock, conn, family)
     outing = _call(us, "add_idea", title="Zoo", kind="outing")[1]
     refused, said = _call(us, "shopping_list", action="from_recipes", idea_ids=[outing["id"]])
     assert refused.is_error and "not a recipe" in said["error"]
+
+
+# -- what the review of the branch found (each a defect fixed, held here) -------------------------
+
+
+def test_a_guess_turned_down_stays_gone_until_its_facts_change(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Stir fry", total_minutes=20)
+    assert store.get(conn, made["id"]).occasions_guessed == ["weeknight"]
+    _call(us, "recipe", action="change", id=made["id"], occasions_guessed=[])
+    _call(us, "recipe", action="change", id=made["id"], serves=4, steps=["Fry it."])
+    assert store.get(conn, made["id"]).occasions_guessed == []  # still 20 minutes: stays gone
+    _call(us, "recipe", action="change", id=made["id"], total_minutes=200)
+    assert store.get(conn, made["id"]).occasions_guessed == ["slow"]  # new facts, a new reading
+
+
+def test_a_note_ahead_of_time_can_be_cleared(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Ribs", prep_note="Marinate overnight")
+    _call(us, "recipe", action="change", id=made["id"], prep_note="")
+    assert store.get(conn, made["id"]).prep_note is None
+
+
+def test_a_present_s_plan_is_only_a_plan_in_a_reason(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _recipe(us, "Roast", total_minutes=120)
+    with db.transaction(conn):
+        gift = ideas.insert(conn, title="Party for Mia", kind="gift", now=NOW_ISO)
+        plans.insert(
+            conn,
+            title="Mia's surprise party",
+            start="2026-09-20T18:30:00-07:00",
+            end="2026-09-20T21:00:00-07:00",
+            all_day=False,
+            idea_id=gift.id,
+            now=NOW_ISO,
+        )
+    _, found = _call(us, "find_recipes")
+    said = json.dumps(found)
+    assert "surprise" not in said and "before a plan" in said
+
+
+def test_find_recipes_reads_tonight_from_the_calendar(env):
+    from datetime import datetime as moment
+
+    env.cal.seed(
+        "Soccer practice",
+        moment(2026, 9, 24, 18, 15, tzinfo=env.app.clock.tz),
+        moment(2026, 9, 24, 19, 30, tzinfo=env.app.clock.tz),
+    )
+    _call(env.ctx, "recipe", action="save", title="Lasagne", total_minutes=90)
+    _call(env.ctx, "recipe", action="save", title="Quesadillas", total_minutes=15)
+    _, found = _call(env.ctx, "find_recipes")
+    assert [one["title"] for one in found["recipes"]] == ["Quesadillas"]
+    assert "Soccer practice" in found["ruled_out"][0]["why"]
+
+
+def test_a_recipe_given_another_link_reads_that_one(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _, made = _call(us, "add_idea", title="Chili", kind="recipe", url="https://a.example/chili")
+    with db.transaction(conn):
+        store.upsert(conn, made["id"], {"fill_note": "no recipe on the page"}, now=NOW_ISO)
+    _call(us, "update_idea", id=made["id"], url="https://b.example/real-chili")
+    kept = store.get(conn, made["id"])
+    assert kept.source_url == "https://b.example/real-chili" and kept.source_site == "b.example"
+    assert kept.fill_note is None and store.links_to_read(conn, 5) == [made["id"]]
+
+
+def test_the_lookup_job_leaves_an_untried_link_to_the_free_read(settings, clock, conn, family):
+    from familydb.app import App
+    from familydb.jobs.enrich import run_enrichment
+    from tests import fakes
+
+    us = _as(conn, settings, clock, family["sam"])
+    _call(us, "add_idea", title="Chili", kind="recipe", url="https://a.example/chili")
+    app = App(
+        settings.model_copy(update={"web_tools_enabled": True, "lookups_when": "asap"}), clock
+    )
+    api = fakes.FakeMessagesAPI()
+    assert run_enrichment(app, api=api)["done"] == 0
+    assert api.requests == []  # nothing fetched or asked twice: the recipe_links job reads it

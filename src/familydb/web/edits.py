@@ -252,6 +252,32 @@ def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
     return values, None
 
 
+def _changed_facts(kept: Any, facts: dict[str, Any]) -> dict[str, Any]:
+    """The recipe facts the form changed, against what is kept: an ingredient list sent back as
+    drawn keeps the split a lookup gave each line, and nothing moved keeps no Undo."""
+    if kept is None:
+        return facts
+    now = {
+        "ingredients": [one.text for one in kept.ingredients],
+        "steps": kept.steps,
+        "occasions": kept.occasions,
+        "prep_note": kept.prep_note or "",
+        "total_minutes": kept.total_minutes,
+        "active_minutes": kept.active_minutes,
+        "serves": kept.serves,
+    }
+    changed = {}
+    for key, value in facts.items():
+        said = value
+        if key == "occasions":
+            said = [one for one in recipe_store.OCCASIONS if one in set(value)]
+        if key == "prep_note":
+            said = " ".join((value or "").split())
+        if said != now.get(key):
+            changed[key] = value
+    return changed
+
+
 def _recipe_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
     """The idea form's Recipe part, as the `recipe` tool's change takes it. Sent every time, so
     emptying a box clears it (the lines) or leaves it as it was (a number, which a tool cannot
@@ -403,7 +429,10 @@ def edit_idea(idea_id: int) -> Response:
     status = _text(request.form, "status")
     if status:
         values["status"] = status
-    facts = values.pop("recipe", None)
+    with closing(_app().connect()) as conn:
+        before = idea_store.get(conn, idea_id)
+        kept = recipe_store.get(conn, idea_id)
+    facts = _changed_facts(kept, values.pop("recipe", None) or {})
     result, complaint = run(
         "update_idea",
         {**values, "id": idea_id},
@@ -413,8 +442,16 @@ def edit_idea(idea_id: int) -> Response:
     if result is None:
         _say(complaint or "")
         return _back("web.edit_idea", idea_id=idea_id)
-    if facts:  # a recipe's facts: the recipe tool's change, which Undo takes back
-        _, complaint = run("recipe", {"action": "change", "id": idea_id, **facts})
+    if facts:
+        # A recipe's facts are the recipe tool's change. Its Undo is offered only when it is the
+        # whole change: one Undo must never take back half of what was saved.
+        was = before.model_dump(mode="json") if before else {}
+        moved = any(
+            (result.get(key) or None) != (was.get(key) or None) for key in values if key in result
+        )  # an empty box saved over nothing is no change
+        _, complaint = run(
+            "recipe", {"action": "change", "id": idea_id, **facts}, offer_undo=not moved
+        )
         if complaint:
             _say(complaint)
             return _back("web.edit_idea", idea_id=idea_id)

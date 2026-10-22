@@ -261,9 +261,19 @@ def key(item: str) -> str:
     return " ".join([*words[:-1], last])
 
 
-def staple(item: str) -> bool:
+# Staples that are also something to buy: "pepper" with a spoon or a pinch is black pepper, but
+# "2 peppers" or "1 pepper, diced" is a bell pepper.
+SEASONING = frozenset({"pepper"})
+SPOONS = re.compile(r"\b(?:tsp|tbsp|tbs|tb|teaspoons?|tablespoons?|pinch(?:es)?|dash(?:es)?)\b")
+
+
+def staple(item: str, amount: str | None = None) -> bool:
+    """Whether a household has it already: salt, oil, flour and the like, as written (never
+    "peppers" for "pepper"); a lone pepper only as a seasoning."""
     folded = lists.fold(item)
-    return folded in STAPLES or key(folded) in STAPLES
+    if folded not in STAPLES:
+        return False
+    return not (folded in SEASONING and amount and not SPOONS.search(amount.casefold()))
 
 
 @dataclass
@@ -304,7 +314,7 @@ def wanted(chosen: list[tuple[Idea, Recipe]]) -> tuple[list[Wanted], list[str]]:
             item = ingredient.item or parse(ingredient.text).item
             if not item:
                 continue
-            if staple(item):
+            if staple(item, ingredient.amount):
                 if item not in staples:
                     staples.append(item)
                 continue

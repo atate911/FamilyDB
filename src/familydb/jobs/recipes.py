@@ -9,13 +9,16 @@ import logging
 from contextlib import closing
 from typing import Any
 
+from familydb import meals
 from familydb.app import App
+from familydb.base.dates import utc_iso
 from familydb.integrations.recipe_page import PageAPI
 from familydb.jobs.enrich import notify
 from familydb.scouting import fill
 from familydb.scouting.reach import Reach
 from familydb.store import ideas
 from familydb.store import recipes as recipe_store
+from familydb.store.db import transaction
 
 log = logging.getLogger(__name__)
 
@@ -40,13 +43,21 @@ def run_recipe_links(app: App, *, pages: PageAPI | None = None) -> dict[str, int
                 continue
             try:
                 outcome = fill.read_recipe(reach, idea, pages)
-            except Exception:
+            except Exception as exc:
+                # Noted, so the next run does not fetch it again: the evening's lookup has it.
                 log.exception("reading recipe %s crashed", idea_id)
+                _noted(app, conn, idea, f"could not be read: {type(exc).__name__}")
+                counts["unread"] += 1
                 continue
             counts[outcome] += 1
             if outcome == "done":
                 _told(app, conn, idea_id)
     return counts
+
+
+def _noted(app: App, conn: Any, idea: Any, note: str) -> None:
+    with transaction(conn):
+        meals.not_read(conn, idea, note, status=None, now=utc_iso(app.clock.now()))
 
 
 def _told(app: App, conn: Any, idea_id: int) -> None:

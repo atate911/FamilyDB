@@ -590,7 +590,12 @@ def _dinner(
     now = app.clock.now()
     today = now.date()
     seen = _no_presents(conn, msg, member, agenda.read(app, conn, today, today))
-    tonight = meals.situation(now, agenda.on(seen, today), rest=meals.rest_days(conn, today))
+    tonight = meals.situation(
+        now,
+        agenda.on(seen, today),
+        rest=meals.rest_days(conn, today),
+        unnamed=presents.plan_titles(conn, today.isoformat(), today.isoformat()),
+    )
     ranked = meals.rank(
         kept,
         tonight,

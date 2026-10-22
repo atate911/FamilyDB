@@ -133,7 +133,13 @@ def dinner_pick(conn: Any, local_now: Any, today_on: list[agenda.Entry]) -> dict
     kept = recipe_store.live(conn)
     if not kept:
         return None
-    tonight = meals.situation(local_now, today_on, rest=meals.rest_days(conn, local_now.date()))
+    day = local_now.date()
+    tonight = meals.situation(
+        local_now,
+        today_on,
+        rest=meals.rest_days(conn, day),
+        unnamed=presents.plan_titles(conn, day.isoformat(), day.isoformat()),
+    )
     best = meals.pick(kept, tonight)
     if best is None:
         return None

@@ -312,6 +312,26 @@ def _keep_recipe(ctx: ToolContext, idea: ideas.Idea, link: str | None) -> None:
     meals.keep(ctx.conn, idea, facts, by="family", now=ctx.now_iso())
 
 
+def _relinked(ctx: ToolContext, idea: ideas.Idea) -> ideas.Idea:
+    """A recipe's link changed: the new one is the one read, from the start, and the old page's
+    reading is let go. What the family said of it stands. In the idea's transaction."""
+    link = clean_url(idea.url)
+    now = ctx.now_iso()
+    recipe_store.upsert(
+        ctx.conn,
+        idea.id,
+        {"source_url": link, "source_site": recipe_store.site_of(link)},
+        now=now,
+    )
+    recipe_store.clear_read(ctx.conn, idea.id, now=now)
+    waiting = (
+        {"enrichment": "pending", "enrichment_note": None}
+        if link
+        else {"enrichment": "skipped", "enrichment_note": NOTHING_TO_READ}
+    )
+    return ideas.update(ctx.conn, idea.id, waiting, now=now) or idea
+
+
 def _with_recipe(ctx: ToolContext, idea: ideas.Idea) -> dict[str, Any]:
     out = idea.model_dump(mode="json")
     if idea.kind == RECIPE:
@@ -365,9 +385,12 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
         idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
         if idea is not None:
             _keep_presents(ctx, idea)
-            # An idea that becomes a recipe gets its row (its facts are the `recipe` tool's).
+            # An idea that becomes a recipe gets its row (its facts are the `recipe` tool's); a
+            # recipe given another link reads that one, afresh.
             if idea.kind == RECIPE and recipe_store.get(ctx.conn, idea.id) is None:
                 _keep_recipe(ctx, idea, clean_url(idea.url))
+            elif idea.kind == RECIPE and "url" in changes and idea.url != current.url:
+                idea = _relinked(ctx, idea)
     if idea is None:
         raise ToolError(f"no idea #{args.id}")
     was, now_is = current.model_dump(mode="json"), idea.model_dump(mode="json")

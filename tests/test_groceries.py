@@ -52,3 +52,10 @@ def test_staples_are_left_off(item):
 
 def test_what_one_buys_is_not_a_staple():
     assert not groceries.staple("chicken thighs")
+
+
+def test_peppers_to_buy_are_not_the_pepper_mill():
+    assert not groceries.staple("peppers", "3")
+    assert not groceries.staple("pepper", "1")  # one bell pepper
+    assert groceries.staple("pepper", "1/2 tsp")
+    assert groceries.staple("pepper")

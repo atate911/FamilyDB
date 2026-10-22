@@ -431,7 +431,6 @@ def search(
     limit: int = 50,
     exclude_ids: Iterable[int] = (),
     newest_first: bool = False,
-    exclude_kinds: Iterable[str] = (),
 ) -> list[Idea]:
     """Filtered ideas; no filters returns everything not dropped. `exclude_ids` leaves out the
     ideas kept from the asker (`presents.kept_ids`); `newest_first` orders by when saved."""
@@ -444,9 +443,6 @@ def search(
     if kind:
         where.append("i.kind = ?")
         params.append(kind.strip().lower())
-    for other in sorted(set(exclude_kinds)):
-        where.append("i.kind != ?")
-        params.append(other)
     if status:
         where.append("i.status = ?")
         params.append(status)

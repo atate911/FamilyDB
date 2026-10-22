@@ -61,3 +61,7 @@ def test_durations(written, minutes):
 def test_an_address_this_server_should_not_read_is_refused(url):
     with pytest.raises(page.PageError):
         page.check_address(url)
+
+
+def test_a_character_set_nobody_knows_is_read_as_utf8():
+    assert page.decoded("Crème".encode(), "utf8mb4") == "Crème"

@@ -177,6 +177,16 @@ def enrich_idea(
     return status
 
 
+def _the_free_reads(app: App, conn: Any, idea: Idea) -> bool:
+    """Whether a recipe's link is the recipe_links job's to read first (jobs/recipes.py): one
+    nobody has tried while that job is on. Left to it, a page is never read twice at once nor
+    the chat told twice; what it cannot read comes back here noted."""
+    if idea.kind != RECIPE or not app.settings.recipe_links:
+        return False
+    recipe = recipe_store.get(conn, idea.id)
+    return recipe is not None and recipe.filled_at is None and recipe.fill_note is None
+
+
 def run_enrichment(
     app: App,
     *,
@@ -210,6 +220,8 @@ def run_enrichment(
         found: list[int] = []  # the evening's, noted together after the run
         try:
             for idea in batch:
+                if _the_free_reads(app, conn, idea):
+                    continue
                 together = evening and idea.lookup_wanted_at is None
                 outcome = enrich_idea(app, conn, idea, api=api, note=not together)
                 counts[outcome] += 1

@@ -8,15 +8,19 @@ code's (familydb/meals.py)."""
 
 from __future__ import annotations
 
+import logging
+from datetime import datetime, time, timedelta
 from types import SimpleNamespace
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import meals
+from familydb import meals, presents
+from familydb.availability import calendar_available
 from familydb.base import roles
 from familydb.base.errors import ToolError
-from familydb.store import ideas, plans
+from familydb.saved_plans import SavedPlans
+from familydb.store import ideas
 from familydb.store import recipes as store
 from familydb.store.db import transaction
 from familydb.store.ideas import RECIPE
@@ -40,6 +44,7 @@ FACTS = (
     "steps",
     "prep_note",
 )
+log = logging.getLogger(__name__)
 GROWN_UPS = "changing a recipe is for the grown-ups; ask a parent"
 
 
@@ -99,8 +104,8 @@ def given(source: Any) -> dict[str, Any]:
         if value is not None:
             out[key] = [one for one in store.OCCASIONS if one in set(value)]
     note = getattr(source, "prep_note", None)
-    if note is not None:
-        out["prep_note"] = " ".join(note.split())[:MOST_NOTE] or None
+    if note is not None:  # an empty one clears it
+        out["prep_note"] = " ".join(note.split())[:MOST_NOTE]
     return out
 
 
@@ -181,6 +186,26 @@ def _change(ctx: ToolContext, args: RecipeInput) -> dict[str, Any]:
     return {"id": idea.id, "title": idea.title, "recipe": shown(after)}
 
 
+def _today(ctx: ToolContext, now: datetime) -> list[SimpleNamespace]:
+    """What is on today, as the other pages and /dinner read it: the Google calendar through the
+    tool's own client when one is connected (events somebody added by hand included), else the
+    plans kept here. A calendar that does not answer falls back to the plans kept here."""
+    start = datetime.combine(now.date(), time.min, tzinfo=now.tzinfo)
+    end = start + timedelta(days=1)
+    saved = SavedPlans(ctx.conn, ctx.clock.tz)
+    calendar = ctx.calendar if calendar_available(ctx.settings) and ctx.calendar else saved
+    try:
+        events = calendar.list_events(start, end)
+    except Exception:
+        log.warning("the calendar could not be read for tonight's recipes; plans kept here used")
+        events = saved.list_events(start, end)
+    return [
+        SimpleNamespace(start=event.start.isoformat(), all_day=event.all_day, title=event.title)
+        for event in events
+        if event.busy and event.status != "cancelled"
+    ]
+
+
 @tool(
     name="find_recipes",
     description=(
@@ -196,8 +221,9 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
     today = now.date().isoformat()
     tonight = meals.situation(
         now,
-        plans.overlapping(ctx.conn, today, today),
+        _today(ctx, now),
         rest=meals.rest_days(ctx.conn, now.date()),
+        unnamed=presents.plan_titles(ctx.conn, today, today),
     )
     occasion = args.occasion
     asked = meals.Asked(

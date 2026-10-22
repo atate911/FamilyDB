@@ -177,3 +177,30 @@ def test_a_recipe_page_reads_as_a_recipe(settings, clock, conn, family):
     assert "Takes" in page and "Plan it for a night" in page
     assert page.index("Put the ingredients on the list") < page.index("Plan it for a night")
     assert "What goes with it?" in page  # her quick sentences are a recipe's
+
+
+def test_one_undo_never_takes_back_half_an_edit(settings, clock, conn, family):
+    made = _recipe(conn, settings, clock, family["sam"], "Soup", serves=4, ingredients=["1 onion"])
+    browser = _client(settings, clock)
+    form = browser.get(f"/idea/{made['id']}/edit").text
+    fields = dict(re.findall(r'name="(csrf|once|revision)" value="([^"]+)"', form))
+    base = {
+        **fields,
+        "title": "Soup",
+        "kind": "recipe",
+        "recipe_shown": "1",
+        "ingredients": "1 onion",
+        "steps": "",
+    }
+    changed = browser.post(
+        f"/idea/{made['id']}/edit", data={**base, "serves": "6"}, follow_redirects=True
+    )
+    assert "Undo" in changed.text  # only a fact moved: its Undo is all of it
+    form = browser.get(f"/idea/{made['id']}/edit").text
+    fields = dict(re.findall(r'name="(csrf|once|revision)" value="([^"]+)"', form))
+    both = browser.post(
+        f"/idea/{made['id']}/edit",
+        data={**base, **fields, "title": "Leek soup", "serves": "8"},
+        follow_redirects=True,
+    )
+    assert "Changed #" in _said(both) and ">Undo<" not in both.text

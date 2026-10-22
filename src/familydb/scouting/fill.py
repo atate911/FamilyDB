@@ -190,7 +190,7 @@ def read_recipe(reach: Reach, idea: Idea, pages: PageAPI | None = None) -> str:
     "refused" when the address is not one this server reads (no model is asked either), else
     "unread", left for the paid lookup with why."""
     recipe = recipe_store.get(reach.conn, idea.id)
-    url = (recipe.source_url if recipe else None) or idea.url
+    url = idea.url or (recipe.source_url if recipe else None)  # the link as it stands now
     now = utc_iso(reach.clock.now())
     if not url:
         return "refused"
@@ -223,7 +223,7 @@ def read_recipe(reach: Reach, idea: Idea, pages: PageAPI | None = None) -> str:
 
 def render_recipe_request(idea: Idea, recipe: recipe_store.Recipe | None) -> str:
     """What the recipe reader is told: the link, the title, why code could not read it."""
-    url = (recipe.source_url if recipe else None) or idea.url
+    url = idea.url or (recipe.source_url if recipe else None)
     lines = [f"Recipe #{idea.id}: {idea.title}", f"Link: {url}"]
     if recipe and recipe.fill_note:
         lines.append(f"Read without a browser, the page gave: {recipe.fill_note}")

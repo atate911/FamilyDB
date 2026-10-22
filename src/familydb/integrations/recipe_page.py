@@ -81,7 +81,16 @@ class RecipePages:
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise PageError("the site could not be reached") from exc
         # Past the cap, what was read is still read: the recipe block is usually near the top.
-        return body[:MAX_BYTES].decode(charset, errors="replace")
+        return decoded(body[:MAX_BYTES], charset)
+
+
+def decoded(body: bytes, charset: str) -> str:
+    """A page's text in the character set it named, or UTF-8 when it named one nobody knows
+    ("utf8mb4"): a bad label is not a reason to fail the read."""
+    try:
+        return body.decode(charset, errors="replace")
+    except LookupError:
+        return body.decode("utf-8", errors="replace")
 
 
 class _Scripts(HTMLParser):

@@ -91,6 +91,7 @@ class Planned(Protocol):
 
     start: str
     all_day: bool
+    title: str
 
 
 def occasion_words(occasions: Iterable[str]) -> list[str]:
@@ -153,10 +154,16 @@ def rest_days(conn: sqlite3.Connection, today: date) -> int:
 
 
 def situation(
-    now: datetime, planned: Iterable[Planned] = (), *, rest: int = REST_DAYS
+    now: datetime,
+    planned: Iterable[Planned] = (),
+    *,
+    rest: int = REST_DAYS,
+    unnamed: frozenset[str] = frozenset(),
 ) -> Situation:
     """Tonight as code reads it: the weekday, and the minutes from when cooking starts (now, or
-    `DINNER` if earlier) to the first timed plan before `LATEST`."""
+    `DINNER` if earlier) to the first timed plan before `LATEST`. A plan whose title is in
+    `unnamed` (one made for a present, `presents.plan_titles`) still takes its time but is said
+    only as "a plan", whoever reads the reason."""
     today = now.date()
     start = max(now, datetime.combine(today, DINNER, tzinfo=now.tzinfo))
     latest = datetime.combine(today, LATEST, tzinfo=now.tzinfo)
@@ -173,7 +180,8 @@ def situation(
         begins = begins.astimezone(now.tzinfo)
         later = first is None or begins < first[0]
         if begins.date() == today and start <= begins <= latest and later:
-            first = (begins, getattr(entry, "title", "") or "a plan")
+            title = getattr(entry, "title", "") or ""
+            first = (begins, "a plan" if not title or title in unnamed else title)
     free = int((first[0] - start).total_seconds() // 60) if first else None
     return Situation(
         day=today,
@@ -356,17 +364,8 @@ def pick(chosen: Iterable[tuple[Idea, Recipe]], now: Situation) -> Ranked | None
     return best if best.verdict != "out" else None
 
 
-def guessed_for(recipe: Recipe, idea: Idea | None = None) -> list[str]:
-    """What to keep as guessed: nothing when the family named any situation."""
-    return [] if recipe.occasions else guess_occasions(recipe, idea)
-
-
 # -- what a recipe keeps ------------------------------------------------------------------------
 
-# What may change how a recipe is guessed: a change to any of these guesses again.
-GUESSED_FROM = frozenset(
-    {"name", "steps", "prep_note", "active_minutes", "total_minutes", "serves", "ingredients"}
-)
 FILLABLE = ("name", "ingredients", "steps", "active_minutes", "total_minutes", "serves")
 
 
@@ -401,11 +400,17 @@ def keep(
 ) -> Recipe:
     """Keep a recipe's facts. What the family gives replaces; what a page or a lookup gives fills
     only what is empty, so what the family said stands. Situations nobody named are guessed from
-    the facts when they change, kept apart, never the family's. Call inside a transaction."""
+    the facts, kept apart, never the family's, as the facts imply them now (below), with any the
+    model read between the lines this time. An empty note from the family clears it. Call
+    inside a transaction."""
     before = recipe_store.get(conn, idea.id) or Recipe(idea_id=idea.id)
     fields: dict[str, Any] = {}
     for key, value in given.items():
         if value is None:
+            continue
+        if key == "prep_note" and value == "":
+            if by == "family":
+                fields[key] = None
             continue
         if key == "ingredients":
             value = ingredients(value)
@@ -419,11 +424,16 @@ def keep(
             one for one in merged.occasions_guessed if one not in merged.occasions
         ]
         merged = merged.model_copy(update=fields)
-    if GUESSED_FROM & set(fields):
-        guessed = set(merged.occasions_guessed) | set(guess_occasions(merged, idea))
-        fields["occasions_guessed"] = [
-            one for one in OCCASIONS if one in guessed and one not in merged.occasions
-        ]
+    # What the facts imply, before and after: a guess they no longer imply goes, one they newly
+    # imply comes, and the rest stand as they were, so one the family turned down stays gone
+    # while what it was read from is unchanged. Any read between the lines now is added.
+    was = set(guess_occasions(before, idea)) if recipe_store.get(conn, idea.id) else set()
+    now_implied = set(guess_occasions(merged, idea))
+    guessed = (set(merged.occasions_guessed) - (was - now_implied)) | (now_implied - was)
+    guessed |= set(given.get("occasions_guessed") or [])
+    settled = [one for one in OCCASIONS if one in guessed and one not in merged.occasions]
+    if settled != before.occasions_guessed or "occasions_guessed" in fields:
+        fields["occasions_guessed"] = settled
     if not fields and recipe_store.get(conn, idea.id) is not None:
         return before
     return recipe_store.upsert(conn, idea.id, fields, now=now)
