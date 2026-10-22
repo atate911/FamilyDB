@@ -11,6 +11,9 @@ from pydantic import BaseModel
 FILLER = re.compile(r"^(?:(?:a|an|some|more|the|another|extra)\s+)+")
 
 
+_ITEM = "SELECT id, list_id, text, ticked_at, added_at, added_by, note FROM list_items"
+
+
 class Item(BaseModel):
     id: int
     list_id: int
@@ -19,6 +22,8 @@ class Item(BaseModel):
     added_at: str
     # Who put it there (None when nobody now on the family list did); the Lists page names them.
     added_by: int | None = None
+    # How much each recipe that put it there wants (familydb/groceries.py); None for the rest.
+    note: str | None = None
 
 
 def fold(text: str) -> str:
@@ -55,8 +60,7 @@ def names(conn: sqlite3.Connection) -> list[str]:
 def items(conn: sqlite3.Connection, list_ref: int) -> list[Item]:
     """What is on a list: still to get first, in the order added, then what was ticked."""
     rows = conn.execute(
-        "SELECT id, list_id, text, ticked_at, added_at, added_by FROM list_items WHERE list_id = ? "
-        "ORDER BY ticked_at IS NOT NULL, ticked_at DESC, id",
+        f"{_ITEM} WHERE list_id = ? ORDER BY ticked_at IS NOT NULL, ticked_at DESC, id",
         (list_ref,),
     )
     return [Item(**dict(row)) for row in rows]
@@ -64,7 +68,7 @@ def items(conn: sqlite3.Connection, list_ref: int) -> list[Item]:
 
 def item(conn: sqlite3.Connection, item_id: int) -> Item | None:
     row = conn.execute(
-        "SELECT id, list_id, text, ticked_at, added_at, added_by FROM list_items WHERE id = ?",
+        f"{_ITEM} WHERE id = ?",
         (item_id,),
     ).fetchone()
     return Item(**dict(row)) if row else None
@@ -72,8 +76,7 @@ def item(conn: sqlite3.Connection, item_id: int) -> Item | None:
 
 def by_text(conn: sqlite3.Connection, list_ref: int, text: str) -> Item | None:
     row = conn.execute(
-        "SELECT id, list_id, text, ticked_at, added_at, added_by FROM list_items "
-        "WHERE list_id = ? AND folded = ?",
+        f"{_ITEM} WHERE list_id = ? AND folded = ?",
         (list_ref, fold(text)),
     ).fetchone()
     return Item(**dict(row)) if row else None
@@ -103,6 +106,11 @@ def set_ticked(conn: sqlite3.Connection, item_id: int, *, by: int | None, now: s
         "UPDATE list_items SET ticked_at = ?, ticked_by = ? WHERE id = ?",
         (now, by if now else None, item_id),
     )
+
+
+def set_note(conn: sqlite3.Connection, item_id: int, note: str | None) -> None:
+    """How much the recipes that put it there want. Call inside a transaction."""
+    conn.execute("UPDATE list_items SET note = ? WHERE id = ?", (note or None, item_id))
 
 
 def remove(conn: sqlite3.Connection, item_id: int) -> None:
