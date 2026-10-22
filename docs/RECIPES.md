@@ -29,6 +29,15 @@ the build differs from the plan below, the build is right and the plan is kept f
 - **No dinner slot in the hourly picks.** Now draws tonight's pick to cook at view time, by code
   and with no model, from midday to eight; a slot in `pick_sets` would have made the same choice
   an hour stale.
+- **Reading recipes has a model of its own.** The paid reader is a use on the AI model page,
+  following the lookups' model until the family picks one, and it may be off (the link stays a
+  link; the free read goes on).
+- **Eat has tabs.** With both kept, Eat opens on the next meal (the two picks and the first few
+  of each that fit), with Cook and Eat out as tabs carrying their own chips; the grocery boxes are
+  on Cook. A recipe's page reads as a recipe (made or not, what it takes, the list first, a night
+  on the calendar quieter), the kitchen board names tonight's pick, and Eat is a module of its own
+  (`web/eat_page.py`). The row of eight places is unchanged: a ninth for cooking would crowd a
+  phone's row, and Eat already asks the question.
 - **Not yet done:** the evals have not been run against a model (`uv run python -m evals --case
   recipe_said` and the other three), `familydb debug cost` has not been measured before and after,
   and no real recipe links have been read, so the share read by code is not known and Status does

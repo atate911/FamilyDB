@@ -46,7 +46,6 @@
   {% if recipe %}
     <section class="found" aria-labelledby="h-recipe">
       <h2 class="sr" id="h-recipe">The recipe</h2>
-      {% if recipe.facts %}<dl class="kv">{% for k, v in recipe.facts %}<dt>{{ k }}</dt><dd>{{ v | figs }}</dd>{% endfor %}</dl>{% endif %}
       {% if recipe.guessed %}<p class="found__note">{{ assistant }}’s reading of what it is good for, which nobody has said:</p>{% endif %}
       {% for guess in recipe.guessed %}
         <div class="acts">
@@ -80,12 +79,6 @@
       {% endif %}
       {% if recipe.read %}<p class="found__by">{{ recipe.read }}.</p>{% endif %}
       {% if recipe.unread %}<p class="sec__note">Its page could not be read straight away ({{ recipe.unread }}); it is read with the evening’s lookups.</p>{% endif %}
-      {% if recipe.shoppable and grownup and visitor().may('change') %}
-        <form method="post" action="{{ url_for('edits.list_from_recipes') }}">
-          {{ guard(once=true) }}<input type="hidden" name="idea_ids" value="{{ idea.id }}" /><input type="hidden" name="back" value="{{ idea.id }}" />
-          <button class="btn btn--quiet btn--sm" type="submit">{{ icon('list', size='sm') }}Put the ingredients on the list</button>
-        </form>
-      {% endif %}
     </section>
   {% endif %}
 
@@ -151,8 +144,15 @@
   {# Plan it, and the rest, by hand. #}
   {% if visitor().may('change') %}
     <div class="acts">
+      {# A recipe's first act is the shopping; a dinner put on the calendar is the quieter one. #}
+      {% if recipe and recipe.shoppable and grownup %}
+        <form method="post" action="{{ url_for('edits.list_from_recipes') }}">
+          {{ guard(once=true) }}<input type="hidden" name="idea_ids" value="{{ idea.id }}" /><input type="hidden" name="back" value="{{ idea.id }}" />
+          <button class="btn btn--primary btn--sm" type="submit">{{ icon('list', size='sm') }}Put the ingredients on the list</button>
+        </form>
+      {% endif %}
       <details class="fold fold--quiet" id="plan-it">
-        <summary class="btn btn--primary btn--sm">{{ icon('cal', size='sm') }}{{ 'Plan it again' if plans else 'Plan it' }}</summary>
+        <summary class="btn {{ 'btn--quiet' if recipe else 'btn--primary' }} btn--sm">{{ icon('cal', size='sm') }}{{ 'Plan it for a night' if recipe else ('Plan it again' if plans else 'Plan it') }}</summary>
         <form class="form fold__body" method="post" action="{{ url_for('edits.add_plan') }}">
           {{ guard(once=true) }}
           <input type="hidden" name="idea_id" value="{{ idea.id }}" /><input type="hidden" name="title" value="{{ idea.title }}" />
@@ -173,7 +173,7 @@
       {% if can_look_up and not idea.lookup_wanted_at %}
         <form method="post" action="{{ url_for('edits.look_up', idea_id=idea.id) }}">
           {{ guard(once=true) }}
-          <button class="q__lnk" type="submit">{{ 'Look it up now' if idea.enrichment == 'pending' else 'Look it up again' }}</button>
+          <button class="q__lnk" type="submit">{% if recipe %}{{ 'Read its page now' if idea.enrichment == 'pending' else 'Read its page again' }}{% else %}{{ 'Look it up now' if idea.enrichment == 'pending' else 'Look it up again' }}{% endif %}</button>
         </form>
       {% endif %}
     </div>

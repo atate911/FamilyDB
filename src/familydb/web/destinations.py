@@ -348,12 +348,22 @@ def board() -> str:
             found = pick_store.current(conn, member_id=mine, today=today.isoformat())
         picks = now.pick_set(app, found, kept) if found is not None else None
         shopping = _shopping(conn) if visitor.may("change") else None
+        # Tonight's pick to cook, as Now names it (docs/RECIPES.md): the board is in the kitchen.
+        dinner = now.dinner_pick(
+            conn,
+            app.clock.now().astimezone(app.settings.tzinfo),
+            agenda.on(agenda.read(app, conn, today, today), today),
+        )
         stale = utc_iso(app.clock.now() - timedelta(days=ideas_page.FADE_DAYS))
         saved = sorted(
             (
                 idea
                 for idea in idea_store.list_all(conn)
-                if idea.id not in kept and idea.status == "idea" and not idea_store.is_gift(idea)
+                # Somewhere to go one day; a recipe is cooked, and is on Eat.
+                if idea.id not in kept
+                and idea.status == "idea"
+                and not idea_store.is_gift(idea)
+                and idea.kind != idea_store.RECIPE
             ),
             key=lambda idea: idea.updated_at,
             reverse=True,
@@ -365,6 +375,7 @@ def board() -> str:
         questions=questions,
         picks=picks,
         shopping=shopping,
+        dinner=dinner,
         someday=[
             {
                 "title": idea.title,

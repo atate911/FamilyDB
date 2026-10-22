@@ -750,6 +750,7 @@ def test_no_page_writes_but_through_the_four_doors() -> None:
 FAMILY_PAGES = {
     "routes.py",
     "ideas_page.py",
+    "eat_page.py",
     "plans_page.py",
     "tasks_page.py",
     "wishes_page.py",

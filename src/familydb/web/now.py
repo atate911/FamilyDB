@@ -87,7 +87,7 @@ def show() -> Response | str:
         picks = _picks(conn, app, visitor, kept, today)
         setup = status_page.setup_steps(app, conn) if visitor.manages else []
         my_list = _my_list(conn, visitor, today) if kid else None
-        dinner = _dinner(conn, now.astimezone(tz), agenda.on(seen, today))
+        dinner = dinner_pick(conn, now.astimezone(tz), agenda.on(seen, today))
         # The first day (docs/INTERFACE.md section 10): nothing saved and nothing on, so the box
         # asks for a place they would go back to and she says who she is; nothing empty-with-chrome.
         first_day = (
@@ -125,7 +125,7 @@ DINNER_FROM = 12
 DINNER_UNTIL = 20
 
 
-def _dinner(conn: Any, local_now: Any, today_on: list[agenda.Entry]) -> dict[str, Any] | None:
+def dinner_pick(conn: Any, local_now: Any, today_on: list[agenda.Entry]) -> dict[str, Any] | None:
     """Tonight's pick to cook, by code (familydb/meals.py): the evening's plans and what was had
     lately weighed. None outside the afternoon, with no recipes, or when nothing fits."""
     if not DINNER_FROM <= local_now.hour < DINNER_UNTIL:

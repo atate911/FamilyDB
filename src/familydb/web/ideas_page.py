@@ -1,5 +1,5 @@
-"""The ideas pages: What could we do (and its chips), one idea in full, the forms for a new
-idea and a change, and Where could we eat."""
+"""The ideas pages: What could we do (and its chips), one idea in full, and the forms for a new
+idea and a change. What should we eat is eat_page.py."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, meals, personas, presents
+from familydb import personas, presents
 from familydb.availability import calendar_available, enrichment_available
 from familydb.base import roles
 from familydb.base.dates import utc_iso
@@ -40,6 +40,7 @@ from familydb.web import (
 )
 from familydb.web.answers import answer
 from familydb.web.chat import WHO_KEY
+from familydb.web.eat_page import RESTAURANT_KIND
 from familydb.web.pages import MAX_ID, bp, familydb_app, who_asks
 
 LIST_LIMIT = 200
@@ -63,8 +64,7 @@ COSTS = ((0, "free"), (1, "cheap"), (2, "moderate"), (3, "pricey"), (4, "expensi
 RATINGS = tuple(range(10, 0, -1))
 
 
-RESTAURANT_KIND = "restaurant"
-# Kinds with a door of their own, Eat's: restaurants and recipes are not on Do.
+# Kinds with a door of their own, Eat's (eat_page.py): restaurants and recipes are not on Do.
 ELSEWHERE = frozenset({RESTAURANT_KIND, RECIPE})
 
 
@@ -330,6 +330,8 @@ def idea(idea_id: int) -> str:
         box["starters"] = views.idea_starters(record, today)
     away = map_view.away_from_home(place, settings)
     card = _idea_card(record, settings, away, slots, kept)
+    recipe_panel = views.recipe_panel(cooked, settings.tzinfo, grown_up=visitor.may("browse"))
+    recipe_facts = recipe_panel["facts"] if recipe_panel else []
     place_panel = views.place_panel(place, now, settings.place_stale_days, today)
     by = next((m.display_name for m in family if m.id == record.suggested_by), None)
     return answer(
@@ -350,15 +352,32 @@ def idea(idea_id: int) -> str:
         row=card,
         setting=views.SETTINGS.get(record.setting, record.setting),
         weather=views.WEATHER.get(record.weather),
-        facts=views.idea_facts(record, card, place_panel, grown_up=visitor.may("browse")),
+        facts=_facts(record, card, place_panel, recipe_facts, grown_up=visitor.may("browse")),
         place=place_panel,
-        recipe=views.recipe_panel(cooked, settings.tzinfo, grown_up=visitor.may("browse")),
+        recipe=recipe_panel,
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
         plans=planned,
         changed=views.changed_line(
             changed, settings.tzinfo, assistant=personas.active(settings).name
         ),
     )
+
+
+def _facts(
+    record: Any,
+    card: dict[str, Any],
+    place: dict[str, Any] | None,
+    recipe: list[tuple[str, str]],
+    *,
+    grown_up: bool,
+) -> list[tuple[str, str, str]]:
+    """The facts that decide, on an idea's page; a recipe's own (what it takes, what it serves,
+    what it is good for) lead, and "So far" is the made-it line's."""
+    facts = views.idea_facts(record, card, place, grown_up=grown_up)
+    if record.kind != RECIPE:
+        return facts
+    made = [(k, v.replace("done", "made", 1) if k == "So far" else v, tone) for k, v, tone in facts]
+    return [*((key, value, "") for key, value in recipe), *made]
 
 
 def _idea_form(record: Any = None) -> str:
@@ -420,233 +439,3 @@ def edit_idea(idea_id: int) -> str:
     if record is None:
         abort(404)
     return _idea_form(record)
-
-
-@bp.get("/restaurants")
-@bp.get("/eat")
-def restaurants() -> str:
-    """What should we eat? (docs/INTERFACE.md section 4, docs/RECIPES.md): the pick to cook and
-    the pick to eat out for the next meal, both chosen by code, then the recipes ranked for it
-    and every saved restaurant with the one fact that decides."""
-    app = familydb_app()
-    now = app.clock.now()
-    today = app.clock.today()
-    stale_days = app.settings.place_stale_days
-    visitor = auth.visitor()
-    kid = not visitor.may("browse")
-    who = request.args.get("who", "").strip()
-    narrow = {key: request.args.get(key, "") == "1" for key in ("open", "close", "new")}
-    tag = request.args.get("tag", "").strip().casefold()
-    side = request.args.get("side", "")
-    occasion = request.args.get("occasion", "")
-    occasion = occasion if occasion in {key for key, _ in views.COOK_CHIPS} else ""
-    if narrow["open"] or narrow["close"]:
-        side = "out"  # open and close are a restaurant's
-    elif occasion:
-        side = "cook"
-    with closing(app.connect()) as conn:
-        cooking = _cook_rows(app, conn, now, today, occasion, kid) if side != "out" else []
-        kept = presents.kept_ids(conn, visitor.member)
-        found = idea_store.search(
-            conn,
-            kind=RESTAURANT_KIND,
-            participant=who if who and who not in ("kids", "us") else None,
-            limit=LIST_LIMIT,
-            exclude_ids=kept,
-            newest_first=True,
-        )
-        people = member_store.list_all(conn)
-        slots = views.slot_map(people)
-        cards = []
-        for idea in found:
-            card = views.restaurant_card(
-                idea,
-                place_store.get(conn, idea.place_id) if idea.place_id else None,
-                today,
-                now,
-                stale_days,
-            )
-            card["people"] = views.people_for(idea, slots)
-            card["who"] = views.names_text(card["people"])
-            card["line"] = views.eat_line(card, idea, kid=kid)
-            card["score"] = views.eat_score(card, idea)
-            card["idea"] = idea
-            cards.append(card)
-        tags = sorted({one.casefold() for idea in found for one in idea.tags})
-        chat.page_box(app, conn, people, scope={"label": "Eat", "text": "About what to eat:"})
-    cards = _eat_narrowed(cards, people, narrow, who, tag) if side != "cook" else []
-    cards.sort(key=lambda card: card["score"])
-    for card in cards:
-        card.pop("idea")
-    cooking = _cook_narrowed(cooking, people, narrow, who, tag)
-    plain = not any(narrow.values()) and not who and not tag and not side and not occasion
-    meal = views.meal_words(now.astimezone(app.settings.tzinfo))
-    top = meal if cards and plain else None
-    cook_top = meal if cooking and plain and cooking[0]["verdict"] != "out" else None
-    for row in cooking:
-        row.pop("idea")
-    tags = sorted(set(tags) | {one for row in cooking for one in row["tags"]})
-    return answer(
-        "eat.html",
-        cards=cards,
-        top=top,
-        cooking=cooking,
-        cook_top=cook_top,
-        side=side,
-        summary=views.eat_both_summary(
-            cooking[0] if cook_top else None, cards[0] if top else None, meal
-        )
-        if plain
-        else views.eat_summary(cards[0] if cards else None, None),
-        chips=_eat_chips(people, narrow, who, tags, tag, kid, side, occasion),
-        can_list=visitor.may("change"),
-    )
-
-
-def _cook_rows(
-    app: Any, conn: Any, now: Any, today: date, occasion: str, kid: bool
-) -> list[dict[str, Any]]:
-    """The family's recipes ranked for the next meal by code (familydb/meals.py): tonight's plans
-    as the page reads them, the family's rest for recipes, and the situation asked for."""
-    kept = recipe_store.live(conn)
-    if not kept:
-        return []
-    seen = agenda.read(app, conn, today, today)
-    tonight = meals.situation(
-        now.astimezone(app.settings.tzinfo),
-        agenda.on(seen, today),
-        rest=meals.rest_days(conn, today),
-    )
-    if occasion:
-        ranked = meals.rank(kept, tonight, meals.Asked(occasion=occasion, meal="dinner"))
-    else:
-        best = meals.pick(kept, tonight)
-        ranked = meals.rank(kept, tonight, meals.Asked(meal="dinner"))
-        if best is not None:
-            ranked = [best, *(one for one in ranked if one.idea.id != best.idea.id)]
-    rows = []
-    for one in ranked:
-        short = [r for r in one.reasons if r[:1].isdigit()][:1]
-        rows.append(
-            {
-                "id": one.idea.id,
-                "title": one.idea.title,
-                "line": views.cook_line(one),
-                "short": short[0] if short else one.reasons[0] if one.reasons else "",
-                "verdict": one.verdict,
-                "tags": one.idea.tags,
-                "people": [],
-                "who": views.participants_text(one.idea),
-                "idea": one.idea,
-                "shoppable": bool(one.recipe.ingredients) and not kid,
-            }
-        )
-    return rows
-
-
-def _cook_narrowed(
-    rows: list[dict[str, Any]],
-    people: list[member_store.Member],
-    narrow: dict[str, bool],
-    who: str,
-    tag: str,
-) -> list[dict[str, Any]]:
-    kept = rows
-    if narrow["new"]:
-        kept = [row for row in kept if not row["idea"].times_done]
-    if who == "kids":
-        kept = [row for row in kept if who_for.with_the_kids(row["idea"], people)]
-    elif who == "us":
-        kept = [row for row in kept if who_for.just_us(row["idea"], people)]
-    elif who:
-        named = who.casefold()
-        kept = [
-            row
-            for row in kept
-            if any(named in part.casefold() for part in row["idea"].participants)
-            or (row["idea"].suggested_by_name and row["idea"].suggested_by_name.casefold() == named)
-        ]
-    if tag:
-        kept = [row for row in kept if tag in {one.casefold() for one in row["tags"]}]
-    return kept
-
-
-def _eat_narrowed(
-    cards: list[dict[str, Any]],
-    people: list[member_store.Member],
-    narrow: dict[str, bool],
-    who: str,
-    tag: str,
-) -> list[dict[str, Any]]:
-    kept = cards
-    if narrow["open"]:
-        kept = [card for card in kept if card["today"] and card["today"].startswith("open")]
-    if narrow["close"]:
-        kept = [card for card in kept if views.travel_minutes(card["travel"]) <= CLOSE_MINUTES]
-    if narrow["new"]:
-        kept = [card for card in kept if not card["idea"].times_done]
-    if who == "kids":
-        kept = [card for card in kept if who_for.with_the_kids(card["idea"], people)]
-    elif who == "us":
-        kept = [card for card in kept if who_for.just_us(card["idea"], people)]
-    if tag:
-        kept = [card for card in kept if tag in {one.casefold() for one in card["tags"]}]
-    return kept
-
-
-def _eat_chips(
-    people: list[member_store.Member],
-    narrow: dict[str, bool],
-    who: str,
-    tags: list[str],
-    tag: str,
-    kid: bool,
-    side: str = "",
-    occasion: str = "",
-) -> list[dict[str, Any]]:
-    chips = [
-        {
-            "label": "Cook",
-            "href": url_for("web.restaurants", side="cook"),
-            "on": side == "cook" and not occasion,
-        },
-        {"label": "Eat out", "href": url_for("web.restaurants", side="out"), "on": side == "out"},
-        *(
-            {
-                "label": label,
-                "href": url_for("web.restaurants", occasion=key),
-                "on": occasion == key,
-            }
-            for key, label in views.COOK_CHIPS
-        ),
-        {"label": "Open today", "href": url_for("web.restaurants", open="1"), "on": narrow["open"]},
-        {"label": "Close", "href": url_for("web.restaurants", close="1"), "on": narrow["close"]},
-        {"label": "New to us", "href": url_for("web.restaurants", new="1"), "on": narrow["new"]},
-    ]
-    if not kid:
-        chips.append(
-            {"label": "Just us", "href": url_for("web.restaurants", who="us"), "on": who == "us"}
-        )
-        chips.append(
-            {
-                "label": "With the kids",
-                "href": url_for("web.restaurants", who="kids"),
-                "on": who == "kids",
-            }
-        )
-    chips += [
-        {"label": one.capitalize(), "href": url_for("web.restaurants", tag=one), "on": tag == one}
-        for one in tags[:8]
-    ]
-    if not kid:
-        chips += [
-            {
-                "label": person.display_name,
-                "href": url_for("web.restaurants", who=person.display_name),
-                "on": who.casefold() == person.display_name.casefold(),
-            }
-            for person in people
-        ]
-    if any(chip["on"] for chip in chips):
-        chips.insert(0, {"label": "Everything", "href": url_for("web.restaurants"), "on": False})
-    return chips

@@ -27,6 +27,7 @@
           {% endfor %}
           {% if day.pencil %}<a class="pk pk--day" href="{{ day.pencil.href }}"><span class="pk__label">{{ assistant }}’s pick</span><span class="pk__t">{{ day.pencil.title }}</span></a>{% endif %}
           {% if day.free %}<p class="bd__free">{{ day.free }}</p>{% endif %}
+          {% if loop.first and dinner %}<p class="bd__free">To cook: <a href="{{ dinner.href }}">{{ dinner.title }}</a>{% if dinner.why %}, {{ dinner.why | figs }}{% endif %}</p>{% endif %}
           {% if day.due %}<ul class="wk__due">{% for t in day.due %}<li>{{ icon('bell', size='sm') }}{{ t.title }}</li>{% endfor %}</ul>{% endif %}
         </article>
       {% endfor %}

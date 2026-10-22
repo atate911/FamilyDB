@@ -31,8 +31,8 @@ def test_eat_ranks_what_to_cook_beside_the_restaurants(settings, clock, conn, fa
     _recipe(conn, settings, clock, family["sam"], "Stir fry", total_minutes=25, serves=4)
     _recipe(conn, settings, clock, family["sam"], "Short ribs", total_minutes=240)
     page = _client(settings, clock).get("/eat").text
-    assert "What should we eat?" in page and ">Cook<" in page
-    assert "Tonight: Stir fry, 25 min." in page
+    assert "What should we eat?" in page and "Tonight: Stir fry, 25 min." in page
+    assert 'aria-label="Cook or eat out"' not in page  # only recipes kept: no tabs, the list whole
     cook = page[page.index('id="h-cook"') :]
     assert cook.index("Stir fry") < cook.index("Short ribs")
     assert "looks like weeknight" in cook  # her guess, marked as one
@@ -70,7 +70,7 @@ def test_ticked_recipes_go_on_the_shopping_list_with_their_amounts(settings, clo
     one = _recipe(conn, settings, clock, family["sam"], "Fajitas", ingredients=["2 onions", "salt"])
     two = _recipe(conn, settings, clock, family["sam"], "Soup", ingredients=["1 onion"])
     browser = _client(settings, clock)
-    page = browser.get("/eat").text
+    page = browser.get("/eat?side=cook").text
     assert 'name="idea_ids"' in page and "Grocery list for these" in page
     listed = browser.post(
         "/eat/grocery-list",
@@ -142,3 +142,38 @@ def test_dinner_in_plain_words_is_answered_by_code(settings, clock, conn, family
     assert lines[0] == "For dinner tonight, from your recipes:"
     assert lines[1].startswith("#1 Stir fry: 25 min, serves 4")
     assert conn.execute("SELECT COUNT(*) FROM llm_calls").fetchone()[0] == 0
+
+
+def test_with_both_kept_eat_has_tabs_and_each_its_own_chips(settings, clock, conn, family):
+    from tests.test_web import _idea
+
+    for title in ("Stir fry", "Dal", "Tacos", "Soup"):
+        _recipe(conn, settings, clock, family["sam"], title, total_minutes=25)
+    _idea(conn, "Ramen place", kind="restaurant")
+    browser = _client(settings, clock)
+    page = browser.get("/eat").text
+    assert 'aria-label="Cook or eat out"' in page and '>Cook <span class="n">4</span>' in page
+    assert "To cook" in page and "To eat out" in page and "All 4" in page
+    assert page.count('class="r__t"') == 3 + 1  # the first three of each
+    assert 'aria-label="Narrow it"' not in page  # chips belong to a tab
+    cook = browser.get("/eat?side=cook").text
+    assert "Quick" in cook and "Open today" not in cook and cook.count('class="r__t"') == 4
+    out = browser.get("/eat?side=out").text
+    assert "Open today" in out and "Quick" not in out and "Stir fry" not in out
+
+
+def test_the_kitchen_board_names_a_recipe_to_cook(settings, clock, conn, family):
+    _recipe(conn, settings, clock, family["sam"], "Stir fry", total_minutes=25)
+    board = _client(settings, clock).get("/board").text
+    assert "To cook:" in board and ">Stir fry</a>, 25 min" in board
+
+
+def test_a_recipe_page_reads_as_a_recipe(settings, clock, conn, family):
+    made = _recipe(
+        conn, settings, clock, family["sam"], "Dal", total_minutes=30, ingredients=["1 onion"]
+    )
+    page = _client(settings, clock).get(f"/idea/{made['id']}").text
+    assert "Not made yet" in page and "An idea" not in page
+    assert "Takes" in page and "Plan it for a night" in page
+    assert page.index("Put the ingredients on the list") < page.index("Plan it for a night")
+    assert "What goes with it?" in page  # her quick sentences are a recipe's

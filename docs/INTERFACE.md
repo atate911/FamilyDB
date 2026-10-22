@@ -120,12 +120,12 @@ Nothing else appears on a destination. Her picks and her finds are marked as her
 
 ### What should we eat? (`/eat`)
 
-- **Opens on:** the pick to cook and the pick to eat out for the next meal, named together in the summary line ("Tonight: Stir fry, 25 min · or Kenji's, open till 9, 12 min"); then **Cook**, the family's recipes ranked for that meal, and **Eat out**, every saved restaurant (`docs/RECIPES.md`).
+- **Opens on:** the next meal: the pick to cook and the pick to eat out, named together in the summary line ("Tonight: Stir fry, 25 min · or Kenji's, open till 9, 12 min"), then the first three of each that fit, each with **All N**. A row of tabs, as Plans has, goes between that overview (named for the meal: Tonight, Lunch, Today), **Cook**, every recipe ranked for the meal, and **Eat out**, every saved restaurant, each tab with its own chips (`web/eat_page.py`, `docs/RECIPES.md`). A household keeping only recipes or only restaurants sees that list whole, with no tabs.
 - **The cook pick:** chosen by code (`familydb/meals.py`): a weeknight one on a weeknight when there is one, short enough for the time before a plan on the calendar tonight, not had in the last ten days (or the family's own rest for recipes), how it was rated. A recipe that cannot fit is drawn faded at the foot with why.
 - **The restaurant pick:** chosen by code: open at the meal time, not done recently, how it was rated, drive time, weather for a patio. Its line says why: "Open till 9, 12 min, you haven't been."
-- **Chips:** Cook · Eat out · Quick · Prep ahead · Family dinner · Open now · Close · New · Just us · With the kids · Cuisines that exist in the pile · Each person.
+- **Chips, on Cook:** the situations some recipe has (Quick always; Prep ahead, Family dinner, Slow cook, Breakfast) · New to us · With the kids · Cuisines in the recipes. **On Eat out:** Open now · Close · New · Just us · With the kids · Cuisines in the pile · Each person. The overview has none.
 - **Each row:** a recipe's minutes, servings, times made and rating, what it is good for (a guess marked "looks like"); a restaurant's cuisine, one fact that decides (open till, how far, cost band), who suggested it, done before or not.
-- **Grocery list:** a grown-up who may change things ticks recipes and presses **Grocery list for these**: what they need goes on the shopping list by code (`shopping_list`, `from_recipes`).
+- **Grocery list:** on Cook, a grown-up who may change things ticks recipes and presses **Grocery list for these**: what they need goes on the shopping list by code (`shopping_list`, `from_recipes`).
 - **Empty:** "Nothing saved yet. Tell Vera a recipe you like or a place you've heard about."
 - **Kid:** the same lists without cost bands, "just us" or the boxes.
 

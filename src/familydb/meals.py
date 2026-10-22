@@ -309,7 +309,8 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
         if idea.avg_rating is not None:
             made += f", {idea.avg_rating:g}/10"
         reasons.append(made)
-        if days is not None:
+        resting = days is not None and days < now.rest_days and not asked.favorites
+        if days is not None and not resting:  # a rest says when, first
             reasons.append(f"last {_when_words(days)}")
     else:
         reasons.append("new to us")

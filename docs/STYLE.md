@@ -371,7 +371,10 @@ Each page names its focal element, what the main column holds, and what the rail
 - **A destination** (section 4): the question as the title, one line of the answer, a row of chips,
   then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
   one fact line and the people's marks at the edge; "by hand" last, as a quiet link. **Eat**: the
-  pick for the next meal. **Do**: what fits the next free stretch, then the pile, the quiet ones
+  next meal's picks, one to cook and one to eat out, each over its first few rows, with a
+  segmented control (as Plans' List and Month) to Cook and Eat out, where the chips live; a
+  recipe's page leads with what it takes and its ingredients, Put the ingredients on the list the
+  one solid button and Plan it for a night quiet. **Do**: what fits the next free stretch, then the pile, the quiet ones
   faded, then New ideas (what she found and judged worth putting forward, under a label saying she
   found them, each a hairline row with its reason and Save it and Not for us under it, small; the
   family's own always first), the map under it. **Week**: a day a section, set things as set rows (a solid left edge,

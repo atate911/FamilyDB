@@ -794,13 +794,18 @@ COOK_CHIPS = (
     ("weeknight", "Quick"),
     ("prep_ahead", "Prep ahead"),
     ("family_dinner", "Family dinner"),
+    ("slow", "Slow cook"),
+    ("breakfast", "Breakfast"),
 )
 
 
 def cook_line(ranked: meals.Ranked) -> str:
     """The one line under a recipe on Eat: its reasons as code gave them, and what it suits."""
     said = list(ranked.reasons)
-    occasions = meals.occasion_words(ranked.recipe.occasions)
+    if ranked.verdict == "out":  # why it does not fit is the whole line
+        line = " · ".join(said)
+        return line[:1].upper() + line[1:]
+    occasions = [one for one in meals.occasion_words(ranked.recipe.occasions) if one not in said]
     if occasions:
         said.append(", ".join(occasions))
     elif ranked.recipe.occasions_guessed:
@@ -832,6 +837,8 @@ def recipe_panel(recipe: Recipe | None, tz: ZoneInfo, *, grown_up: bool) -> dict
         facts.append(("Good for", ", ".join(meals.occasion_words(recipe.occasions))))
     if recipe.prep_note:
         facts.append(("Ahead", recipe.prep_note))
+    if recipe.source_site:
+        facts.append(("From", recipe.source_site))
     read = None
     if recipe.filled_at and recipe.filled_by in ("page", "lookup"):
         day = day_short(date.fromisoformat(local_day(recipe.filled_at, tz)))
@@ -929,6 +936,8 @@ def my_list_summary(kid: dict[str, Any]) -> str:
 
 # Quick sentences under an idea's box, filled in by a tap, never sent by themselves.
 def idea_starters(idea: Idea, today: date) -> list[str]:
+    if idea.kind == "recipe":
+        return ["What goes with it?", "Can we make it ahead?", "Put it on the list"]
     weekend = "this weekend" if today.weekday() < 5 else "next weekend"
     first = "Plan it for " + weekend
     second = "Is it good for the kids?" if idea.kind != "gift" else "What would go with it?"
@@ -1104,6 +1113,8 @@ def idea_state(idea: Idea, plans: Sequence[Plan], today: date) -> str:
     "Done, last on Saturday 12 September", "Dropped", "On until Sunday 11 October"."""
     if idea.status == "dropped":
         return "Dropped"
+    if idea.kind == "recipe":
+        return recipe_state(idea)
     coming = [p for p in plans if p.status != "cancelled" and p.start[:10] >= today.isoformat()]
     if coming:
         first = min(coming, key=lambda p: p.start)
@@ -1116,6 +1127,18 @@ def idea_state(idea: Idea, plans: Sequence[Plan], today: date) -> str:
     if last is not None and last >= today:
         return f"On until {day_text(last.isoformat())}"
     return "An idea"
+
+
+def recipe_state(idea: Idea) -> str:
+    """A recipe's state in words: "Not made yet", "Made once, on Tuesday 13 October", "Made 3
+    times, last on ..." (plans for a dinner are on its page, under Planned)."""
+    if not idea.times_done:
+        return "Not made yet"
+    times = "once" if idea.times_done == 1 else f"{idea.times_done} times"
+    last = f", last on {day_text(idea.last_done_at[:10])}" if idea.last_done_at else ""
+    if idea.times_done == 1 and last:
+        last = f", on {day_text(idea.last_done_at[:10])}"
+    return f"Made {times}{last}"
 
 
 def made_words(made_at: str, now: datetime, tz: ZoneInfo) -> str:
