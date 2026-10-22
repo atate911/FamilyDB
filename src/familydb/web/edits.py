@@ -255,8 +255,8 @@ def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
 def _changed_facts(kept: Any, facts: dict[str, Any]) -> dict[str, Any]:
     """The recipe facts the form changed, against what is kept: an ingredient list sent back as
     drawn keeps the split a lookup gave each line, and nothing moved keeps no Undo."""
-    if kept is None:
-        return facts
+    if kept is None:  # an idea becoming a recipe: against nothing kept, empty boxes are no change
+        kept = recipe_store.Recipe(idea_id=0)
     now = {
         "ingredients": [one.text for one in kept.ingredients],
         "steps": kept.steps,

@@ -14,6 +14,7 @@ from familydb.agent.prompt import build_system_blocks
 from familydb.store import db, ideas, lists, messages, plans
 from familydb.store import recipes as store
 from familydb.tools import ToolContext, build_registry
+from familydb.tools.registry import NOT_THEIRS
 from tests.conftest import NOW_ISO, TZ
 
 REGISTRY = build_registry()
@@ -123,7 +124,7 @@ def test_a_kid_may_save_a_recipe_but_not_change_one(settings, clock, conn, famil
     made = _recipe(_as(conn, settings, clock, family["sam"]), "Tacos", serves=4)
     kid = _as(conn, settings, clock, family["girls"])
     refused, said = _call(kid, "recipe", action="change", id=made["id"], serves=8)
-    assert refused.is_error and "ask a parent" in said["error"]
+    assert refused.is_error and said["error"] == NOT_THEIRS
 
 
 def test_making_a_recipe_leaves_it_one_to_cook(settings, clock, conn, family):
@@ -408,6 +409,10 @@ def test_a_present_s_plan_is_only_a_plan_in_a_reason(settings, clock, conn, fami
             now=NOW_ISO,
         )
     _, found = _call(us, "find_recipes")
+    assert "before Mia's surprise party" in json.dumps(found)  # Sam's own chat: not kept from Sam
+    kid_reads = _as(conn, settings, clock, family["sam"])
+    kid_reads.plain = True  # a group with a kid: every present's plan is only a plan
+    _, found = _call(kid_reads, "find_recipes")
     said = json.dumps(found)
     assert "surprise" not in said and "before a plan" in said
 
@@ -451,3 +456,58 @@ def test_the_lookup_job_leaves_an_untried_link_to_the_free_read(settings, clock,
     api = fakes.FakeMessagesAPI()
     assert run_enrichment(app, api=api)["done"] == 0
     assert api.requests == []  # nothing fetched or asked twice: the recipe_links job reads it
+
+
+def test_a_recipe_with_no_link_asked_about_now_is_not_left_waiting(settings, clock, conn, family):
+    """A recipe with no link has nothing for the free read, so the lookup job must take it when
+    asked and settle it with no model call, rather than leave it pending for a read that never
+    comes (and looked up again on every run)."""
+    from familydb.app import App
+    from familydb.jobs.enrich import run_enrichment
+    from tests import fakes
+
+    app = App(
+        settings.model_copy(update={"web_tools_enabled": True, "lookups_when": "asap"}), clock
+    )
+    us = _as(conn, app.settings, clock, family["sam"])
+    made = _recipe(us, "Grandma's stew")
+    assert ideas.get(conn, made["id"]).enrichment == "skipped"  # nothing to read, until asked
+    _call(us, "look_up_now", idea_ids=[made["id"]])
+    assert ideas.get(conn, made["id"]).enrichment == "pending"
+    api = fakes.FakeMessagesAPI()
+    assert run_enrichment(app, api=api)["skipped"] == 1
+    assert api.requests == [] and ideas.get(conn, made["id"]).enrichment == "skipped"
+    assert run_enrichment(app, api=api)["skipped"] == 0  # settled: not asked again
+
+
+def test_a_recipe_is_not_relinked_to_another_s_page_or_to_no_address(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _, chili = _call(us, "add_idea", title="Chili", kind="recipe", url="https://a.example/chili")
+    _, stew = _call(us, "add_idea", title="Stew", kind="recipe", url="https://a.example/stew")
+    taken, said = _call(us, "update_idea", id=stew["id"], url="https://a.example/chili")
+    assert taken.is_error and f"already recipe #{chili['id']}" in said["error"]
+    odd, said = _call(us, "update_idea", id=stew["id"], url="ftp://a.example/stew")
+    assert odd.is_error and "web address" in said["error"]
+    assert store.get(conn, stew["id"]).source_url == "https://a.example/stew"
+
+
+def test_find_recipes_reads_the_calendar_as_the_page_does(env, monkeypatch):
+    """Through `recent_events` (kept a minute by app.calendar), never a fresh `list_events`
+    for every question."""
+    from datetime import datetime as moment
+
+    env.cal.seed(
+        "Recital",
+        moment(2026, 9, 24, 18, 0, tzinfo=env.app.clock.tz),
+        moment(2026, 9, 24, 20, 0, tzinfo=env.app.clock.tz),
+    )
+    fresh = env.cal.list_events
+
+    def never(*args, **kwargs):
+        raise AssertionError("list_events asked for a question")
+
+    monkeypatch.setattr(env.cal, "recent_events", lambda start, end: fresh(start, end))
+    monkeypatch.setattr(env.cal, "list_events", never)
+    _call(env.ctx, "recipe", action="save", title="Lasagne", total_minutes=90)
+    _, found = _call(env.ctx, "find_recipes")
+    assert "Recital" in found["ruled_out"][0]["why"]

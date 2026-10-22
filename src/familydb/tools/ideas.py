@@ -316,6 +316,11 @@ def _relinked(ctx: ToolContext, idea: ideas.Idea) -> ideas.Idea:
     """A recipe's link changed: the new one is the one read, from the start, and the old page's
     reading is let go. What the family said of it stands. In the idea's transaction."""
     link = clean_url(idea.url)
+    if idea.url and not link:
+        raise ToolError("that is not a web address; give the recipe's link as http(s)")
+    other = recipe_store.by_source_url(ctx.conn, link) if link else None
+    if other is not None and other != idea.id:
+        raise ToolError(f"that link is already recipe #{other}'s")
     now = ctx.now_iso()
     recipe_store.upsert(
         ctx.conn,

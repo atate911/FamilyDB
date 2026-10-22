@@ -353,6 +353,7 @@ def board() -> str:
             conn,
             app.clock.now().astimezone(app.settings.tzinfo),
             agenda.on(agenda.read(app, conn, today, today), today),
+            kept,
         )
         stale = utc_iso(app.clock.now() - timedelta(days=ideas_page.FADE_DAYS))
         saved = sorted(

@@ -359,17 +359,23 @@ def _order(ranked: Ranked) -> tuple[float, ...]:
     return ranked.score
 
 
-def pick(chosen: Iterable[tuple[Idea, Recipe]], now: Situation) -> Ranked | None:
-    """The page's pick for the meal: on a weeknight a weeknight one when there is one."""
+def rank_for_meal(chosen: Iterable[tuple[Idea, Recipe]], now: Situation) -> list[Ranked]:
+    """Every recipe ranked for tonight's dinner, one order for the page and the pick: on a
+    weeknight the weeknight ones first, unless none fits, when the day's time alone decides."""
     everything = list(chosen)
     if not everything:
-        return None
+        return []
     asked = Asked(occasion=None if now.weekend else "weeknight", meal="dinner")
     ranked = rank(everything, now, asked)
     if ranked[0].verdict == "out" and asked.occasion:
         ranked = rank(everything, now, Asked(meal="dinner"))
-    best = ranked[0]
-    return best if best.verdict != "out" else None
+    return ranked
+
+
+def pick(chosen: Iterable[tuple[Idea, Recipe]], now: Situation) -> Ranked | None:
+    """The pick for the meal: the first of `rank_for_meal` that fits."""
+    ranked = rank_for_meal(chosen, now)
+    return ranked[0] if ranked and ranked[0].verdict != "out" else None
 
 
 # -- what a recipe keeps ------------------------------------------------------------------------
@@ -411,7 +417,8 @@ def keep(
     the facts, kept apart, never the family's, as the facts imply them now (below), with any the
     model read between the lines this time. An empty note from the family clears it. Call
     inside a transaction."""
-    before = recipe_store.get(conn, idea.id) or Recipe(idea_id=idea.id)
+    existed = recipe_store.get(conn, idea.id)
+    before = existed or Recipe(idea_id=idea.id)
     fields: dict[str, Any] = {}
     for key, value in given.items():
         if value is None:
@@ -435,14 +442,14 @@ def keep(
     # What the facts imply, before and after: a guess they no longer imply goes, one they newly
     # imply comes, and the rest stand as they were, so one the family turned down stays gone
     # while what it was read from is unchanged. Any read between the lines now is added.
-    was = set(guess_occasions(before, idea)) if recipe_store.get(conn, idea.id) else set()
+    was = set(guess_occasions(before, idea)) if existed else set()
     now_implied = set(guess_occasions(merged, idea))
     guessed = (set(merged.occasions_guessed) - (was - now_implied)) | (now_implied - was)
     guessed |= set(given.get("occasions_guessed") or [])
     settled = [one for one in OCCASIONS if one in guessed and one not in merged.occasions]
     if settled != before.occasions_guessed or "occasions_guessed" in fields:
         fields["occasions_guessed"] = settled
-    if not fields and recipe_store.get(conn, idea.id) is not None:
+    if not fields and existed is not None:
         return before
     return recipe_store.upsert(conn, idea.id, fields, now=now)
 

@@ -219,3 +219,40 @@ def test_a_grocery_tick_is_a_whole_target_and_the_one_action(settings, clock, co
     page = _client(settings, clock).get("/eat?side=cook").text
     assert 'class="check check--tick"' in page
     assert 'class="btn btn--primary btn--sm" type="submit">' in page  # Grocery list for these
+
+
+def test_tonight_s_pick_and_the_cook_list_agree(settings, thursday_clock, conn, family):
+    """On a weeknight with nothing quick enough, the time alone decides, and the one order
+    (meals.rank_for_meal) names the pick and draws the list: never a pick the list rules out."""
+    made = _recipe(conn, settings, thursday_clock, family["sam"], "Short ribs", total_minutes=240)
+    page = _client(settings, thursday_clock).get("/eat").text
+    assert "Tonight: Short ribs, 4 h." in page
+    cook = page[page.index('id="h-cook"') :]
+    assert f'href="/idea/{made["id"]}"' in cook and "r--faded" not in cook
+
+
+def test_an_idea_made_a_recipe_with_empty_boxes_keeps_its_undo(settings, clock, conn, family):
+    """Turning an outing into a recipe without filling a box is one change (update_idea), so its
+    Undo stands: empty boxes against nothing kept are no second write."""
+    ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    made = json.loads(
+        REGISTRY.dispatch("add_idea", {"title": "Pancakes", "kind": "outing"}, ctx).content
+    )
+    browser = _client(settings, clock)
+    form = browser.get(f"/idea/{made['id']}/edit").text
+    fields = dict(re.findall(r'name="(csrf|once|revision)" value="([^"]+)"', form))
+    changed = browser.post(
+        f"/idea/{made['id']}/edit",
+        data={
+            **fields,
+            "title": "Pancakes",
+            "kind": "recipe",
+            "recipe_shown": "1",
+            "ingredients": "",
+            "steps": "",
+            "serves": "",
+            "total_minutes": "",
+        },
+        follow_redirects=True,
+    )
+    assert "Changed #" in _said(changed) and ">Undo<" in changed.text

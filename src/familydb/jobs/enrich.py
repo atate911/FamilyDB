@@ -184,7 +184,12 @@ def _the_free_reads(app: App, conn: Any, idea: Idea) -> bool:
     if idea.kind != RECIPE or not app.settings.recipe_links:
         return False
     recipe = recipe_store.get(conn, idea.id)
-    return recipe is not None and recipe.filled_at is None and recipe.fill_note is None
+    return (
+        recipe is not None
+        and bool(recipe.source_url)
+        and recipe.filled_at is None
+        and recipe.fill_note is None
+    )
 
 
 def run_enrichment(

@@ -87,7 +87,7 @@ def show() -> Response | str:
         picks = _picks(conn, app, visitor, kept, today)
         setup = status_page.setup_steps(app, conn) if visitor.manages else []
         my_list = _my_list(conn, visitor, today) if kid else None
-        dinner = dinner_pick(conn, now.astimezone(tz), agenda.on(seen, today))
+        dinner = dinner_pick(conn, now.astimezone(tz), agenda.on(seen, today), kept)
         # The first day (docs/INTERFACE.md section 10): nothing saved and nothing on, so the box
         # asks for a place they would go back to and she says who she is; nothing empty-with-chrome.
         first_day = (
@@ -125,22 +125,26 @@ DINNER_FROM = 12
 DINNER_UNTIL = 20
 
 
-def dinner_pick(conn: Any, local_now: Any, today_on: list[agenda.Entry]) -> dict[str, Any] | None:
+def dinner_pick(
+    conn: Any, local_now: Any, today_on: list[agenda.Entry], kept: set[int] = frozenset()
+) -> dict[str, Any] | None:
     """Tonight's pick to cook, by code (familydb/meals.py): the evening's plans and what was had
-    lately weighed. None outside the afternoon, with no recipes, or when nothing fits."""
+    lately weighed. None outside the afternoon, with no recipes, or when nothing fits. `kept` is
+    what is kept from the reader (presents.kept_ids): never a recipe among them, and a plan for
+    a present is only "something on" in the situation."""
     if not DINNER_FROM <= local_now.hour < DINNER_UNTIL:
         return None
-    kept = recipe_store.live(conn)
-    if not kept:
+    recipes = recipe_store.live(conn, exclude_ids=kept)
+    if not recipes:
         return None
     day = local_now.date()
     tonight = meals.situation(
         local_now,
         today_on,
         rest=meals.rest_days(conn, day),
-        unnamed=presents.plan_titles(conn, day.isoformat(), day.isoformat()),
+        unnamed=presents.plan_titles(conn, day.isoformat(), day.isoformat(), kept),
     )
-    best = meals.pick(kept, tonight)
+    best = meals.pick(recipes, tonight)
     if best is None:
         return None
     first = [reason for reason in best.reasons if reason[:1].isdigit()][:1]

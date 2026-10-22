@@ -584,8 +584,13 @@ def _dinner(
     """/dinner: the family's recipes ranked for tonight by code (familydb/meals.py), the evening's
     plans and what was had lately weighed, each with its reason. No model call. Where a kid
     reads, no numbers (the workings)."""
-    kept = recipe_store.live(conn)
-    if not kept:
+    # The presents kept from whoever asked, and every present where not everyone there may
+    # decide: never a recipe among them, and their plans only "a plan" in a reason.
+    kept = presents.kept_ids(conn, member)
+    if not audience.everyone_may(conn, msg.channel, msg.chat_id, "decide", member):
+        kept |= presents.gift_ids(conn)
+    recipes = recipe_store.live(conn, exclude_ids=kept)
+    if not recipes:
         return voice.say(app.settings, "cmd_dinner_empty", seed=seed)
     now = app.clock.now()
     today = now.date()
@@ -594,15 +599,9 @@ def _dinner(
         now,
         agenda.on(seen, today),
         rest=meals.rest_days(conn, today),
-        unnamed=presents.plan_titles(conn, today.isoformat(), today.isoformat()),
+        unnamed=presents.plan_titles(conn, today.isoformat(), today.isoformat(), kept),
     )
-    ranked = meals.rank(
-        kept,
-        tonight,
-        meals.Asked(occasion=None if tonight.weekend else "weeknight", meal="dinner"),
-    )
-    if not ranked or ranked[0].verdict == "out":
-        ranked = meals.rank(kept, tonight, meals.Asked(meal="dinner"))
+    ranked = meals.rank_for_meal(recipes, tonight)
     offered = [one for one in ranked if one.verdict != "out"][:MAX_DINNER]
     if not offered:
         return voice.say(app.settings, "cmd_dinner_none", seed=seed)

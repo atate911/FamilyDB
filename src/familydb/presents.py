@@ -126,12 +126,14 @@ def gift_ids(conn: sqlite3.Connection) -> set[int]:
     }
 
 
-def plan_titles(conn: sqlite3.Connection, first: str, last: str) -> frozenset[str]:
-    """The titles of the plans from `first` to `last` made for a present: a reason that names a
-    plan says these only as "a plan", whoever reads it (meals.situation)."""
-    gifts = gift_ids(conn)
+def plan_titles(conn: sqlite3.Connection, first: str, last: str, kept: set[int]) -> frozenset[str]:
+    """The titles of the plans from `first` to `last` made for a present in `kept` (the ideas
+    kept from whoever reads: `kept_ids`, and every present where not everyone may decide): a
+    reason that names a plan says these only as "a plan" (meals.situation)."""
+    if not kept:
+        return frozenset()
     return frozenset(
-        plan.title for plan in plan_store.overlapping(conn, first, last) if plan.idea_id in gifts
+        plan.title for plan in plan_store.overlapping(conn, first, last) if plan.idea_id in kept
     )
 
 

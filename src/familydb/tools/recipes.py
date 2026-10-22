@@ -25,7 +25,7 @@ from familydb.store import recipes as store
 from familydb.store.db import transaction
 from familydb.store.ideas import RECIPE
 from familydb.store.recipes import Occasion
-from familydb.tools.registry import ToolContext, keep_undo, tool
+from familydb.tools.registry import NOT_THEIRS, ToolContext, keep_undo, tool
 
 MOST_INGREDIENTS = 40
 MOST_STEPS = 30
@@ -45,7 +45,6 @@ FACTS = (
     "prep_note",
 )
 log = logging.getLogger(__name__)
-GROWN_UPS = "changing a recipe is for the grown-ups; ask a parent"
 
 
 class RecipeInput(BaseModel):
@@ -141,6 +140,8 @@ def _save(ctx: ToolContext, args: RecipeInput) -> dict[str, Any]:
     title = (args.title or "").strip() or meals.title_from_link(args.url) or ""
     if not title:
         raise ToolError("save needs a title or a link")
+    if ctx.allowed_tools is not None and "add_idea" not in ctx.allowed_tools:
+        raise ToolError("saving an idea is not allowed in this turn")
     facts = given(args)
     made = add_idea(
         ctx,
@@ -157,8 +158,10 @@ def _save(ctx: ToolContext, args: RecipeInput) -> dict[str, Any]:
 
 def _change(ctx: ToolContext, args: RecipeInput) -> dict[str, Any]:
     """One recipe's facts, as the family said them; its old facts kept for undo."""
+    # A kid may save a recipe, as she may add an idea, but not change one: the registry's gate,
+    # by hand here since the tool's save is hers too (`ToolSpec.needs` covers a whole tool).
     if ctx.member is not None and not roles.may(ctx.member.role, "change"):
-        raise ToolError(GROWN_UPS)
+        raise ToolError(NOT_THEIRS)
     if args.id is None:
         raise ToolError("change needs the recipe's id")
     facts = given(args)
@@ -195,7 +198,7 @@ def _today(ctx: ToolContext, now: datetime) -> list[SimpleNamespace]:
     saved = SavedPlans(ctx.conn, ctx.clock.tz)
     calendar = ctx.calendar if calendar_available(ctx.settings) and ctx.calendar else saved
     try:
-        events = calendar.list_events(start, end)
+        events = calendar.recent_events(start, end)  # Google's, kept a minute (app.calendar)
     except Exception:
         log.warning("the calendar could not be read for tonight's recipes; plans kept here used")
         events = saved.list_events(start, end)
@@ -219,11 +222,16 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
         raise ToolError(f"most_minutes is 1 to {LONGEST}")
     now = ctx.clock.now()
     today = now.date().isoformat()
+    # A plan for a present is only "a plan" in a reason where it is kept from the asker, and
+    # every present's where a kid reads the chat (ctx.plain), as /dinner does (commands.py).
+    kept = presents.kept_ids(ctx.conn, ctx.member)
+    if ctx.plain:
+        kept |= presents.gift_ids(ctx.conn)
     tonight = meals.situation(
         now,
         _today(ctx, now),
         rest=meals.rest_days(ctx.conn, now.date()),
-        unnamed=presents.plan_titles(ctx.conn, today, today),
+        unnamed=presents.plan_titles(ctx.conn, today, today, kept),
     )
     occasion = args.occasion
     asked = meals.Asked(

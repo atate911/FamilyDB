@@ -55,7 +55,8 @@ def restaurants() -> str:
         side = "cook"
     side = side if side in SIDES else ""
     with closing(app.connect()) as conn:
-        cooking = _cook_rows(app, conn, now, today, occasion, kid)
+        kept = presents.kept_ids(conn, visitor.member)
+        cooking = _cook_rows(app, conn, now, today, occasion, kid, kept)
         people = member_store.list_all(conn)
         cards = _restaurant_cards(app, conn, now, today, visitor, who, people, kid)
         chat.page_box(app, conn, people, scope={"label": "Eat", "text": "About what to eat:"})
@@ -186,28 +187,31 @@ def _restaurant_cards(
 
 
 def _cook_rows(
-    app: Any, conn: Any, now: datetime, today: date, occasion: str, kid: bool
+    app: Any,
+    conn: Any,
+    now: datetime,
+    today: date,
+    occasion: str,
+    kid: bool,
+    kept: set[int],
 ) -> list[dict[str, Any]]:
     """The family's recipes ranked for the next meal by code (familydb/meals.py): tonight's plans
     as the page reads them, the family's rest for recipes, and the situation asked for."""
-    kept = recipe_store.live(conn)
-    if not kept:
+    kept_recipes = recipe_store.live(conn, exclude_ids=kept)
+    if not kept_recipes:
         return []
     seen = agenda.read(app, conn, today, today)
     tonight = meals.situation(
         now.astimezone(app.settings.tzinfo),
         agenda.on(seen, today),
         rest=meals.rest_days(conn, today),
-        unnamed=presents.plan_titles(conn, today.isoformat(), today.isoformat()),
+        unnamed=presents.plan_titles(conn, today.isoformat(), today.isoformat(), kept),
     )
     meal = None if occasion in NOT_DINNER else "dinner"
     if occasion:
-        ranked = meals.rank(kept, tonight, meals.Asked(occasion=occasion, meal=meal))
+        ranked = meals.rank(kept_recipes, tonight, meals.Asked(occasion=occasion, meal=meal))
     else:
-        best = meals.pick(kept, tonight)
-        ranked = meals.rank(kept, tonight, meals.Asked(meal=meal))
-        if best is not None:
-            ranked = [best, *(one for one in ranked if one.idea.id != best.idea.id)]
+        ranked = meals.rank_for_meal(kept_recipes, tonight)
     rows = []
     for one in ranked:
         short = [r for r in one.reasons if r[:1].isdigit()][:1]
