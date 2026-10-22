@@ -14,9 +14,24 @@ Who may change what is in [Roles and permissions](/wiki/model/family-and-roles#r
 
 ## Eat
 
-The line under the question is the pick for the next meal (lunch from 11, tonight from 2 pm), chosen by code from what is open for that meal and how far it is. Then every restaurant that is not dropped, the pick on top, with one fact line each: open till when, the drive, the cost band, who suggested it, been or not. A kid is told nothing of cost.
+**Eat** answers "What should we eat?" with both ways to have the next meal: something to cook and somewhere to go. The line under the question names the pick for each (lunch from 11, tonight from 2 pm): "Tonight: Stir fry, 25 min · or Kenji's, open till 9, 12 min". Both are chosen by code, with no model call.
 
-The chips narrow the list: **Open today**, **Close** (about 20 minutes' drive or less), **New to us**, **Just us**, **With the kids**, and each person, for what is theirs. **Add a place by hand** is at the foot, for whoever may change things.
+**Cook** comes first: every [recipe](#recipes) that is not dropped, the pick on top. Each row says how long it takes, how many it serves, how often it has been made and how it was rated, and what it is good for. A recipe that cannot fit is drawn faded at the foot with why ("takes 3 h, there are 45 min before the recital"). On a weeknight the pick is a quick one when there is one; a plan tonight on the calendar shortens the time there is.
+
+**Eat out** follows: every restaurant, with one fact line each: open till when, the drive, the cost band, who suggested it, been or not. A kid is told nothing of cost.
+
+The chips narrow the page: **Cook** or **Eat out** alone, **Quick**, **Prep ahead** and **Family dinner** among the recipes, **Open today** and **Close** (about 20 minutes' drive or less) among the restaurants, **New to us**, **Just us**, **With the kids**, the cuisines, and each person. **Add a recipe by hand** and **Add a place by hand** are at the foot, for whoever may change things.
+
+## Recipes
+
+A recipe is an idea of kind recipe, kept with what it takes to cook it: minutes start to table and hands-on, how many it serves, what it is good for (a weeknight, a family dinner, prep ahead, slow, a date night, guests, kids can make it, a lunchbox, freezes well), a note on what to do ahead, the ingredients and the steps. Recipes are not on **Do**.
+
+- **Saving one.** Tell the assistant ("sheet-pan fajitas, 30 minutes, the kids liked them"), paste a link to a recipe, send a photo of a cookbook page, or use **Add a recipe by hand**, whose **Recipe** part takes the same facts.
+- **A pasted link** is read by this server from the recipe's own page within a few minutes, with nothing of the family sent and no model asked, and the chat it came from is told what was found. A page with no recipe data waits for the evening's lookups, which read it for a little; one this server will not reach (a home network address) is never read. What you said stands: a page fills only what you left empty, and its name replaces the title only when the title was the link's own words. The setting is [Read a pasted recipe link straight away](/wiki/controls/settings/lookups).
+- **What it is good for.** What you say is kept as yours. When nobody said, the assistant reads it from the facts (30 minutes or under looks like a weeknight one, "the night before" like prep ahead, eight servings like guests) and marks it as a guess: "Looks like weeknight". A guess helps a recipe come up but never keeps one out. **That's right** on the recipe's page makes it yours, **Not that** takes it away, and so does saying so in the chat.
+- **A recipe's page** shows those facts, the guesses, the ingredients, the steps folded, the link and when it was read. **Put the ingredients on the list** and **Record that you made it** are there for whoever may change things.
+- **The grocery list.** Tick recipes on Eat and press **Grocery list for these**, press **Put the ingredients on the list** on one, or ask ("put the fajitas and the soup on the list"). Code reads each ingredient line ("2 cups chopped onion" is onion), puts each thing on the [shopping list](/wiki/controls/plans-and-tasks) once however many recipes want it, with how much each wants under it ("2 (Fajitas), 1 (Soup)"), and leaves off salt, pepper, oil, water, sugar and flour. A thing already there keeps its place; one ticked off is wanted again. Undo takes it back.
+- **What's for dinner?** Asked in the chat, the assistant ranks the recipes the same way, with the time tonight, what was had lately (a recipe made in the last 10 days rests, unless you ask for your favorites or tell it another number) and what you asked for ("something quick", "with chickpeas", "for before work").
 
 ## Do
 

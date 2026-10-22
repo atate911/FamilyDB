@@ -580,9 +580,9 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
     assert page.status_code == 200
     assert _cards(page.text) == 2 and "Museum day" not in page.text  # not the outing
     # The top pick for the next meal leads, with the one line that decides; the rest follow.
-    assert "Where should we eat?" in page.text
+    assert "What should we eat?" in page.text
     assert (
-        "Ramen place tonight: open today 11\u00a0am to 9\u00a0pm · 12 min · $$ · not been yet."
+        "Tonight: Ramen place, open today 11\u00a0am to 9\u00a0pm · 12 min · $$ · not been yet."
         in page.text
     )
     top = re.search(r'<div class="r r--top">.*?</div>\s*<div class="r">', page.text, re.S).group(0)
@@ -596,7 +596,7 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
 def test_the_restaurants_page_when_there_are_none(settings, clock, conn, family) -> None:
     _idea(conn, "Museum day", kind="outing")
     page = _client(settings, clock).get("/restaurants")
-    assert "No restaurants yet" in page.text and 'class="place"' not in page.text
+    assert "Nothing saved yet" in page.text and 'class="place"' not in page.text
 
 
 def test_the_plans_page_shows_what_is_coming_and_what_just_happened(

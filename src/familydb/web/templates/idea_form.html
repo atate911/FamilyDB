@@ -33,7 +33,7 @@
         <div class="form__row">
           <div class="field"><label class="field__label" for="i-kind">Kind <span class="req">(required)</span></label>
             {# A list, not a closed choice: the model invents a kind when none fits, and so may you. #}
-            <input id="i-kind" type="text" name="kind" list="kinds" required placeholder="e.g. restaurant" value="{{ idea.kind if editing else '' }}" aria-describedby="i-kind-h" />
+            <input id="i-kind" type="text" name="kind" list="kinds" required placeholder="e.g. restaurant" value="{{ idea.kind if editing else kind_given or '' }}" aria-describedby="i-kind-h" />
             <datalist id="kinds">{% for kind in kinds %}<option value="{{ kind }}"></option>{% endfor %}</datalist>
             <span class="field__hint" id="i-kind-h">Pick one or type your own.</span></div>
           {% if editing %}
@@ -59,7 +59,34 @@
         </div>
       </fieldset>
 
-      <details class="fieldfold"{{ ' open' if editing }}>
+      {% set cooking = (idea.kind if editing else kind_given) == 'recipe' %}
+      <details class="fieldfold"{{ ' open' if cooking }}>
+        <summary>Recipe <span class="val">minutes, servings, what it’s good for, ingredients, steps</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+        <div class="fieldfold__body">
+          <input type="hidden" name="recipe_shown" value="1" />
+          <p class="small muted">For a recipe (kind “recipe”). A link is read for you; anything you write here stands.</p>
+          <div class="form__row form__row--3">
+            <div class="field"><label class="field__label" for="r-total">Minutes, start to table</label>
+              <input id="r-total" type="text" name="total_minutes" inputmode="numeric" value="{{ recipe.total_minutes if recipe and recipe.total_minutes is not none else '' }}" /></div>
+            <div class="field"><label class="field__label" for="r-active">Of them hands-on</label>
+              <input id="r-active" type="text" name="active_minutes" inputmode="numeric" value="{{ recipe.active_minutes if recipe and recipe.active_minutes is not none else '' }}" /></div>
+            <div class="field"><label class="field__label" for="r-serves">Serves</label>
+              <input id="r-serves" type="text" name="serves" inputmode="numeric" value="{{ recipe.serves if recipe and recipe.serves is not none else '' }}" /></div>
+          </div>
+          <fieldset class="fieldset fieldset--inner">
+            <legend class="field__label">Good for</legend>
+            <div class="choices">{% for key, words in occasions %}<label class="choice"><input type="checkbox" name="occasions" value="{{ key }}" {{ 'checked' if recipe and key in recipe.occasions }} /><span>{{ words | capitalize }}</span></label>{% endfor %}</div>
+          </fieldset>
+          <div class="field"><label class="field__label" for="r-prep">Ahead of time <span class="opt">(optional)</span></label>
+            <input id="r-prep" type="text" name="prep_note" maxlength="300" placeholder="e.g. marinate the night before" value="{{ recipe.prep_note or '' if recipe else '' }}" /></div>
+          <div class="field"><label class="field__label" for="r-ingredients">Ingredients <span class="opt">(one a line)</span></label>
+            <textarea id="r-ingredients" name="ingredients" rows="6" data-dictate>{{ recipe.ingredients | map(attribute='text') | join('\n') if recipe else '' }}</textarea></div>
+          <div class="field"><label class="field__label" for="r-steps">Steps <span class="opt">(one a line)</span></label>
+            <textarea id="r-steps" name="steps" rows="6" data-dictate>{{ recipe.steps | join('\n') if recipe else '' }}</textarea></div>
+        </div>
+      </details>
+
+      <details class="fieldfold"{{ ' open' if editing and not cooking }}>
         <summary>Everything else <span class="val">where, when, who, cost, how long</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
         <div class="fieldfold__body">
           <div class="form__row">

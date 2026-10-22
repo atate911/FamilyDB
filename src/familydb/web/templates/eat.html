@@ -1,26 +1,55 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, who with context %}
+{% from "_ui.html" import icon, avatar, who, guard with context %}
 {% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty, by_hand %}
-{% block title %}Where should we eat? · {{ site_title }}{% endblock %}
+{% block title %}What should we eat? · {{ site_title }}{% endblock %}
 {% block body_class %}page-eat{% endblock %}
-{# Where should we eat? (docs/INTERFACE.md section 4): a top pick for the next meal, chosen by code, then every saved
-   restaurant, one fact line each. A kid sees the same list without cost bands. #}
+{# What should we eat? (docs/INTERFACE.md section 4, docs/RECIPES.md): the pick to cook and the pick to eat out for the
+   next meal, chosen by code, then the recipes ranked for it and every saved restaurant, one fact line each. A grown-up
+   who may change things ticks recipes for a grocery list (shopping_list, from_recipes). A kid sees the same rows
+   without cost bands or boxes. #}
 {% block content %}
-  {{ dest_head('Where should we eat?', summary) }}
+  {{ dest_head('What should we eat?', summary) }}
   {{ chip_row(chips) }}
-  {% if cards %}
-    <div class="rows">
-      {% for card in cards %}
-        <div class="r{{ ' r--top' if loop.first and top }}{{ ' r--faded' if card.faded }}">
-          {% if loop.first and top %}<span class="r__label">{{ top }}</span>{% endif %}
-          <span class="r__t"><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></span>
-          <span class="r__m">{{ card.line }}</span>
-          <span class="r__tr">{{ who(card.people, card.who, shell.family) }}</span>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    {{ dest_empty('No restaurants yet. Tell ' ~ assistant ~ ' one you’ve heard about.', 'utensils') }}
+  {% if not cooking and not cards %}
+    {{ dest_empty('Nothing saved yet. Tell ' ~ assistant ~ ' a recipe you like or a place you’ve heard about.', 'utensils') }}
   {% endif %}
-  {% if grownup and visitor().may('change') %}{{ by_hand('Add a place by hand', url_for('web.new_idea', kind='restaurant')) }}{% endif %}
+  {% if cooking %}
+    <section class="sec" aria-labelledby="h-cook">
+      <div class="sec__label"><h2 id="h-cook" class="label">Cook</h2></div>
+      {% set listing = grownup and can_list and cooking | selectattr('shoppable') | list %}
+      {% if listing %}<form method="post" action="{{ url_for('edits.list_from_recipes') }}">{{ guard(once=true) }}{% endif %}
+      <div class="rows">
+        {% for row in cooking %}
+          <div class="r{{ ' r--top' if loop.first and cook_top }}{{ ' r--faded' if row.verdict == 'out' }}">
+            {% if loop.first and cook_top %}<span class="r__label">{{ cook_top }}</span>{% endif %}
+            <span class="r__t"><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></span>
+            <span class="r__m">{{ row.line }}</span>
+            {% if listing and row.shoppable %}<span class="r__tr"><label class="check"><input type="checkbox" name="idea_ids" value="{{ row.id }}" /><span class="sr">Put {{ row.title }} on the list</span></label></span>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      {% if listing %}
+        <div class="actions"><button class="btn btn--quiet btn--sm" type="submit">{{ icon('list', size='sm') }}Grocery list for these</button><span class="small muted">What the ticked recipes need goes on the shopping list, less salt, oil and the like.</span></div>
+      </form>{% endif %}
+    </section>
+  {% endif %}
+  {% if cards %}
+    <section class="sec" aria-labelledby="h-out">
+      <div class="sec__label"><h2 id="h-out" class="label">Eat out</h2></div>
+      <div class="rows">
+        {% for card in cards %}
+          <div class="r{{ ' r--top' if loop.first and top }}{{ ' r--faded' if card.faded }}">
+            {% if loop.first and top %}<span class="r__label">{{ top }}</span>{% endif %}
+            <span class="r__t"><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></span>
+            <span class="r__m">{{ card.line }}</span>
+            <span class="r__tr">{{ who(card.people, card.who, shell.family) }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+  {% if grownup and visitor().may('change') %}
+    {{ by_hand('Add a recipe by hand', url_for('web.new_idea', kind='recipe')) }}
+    {{ by_hand('Add a place by hand', url_for('web.new_idea', kind='restaurant')) }}
+  {% endif %}
 {% endblock %}

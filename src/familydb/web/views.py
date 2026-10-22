@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 
 from markupsafe import Markup, escape
 
-from familydb import alerts, happening, presents, windows
+from familydb import alerts, happening, meals, presents, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, companies, prices
 from familydb.availability import happening_search_available, ticketmaster_available
@@ -32,6 +32,7 @@ from familydb.store.messages import VOICE_PREFIX, WORDS_GONE, Message, as_said
 from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
+from familydb.store.recipes import OCCASIONS, Recipe
 from familydb.store.tasks import Task
 from familydb.suggest.types import DAY_END, DAY_START
 from familydb.web.map_view import Away, drive_text
@@ -248,6 +249,7 @@ def local_day(value: str, tz: ZoneInfo) -> str:
 # The picture beside a kind of idea (the new sprite's names); anything else gets a spark.
 KIND_GLYPHS = {
     "restaurant": "utensils",
+    "recipe": "utensils",
     "activity": "sparkle",
     "outing": "sparkle",
     "day_trip": "mountain",
@@ -731,7 +733,8 @@ def eat_line(card: dict[str, Any], idea: Idea, *, kid: bool = False) -> str:
 
 
 def eat_score(card: dict[str, Any], idea: Idea) -> tuple:
-    """What comes first on Where should we eat: open today, not done lately, loved, near."""
+    """What comes first among the restaurants on What should we eat: open today, not done
+    lately, loved, near."""
     opened = bool(card["today"] and card["today"].startswith("open"))
     rating = idea.avg_rating or 0.0
     minutes = travel_minutes(card["travel"])
@@ -782,6 +785,89 @@ def do_summary(count: int, top: str | None, lead: dict[str, Any] | None) -> str:
     if top and lead:
         said += f" · {lead['title']} {top[0].lower()}{top[1:]}"
     return said + "."
+
+
+# -- recipes (docs/RECIPES.md) --------------------------------------------------------------------
+
+# The chips on What should we eat that narrow to a situation, in the order shown.
+COOK_CHIPS = (
+    ("weeknight", "Quick"),
+    ("prep_ahead", "Prep ahead"),
+    ("family_dinner", "Family dinner"),
+)
+
+
+def cook_line(ranked: meals.Ranked) -> str:
+    """The one line under a recipe on Eat: its reasons as code gave them, and what it suits."""
+    said = list(ranked.reasons)
+    occasions = meals.occasion_words(ranked.recipe.occasions)
+    if occasions:
+        said.append(", ".join(occasions))
+    elif ranked.recipe.occasions_guessed:
+        said.append(
+            "looks like " + ", ".join(meals.occasion_words(ranked.recipe.occasions_guessed))
+        )
+    line = " · ".join(said)
+    return line[:1].upper() + line[1:]
+
+
+def recipe_panel(recipe: Recipe | None, tz: ZoneInfo, *, grown_up: bool) -> dict[str, Any] | None:
+    """What a recipe's page draws: its facts, the situations said and guessed, what to buy and the
+    steps, where it was read and when. None for an idea with no recipe kept."""
+    if recipe is None:
+        return None
+    facts: list[tuple[str, str]] = []
+    if recipe.minutes is not None:
+        total = fmt_minutes(recipe.minutes)
+        if (
+            recipe.active_minutes
+            and recipe.total_minutes
+            and recipe.active_minutes < recipe.total_minutes
+        ):
+            total += f", {fmt_minutes(recipe.active_minutes)} of it hands-on"
+        facts.append(("Takes", total))
+    if recipe.serves:
+        facts.append(("Serves", str(recipe.serves)))
+    if recipe.occasions:
+        facts.append(("Good for", ", ".join(meals.occasion_words(recipe.occasions))))
+    if recipe.prep_note:
+        facts.append(("Ahead", recipe.prep_note))
+    read = None
+    if recipe.filled_at and recipe.filled_by in ("page", "lookup"):
+        day = day_short(date.fromisoformat(local_day(recipe.filled_at, tz)))
+        read = f"Read from {recipe.source_site or 'its page'}, {day}"
+    return {
+        "facts": facts,
+        "guessed": [
+            {"key": one, "words": meals.OCCASION_WORDS.get(one, one)}
+            for one in recipe.occasions_guessed
+        ],
+        "occasions": list(recipe.occasions),
+        "ingredients": [one.text for one in recipe.ingredients],
+        "steps": recipe.steps,
+        "source_url": clean_url(recipe.source_url),
+        "source_site": recipe.source_site,
+        "read": read,
+        "unread": recipe.fill_note if grown_up and not recipe.filled_at else None,
+        "shoppable": bool(recipe.ingredients),
+    }
+
+
+def occasion_choices() -> list[tuple[str, str]]:
+    return [(one, meals.OCCASION_WORDS.get(one, one)) for one in OCCASIONS]
+
+
+def eat_both_summary(cook: dict[str, Any] | None, out: dict[str, Any] | None, meal: str) -> str:
+    """The line under What should we eat: the cook pick and the restaurant pick for the meal."""
+    if cook and out:
+        return (
+            f"{meal}: {cook['title']}, {cook['short']} · or {out['title']}, {out['line'].lower()}."
+        )
+    if cook:
+        return f"{meal}: {cook['title']}, {cook['short']}."
+    if out:
+        return f"{meal}: {out['title']}, {out['line'].lower()}."
+    return "Nothing saved yet."
 
 
 def meal_words(local_now: datetime) -> str:

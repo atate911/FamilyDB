@@ -325,7 +325,7 @@ def test_every_destination_answers_a_question_and_scopes_the_box(
 ) -> None:
     client = _client(settings, clock)
     expected = {
-        "/eat": ("Where should we eat?", "About eating out:"),
+        "/eat": ("What should we eat?", "About what to eat:"),
         "/do": ("What could we do?", "About things to do:"),
         "/week": ("This week", "About this week:"),
         "/soon": (None, "About what is on near home:"),

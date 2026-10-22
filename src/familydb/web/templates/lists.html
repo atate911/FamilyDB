@@ -20,7 +20,7 @@
             <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing.text }}" /><input type="hidden" name="back" value="{{ one.name }}" />
             <button class="tick" type="submit"><span>{{ icon('check') }}</span><span class="sr">Got: {{ thing.text }}</span></button>
           </form>
-          <span>{{ thing.text }}</span>
+          <span>{{ thing.text }}{% if thing.note %} <span class="small muted">{{ thing.note }}</span>{% endif %}</span>
           {% if thing.by %}{{ who([thing.by], 'Added by ' ~ thing.by.name) }}{% endif %}
         </li>
       {% else %}

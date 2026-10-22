@@ -48,6 +48,8 @@ def lists_page(name: str | None = None) -> str:
                     "to_get": [
                         {
                             "text": item.text,
+                            # How much the recipes that put it there want (groceries.py).
+                            "note": item.note,
                             "by": views.person_of(named[item.added_by], slots)
                             if item.added_by in named
                             else None,

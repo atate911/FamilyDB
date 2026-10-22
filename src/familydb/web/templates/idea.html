@@ -19,7 +19,8 @@
 {% endmacro %}
 {% block content %}
   <header class="dest">
-    <a class="back" href="{{ url_for('web.restaurants') if idea.kind == 'restaurant' else url_for('web.ideas') }}">{{ icon('chevl', size='sm') }}{{ 'Eat out' if idea.kind == 'restaurant' else 'Things to do' }}</a>
+    {% set eaten = idea.kind in ('restaurant', 'recipe') %}
+    <a class="back" href="{{ url_for('web.restaurants') if eaten else url_for('web.ideas') }}">{{ icon('chevl', size='sm') }}{{ 'What to eat' if eaten else 'Things to do' }}</a>
     <p class="label">{{ row.kind_name }}{% if grownup %} · #{{ idea.id }}{% endif %}</p>
     <h1 class="dest__q">{{ idea.title }}</h1>
     <p class="dest__sum">{{ state }}{% if row.hidden %} · {{ surprise(row.hidden) }}{% endif %}</p>
@@ -38,6 +39,53 @@
     <p class="said__by">{{ by }}’s idea · added {{ row.added_words }}</p>
   {% else %}
     <p class="said__by">Added {{ row.added_words }}</p>
+  {% endif %}
+
+  {# A recipe: what it takes, what it is good for (a guess marked as hers, to take or drop), what to buy, the steps,
+     and where it was read (docs/RECIPES.md). #}
+  {% if recipe %}
+    <section class="found" aria-labelledby="h-recipe">
+      <h2 class="sr" id="h-recipe">The recipe</h2>
+      {% if recipe.facts %}<dl class="kv">{% for k, v in recipe.facts %}<dt>{{ k }}</dt><dd>{{ v | figs }}</dd>{% endfor %}</dl>{% endif %}
+      {% for guess in recipe.guessed %}
+        <div class="acts">
+          <p class="found__note">Looks like {{ guess.words }}{% if grownup %}, by {{ assistant }}’s reading{% endif %}.</p>
+          {% if visitor().may('change') %}
+            <form method="post" action="{{ url_for('edits.take_guess', idea_id=idea.id) }}">
+              {{ guard(once=true) }}<input type="hidden" name="occasion" value="{{ guess.key }}" /><input type="hidden" name="right" value="yes" />
+              <button class="q__lnk" type="submit">That’s right<span class="sr">: {{ guess.words }}</span></button>
+            </form>
+            <form method="post" action="{{ url_for('edits.take_guess', idea_id=idea.id) }}">
+              {{ guard(once=true) }}<input type="hidden" name="occasion" value="{{ guess.key }}" /><input type="hidden" name="right" value="no" />
+              <button class="q__lnk" type="submit">Not that<span class="sr">: {{ guess.words }}</span></button>
+            </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+      {% if recipe.ingredients %}
+        <details class="fold fold--quiet" open>
+          <summary>Ingredients{{ icon('chev', size='sm', cls='chev') }}</summary>
+          <ul class="fold__body">{% for line in recipe.ingredients %}<li>{{ line }}</li>{% endfor %}</ul>
+        </details>
+      {% endif %}
+      {% if recipe.steps %}
+        <details class="fold fold--quiet">
+          <summary>Steps{{ icon('chev', size='sm', cls='chev') }}</summary>
+          <ol class="fold__body">{% for step in recipe.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+        </details>
+      {% endif %}
+      {% if recipe.source_url %}
+        <p class="found__links"><a href="{{ recipe.source_url }}" rel="noopener noreferrer">{{ icon('link', size='sm') }}{{ recipe.source_site or 'The recipe' }}</a></p>
+      {% endif %}
+      {% if recipe.read %}<p class="found__by">{{ recipe.read }}.</p>{% endif %}
+      {% if recipe.unread %}<p class="sec__note">Its page could not be read straight away ({{ recipe.unread }}); it is read with the evening’s lookups.</p>{% endif %}
+      {% if recipe.shoppable and grownup and visitor().may('change') %}
+        <form method="post" action="{{ url_for('edits.list_from_recipes') }}">
+          {{ guard(once=true) }}<input type="hidden" name="idea_ids" value="{{ idea.id }}" /><input type="hidden" name="back" value="{{ idea.id }}" />
+          <button class="btn btn--quiet btn--sm" type="submit">{{ icon('list', size='sm') }}Put the ingredients on the list</button>
+        </form>
+      {% endif %}
+    </section>
   {% endif %}
 
   {# What she found, marked as hers and dated. #}
@@ -65,7 +113,7 @@
       {% endif %}
       <p class="found__by{{ ' warnline' if place.stale }}">{{ assistant }} {{ 'has not checked it yet' if place.freshness in (none, 'never checked') else place.freshness }}.{% if grownup and looked_up %} <a href="{{ url_for('activity.show', key='t' ~ looked_up) }}">How it was looked up</a>{% endif %}</p>
     </section>
-  {% elif row.url %}
+  {% elif row.url and not recipe %}
     <p class="found__links"><a href="{{ row.url }}" rel="noopener noreferrer">{{ icon('link', size='sm') }}Link</a></p>
   {% endif %}
   {% if grownup and (idea.enrichment == 'pending' or idea.enrichment_note) %}
@@ -129,7 +177,7 @@
       {% endif %}
     </div>
     <details class="fold fold--quiet">
-      <summary>Record how it went by hand{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <summary>{{ 'Record that you made it' if idea.kind == 'recipe' else 'Record how it went by hand' }}{{ icon('chev', size='sm', cls='chev') }}</summary>
       <form class="form fold__body" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
         {{ guard(once=true) }}
         <div class="form__row">
