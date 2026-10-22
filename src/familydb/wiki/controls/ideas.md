@@ -1,6 +1,6 @@
 # Eat and Do
 
-Two destinations read the family's saved [ideas](/wiki/reference/glossary#idea). **Eat** answers "Where should we eat?" from the restaurants, and **Do** answers "What could we do?" from everything else. Each opens on its answer, ranked by code with no model call, and narrows with chips. A parent or admin adds, fixes, drops and rates ideas on a place's own page, and asks for one to be looked up again. The box on either page is about it: "anything cheaper?" sent from Eat is a question about restaurants.
+Two destinations read the family's saved [ideas](/wiki/reference/glossary#idea). **Eat** answers "What should we eat?" from the recipes and the restaurants, and **Do** answers "What could we do?" from everything else. Each opens on its answer, ranked by code with no model call, and narrows with chips. A parent or admin adds, fixes, drops and rates ideas on a place's own page, and asks for one to be looked up again. The box on either page is about it: "anything cheaper?" sent from Eat is a question about restaurants.
 
 ## Who sees what
 

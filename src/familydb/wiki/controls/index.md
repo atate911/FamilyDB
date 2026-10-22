@@ -8,7 +8,7 @@ Everything the family does day to day is on one of these pages or in Telegram. T
 | [What about](/wiki/controls/home-and-chat#her-picks) | All of her picks, for the next few hours and the weekend, made ahead | Everyone |
 | [The board](/wiki/controls/home-and-chat#on-a-big-screen-and-the-kitchen-tablet) | Now for a tablet on the kitchen wall, with a face for each person on the box | Everyone |
 | [Chat](/wiki/controls/home-and-chat) | The conversation behind the box; every message is paid for | Anyone who may chat |
-| [Eat](/wiki/controls/ideas) | Where should we eat? A pick for the next meal, then every saved restaurant with the one fact that decides | Everyone reads; parents and admins change |
+| [Eat](/wiki/controls/ideas) | What should we eat? A pick to cook and a pick to eat out for the next meal, then the recipes ranked for it and every saved restaurant with the one fact that decides | Everyone reads; parents and admins change |
 | [Do](/wiki/controls/ideas) | What could we do? What fits the next free stretch on top, then the whole pile; open one for its hours, drive and booking link | Everyone reads; parents and admins change |
 | [Week](/wiki/controls/plans-and-tasks) | This week, a day at a time: what is on, the free time, the reminders due, and what is on your plate | Everyone; a kid sees her own things |
 | [Kids](/wiki/controls/wish-lists) | Each kid's asks and lists; a kid's own is My list | Parents answer; kids keep |

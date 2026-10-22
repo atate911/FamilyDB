@@ -12,6 +12,7 @@ The scheduled jobs are what FamilyDB does without being asked: reminders, lookup
 | Tidy job | daily 03:30 | none; `tidy_ideas` turns off only taking ideas off | No |
 | Retry job | every 5 minutes | `retry_interval_minutes`; `retry_max_attempts` bounds the retries | Only to answer a failed message |
 | Lookups job | every 2 minutes | `enrich_interval_minutes`; not scheduled while `web_tools_enabled` is off | Yes, one worker turn per idea due |
+| Recipe links job | every 2 minutes | `enrich_interval_minutes`; `recipe_links` | No: the page's own recipe data is read by code |
 | Weekend ideas job | Thursday 18:00 | `digest_day`, `digest_hour`; not scheduled while `digest_chat_id` is empty | Yes, one chat turn |
 | Follow-ups job | daily 10:00 | `follow_up_hour`; `follow_ups` | No |
 | Evening-before check | hourly 19:00 to 22:00 | `plan_check_hour`; `plan_checks` | No |
@@ -22,6 +23,10 @@ The scheduled jobs are what FamilyDB does without being asked: reminders, lookup
 | Settings watch | every 5 minutes | none | No |
 
 The program's own defaults leave `digest_chat_id` empty and `web_tools_enabled` off; the installer sets the weekend ideas to the web page's chat and turns lookups on. The settings are on [Messages](/wiki/controls/settings/messages), [Lookups](/wiki/controls/settings/lookups) and [AI model](/wiki/controls/settings/ai-model#keeping-up-with-the-companies).
+
+### Recipe links job
+
+It takes each recipe whose link nobody has tried to read, up to 10 a run, and reads the page's own recipe data (schema.org's Recipe, which nearly every recipe site carries): the name, ingredients, steps, minutes and servings. What the family said stands. The chat the link came from is told what was found, as a lookup note is. A page with no recipe data, or one that refuses to be read, is noted and left for the evening's lookups, which pay a reader for that page alone; an address on this machine or the home network is never read, by code or by a model. Idle it is one query. See [Recipes](/wiki/controls/ideas#recipes).
 
 ### Reminders job
 

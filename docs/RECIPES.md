@@ -1,8 +1,38 @@
 # Recipes and dinner ideas
 
-Draft plan, October 2026. Nothing here is built yet; each phase names what it adds and the test
-that holds it. Design in the shape of [WISHES.md](WISHES.md) and [FINDS.md](FINDS.md): what the
+Built, October 2026, as planned below with the changes under "Where it stands"; each phase names
+what it adds and the test that holds it. Design in the shape of [WISHES.md](WISHES.md) and [FINDS.md](FINDS.md): what the
 family asked for, what is decided, how it is built, what it costs.
+
+## Where it stands
+
+All four phases are built on one branch, with their tests, guide pages and design notes. Where
+the build differs from the plan below, the build is right and the plan is kept for its reasons:
+
+- **The free read is a job of its own**, `recipe_links` (`jobs/recipes.py`), not a step in the
+  lookups job: that job is not scheduled while web lookups are off, and a read that costs nothing
+  need not wait for them. The lookups job still routes a recipe to the code read first
+  (`fill.fill_recipe_in`), so no link reaches a model before code has tried it.
+- **A setting, `recipe_links`** (Lookups, on), turns the server's own read off. It is a request to
+  a site the family named, so it is the family's to stop (what leaves the house).
+- **No line in the cached prefix.** The plan had a "recipes saved" line in the family context; the
+  system prompt says recipes are not in the list and `find_recipes` finds them, so the prefix is
+  the same with none or a hundred.
+- **Rest is the family's to set.** A recipe made in the last 10 days is a maybe; the family's
+  `remember` rule with `rest_kind` recipe changes that (`meals.rest_days`). The rest kinds now
+  include recipe.
+- **A weeknight is an hour at most.** Asked for a weeknight one, a recipe over 60 minutes is ruled
+  out by its minutes, unless the family said it is a weeknight one.
+- **The reader may search and fetch twice each.** Providers give web search and fetch together, so
+  `fill_recipe` has two of each; its prompt keeps it to the given page or the same recipe's plain
+  version on the same site.
+- **No dinner slot in the hourly picks.** Now draws tonight's pick to cook at view time, by code
+  and with no model, from midday to eight; a slot in `pick_sets` would have made the same choice
+  an hour stale.
+- **Not yet done:** the evals have not been run against a model (`uv run python -m evals --case
+  recipe_said` and the other three), `familydb debug cost` has not been measured before and after,
+  and no real recipe links have been read, so the share read by code is not known and Status does
+  not show it yet.
 
 ## What the family asked for
 

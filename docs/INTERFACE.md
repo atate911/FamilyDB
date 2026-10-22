@@ -12,7 +12,7 @@ Three things, and a person always knows which they want:
 
 - **Vera to tell.** The box is the first thing on every first screen, because an instruction is the most common reason to open the app: "add this restaurant", "remind me Tuesday", "tell Maya yes". It comes back as a one-line receipt with undo.
 - **Now, arranged by Vera.** Under the box, her picks for right now and the next day or two, and anything waiting on you. She arranges this part freely each time. It is the answer to the family's daily question, which is improvisational: "what should we do, now or soon?"
-- **Destinations to look at.** A short row of screens, each named for a want ("Where should we eat?"), each one tap away, each opening on its answer with nothing to set first. Ranked by code, instant and free. Vera is there too, as a supporting assistant, through the same box scoped to the screen.
+- **Destinations to look at.** A short row of screens, each named for a want ("What should we eat?"), each one tap away, each opening on its answer with nothing to set first. Ranked by code, instant and free. Vera is there too, as a supporting assistant, through the same box scoped to the screen.
 
 Four rules hold everything below:
 
@@ -29,7 +29,7 @@ FIRST     Now                                        /
           the destination row
 
 LEVEL 1   Destinations                               path
-          Where should we eat?        (Eat out)      /eat
+          What should we eat?         (Eat)          /eat
           What could we do?           (Things)       /do
           This week                   (Calendar)     /week
           The kids                                   /kids
@@ -118,14 +118,16 @@ Every destination is built in this order, so one learned is all learned:
 
 Nothing else appears on a destination. Her picks and her finds are marked as hers; everything else is the family's own.
 
-### Where should we eat? (`/eat`)
+### What should we eat? (`/eat`)
 
-- **Opens on:** a top pick for the next meal, then every saved restaurant.
-- **The pick:** chosen by code: open at the meal time, not done recently, how it was rated, drive time, weather for a patio. Its line says why: "Open till 9, 12 min, you haven't been."
-- **Chips:** Open now · Close · Just us · With the kids · New · Cuisines that exist in the pile · Each person.
-- **Each row:** name, cuisine, one fact that decides (open till, how far, cost band), who suggested it, done before or not.
-- **Empty:** "No restaurants yet. Tell Vera one you've heard about."
-- **Kid:** the same list without cost bands or "just us".
+- **Opens on:** the pick to cook and the pick to eat out for the next meal, named together in the summary line ("Tonight: Stir fry, 25 min · or Kenji's, open till 9, 12 min"); then **Cook**, the family's recipes ranked for that meal, and **Eat out**, every saved restaurant (`docs/RECIPES.md`).
+- **The cook pick:** chosen by code (`familydb/meals.py`): a weeknight one on a weeknight when there is one, short enough for the time before a plan on the calendar tonight, not had in the last ten days (or the family's own rest for recipes), how it was rated. A recipe that cannot fit is drawn faded at the foot with why.
+- **The restaurant pick:** chosen by code: open at the meal time, not done recently, how it was rated, drive time, weather for a patio. Its line says why: "Open till 9, 12 min, you haven't been."
+- **Chips:** Cook · Eat out · Quick · Prep ahead · Family dinner · Open now · Close · New · Just us · With the kids · Cuisines that exist in the pile · Each person.
+- **Each row:** a recipe's minutes, servings, times made and rating, what it is good for (a guess marked "looks like"); a restaurant's cuisine, one fact that decides (open till, how far, cost band), who suggested it, done before or not.
+- **Grocery list:** a grown-up who may change things ticks recipes and presses **Grocery list for these**: what they need goes on the shopping list by code (`shopping_list`, `from_recipes`).
+- **Empty:** "Nothing saved yet. Tell Vera a recipe you like or a place you've heard about."
+- **Kid:** the same lists without cost bands, "just us" or the boxes.
 
 ### What could we do? (`/do`)
 

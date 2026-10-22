@@ -4,7 +4,7 @@ An [idea](/wiki/reference/glossary#idea) is something the family might do one da
 
 ## What an idea is
 
-The *kind* is free text, so a new kind needs no change to the software. The assistant prefers `restaurant`, `activity`, `outing`, `day_trip`, `trip`, `show`, `event`, `seasonal`, `home`, `gift` or `other`, and invents one only when none fits. FamilyDB saves a kind in lower case, and any way of saying present ("present", "gifts", "gift idea") as `gift`.
+The *kind* is free text, so a new kind needs no change to the software. The assistant prefers `restaurant`, `activity`, `outing`, `day_trip`, `trip`, `show`, `event`, `seasonal`, `home`, `gift`, `recipe` or `other`, and invents one only when none fits. FamilyDB saves a kind in lower case, any way of saying present ("present", "gifts", "gift idea") as `gift`, and any way of saying a dish to cook ("meal", "dish", "recipes") as `recipe`. A recipe keeps what it takes to cook it beside the idea, is never suggested as something to go and do, and is on Eat rather than Do ([Recipes](/wiki/controls/ideas#recipes)).
 
 | Part | What it holds |
 |---|---|
@@ -84,6 +84,6 @@ Birthdays are on [Things to do and reminders](/wiki/model/tasks-and-reminders#bi
 
 ## The ideas list in the prompt
 
-Each chat message carries the idea list in the [cached start of the request](/wiki/reference/glossary#prompt-cache): one line per idea, oldest first, leaving out dropped ideas and presents. Only the newest `prompt_idea_limit` are listed (150 by default; 0 sends all; set on [Spending](/wiki/controls/settings/spending)), and the assistant is told to use `search_ideas` for the rest. Adding or changing an idea changes the list, and the next message then writes the cache again.
+Each chat message carries the idea list in the [cached start of the request](/wiki/reference/glossary#prompt-cache): one line per idea, oldest first, leaving out dropped ideas, presents and recipes (a family keeps recipes by the dozen and most messages never need them, so the assistant finds them with `find_recipes` when one does). Only the newest `prompt_idea_limit` are listed (150 by default; 0 sends all; set on [Spending](/wiki/controls/settings/spending)), and the assistant is told to use `search_ideas` for the rest. Adding or changing an idea changes the list, and the next message then writes the cache again.
 
 Developer docs: src/familydb/presents.py, jobs/enrich.py and agent/worker.py; docs/DESIGN.md, "Enrichment: filling in the details".

@@ -4,6 +4,18 @@
 
 ### New since v0.5.0
 
+- **Recipes and dinner ideas.** Tell Vera a dish ("sheet-pan fajitas, 30 minutes, the kids
+  liked them"), paste a link to a recipe, or add one by hand, and it is kept with how long it takes,
+  how many it serves, what it is good for (a weeknight, prep ahead, a family dinner and more), its
+  ingredients and its steps. A pasted link is read by this server from the recipe's own page within
+  a few minutes, for nothing, and only a page with no recipe data waits for the evening's lookups.
+  What nobody said about a recipe's situation is guessed from its facts and marked as a guess, to
+  take or drop with a tap. Eat now asks "What should we eat?": a pick to cook and a pick to eat out
+  for the next meal, the recipes ranked for it beside the restaurants, a plan tonight shortening the
+  time there is. "What's for dinner?", and `/dinner` on Telegram, are answered by code, and Now
+  names a recipe to cook in the afternoon. Tick recipes, or ask, and what they need goes on the
+  shopping list, shared things once and salt and oil left off, with how much each wants under it.
+  **Read a pasted recipe link straight away** (Settings, Lookups) turns the server's own read off.
 - **The menu on the left is the same on every page.** On a computer or a tablet, opening Now, Eat or
   Kids from Settings or Status swapped the menu for a bare list of places, without the mark, how
   Vera is, What Vera knows or Behind the scenes, and the only way back was the small picture at the

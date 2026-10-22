@@ -116,7 +116,7 @@ and no menu.
   stretching the main column into it, so every page's main column starts at the same edge.
 - **The page header** opens the main column: a caps label for context, the page's title or the
   day as a display line, at most one line in the quiet tone, and a hairline under it. On the
-  family's frame a destination's head is the question it answers ("Where should we eat?") and one
+  family's frame a destination's head is the question it answers ("What should we eat?") and one
   line of the answer, then a row of chips. The page's one primary action, if it has one, sits at the header's right edge. The
   header's top lines up with the wordmark's, so the page has one top edge.
 - **The footer** ends the main column: the mark, the family's line and the version, quiet.
