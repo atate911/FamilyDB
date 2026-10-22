@@ -1,4 +1,4 @@
-"""What the family has Vera do, and which company and model does each: eight **uses**, each with one
+"""What the family has Vera do, and which company and model does each: nine **uses**, each with one
 choice (`Settings.model_choices`), laid over the settings that used to say it in five places (the
 company, a strength per situation, each company's everyday model).
 
@@ -89,7 +89,7 @@ USES: tuple[Use, ...] = (
         "lookup",
         "Looking things up",
         "Fills ideas in on the web: hours, addresses, prices.",
-        ("enrich", "discover", "price_check", "fill_recipe"),
+        ("enrich", "discover", "price_check"),
         "worker",
         "everyday",
         "search",
@@ -106,6 +106,22 @@ USES: tuple[Use, ...] = (
         "search",
         anchor="lookup",
         exact=True,
+        group="Looking",
+    ),
+    # Reading a pasted recipe's page that has no recipe data for code to read (docs/RECIPES.md):
+    # extraction, so it follows the lookups' model until the family picks one for it; off, such a
+    # link stays a link and the free read by code goes on.
+    Use(
+        "recipes",
+        "Reading recipes",
+        "Reads a pasted recipe's page when code finds no recipe on it.",
+        ("fill_recipe",),
+        "worker",
+        "everyday",
+        "search",
+        anchor="lookup",
+        exact=True,
+        off="A link code cannot read stays a link; the family can type the recipe in.",
         group="Looking",
     ),
     Use(

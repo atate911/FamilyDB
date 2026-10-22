@@ -11,6 +11,7 @@ import json
 import logging
 
 from familydb import meals
+from familydb.agent import uses
 from familydb.agent.spending import LIMITS
 from familydb.agent.worker import WorkerTurn
 from familydb.base.config import Settings
@@ -243,6 +244,18 @@ def fill_recipe_in(reach: Reach, idea: Idea, pages: PageAPI | None = None) -> st
         if read == "refused":
             return "failed"
         recipe = recipe_store.get(reach.conn, idea.id)
+    if not uses.on(reach.settings, "recipes"):
+        # Reading recipes is off on the AI model page: the link stays a link, nothing is paid.
+        why = (recipe.fill_note if recipe else None) or "no recipe on the page"
+        with transaction(reach.conn):
+            meals.not_read(
+                reach.conn,
+                idea,
+                f"{why}; reading recipes is off",
+                status="skipped",
+                now=utc_iso(reach.clock.now()),
+            )
+        return "skipped"
     try:
         turn = reach_turn(
             reach,

@@ -173,3 +173,37 @@ def test_idle_it_reads_nothing(settings, clock, conn, family):
         "refused": 0,
     }
     assert pages.read_from == []
+
+
+def test_reading_recipes_has_a_model_of_its_own(settings):
+    from familydb.agent import uses
+
+    assert uses.use_of("fill_recipe").key == "recipes"
+    follows = uses.answering(settings, "fill_recipe")
+    assert follows.model == uses.answering(settings, "enrich").model  # the lookups' until chosen
+    chosen = settings.model_copy(
+        update={"model_choices": {"recipes": "anthropic:claude-haiku-5-5"}}
+    )
+    assert uses.answering(chosen, "fill_recipe").model == "claude-haiku-5-5"
+    assert uses.answering(chosen, "enrich").model != "claude-haiku-5-5"
+
+
+def test_reading_recipes_off_keeps_the_link_and_pays_nothing(settings, clock, conn, family):
+    blog = "https://example.com/our-trip"
+    app = App(
+        settings.model_copy(
+            update={
+                "web_tools_enabled": True,
+                "lookups_when": "asap",
+                "model_choices": {"recipes": "off"},
+            }
+        ),
+        clock,
+    )
+    made = _pasted(conn, settings, clock, family, url=blog, title="Grandma's stew")
+    run_recipe_links(app, pages=Pages(**{blog: "no_recipe.html"}))
+    api = fakes.FakeMessagesAPI()
+    assert run_enrichment(app, api=api)["skipped"] == 1
+    assert api.requests == []
+    idea = ideas.get(conn, made["id"])
+    assert idea.enrichment == "skipped" and "reading recipes is off" in idea.enrichment_note

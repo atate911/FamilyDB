@@ -12,7 +12,7 @@ What each kind of call carries is on [What leaves the house](/wiki/security/what
 
 ## Which company does which job
 
-Each of eight things the assistant does has a company and a model of its own, chosen on the rows of [AI model](/wiki/controls/settings/ai-model#what-does-what). With nothing chosen a row answers as the older settings say, shown in the table.
+Each of nine things the assistant does has a company and a model of its own, chosen on the rows of [AI model](/wiki/controls/settings/ai-model#what-does-what). With nothing chosen a row answers as the older settings say, shown in the table.
 
 | Job (row) | When nothing is chosen | Older setting it falls back to |
 |---|---|---|
@@ -21,6 +21,7 @@ Each of eight things the assistant does has a company and a model of its own, ch
 | Choosing what to suggest (**Choosing suggestions**) | The chat company, at best, while choosing is on | `choosing`, `choose_level` |
 | Looking ideas up, checking a disputed price (**Looking things up**) | The lookup company | `worker_provider` (empty means `provider`), `lookup_level` |
 | Searching for what is on near home (its row, under the family's own name for it) | The same as looking things up | |
+| Reading a recipe page code could not read (**Reading recipes**) | The same as looking things up | |
 | Voice notes (**Voice notes**) | The chat company if it can hear, else another with a key | `transcribe_provider`, `voice_notes`; Claude cannot hear |
 | Photos (**Photos**) | The same as looking things up | `photos` |
 | Weighing a change in the models (**Weighing changes**) | Off until a model is chosen | `judgements`, `judgement_level` |

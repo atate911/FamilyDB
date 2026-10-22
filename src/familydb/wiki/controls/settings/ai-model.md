@@ -8,7 +8,7 @@ Nothing here is a model call. Every figure is the last 30 days of calls, priced 
 
 ## What does what
 
-There are eight rows. Each has a **company** dropdown and a **model** dropdown, and the month's cost beside them; a changed row also shows the difference.
+There are nine rows. Each has a **company** dropdown and a **model** dropdown, and the month's cost beside them; a changed row also shows the difference.
 
 | Row | What it covers | When nothing is chosen |
 |---|---|---|
@@ -17,6 +17,7 @@ There are eight rows. Each has a **company** dropdown and a **model** dropdown, 
 | **Choosing suggestions** | The stronger model that [picks what to suggest](#choosing-the-suggestions) | Best, on the company that answers the chat; off while `choosing` is off |
 | **Looking things up** | Filling in an idea, finding what is on, a disputed price | Everyday on the lookup company |
 | **What is on near home** (under the family's own name for it) | Scouting each evening for what is on near home, filling in what it finds and judging which to put forward | The same as looking things up |
+| **Reading recipes** | Reading a pasted [recipe](/wiki/controls/ideas#recipes)'s page when it has no recipe data for this server to read itself. Off, such a link stays a link (the free read goes on) | The same as looking things up |
 | **Voice notes** | Writing a [voice note](#voice-notes-and-photos) down | OpenAI's `gpt-4o-mini-transcribe` |
 | **Photos** | Reading a poster, a menu or a ticket | The same as looking things up |
 | **Weighing changes** | A [judgment](#asking-a-stronger-model-to-weigh-a-change) about a model that is going or a price that moved | Off |

@@ -49,6 +49,7 @@ THINKS = {
     "judge": "effort",
     "lookup": "worker_effort",
     "onnear": "worker_effort",
+    "recipes": "worker_effort",
 }
 # The plain settings that belong to one use: read as every other settings box is read.
 EXTRAS = {
@@ -100,6 +101,7 @@ SEES = {
     "choose": "the family's words, memories, ratings, the weeks around, what was picked lately",
     "lookup": "the idea's title, the home area, the day's hours. Never a message",
     "onnear": "the home area and the next four weeks. Never a message",
+    "recipes": "the recipe's link and title, and why code could not read it. Never a message",
     "hear": "the recording, which is not kept, and the family's names",
     "look": "the photo, which is not kept, and the family's names",
     "judge": "model names, prices and error messages. Never the family",
@@ -124,6 +126,12 @@ KNOW = {
     "onnear": [
         "Has its own monthly cap, counted inside the daily limit. Reading the calendars and "
         "Ticketmaster is code and costs nothing."
+    ],
+    "recipes": [
+        "Most recipe sites carry the recipe as data, which this server reads itself for "
+        "nothing; this model is asked only for a page without it, in the evening's lookups.",
+        "It copies ingredient lines and steps and splits each line into what to buy, so a "
+        "careful everyday model is usually enough.",
     ],
     "hear": [
         "Claude takes no recordings, so only OpenAI and Google models can be picked.",
