@@ -51,8 +51,12 @@ OCCASION_WORDS = {
     "guests": "for guests",
     "kids_cook": "kids can make it",
     "lunchbox": "lunchbox",
+    "breakfast": "breakfast",
     "freezer": "freezes well",
 }
+# What makes a recipe a dinner: one only for breakfast or a lunchbox is not offered for dinner.
+DINNERS = frozenset({"weeknight", "family_dinner", "slow", "date_night", "guests"})
+NOT_DINNERS = frozenset({"breakfast", "lunchbox"})
 CLUES: dict[str, tuple[str, ...]] = {
     "prep_ahead": (
         "make ahead",
@@ -69,6 +73,16 @@ CLUES: dict[str, tuple[str, ...]] = {
     "freezer": ("freezes well", "freezer", "freeze for", "can be frozen", "to freeze"),
     "lunchbox": ("lunchbox", "lunch box", "packed lunch"),
     "kids_cook": ("kids can", "with the kids", "kid-friendly", "kid friendly"),
+    "breakfast": (
+        "breakfast",
+        "brunch",
+        "pancake",
+        "waffle",
+        "granola",
+        "porridge",
+        "overnight oats",
+        "school morning",
+    ),
 }
 
 
@@ -98,7 +112,8 @@ def guess_occasions(recipe: Recipe, idea: Idea | None = None) -> list[str]:
     ).casefold()
     found: list[str] = []
     minutes = recipe.minutes
-    if minutes is not None and minutes <= QUICK:
+    breakfast = any(clue in text for clue in CLUES["breakfast"])
+    if minutes is not None and minutes <= QUICK and not breakfast:
         found.append("weeknight")
     if minutes is not None and minutes >= SLOW:
         found.append("slow")
@@ -177,6 +192,8 @@ class Asked:
     most_minutes: int | None = None
     text: str | None = None
     favorites: bool = False
+    # The meal asked about: for "dinner" a recipe only for breakfast or a lunchbox is ruled out.
+    meal: str | None = None
 
 
 @dataclass
@@ -261,8 +278,10 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
         too_long = (
             asked.occasion == "weeknight" and minutes is not None and minutes > WEEKNIGHT_LONGEST
         )
-        if asked.occasion in recipe.occasions or quick_enough:
+        if asked.occasion in recipe.occasions:
             reasons.append(words)
+        elif quick_enough:
+            pass  # its minutes, said first, are why
         elif too_long:
             out.append(f"takes {fmt_minutes(minutes or 0)}, too long for a weeknight")
         elif asked.occasion in recipe.occasions_guessed:
@@ -271,6 +290,14 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
             out.append(f"not a {words} one")
         else:
             maybe.append(f"nobody said if it is {words}")
+    said, guessed = set(recipe.occasions), set(recipe.occasions_guessed)
+    if asked.meal == "dinner" and not (said | guessed) & DINNERS:
+        if said & NOT_DINNERS:  # the family said so: a fact
+            words = " or ".join(occasion_words(sorted(said & NOT_DINNERS)))
+            out.append(f"a {words} one, not a dinner")
+        elif guessed & NOT_DINNERS:  # a guess only lowers it
+            words = " or ".join(occasion_words(sorted(guessed & NOT_DINNERS)))
+            maybe.append(f"looks like a {words} one")
     if asked.text:
         wanted = _words(asked.text)
         wanted |= {word[:-1] for word in wanted if word.endswith("s")}
@@ -320,10 +347,10 @@ def pick(chosen: Iterable[tuple[Idea, Recipe]], now: Situation) -> Ranked | None
     everything = list(chosen)
     if not everything:
         return None
-    asked = Asked(occasion=None if now.weekend else "weeknight")
+    asked = Asked(occasion=None if now.weekend else "weeknight", meal="dinner")
     ranked = rank(everything, now, asked)
     if ranked[0].verdict == "out" and asked.occasion:
-        ranked = rank(everything, now)
+        ranked = rank(everything, now, Asked(meal="dinner"))
     best = ranked[0]
     return best if best.verdict != "out" else None
 

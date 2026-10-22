@@ -518,10 +518,10 @@ def _cook_rows(
         rest=meals.rest_days(conn, today),
     )
     if occasion:
-        ranked = meals.rank(kept, tonight, meals.Asked(occasion=occasion))
+        ranked = meals.rank(kept, tonight, meals.Asked(occasion=occasion, meal="dinner"))
     else:
         best = meals.pick(kept, tonight)
-        ranked = meals.rank(kept, tonight)
+        ranked = meals.rank(kept, tonight, meals.Asked(meal="dinner"))
         if best is not None:
             ranked = [best, *(one for one in ranked if one.idea.id != best.idea.id)]
     rows = []

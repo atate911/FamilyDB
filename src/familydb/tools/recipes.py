@@ -126,6 +126,7 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
         most_minutes=args.most_minutes,
         text=(args.text or "").strip() or None,
         favorites=args.favorites,
+        meal=None if args.occasion in ("breakfast", "lunchbox") else "dinner",
     )
     ranked = meals.rank(store.live(ctx.conn), tonight, asked)
     kept = [one for one in ranked if one.verdict != "out"]

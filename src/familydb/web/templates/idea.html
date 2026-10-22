@@ -47,9 +47,10 @@
     <section class="found" aria-labelledby="h-recipe">
       <h2 class="sr" id="h-recipe">The recipe</h2>
       {% if recipe.facts %}<dl class="kv">{% for k, v in recipe.facts %}<dt>{{ k }}</dt><dd>{{ v | figs }}</dd>{% endfor %}</dl>{% endif %}
+      {% if recipe.guessed %}<p class="found__note">{{ assistant }}’s reading of what it is good for, which nobody has said:</p>{% endif %}
       {% for guess in recipe.guessed %}
         <div class="acts">
-          <p class="found__note">Looks like {{ guess.words }}{% if grownup %}, by {{ assistant }}’s reading{% endif %}.</p>
+          <p class="found__note">Looks like {{ guess.words }}.</p>
           {% if visitor().may('change') %}
             <form method="post" action="{{ url_for('edits.take_guess', idea_id=idea.id) }}">
               {{ guard(once=true) }}<input type="hidden" name="occasion" value="{{ guess.key }}" /><input type="hidden" name="right" value="yes" />

@@ -24,6 +24,7 @@ OCCASIONS: tuple[str, ...] = (
     "guests",
     "kids_cook",
     "lunchbox",
+    "breakfast",
     "freezer",
 )
 Occasion = Literal[
@@ -35,6 +36,7 @@ Occasion = Literal[
     "guests",
     "kids_cook",
     "lunchbox",
+    "breakfast",
     "freezer",
 ]
 FilledBy = Literal["family", "page", "lookup"]
@@ -156,11 +158,6 @@ def upsert(conn: sqlite3.Connection, idea_id: int, fields: dict[str, Any], *, no
     return found
 
 
-def delete(conn: sqlite3.Connection, idea_id: int) -> None:
-    """When an idea stops being a recipe. Call inside a transaction."""
-    conn.execute("DELETE FROM recipes WHERE idea_id = ?", (idea_id,))
-
-
 def by_source_url(conn: sqlite3.Connection, url: str) -> int | None:
     """The live recipe idea already kept for this link, if any."""
     row = conn.execute(
@@ -189,13 +186,6 @@ def live(conn: sqlite3.Connection, exclude_ids: Iterable[int] = ()) -> list[tupl
     return [(Idea.from_row(row), found.get(row["id"]) or Recipe(idea_id=row["id"])) for row in rows]
 
 
-def any_kept(conn: sqlite3.Connection) -> bool:
-    row = conn.execute(
-        "SELECT 1 FROM ideas WHERE kind = ? AND status != 'dropped' LIMIT 1", (RECIPE,)
-    ).fetchone()
-    return row is not None
-
-
 def links_to_read(conn: sqlite3.Connection, limit: int) -> list[int]:
     """Recipe ideas with a link nobody has tried to read yet, oldest first."""
     rows = conn.execute(
@@ -213,15 +203,3 @@ def clear_read(conn: sqlite3.Connection, idea_id: int, *, now: str) -> None:
         "UPDATE recipes SET filled_at = NULL, fill_note = NULL, updated_at = ? WHERE idea_id = ?",
         (now, idea_id),
     )
-
-
-def read_by(conn: sqlite3.Connection, since: str) -> dict[str, int]:
-    """How the links read since `since` were read: by code (page) or a lookup, and how many could
-    not be (a note and nothing filled), for Status."""
-    rows = conn.execute(
-        "SELECT CASE WHEN filled_at IS NULL THEN 'unread' ELSE filled_by END AS how, "
-        "COUNT(*) AS n FROM recipes WHERE source_url IS NOT NULL AND updated_at >= ? "
-        "AND (filled_at IS NOT NULL OR fill_note IS NOT NULL) GROUP BY how",
-        (since,),
-    )
-    return {row["how"] or "unread": int(row["n"]) for row in rows}

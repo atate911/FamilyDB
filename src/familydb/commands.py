@@ -592,10 +592,12 @@ def _dinner(
     seen = _no_presents(conn, msg, member, agenda.read(app, conn, today, today))
     tonight = meals.situation(now, agenda.on(seen, today), rest=meals.rest_days(conn, today))
     ranked = meals.rank(
-        kept, tonight, meals.Asked(occasion=None if tonight.weekend else "weeknight")
+        kept,
+        tonight,
+        meals.Asked(occasion=None if tonight.weekend else "weeknight", meal="dinner"),
     )
     if not ranked or ranked[0].verdict == "out":
-        ranked = meals.rank(kept, tonight)
+        ranked = meals.rank(kept, tonight, meals.Asked(meal="dinner"))
     offered = [one for one in ranked if one.verdict != "out"][:MAX_DINNER]
     if not offered:
         return voice.say(app.settings, "cmd_dinner_none", seed=seed)

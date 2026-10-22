@@ -229,6 +229,8 @@ def test_made_lately_rests_and_a_favourite_does_not(settings, clock, conn, famil
         ({"serves": 8}, ["family_dinner", "guests"]),
         ({"steps": ["Cool, then freeze for up to 3 months."]}, ["freezer"]),
         ({"total_minutes": 60, "serves": 4}, []),
+        ({"total_minutes": 5, "name": "Overnight oats"}, ["prep_ahead", "breakfast"]),
+        ({"total_minutes": 15, "name": "Pancakes"}, ["breakfast"]),
     ],
 )
 def test_situations_are_read_from_the_facts(facts, guessed):
@@ -256,6 +258,17 @@ def test_the_page_pick_on_a_weeknight_is_a_weeknight_one(settings, clock, conn, 
     weeknight = meals.situation(datetime(2026, 10, 21, 16, 0, tzinfo=TZ))
     best = meals.pick(store.live(conn), weeknight)
     assert best is not None and best.idea.title == "Stir fry"
+
+
+def test_a_breakfast_is_not_offered_for_dinner(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _recipe(us, "Overnight oats", total_minutes=5, occasions=["breakfast", "prep_ahead"])
+    _recipe(us, "Stir fry", total_minutes=25)
+    _, found = _call(us, "find_recipes")
+    assert [one["title"] for one in found["recipes"]] == ["Stir fry"]
+    assert "not a dinner" in found["ruled_out"][0]["why"]
+    _, mornings = _call(us, "find_recipes", occasion="breakfast")
+    assert mornings["recipes"][0]["title"] == "Overnight oats"
 
 
 def test_a_family_rest_for_recipes_is_held(settings, clock, conn, family):

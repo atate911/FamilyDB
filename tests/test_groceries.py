@@ -9,6 +9,7 @@ from familydb import groceries
 
 LINES = [
     ("2 cups chopped onion", "onion", "2 cups"),
+    ("1 (28-oz) can crushed tomatoes", "crushed tomatoes", "1 (28-oz) can"),
     ("1 (14-oz) can black beans, drained and rinsed", "black beans", "1 (14-oz) can"),
     ("½ tsp kosher salt", "kosher salt", "1/2 tsp"),
     ("1½ cups rice", "rice", "1 1/2 cups"),

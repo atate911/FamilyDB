@@ -417,7 +417,7 @@ def seed(conn: sqlite3.Connection, *, passwords: bool = True) -> Family:
             {
                 "total_minutes": 5,
                 "serves": 2,
-                "occasions": ["prep_ahead", "kids_cook"],
+                "occasions": ["breakfast", "prep_ahead", "kids_cook"],
                 "prep_note": "Make it the night before",
                 "ingredients": [
                     "1 cup rolled oats",

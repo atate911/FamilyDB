@@ -142,7 +142,6 @@ PREPARED = frozenset(
         "grated",
         "shredded",
         "peeled",
-        "crushed",
         "softened",
         "melted",
         "beaten",
