@@ -13,12 +13,13 @@ from typing import Any
 
 from flask import Response, abort, current_app, redirect, request, session, url_for
 
-from familydb import agenda, personas, presents
+from familydb import agenda, meals, personas, presents
 from familydb.app import App
 from familydb.base import roles
 from familydb.base.dates import utc_iso
 from familydb.store import ideas as idea_store
 from familydb.store import picks as pick_store
+from familydb.store import recipes as recipe_store
 from familydb.store import tasks as task_store
 from familydb.store.members import Member
 from familydb.web import auth, chat, conversation, household, page_rows, shell, views, wishes_view
@@ -86,6 +87,7 @@ def show() -> Response | str:
         picks = _picks(conn, app, visitor, kept, today)
         setup = status_page.setup_steps(app, conn) if visitor.manages else []
         my_list = _my_list(conn, visitor, today) if kid else None
+        dinner = _dinner(conn, now.astimezone(tz), agenda.on(seen, today))
         # The first day (docs/INTERFACE.md section 10): nothing saved and nothing on, so the box
         # asks for a place they would go back to and she says who she is; nothing empty-with-chrome.
         first_day = (
@@ -110,11 +112,37 @@ def show() -> Response | str:
         my_list=my_list,
         picks=picks,
         days=_days(rows, today, grown_up),
+        dinner=dinner,
         quiet=QUIET if grown_up else QUIET_KID,
         setup=setup,
         different=DIFFERENT,
         first_day=FIRST_DAY.format(name=personas.active(app.settings).name) if first_day else None,
     )
+
+
+# From midday until the evening, Now names a recipe for dinner when the family keeps any.
+DINNER_FROM = 12
+DINNER_UNTIL = 20
+
+
+def _dinner(conn: Any, local_now: Any, today_on: list[agenda.Entry]) -> dict[str, Any] | None:
+    """Tonight's pick to cook, by code (familydb/meals.py): the evening's plans and what was had
+    lately weighed. None outside the afternoon, with no recipes, or when nothing fits."""
+    if not DINNER_FROM <= local_now.hour < DINNER_UNTIL:
+        return None
+    kept = recipe_store.live(conn)
+    if not kept:
+        return None
+    tonight = meals.situation(local_now, today_on, rest=meals.rest_days(conn, local_now.date()))
+    best = meals.pick(kept, tonight)
+    if best is None:
+        return None
+    first = [reason for reason in best.reasons if reason[:1].isdigit()][:1]
+    return {
+        "title": best.idea.title,
+        "href": url_for("web.idea", idea_id=best.idea.id),
+        "why": first[0] if first else "",
+    }
 
 
 def _rows(

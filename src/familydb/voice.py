@@ -302,6 +302,19 @@ EVENTS: dict[str, Event] = {
         },
     ),
     "cmd_list": Event("Heading /list", "On the shopping list:", (), {}),
+    "cmd_dinner": Event("Heading /dinner", "For dinner tonight, from your recipes:", (), {}),
+    "cmd_dinner_empty": Event(
+        "Answering /dinner with no recipes saved",
+        "No recipes saved yet. Tell me one you like, or paste a link to one.",
+        (),
+        {},
+    ),
+    "cmd_dinner_none": Event(
+        "Answering /dinner when nothing fits tonight",
+        "None of your recipes fits tonight.",
+        (),
+        {},
+    ),
     "cmd_list_empty": Event(
         "Answering /list when it is empty", "Nothing on the shopping list.", (), {}
     ),

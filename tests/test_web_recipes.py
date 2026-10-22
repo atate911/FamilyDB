@@ -117,3 +117,28 @@ def test_a_kid_sees_the_recipes_and_no_boxes(app, sam, conn, settings, clock, fa
     kid.post("/you", data={**_tokens(kid, "/you"), "new": KIDS, "again": KIDS})
     page = kid.get("/eat").text
     assert "Tacos" in page and 'name="idea_ids"' not in page
+
+
+def test_now_names_a_recipe_to_cook_in_the_afternoon(settings, clock, conn, family):
+    made = _recipe(conn, settings, clock, family["sam"], "Stir fry", total_minutes=25)
+    page = _client(settings, clock).get("/").text  # Sunday, 2:03 pm
+    assert "To cook" in page and f'href="/idea/{made["id"]}">Stir fry</a>, 25 min' in page
+
+
+def test_dinner_in_plain_words_is_answered_by_code(settings, clock, conn, family):
+    from familydb import commands
+    from familydb.app import App
+    from familydb.channels.base import IncomingMessage
+
+    running = App(settings, clock)
+    asked = commands.in_words(
+        running, conn, IncomingMessage("telegram", "1", "1001", "1001", "What's for dinner?")
+    )
+    assert asked is not None and asked.text.startswith("No recipes saved yet.")
+    _recipe(conn, settings, clock, family["sam"], "Stir fry", total_minutes=25, serves=4)
+    _recipe(conn, settings, clock, family["sam"], "Dal", total_minutes=40)
+    asked = commands.answer(running, IncomingMessage("telegram", "2", "1001", "1001", "/dinner"))
+    lines = asked.text.splitlines()
+    assert lines[0] == "For dinner tonight, from your recipes:"
+    assert lines[1].startswith("#1 Stir fry: 25 min, serves 4")
+    assert conn.execute("SELECT COUNT(*) FROM llm_calls").fetchone()[0] == 0

@@ -189,7 +189,7 @@ class Ranked:
 
     @property
     def reason(self) -> str:
-        return "; ".join(self.reasons)
+        return ", ".join(self.reasons)
 
 
 def _words(text: str) -> set[str]:

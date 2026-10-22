@@ -33,13 +33,24 @@ from contextlib import closing
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from familydb import agenda, audience, buttons, family, personas, presents, task_service, voice
+from familydb import (
+    agenda,
+    audience,
+    buttons,
+    family,
+    meals,
+    personas,
+    presents,
+    task_service,
+    voice,
+)
 from familydb.agenda import Agenda
 from familydb.app import App
 from familydb.base import roles
 from familydb.base.dates import clock_time, spoken_times, utc_iso
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.store import knocks, lists, members, messages, tasks
+from familydb.store import recipes as recipe_store
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.store.tasks import Task
@@ -57,11 +68,13 @@ MENU = (
     ("lookup", "Look up the ideas waiting, now"),
     ("undo", "Undo your last change here"),
     ("list", "The shopping list"),
+    ("dinner", "What to cook tonight"),
 )
 NAMES = frozenset(name for name, _ in MENU)
 MAX_TASKS = 12
 MAX_NOW = 5
 MAX_NOT_NOW = 3
+MAX_DINNER = 3
 SOURCE_NOTES = {
     "saved": "Google Calendar isn't connected, so these are the saved plans only.",
     "unavailable": "Google Calendar didn't answer, so these are the saved plans; times may "
@@ -122,6 +135,20 @@ WORDS: dict[str, tuple[str, ...]] = {
         "what should we do right now",
     ),
     "undo": ("undo", "undo that", "undo it", "take that back"),
+    "dinner": (
+        "what's for dinner",
+        "what's for dinner tonight",
+        "what's for supper",
+        "what should we cook",
+        "what should we cook tonight",
+        "what should we make for dinner",
+        "what should we have for dinner",
+        "what can we make for dinner",
+        "what should i cook",
+        "what should i make for dinner",
+        "dinner ideas",
+        "any dinner ideas",
+    ),
 }
 _ASKED = {words: name for name, said in WORDS.items() for words in said}
 _PUNCTUATION = str.maketrans({"\u2019": "'", "\u2018": "'", "?": " ", "!": " ", ".": " "})
@@ -551,6 +578,40 @@ def _list(
     return _under(said, [item.text for item in held]), row
 
 
+def _dinner(
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
+) -> str:
+    """/dinner: the family's recipes ranked for tonight by code (familydb/meals.py), the evening's
+    plans and what was had lately weighed, each with its reason. No model call. Where a kid
+    reads, no numbers (the workings)."""
+    kept = recipe_store.live(conn)
+    if not kept:
+        return voice.say(app.settings, "cmd_dinner_empty", seed=seed)
+    now = app.clock.now()
+    today = now.date()
+    seen = _no_presents(conn, msg, member, agenda.read(app, conn, today, today))
+    tonight = meals.situation(now, agenda.on(seen, today), rest=meals.rest_days(conn, today))
+    ranked = meals.rank(
+        kept, tonight, meals.Asked(occasion=None if tonight.weekend else "weeknight")
+    )
+    if not ranked or ranked[0].verdict == "out":
+        ranked = meals.rank(kept, tonight)
+    offered = [one for one in ranked if one.verdict != "out"][:MAX_DINNER]
+    if not offered:
+        return voice.say(app.settings, "cmd_dinner_none", seed=seed)
+    plain = audience.plain(conn, msg.channel, msg.chat_id, member)
+    lines = [
+        ("" if plain else f"#{one.idea.id} ")
+        + one.idea.title
+        + (" (maybe)" if one.verdict == "maybe" else "")
+        + (f": {one.reason}" if one.reason else "")
+        for one in offered
+    ]
+    if tonight.minutes_free is not None and tonight.plan:
+        lines.append(f"About {tonight.minutes_free} min to cook before {tonight.plan}.")
+    return _under(voice.say(app.settings, "cmd_dinner", seed=seed), lines)
+
+
 ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, int], Any]] = {
     "today": _today,
     "week": _week,
@@ -559,4 +620,5 @@ ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, i
     "lookup": _lookup,
     "undo": _undo,
     "list": _list,
+    "dinner": _dinner,
 }
