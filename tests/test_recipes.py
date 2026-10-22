@@ -45,7 +45,7 @@ def _said(conn, member, text, update):
 
 
 def _recipe(ctx, title, **facts):
-    _, made = _call(ctx, "add_idea", title=title, kind="recipe", recipe=facts)
+    _, made = _call(ctx, "recipe", action="save", title=title, **facts)
     return made
 
 
@@ -80,7 +80,7 @@ def test_a_situation_the_family_names_is_theirs_and_no_longer_a_guess(
     us = _as(conn, settings, clock, family["sam"])
     made = _recipe(us, "Chili", total_minutes=240, occasions_guessed=["freezer"])
     assert made["recipe"]["occasions_guessed"] == ["slow", "freezer"]
-    _, changed = _call(us, "update_idea", id=made["id"], recipe={"occasions": ["slow"]})
+    _, changed = _call(us, "recipe", action="change", id=made["id"], occasions=["slow"])
     assert changed["recipe"]["occasions"] == ["slow"]
     assert changed["recipe"]["occasions_guessed"] == ["freezer"]
 
@@ -105,10 +105,37 @@ def test_a_title_of_their_own_is_kept_when_the_page_is_read(settings, clock, con
     assert not store.get(conn, made["id"]).name_wanted
 
 
-def test_recipe_facts_on_an_outing_are_refused(settings, clock, conn, family):
+def test_recipe_facts_are_only_for_a_recipe(settings, clock, conn, family):
     us = _as(conn, settings, clock, family["sam"])
-    refused, said = _call(us, "add_idea", title="Zoo", kind="outing", recipe={"total_minutes": 30})
-    assert refused.is_error and "kind recipe" in said["error"]
+    _, zoo = _call(us, "add_idea", title="Zoo", kind="outing")
+    refused, said = _call(us, "recipe", action="change", id=zoo["id"], total_minutes=30)
+    assert refused.is_error and "no recipe" in said["error"]
+
+
+def test_the_idea_tools_carry_no_recipe_facts(registry):
+    """A recipe's facts are on its own tool, so the idea tools every message carries keep their
+    size (docs/RECIPES.md)."""
+    for name in ("add_idea", "update_idea"):
+        assert "ingredients" not in str(registry.get(name).definition())
+
+
+def test_a_kid_may_save_a_recipe_but_not_change_one(settings, clock, conn, family):
+    made = _recipe(_as(conn, settings, clock, family["sam"]), "Tacos", serves=4)
+    kid = _as(conn, settings, clock, family["girls"])
+    refused, said = _call(kid, "recipe", action="change", id=made["id"], serves=8)
+    assert refused.is_error and "ask a parent" in said["error"]
+
+
+def test_making_a_recipe_leaves_it_one_to_cook(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Tacos", total_minutes=30)
+    _call(us, "record_outcome", idea_id=made["id"], rating=8)
+    _call(us, "record_outcome", idea_id=made["id"], rating=9)
+    kept = ideas.get(conn, made["id"])
+    assert kept.status == "idea" and kept.times_done == 2
+    _, outing = _call(us, "add_idea", title="Zoo", kind="outing")
+    _call(us, "record_outcome", idea_id=outing["id"], rating=8)
+    assert ideas.get(conn, outing["id"]).status == "done"  # an outing is done as before
 
 
 def test_a_kid_may_add_a_recipe_and_ask_for_dinner(settings, clock, conn, family):
@@ -124,9 +151,10 @@ def test_a_change_to_a_recipe_is_taken_back(settings, clock, conn, family):
     asked = _said(conn, family["sam"], "it serves six", "u1")
     _call(
         _as(conn, settings, clock, family["sam"], asked.id),
-        "update_idea",
+        "recipe",
+        action="change",
         id=made["id"],
-        recipe={"serves": 6},
+        serves=6,
     )
     assert store.get(conn, made["id"]).serves == 6
     undo = _said(conn, family["sam"], "undo that", "u2")

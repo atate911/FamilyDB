@@ -25,8 +25,9 @@ class RecordOutcomeInput(BaseModel):
 @tool(
     name="record_outcome",
     description=(
-        "Record that an idea was done and how it went. Marks the idea done, counts the visit and "
-        "updates its average rating. Returns the outcome and the updated idea."
+        "Record that an idea was done and how it went. Marks the idea done (a recipe stays one to "
+        "cook), counts the visit and updates its average rating. Returns the outcome and the "
+        "updated idea."
     ),
     writes=True,
     needs="change",

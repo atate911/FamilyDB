@@ -418,13 +418,13 @@ def _two_recipes(conn: sqlite3.Connection, house: Household) -> None:
             meals.keep(conn, made, facts, by="family", now=NOW_ISO)
 
 
-def _a_recipe(call: Call) -> bool:
-    return call.input.get("kind") == "recipe"
+def _saved(call: Call) -> bool:
+    return call.input.get("action") == "save"
 
 
 def _no_made_up_minutes(call: Call) -> bool:
-    facts = call.input.get("recipe") or {}
-    return _a_recipe(call) and not facts.get("total_minutes") and not facts.get("ingredients")
+    said = call.input
+    return _saved(call) and not said.get("total_minutes") and not said.get("ingredients")
 
 
 def _quick(call: Call) -> bool:
@@ -1135,12 +1135,12 @@ CASES: tuple[Case, ...] = (
         ("save this one: sheet-pan fajitas, about 30 minutes, the kids liked it",),
         (
             called(
-                "add_idea",
+                "recipe",
                 1,
-                lambda c: _a_recipe(c) and (c.input.get("recipe") or {}).get("total_minutes") == 30,
-                "a recipe of 30 minutes",
+                lambda c: _saved(c) and c.input.get("total_minutes") == 30,
+                "a recipe saved, of 30 minutes",
             ),
-            wrote_only("add_idea"),
+            wrote_only("recipe"),
             shorter_than(300),
         ),
         "A dish to cook is a recipe, with what was said and nothing more.",
@@ -1150,12 +1150,12 @@ CASES: tuple[Case, ...] = (
         ("https://www.seriouseats.com/sheet-pan-chicken-fajitas-recipe this one for a weeknight",),
         (
             called(
-                "add_idea",
+                "recipe",
                 1,
                 lambda c: _no_made_up_minutes(c) and "seriouseats" in str(c.input.get("url")),
                 "a recipe with its link and no minutes or ingredients made up",
             ),
-            wrote_only("add_idea"),
+            wrote_only("recipe"),
             promises_nothing(),
         ),
         "A pasted link is saved as a recipe; its page is read later, so nothing is guessed.",

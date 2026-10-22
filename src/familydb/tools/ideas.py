@@ -16,7 +16,7 @@ from familydb.store import finds, ideas, members, messages, outcomes, places
 from familydb.store import recipes as recipe_store
 from familydb.store.db import transaction
 from familydb.store.ideas import KIND_SUGGESTIONS, RECIPE
-from familydb.tools.recipes import RecipeFacts, for_kind, given, shown
+from familydb.tools.recipes import shown
 from familydb.tools.registry import ToolContext, keep_undo, tool
 
 Season = Literal["spring", "summer", "autumn", "winter"]
@@ -83,7 +83,6 @@ class AddIdeaInput(BaseModel):
     find_id: int | None = Field(
         default=None, description="When saving something she found, its find number."
     )
-    recipe: RecipeFacts | None = Field(default=None, description="Only for kind recipe.")
 
 
 class UpdateIdeaInput(BaseModel):
@@ -111,7 +110,6 @@ class UpdateIdeaInput(BaseModel):
         default=None,
         description="'dropped' removes it from the list; 'idea' brings a done idea back.",
     )
-    recipe: RecipeFacts | None = Field(default=None, description="Only for kind recipe.")
 
 
 class DescribeIdeaInput(BaseModel):
@@ -235,8 +233,6 @@ def _keep_presents(ctx: ToolContext, idea: ideas.Idea) -> None:
     writes=True,
 )
 def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
-    for_kind(args.kind, args.recipe)
-    recipe = given(args.recipe)
     cooked = ideas.normal_kind(args.kind) == RECIPE
     link = clean_url(args.url) if cooked else None
     same_link = recipe_store.by_source_url(ctx.conn, link) if link else None
@@ -263,7 +259,7 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
         }
     suggested_by = _resolve_member_name(ctx, args.suggested_by)
     _ages(args.min_age, args.max_age)
-    fields = args.model_dump(exclude={"title", "kind", "suggested_by", "find_id", "recipe", *DATES})
+    fields = args.model_dump(exclude={"title", "kind", "suggested_by", "find_id", *DATES})
     fields |= _dated(ctx, args.happens_from, args.happens_until)
     if cooked:
         fields["url"] = link
@@ -283,7 +279,7 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
         if found is not None:
             finds.mark_saved(ctx.conn, found.id, idea_id=idea.id, now=ctx.now_iso())
         if cooked:
-            _keep_recipe(ctx, idea, recipe, link)
+            _keep_recipe(ctx, idea, link)
     keep_undo(
         ctx,
         "drop_idea",
@@ -298,12 +294,10 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
 NOTHING_TO_READ = "nothing to read: a recipe with no link"
 
 
-def _keep_recipe(
-    ctx: ToolContext, idea: ideas.Idea, recipe: dict[str, Any], link: str | None
-) -> None:
-    """A new recipe's row: what was said, its link, and whether its title is only the link's
-    words, so the page's name may replace it. In the idea's transaction."""
-    facts = dict(recipe)
+def _keep_recipe(ctx: ToolContext, idea: ideas.Idea, link: str | None) -> None:
+    """A new recipe's row: its link, and whether its title is only the link's words, so the
+    page's name may replace it. Its facts are the `recipe` tool's. In the idea's transaction."""
+    facts: dict[str, Any] = {}
     if link:
         made_up = meals.title_from_link(link)
         facts |= {
@@ -351,12 +345,9 @@ def _found(ctx: ToolContext, args: AddIdeaInput) -> finds.Find | None:
     needs="change",
 )
 def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
-    changes = {
-        k: v for k, v in args.model_dump(exclude={"id", "recipe", *DATES}).items() if v is not None
-    }
-    recipe = given(args.recipe)
+    changes = {k: v for k, v in args.model_dump(exclude={"id", *DATES}).items() if v is not None}
     dated = args.happens_from is not None or args.happens_until is not None
-    if not changes and not dated and not recipe:
+    if not changes and not dated:
         raise ToolError("nothing to change: give at least one field besides id")
     with transaction(ctx.conn):
         current = ideas.get(ctx.conn, args.id)
@@ -370,27 +361,16 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
         if current is None or _kept_from(ctx, current):
             raise ToolError(f"no idea #{args.id}")
         _ages(args.min_age, args.max_age, current)
-        for_kind(changes.get("kind", current.kind), args.recipe)
         changes |= _dated(ctx, args.happens_from, args.happens_until, current)
-        cooked_before = recipe_store.get(ctx.conn, args.id)
-        idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso()) if changes else current
+        idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
         if idea is not None:
             _keep_presents(ctx, idea)
-            if idea.kind == RECIPE and (recipe or cooked_before is None):
-                link = clean_url(idea.url)
-                _changed_recipe(ctx, idea, recipe, link, made=cooked_before is None)
+            # An idea that becomes a recipe gets its row (its facts are the `recipe` tool's).
+            if idea.kind == RECIPE and recipe_store.get(ctx.conn, idea.id) is None:
+                _keep_recipe(ctx, idea, clean_url(idea.url))
     if idea is None:
         raise ToolError(f"no idea #{args.id}")
     was, now_is = current.model_dump(mode="json"), idea.model_dump(mode="json")
-    cooked_after = recipe_store.get(ctx.conn, idea.id)
-    undo_recipe: dict[str, Any] = {}
-    if recipe and cooked_before is not None and cooked_after is not None:
-        old, new = cooked_before.model_dump(mode="json"), cooked_after.model_dump(mode="json")
-        moved = sorted(key for key in RECIPE_KEPT if old.get(key) != new.get(key))
-        undo_recipe = {
-            "recipe_before": {key: old.get(key) for key in moved},
-            "recipe_after": {key: new.get(key) for key in moved},
-        }
     keep_undo(
         ctx,
         "restore_idea",
@@ -398,37 +378,8 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
         idea=idea.id,
         before={key: was.get(key) for key in changes},
         after={key: now_is.get(key) for key in changes},
-        **undo_recipe,
     )
     return _with_recipe(ctx, idea)
-
-
-# What undoing a change to a recipe puts back.
-RECIPE_KEPT = (
-    "ingredients",
-    "steps",
-    "active_minutes",
-    "total_minutes",
-    "serves",
-    "occasions",
-    "occasions_guessed",
-    "prep_note",
-)
-
-
-def _changed_recipe(
-    ctx: ToolContext,
-    idea: ideas.Idea,
-    recipe: dict[str, Any],
-    link: str | None,
-    *,
-    made: bool,
-) -> None:
-    """A recipe's facts changed, or an idea just became a recipe and gets its row."""
-    if made:
-        _keep_recipe(ctx, idea, recipe, link)
-    else:
-        meals.keep(ctx.conn, idea, recipe, by="family", now=ctx.now_iso())
 
 
 @tool(

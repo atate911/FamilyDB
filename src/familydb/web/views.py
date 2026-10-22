@@ -1573,6 +1573,7 @@ DID_WORDS = {
     "update_wish": "Changed a wish",
     "turn_away": "Turned down a request",
     "shopping_list": "Changed a list",
+    "recipe": "Saved a recipe",
     "undo": "Took a change back",
 }
 

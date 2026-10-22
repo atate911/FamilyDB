@@ -1,23 +1,27 @@
-"""Recipes (docs/RECIPES.md): the facts a recipe idea carries on `add_idea` and `update_idea`
-(`RecipeFacts`), `find_recipes` to rank them for a meal, and the lookup's hand-backs for a link
-whose page has no recipe block (`save_recipe`, `skip_recipe`). Recipes are kept out of the
-prompt's idea list, so the model finds them here; the ranking and its reasons are code's
-(familydb/meals.py)."""
+"""Recipes (docs/RECIPES.md): `find_recipes` ranks them for a meal (a read); `recipe` saves a
+new one with what was said and changes one's facts (the writes); and the lookup's hand-backs for
+a link whose page has no recipe block (`save_recipe`, `skip_recipe`). Recipes are ideas of kind
+recipe kept out of the prompt's idea list, so the model finds them here; their facts are on these
+tools alone, so the idea tools every message carries keep their size. Reading and writing are two
+tools so a question about dinner is never counted as a change. The ranking and its reasons are
+code's (familydb/meals.py)."""
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from familydb import meals
+from familydb.base import roles
 from familydb.base.errors import ToolError
 from familydb.store import ideas, plans
 from familydb.store import recipes as store
 from familydb.store.db import transaction
 from familydb.store.ideas import RECIPE
 from familydb.store.recipes import Occasion
-from familydb.tools.registry import ToolContext, tool
+from familydb.tools.registry import ToolContext, keep_undo, tool
 
 MOST_INGREDIENTS = 40
 MOST_STEPS = 30
@@ -26,16 +30,32 @@ MOST_NOTE = 300
 LONGEST = 24 * 60
 MOST_SERVES = 50
 MOST_TAGS = 5
+FACTS = (
+    "occasions",
+    "occasions_guessed",
+    "active_minutes",
+    "total_minutes",
+    "serves",
+    "ingredients",
+    "steps",
+    "prep_note",
+)
+GROWN_UPS = "changing a recipe is for the grown-ups; ask a parent"
 
 
-class RecipeFacts(BaseModel):
-    """Only what was said or shown; never guessed minutes or ingredients."""
+class RecipeInput(BaseModel):
+    """Only what was said or shown; never guessed."""
 
+    action: Literal["save", "change"] = Field(description="save a new one; change one by id.")
+    id: int | None = Field(default=None, description="change: its number.")
+    title: str | None = Field(default=None, description="save: as said, else the link's words.")
+    url: str | None = Field(default=None, description="save: the recipe's link.")
+    description: str | None = Field(default=None, description="save: anything else said.")
     occasions: list[Occasion] | None = Field(
-        default=None, description="Situations they said it suits; the whole list."
+        default=None, description="As they said; on change, the whole list."
     )
     occasions_guessed: list[Occasion] | None = Field(
-        default=None, description="Situations you read between the lines."
+        default=None, description="Ones you read between the lines."
     )
     active_minutes: int | None = None
     total_minutes: int | None = None
@@ -45,40 +65,43 @@ class RecipeFacts(BaseModel):
     prep_note: str | None = Field(default=None, description="e.g. 'marinate the night before'.")
 
 
-def given(facts: RecipeFacts | None) -> dict[str, Any]:
-    """The facts given, checked: lists bounded, numbers that could be. Raises ToolError."""
-    if facts is None:
-        return {}
+class FindRecipesInput(BaseModel):
+    occasion: Occasion | None = None
+    most_minutes: int | None = Field(default=None, description="'Quick' is 30.")
+    text: str | None = Field(default=None, description="A dish, cuisine or ingredient.")
+    favorites: bool = Field(default=False, description="Their usual, what they loved.")
+
+
+def given(source: Any) -> dict[str, Any]:
+    """The facts given (on the tool's input, or any object with those names), checked: lists
+    bounded, numbers that could be. Raises ToolError."""
     out: dict[str, Any] = {}
     for key in ("active_minutes", "total_minutes"):
-        value = getattr(facts, key)
+        value = getattr(source, key, None)
         if value is not None:
             if not 0 < value <= LONGEST:
                 raise ToolError(f"{key} is 1 to {LONGEST}")
             out[key] = value
-    if facts.serves is not None:
-        if not 0 < facts.serves <= MOST_SERVES:
+    serves = getattr(source, "serves", None)
+    if serves is not None:
+        if not 0 < serves <= MOST_SERVES:
             raise ToolError(f"serves is 1 to {MOST_SERVES}")
-        out["serves"] = facts.serves
+        out["serves"] = serves
     for key, most in (("ingredients", MOST_INGREDIENTS), ("steps", MOST_STEPS)):
-        value = getattr(facts, key)
+        value = getattr(source, key, None)
         if value is not None:
             lines = [" ".join(line.split()) for line in value if line.strip()]
             if len(lines) > most:
                 raise ToolError(f"at most {most} {key}")
             out[key] = [line[:MOST_LINE] for line in lines]
     for key in ("occasions", "occasions_guessed"):
-        value = getattr(facts, key)
+        value = getattr(source, key, None)
         if value is not None:
             out[key] = [one for one in store.OCCASIONS if one in set(value)]
-    if facts.prep_note is not None:
-        out["prep_note"] = " ".join(facts.prep_note.split())[:MOST_NOTE] or None
+    note = getattr(source, "prep_note", None)
+    if note is not None:
+        out["prep_note"] = " ".join(note.split())[:MOST_NOTE] or None
     return out
-
-
-def for_kind(kind: str, facts: RecipeFacts | None) -> None:
-    if facts is not None and ideas.normal_kind(kind) != RECIPE:
-        raise ToolError("recipe facts are only for an idea of kind recipe")
 
 
 def shown(recipe: store.Recipe) -> dict[str, Any]:
@@ -95,23 +118,78 @@ def shown(recipe: store.Recipe) -> dict[str, Any]:
     return out
 
 
-class FindRecipesInput(BaseModel):
-    occasion: Occasion | None = None
-    most_minutes: int | None = Field(default=None, description="'Quick' is 30.")
-    text: str | None = Field(default=None, description="A dish, cuisine or ingredient.")
-    favorites: bool = Field(default=False, description="Their usual, what they loved.")
-    limit: int = Field(default=5, description="1 to 10.")
+@tool(
+    name="recipe",
+    description="Save a recipe (a dish or a link) or change one's facts.",
+    writes=True,
+)
+def recipe(ctx: ToolContext, args: RecipeInput) -> dict[str, Any]:
+    if args.action == "save":
+        return _save(ctx, args)
+    return _change(ctx, args)
+
+
+def _save(ctx: ToolContext, args: RecipeInput) -> dict[str, Any]:
+    """A new recipe through `add_idea` (its duplicate checks, its undo), then its facts."""
+    from familydb.tools.ideas import AddIdeaInput, add_idea
+
+    title = (args.title or "").strip() or meals.title_from_link(args.url) or ""
+    if not title:
+        raise ToolError("save needs a title or a link")
+    facts = given(args)
+    made = add_idea(
+        ctx,
+        AddIdeaInput(title=title, kind=RECIPE, url=args.url, description=args.description),
+    )
+    if "duplicate_of" in made or not facts:
+        return made
+    idea = ideas.get(ctx.conn, made["id"])
+    assert idea is not None
+    with transaction(ctx.conn):
+        kept = meals.keep(ctx.conn, idea, facts, by="family", now=ctx.now_iso())
+    return {**made, "recipe": shown(kept)}
+
+
+def _change(ctx: ToolContext, args: RecipeInput) -> dict[str, Any]:
+    """One recipe's facts, as the family said them; its old facts kept for undo."""
+    if ctx.member is not None and not roles.may(ctx.member.role, "change"):
+        raise ToolError(GROWN_UPS)
+    if args.id is None:
+        raise ToolError("change needs the recipe's id")
+    facts = given(args)
+    if not facts:
+        raise ToolError("nothing to change: give a fact")
+    with transaction(ctx.conn):
+        idea = ideas.get(ctx.conn, args.id)
+        if idea is None or idea.kind != RECIPE:
+            raise ToolError(f"no recipe #{args.id}")
+        before = store.get(ctx.conn, idea.id) or store.Recipe(idea_id=idea.id)
+        after = meals.keep(ctx.conn, idea, facts, by="family", now=ctx.now_iso())
+    old, new = before.model_dump(mode="json"), after.model_dump(mode="json")
+    moved = sorted(key for key in FACTS if old.get(key) != new.get(key))
+    if moved:
+        keep_undo(
+            ctx,
+            "restore_idea",
+            f"changed recipe #{idea.id} {idea.title}",
+            idea=idea.id,
+            before={},
+            after={},
+            recipe_before={key: old.get(key) for key in moved},
+            recipe_after={key: new.get(key) for key in moved},
+        )
+    return {"id": idea.id, "title": idea.title, "recipe": shown(after)}
 
 
 @tool(
     name="find_recipes",
     description=(
-        "The family's recipes, ranked by code for tonight or what was asked, each with its "
-        "reason. Recipes are not in the ideas list; this finds them."
+        "The family's recipes, which are not in the ideas list, ranked by code for tonight or "
+        "what was asked, each with its reason."
     ),
 )
 def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
-    limit = max(1, min(args.limit, meals.MOST_SHOWN))
+    limit = meals.MOST_SHOWN // 2
     if args.most_minutes is not None and not 0 < args.most_minutes <= LONGEST:
         raise ToolError(f"most_minutes is 1 to {LONGEST}")
     now = ctx.clock.now()
@@ -121,12 +199,13 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
         plans.overlapping(ctx.conn, today, today),
         rest=meals.rest_days(ctx.conn, now.date()),
     )
+    occasion = args.occasion
     asked = meals.Asked(
-        occasion=args.occasion,
+        occasion=occasion,
         most_minutes=args.most_minutes,
         text=(args.text or "").strip() or None,
         favorites=args.favorites,
-        meal=None if args.occasion in ("breakfast", "lunchbox") else "dinner",
+        meal=None if occasion in ("breakfast", "lunchbox") else "dinner",
     )
     ranked = meals.rank(store.live(ctx.conn), tonight, asked)
     kept = [one for one in ranked if one.verdict != "out"]
@@ -209,7 +288,7 @@ def save_recipe(ctx: ToolContext, args: SaveRecipeInput) -> dict[str, Any]:
     if not args.ingredients and not args.steps:
         raise ToolError("give the ingredients or the steps, or skip_recipe")
     facts = given(
-        RecipeFacts(
+        SimpleNamespace(
             active_minutes=_sane(args.prep_minutes),
             total_minutes=_sane(args.total_minutes),
             serves=args.serves if args.serves and 0 < args.serves <= MOST_SERVES else None,

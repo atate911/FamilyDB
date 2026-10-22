@@ -58,6 +58,7 @@ STALE_IDEA = (
     "make your change again."
 )
 RECORDED = "Recorded. #{id} is marked done."
+RECORDED_MADE = "Recorded: #{id} made once more."
 # "How did it go?" on Home: three faces, kept as the same 1 to 10 rating the longer form takes.
 FACES = {"loved": 9, "ok": 6, "not-great": 3}
 RATED = "Thanks. That goes into the next suggestions."
@@ -252,8 +253,9 @@ def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
 
 
 def _recipe_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
-    """The idea form's Recipe part in the shape `RecipeFacts` takes. Sent every time, so emptying
-    a box clears it (the lines) or leaves it as it was (a number, which a tool cannot unset)."""
+    """The idea form's Recipe part, as the `recipe` tool's change takes it. Sent every time, so
+    emptying a box clears it (the lines) or leaves it as it was (a number, which a tool cannot
+    unset)."""
     found: dict[str, Any] = {}
     for key, label in RECIPE_NUMBERS:
         given = _text(form, key)
@@ -331,6 +333,7 @@ def add_idea() -> Response:
     found = _text(request.form, "find_id")
     if found.isascii() and found.isdigit() and len(found) <= 18:
         values["find_id"] = int(found)  # saving something she found (a happening's page)
+    facts = values.pop("recipe", None)
     result, complaint = run("add_idea", values, hidden_from=_hidden_from(request.form))
     if result is None:
         _say(complaint or "")
@@ -338,6 +341,13 @@ def add_idea() -> Response:
     if "duplicate_of" in result:
         _say(DUPLICATE.format(id=result["duplicate_of"]))
         return _back("web.idea", idea_id=result["duplicate_of"])
+    if facts:  # a recipe's facts are the recipe tool's; Undo drops the whole recipe
+        _, complaint = run(
+            "recipe", {"action": "change", "id": result["id"], **facts}, offer_undo=False
+        )
+        if complaint:
+            _say(complaint)
+            return _back("web.idea", idea_id=result["id"])
     _say(SAVED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(result["id"]))
     return _back("web.idea", idea_id=result["id"])
 
@@ -393,12 +403,21 @@ def edit_idea(idea_id: int) -> Response:
     status = _text(request.form, "status")
     if status:
         values["status"] = status
+    facts = values.pop("recipe", None)
     result, complaint = run(
-        "update_idea", {**values, "id": idea_id}, hidden_from=_hidden_from(request.form)
+        "update_idea",
+        {**values, "id": idea_id},
+        hidden_from=_hidden_from(request.form),
+        offer_undo=not facts,
     )
     if result is None:
         _say(complaint or "")
         return _back("web.edit_idea", idea_id=idea_id)
+    if facts:  # a recipe's facts: the recipe tool's change, which Undo takes back
+        _, complaint = run("recipe", {"action": "change", "id": idea_id, **facts})
+        if complaint:
+            _say(complaint)
+            return _back("web.edit_idea", idea_id=idea_id)
     _say(CHANGED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(idea_id))
     return _back("web.idea", idea_id=idea_id)
 
@@ -480,8 +499,10 @@ def record_outcome(idea_id: int) -> Response:
     repeat = _text(form, "would_repeat")
     if repeat in {"yes", "no"}:
         values["would_repeat"] = repeat == "yes"
-    _, complaint = run("record_outcome", values)
-    _say(complaint or (RATED if went in FACES else RECORDED.format(id=idea_id)))
+    result, complaint = run("record_outcome", values)
+    cooked = bool(result) and (result.get("idea") or {}).get("kind") == idea_store.RECIPE
+    done = (RECORDED_MADE if cooked else RECORDED).format(id=idea_id)
+    _say(complaint or (RATED if went in FACES else done))
     if _text(form, "back") == "home":  # asked on Home: back there for the next one
         return _back("web.home")
     if _text(form, "back") == "board":  # asked on the kitchen tablet
@@ -777,7 +798,7 @@ def list_from_recipes() -> Response:
 @once
 def take_guess(idea_id: int) -> Response:
     """A situation she guessed for a recipe: That's right makes it the family's, Not that takes the
-    guess away (update_idea with the recipe's situations, as she would call it)."""
+    guess away (the recipe tool's change, as she would call it)."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.idea", idea_id=idea_id)
@@ -793,7 +814,7 @@ def take_guess(idea_id: int) -> Response:
     else:
         change = {"occasions_guessed": [one for one in recipe.occasions_guessed if one != occasion]}
         notice = DROPPED_GUESS
-    result, complaint = run("update_idea", {"id": idea_id, "recipe": change})
+    result, complaint = run("recipe", {"action": "change", "id": idea_id, **change})
     _say(complaint or "" if result is None else notice.format(id=idea_id, words=words))
     return _back("web.idea", idea_id=idea_id)
 

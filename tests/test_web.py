@@ -853,7 +853,8 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         "add_wish",
         "update_wish",
         "undo",  # the Undo beside a form's notice and under her reply (familydb/undo.py)
-        "shopping_list",  # the Lists page (tools/lists.py)
+        "shopping_list",  # the Lists page, and a grocery list from recipes (tools/lists.py)
+        "recipe",  # a recipe's facts on the idea form, and taking or dropping her guess
     }
     # And it runs them the one way: through the registry, which validates and owns the transaction.
     assert (

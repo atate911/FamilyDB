@@ -84,8 +84,8 @@ def test_what_the_family_said_stands_over_the_page(settings, clock, conn, family
     ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
     made = json.loads(
         REGISTRY.dispatch(
-            "add_idea",
-            {"title": "Jo's fajitas", "kind": "recipe", "url": LINK, "recipe": {"serves": 6}},
+            "recipe",
+            {"action": "save", "title": "Jo's fajitas", "url": LINK, "serves": 6},
             ctx,
         ).content
     )

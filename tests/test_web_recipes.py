@@ -19,7 +19,7 @@ REGISTRY = build_registry()
 
 def _recipe(conn, settings, clock, member, title, **facts):
     ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=member)
-    result = REGISTRY.dispatch("add_idea", {"title": title, "kind": "recipe", "recipe": facts}, ctx)
+    result = REGISTRY.dispatch("recipe", {"action": "save", "title": title, **facts}, ctx)
     return json.loads(result.content)
 
 

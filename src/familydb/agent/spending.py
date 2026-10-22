@@ -43,6 +43,7 @@ DONE = {
     "skip_place": ("Marked lookup skipped", "idea_id"),
     "save_find": ("Saved details of a find", "find_id"),
     "skip_find": ("Marked a find's lookup skipped", "find_id"),
+    "recipe": ("Saved recipe", "id"),
     "save_recipe": ("Saved a recipe's details", "idea_id"),
     "skip_recipe": ("Marked a recipe's lookup skipped", "idea_id"),
     "look_up_now": ("Asked for a lookup", "idea_id"),

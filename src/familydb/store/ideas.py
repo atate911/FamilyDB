@@ -550,13 +550,15 @@ def apply_outcome(
     avg_rating: float | None,
     now: str | None = None,
 ) -> Idea | None:
-    """Bookkeeping after an outcome: done count, last date, average, status."""
+    """Bookkeeping after an outcome: done count, last date, average, status. A recipe is made
+    again and again, so it is counted and stays one to cook, never "done" (docs/RECIPES.md)."""
     conn.execute(
         "UPDATE ideas SET times_done = times_done + 1, "
         "last_done_at = CASE WHEN last_done_at IS NULL OR last_done_at < ? THEN ? "
         "ELSE last_done_at END, "
-        "avg_rating = ?, status = 'done', updated_at = ? WHERE id = ?",
-        (happened_on, happened_on, avg_rating, now or utcnow_iso(), idea_id),
+        "avg_rating = ?, status = CASE WHEN kind = ? THEN 'idea' ELSE 'done' END, "
+        "updated_at = ? WHERE id = ?",
+        (happened_on, happened_on, avg_rating, RECIPE, now or utcnow_iso(), idea_id),
     )
     return get(conn, idea_id)
 

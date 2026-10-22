@@ -38,6 +38,16 @@ the build differs from the plan below, the build is right and the plan is kept f
   on the calendar quieter), the kitchen board names tonight's pick, and Eat is a module of its own
   (`web/eat_page.py`). The row of eight places is unchanged: a ninth for cooking would crowd a
   phone's row, and Eat already asks the question.
+- **A recipe's facts are on tools of their own** (after a review of the design, October 2026). The
+  plan put them on `add_idea` and `update_idea` as a nested `recipe` field, which declared the same
+  schema twice in the tools every message carries. Now `recipe` saves (through `add_idea`, so its
+  duplicate checks and undo hold) and changes a recipe's facts, and `find_recipes` stays a separate
+  read, so a question about dinner is never counted as a change on the page or in a budget
+  cut-off. Measured on the tool list and system prompt, the recipe work adds about 3,900
+  characters to the cached prefix (about 970 tokens at four characters a token), down from about
+  5,300; the plan's estimate of 400 tokens was low.
+- **Making a recipe leaves it one to cook.** Recording a dinner counts it as made and keeps its
+  status an idea, where an outing becomes done (`ideas.apply_outcome`).
 - **Not yet done:** the evals have not been run against a model (`uv run python -m evals --case
   recipe_said` and the other three), `familydb debug cost` has not been measured before and after,
   and no real recipe links have been read, so the share read by code is not known and Status does
