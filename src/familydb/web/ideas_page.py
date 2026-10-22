@@ -355,7 +355,7 @@ def idea(idea_id: int) -> str:
         facts=_facts(record, card, place_panel, recipe_facts, grown_up=visitor.may("browse")),
         place=place_panel,
         recipe=recipe_panel,
-        outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
+        outcomes=[views.outcome_row(o, cooked=record.kind == RECIPE) for o in reversed(outcomes)],
         plans=planned,
         changed=views.changed_line(
             changed, settings.tzinfo, assistant=personas.active(settings).name
@@ -376,8 +376,9 @@ def _facts(
     facts = views.idea_facts(record, card, place, grown_up=grown_up)
     if record.kind != RECIPE:
         return facts
-    made = [(k, v.replace("done", "made", 1) if k == "So far" else v, tone) for k, v, tone in facts]
-    return [*((key, value, "") for key, value in recipe), *made]
+    # The state line already says how often it was made, so "So far" is not said again.
+    kept = [fact for fact in facts if fact[0] != "So far"]
+    return [*((key, value, "") for key, value in recipe), *kept]
 
 
 def _idea_form(record: Any = None) -> str:

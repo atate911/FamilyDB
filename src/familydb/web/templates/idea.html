@@ -46,22 +46,30 @@
   {% if recipe %}
     <section class="found" aria-labelledby="h-recipe">
       <h2 class="sr" id="h-recipe">The recipe</h2>
-      {% if recipe.guessed %}<p class="found__note">{{ assistant }}’s reading of what it is good for, which nobody has said:</p>{% endif %}
-      {% for guess in recipe.guessed %}
-        <div class="acts">
-          <p class="found__note">Looks like {{ guess.words }}.</p>
-          {% if visitor().may('change') %}
-            <form method="post" action="{{ url_for('edits.take_guess', idea_id=idea.id) }}">
-              {{ guard(once=true) }}<input type="hidden" name="occasion" value="{{ guess.key }}" /><input type="hidden" name="right" value="yes" />
-              <button class="q__lnk" type="submit">That’s right<span class="sr">: {{ guess.words }}</span></button>
-            </form>
-            <form method="post" action="{{ url_for('edits.take_guess', idea_id=idea.id) }}">
-              {{ guard(once=true) }}<input type="hidden" name="occasion" value="{{ guess.key }}" /><input type="hidden" name="right" value="no" />
-              <button class="q__lnk" type="submit">Not that<span class="sr">: {{ guess.words }}</span></button>
-            </form>
-          {% endif %}
-        </div>
-      {% endfor %}
+      {# Her guesses at what it is good for, folded to one quiet line; open, each is taken or dropped. #}
+      {% if recipe.guessed %}
+        <details class="fold fold--quiet">
+          <summary>{{ assistant }}’s guess: {{ recipe.guessed | map(attribute='words') | join(', ') }}{{ icon('chev', size='sm', cls='chev') }}</summary>
+          <div class="fold__body">
+            <p class="found__note">Nobody has said what it is good for; this is her reading of the recipe.</p>
+            {% for guess in recipe.guessed %}
+              <div class="acts">
+                <span>{{ guess.words | capitalize }}</span>
+                {% if visitor().may('change') %}
+                  <form method="post" action="{{ url_for('edits.take_guess', idea_id=idea.id) }}">
+                    {{ guard(once=true) }}<input type="hidden" name="occasion" value="{{ guess.key }}" /><input type="hidden" name="right" value="yes" />
+                    <button class="q__lnk" type="submit">That’s right<span class="sr">: {{ guess.words }}</span></button>
+                  </form>
+                  <form method="post" action="{{ url_for('edits.take_guess', idea_id=idea.id) }}">
+                    {{ guard(once=true) }}<input type="hidden" name="occasion" value="{{ guess.key }}" /><input type="hidden" name="right" value="no" />
+                    <button class="q__lnk" type="submit">Not that<span class="sr">: {{ guess.words }}</span></button>
+                  </form>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </details>
+      {% endif %}
       {% if recipe.ingredients %}
         <details class="fold fold--quiet" open>
           <summary>Ingredients{{ icon('chev', size='sm', cls='chev') }}</summary>
@@ -75,7 +83,7 @@
         </details>
       {% endif %}
       {% if recipe.source_url %}
-        <p class="found__links"><a href="{{ recipe.source_url }}" rel="noopener noreferrer">{{ icon('link', size='sm') }}{{ recipe.source_site or 'The recipe' }}</a></p>
+        <p class="found__links"><a href="{{ recipe.source_url }}" rel="noopener noreferrer">{{ icon('link', size='sm') }}The recipe</a></p>
       {% endif %}
       {% if recipe.read %}<p class="found__by">{{ recipe.read }}.</p>{% endif %}
       {% if recipe.unread %}<p class="sec__note">Its page could not be read straight away ({{ recipe.unread }}); it is read with the evening’s lookups.</p>{% endif %}
@@ -130,7 +138,7 @@
   {% endif %}
   {% if outcomes %}
     <section class="sec" aria-labelledby="h-how">
-      <div class="sec__label"><h2 id="h-how" class="label">How it went</h2></div>
+      <div class="sec__label"><h2 id="h-how" class="label">{{ 'Made' if recipe else 'How it went' }}</h2></div>
       {% for outcome in outcomes %}
         <div class="set set--done">
           <span class="set__num">{{ icon('smile') }}</span>

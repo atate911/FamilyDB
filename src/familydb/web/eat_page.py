@@ -28,6 +28,8 @@ LIST_LIMIT = 200
 CLOSE_MINUTES = 20
 # How many of each side the overview shows under its pick.
 OVERVIEW = 3
+# Cuisines shown as chips on Cook: the situations come first, so fewer than Eat out's eight.
+COOK_TAGS = 4
 SIDES = ("cook", "out")
 # The situations asked for at breakfast or for a lunchbox are not dinners.
 NOT_DINNER = frozenset({"breakfast", "lunchbox"})
@@ -301,7 +303,7 @@ def _cook_chips(
             "href": url_for("web.restaurants", side="cook", tag=one),
             "on": tag == one,
         }
-        for one in cooking_tags[:8]
+        for one in cooking_tags[:COOK_TAGS]
     ]
     if any(chip["on"] for chip in chips):
         chips.insert(

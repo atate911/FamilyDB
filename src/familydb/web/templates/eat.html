@@ -14,7 +14,7 @@
         {% if loop.first and top %}<span class="r__label">{{ top }}</span>{% endif %}
         <span class="r__t"><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></span>
         <span class="r__m">{{ row.line }}</span>
-        {% if listing and row.shoppable %}<span class="r__tr"><label class="check"><input type="checkbox" name="idea_ids" value="{{ row.id }}" /><span class="sr">Put {{ row.title }} on the list</span></label></span>{% endif %}
+        {% if listing and row.shoppable %}<span class="r__tr"><label class="check check--tick"><input type="checkbox" name="idea_ids" value="{{ row.id }}" /><span class="sr">Put {{ row.title }} on the list</span></label></span>{% endif %}
       </div>
     {% endfor %}
   </div>
@@ -56,7 +56,8 @@
     {% if cards %}
       <section class="sec" aria-labelledby="h-out">
         <div class="sec__label"><h2 id="h-out" class="label">To eat out</h2><a href="{{ url_for('web.restaurants', side='out') }}">All {{ out_all }}</a></div>
-        {{ out_rows(cards, top) }}
+        {# One thing leads the next meal: the cook pick's card; the place is a plain row when there is one. #}
+        {{ out_rows(cards, none if cooking else top) }}
       </section>
     {% endif %}
   {% elif side == 'cook' and cooking %}
@@ -66,7 +67,7 @@
       {% if listing %}<form method="post" action="{{ url_for('edits.list_from_recipes') }}">{{ guard(once=true) }}{% endif %}
       {{ cook_rows(cooking, cook_top, listing) }}
       {% if listing %}
-        <div class="actions"><button class="btn btn--quiet btn--sm" type="submit">{{ icon('list', size='sm') }}Grocery list for these</button><span class="small muted">What the ticked recipes need goes on the shopping list, less salt, oil and the like.</span></div>
+        <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ icon('list', size='sm') }}Grocery list for these</button><span class="small muted">What the ticked recipes need goes on the shopping list, less salt, oil and the like.</span></div>
       </form>{% endif %}
     </section>
   {% elif side == 'out' and cards %}

@@ -209,12 +209,13 @@ class Ranked:
     idea: Idea
     recipe: Recipe
     verdict: Literal["good", "maybe", "out"]
-    reasons: list[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)  # the facts, or why it is out
+    caveats: list[str] = field(default_factory=list)  # what only lowers it: said last
     score: tuple[float, ...] = ()
 
     @property
     def reason(self) -> str:
-        return ", ".join(self.reasons)
+        return ", ".join([*self.reasons, *self.caveats])
 
 
 def _words(text: str) -> set[str]:
@@ -325,7 +326,7 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
     if days is not None and days < now.rest_days and not asked.favorites:
         maybe.append(f"had it {_when_words(days)}")
     verdict: Literal["good", "maybe", "out"] = "out" if out else ("maybe" if maybe else "good")
-    shown = out if out else [*maybe, *reasons]
+    shown = out if out else reasons
     rating = idea.avg_rating if idea.avg_rating is not None else 6.0
     score = (
         {"good": 0, "maybe": 1, "out": 2}[verdict],
@@ -334,7 +335,14 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
         minutes if minutes is not None else 90,
         -idea.id,
     )
-    return Ranked(idea, recipe, verdict, shown, tuple(float(x) for x in score))
+    return Ranked(
+        idea,
+        recipe,
+        verdict,
+        shown,
+        [] if out else maybe,
+        tuple(float(x) for x in score),
+    )
 
 
 ANYTHING = Asked()

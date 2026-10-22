@@ -581,10 +581,7 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
     assert _cards(page.text) == 2 and "Museum day" not in page.text  # not the outing
     # The top pick for the next meal leads, with the one line that decides; the rest follow.
     assert "What should we eat?" in page.text
-    assert (
-        "Tonight: Ramen place, open today 11\u00a0am to 9\u00a0pm · 12 min · $$ · not been yet."
-        in page.text
-    )
+    assert "Tonight: Ramen place, open till 9\u00a0pm, 12 min." in page.text
     top = re.search(r'<div class="r r--top">.*?</div>\s*<div class="r">', page.text, re.S).group(0)
     assert "Ramen place" in top and '<span class="r__label">Tonight</span>' in top
     assert f'href="/idea/{ramen.id}"' in page.text  # the place page has the links out

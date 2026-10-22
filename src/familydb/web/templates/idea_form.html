@@ -49,6 +49,9 @@
           <textarea id="i-desc" name="description" rows="3" data-dictate>{{ idea.description or '' if editing else '' }}</textarea></div>
       </fieldset>
 
+      {% set cooking = (idea.kind if editing else kind_given) == 'recipe' %}
+      {# A present's fieldset: not for a recipe, which is nobody's surprise. #}
+      {% if not cooking %}
       <fieldset class="fieldset">
         <legend>Hidden from</legend>
         <p class="small muted">For a present (kind “gift”). A present is kept from every kid, always, and from the grown-up it is for; tick another grown-up to keep it from them too.</p>
@@ -58,8 +61,8 @@
           {% endfor %}
         </div>
       </fieldset>
+      {% endif %}
 
-      {% set cooking = (idea.kind if editing else kind_given) == 'recipe' %}
       <details class="fieldfold"{{ ' open' if cooking }}>
         <summary>Recipe <span class="val">minutes, servings, what it’s good for, ingredients, steps</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
         <div class="fieldfold__body">

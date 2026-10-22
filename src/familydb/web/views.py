@@ -805,15 +805,32 @@ def cook_line(ranked: meals.Ranked) -> str:
     if ranked.verdict == "out":  # why it does not fit is the whole line
         line = " · ".join(said)
         return line[:1].upper() + line[1:]
+    # The facts, what it suits (two at most; the rest, and her guesses, are on its page), and
+    # what only lowers it last, so a pick's line does not open with a reason against it.
     occasions = [one for one in meals.occasion_words(ranked.recipe.occasions) if one not in said]
     if occasions:
-        said.append(", ".join(occasions))
-    elif ranked.recipe.occasions_guessed:
-        said.append(
-            "looks like " + ", ".join(meals.occasion_words(ranked.recipe.occasions_guessed))
-        )
+        said.append(", ".join(occasions[:ROW_OCCASIONS]))
+    said += ranked.caveats
     line = " · ".join(said)
     return line[:1].upper() + line[1:]
+
+
+ROW_OCCASIONS = 2
+
+
+def eat_short(card: dict[str, Any]) -> str:
+    """A restaurant in a few words for the summary line: open till when, and how far."""
+    parts: list[str] = []
+    today = card.get("today") or ""
+    found = re.search(r" to (.+)$", today)
+    if found:
+        parts.append(f"open till {found.group(1)}")
+    elif today:
+        parts.append(today)
+    if card.get("travel"):
+        minutes = travel_minutes(card["travel"])
+        parts.append(f"{minutes} min" if minutes < 999 else card["travel"])
+    return ", ".join(parts) or (card.get("line") or "").lower()
 
 
 def recipe_panel(recipe: Recipe | None, tz: ZoneInfo, *, grown_up: bool) -> dict[str, Any] | None:
@@ -837,18 +854,19 @@ def recipe_panel(recipe: Recipe | None, tz: ZoneInfo, *, grown_up: bool) -> dict
         facts.append(("Good for", ", ".join(meals.occasion_words(recipe.occasions))))
     if recipe.prep_note:
         facts.append(("Ahead", recipe.prep_note))
-    if recipe.source_site:
-        facts.append(("From", recipe.source_site))
     read = None
     if recipe.filled_at and recipe.filled_by in ("page", "lookup"):
         day = day_short(date.fromisoformat(local_day(recipe.filled_at, tz)))
         read = f"Read from {recipe.source_site or 'its page'}, {day}"
     return {
         "facts": facts,
+        # Her guesses are the workings: a grown-up's to take or drop, never shown to a kid.
         "guessed": [
             {"key": one, "words": meals.OCCASION_WORDS.get(one, one)}
             for one in recipe.occasions_guessed
-        ],
+        ]
+        if grown_up
+        else [],
         "occasions": list(recipe.occasions),
         "ingredients": [one.text for one in recipe.ingredients],
         "steps": recipe.steps,
@@ -867,13 +885,11 @@ def occasion_choices() -> list[tuple[str, str]]:
 def eat_both_summary(cook: dict[str, Any] | None, out: dict[str, Any] | None, meal: str) -> str:
     """The line under What should we eat: the cook pick and the restaurant pick for the meal."""
     if cook and out:
-        return (
-            f"{meal}: {cook['title']}, {cook['short']} · or {out['title']}, {out['line'].lower()}."
-        )
+        return f"{meal}: {cook['title']}, {cook['short']} · or {out['title']}, {eat_short(out)}."
     if cook:
         return f"{meal}: {cook['title']}, {cook['short']}."
     if out:
-        return f"{meal}: {out['title']}, {out['line'].lower()}."
+        return f"{meal}: {out['title']}, {eat_short(out)}."
     return "Nothing saved yet."
 
 
@@ -1481,10 +1497,12 @@ AGENDA_NOTES = {
 }
 
 
-def outcome_row(outcome: Outcome) -> dict[str, Any]:
+def outcome_row(outcome: Outcome, *, cooked: bool = False) -> dict[str, Any]:
+    """How one time went; for a recipe (`cooked`) in a recipe's words."""
     repeat = None
     if outcome.would_repeat is not None:
-        repeat = "would go again" if outcome.would_repeat else "would not go again"
+        verb = "make" if cooked else "go"
+        repeat = f"would {verb} again" if outcome.would_repeat else f"would not {verb} again"
     return {
         "when": day_text(outcome.happened_on),
         "rating": f"{outcome.rating}/10" if outcome.rating is not None else None,

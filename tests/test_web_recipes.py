@@ -35,7 +35,7 @@ def test_eat_ranks_what_to_cook_beside_the_restaurants(settings, clock, conn, fa
     assert 'aria-label="Cook or eat out"' not in page  # only recipes kept: no tabs, the list whole
     cook = page[page.index('id="h-cook"') :]
     assert cook.index("Stir fry") < cook.index("Short ribs")
-    assert "looks like weeknight" in cook  # her guess, marked as one
+    assert "looks like" not in cook  # her guesses are on a recipe's page, not in its row
     # Narrowed to quick ones, the slow one is said last and why.
     quick = _client(settings, clock).get("/eat?occasion=weeknight").text
     assert "r--faded" in quick and "too long for a weeknight" in quick
@@ -55,7 +55,7 @@ def test_a_recipe_page_draws_it_and_her_guess_is_taken_with_a_tap(settings, cloc
     browser = _client(settings, clock)
     page = browser.get(f"/idea/{made['id']}").text
     assert "1 cup red lentils" in page and "<li>Simmer.</li>" in page
-    assert "Looks like weeknight" in page and "That\u2019s right" in page
+    assert "guess: weeknight" in page and "That\u2019s right" in page
     taken = browser.post(
         f"/idea/{made['id']}/occasion",
         data={**_token(page), "occasion": "weeknight", "right": "yes"},
@@ -204,3 +204,18 @@ def test_one_undo_never_takes_back_half_an_edit(settings, clock, conn, family):
         follow_redirects=True,
     )
     assert "Changed #" in _said(both) and ">Undo<" not in both.text
+
+
+def test_a_kid_is_shown_no_guesses(app, sam, conn, settings, clock, family):  # noqa: F811
+    made = _recipe(conn, settings, clock, family["sam"], "Stir fry", total_minutes=20)
+    kid = _browser_as(app, "the girls", _start(sam, family["girls"].id))
+    kid.post("/you", data={**_tokens(kid, "/you"), "new": KIDS, "again": KIDS})
+    page = kid.get(f"/idea/{made['id']}").text
+    assert "Stir fry" in page and "guess" not in page.casefold()
+
+
+def test_a_grocery_tick_is_a_whole_target_and_the_one_action(settings, clock, conn, family):
+    _recipe(conn, settings, clock, family["sam"], "Stir fry", ingredients=["1 onion"])
+    page = _client(settings, clock).get("/eat?side=cook").text
+    assert 'class="check check--tick"' in page
+    assert 'class="btn btn--primary btn--sm" type="submit">' in page  # Grocery list for these
