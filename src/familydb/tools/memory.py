@@ -41,6 +41,7 @@ RestKind = Literal[
     "event",
     "seasonal",
     "home",
+    "recipe",
     "other",
 ]
 FAMILY = frozenset({"family", "the family", "everyone", "household", "us", "we", "all of us"})

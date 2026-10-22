@@ -141,7 +141,7 @@ def brief(conn: sqlite3.Connection, settings: Settings, *, today: date) -> Brief
     on_list = {
         idea.id: idea
         for idea in ideas.list_all(conn)
-        if idea.status != "dropped" and not ideas.is_gift(idea)
+        if idea.status != "dropped" and not ideas.is_gift(idea) and idea.kind != ideas.RECIPE
     }
     titles = sorted(on_list.values(), key=lambda idea: (idea.title.casefold(), idea.id))
     found = finds.upcoming(conn, start=today, end=today + timedelta(days=60), limit=40)
