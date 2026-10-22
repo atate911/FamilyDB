@@ -124,7 +124,9 @@ message only hints at goes in `recipe.occasions_guessed`, never `occasions`; "ye
 weeknight one" moves it over with `update_idea`. "Put the fajitas on the list" and "grocery list
 for the week's dinners" is `shopping_list` with `from_recipes` and the idea numbers (from the
 conversation or `find_recipes`), the reply from what it returns, nothing parsed by the model. The family context
-line says "Recipes: 64 saved (find_recipes)" so the model knows they exist without seeing them.
+line says "Recipes: some saved; find_recipes finds them" once the family has one (a count would
+rewrite the cached prefix on every recipe added), so the model knows they exist without seeing
+them.
 `memory.CUES["food"]` gains recipe, meal, cook, fridge, leftovers, weeknight.
 
 ### Pasting a link, step by step (`integrations/recipe_page.py`, `scouting/fill.py`, `jobs/enrich.py`)
@@ -349,3 +351,169 @@ list** form through `shopping_list`. Both under the existing rules for commands 
   today: a kid may add an idea and read, so a kid may add a recipe and ask what is for dinner,
   within her daily messages.
 - *Migrations*: next becomes `0064`.
+
+## Build plan
+
+Four pull requests, in order, each green on `uv run pytest -q`, `uv run ruff check . && uv run
+ruff format .` and `uv run python -m examples` before review, with its docs, guide page and
+CHANGELOG line in it. Each step names the file and the test that holds it. "Held by" names the
+existing test that will fail until the step is done, which is how the order was found.
+
+### PR 1: Capture and keep
+
+Migration and store.
+
+1. `store/migrations/0063_recipes.sql`: the `recipes` table above, with `name_wanted` and
+   `occasions_guessed`. No FTS change. `tests/test_migrations.py` applies it; CLAUDE.md's "Next is
+   `0063`" becomes `0064`.
+2. `store/recipes.py`: `Recipe` (pydantic, `from_row`), `OCCASIONS` as the one list the tool,
+   the page and the picker read, `get(conn, idea_id)`, `upsert(conn, idea_id, fields, now)`,
+   `by_source_url(conn, url)`, `all_live(conn, exclude_ids)` (joined to `ideas`, not dropped,
+   with `times_done`, `last_done_at`, `avg_rating`), `clear_read(conn, idea_id)`. Held by
+   `tests/test_store_boundary.py` (a statement on `recipes` anywhere else fails). New
+   `tests/test_recipes_store.py`.
+3. `store/ideas.py`: `RECIPE = "recipe"`, `RECIPE_WORDS`, `normal_kind` folds them (as
+   `GIFT_WORDS`); `KIND_SUGGESTIONS` gains it; `needs_lookup` returns `bool(idea.url)` for a
+   recipe; `search` takes `exclude_kinds`. `tools/memory.py` `RestKind` gains `recipe`;
+   `suggest/shortlist.py` `REST_BY_KIND["recipe"] = 10` and its candidate filter leaves recipes
+   out beside `GIFT`. Held by `tests/test_suggest.py` (add a case: a recipe is never a candidate).
+
+Tools.
+
+4. `tools/recipes.py`: `RecipeFacts` (occasions, occasions_guessed, active_minutes, total_minutes,
+   serves, ingredients as a list of lines, steps, prep_note; bounds as module constants),
+   `check_facts(kind, facts)` (refuses facts on another kind, bounds the lists, minutes 1 to
+   1440, serves 1 to 50, an occasion not in `OCCASIONS`), `write_facts(conn, idea_id, facts, by,
+   now)` (splits each line with `groceries.parse`, upserts). `find_recipes` tool (read): input
+   `occasion`, `most_minutes`, `text`, `for_people`, `limit` (1 to 10); calls `meals.rank`; result
+   `{"recipes": [{id, title, minutes, serves, occasions, guessed, last_made, rating, reason}],
+   "left_out": n}`. A kid may call it (no `needs`).
+5. `tools/ideas.py`: `AddIdeaInput.recipe: RecipeFacts | None`, `UpdateIdeaInput.recipe` the
+   same; `add_idea` normalises the kind, checks the facts before the transaction, finds a recipe
+   kept once by `source_url` (returns `duplicate_of`), writes the row in the idea's transaction
+   with `name_wanted` when the title's folded words equal the link's slug words
+   (`recipes.title_from_link(title, url)`); `update_idea` writes facts given, drops the row when
+   the kind stops being recipe and makes one when it becomes it. `describe_idea` adds
+   `"recipe"`. Undo: `drop_idea` already drops the idea (the row cascades); `restore_idea`'s
+   `before`/`after` gains the recipe fields it changed. Held by `tests/test_tool_facts.py`
+   (nothing new: no new writing tool) and `tests/test_schema.py` (the nested model's strict
+   schema). New `tests/test_recipes_tools.py`: add with facts, add by link alone, the same link
+   twice, facts on an outing refused, update moves a guess to the family's, undo of each, a kid
+   adds one, `find_recipes` ranks and says why.
+6. `familydb/meals.py` (domain; imports `store`, `base`, `hours` only, held by
+   `tests/test_layering.py`): `Situation` (weekday, minutes free before the evening's first
+   plan, who is eating), `situation(conn, now, agenda)`, `guess_occasions(recipe)`, `rank(rows,
+   situation, asked)` with reasons worded by code, `pick(rows, situation)` for the page. New
+   `tests/test_meals.py`: a table of recipes against situations, guesses from facts, rest, rating,
+   a guess as a maybe.
+7. `familydb/groceries.py` (domain, no store import): `Ingredient`, `parse(line)`, `STAPLES`,
+   `UNITS`. New `tests/test_groceries.py`: the table of lines (grown as the family pastes). PR 1
+   needs only `parse`, so the split is kept from the first recipe on.
+8. `agent/prompt.py`: the idea list leaves recipes out (`exclude_kinds`), and `render_family_context`
+   gains one line when any recipe exists. `prompts/system.md`: the Recipes section. `memory.CUES`
+   food words. Held by `tests/test_prompt.py` (the request for a message is stable; add: unchanged
+   after a recipe is added, the line present once one exists) and `tests/test_memory.py`.
+
+Page.
+
+9. `web/views.py`: `recipe_card(idea, recipe, today)`, `occasion_words`, `cook_line`,
+   `eat_summary` taking both picks; `DID_WORDS` unchanged (no new writer). `web/rows.py`:
+   `RecipeRow`.
+10. `web/ideas_page.py`: `restaurants()` reads recipes too (`recipes.all_live` less the presents
+    kept), ranks with `meals.pick` using `app.calendar.recent_events` for tonight, builds the
+    Cook section and the chips; `ideas()` excludes `RECIPE` as it does `RESTAURANT_KIND`; the
+    idea page passes the recipe row. `eat.html`: the summary line, Cook then Eat out, chips.
+    `idea.html`: the recipe section with the guess's two forms (`edits.edit_idea` with
+    `recipe.occasions`; no new writer). `idea_form.html` and `edits.idea_fields`: the recipe
+    fields, shown for kind recipe. Held by `tests/test_web.py` (`FAMILY_PAGES`, the writers list,
+    `test_browsing_asks_nothing_of_a_model`), `tests/test_kids_changes.py` (a kid's page shows no
+    buttons), `tests/test_examples.py` (step 12).
+11. `familydb/export.py`: `recipes` in the JSON tables; `ideas_csv` gains minutes and serves.
+    Held by `tests/test_export.py`.
+12. `examples/household.py` and `evals/household.py`: three recipes each (one with every fact,
+    one with a guess, one a bare link), so the example site shows Cook and the evals have numbers
+    to name. `evals/cases.py`: `recipe_said`, `dinner_quick`, `recipe_outcome` (section Phases).
+13. Docs: `docs/DESIGN.md` sections 6 and 7 (the tools and the table), `docs/INTERFACE.md`
+    section 4 (Eat), `docs/STYLE.md` (the Cook section's look), the guide (`controls/ideas.md`,
+    `model/ideas-and-places.md`, `reference/glossary.md`), CLAUDE.md Layout (`meals.py`,
+    `groceries.py`, `store/recipes.py`, `tools/recipes.py`; next migration). Held by
+    `tests/test_wiki.py`.
+
+### PR 2: Links
+
+1. `integrations/recipe_page.py`: `read(url, fetch=None) -> ReadRecipe | NoRecipe` with
+   `check_address` from `ical.py` moved to `integrations/address.py` (shared, held by
+   `tests/test_ical.py` still passing), `_fetch` (urllib, checked redirects, `MAX_BYTES` 2 MB,
+   `TIMEOUT` 20, HTML only), `blocks(html)` (the `ld+json` scripts, `html.parser`), `find_recipe`
+   (the walker: object, list, `@graph`, `@type` string or list), `minutes(iso_duration)`,
+   `first_number(yield)`, `steps_of(instructions)` (strings, `HowToStep`, `HowToSection`, tags
+   stripped), `tags_of(cuisine, keywords)`. `tests/pages/*.html`, eight shapes, and
+   `tests/test_recipe_page.py` reading them with no network; a fake fetcher for 403, too big,
+   not HTML, a redirect to a private host.
+2. `scouting/fill.py`: `read_recipe(reach, idea)` (the free read: writes the row, guesses
+   occasions, fills tags, replaces the title under `name_wanted`, marks enrichment done or writes
+   `fill_note`) and `fill_recipe(reach, idea)` (the worker, as `fill_in`), `render_recipe_request`.
+3. `tools/recipes.py`: `save_recipe` and `skip_recipe`, `worker_only=True`, `writes=True`, scoped
+   by `worker_idea_id` (held by the scope check in `registry.dispatch`); `spending.DONE` and
+   `tests/test_tool_facts.py` gain them (no `DID_WORDS`: never from chat). `save_recipe`'s
+   ingredients are `{"text", "item", "amount"}`.
+4. `agent/gateway.py`: `CallSpec("fill_recipe", "reading a recipe link", prompt="fill_recipe",
+   tools=("save_recipe", "skip_recipe"), hand_back=..., web_searches=0, **_WORKER)` and a fetch
+   limit of 2 where the provider takes one. `prompts/fill_recipe.md`. `docs/AI_CALLS.md`: its row
+   and five answers. Held by `tests/test_gateway.py` (every kind has a prompt file and its tools
+   exist).
+5. `jobs/enrich.py`: `run_enrichment` first calls `read_links(app, conn)` (recipes with a link,
+   no `filled_at`, no `fill_note`; each `read_recipe`; a note at once through `_send_note`), then
+   the batch as today, where a recipe idea goes to `fill_recipe` instead of `fill_in`
+   (`store.ideas.due_enrichment` is unchanged: a recipe's `enrichment` stays `pending` until read).
+   `voice.EVENTS`: `recipe_read` ("Filled in #{idea} {name}: {details}{guess}.") and
+   `recipe_unread`; `web/status.automatic` and `views.AUTOMATIC` list the kind. Held by
+   `tests/test_jobs.py`, `tests/test_tidy.py` (no model call idle), new `tests/test_recipe_links.py`
+   (read by code, no block then worker with `tests/fakes.py`, 403 then worker, refused address and
+   no worker, `look_up_now` rereads, the note's wording and where it goes).
+6. `web/status.py`: the share read by code against the worker over 30 days (from `recipes.filled_by`),
+   one row under lookups. The guide: `controls/settings/lookups.md`, `security/what-leaves-the-house.md`,
+   `behavior/jobs.md`. `docs/DESIGN.md` section 9.
+7. Measure before merge: `familydb debug cost` for the prefix; ten real links from the family
+   through `familydb enrich --idea N`, noting which needed the worker, into the PR description.
+
+### PR 3: The grocery list
+
+1. `store/migrations/0064_list_notes.sql`: `ALTER TABLE list_items ADD COLUMN note TEXT`.
+   `store/lists.py`: `Item.note`, `add(..., note=)`, `set_note`. Held by `tests/test_lists.py`.
+2. `familydb/groceries.py`: `from_recipes(conn, idea_ids, by, now) -> Shopped` (added, there,
+   left_out, unticked), folding items across recipes, the staples, the note "2 cups (fajitas),
+   1 (soup)". `tests/test_groceries.py` grows: two recipes sharing onion, a staple, a thing on the
+   list, a ticked thing wanted again.
+3. `tools/lists.py`: `action` gains `from_recipes`, input gains `idea_ids`; the handler refuses a
+   number that is not a recipe or is kept from the asker, calls `groceries.from_recipes` in the
+   list's transaction, keeps undo as `add` does plus the unticked ones to re-tick (`OPPOSITE`
+   gains nothing; the inverse lists both). `tests/test_lists.py`: the action, a kid refused, undo.
+4. `web/edits.py`: `list_from_recipes` posting to `shopping_list` (the writer already named in
+   `tests/test_web.py`'s list; the view is a new function, so the test's list of page functions
+   that may dispatch gains it); `idea.html`'s button, `eat.html`'s tick-and-list form,
+   `lists.html` drawing the note. `tests/test_web.py`: the forms, the notice with Undo.
+5. `prompts/system.md`: the two lines on lists. `evals/cases.py`: `grocery_two_recipes`.
+6. Docs: `docs/DESIGN.md` section 6 (`shopping_list`), the guide's `controls/plans-and-tasks.md`
+   (Lists), CLAUDE.md Layout (`groceries.py`).
+
+### PR 4: Cheaper paths
+
+1. `commands.py`: `WORDS["dinner"]` ("what's for dinner", "what should we cook", "dinner
+   ideas", "what's for dinner tonight"), answered by `meals.rank` for tonight, three picks with
+   reasons, worded by `voice.EVENTS` `cmd_dinner` (plain where a kid reads: she is told the
+   picks, never the workings). Telegram `/dinner` registered beside `/now`. Held by
+   `tests/test_commands.py` (no model call, family only, kid plain).
+2. `web/now.py`: tonight's cook pick as one line under today's when there are recipes and no
+   plan at dinner time (design; `docs/INTERFACE.md` section 3). `tests/test_web.py`.
+3. `picks.py`: a dinner pick in each set, drawn on Now as the others (`pick_sets` gains a
+   `recipe` slot; `tests/test_picks.py`).
+4. The guide's `controls/telegram.md` and `controls/home-and-chat.md`; `docs/DESIGN.md` section 18.
+
+### Order inside a PR
+
+Store, then tools, then prompt, then page, then jobs, then docs, each with its test as it goes:
+every step leaves the suite green, so a review can read the commits in order. Separate commits
+per step as CLAUDE.md asks ("separate concerns in separate commits"), with the PR description's
+`Rules:` line naming what moved: the next migration number, `needs_lookup` for a kind with a
+link, the idea list leaving a kind out of the prefix, a worker kind with a fetch and no search.
