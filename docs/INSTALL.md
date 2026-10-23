@@ -344,6 +344,7 @@ sudo /opt/familydb/scripts/maintain.sh restart
 sudo /opt/familydb/scripts/maintain.sh backup
 sudo /opt/familydb/scripts/maintain.sh restore FILE       # stops it, puts it back, starts it
 sudo /opt/familydb/scripts/maintain.sh upgrade            # newer code, backup taken first
+sudo /opt/familydb/upgrade.sh                             # the same, from the base directory
 ```
 
 `restore` and `upgrade` each take a backup first, so either can be undone, and an upgrade that fails before its migrations undoes itself. Use `upgrade`, not `git pull` (which fails on the detached commit an upgrade leaves). RUNBOOK section 8 says what it does and which version it moves to. Keep a change to `docker-compose.yml` in `docker-compose.override.yml`: an upgrade refuses to overwrite a shipped file you changed.
@@ -357,6 +358,8 @@ sudo /opt/familydb/scripts/maintain.sh upgrade            # newer code, backup t
   read -rs GITHUB_TOKEN && export GITHUB_TOKEN
   sudo --preserve-env=GITHUB_TOKEN /opt/familydb/scripts/maintain.sh upgrade
   ```
+
+  `/opt/familydb/upgrade.sh` carries the token along by itself when run without `sudo`.
 
   Tokens expire. To stop needing one, make a deploy key ([A deploy key, by hand](#a-deploy-key-by-hand)) and point the checkout at it once:
 

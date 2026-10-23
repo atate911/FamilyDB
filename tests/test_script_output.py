@@ -230,7 +230,7 @@ def test_a_dry_run_says_it_changed_nothing_and_changes_nothing(tmp_path) -> None
 
 
 def test_a_backup_ends_with_where_it_is_and_how_to_fetch_it(tmp_path) -> None:
-    if os.geteuid() != 0:
+    if os.geteuid() != 0:  # as root (a container) there is nobody to ask: the first run above
         pytest.skip("the backup is handed to the service account, which takes root to do")
     target, env = _fake_server(tmp_path)
     done = _maintain(target, env, "backup")
@@ -734,3 +734,49 @@ def test_a_page_that_is_on_is_asked_and_what_it_says_is_believed(tmp_path) -> No
     # An error page of the web server's is markup, which says nothing: say the status instead.
     page = _page_health(tmp_path, "WEB_ENABLED=true\n", curl="<html>oops</html>\\n500")
     assert page.stdout == "the page answered with status 500 [1]"
+
+
+# -- upgrade.sh: the one command to remember, from the base directory
+
+
+def test_upgrade_sh_is_maintain_upgrade_with_the_options_passed_through(tmp_path: Path) -> None:
+    """`sudo ./upgrade.sh --dry-run` is `scripts/maintain.sh upgrade --dry-run`, found beside
+    itself wherever the install is; as root it runs it straight, and asks sudo otherwise."""
+    install = tmp_path / "opt" / "familydb"
+    (install / "scripts").mkdir(parents=True)
+    shutil.copy(ROOT / "upgrade.sh", install / "upgrade.sh")
+    fake = install / "scripts" / "maintain.sh"
+    fake.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$@"\nprintf "uid %s\\n" "$EUID"\n')
+    fake.chmod(0o755)
+    # No sudo on the path: it runs the script straight, as root would.
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "bash").symlink_to(BASH)
+    (bin_dir / "dirname").symlink_to(shutil.which("dirname"))
+    done = subprocess.run(
+        [BASH, str(install / "upgrade.sh"), "--dry-run", "--yes"],
+        cwd=tmp_path,
+        env={"PATH": str(bin_dir), "LC_ALL": "C.UTF-8"},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.splitlines()[:3] == ["upgrade", "--dry-run", "--yes"]
+    # With sudo at hand and not root, sudo runs it, the token carried along for a private repository.
+    sudo = bin_dir / "sudo"
+    sudo.write_text('#!/usr/bin/env bash\nprintf "sudo %s\\n" "$*"\n')
+    sudo.chmod(0o755)
+    asked = subprocess.run(
+        [BASH, str(install / "upgrade.sh"), "--dry-run"],
+        cwd=tmp_path,
+        env={"PATH": str(bin_dir), "LC_ALL": "C.UTF-8"},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if os.geteuid() != 0:  # as root (a container) there is nobody to ask: the first run above
+        assert asked.stdout.strip() == (
+            f"sudo --preserve-env=GITHUB_TOKEN -- {install}/scripts/maintain.sh upgrade --dry-run"
+        ), asked.stderr
+    assert (ROOT / "upgrade.sh").stat().st_mode & 0o111, "upgrade.sh must be executable"

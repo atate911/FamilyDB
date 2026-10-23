@@ -4,6 +4,9 @@
 
 ### New since v0.5.0
 
+- **`upgrade.sh` in the base directory.** `sudo /opt/familydb/upgrade.sh` is `scripts/maintain.sh
+  upgrade`, the one command to remember; it asks sudo for you when you forget it, carries a
+  `GITHUB_TOKEN` along for a private repository, and passes `--dry-run` and the rest through.
 - **The menu on the left is the same on every page.** On a computer or a tablet, opening Now, Eat or
   Kids from Settings or Status swapped the menu for a bare list of places, without the mark, how
   Vera is, What Vera knows or Behind the scenes, and the only way back was the small picture at the

@@ -182,8 +182,11 @@ writes `plans.ics` (every plan, for any calendar), `ideas.csv` and `tasks.csv` (
 ## 8. Upgrades
 
 ```bash
-sudo /opt/familydb/scripts/maintain.sh upgrade
+sudo /opt/familydb/upgrade.sh                # the same as scripts/maintain.sh upgrade
+sudo /opt/familydb/upgrade.sh --dry-run      # say what would change, change nothing
 ```
+
+`upgrade.sh` in the base directory is the one command to remember: it runs `scripts/maintain.sh upgrade` as root (asking sudo for you when you are not), and passes its options through.
 
 It fetches, says what this upgrade changes (the commits and pull requests, and any new migrations, packages and settings) and asks, with Enter as yes; then stops the bot, takes a backup, prints the commands to go back, moves to the newer code, reinstalls locked dependencies, migrates and starts it again (on Docker the image is built from the new code while the old containers run, which are then stopped for the backup, the migrations and the start). A failure before the migrations puts the old code, packages, service file and image back and starts the bot again; the commands to go back are printed again only if the upgrade fails in the migrations or after (with the command to finish) or the bot does not come back. A file that ships with FamilyDB and was changed on the server stops it before it asks (a change to docker-compose.yml belongs in docker-compose.override.yml). The service file is updated when the new version changes it and the installed one is as the installer wrote it. If the scripts changed in the new version, the new maintain.sh finishes the upgrade. Only one command that changes the install runs at a time. If it stops part-way, running `upgrade` again finishes it: it says "Already up to date" only when the code is on the newest version and the database is migrated. Do not `git pull`: after an upgrade the checkout is on a detached commit, where it fails, and it would skip the backup and dependencies. On a private repository the fetch needs a credential (docs/INSTALL.md, Day to day).
 

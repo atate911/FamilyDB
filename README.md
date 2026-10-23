@@ -26,7 +26,7 @@ One Python process does all of it. A chat adapter hands each message to a pipeli
 
 **On a server, follow [docs/INSTALL.md](docs/INSTALL.md):** three steps, about twenty minutes, no Linux knowledge needed. Paste one block into the server's terminal; it has the server read this private repository, installs everything, puts the page on HTTPS and prints a link and a password. The page then walks you through the rest: yourself, your password, an AI key, home, Telegram, the family, Google Calendar.
 
-Afterwards: `familydb doctor` checks the install and says what to fix, `scripts/maintain.sh` does backups, restores, upgrades, logs and a forgotten password, `maintain.sh check` looks at everything between the disk and the page, `maintain.sh doctor` works out what is wrong, says why and fixes what it can, `maintain.sh rescue` is the way out when it is badly broken, and `scripts/uninstall.sh` removes it (`--from-zero` restores the server to before FamilyDB).
+Afterwards: `familydb doctor` checks the install and says what to fix, `scripts/maintain.sh` does backups, restores, upgrades, logs and a forgotten password (`upgrade.sh` in the base directory is its upgrade, the one command to remember), `maintain.sh check` looks at everything between the disk and the page, `maintain.sh doctor` works out what is wrong, says why and fixes what it can, `maintain.sh rescue` is the way out when it is badly broken, and `scripts/uninstall.sh` removes it (`--from-zero` restores the server to before FamilyDB).
 
 On your own machine, to try it out:
 
@@ -84,6 +84,7 @@ src/familydb/     pipeline.py (one message end to end), agent/ (the gateway, pro
 tests/            pytest suite with scripted fakes of each provider's SDK, Google and the weather
 evals/            the family's own requests run against a real model, graded by code
 scripts/          bootstrap (bare server to running bot), install, maintain, uninstall; lib/ shared
+upgrade.sh        `sudo ./upgrade.sh`: scripts/maintain.sh upgrade, from the base directory
 deploy/           systemd unit, Caddyfile and nginx site; Dockerfile and docker-compose.yml at the root
 docs/             DESIGN, INSTALL (a server from zero), AI_CALLS (how each model call is decided),
                   MEMORY, PERSONAS, WISHES, STYLE (how the page looks, and why), PRODUCT_EXAMPLES
