@@ -1,0 +1,513 @@
+"""Recipes (docs/RECIPES.md): kept as ideas of kind recipe with their own facts, situations the
+family said standing and the ones read from the facts kept as a guess, out of the cached prompt,
+ranked by code for a meal, and put on the shopping list by code."""
+
+from __future__ import annotations
+
+import json
+from datetime import date, datetime
+
+import pytest
+
+from familydb import meals
+from familydb.agent.prompt import build_system_blocks
+from familydb.store import db, ideas, lists, messages, plans
+from familydb.store import recipes as store
+from familydb.tools import ToolContext, build_registry
+from familydb.tools.registry import NOT_THEIRS
+from tests.conftest import NOW_ISO, TZ
+
+REGISTRY = build_registry()
+LINK = "https://www.seriouseats.com/sheet-pan-chicken-fajitas-recipe"
+
+
+def _as(conn, settings, clock, member, message_id=None):
+    return ToolContext(
+        conn=conn, settings=settings, clock=clock, member=member, message_id=message_id
+    )
+
+
+def _call(ctx, name, **args):
+    result = REGISTRY.dispatch(name, args, ctx)
+    return result, json.loads(result.content)
+
+
+def _said(conn, member, text, update):
+    with db.transaction(conn):
+        return messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id=update,
+            chat_id="42",
+            member_id=member.id,
+            text=text,
+            now=NOW_ISO,
+        )
+
+
+def _recipe(ctx, title, **facts):
+    _, made = _call(ctx, "recipe", action="save", title=title, **facts)
+    return made
+
+
+def test_a_recipe_said_keeps_its_facts_and_guesses_what_nobody_said(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(
+        us,
+        "Sheet-pan fajitas",
+        total_minutes=25,
+        serves=4,
+        ingredients=["2 cups chopped onion", "1 lb chicken thighs", "salt to taste"],
+    )
+    assert made["kind"] == "recipe"
+    assert made["recipe"]["occasions_guessed"] == ["weeknight"]
+    assert "occasions" not in made["recipe"] or made["recipe"]["occasions"] == []
+    kept = store.get(conn, made["id"])
+    assert [one.item for one in kept.ingredients] == ["onion", "chicken thighs", "salt"]
+    assert kept.ingredients[0].amount == "2 cups"
+    # A recipe typed with no link has nothing to read, so it waits for no lookup.
+    assert ideas.get(conn, made["id"]).enrichment == "skipped"
+
+
+def test_any_way_of_saying_a_dish_is_a_recipe(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _, made = _call(us, "add_idea", title="Mum's lasagne", kind="Meal")
+    assert made["kind"] == "recipe"
+
+
+def test_a_situation_the_family_names_is_theirs_and_no_longer_a_guess(
+    settings, clock, conn, family
+):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Chili", total_minutes=240, occasions_guessed=["freezer"])
+    assert made["recipe"]["occasions_guessed"] == ["slow", "freezer"]
+    _, changed = _call(us, "recipe", action="change", id=made["id"], occasions=["slow"])
+    assert changed["recipe"]["occasions"] == ["slow"]
+    assert changed["recipe"]["occasions_guessed"] == ["freezer"]
+
+
+def test_a_link_alone_is_kept_once_and_waits_to_be_read(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _, made = _call(
+        us, "add_idea", title="Sheet pan chicken fajitas", kind="recipe", url=LINK + "  "
+    )
+    kept = store.get(conn, made["id"])
+    assert kept.source_url == LINK and kept.source_site == "seriouseats.com"
+    assert kept.name_wanted  # the title is only the link's words, so the page's name may replace it
+    assert ideas.get(conn, made["id"]).enrichment == "pending"
+    assert store.links_to_read(conn, 5) == [made["id"]]
+    _, again = _call(us, "add_idea", title="Those fajitas", kind="recipe", url=LINK)
+    assert again["duplicate_of"] == made["id"]
+
+
+def test_a_title_of_their_own_is_kept_when_the_page_is_read(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _, made = _call(us, "add_idea", title="Jo's fajitas", kind="recipe", url=LINK)
+    assert not store.get(conn, made["id"]).name_wanted
+
+
+def test_recipe_facts_are_only_for_a_recipe(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _, zoo = _call(us, "add_idea", title="Zoo", kind="outing")
+    refused, said = _call(us, "recipe", action="change", id=zoo["id"], total_minutes=30)
+    assert refused.is_error and "no recipe" in said["error"]
+
+
+def test_the_idea_tools_carry_no_recipe_facts(registry):
+    """A recipe's facts are on its own tool, so the idea tools every message carries keep their
+    size (docs/RECIPES.md)."""
+    for name in ("add_idea", "update_idea"):
+        assert "ingredients" not in str(registry.get(name).definition())
+
+
+def test_a_kid_may_save_a_recipe_but_not_change_one(settings, clock, conn, family):
+    made = _recipe(_as(conn, settings, clock, family["sam"]), "Tacos", serves=4)
+    kid = _as(conn, settings, clock, family["girls"])
+    refused, said = _call(kid, "recipe", action="change", id=made["id"], serves=8)
+    assert refused.is_error and said["error"] == NOT_THEIRS
+
+
+def test_making_a_recipe_leaves_it_one_to_cook(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Tacos", total_minutes=30)
+    _call(us, "record_outcome", idea_id=made["id"], rating=8)
+    _call(us, "record_outcome", idea_id=made["id"], rating=9)
+    kept = ideas.get(conn, made["id"])
+    assert kept.status == "idea" and kept.times_done == 2
+    _, outing = _call(us, "add_idea", title="Zoo", kind="outing")
+    _call(us, "record_outcome", idea_id=outing["id"], rating=8)
+    assert ideas.get(conn, outing["id"]).status == "done"  # an outing is done as before
+
+
+def test_a_kid_may_add_a_recipe_and_ask_for_dinner(settings, clock, conn, family):
+    kid = _as(conn, settings, clock, family["girls"])
+    made = _recipe(kid, "Pancakes", total_minutes=20, occasions=["kids_cook"])
+    _, found = _call(kid, "find_recipes")
+    assert [one["id"] for one in found["recipes"]] == [made["id"]]
+
+
+def test_a_change_to_a_recipe_is_taken_back(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Soup", serves=4)
+    asked = _said(conn, family["sam"], "it serves six", "u1")
+    _call(
+        _as(conn, settings, clock, family["sam"], asked.id),
+        "recipe",
+        action="change",
+        id=made["id"],
+        serves=6,
+    )
+    assert store.get(conn, made["id"]).serves == 6
+    undo = _said(conn, family["sam"], "undo that", "u2")
+    undone = REGISTRY.dispatch("undo", {}, _as(conn, settings, clock, family["sam"], undo.id))
+    assert not undone.is_error, undone.content
+    assert store.get(conn, made["id"]).serves == 4
+
+
+def test_describe_idea_reads_a_recipe_out(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Dal", steps=["Rinse the lentils.", "Simmer 30 minutes."])
+    _, told = _call(us, "describe_idea", id=made["id"])
+    assert told["recipe"]["steps"] == ["Rinse the lentils.", "Simmer 30 minutes."]
+
+
+def test_recipes_stay_out_of_the_cached_prompt(settings, clock, conn, family):
+    before = build_system_blocks(conn, settings)
+    _recipe(_as(conn, settings, clock, family["sam"]), "Sheet-pan fajitas", total_minutes=35)
+    after = build_system_blocks(conn, settings)
+    assert [block.text for block in before] == [block.text for block in after]
+    assert "find_recipes" in before[0].text  # the spec says where they are
+
+
+def test_the_engine_never_offers_a_recipe_to_go_and_do(env):
+    made = _recipe(env.ctx, "Sheet-pan fajitas", total_minutes=35)
+    result = env.registry.dispatch(
+        "suggest",
+        {"window": "this_weekend", "question": "what should we do?", "discover": False},
+        env.ctx,
+    )
+    assert f'"idea_id": {made["id"]}' not in result.content
+
+
+# -- ranking -------------------------------------------------------------------------------------
+
+
+def test_find_recipes_rules_out_what_takes_too_long_and_says_why(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    quick = _recipe(us, "Quesadillas", total_minutes=15)
+    slow = _recipe(us, "Short ribs", total_minutes=200)
+    unknown = _recipe(us, "Mystery bake")
+    _, found = _call(us, "find_recipes", most_minutes=30)
+    listed = {one["id"]: one for one in found["recipes"]}
+    assert listed[quick["id"]]["verdict"] == "good"
+    assert listed[unknown["id"]]["verdict"] == "maybe"
+    assert found["ruled_out"][0]["id"] == slow["id"]
+    assert "3.3 h" in found["ruled_out"][0]["why"] or "takes" in found["ruled_out"][0]["why"]
+    assert found["recipes"][0]["id"] == quick["id"]
+
+
+def test_find_recipes_finds_by_ingredient(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _recipe(us, "Chana masala", ingredients=["2 cans chickpeas", "1 onion"])
+    _recipe(us, "Pasta", ingredients=["1 lb spaghetti"])
+    _, found = _call(us, "find_recipes", text="chickpeas")
+    assert [one["title"] for one in found["recipes"]] == ["Chana masala"]
+
+
+def test_a_plan_tonight_leaves_less_time_to_cook(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _recipe(us, "Roast chicken", total_minutes=90)
+    _recipe(us, "Omelettes", total_minutes=15)
+    with db.transaction(conn):
+        plans.insert(
+            conn,
+            title="Recital",
+            start="2026-09-20T18:30:00-07:00",
+            end="2026-09-20T20:00:00-07:00",
+            all_day=False,
+            now=NOW_ISO,
+        )
+    _, found = _call(us, "find_recipes")
+    assert [one["title"] for one in found["recipes"]] == ["Omelettes"]
+    assert found["ruled_out"][0]["title"] == "Roast chicken"
+    assert "Recital" in found["ruled_out"][0]["why"]
+
+
+def test_made_lately_rests_and_a_favourite_does_not(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    tacos = _recipe(us, "Tacos", total_minutes=30)
+    _recipe(us, "Curry", total_minutes=40)
+    done, said = _call(
+        us, "record_outcome", idea_id=tacos["id"], happened_on="2026-09-17", rating=9
+    )
+    assert not done.is_error, said
+    _, found = _call(us, "find_recipes")
+    assert found["recipes"][0]["title"] == "Curry"
+    resting = next(one for one in found["recipes"] if one["title"] == "Tacos")
+    assert resting["verdict"] == "maybe" and "3 days ago" in resting["why"]
+    _, loved = _call(us, "find_recipes", favorites=True)
+    assert loved["recipes"][0]["title"] == "Tacos"
+
+
+@pytest.mark.parametrize(
+    ("facts", "guessed"),
+    [
+        ({"total_minutes": 20}, ["weeknight"]),
+        ({"total_minutes": 300}, ["slow"]),
+        ({"prep_note": "Marinate the night before"}, ["prep_ahead"]),
+        ({"serves": 8}, ["family_dinner", "guests"]),
+        ({"steps": ["Cool, then freeze for up to 3 months."]}, ["freezer"]),
+        ({"total_minutes": 60, "serves": 4}, []),
+        ({"total_minutes": 5, "name": "Overnight oats"}, ["prep_ahead", "breakfast"]),
+        ({"total_minutes": 15, "name": "Pancakes"}, ["breakfast"]),
+    ],
+)
+def test_situations_are_read_from_the_facts(facts, guessed):
+    assert meals.guess_occasions(store.Recipe(idea_id=1, **facts)) == guessed
+
+
+def test_tonight_is_read_from_the_plans_that_cut_it_short():
+    class Plan:
+        def __init__(self, start, title="Game", all_day=False):
+            self.start, self.title, self.all_day = start, title, all_day
+
+    now = datetime(2026, 10, 21, 16, 0, tzinfo=TZ)
+    tonight = meals.situation(
+        now, [Plan("2026-10-21T19:00:00-07:00"), Plan("2026-10-21", "x", True)]
+    )
+    assert tonight.minutes_free == 90 and tonight.plan == "Game" and not tonight.weekend
+    assert meals.situation(now).minutes_free is None
+    assert meals.situation(datetime(2026, 10, 24, 12, 0, tzinfo=TZ)).weekend
+
+
+def test_the_page_pick_on_a_weeknight_is_a_weeknight_one(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _recipe(us, "Lasagne", total_minutes=120)
+    _recipe(us, "Stir fry", total_minutes=25)
+    weeknight = meals.situation(datetime(2026, 10, 21, 16, 0, tzinfo=TZ))
+    best = meals.pick(store.live(conn), weeknight)
+    assert best is not None and best.idea.title == "Stir fry"
+
+
+def test_a_breakfast_is_not_offered_for_dinner(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _recipe(us, "Overnight oats", total_minutes=5, occasions=["breakfast", "prep_ahead"])
+    _recipe(us, "Stir fry", total_minutes=25)
+    _, found = _call(us, "find_recipes")
+    assert [one["title"] for one in found["recipes"]] == ["Stir fry"]
+    assert "not a dinner" in found["ruled_out"][0]["why"]
+    _, mornings = _call(us, "find_recipes", occasion="breakfast")
+    assert mornings["recipes"][0]["title"] == "Overnight oats"
+
+
+def test_a_family_rest_for_recipes_is_held(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _call(
+        us,
+        "remember",
+        changes=[
+            {
+                "action": "add",
+                "fact": "no repeat dinners within two weeks",
+                "rule": {"rest_days": 14, "rest_kind": "recipe"},
+            }
+        ],
+    )
+    assert meals.rest_days(conn, date(2026, 9, 20)) == 14
+
+
+# -- the grocery list ----------------------------------------------------------------------------
+
+
+def test_recipes_go_on_the_list_with_their_amounts_and_without_the_staples(
+    settings, clock, conn, family
+):
+    us = _as(conn, settings, clock, family["sam"])
+    fajitas = _recipe(
+        us,
+        "Sheet-pan fajitas",
+        ingredients=["2 onions, sliced", "1 lb chicken thighs", "Salt and pepper to taste"],
+    )
+    soup = _recipe(us, "Tortilla soup", ingredients=["1 onion", "4 cups broth", "2 tbsp olive oil"])
+    _call(us, "shopping_list", action="add", items=["broth"])
+    _, said = _call(
+        us, "shopping_list", action="from_recipes", idea_ids=[fajitas["id"], soup["id"]]
+    )
+    assert said["added"] == ["onions", "chicken thighs"]
+    assert said["already"] == ["broth"]
+    assert said["in_pantry"] == ["salt and pepper", "olive oil"]
+    on_list = {item.text: item for item in lists.items(conn, lists.find(conn, "shopping"))}
+    assert on_list["onions"].note == "2 (Sheet-pan fajitas), 1 (Tortilla soup)"
+    assert on_list["broth"].note == "4 cups (Tortilla soup)"
+
+
+def test_a_grocery_list_is_the_grown_ups_and_is_taken_back(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Dal", ingredients=["1 cup red lentils", "1 onion"])
+    refused, said = _call(
+        _as(conn, settings, clock, family["girls"]),
+        "shopping_list",
+        action="from_recipes",
+        idea_ids=[made["id"]],
+    )
+    assert refused.is_error and "ask a parent" in said["error"]
+    asked = _said(conn, family["sam"], "put the dal on the list", "u1")
+    _call(
+        _as(conn, settings, clock, family["sam"], asked.id),
+        "shopping_list",
+        action="from_recipes",
+        idea_ids=[made["id"]],
+    )
+    undo = _said(conn, family["sam"], "undo that", "u2")
+    REGISTRY.dispatch("undo", {}, _as(conn, settings, clock, family["sam"], undo.id))
+    assert lists.items(conn, lists.find(conn, "shopping")) == []
+
+
+def test_a_recipe_with_no_ingredients_yet_says_so(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Something")
+    refused, said = _call(us, "shopping_list", action="from_recipes", idea_ids=[made["id"]])
+    assert refused.is_error and "no ingredients kept" in said["error"]
+    outing = _call(us, "add_idea", title="Zoo", kind="outing")[1]
+    refused, said = _call(us, "shopping_list", action="from_recipes", idea_ids=[outing["id"]])
+    assert refused.is_error and "not a recipe" in said["error"]
+
+
+# -- what the review of the branch found (each a defect fixed, held here) -------------------------
+
+
+def test_a_guess_turned_down_stays_gone_until_its_facts_change(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Stir fry", total_minutes=20)
+    assert store.get(conn, made["id"]).occasions_guessed == ["weeknight"]
+    _call(us, "recipe", action="change", id=made["id"], occasions_guessed=[])
+    _call(us, "recipe", action="change", id=made["id"], serves=4, steps=["Fry it."])
+    assert store.get(conn, made["id"]).occasions_guessed == []  # still 20 minutes: stays gone
+    _call(us, "recipe", action="change", id=made["id"], total_minutes=200)
+    assert store.get(conn, made["id"]).occasions_guessed == ["slow"]  # new facts, a new reading
+
+
+def test_a_note_ahead_of_time_can_be_cleared(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    made = _recipe(us, "Ribs", prep_note="Marinate overnight")
+    _call(us, "recipe", action="change", id=made["id"], prep_note="")
+    assert store.get(conn, made["id"]).prep_note is None
+
+
+def test_a_present_s_plan_is_only_a_plan_in_a_reason(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _recipe(us, "Roast", total_minutes=120)
+    with db.transaction(conn):
+        gift = ideas.insert(conn, title="Party for Mia", kind="gift", now=NOW_ISO)
+        plans.insert(
+            conn,
+            title="Mia's surprise party",
+            start="2026-09-20T18:30:00-07:00",
+            end="2026-09-20T21:00:00-07:00",
+            all_day=False,
+            idea_id=gift.id,
+            now=NOW_ISO,
+        )
+    _, found = _call(us, "find_recipes")
+    assert "before Mia's surprise party" in json.dumps(found)  # Sam's own chat: not kept from Sam
+    kid_reads = _as(conn, settings, clock, family["sam"])
+    kid_reads.plain = True  # a group with a kid: every present's plan is only a plan
+    _, found = _call(kid_reads, "find_recipes")
+    said = json.dumps(found)
+    assert "surprise" not in said and "before a plan" in said
+
+
+def test_find_recipes_reads_tonight_from_the_calendar(env):
+    from datetime import datetime as moment
+
+    env.cal.seed(
+        "Soccer practice",
+        moment(2026, 9, 24, 18, 15, tzinfo=env.app.clock.tz),
+        moment(2026, 9, 24, 19, 30, tzinfo=env.app.clock.tz),
+    )
+    _call(env.ctx, "recipe", action="save", title="Lasagne", total_minutes=90)
+    _call(env.ctx, "recipe", action="save", title="Quesadillas", total_minutes=15)
+    _, found = _call(env.ctx, "find_recipes")
+    assert [one["title"] for one in found["recipes"]] == ["Quesadillas"]
+    assert "Soccer practice" in found["ruled_out"][0]["why"]
+
+
+def test_a_recipe_given_another_link_reads_that_one(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _, made = _call(us, "add_idea", title="Chili", kind="recipe", url="https://a.example/chili")
+    with db.transaction(conn):
+        store.upsert(conn, made["id"], {"fill_note": "no recipe on the page"}, now=NOW_ISO)
+    _call(us, "update_idea", id=made["id"], url="https://b.example/real-chili")
+    kept = store.get(conn, made["id"])
+    assert kept.source_url == "https://b.example/real-chili" and kept.source_site == "b.example"
+    assert kept.fill_note is None and store.links_to_read(conn, 5) == [made["id"]]
+
+
+def test_the_lookup_job_leaves_an_untried_link_to_the_free_read(settings, clock, conn, family):
+    from familydb.app import App
+    from familydb.jobs.enrich import run_enrichment
+    from tests import fakes
+
+    us = _as(conn, settings, clock, family["sam"])
+    _call(us, "add_idea", title="Chili", kind="recipe", url="https://a.example/chili")
+    app = App(
+        settings.model_copy(update={"web_tools_enabled": True, "lookups_when": "asap"}), clock
+    )
+    api = fakes.FakeMessagesAPI()
+    assert run_enrichment(app, api=api)["done"] == 0
+    assert api.requests == []  # nothing fetched or asked twice: the recipe_links job reads it
+
+
+def test_a_recipe_with_no_link_asked_about_now_is_not_left_waiting(settings, clock, conn, family):
+    """A recipe with no link has nothing for the free read, so the lookup job must take it when
+    asked and settle it with no model call, rather than leave it pending for a read that never
+    comes (and looked up again on every run)."""
+    from familydb.app import App
+    from familydb.jobs.enrich import run_enrichment
+    from tests import fakes
+
+    app = App(
+        settings.model_copy(update={"web_tools_enabled": True, "lookups_when": "asap"}), clock
+    )
+    us = _as(conn, app.settings, clock, family["sam"])
+    made = _recipe(us, "Grandma's stew")
+    assert ideas.get(conn, made["id"]).enrichment == "skipped"  # nothing to read, until asked
+    _call(us, "look_up_now", idea_ids=[made["id"]])
+    assert ideas.get(conn, made["id"]).enrichment == "pending"
+    api = fakes.FakeMessagesAPI()
+    assert run_enrichment(app, api=api)["skipped"] == 1
+    assert api.requests == [] and ideas.get(conn, made["id"]).enrichment == "skipped"
+    assert run_enrichment(app, api=api)["skipped"] == 0  # settled: not asked again
+
+
+def test_a_recipe_is_not_relinked_to_another_s_page_or_to_no_address(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _, chili = _call(us, "add_idea", title="Chili", kind="recipe", url="https://a.example/chili")
+    _, stew = _call(us, "add_idea", title="Stew", kind="recipe", url="https://a.example/stew")
+    taken, said = _call(us, "update_idea", id=stew["id"], url="https://a.example/chili")
+    assert taken.is_error and f"already recipe #{chili['id']}" in said["error"]
+    odd, said = _call(us, "update_idea", id=stew["id"], url="ftp://a.example/stew")
+    assert odd.is_error and "web address" in said["error"]
+    assert store.get(conn, stew["id"]).source_url == "https://a.example/stew"
+
+
+def test_find_recipes_reads_the_calendar_as_the_page_does(env, monkeypatch):
+    """Through `recent_events` (kept a minute by app.calendar), never a fresh `list_events`
+    for every question."""
+    from datetime import datetime as moment
+
+    env.cal.seed(
+        "Recital",
+        moment(2026, 9, 24, 18, 0, tzinfo=env.app.clock.tz),
+        moment(2026, 9, 24, 20, 0, tzinfo=env.app.clock.tz),
+    )
+    fresh = env.cal.list_events
+
+    def never(*args, **kwargs):
+        raise AssertionError("list_events asked for a question")
+
+    monkeypatch.setattr(env.cal, "recent_events", lambda start, end: fresh(start, end))
+    monkeypatch.setattr(env.cal, "list_events", never)
+    _call(env.ctx, "recipe", action="save", title="Lasagne", total_minutes=90)
+    _, found = _call(env.ctx, "find_recipes")
+    assert "Recital" in found["ruled_out"][0]["why"]

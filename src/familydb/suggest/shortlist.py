@@ -21,7 +21,7 @@ from datetime import date
 from familydb.base.config import Settings
 from familydb.base.dates import age_on, fmt_minutes
 from familydb.integrations.open_meteo import DayForecast
-from familydb.store.ideas import GIFT, Idea, ages_text
+from familydb.store.ideas import GIFT, RECIPE, Idea, ages_text
 from familydb.store.members import Member
 from familydb.suggest import people as who
 from familydb.suggest.types import Candidate, Constraints, Context, Shortlisted
@@ -358,7 +358,8 @@ def shortlist(
     for idea in all_ideas:
         if constraints.idea_ids and idea.id not in constraints.idea_ids:
             continue
-        if idea.status == "dropped" or idea.kind.casefold() == GIFT:
+        # A present is never offered to do; a recipe is cooked at home, chosen by meals.py.
+        if idea.status == "dropped" or idea.kind.casefold() in (GIFT, RECIPE):
             continue
         # What is said first and makes it possible at best; a later fact still rules it out.
         caveats: list[str] = []

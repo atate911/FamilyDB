@@ -1462,7 +1462,7 @@ LINE_GROUPS = (
         ),
     ),
     (
-        "Answering /today, /week, /tasks, /now and /lookup",
+        "Answering /today, /week, /tasks, /now, /list, /dinner and /lookup",
         True,
         (
             "cmd_today",
@@ -1471,6 +1471,9 @@ LINE_GROUPS = (
             "cmd_now",
             "cmd_list",
             "cmd_list_empty",
+            "cmd_dinner",
+            "cmd_dinner_empty",
+            "cmd_dinner_none",
             "undo_done",
             "undo_not",
             "lookups_asked",

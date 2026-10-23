@@ -52,6 +52,8 @@ TABLES: dict[str, tuple[str, ...]] = {
     "members": ("id", "display_name", "role", "active", "birth_date", "gender", "created_at"),
     "ideas": (),
     "places": (),
+    # A recipe's ingredients, steps and situations (docs/RECIPES.md).
+    "recipes": (),
     "outcomes": (),
     "plans": (),
     "tasks": ("operation_key",),

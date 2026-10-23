@@ -1,6 +1,6 @@
 """The family's pages share one blueprint (`web`, so every endpoint keeps its name) and a few
-things every page module needs. Each page family is a module of its own (ideas_page, plans_page,
-tasks_page, wishes_page, lists_page); routes.py keeps the frame's own addresses."""
+things every page module needs. Each page family is a module of its own (ideas_page, eat_page,
+plans_page, tasks_page, wishes_page, lists_page); routes.py keeps the frame's own addresses."""
 
 from __future__ import annotations
 

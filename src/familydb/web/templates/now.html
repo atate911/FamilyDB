@@ -105,6 +105,8 @@
     {% for line in days %}
       <p class="today"><b>{{ line.label }}</b><span>{% for part in line.parts %}{% if part.href %}<a href="{{ part.href }}">{{ part.text | figs }}</a>{% else %}{{ part.text | figs }}{% endif %}{% endfor %}</span></p>
     {% endfor %}
+    {# Tonight's pick to cook, by code, from the family's recipes (docs/RECIPES.md). #}
+    {% if dinner %}<p class="today"><b>To cook</b><span><a href="{{ dinner.href }}">{{ dinner.title }}</a>{% if dinner.why %}, {{ dinner.why | figs }}{% endif %}</span></p>{% endif %}
   </div>
   {% if left is not none %}<p class="nf__quiet">{{ left }} message{{ '' if left == 1 else 's' }} left today.</p>{% endif %}
 {% endblock %}

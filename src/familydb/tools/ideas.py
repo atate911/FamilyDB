@@ -7,13 +7,16 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import presents
+from familydb import meals, presents
 from familydb.agent.render import render_idea_line
 from familydb.base.dates import parse_date, parse_datetime
 from familydb.base.errors import ToolError
+from familydb.base.urls import clean_url
 from familydb.store import finds, ideas, members, messages, outcomes, places
+from familydb.store import recipes as recipe_store
 from familydb.store.db import transaction
-from familydb.store.ideas import KIND_SUGGESTIONS
+from familydb.store.ideas import KIND_SUGGESTIONS, RECIPE
+from familydb.tools.recipes import shown
 from familydb.tools.registry import ToolContext, keep_undo, tool
 
 Season = Literal["spring", "summer", "autumn", "winter"]
@@ -230,6 +233,17 @@ def _keep_presents(ctx: ToolContext, idea: ideas.Idea) -> None:
     writes=True,
 )
 def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
+    cooked = ideas.normal_kind(args.kind) == RECIPE
+    link = clean_url(args.url) if cooked else None
+    same_link = recipe_store.by_source_url(ctx.conn, link) if link else None
+    if same_link is not None:
+        kept = ideas.get(ctx.conn, same_link)
+        if kept is not None:
+            return {
+                "duplicate_of": kept.id,
+                "note": "This recipe's link is already kept; nothing was added.",
+                "idea": kept.model_dump(mode="json"),
+            }
     found = _found(ctx, args)
     existing = ideas.find_similar_title(ctx.conn, args.title)
     if _kept_from(ctx, existing):
@@ -247,6 +261,10 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
     _ages(args.min_age, args.max_age)
     fields = args.model_dump(exclude={"title", "kind", "suggested_by", "find_id", *DATES})
     fields |= _dated(ctx, args.happens_from, args.happens_until)
+    if cooked:
+        fields["url"] = link
+        if not link:  # a recipe is read from its link, and has nothing else to look up
+            fields |= {"enrichment": "skipped", "enrichment_note": NOTHING_TO_READ}
     with transaction(ctx.conn):
         idea = ideas.insert(
             ctx.conn,
@@ -260,6 +278,8 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
         _keep_presents(ctx, idea)
         if found is not None:
             finds.mark_saved(ctx.conn, found.id, idea_id=idea.id, now=ctx.now_iso())
+        if cooked:
+            _keep_recipe(ctx, idea, link)
     keep_undo(
         ctx,
         "drop_idea",
@@ -268,7 +288,62 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
         status=idea.status,
         **({"find": found.id, "find_before": finds.fate(found)} if found is not None else {}),
     )
-    return idea.model_dump(mode="json")
+    return _with_recipe(ctx, idea)
+
+
+NOTHING_TO_READ = "nothing to read: a recipe with no link"
+
+
+def _keep_recipe(ctx: ToolContext, idea: ideas.Idea, link: str | None) -> None:
+    """A new recipe's row: its link, and whether its title is only the link's words, so the
+    page's name may replace it. Its facts are the `recipe` tool's. In the idea's transaction."""
+    facts: dict[str, Any] = {}
+    if link:
+        made_up = meals.title_from_link(link)
+        facts |= {
+            "source_url": link,
+            "source_site": recipe_store.site_of(link),
+            "name_wanted": idea.title == link
+            or (
+                made_up is not None
+                and ideas.normalize_title(made_up) == ideas.normalize_title(idea.title)
+            ),
+        }
+    meals.keep(ctx.conn, idea, facts, by="family", now=ctx.now_iso())
+
+
+def _relinked(ctx: ToolContext, idea: ideas.Idea) -> ideas.Idea:
+    """A recipe's link changed: the new one is the one read, from the start, and the old page's
+    reading is let go. What the family said of it stands. In the idea's transaction."""
+    link = clean_url(idea.url)
+    if idea.url and not link:
+        raise ToolError("that is not a web address; give the recipe's link as http(s)")
+    other = recipe_store.by_source_url(ctx.conn, link) if link else None
+    if other is not None and other != idea.id:
+        raise ToolError(f"that link is already recipe #{other}'s")
+    now = ctx.now_iso()
+    recipe_store.upsert(
+        ctx.conn,
+        idea.id,
+        {"source_url": link, "source_site": recipe_store.site_of(link)},
+        now=now,
+    )
+    recipe_store.clear_read(ctx.conn, idea.id, now=now)
+    waiting = (
+        {"enrichment": "pending", "enrichment_note": None}
+        if link
+        else {"enrichment": "skipped", "enrichment_note": NOTHING_TO_READ}
+    )
+    return ideas.update(ctx.conn, idea.id, waiting, now=now) or idea
+
+
+def _with_recipe(ctx: ToolContext, idea: ideas.Idea) -> dict[str, Any]:
+    out = idea.model_dump(mode="json")
+    if idea.kind == RECIPE:
+        kept = recipe_store.get(ctx.conn, idea.id)
+        if kept is not None:
+            out["recipe"] = shown(kept)
+    return out
 
 
 def _found(ctx: ToolContext, args: AddIdeaInput) -> finds.Find | None:
@@ -315,6 +390,12 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
         idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
         if idea is not None:
             _keep_presents(ctx, idea)
+            # An idea that becomes a recipe gets its row (its facts are the `recipe` tool's); a
+            # recipe given another link reads that one, afresh.
+            if idea.kind == RECIPE and recipe_store.get(ctx.conn, idea.id) is None:
+                _keep_recipe(ctx, idea, clean_url(idea.url))
+            elif idea.kind == RECIPE and "url" in changes and idea.url != current.url:
+                idea = _relinked(ctx, idea)
     if idea is None:
         raise ToolError(f"no idea #{args.id}")
     was, now_is = current.model_dump(mode="json"), idea.model_dump(mode="json")
@@ -326,7 +407,7 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
         before={key: was.get(key) for key in changes},
         after={key: now_is.get(key) for key in changes},
     )
-    return now_is
+    return _with_recipe(ctx, idea)
 
 
 @tool(
@@ -347,7 +428,13 @@ def describe_idea(ctx: ToolContext, args: DescribeIdeaInput) -> dict[str, Any]:
         "idea": idea.model_dump(mode="json"),
         "place": place.model_dump(mode="json") if place else None,
         "outcomes": [o.model_dump(mode="json") for o in outcomes.list_for_idea(ctx.conn, idea.id)],
+        **_recipe_of(ctx, idea),
     }
+
+
+def _recipe_of(ctx: ToolContext, idea: ideas.Idea) -> dict[str, Any]:
+    kept = recipe_store.get(ctx.conn, idea.id) if idea.kind == RECIPE else None
+    return {"recipe": shown(kept)} if kept is not None else {}
 
 
 @tool(

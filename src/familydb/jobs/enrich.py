@@ -11,7 +11,7 @@ from contextlib import closing
 from datetime import datetime
 from typing import Any
 
-from familydb import routing, voice
+from familydb import meals, routing, voice
 from familydb.agent import spending
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
@@ -22,8 +22,9 @@ from familydb.scouting import fill
 from familydb.scouting.fill import OUTCOMES
 from familydb.scouting.reach import Reach
 from familydb.store import ideas, messages, places
+from familydb.store import recipes as recipe_store
 from familydb.store.db import transaction
-from familydb.store.ideas import Idea
+from familydb.store.ideas import RECIPE, Idea
 from familydb.store.places import Place
 
 log = logging.getLogger(__name__)
@@ -47,14 +48,22 @@ def render_place_note(idea: Idea, place: Place, settings: Any) -> str:
     )
 
 
-def render_evening_note(found: list[tuple[Idea, Place]], settings: Any) -> str:
-
+def render_evening_note(found: list[tuple[Idea, str, str]], settings: Any) -> str:
+    """The evening's lookups in one note: each idea, what it was found to be, and the details."""
     if len(found) == 1:
-        return render_place_note(*found[0], settings)
-    listed = "\n".join(
-        f"• #{idea.id} {place.name}: {place_details(place)}" for idea, place in found
-    )
+        idea, name, details = found[0]
+        return voice.say(settings, "lookup_done", idea=idea.id, place=name, details=details)
+    listed = "\n".join(f"• #{idea.id} {name}: {details}" for idea, name, details in found)
     return voice.say(settings, "lookups_done", count=len(found), found=listed)
+
+
+def recipe_details(recipe: recipe_store.Recipe) -> str:
+    """A recipe read, in a line, with the situation it looks like when nobody said one."""
+    details = meals.details(recipe)
+    if recipe.occasions_guessed and not recipe.occasions:
+        words = " and ".join(meals.occasion_words(recipe.occasions_guessed[:2]))
+        details += f"; looks like {words}, say if not"
+    return details
 
 
 def place_details(place: Place) -> str:
@@ -80,24 +89,31 @@ def place_details(place: Place) -> str:
     return " · ".join(parts).rstrip(".")
 
 
-def _origin(app: App, conn: Any, idea: Idea) -> tuple[Any, Place] | None:
-    """The message an idea came from and its place, when a note can be sent there."""
+def _origin(app: App, conn: Any, idea: Idea) -> tuple[Any, str, str] | None:
+    """The message an idea came from, what it was found to be and the details, when a note can
+    be sent there: its place, or for a recipe what its page said."""
     if not app.settings.enrichment_notes or idea.source_message_id is None:
         return None
     origin = messages.get(conn, idea.source_message_id)
     if origin is None or app.senders.get(origin.channel) is None:
         return None
+    if idea.kind == RECIPE:
+        recipe = recipe_store.get(conn, idea.id)
+        if recipe is None or not recipe.read:
+            return None
+        return origin, idea.title, recipe_details(recipe)
     place = places.get(conn, idea.place_id) if idea.place_id else None
-    return (origin, place) if place is not None else None
+    return (origin, place.name, place_details(place)) if place is not None else None
 
 
-def _notify(app: App, conn: Any, idea: Idea) -> None:
+def notify(app: App, conn: Any, idea: Idea) -> None:
     """Post the 'filled in' note to the idea's chat, when possible and wanted."""
     found = _origin(app, conn, idea)
     if found is None:
         return
-    origin, place = found
-    _send_note(app, conn, origin, render_place_note(idea, place, app.settings), place.name)
+    origin, name, details = found
+    text = voice.say(app.settings, "lookup_done", idea=idea.id, place=name, details=details)
+    _send_note(app, conn, origin, text, name)
 
 
 def _to(app: App, conn: Any, origin: Any) -> tuple[str, str]:
@@ -107,16 +123,18 @@ def _to(app: App, conn: Any, origin: Any) -> tuple[str, str]:
 
 def _notify_together(app: App, conn: Any, done: list[int]) -> None:
 
-    by_chat: dict[tuple[str, str], list[tuple[Any, Idea, Place]]] = defaultdict(list)
+    by_chat: dict[tuple[str, str], list[tuple[Any, Idea, str, str]]] = defaultdict(list)
     for idea_id in done:
         idea = ideas.get(conn, idea_id)
         found = _origin(app, conn, idea) if idea is not None else None
         if idea is not None and found is not None:
-            origin, place = found
-            by_chat[_to(app, conn, origin)].append((origin, idea, place))
+            origin, name, details = found
+            by_chat[_to(app, conn, origin)].append((origin, idea, name, details))
     for rows in by_chat.values():
-        text = render_evening_note([(idea, place) for _, idea, place in rows], app.settings)
-        _send_note(app, conn, rows[-1][0], text, rows[0][2].name, together=len(rows) > 1)
+        text = render_evening_note(
+            [(idea, name, said) for _, idea, name, said in rows], app.settings
+        )
+        _send_note(app, conn, rows[-1][0], text, rows[0][2], together=len(rows) > 1)
 
 
 def _send_note(
@@ -153,10 +171,25 @@ def enrich_idea(
     current = ideas.get(conn, idea.id) if status == "done" and note else None
     if current is not None and current.enrichment == "done":
         try:
-            _notify(app, conn, current)
+            notify(app, conn, current)
         except Exception:
             log.exception("could not note the enrichment of idea %s", idea.id)
     return status
+
+
+def _the_free_reads(app: App, conn: Any, idea: Idea) -> bool:
+    """Whether a recipe's link is the recipe_links job's to read first (jobs/recipes.py): one
+    nobody has tried while that job is on. Left to it, a page is never read twice at once nor
+    the chat told twice; what it cannot read comes back here noted."""
+    if idea.kind != RECIPE or not app.settings.recipe_links:
+        return False
+    recipe = recipe_store.get(conn, idea.id)
+    return (
+        recipe is not None
+        and bool(recipe.source_url)
+        and recipe.filled_at is None
+        and recipe.fill_note is None
+    )
 
 
 def run_enrichment(
@@ -192,6 +225,8 @@ def run_enrichment(
         found: list[int] = []  # the evening's, noted together after the run
         try:
             for idea in batch:
+                if _the_free_reads(app, conn, idea):
+                    continue
                 together = evening and idea.lookup_wanted_at is None
                 outcome = enrich_idea(app, conn, idea, api=api, note=not together)
                 counts[outcome] += 1

@@ -25,6 +25,7 @@ KIND_SUGGESTIONS: tuple[str, ...] = (
     "seasonal",
     "home",
     "gift",
+    "recipe",
     "other",
 )
 # A present somebody would like: listed under their birthday's reminder, never offered to do.
@@ -33,10 +34,21 @@ GIFT = "gift"
 GIFT_WORDS = frozenset({GIFT, "gifts", "present", "presents", "gift idea", "gift ideas"})
 
 
+# Something to cook at home (docs/RECIPES.md): its own facts are in `recipes`, it is kept out of
+# the prompt's idea list (`find_recipes` finds it) and out of what the engine offers to go and do.
+RECIPE = "recipe"
+RECIPE_WORDS = frozenset(
+    {RECIPE, "recipes", "meal", "meals", "dish", "dishes", "home cooking", "meal idea"}
+)
+
+
 def normal_kind(kind: str) -> str:
-    """The kind as saved: any way of saying present is "gift"."""
+    """The kind as saved: any way of saying present is "gift", any way of saying a dish to cook
+    is "recipe"."""
     kind = kind.strip()
-    return GIFT if kind.lower() in GIFT_WORDS else kind
+    if kind.lower() in GIFT_WORDS:
+        return GIFT
+    return RECIPE if kind.lower() in RECIPE_WORDS else kind
 
 
 # Kinds that are never a place. Narrow on purpose (a title can name a place, "Pizza Luna"): only
@@ -49,6 +61,8 @@ def needs_lookup(idea: Idea) -> bool:
     """Whether a lookup could find anything for this idea (decided in code): the lookup job
     skips one that has nothing (jobs/enrich.py), and the engine holds it to no opening hours
     (suggest/evaluate.py)."""
+    if idea.kind == RECIPE:
+        return bool(idea.url)  # a recipe is read from its link, and has nothing else to find
     if idea.kind not in NO_LOOKUP_KINDS:
         return True
     link = idea.url if idea.kind != GIFT else None
@@ -229,9 +243,15 @@ def get(conn: sqlite3.Connection, idea_id: int) -> Idea | None:
 
 
 def list_for_prompt(conn: sqlite3.Connection) -> list[Idea]:
-    """Every idea for the cached prefix, oldest first, minus dropped ones and presents (the prefix
-    is the same for a kid's chat; docs/WISHES.md). search_ideas finds presents."""
-    return [idea for idea in list_all(conn, include_dropped=False) if not is_gift(idea)]
+    """Every idea for the cached prefix, oldest first, minus dropped ones, presents (the prefix
+    is the same for a kid's chat; docs/WISHES.md) and recipes, which a family keeps by the dozen
+    and most messages never need (docs/RECIPES.md). search_ideas finds presents, find_recipes
+    recipes."""
+    return [
+        idea
+        for idea in list_all(conn, include_dropped=False)
+        if not is_gift(idea) and idea.kind != RECIPE
+    ]
 
 
 def is_gift(idea: Idea) -> bool:
@@ -526,13 +546,15 @@ def apply_outcome(
     avg_rating: float | None,
     now: str | None = None,
 ) -> Idea | None:
-    """Bookkeeping after an outcome: done count, last date, average, status."""
+    """Bookkeeping after an outcome: done count, last date, average, status. A recipe is made
+    again and again, so it is counted and stays one to cook, never "done" (docs/RECIPES.md)."""
     conn.execute(
         "UPDATE ideas SET times_done = times_done + 1, "
         "last_done_at = CASE WHEN last_done_at IS NULL OR last_done_at < ? THEN ? "
         "ELSE last_done_at END, "
-        "avg_rating = ?, status = 'done', updated_at = ? WHERE id = ?",
-        (happened_on, happened_on, avg_rating, now or utcnow_iso(), idea_id),
+        "avg_rating = ?, status = CASE WHEN kind = ? THEN 'idea' ELSE 'done' END, "
+        "updated_at = ? WHERE id = ?",
+        (happened_on, happened_on, avg_rating, RECIPE, now or utcnow_iso(), idea_id),
     )
     return get(conn, idea_id)
 

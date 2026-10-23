@@ -27,11 +27,12 @@ from flask import (
 )
 from werkzeug.datastructures import MultiDict
 
-from familydb import buttons, presents
+from familydb import buttons, meals, presents
 from familydb.app import App
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store import outcomes as outcome_store
+from familydb.store import recipes as recipe_store
 from familydb.tools import ToolContext
 from familydb.web import auth, views
 from familydb.web.chat import WHO_KEY
@@ -57,6 +58,7 @@ STALE_IDEA = (
     "make your change again."
 )
 RECORDED = "Recorded. #{id} is marked done."
+RECORDED_MADE = "Recorded: #{id} made once more."
 # "How did it go?" on Home: three faces, kept as the same 1 to 10 rating the longer form takes.
 FACES = {"loved": 9, "ok": 6, "not-great": 3}
 RATED = "Thanks. That goes into the next suggestions."
@@ -99,6 +101,18 @@ NOT_A_REPEAT = "Choose how often it repeats from the list."
 # Sent every time, so emptying one clears it.
 IDEA_TEXT = ("description", "location_name", "url")
 # Sent only when filled in: the tool reads a missing one as "leave it alone".
+RECIPE_NUMBERS = (
+    ("total_minutes", "The minutes, start to table"),
+    ("active_minutes", "The hands-on minutes"),
+    ("serves", "How many it serves"),
+)
+LISTED = "On the shopping list for {recipes}: {added}."
+LISTED_NOTHING = "Nothing new for the list: {recipes} needs what is on it already."
+LISTED_THERE = "Already on it: {items}."
+LISTED_LEFT = "In the pantry already: {items}."
+NEEDS_RECIPES = "Tick the recipes to make a grocery list from."
+TOOK_GUESS = "#{id} is {words}, then."
+DROPPED_GUESS = "#{id} is not {words}; that guess is gone."
 IDEA_NUMBERS = (
     ("duration_min", "The shortest time"),
     ("duration_max", "The longest time"),
@@ -230,7 +244,58 @@ def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
     first, time = _text(form, "happens_from"), _text(form, "happens_time")
     values["happens_from"] = f"{first}T{time}" if first and time else first
     values["happens_until"] = _text(form, "happens_until")
+    if form.get("recipe_shown") and idea_store.normal_kind(kind) == idea_store.RECIPE:
+        recipe, complaint = _recipe_fields(form)
+        if complaint:
+            return {}, complaint
+        values["recipe"] = recipe
     return values, None
+
+
+def _changed_facts(kept: Any, facts: dict[str, Any]) -> dict[str, Any]:
+    """The recipe facts the form changed, against what is kept: an ingredient list sent back as
+    drawn keeps the split a lookup gave each line, and nothing moved keeps no Undo."""
+    if kept is None:  # an idea becoming a recipe: against nothing kept, empty boxes are no change
+        kept = recipe_store.Recipe(idea_id=0)
+    now = {
+        "ingredients": [one.text for one in kept.ingredients],
+        "steps": kept.steps,
+        "occasions": kept.occasions,
+        "prep_note": kept.prep_note or "",
+        "total_minutes": kept.total_minutes,
+        "active_minutes": kept.active_minutes,
+        "serves": kept.serves,
+    }
+    changed = {}
+    for key, value in facts.items():
+        said = value
+        if key == "occasions":
+            said = [one for one in recipe_store.OCCASIONS if one in set(value)]
+        if key == "prep_note":
+            said = " ".join((value or "").split())
+        if said != now.get(key):
+            changed[key] = value
+    return changed
+
+
+def _recipe_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
+    """The idea form's Recipe part, as the `recipe` tool's change takes it. Sent every time, so
+    emptying a box clears it (the lines) or leaves it as it was (a number, which a tool cannot
+    unset)."""
+    found: dict[str, Any] = {}
+    for key, label in RECIPE_NUMBERS:
+        given = _text(form, key)
+        if not given:
+            continue
+        try:
+            found[key] = int(given)
+        except ValueError:
+            return {}, NOT_A_NUMBER.format(label=label)
+    found["occasions"] = form.getlist("occasions")
+    for key in ("ingredients", "steps"):
+        found[key] = [line.strip() for line in form.get(key, "").splitlines() if line.strip()]
+    found["prep_note"] = _text(form, "prep_note")
+    return found, None
 
 
 def _back(target: str, **values: Any) -> Response:
@@ -294,6 +359,7 @@ def add_idea() -> Response:
     found = _text(request.form, "find_id")
     if found.isascii() and found.isdigit() and len(found) <= 18:
         values["find_id"] = int(found)  # saving something she found (a happening's page)
+    facts = values.pop("recipe", None)
     result, complaint = run("add_idea", values, hidden_from=_hidden_from(request.form))
     if result is None:
         _say(complaint or "")
@@ -301,6 +367,13 @@ def add_idea() -> Response:
     if "duplicate_of" in result:
         _say(DUPLICATE.format(id=result["duplicate_of"]))
         return _back("web.idea", idea_id=result["duplicate_of"])
+    if facts:  # a recipe's facts are the recipe tool's; Undo drops the whole recipe
+        _, complaint = run(
+            "recipe", {"action": "change", "id": result["id"], **facts}, offer_undo=False
+        )
+        if complaint:
+            _say(complaint)
+            return _back("web.idea", idea_id=result["id"])
     _say(SAVED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(result["id"]))
     return _back("web.idea", idea_id=result["id"])
 
@@ -356,12 +429,32 @@ def edit_idea(idea_id: int) -> Response:
     status = _text(request.form, "status")
     if status:
         values["status"] = status
+    with closing(_app().connect()) as conn:
+        before = idea_store.get(conn, idea_id)
+        kept = recipe_store.get(conn, idea_id)
+    facts = _changed_facts(kept, values.pop("recipe", None) or {})
     result, complaint = run(
-        "update_idea", {**values, "id": idea_id}, hidden_from=_hidden_from(request.form)
+        "update_idea",
+        {**values, "id": idea_id},
+        hidden_from=_hidden_from(request.form),
+        offer_undo=not facts,
     )
     if result is None:
         _say(complaint or "")
         return _back("web.edit_idea", idea_id=idea_id)
+    if facts:
+        # A recipe's facts are the recipe tool's change. Its Undo is offered only when it is the
+        # whole change: one Undo must never take back half of what was saved.
+        was = before.model_dump(mode="json") if before else {}
+        moved = any(
+            (result.get(key) or None) != (was.get(key) or None) for key in values if key in result
+        )  # an empty box saved over nothing is no change
+        _, complaint = run(
+            "recipe", {"action": "change", "id": idea_id, **facts}, offer_undo=not moved
+        )
+        if complaint:
+            _say(complaint)
+            return _back("web.edit_idea", idea_id=idea_id)
     _say(CHANGED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(idea_id))
     return _back("web.idea", idea_id=idea_id)
 
@@ -443,8 +536,10 @@ def record_outcome(idea_id: int) -> Response:
     repeat = _text(form, "would_repeat")
     if repeat in {"yes", "no"}:
         values["would_repeat"] = repeat == "yes"
-    _, complaint = run("record_outcome", values)
-    _say(complaint or (RATED if went in FACES else RECORDED.format(id=idea_id)))
+    result, complaint = run("record_outcome", values)
+    cooked = bool(result) and (result.get("idea") or {}).get("kind") == idea_store.RECIPE
+    done = (RECORDED_MADE if cooked else RECORDED).format(id=idea_id)
+    _say(complaint or (RATED if went in FACES else done))
     if _text(form, "back") == "home":  # asked on Home: back there for the next one
         return _back("web.home")
     if _text(form, "back") == "board":  # asked on the kitchen tablet
@@ -701,6 +796,74 @@ def undo() -> Response:
     return redirect(back)
 
 
+@bp.post("/eat/grocery-list")
+@once
+def list_from_recipes() -> Response:
+    """Ticked recipes on What should we eat, or one recipe's page: what they need on the shopping
+    list, by code (shopping_list with from_recipes, as she would call it)."""
+    back = _text(request.form, "back")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.restaurants")
+    wanted = [
+        int(one) for one in request.form.getlist("idea_ids") if one.isdigit() and len(one) < 10
+    ]
+    if not wanted:
+        _say(NEEDS_RECIPES)
+        return _back("web.restaurants")
+    result, complaint = run("shopping_list", {"action": "from_recipes", "idea_ids": wanted})
+    if result is None:
+        _say(complaint or "")
+    else:
+        recipes = ", ".join(result["recipes"])
+        said = [
+            LISTED.format(recipes=recipes, added=", ".join(result["added"]))
+            if result["added"]
+            else LISTED_NOTHING.format(recipes=recipes)
+        ]
+        if result["already"]:
+            said.append(LISTED_THERE.format(items=", ".join(result["already"])))
+        if result["in_pantry"]:
+            said.append(LISTED_LEFT.format(items=", ".join(result["in_pantry"])))
+        _say(" ".join(said))
+    if (shop := _shop_back(back)) is not None:
+        return _back("web.shop", idea_id=shop)
+    if back.isdigit() and len(back) < 10:
+        return _back("web.idea", idea_id=int(back))
+    return _back("web.restaurants")
+
+
+def _shop_back(back: str) -> int | None:
+    """A recipe's Shopping page, when a form there said "shop:N" as its way back."""
+    kind, _, number = back.partition(":")
+    return int(number) if kind == "shop" and number.isdigit() and len(number) < 10 else None
+
+
+@bp.post("/idea/<int:idea_id>/occasion")
+@once
+def take_guess(idea_id: int) -> Response:
+    """A situation she guessed for a recipe: That's right makes it the family's, Not that takes the
+    guess away (the recipe tool's change, as she would call it)."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.idea", idea_id=idea_id)
+    occasion = _text(request.form, "occasion")
+    with closing(_app().connect()) as conn:
+        recipe = recipe_store.get(conn, idea_id)
+    if recipe is None or occasion not in recipe.occasions_guessed:
+        return _back("web.idea", idea_id=idea_id)
+    words = meals.OCCASION_WORDS.get(occasion, occasion)
+    if request.form.get("right") == "yes":
+        change = {"occasions": [*recipe.occasions, occasion]}
+        notice = TOOK_GUESS
+    else:
+        change = {"occasions_guessed": [one for one in recipe.occasions_guessed if one != occasion]}
+        notice = DROPPED_GUESS
+    result, complaint = run("recipe", {"action": "change", "id": idea_id, **change})
+    _say(complaint or "" if result is None else notice.format(id=idea_id, words=words))
+    return _back("web.idea", idea_id=idea_id)
+
+
 LIST_ACTIONS = frozenset(views.LIST_SAID)
 
 
@@ -730,9 +893,12 @@ def change_list() -> Response:
     if already := result.get("already"):
         said.append(views.LIST_ALREADY.format(items=", ".join(already)))
     _say(" ".join(said))
-    if _text(request.form, "back") == "board":  # ticked on the kitchen tablet
+    back = _text(request.form, "back")
+    if back == "board":  # ticked on the kitchen tablet
         return _back("go.board")
-    return _back("web.lists_page", name=_text(request.form, "back") or None)
+    if (shop := _shop_back(back)) is not None:  # ticked on a recipe's Shopping page, in the store
+        return _back("web.shop", idea_id=shop)
+    return _back("web.lists_page", name=back or None)
 
 
 @bp.post("/memory/new")

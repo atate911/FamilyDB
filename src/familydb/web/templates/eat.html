@@ -1,26 +1,84 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, who with context %}
-{% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty, by_hand %}
-{% block title %}Where should we eat? · {{ site_title }}{% endblock %}
+{% from "_ui.html" import icon, avatar, who, guard with context %}
+{% from "_dest.html" import dest_head, chip_row, dest_empty, by_hand %}
+{% block title %}What should we eat? · {{ site_title }}{% endblock %}
 {% block body_class %}page-eat{% endblock %}
-{# Where should we eat? (docs/INTERFACE.md section 4): a top pick for the next meal, chosen by code, then every saved
-   restaurant, one fact line each. A kid sees the same list without cost bands. #}
+{# What should we eat? (docs/INTERFACE.md section 4, docs/RECIPES.md): one door, two answers. With both kept, three
+   tabs as Plans has them: the next meal (the pick to cook and to eat out, the first few of each), Cook (every recipe
+   ranked for it, its own chips, boxes for a grocery list) and Eat out (every restaurant, its own chips). With one kept,
+   that list whole. A kid sees the same without cost bands or boxes. No model call. #}
+{% macro cook_rows(rows, top, listing) %}
+  <div class="rows">
+    {% for row in rows %}
+      <div class="r{{ ' r--top' if loop.first and top }}{{ ' r--faded' if row.verdict == 'out' }}">
+        {% if loop.first and top %}<span class="r__label">{{ top }}</span>{% endif %}
+        <span class="r__t"><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></span>
+        <span class="r__m">{{ row.line }}</span>
+        {% if listing and row.shoppable %}<span class="r__tr"><label class="check check--tick"><input type="checkbox" name="idea_ids" value="{{ row.id }}" /><span class="sr">Put {{ row.title }} on the list</span></label></span>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endmacro %}
+{% macro out_rows(cards, top) %}
+  <div class="rows">
+    {% for card in cards %}
+      <div class="r{{ ' r--top' if loop.first and top }}{{ ' r--faded' if card.faded }}">
+        {% if loop.first and top %}<span class="r__label">{{ top }}</span>{% endif %}
+        <span class="r__t"><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></span>
+        <span class="r__m">{{ card.line }}</span>
+        <span class="r__tr">{{ who(card.people, card.who, shell.family) }}</span>
+      </div>
+    {% endfor %}
+  </div>
+{% endmacro %}
 {% block content %}
-  {{ dest_head('Where should we eat?', summary) }}
-  {{ chip_row(chips) }}
-  {% if cards %}
-    <div class="rows">
-      {% for card in cards %}
-        <div class="r{{ ' r--top' if loop.first and top }}{{ ' r--faded' if card.faded }}">
-          {% if loop.first and top %}<span class="r__label">{{ top }}</span>{% endif %}
-          <span class="r__t"><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></span>
-          <span class="r__m">{{ card.line }}</span>
-          <span class="r__tr">{{ who(card.people, card.who, shell.family) }}</span>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    {{ dest_empty('No restaurants yet. Tell ' ~ assistant ~ ' one you’ve heard about.', 'utensils') }}
+  {{ dest_head('What should we eat?', summary or none) }}
+  {% if tabs %}
+    <nav class="seg" aria-label="Cook or eat out">
+      {% for tab in tabs %}<a href="{{ tab.href }}"{% if tab.on %} aria-current="page"{% endif %}>{{ tab.label }}{% if tab.n %} <span class="n">{{ tab.n }}</span>{% endif %}</a>{% endfor %}
+    </nav>
   {% endif %}
-  {% if grownup and visitor().may('change') %}{{ by_hand('Add a place by hand', url_for('web.new_idea', kind='restaurant')) }}{% endif %}
+  {{ chip_row(chips) }}
+  {% if not cooking and not cards %}
+    {% if side == 'cook' and cook_all %}{{ dest_empty('No recipe fits that. Try another chip.', 'utensils') }}
+    {% elif side == 'out' and out_all %}{{ dest_empty('No place fits that. Try another chip.', 'utensils') }}
+    {% else %}{{ dest_empty('Nothing saved yet. Tell ' ~ assistant ~ ' a recipe you like or a place you’ve heard about.', 'utensils') }}{% endif %}
+  {% endif %}
+
+  {% if not side %}
+    {# The next meal: the pick and the first few of each side, each with the way to all of it. #}
+    {% if cooking %}
+      <section class="sec" aria-labelledby="h-cook">
+        <div class="sec__label"><h2 id="h-cook" class="label">To cook</h2><a href="{{ url_for('web.restaurants', side='cook') }}">All {{ cook_all }}</a></div>
+        {{ cook_rows(cooking, cook_top, false) }}
+      </section>
+    {% endif %}
+    {% if cards %}
+      <section class="sec" aria-labelledby="h-out">
+        <div class="sec__label"><h2 id="h-out" class="label">To eat out</h2><a href="{{ url_for('web.restaurants', side='out') }}">All {{ out_all }}</a></div>
+        {# One thing leads the next meal: the cook pick's card; the place is a plain row when there is one. #}
+        {{ out_rows(cards, none if cooking else top) }}
+      </section>
+    {% endif %}
+  {% elif side == 'cook' and cooking %}
+    <section class="sec" aria-labelledby="h-cook">
+      <h2 id="h-cook" class="sr">Recipes</h2>
+      {% set listing = grownup and can_list and cooking | selectattr('shoppable') | list %}
+      {% if listing %}<form method="post" action="{{ url_for('edits.list_from_recipes') }}">{{ guard(once=true) }}{% endif %}
+      {{ cook_rows(cooking, cook_top, listing) }}
+      {% if listing %}
+        <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ icon('list', size='sm') }}Grocery list for these</button><span class="small muted">What the ticked recipes need goes on the shopping list, less salt, oil and the like.</span></div>
+      </form>{% endif %}
+    </section>
+  {% elif side == 'out' and cards %}
+    <section class="sec" aria-labelledby="h-out">
+      <h2 id="h-out" class="sr">Places to eat</h2>
+      {{ out_rows(cards, top) }}
+    </section>
+  {% endif %}
+
+  {% if grownup and visitor().may('change') %}
+    {% if side != 'out' %}{{ by_hand('Add a recipe by hand', url_for('web.new_idea', kind='recipe')) }}{% endif %}
+    {% if side != 'cook' %}{{ by_hand('Add a place by hand', url_for('web.new_idea', kind='restaurant')) }}{% endif %}
+  {% endif %}
 {% endblock %}

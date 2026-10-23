@@ -116,7 +116,7 @@ and no menu.
   stretching the main column into it, so every page's main column starts at the same edge.
 - **The page header** opens the main column: a caps label for context, the page's title or the
   day as a display line, at most one line in the quiet tone, and a hairline under it. On the
-  family's frame a destination's head is the question it answers ("Where should we eat?") and one
+  family's frame a destination's head is the question it answers ("What should we eat?") and one
   line of the answer, then a row of chips. The page's one primary action, if it has one, sits at the header's right edge. The
   header's top lines up with the wordmark's, so the page has one top edge.
 - **The footer** ends the main column: the mark, the family's line and the version, quiet.
@@ -371,13 +371,18 @@ Each page names its focal element, what the main column holds, and what the rail
 - **A destination** (section 4): the question as the title, one line of the answer, a row of chips,
   then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
   one fact line and the people's marks at the edge; "by hand" last, as a quiet link. **Eat**: the
-  pick for the next meal. **Do**: what fits the next free stretch, then the pile, the quiet ones
+  next meal's picks, one to cook and one to eat out, each over its first few rows, with a
+  segmented control (as Plans' List and Month) to Cook and Eat out, where the chips live; a
+  recipe's page leads with what it takes and its ingredients, Put the ingredients on the list the
+  one solid button and Plan it for a night quiet. **Do**: what fits the next free stretch, then the pile, the quiet ones
   faded, then New ideas (what she found and judged worth putting forward, under a label saying she
   found them, each a hairline row with its reason and Save it and Not for us under it, small; the
   family's own always first), the map under it. **Week**: a day a section, set things as set rows (a solid left edge,
   the time in the mono), the free time in words, a reminder a small bell line, her pick in pencil;
   the plate above. **Kids**: a kid a section, what waits first. **Soon**: finds by day. **Lists**:
-  big ticks. **Did**: a face a row.
+  big ticks, under a quiet uppercase label a section of the store once the list spans two
+  (`.list-items__sec`); a recipe's Shopping page is the same ticks by section with the pantry
+  apart and a stand-in folded under a thing (`.swap`). **Did**: a face a row.
 - **What about** (`/about`): her picks as a destination, a section a set (the next few hours, the
   weekend), its tiles three across where there is room, each set with what drove it and when it was
   chosen; Different ones under them, a quiet link.

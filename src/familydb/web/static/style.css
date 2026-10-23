@@ -394,6 +394,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 .check { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); font-weight: 400; cursor: pointer; }
 .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--vera-bg); flex: none; }
 .check--off { color: var(--ink-2); cursor: not-allowed; }
+/* A tick alone at a row's edge (Eat's grocery boxes): the whole slot is the target. */
+.check--tick { min-width: var(--target); justify-content: center; }
 .searchbox { position: relative; }
 .searchbox .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
 .searchbox input { padding-left: 44px; }
@@ -413,6 +415,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 .seg a { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: var(--target); padding: 0 var(--s4); border-radius: var(--r-md); color: var(--ink-2); text-decoration: none; font-weight: 700; }
 .seg a[aria-current] { background: var(--ink); color: var(--paper); }
 .seg .n { font-size: var(--t-sm); padding: 1px 8px; border-radius: var(--r-pill); background: var(--paper); font-family: var(--font-num); }
+@media (max-width: 360px) { .seg a { padding: 0 var(--s3); gap: var(--s1); } .seg .n { padding: 1px 6px; } }
 .seg a[aria-current] .n { background: var(--paper); color: var(--ink); }
 
 /* 5.14 Health pill (same state everywhere) */
@@ -2193,3 +2196,9 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
   .bd__someday { grid-area: someday; }
   .bd__day--first { min-height: 260px; }
 }
+
+/* A recipe's shopping, and the shopping list by section (shop.html, lists.html): a section's name is a quiet label
+   over its things; a stand-in folds under the thing it is for. */
+.list-items__sec { font-size: .8125rem; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; margin: var(--s4) 0 var(--s1); }
+.list-items .swap summary { font-size: .875rem; color: var(--ink-2); }
+.list-items .swap .fold__body { margin: var(--s1) 0 0; }

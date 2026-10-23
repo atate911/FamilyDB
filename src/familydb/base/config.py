@@ -34,7 +34,17 @@ Level = Literal["everyday", "better", "best"]
 # each); any other is defined in the settings (`CompanyDef`).
 BUILT_IN_COMPANIES = ("anthropic", "openai", "gemini")
 # What the family has Vera do, each with one choice of company and model (agent/uses.py).
-USE_KEYS = ("chat", "digest", "choose", "lookup", "onnear", "hear", "look", "judge")
+USE_KEYS = (
+    "chat",
+    "digest",
+    "choose",
+    "lookup",
+    "onnear",
+    "recipes",
+    "hear",
+    "look",
+    "judge",
+)
 # The keys an older FamilyDB chose models with. Still read from the environment (`.env`, the
 # installer's PROVIDER line) and from an older database once (store/settings.upgrade), and turned
 # into the choices the AI model page keeps (`older_to_choices`); nothing else reads them, held by
@@ -605,6 +615,9 @@ class Settings(BaseSettings):
     google_calendar_id: str | None = None
     google_key_path: Path = Path("data/google_key.json")
     enrichment_notes: bool = True
+    # A recipe link the family pasted is read by this server, by code and for nothing, within a
+    # few minutes (docs/RECIPES.md); off, it waits for the evening's paid lookup like a place.
+    recipe_links: bool = True
 
     # Dated things near home, found by the app (familydb/happening.py, jobs/happening.py). The
     # calendars it reads, one address a line: those it proposed that an admin ticked, and any

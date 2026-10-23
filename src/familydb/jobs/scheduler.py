@@ -31,6 +31,7 @@ from familydb.jobs.morning import run_morning
 from familydb.jobs.nudges import run_nudges
 from familydb.jobs.picks import run_picks
 from familydb.jobs.plan_checks import run_plan_checks
+from familydb.jobs.recipes import run_recipe_links
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.tidy import run_tidy
@@ -92,6 +93,13 @@ def job_specs(app: App) -> list[JobSpec]:
             run_enrichment,
             IntervalTrigger(minutes=settings.enrich_interval_minutes),
             wanted=enrichment_available(settings),
+        ),
+        JobSpec(
+            "recipe_links",
+            "read pasted recipe links",
+            run_recipe_links,
+            IntervalTrigger(minutes=settings.enrich_interval_minutes),
+            wanted=settings.recipe_links,
         ),
         JobSpec(
             "weekend_digest",

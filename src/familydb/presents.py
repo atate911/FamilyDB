@@ -21,6 +21,7 @@ from typing import Any
 from familydb.base import roles
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
+from familydb.store import plans as plan_store
 from familydb.store.ideas import Idea
 from familydb.store.members import Member
 from familydb.store.tasks import Task
@@ -123,6 +124,17 @@ def gift_ids(conn: sqlite3.Connection) -> set[int]:
         for idea in idea_store.list_all(conn, include_dropped=True)
         if idea_store.is_gift(idea)
     }
+
+
+def plan_titles(conn: sqlite3.Connection, first: str, last: str, kept: set[int]) -> frozenset[str]:
+    """The titles of the plans from `first` to `last` made for a present in `kept` (the ideas
+    kept from whoever reads: `kept_ids`, and every present where not everyone may decide): a
+    reason that names a plan says these only as "a plan" (meals.situation)."""
+    if not kept:
+        return frozenset()
+    return frozenset(
+        plan.title for plan in plan_store.overlapping(conn, first, last) if plan.idea_id in kept
+    )
 
 
 def without(items: list[Any], kept: set[int]) -> list[Any]:

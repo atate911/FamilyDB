@@ -9,6 +9,7 @@ If looking ideas up is on but there is no key for the model company that does it
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|
 | Look ideas up on the web (`web_tools_enabled`) | off in the program; the installer turns it on | Off: the lookups job does not run, no idea is filled in, nothing new is discovered, and `/lookup` says lookups are switched off. With no key for the company that does it, ideas wait and are looked up once a key is added. | on or off |
+| Read a pasted recipe link straight away (`recipe_links`) | on | A link to a recipe is read by this server from the page's own recipe data within a few minutes, with nothing of the family sent and no model asked, so it costs nothing; its ingredients, steps, minutes and servings are kept and the chat it came from is told. A page with no recipe data waits for the evening's lookups, which pay a reader for it. Off, every recipe link waits for the evening. See [Recipes](/wiki/controls/ideas#recipes). | on or off |
 | Days before details look old (`place_stale_days`) | 30 | After this, an idea's hours and prices are marked as worth checking again, and looked up again the next time the idea is suggested (within the spending limit). | 1 to 3650 |
 
 ## When

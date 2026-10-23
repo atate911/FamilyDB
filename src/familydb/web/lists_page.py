@@ -48,6 +48,8 @@ def lists_page(name: str | None = None) -> str:
                     "to_get": [
                         {
                             "text": item.text,
+                            # How much the recipes that put it there want (groceries.py).
+                            "note": item.note,
                             "by": views.person_of(named[item.added_by], slots)
                             if item.added_by in named
                             else None,
@@ -59,6 +61,8 @@ def lists_page(name: str | None = None) -> str:
                 }
             )
         current = next(one for one in shown if one["name"] == wanted)
+        # By the section of the store, once there are two (groceries.section_of).
+        current["groups"] = views.list_groups(current["to_get"])
         chat.page_box(
             app,
             conn,

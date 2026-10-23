@@ -35,7 +35,8 @@ COMMON = _words(
 CUES: dict[str, frozenset[str]] = {
     "food": _words(
         "eat eating food dinner lunch breakfast brunch restaurant restaurants hungry snack "
-        "cook cooking menu takeout dessert cafe coffee drinks bar"
+        "cook cooking menu takeout dessert cafe coffee drinks bar recipe recipes meal meals "
+        "supper fridge leftovers weeknight vegetarian vegan grocery groceries"
     ),
     "activities": _words(
         "bored fun weekend tonight today tomorrow outing activity hike park museum show "

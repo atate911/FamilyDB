@@ -47,6 +47,7 @@ chosen on the row, and everything else a click away.
 | Choosing suggestions | `choose` | best, within its budget |
 | Looking things up | `enrich`, `discover`, `places`, `price_check` | everyday |
 | What's going down? | `scout`, `find_feeds` | same as looking things up |
+| Reading recipes | `fill_recipe` | same as looking things up; may be off |
 | Voice notes | `transcribe` (OpenAI or Google only: Claude hears nothing) | OpenAI's cheapest |
 | Photos | `look` | same as looking things up |
 | Weighing changes | `judge` | off |
@@ -170,7 +171,7 @@ These were put to the family with the mockup and chosen; `docs/DESIGN.md` sectio
 `docs/STYLE.md` is a record, not a fence, and these are chosen for the page. `STYLE.md` records
 them under Settings.
 
-- Controls in the table are about 40 pixels, not 44, because eight rows of two dropdowns need the
+- Controls in the table are about 40 pixels, not 44, because nine rows of two dropdowns need the
   density (WCAG 2.2's minimum target is 24).
 - Disclosure arrows lead the row, rather than trail it, so every fold on the page agrees.
 - The header leads with a figure and a sentence rather than only a sentence.

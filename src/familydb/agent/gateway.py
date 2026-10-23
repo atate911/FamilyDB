@@ -52,6 +52,7 @@ Kind = Literal[
     "scout",
     "find_feeds",
     "fill_find",
+    "fill_recipe",
     "curate",
     "choose",
     "judge",
@@ -157,6 +158,18 @@ KINDS: dict[str, CallSpec] = {
             tools=("save_find", "skip_find"),
             hand_back=("save_find", "skip_find"),
             web_searches=3,
+            **_WORKER,
+        ),
+        # Reading a recipe link whose page has no recipe block for code to read (docs/RECIPES.md,
+        # scouting/fill.py): that page and at most one more, writing that recipe alone
+        # (`worker_idea_id`), with the evening's lookups.
+        CallSpec(
+            "fill_recipe",
+            "reading recipe links",
+            prompt="fill_recipe",
+            tools=("save_recipe", "skip_recipe"),
+            hand_back=("save_recipe", "skip_recipe"),
+            web_searches=2,
             **_WORKER,
         ),
         # Judging the pocket each evening (scouting/judging.py): which finds, already checked

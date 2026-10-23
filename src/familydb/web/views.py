@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 
 from markupsafe import Markup, escape
 
-from familydb import alerts, happening, presents, windows
+from familydb import alerts, happening, meals, presents, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, companies, prices
 from familydb.availability import happening_search_available, ticketmaster_available
@@ -32,6 +32,7 @@ from familydb.store.messages import VOICE_PREFIX, WORDS_GONE, Message, as_said
 from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
+from familydb.store.recipes import OCCASIONS, Recipe
 from familydb.store.tasks import Task
 from familydb.suggest.types import DAY_END, DAY_START
 from familydb.web.map_view import Away, drive_text
@@ -248,6 +249,7 @@ def local_day(value: str, tz: ZoneInfo) -> str:
 # The picture beside a kind of idea (the new sprite's names); anything else gets a spark.
 KIND_GLYPHS = {
     "restaurant": "utensils",
+    "recipe": "utensils",
     "activity": "sparkle",
     "outing": "sparkle",
     "day_trip": "mountain",
@@ -731,7 +733,8 @@ def eat_line(card: dict[str, Any], idea: Idea, *, kid: bool = False) -> str:
 
 
 def eat_score(card: dict[str, Any], idea: Idea) -> tuple:
-    """What comes first on Where should we eat: open today, not done lately, loved, near."""
+    """What comes first among the restaurants on What should we eat: open today, not done
+    lately, loved, near."""
     opened = bool(card["today"] and card["today"].startswith("open"))
     rating = idea.avg_rating or 0.0
     minutes = travel_minutes(card["travel"])
@@ -784,6 +787,112 @@ def do_summary(count: int, top: str | None, lead: dict[str, Any] | None) -> str:
     return said + "."
 
 
+# -- recipes (docs/RECIPES.md) --------------------------------------------------------------------
+
+# The chips on What should we eat that narrow to a situation, in the order shown.
+COOK_CHIPS = (
+    ("weeknight", "Quick"),
+    ("prep_ahead", "Prep ahead"),
+    ("family_dinner", "Family dinner"),
+    ("slow", "Slow cook"),
+    ("breakfast", "Breakfast"),
+)
+
+
+def cook_line(ranked: meals.Ranked) -> str:
+    """The one line under a recipe on Eat: its reasons as code gave them, and what it suits."""
+    said = list(ranked.reasons)
+    if ranked.verdict == "out":  # why it does not fit is the whole line
+        line = " · ".join(said)
+        return line[:1].upper() + line[1:]
+    # The facts, what it suits (two at most; the rest, and her guesses, are on its page), and
+    # what only lowers it last, so a pick's line does not open with a reason against it.
+    occasions = [one for one in meals.occasion_words(ranked.recipe.occasions) if one not in said]
+    if occasions:
+        said.append(", ".join(occasions[:ROW_OCCASIONS]))
+    said += ranked.caveats
+    line = " · ".join(said)
+    return line[:1].upper() + line[1:]
+
+
+ROW_OCCASIONS = 2
+
+
+def eat_short(card: dict[str, Any]) -> str:
+    """A restaurant in a few words for the summary line: open till when, and how far."""
+    parts: list[str] = []
+    today = card.get("today") or ""
+    found = re.search(r" to (.+)$", today)
+    if found:
+        parts.append(f"open till {found.group(1)}")
+    elif today:
+        parts.append(today)
+    if card.get("travel"):
+        minutes = travel_minutes(card["travel"])
+        parts.append(f"{minutes} min" if minutes < 999 else card["travel"])
+    return ", ".join(parts) or (card.get("line") or "").lower()
+
+
+def recipe_panel(recipe: Recipe | None, tz: ZoneInfo, *, grown_up: bool) -> dict[str, Any] | None:
+    """What a recipe's page draws: its facts, the situations said and guessed, what to buy and the
+    steps, where it was read and when. None for an idea with no recipe kept."""
+    if recipe is None:
+        return None
+    facts: list[tuple[str, str]] = []
+    if recipe.minutes is not None:
+        total = fmt_minutes(recipe.minutes)
+        if (
+            recipe.active_minutes
+            and recipe.total_minutes
+            and recipe.active_minutes < recipe.total_minutes
+        ):
+            total += f", {fmt_minutes(recipe.active_minutes)} of it hands-on"
+        facts.append(("Takes", total))
+    if recipe.serves:
+        facts.append(("Serves", str(recipe.serves)))
+    if recipe.occasions:
+        facts.append(("Good for", ", ".join(meals.occasion_words(recipe.occasions))))
+    if recipe.prep_note:
+        facts.append(("Ahead", recipe.prep_note))
+    read = None
+    if recipe.filled_at and recipe.filled_by in ("page", "lookup"):
+        day = day_short(date.fromisoformat(local_day(recipe.filled_at, tz)))
+        read = f"Read from {recipe.source_site or 'its page'}, {day}"
+    return {
+        "facts": facts,
+        # Her guesses are the workings: a grown-up's to take or drop, never shown to a kid.
+        "guessed": [
+            {"key": one, "words": meals.OCCASION_WORDS.get(one, one)}
+            for one in recipe.occasions_guessed
+        ]
+        if grown_up
+        else [],
+        "occasions": list(recipe.occasions),
+        "ingredients": [one.text for one in recipe.ingredients],
+        "steps": recipe.steps,
+        "source_url": clean_url(recipe.source_url),
+        "source_site": recipe.source_site,
+        "read": read,
+        "unread": recipe.fill_note if grown_up and not recipe.filled_at else None,
+        "shoppable": bool(recipe.ingredients),
+    }
+
+
+def occasion_choices() -> list[tuple[str, str]]:
+    return [(one, meals.OCCASION_WORDS.get(one, one)) for one in OCCASIONS]
+
+
+def eat_both_summary(cook: dict[str, Any] | None, out: dict[str, Any] | None, meal: str) -> str:
+    """The line under What should we eat: the cook pick and the restaurant pick for the meal."""
+    if cook and out:
+        return f"{meal}: {cook['title']}, {cook['short']} · or {out['title']}, {eat_short(out)}."
+    if cook:
+        return f"{meal}: {cook['title']}, {cook['short']}."
+    if out:
+        return f"{meal}: {out['title']}, {eat_short(out)}."
+    return "Nothing saved yet."
+
+
 def meal_words(local_now: datetime) -> str:
     """Which meal is next: the label over the top pick."""
     if local_now.hour >= 14:
@@ -814,6 +923,21 @@ def soon_summary(days: Sequence[dict[str, Any]], today: date) -> str:
     return f"{total} in the next few weeks."
 
 
+def list_groups(to_get: list[dict[str, Any]]) -> list[tuple[str, list[dict[str, Any]]]]:
+    """A list's things by the section of the store (groceries.section_of), in the order a store is
+    walked, once two sections besides Other have something; else nothing, and the list is drawn
+    whole in the order added (a hardware list has no sections)."""
+    from familydb import groceries
+
+    found: dict[str, list[dict[str, Any]]] = {section: [] for section in groceries.SECTIONS}
+    for thing in to_get:
+        found[groceries.section_of(thing["text"], thing.get("note"))].append(thing)
+    placed = [section for section in groceries.SECTIONS[:-1] if found[section]]
+    if len(placed) < 2:
+        return []
+    return [(section, found[section]) for section in groceries.SECTIONS if found[section]]
+
+
 def lists_summary(lists: Sequence[dict[str, Any]], shown: dict[str, Any]) -> str:
     """The list open, then what waits on the others: "6 to get. 5 more on Costco and Camping." """
     here = len(shown["to_get"])
@@ -841,8 +965,51 @@ def my_list_summary(kid: dict[str, Any]) -> str:
     return _n(open_count, "thing", "things") + " on your lists."
 
 
+def shop_summary(shop: Any) -> str:
+    """The line under Shopping for a recipe (groceries.Shopping): what is to buy, and once it is
+    on the list how it stands, then what the pantry has."""
+    buy = shop.to_buy
+    on = [one for one in buy if one.on_list is not None]
+    if not buy:
+        said = "Nothing to buy"
+    elif on:
+        got = sum(1 for one in on if one.got)
+        said = f"{len(on) - got} to get" if len(on) > got else "All got"
+        if got and len(on) > got:
+            said += f", {got} got"
+        if len(on) < len(buy):
+            said += f", {len(buy) - len(on)} not on the list yet"
+    else:
+        n = len(shop.sections)
+        said = f"{len(buy)} to buy, in {n} section{'' if n == 1 else 's'} of the store"
+    if shop.pantry:
+        said += f"; {len(shop.pantry)} from the pantry"
+    return said + "."
+
+
+def shop_starters(shop: Any, *, all_on: bool, may_change: bool) -> list[str]:
+    """Three sentences a recipe's Shopping page offers the box: the list (what is left on it once
+    everything is there, or for a kid, who may not change it), a stand-in for the first thing
+    from the aisles the table knows none for (the family asks her), and what goes with it."""
+    odd = next(
+        (
+            one.item
+            for section, found in shop.sections
+            if section in ("Dry goods & cans", "Other")
+            for one in found
+            if not one.alternatives
+        ),
+        None,
+    )
+    second = f"What could stand in for {odd}?" if odd else "What goes with it?"
+    first = "What's left on the list?" if all_on or not may_change else "Put it all on the list"
+    return [first, second, "Can we make it ahead?"]
+
+
 # Quick sentences under an idea's box, filled in by a tap, never sent by themselves.
 def idea_starters(idea: Idea, today: date) -> list[str]:
+    if idea.kind == "recipe":
+        return ["What goes with it?", "Can we make it ahead?", "Put it on the list"]
     weekend = "this weekend" if today.weekday() < 5 else "next weekend"
     first = "Plan it for " + weekend
     second = "Is it good for the kids?" if idea.kind != "gift" else "What would go with it?"
@@ -1018,6 +1185,8 @@ def idea_state(idea: Idea, plans: Sequence[Plan], today: date) -> str:
     "Done, last on Saturday 12 September", "Dropped", "On until Sunday 11 October"."""
     if idea.status == "dropped":
         return "Dropped"
+    if idea.kind == "recipe":
+        return recipe_state(idea)
     coming = [p for p in plans if p.status != "cancelled" and p.start[:10] >= today.isoformat()]
     if coming:
         first = min(coming, key=lambda p: p.start)
@@ -1030,6 +1199,18 @@ def idea_state(idea: Idea, plans: Sequence[Plan], today: date) -> str:
     if last is not None and last >= today:
         return f"On until {day_text(last.isoformat())}"
     return "An idea"
+
+
+def recipe_state(idea: Idea) -> str:
+    """A recipe's state in words: "Not made yet", "Made once, on Tuesday 13 October", "Made 3
+    times, last on ..." (plans for a dinner are on its page, under Planned)."""
+    if not idea.times_done:
+        return "Not made yet"
+    times = "once" if idea.times_done == 1 else f"{idea.times_done} times"
+    last = f", last on {day_text(idea.last_done_at[:10])}" if idea.last_done_at else ""
+    if idea.times_done == 1 and last:
+        last = f", on {day_text(idea.last_done_at[:10])}"
+    return f"Made {times}{last}"
 
 
 def made_words(made_at: str, now: datetime, tz: ZoneInfo) -> str:
@@ -1372,10 +1553,12 @@ AGENDA_NOTES = {
 }
 
 
-def outcome_row(outcome: Outcome) -> dict[str, Any]:
+def outcome_row(outcome: Outcome, *, cooked: bool = False) -> dict[str, Any]:
+    """How one time went; for a recipe (`cooked`) in a recipe's words."""
     repeat = None
     if outcome.would_repeat is not None:
-        repeat = "would go again" if outcome.would_repeat else "would not go again"
+        verb = "make" if cooked else "go"
+        repeat = f"would {verb} again" if outcome.would_repeat else f"would not {verb} again"
     return {
         "when": day_text(outcome.happened_on),
         "rating": f"{outcome.rating}/10" if outcome.rating is not None else None,
@@ -1464,6 +1647,7 @@ DID_WORDS = {
     "update_wish": "Changed a wish",
     "turn_away": "Turned down a request",
     "shopping_list": "Changed a list",
+    "recipe": "Saved a recipe",
     "undo": "Took a change back",
 }
 

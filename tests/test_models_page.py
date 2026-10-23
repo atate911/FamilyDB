@@ -274,7 +274,7 @@ def test_each_use_that_thinks_has_its_box_and_says_it_on_its_line(page, conn):
     """Every use that thinks has a Thinking box (weighing changes too), and its line says how
     hard it thinks with the row closed; voice notes and photos have none."""
     text = page.get("/settings/model").text
-    for use in ("chat", "digest", "choose", "judge", "lookup", "onnear"):
+    for use in ("chat", "digest", "choose", "judge", "lookup", "onnear", "recipes"):
         assert f'name="effort_{use}"' in text, use
     for use in ("hear", "look"):
         assert f'name="effort_{use}"' not in text, use

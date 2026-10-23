@@ -1,5 +1,5 @@
-"""The ideas pages: What could we do (and its chips), one idea in full, the forms for a new
-idea and a change, and Where could we eat."""
+"""The ideas pages: What could we do (and its chips), one idea in full, and the forms for a new
+idea and a change. What should we eat is eat_page.py."""
 
 from __future__ import annotations
 
@@ -9,25 +9,28 @@ from typing import Any
 
 from flask import (
     abort,
+    redirect,
     request,
     session,
     url_for,
 )
 
-from familydb import personas, presents
+from familydb import groceries, personas, presents
 from familydb.availability import calendar_available, enrichment_available
 from familydb.base import roles
 from familydb.base.dates import utc_iso
 from familydb.store import calls
 from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store
+from familydb.store import lists as list_store
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store import outcomes as outcome_store
 from familydb.store import picks as pick_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
-from familydb.store.ideas import KIND_SUGGESTIONS
+from familydb.store import recipes as recipe_store
+from familydb.store.ideas import KIND_SUGGESTIONS, RECIPE
 from familydb.suggest import people as who_for
 from familydb.web import (
     auth,
@@ -39,7 +42,11 @@ from familydb.web import (
 )
 from familydb.web.answers import answer
 from familydb.web.chat import WHO_KEY
+from familydb.web.eat_page import RESTAURANT_KIND
 from familydb.web.pages import MAX_ID, bp, familydb_app, who_asks
+
+# The list a recipe's shopping lands on: the one the family always has (lists_page).
+SHOPPING = "shopping"
 
 LIST_LIMIT = 200
 
@@ -62,7 +69,8 @@ COSTS = ((0, "free"), (1, "cheap"), (2, "moderate"), (3, "pricey"), (4, "expensi
 RATINGS = tuple(range(10, 0, -1))
 
 
-RESTAURANT_KIND = "restaurant"
+# Kinds with a door of their own, Eat's (eat_page.py): restaurants and recipes are not on Do.
+ELSEWHERE = frozenset({RESTAURANT_KIND, RECIPE})
 
 
 @bp.get("/ideas")
@@ -115,7 +123,7 @@ def ideas() -> str:
             app, conn, people, scope={"label": "Things to do", "text": "About things to do:"}
         )
     if kind != RESTAURANT_KIND:
-        found = [idea for idea in found if idea.kind != RESTAURANT_KIND]
+        found = [idea for idea in found if idea.kind not in ELSEWHERE]
     found = _narrowed(found, people, away, narrow)
     names = {m.id: m.display_name for m in people}
     stale = utc_iso(app.clock.now() - timedelta(days=FADE_DAYS))
@@ -135,7 +143,7 @@ def ideas() -> str:
     top = None
     if picked and not (query or kind or status or who or any(narrow.values())):
         rows, top = _lead_with_pick(rows, picked)
-    live = [idea for idea in listed if idea.status != "dropped" and idea.kind != RESTAURANT_KIND]
+    live = [idea for idea in listed if idea.status != "dropped" and idea.kind not in ELSEWHERE]
     placed = [(idea, away[idea.id]) for idea in found if away.get(idea.id)]
     filtered = bool(query or kind or status or who or any(narrow.values()))
     return answer(
@@ -301,8 +309,9 @@ def idea(idea_id: int) -> str:
         record = idea_store.get(conn, idea_id)
         if record is None or presents.is_kept_from(conn, record, visitor.member):
             abort(404)
-        if record.kind == RESTAURANT_KIND and visitor.may("browse"):
+        if record.kind in ELSEWHERE and visitor.may("browse"):
             shell.belongs_to("eat")
+        cooked = recipe_store.get(conn, idea_id) if record.kind == RECIPE else None
         original = (
             message_store.get(conn, record.source_message_id) if record.source_message_id else None
         )
@@ -326,6 +335,8 @@ def idea(idea_id: int) -> str:
         box["starters"] = views.idea_starters(record, today)
     away = map_view.away_from_home(place, settings)
     card = _idea_card(record, settings, away, slots, kept)
+    recipe_panel = views.recipe_panel(cooked, settings.tzinfo, grown_up=visitor.may("browse"))
+    recipe_facts = recipe_panel["facts"] if recipe_panel else []
     place_panel = views.place_panel(place, now, settings.place_stale_days, today)
     by = next((m.display_name for m in family if m.id == record.suggested_by), None)
     return answer(
@@ -346,9 +357,10 @@ def idea(idea_id: int) -> str:
         row=card,
         setting=views.SETTINGS.get(record.setting, record.setting),
         weather=views.WEATHER.get(record.weather),
-        facts=views.idea_facts(record, card, place_panel, grown_up=visitor.may("browse")),
+        facts=_facts(record, card, place_panel, recipe_facts, grown_up=visitor.may("browse")),
         place=place_panel,
-        outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
+        recipe=recipe_panel,
+        outcomes=[views.outcome_row(o, cooked=record.kind == RECIPE) for o in reversed(outcomes)],
         plans=planned,
         changed=views.changed_line(
             changed, settings.tzinfo, assistant=personas.active(settings).name
@@ -356,9 +368,74 @@ def idea(idea_id: int) -> str:
     )
 
 
+@bp.get("/idea/<int:idea_id>/shop")
+def shop(idea_id: int) -> str:
+    """A recipe's shopping (docs/RECIPES.md): what it needs by the section of the store each is
+    found in, in the order a store is walked, laid over the family's shopping list so a thing on
+    it has its tick (the Lists page's own form, back here); what the pantry has apart, to check,
+    with Need it for one they are out of; what could stand in for an uncommon thing, on a tap.
+    All by code (familydb/groceries.py): no model call."""
+    app = familydb_app()
+    visitor = auth.visitor()
+    with closing(app.connect()) as conn:
+        record = idea_store.get(conn, idea_id)
+        if (
+            record is None
+            or record.kind != RECIPE
+            or presents.is_kept_from(conn, record, visitor.member)
+        ):
+            abort(404)
+        recipe = recipe_store.get(conn, idea_id)
+        if recipe is None or not recipe.ingredients:
+            return redirect(url_for("web.idea", idea_id=idea_id))
+        shell.belongs_to("eat")
+        ref = list_store.find(conn, SHOPPING)
+        held = list_store.items(conn, ref) if ref is not None else []
+        on_list = {groceries.key(item.text): item for item in held}
+        shop = groceries.shopping(recipe, on_list, have=groceries.family_pantry(conn))
+        family = member_store.list_all(conn)
+        box = chat.page_box(
+            app,
+            conn,
+            family,
+            prompt=chat.ITEM_PROMPT,
+            scope={"label": record.title, "text": f"About #{record.id} {record.title}:"},
+        )
+        all_on = all(one.on_list is not None for one in shop.to_buy)
+        box["starters"] = views.shop_starters(shop, all_on=all_on, may_change=visitor.may("change"))
+    return answer(
+        "shop.html",
+        idea=record,
+        shop=shop,
+        list_name=SHOPPING,
+        all_on=all_on,
+        summary=views.shop_summary(shop),
+    )
+
+
+def _facts(
+    record: Any,
+    card: dict[str, Any],
+    place: dict[str, Any] | None,
+    recipe: list[tuple[str, str]],
+    *,
+    grown_up: bool,
+) -> list[tuple[str, str, str]]:
+    """The facts that decide, on an idea's page; a recipe's own (what it takes, what it serves,
+    what it is good for) lead, and "So far" is the made-it line's."""
+    facts = views.idea_facts(record, card, place, grown_up=grown_up)
+    if record.kind != RECIPE:
+        return facts
+    # The state line already says how often it was made, so "So far" is not said again.
+    kept = [fact for fact in facts if fact[0] != "So far"]
+    return [*((key, value, "") for key, value in recipe), *kept]
+
+
 def _idea_form(record: Any = None) -> str:
     app = familydb_app()
+    kind_given = request.args.get("kind", "").strip().casefold()[:40] if record is None else ""
     with closing(app.connect()) as conn:
+        cooked = recipe_store.get(conn, record.id) if record is not None else None
         everything = idea_store.list_all(conn, include_dropped=True)
         visitor = auth.visitor()
         if record is not None and presents.is_kept_from(conn, record, visitor.member):
@@ -395,6 +472,9 @@ def _idea_form(record: Any = None) -> str:
         if record
         else None,
         who=session.get(WHO_KEY),
+        kind_given=kind_given,
+        recipe=cooked,
+        occasions=views.occasion_choices(),
     )
 
 
@@ -410,126 +490,3 @@ def edit_idea(idea_id: int) -> str:
     if record is None:
         abort(404)
     return _idea_form(record)
-
-
-@bp.get("/restaurants")
-@bp.get("/eat")
-def restaurants() -> str:
-    """Where should we eat? (docs/INTERFACE.md section 4): a top pick for the next meal, chosen
-    by code, then every saved restaurant with the one fact that decides."""
-    app = familydb_app()
-    now = app.clock.now()
-    today = app.clock.today()
-    stale_days = app.settings.place_stale_days
-    visitor = auth.visitor()
-    kid = not visitor.may("browse")
-    who = request.args.get("who", "").strip()
-    narrow = {key: request.args.get(key, "") == "1" for key in ("open", "close", "new")}
-    tag = request.args.get("tag", "").strip().casefold()
-    with closing(app.connect()) as conn:
-        kept = presents.kept_ids(conn, visitor.member)
-        found = idea_store.search(
-            conn,
-            kind=RESTAURANT_KIND,
-            participant=who if who and who not in ("kids", "us") else None,
-            limit=LIST_LIMIT,
-            exclude_ids=kept,
-            newest_first=True,
-        )
-        people = member_store.list_all(conn)
-        slots = views.slot_map(people)
-        cards = []
-        for idea in found:
-            card = views.restaurant_card(
-                idea,
-                place_store.get(conn, idea.place_id) if idea.place_id else None,
-                today,
-                now,
-                stale_days,
-            )
-            card["people"] = views.people_for(idea, slots)
-            card["who"] = views.names_text(card["people"])
-            card["line"] = views.eat_line(card, idea, kid=kid)
-            card["score"] = views.eat_score(card, idea)
-            card["idea"] = idea
-            cards.append(card)
-        tags = sorted({one.casefold() for idea in found for one in idea.tags})
-        chat.page_box(app, conn, people, scope={"label": "Eat out", "text": "About eating out:"})
-    cards = _eat_narrowed(cards, people, narrow, who, tag)
-    cards.sort(key=lambda card: card["score"])
-    for card in cards:
-        card.pop("idea")
-    plain = not any(narrow.values()) and not who and not tag
-    top = views.meal_words(now.astimezone(app.settings.tzinfo)) if cards and plain else None
-    return answer(
-        "eat.html",
-        cards=cards,
-        top=top,
-        summary=views.eat_summary(cards[0] if cards else None, top),
-        chips=_eat_chips(people, narrow, who, tags, tag, kid),
-    )
-
-
-def _eat_narrowed(
-    cards: list[dict[str, Any]],
-    people: list[member_store.Member],
-    narrow: dict[str, bool],
-    who: str,
-    tag: str,
-) -> list[dict[str, Any]]:
-    kept = cards
-    if narrow["open"]:
-        kept = [card for card in kept if card["today"] and card["today"].startswith("open")]
-    if narrow["close"]:
-        kept = [card for card in kept if views.travel_minutes(card["travel"]) <= CLOSE_MINUTES]
-    if narrow["new"]:
-        kept = [card for card in kept if not card["idea"].times_done]
-    if who == "kids":
-        kept = [card for card in kept if who_for.with_the_kids(card["idea"], people)]
-    elif who == "us":
-        kept = [card for card in kept if who_for.just_us(card["idea"], people)]
-    if tag:
-        kept = [card for card in kept if tag in {one.casefold() for one in card["tags"]}]
-    return kept
-
-
-def _eat_chips(
-    people: list[member_store.Member],
-    narrow: dict[str, bool],
-    who: str,
-    tags: list[str],
-    tag: str,
-    kid: bool,
-) -> list[dict[str, Any]]:
-    chips = [
-        {"label": "Open today", "href": url_for("web.restaurants", open="1"), "on": narrow["open"]},
-        {"label": "Close", "href": url_for("web.restaurants", close="1"), "on": narrow["close"]},
-        {"label": "New to us", "href": url_for("web.restaurants", new="1"), "on": narrow["new"]},
-    ]
-    if not kid:
-        chips.append(
-            {"label": "Just us", "href": url_for("web.restaurants", who="us"), "on": who == "us"}
-        )
-        chips.append(
-            {
-                "label": "With the kids",
-                "href": url_for("web.restaurants", who="kids"),
-                "on": who == "kids",
-            }
-        )
-    chips += [
-        {"label": one.capitalize(), "href": url_for("web.restaurants", tag=one), "on": tag == one}
-        for one in tags[:8]
-    ]
-    if not kid:
-        chips += [
-            {
-                "label": person.display_name,
-                "href": url_for("web.restaurants", who=person.display_name),
-                "on": who.casefold() == person.display_name.casefold(),
-            }
-            for person in people
-        ]
-    if any(chip["on"] for chip in chips):
-        chips.insert(0, {"label": "Everything", "href": url_for("web.restaurants"), "on": False})
-    return chips

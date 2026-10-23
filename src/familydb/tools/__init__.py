@@ -16,6 +16,7 @@ def build_registry() -> ToolRegistry:
         now,
         outcomes,
         places,
+        recipes,
         suggest,
         tasks,
         undo,

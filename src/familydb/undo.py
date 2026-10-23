@@ -30,7 +30,7 @@ from familydb import task_service
 from familydb.base import roles
 from familydb.base.dates import utc_iso
 from familydb.base.errors import ToolError
-from familydb.store import calls, finds, ideas, memories, plans, tasks
+from familydb.store import calls, finds, ideas, memories, plans, recipes, tasks
 from familydb.store.db import from_json, transaction
 from familydb.tools.registry import UNDO_VERSION, ToolContext, keep_undo
 
@@ -133,7 +133,14 @@ def _restore_idea(ctx: ToolContext, inverse: dict[str, Any]) -> None:
         now_as = idea.model_dump(mode="json")
         if any(now_as.get(key) != value for key, value in inverse["after"].items()):
             raise ToolError(CHANGED)
-        ideas.update(ctx.conn, idea.id, inverse["before"], now=ctx.now_iso())
+        cooked = recipes.get(ctx.conn, idea.id) if "recipe_after" in inverse else None
+        if cooked is not None:
+            cooked_as = cooked.model_dump(mode="json")
+            if any(cooked_as.get(k) != v for k, v in inverse["recipe_after"].items()):
+                raise ToolError(CHANGED)
+            recipes.upsert(ctx.conn, idea.id, inverse["recipe_before"], now=ctx.now_iso())
+        if inverse["before"]:
+            ideas.update(ctx.conn, idea.id, inverse["before"], now=ctx.now_iso())
 
 
 def _cancel_task(ctx: ToolContext, inverse: dict[str, Any]) -> None:

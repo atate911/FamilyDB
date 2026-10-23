@@ -28,6 +28,7 @@ BEHAVIOUR = (
     "lookup_hour",
     "enrich_batch",
     "enrichment_notes",
+    "recipe_links",
     "place_stale_days",
     "prompt_idea_limit",
     "history_limit",

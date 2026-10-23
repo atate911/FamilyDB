@@ -25,6 +25,9 @@ The two labels on a memory. A Must is a rule the assistant never suggests agains
 ### Lookup
 Filling an idea in from the web: address, hours, tickets, travel time. By default lookups wait for the evening and arrive together. See [Lookups](/wiki/controls/settings/lookups).
 
+### Recipe
+An [idea](#idea) of kind recipe: a dish the family cooks at home, kept with how long it takes, how many it serves, the situations it suits (a weeknight, prep ahead, a family dinner), its ingredients and its steps. A pasted link is read for those by code. Recipes are on Eat, ranked for the next meal, and can be put on the shopping list. See [Recipes](/wiki/controls/ideas#recipes).
+
 ### Present
 An idea of kind gift (any way of saying present is saved as gift). It is kept from every kid and from the grown-up it names, unless an admin chose others. See [Presents](/wiki/model/ideas-and-places#presents).
 

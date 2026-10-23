@@ -16,7 +16,7 @@ from evals.household import NOW, NOW_ISO, Household
 from familydb import personas, windows
 from familydb.base.errors import ToolError
 from familydb.routing import is_confirmation
-from familydb.store import db, finds, members, memories
+from familydb.store import db, finds, ideas, members, memories
 from familydb.suggest.engine import resolve_window
 from familydb.suggest.types import SuggestInput
 from familydb.tools.registry import without_nulls
@@ -386,6 +386,54 @@ def _night_market(conn: sqlite3.Connection, house: Household) -> None:
             ],
             now=NOW_ISO,
         )
+
+
+def _two_recipes(conn: sqlite3.Connection, house: Household) -> None:
+    """Two recipes the family keeps (docs/RECIPES.md): a quick weeknight one and a slow one."""
+    from familydb import meals
+
+    sam = members.find_by_name(conn, "Sam")
+    assert sam is not None
+    with db.transaction(conn):
+        for title, facts in (
+            (
+                "Sheet-pan fajitas",
+                {
+                    "total_minutes": 35,
+                    "serves": 4,
+                    "occasions": ["weeknight"],
+                    "ingredients": ["1 lb chicken thighs", "2 bell peppers", "8 tortillas"],
+                },
+            ),
+            (
+                "Slow-cooker chili",
+                {
+                    "total_minutes": 360,
+                    "serves": 8,
+                    "ingredients": ["2 lb ground beef", "2 cans kidney beans", "1 onion"],
+                },
+            ),
+        ):
+            made = ideas.insert(conn, title=title, kind="recipe", now=NOW_ISO, suggested_by=sam.id)
+            meals.keep(conn, made, facts, by="family", now=NOW_ISO)
+
+
+def _saved(call: Call) -> bool:
+    return call.input.get("action") == "save"
+
+
+def _no_made_up_minutes(call: Call) -> bool:
+    said = call.input
+    return _saved(call) and not said.get("total_minutes") and not said.get("ingredients")
+
+
+def _quick(call: Call) -> bool:
+    most = call.input.get("most_minutes")
+    return (most is not None and most <= 40) or call.input.get("occasion") == "weeknight"
+
+
+def _both_recipes(call: Call) -> bool:
+    return call.input.get("action") == "from_recipes" and len(call.input.get("idea_ids") or []) == 2
 
 
 def _readable_window(call: Call) -> bool:
@@ -1080,6 +1128,54 @@ CASES: tuple[Case, ...] = (
         (called("add_wish", 1), mentions("want"), shorter_than(400)),
         'A want said as "we should": on her list, and her wording reflected kindly, once.',
         sender=MIA,
+    ),
+    # -- recipes and dinner (docs/RECIPES.md)
+    Case(
+        "recipe_said",
+        ("save this one: sheet-pan fajitas, about 30 minutes, the kids liked it",),
+        (
+            called(
+                "recipe",
+                1,
+                lambda c: _saved(c) and c.input.get("total_minutes") == 30,
+                "a recipe saved, of 30 minutes",
+            ),
+            wrote_only("recipe"),
+            shorter_than(300),
+        ),
+        "A dish to cook is a recipe, with what was said and nothing more.",
+    ),
+    Case(
+        "recipe_link",
+        ("https://www.seriouseats.com/sheet-pan-chicken-fajitas-recipe this one for a weeknight",),
+        (
+            called(
+                "recipe",
+                1,
+                lambda c: _no_made_up_minutes(c) and "seriouseats" in str(c.input.get("url")),
+                "a recipe with its link and no minutes or ingredients made up",
+            ),
+            wrote_only("recipe"),
+            promises_nothing(),
+        ),
+        "A pasted link is saved as a recipe; its page is read later, so nothing is guessed.",
+    ),
+    Case(
+        "dinner_quick",
+        ("what's for dinner tonight? something quick",),
+        (called("find_recipes", 1, _quick, "framed as quick"), wrote_only(), mentions("fajitas")),
+        "Asked what to cook, the recipes are ranked by code and the quick one leads.",
+        seed=_two_recipes,
+    ),
+    Case(
+        "recipe_groceries",
+        ("put the fajitas and the chili on the shopping list",),
+        (
+            called("shopping_list", 1, _both_recipes, "from both recipes"),
+            wrote_only("shopping_list"),
+        ),
+        "A grocery list is made from the recipes by code, in one call.",
+        seed=_two_recipes,
     ),
     Case(
         "her_name_after_a_rename",

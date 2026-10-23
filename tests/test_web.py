@@ -580,11 +580,8 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
     assert page.status_code == 200
     assert _cards(page.text) == 2 and "Museum day" not in page.text  # not the outing
     # The top pick for the next meal leads, with the one line that decides; the rest follow.
-    assert "Where should we eat?" in page.text
-    assert (
-        "Ramen place tonight: open today 11\u00a0am to 9\u00a0pm · 12 min · $$ · not been yet."
-        in page.text
-    )
+    assert "What should we eat?" in page.text
+    assert "Tonight: Ramen place, open till 9\u00a0pm, 12 min." in page.text
     top = re.search(r'<div class="r r--top">.*?</div>\s*<div class="r">', page.text, re.S).group(0)
     assert "Ramen place" in top and '<span class="r__label">Tonight</span>' in top
     assert f'href="/idea/{ramen.id}"' in page.text  # the place page has the links out
@@ -596,7 +593,7 @@ def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
 def test_the_restaurants_page_when_there_are_none(settings, clock, conn, family) -> None:
     _idea(conn, "Museum day", kind="outing")
     page = _client(settings, clock).get("/restaurants")
-    assert "No restaurants yet" in page.text and 'class="place"' not in page.text
+    assert "Nothing saved yet" in page.text and 'class="place"' not in page.text
 
 
 def test_the_plans_page_shows_what_is_coming_and_what_just_happened(
@@ -750,6 +747,7 @@ def test_no_page_writes_but_through_the_four_doors() -> None:
 FAMILY_PAGES = {
     "routes.py",
     "ideas_page.py",
+    "eat_page.py",
     "plans_page.py",
     "tasks_page.py",
     "wishes_page.py",
@@ -852,7 +850,8 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         "add_wish",
         "update_wish",
         "undo",  # the Undo beside a form's notice and under her reply (familydb/undo.py)
-        "shopping_list",  # the Lists page (tools/lists.py)
+        "shopping_list",  # the Lists page, and a grocery list from recipes (tools/lists.py)
+        "recipe",  # a recipe's facts on the idea form, and taking or dropping her guess
     }
     # And it runs them the one way: through the registry, which validates and owns the transaction.
     assert (

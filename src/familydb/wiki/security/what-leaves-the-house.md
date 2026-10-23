@@ -34,6 +34,8 @@ Where a row says "the company", the second company can receive the same content 
 | Plan titles, times, places and notes; the calendar is read for what is on | Google | When a plan is made, changed or looked up | [Disconnect Google Calendar](/wiki/controls/settings/connections#disconnect-google-calendar) on Connections, then unshare the calendar in Google |
 | The home area, idea locations, place addresses and places named in a question, to find coordinates | Nominatim, then Open-Meteo's geocoder for a short name. A `GEOCODER_CONTACT` you set goes in the request header | When one is typed or saved | No setting |
 | Home coordinates and dates | Open-Meteo | When a forecast is needed | No setting. With no home position there is no forecast |
+| A request for a recipe link somebody pasted, carrying nothing of the family; never to an address on this machine or the home network | The recipe's website | Within a few minutes of the link being saved | [`recipe_links`](/wiki/controls/settings/lookups#looking-ideas-up); off, the link waits for the evening's lookup |
+| The link of a recipe whose page has no recipe data, and its title | The lookup company, which reads that page | In the evening's lookups | [`web_tools_enabled`](/wiki/controls/settings/lookups#looking-ideas-up) |
 | The sound of dictation | The browser's maker (Apple for Safari, Google for Chrome; other browsers vary, and Firefox has no mic), never through FamilyDB | When somebody presses the mic | [`web_dictation`](/wiki/controls/settings/general#this-page) |
 
 ## What a kid's message adds

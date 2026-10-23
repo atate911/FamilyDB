@@ -17,6 +17,7 @@ from familydb.base.urls import clean_url
 from familydb.hours import checked_days_ago, format_ranges, is_stale, open_on
 from familydb.integrations.geocode import estimate_travel
 from familydb.store import ideas, places
+from familydb.store import recipes as recipe_store
 from familydb.store.db import transaction
 from familydb.store.places import Place
 from familydb.tools.registry import ToolContext, tool
@@ -223,6 +224,9 @@ def look_up_now(ctx: ToolContext, args: LookUpNowInput) -> dict[str, Any]:
         raise ToolError("lookups wait for the evening; a parent can ask for one now")
     with transaction(ctx.conn):
         asked = ideas.want_lookup(ctx.conn, args.idea_ids or None, now=ctx.now_iso())
+        for idea_id in asked:
+            # A recipe's link is read again from the start: by code first (docs/RECIPES.md).
+            recipe_store.clear_read(ctx.conn, idea_id, now=ctx.now_iso())
     return {
         "asked": asked,
         "unknown": [idea_id for idea_id in args.idea_ids if idea_id not in asked],

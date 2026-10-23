@@ -12,7 +12,7 @@ Three things, and a person always knows which they want:
 
 - **Vera to tell.** The box is the first thing on every first screen, because an instruction is the most common reason to open the app: "add this restaurant", "remind me Tuesday", "tell Maya yes". It comes back as a one-line receipt with undo.
 - **Now, arranged by Vera.** Under the box, her picks for right now and the next day or two, and anything waiting on you. She arranges this part freely each time. It is the answer to the family's daily question, which is improvisational: "what should we do, now or soon?"
-- **Destinations to look at.** A short row of screens, each named for a want ("Where should we eat?"), each one tap away, each opening on its answer with nothing to set first. Ranked by code, instant and free. Vera is there too, as a supporting assistant, through the same box scoped to the screen.
+- **Destinations to look at.** A short row of screens, each named for a want ("What should we eat?"), each one tap away, each opening on its answer with nothing to set first. Ranked by code, instant and free. Vera is there too, as a supporting assistant, through the same box scoped to the screen.
 
 Four rules hold everything below:
 
@@ -29,7 +29,7 @@ FIRST     Now                                        /
           the destination row
 
 LEVEL 1   Destinations                               path
-          Where should we eat?        (Eat out)      /eat
+          What should we eat?         (Eat)          /eat
           What could we do?           (Things)       /do
           This week                   (Calendar)     /week
           The kids                                   /kids
@@ -118,14 +118,16 @@ Every destination is built in this order, so one learned is all learned:
 
 Nothing else appears on a destination. Her picks and her finds are marked as hers; everything else is the family's own.
 
-### Where should we eat? (`/eat`)
+### What should we eat? (`/eat`)
 
-- **Opens on:** a top pick for the next meal, then every saved restaurant.
-- **The pick:** chosen by code: open at the meal time, not done recently, how it was rated, drive time, weather for a patio. Its line says why: "Open till 9, 12 min, you haven't been."
-- **Chips:** Open now · Close · Just us · With the kids · New · Cuisines that exist in the pile · Each person.
-- **Each row:** name, cuisine, one fact that decides (open till, how far, cost band), who suggested it, done before or not.
-- **Empty:** "No restaurants yet. Tell Vera one you've heard about."
-- **Kid:** the same list without cost bands or "just us".
+- **Opens on:** the next meal: the pick to cook and the pick to eat out, named together in the summary line ("Tonight: Stir fry, 25 min · or Kenji's, open till 9, 12 min"), then the first three of each that fit, each with **All N**; the cook pick is the one card, the place a plain row, so one thing leads. A row of tabs, as Plans has, goes between that overview (named for the meal: Tonight, Lunch, Today), **Cook**, every recipe ranked for the meal, and **Eat out**, every saved restaurant, each tab with its own chips (`web/eat_page.py`, `docs/RECIPES.md`). A household keeping only recipes or only restaurants sees that list whole, with no tabs.
+- **The cook pick:** chosen by code (`familydb/meals.py`): a weeknight one on a weeknight when there is one, short enough for the time before a plan on the calendar tonight, not had in the last ten days (or the family's own rest for recipes), how it was rated. A recipe that cannot fit is drawn faded at the foot with why.
+- **The restaurant pick:** chosen by code: open at the meal time, not done recently, how it was rated, drive time, weather for a patio. Its line says why: "Open till 9, 12 min, you haven't been."
+- **Chips, on Cook:** the situations some recipe has (Quick always; Prep ahead, Family dinner, Slow cook, Breakfast) · New to us · With the kids · Cuisines in the recipes. **On Eat out:** Open now · Close · New · Just us · With the kids · Cuisines in the pile · Each person. The overview has none.
+- **Each row:** a recipe's minutes, servings, times made and rating, what it is good for (a guess marked "looks like"); a restaurant's cuisine, one fact that decides (open till, how far, cost band), who suggested it, done before or not.
+- **Grocery list:** on Cook, a grown-up who may change things ticks recipes and presses **Grocery list for these**: what they need goes on the shopping list by code (`shopping_list`, `from_recipes`).
+- **Empty:** "Nothing saved yet. Tell Vera a recipe you like or a place you've heard about."
+- **Kid:** the same lists without cost bands, "just us" or the boxes.
 
 ### What could we do? (`/do`)
 
@@ -180,7 +182,8 @@ The picks on Now, as a destination of their own for a big screen, a deep link, o
 
 - **Opens on:** the list in use (shopping by default), big targets, ticks that need no conversation.
 - **Other lists** are chips: Costco, a packing list that belongs to a plan, anything created by naming it ("add sunscreen to the camping list" makes the list).
-- **Behind each item:** who asked, the photo of the exact thing if there was one, which plan it belongs to.
+- **Behind each item:** who asked, the photo of the exact thing if there was one, which plan it belongs to; under a thing a recipe put there, how much each recipe wants.
+- **By section of the store**, in the order a store is walked (Produce, Bakery, Meat & fish, Dairy & eggs, Dry goods & cans, Frozen, Drinks, Other), once the list spans two sections; a short list, or a hardware list, stays in the order added. The same sections as a recipe's Shopping page (`/idea/N/shop`, `docs/RECIPES.md`): that page is one recipe's needs laid over this list, with what the pantry has apart and a stand-in under an uncommon thing, for a phone in the store.
 - **A kid's additions** arrive with her face on them for a parent to keep or drop.
 - **Empty:** "Nothing on the list. Tell Vera 'we're out of milk'."
 
@@ -215,6 +218,7 @@ Every item page reads in this order:
 | **A day** | This week | Everything on it, free stretches, pencil, and afterwards the memories. |
 | **A kid** | The kids | Her requests, her lists, her pitches, and for a parent her thread to read along. An admin sees the role and password forms here too. |
 | **A list** | Lists | The checklist itself is the page. |
+| **A recipe** | Eat, Cook; search | Takes, serves, good for (her guess to take or drop); the ingredients and steps; **Shopping list**, a page of its own by the sections of the store with the pantry apart, ticks once it is on the list, a stand-in under an uncommon thing; Plan it for a night; Record that you made it. |
 | **A reminder** | This week, On your plate, a receipt | When or on what condition, owner, repeats, delivery rules in words. |
 | **A happening** | Happening soon, her picks | Date (or any time, for a place she found), source, the original listing, Yes in pencil; **Save it** and **Not for us** while it is hers to offer, and once it is not, what became of it. |
 | **A memory** | What we did, a day | Faces, photo, what made it good, Again?. |
