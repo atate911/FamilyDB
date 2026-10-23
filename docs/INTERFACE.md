@@ -182,7 +182,8 @@ The picks on Now, as a destination of their own for a big screen, a deep link, o
 
 - **Opens on:** the list in use (shopping by default), big targets, ticks that need no conversation.
 - **Other lists** are chips: Costco, a packing list that belongs to a plan, anything created by naming it ("add sunscreen to the camping list" makes the list).
-- **Behind each item:** who asked, the photo of the exact thing if there was one, which plan it belongs to.
+- **Behind each item:** who asked, the photo of the exact thing if there was one, which plan it belongs to; under a thing a recipe put there, how much each recipe wants.
+- **By section of the store**, in the order a store is walked (Produce, Bakery, Meat & fish, Dairy & eggs, Dry goods & cans, Frozen, Drinks, Other), once the list spans two sections; a short list, or a hardware list, stays in the order added. The same sections as a recipe's Shopping page (`/idea/N/shop`, `docs/RECIPES.md`): that page is one recipe's needs laid over this list, with what the pantry has apart and a stand-in under an uncommon thing, for a phone in the store.
 - **A kid's additions** arrive with her face on them for a parent to keep or drop.
 - **Empty:** "Nothing on the list. Tell Vera 'we're out of milk'."
 
@@ -217,6 +218,7 @@ Every item page reads in this order:
 | **A day** | This week | Everything on it, free stretches, pencil, and afterwards the memories. |
 | **A kid** | The kids | Her requests, her lists, her pitches, and for a parent her thread to read along. An admin sees the role and password forms here too. |
 | **A list** | Lists | The checklist itself is the page. |
+| **A recipe** | Eat, Cook; search | Takes, serves, good for (her guess to take or drop); the ingredients and steps; **Shopping list**, a page of its own by the sections of the store with the pantry apart, ticks once it is on the list, a stand-in under an uncommon thing; Plan it for a night; Record that you made it. |
 | **A reminder** | This week, On your plate, a receipt | When or on what condition, owner, repeats, delivery rules in words. |
 | **A happening** | Happening soon, her picks | Date (or any time, for a place she found), source, the original listing, Yes in pencil; **Save it** and **Not for us** while it is hers to offer, and once it is not, what became of it. |
 | **A memory** | What we did, a day | Faces, photo, what made it good, Again?. |

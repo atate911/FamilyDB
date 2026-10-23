@@ -9,18 +9,20 @@ from typing import Any
 
 from flask import (
     abort,
+    redirect,
     request,
     session,
     url_for,
 )
 
-from familydb import personas, presents
+from familydb import groceries, personas, presents
 from familydb.availability import calendar_available, enrichment_available
 from familydb.base import roles
 from familydb.base.dates import utc_iso
 from familydb.store import calls
 from familydb.store import finds as find_store
 from familydb.store import ideas as idea_store
+from familydb.store import lists as list_store
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store import outcomes as outcome_store
@@ -42,6 +44,9 @@ from familydb.web.answers import answer
 from familydb.web.chat import WHO_KEY
 from familydb.web.eat_page import RESTAURANT_KIND
 from familydb.web.pages import MAX_ID, bp, familydb_app, who_asks
+
+# The list a recipe's shopping lands on: the one the family always has (lists_page).
+SHOPPING = "shopping"
 
 LIST_LIMIT = 200
 
@@ -360,6 +365,51 @@ def idea(idea_id: int) -> str:
         changed=views.changed_line(
             changed, settings.tzinfo, assistant=personas.active(settings).name
         ),
+    )
+
+
+@bp.get("/idea/<int:idea_id>/shop")
+def shop(idea_id: int) -> str:
+    """A recipe's shopping (docs/RECIPES.md): what it needs by the section of the store each is
+    found in, in the order a store is walked, laid over the family's shopping list so a thing on
+    it has its tick (the Lists page's own form, back here); what the pantry has apart, to check,
+    with Need it for one they are out of; what could stand in for an uncommon thing, on a tap.
+    All by code (familydb/groceries.py): no model call."""
+    app = familydb_app()
+    visitor = auth.visitor()
+    with closing(app.connect()) as conn:
+        record = idea_store.get(conn, idea_id)
+        if (
+            record is None
+            or record.kind != RECIPE
+            or presents.is_kept_from(conn, record, visitor.member)
+        ):
+            abort(404)
+        recipe = recipe_store.get(conn, idea_id)
+        if recipe is None or not recipe.ingredients:
+            return redirect(url_for("web.idea", idea_id=idea_id))
+        shell.belongs_to("eat")
+        ref = list_store.find(conn, SHOPPING)
+        held = list_store.items(conn, ref) if ref is not None else []
+        on_list = {groceries.key(item.text): item for item in held}
+        shop = groceries.shopping(recipe, on_list, have=groceries.family_pantry(conn))
+        family = member_store.list_all(conn)
+        box = chat.page_box(
+            app,
+            conn,
+            family,
+            prompt=chat.ITEM_PROMPT,
+            scope={"label": record.title, "text": f"About #{record.id} {record.title}:"},
+        )
+        all_on = all(one.on_list is not None for one in shop.to_buy)
+        box["starters"] = views.shop_starters(shop, all_on=all_on, may_change=visitor.may("change"))
+    return answer(
+        "shop.html",
+        idea=record,
+        shop=shop,
+        list_name=SHOPPING,
+        all_on=all_on,
+        summary=views.shop_summary(shop),
     )
 
 

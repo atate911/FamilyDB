@@ -109,7 +109,7 @@ RECIPE_NUMBERS = (
 LISTED = "On the shopping list for {recipes}: {added}."
 LISTED_NOTHING = "Nothing new for the list: {recipes} needs what is on it already."
 LISTED_THERE = "Already on it: {items}."
-LISTED_LEFT = "Left off: {items}."
+LISTED_LEFT = "In the pantry already: {items}."
 NEEDS_RECIPES = "Tick the recipes to make a grocery list from."
 TOOK_GUESS = "#{id} is {words}, then."
 DROPPED_GUESS = "#{id} is not {words}; that guess is gone."
@@ -823,12 +823,20 @@ def list_from_recipes() -> Response:
         ]
         if result["already"]:
             said.append(LISTED_THERE.format(items=", ".join(result["already"])))
-        if result["left_out_staples"]:
-            said.append(LISTED_LEFT.format(items=", ".join(result["left_out_staples"])))
+        if result["in_pantry"]:
+            said.append(LISTED_LEFT.format(items=", ".join(result["in_pantry"])))
         _say(" ".join(said))
+    if (shop := _shop_back(back)) is not None:
+        return _back("web.shop", idea_id=shop)
     if back.isdigit() and len(back) < 10:
         return _back("web.idea", idea_id=int(back))
     return _back("web.restaurants")
+
+
+def _shop_back(back: str) -> int | None:
+    """A recipe's Shopping page, when a form there said "shop:N" as its way back."""
+    kind, _, number = back.partition(":")
+    return int(number) if kind == "shop" and number.isdigit() and len(number) < 10 else None
 
 
 @bp.post("/idea/<int:idea_id>/occasion")
@@ -885,9 +893,12 @@ def change_list() -> Response:
     if already := result.get("already"):
         said.append(views.LIST_ALREADY.format(items=", ".join(already)))
     _say(" ".join(said))
-    if _text(request.form, "back") == "board":  # ticked on the kitchen tablet
+    back = _text(request.form, "back")
+    if back == "board":  # ticked on the kitchen tablet
         return _back("go.board")
-    return _back("web.lists_page", name=_text(request.form, "back") or None)
+    if (shop := _shop_back(back)) is not None:  # ticked on a recipe's Shopping page, in the store
+        return _back("web.shop", idea_id=shop)
+    return _back("web.lists_page", name=back or None)
 
 
 @bp.post("/memory/new")

@@ -1,0 +1,81 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, guard %}
+{% from "_dest.html" import dest_head %}
+{% block title %}Shopping for {{ idea.title }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-lists{% endblock %}
+{# A recipe's shopping (docs/RECIPES.md), for a phone in the store: what it needs under the section of the store each
+   is found in, in the order a store is walked; once on the family's list each thing has the Lists page's own tick, back
+   here; what the pantry has apart, to check, with Need it for one they are out of; an uncommon thing opens on a tap to
+   what could stand in. A kid reads it; the forms are for whoever may change things. No model call. #}
+{% macro tick(thing) -%}
+  <form method="post" action="{{ url_for('edits.change_list') }}">
+    {{ guard(once=true) }}
+    <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ list_name }}" /><input type="hidden" name="items" value="{{ thing.on_list.text }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" />
+    <button class="tick" type="submit"><span>{{ icon('check') }}</span><span class="sr">Got: {{ thing.item }}</span></button>
+  </form>
+{%- endmacro %}
+{% macro put_back(thing) -%}
+  <form method="post" action="{{ url_for('edits.change_list') }}">
+    {{ guard(once=true) }}
+    <input type="hidden" name="action" value="untick" /><input type="hidden" name="name" value="{{ list_name }}" /><input type="hidden" name="items" value="{{ thing.on_list.text }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" />
+    <button class="linkbtn" type="submit">Put back<span class="sr">: {{ thing.item }}</span></button>
+  </form>
+{%- endmacro %}
+{% macro need_it(thing) -%}
+  <form method="post" action="{{ url_for('edits.change_list') }}">
+    {{ guard(once=true) }}
+    <input type="hidden" name="action" value="add" /><input type="hidden" name="name" value="{{ list_name }}" /><input type="hidden" name="items" value="{{ thing.item }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" />
+    <button class="btn btn--quiet btn--sm" type="submit">Need it<span class="sr">: {{ thing.item }}</span></button>
+  </form>
+{%- endmacro %}
+{% macro thing_text(thing) -%}
+  <div class="set__text">
+    <span class="set__t">{% if thing.got %}<s>{{ thing.item }}</s>{% else %}{{ thing.item }}{% endif %}{% if thing.amount %} <span class="small muted">{{ thing.amount }}</span>{% endif %}</span>
+    {% if thing.alternatives %}
+      <details class="fold fold--quiet swap">
+        <summary>No {{ thing.item }}?{{ icon('chev', size='sm', cls='chev') }}</summary>
+        <p class="fold__body small">Instead: {{ thing.alternatives | join('; or ') }}.</p>
+      </details>
+    {% endif %}
+  </div>
+{%- endmacro %}
+{% block content %}
+  {{ dest_head('Shopping for ' ~ idea.title, summary, back=(idea.title, url_for('web.idea', idea_id=idea.id))) }}
+  {% set may = visitor().may('change') %}
+  {% if may and shop.to_buy and not all_on %}
+    <form class="acts" method="post" action="{{ url_for('edits.list_from_recipes') }}">
+      {{ guard(once=true) }}<input type="hidden" name="idea_ids" value="{{ idea.id }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" />
+      <button class="btn btn--primary btn--sm" type="submit">{{ icon('list', size='sm') }}Put it all on the list</button>
+      <span class="small muted">Then tick each thing here as you find it.</span>
+    </form>
+  {% endif %}
+  {% for section, things in shop.sections %}
+    <section class="sec" aria-labelledby="s-{{ loop.index }}">
+      <div class="sec__label"><h2 id="s-{{ loop.index }}" class="label">{{ section }}</h2><small>{{ things | length }}</small></div>
+      <ul class="list-items list-items--big">
+        {% for thing in things %}
+          <li>
+            {% if may and thing.on_list and not thing.got %}{{ tick(thing) }}{% endif %}
+            {{ thing_text(thing) }}
+            {% if may and thing.got %}{{ put_back(thing) }}{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+  {% if shop.pantry %}
+    <section class="sec" aria-labelledby="s-pantry">
+      <div class="sec__label"><h2 id="s-pantry" class="label">From the pantry</h2><small>{{ shop.pantry | length }}</small></div>
+      <p class="sec__note">You likely have these already{% if may %}; Need it puts one you are out of on the list{% endif %}.</p>
+      <ul class="list-items">
+        {% for thing in shop.pantry %}
+          <li>
+            {% if may and thing.on_list and not thing.got %}{{ tick(thing) }}{% endif %}
+            {{ thing_text(thing) }}
+            {% if may and thing.got %}{{ put_back(thing) }}{% elif may and not thing.on_list %}{{ need_it(thing) }}{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endblock %}

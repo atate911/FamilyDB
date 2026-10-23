@@ -12,8 +12,7 @@
   {% set one = shown %}
   <section class="sec" aria-labelledby="l-{{ one.name }}">
     <div class="sec__label"><h2 id="l-{{ one.name }}" class="label">{{ one.title }}</h2><small>{{ one.to_get | length }} to get</small></div>
-    <ul class="list-items list-items--big">
-      {% for thing in one.to_get %}
+    {% macro to_get(thing) -%}
         <li>
           <form method="post" action="{{ url_for('edits.change_list') }}">
             {{ guard(once=true) }}
@@ -23,10 +22,23 @@
           <span>{{ thing.text }}{% if thing.note %} <span class="small muted">{{ thing.note }}</span>{% endif %}</span>
           {% if thing.by %}{{ who([thing.by], 'Added by ' ~ thing.by.name) }}{% endif %}
         </li>
+    {%- endmacro %}
+    {# By the section of the store, in the order a store is walked, once two sections have something (views.list_groups);
+       a short list, or one with no sections to it, is drawn whole in the order added. #}
+    {% if one.groups %}
+      {% for section, things in one.groups %}
+        <h3 class="list-items__sec">{{ section }}</h3>
+        <ul class="list-items list-items--big">{% for thing in things %}{{ to_get(thing) }}{% endfor %}</ul>
+      {% endfor %}
+    {% else %}
+    <ul class="list-items list-items--big">
+      {% for thing in one.to_get %}
+        {{ to_get(thing) }}
       {% else %}
         <li class="muted">Nothing on it. Tell {{ assistant }} “we’re out of milk”.</li>
       {% endfor %}
     </ul>
+    {% endif %}
     <details class="fold fold--quiet">
       <summary>Add by hand{{ icon('chev', size='sm', cls='chev') }}</summary>
       <form class="form fold__body" method="post" action="{{ url_for('edits.change_list') }}">

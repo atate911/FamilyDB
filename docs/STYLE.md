@@ -380,7 +380,9 @@ Each page names its focal element, what the main column holds, and what the rail
   family's own always first), the map under it. **Week**: a day a section, set things as set rows (a solid left edge,
   the time in the mono), the free time in words, a reminder a small bell line, her pick in pencil;
   the plate above. **Kids**: a kid a section, what waits first. **Soon**: finds by day. **Lists**:
-  big ticks. **Did**: a face a row.
+  big ticks, under a quiet uppercase label a section of the store once the list spans two
+  (`.list-items__sec`); a recipe's Shopping page is the same ticks by section with the pantry
+  apart and a stand-in folded under a thing (`.swap`). **Did**: a face a row.
 - **What about** (`/about`): her picks as a destination, a section a set (the next few hours, the
   weekend), its tiles three across where there is room, each set with what drove it and when it was
   chosen; Different ones under them, a quiet link.

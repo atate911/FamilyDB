@@ -46,6 +46,18 @@ the build differs from the plan below, the build is right and the plan is kept f
   cut-off. Measured on the tool list and system prompt, the recipe work adds about 3,900
   characters to the cached prefix (about 970 tokens at four characters a token), down from about
   5,300; the plan's estimate of 400 tokens was low.
+- **A recipe has a Shopping page** (`/idea/N/shop`, asked for after the build): what it needs
+  under the section of the store each is found in, in the order a store is walked (Produce,
+  Bakery, Meat & fish, Dairy & eggs, Dry goods & cans, Frozen, Drinks, Other: `groceries.SECTIONS`,
+  `section_of`, word tables, no model), laid over the family's shopping list so once **Put it all
+  on the list** is pressed each thing has the Lists page's own tick, back here, for a phone in the
+  store; what the pantry has apart, to check, each with **Need it**; and an uncommon thing opens
+  on a tap to what could stand in (`groceries.SUBSTITUTES`, a table; for one the table does not
+  know, the box offers "What could stand in for X?", a chat call only if sent). The pantry is
+  broader than the staples the plan left off (`groceries.pantry`: dried spices and herbs,
+  vinegars, the sauces in the door, the baking shelf, and the family's own list named pantry), so
+  "put the fajitas on the list" leaves those off too and says so. The Lists page walks the
+  shopping list by the same sections once it spans two. A kid reads the page with no forms.
 - **Making a recipe leaves it one to cook.** Recording a dinner counts it as made and keeps its
   status an idea, where an outing becomes done (`ideas.apply_outcome`).
 - **Not yet done:** the evals have not been run against a model (`uv run python -m evals --case
@@ -70,7 +82,7 @@ the evening's plans, the weekday, what was had lately, what they said about food
 | Recipes stay out of the cached idea list | Invariant (cost) | **Never in the prefix; one read tool finds them** | The chat prefix carries every idea, one line each. A family keeps far more recipes than outings, and most messages are not about food, so recipes would be the dearest lines in every request. Instead the prefix says how many there are, and `find_recipes` ranks them in code for the message that asks. A recipe added or changed therefore never moves the cached prefix. |
 | Situations are a short fixed list | Default | **`occasions` on the recipe, code reads the family's situation** | "Quick weeknight", "prep ahead", "family dinner" are what a pick turns on, so they are words code can filter on, not free text: `weeknight`, `family_dinner`, `prep_ahead`, `slow`, `date_night`, `guests`, `kids_cook`, `lunchbox`, `freezer`. Free text (how to prep ahead, the family's notes) goes in `prep_note` and the idea's description. What the family says about itself ("Wednesdays I'm home at seven") is memory, as today, chosen for a dinner message by its words (`memory.CUES`); a per-weekday rule code can hold is a later step, if asked. |
 | Situations nobody said | Default | **Guessed, marked as a guess, confirmed by a word** | When a recipe arrives with no occasion, the facts suggest them: 30 minutes or under is a weeknight one, three hours or a slow cooker is slow, "the night before" or "make ahead" in the steps is prep ahead, six servings or more is a family dinner or guests, "freezes well" is freezer. Code reads those from the recipe once it is read, free, and the chat model may guess from the message ("Mum's quick thing"). A guess is kept apart from what the family said (`occasions_guessed`), shown as "looks like: weeknight", counts for a pick as a maybe and never rules one out, and becomes the family's with one word in chat or one tap on the page. The same rule memory keeps: a guess leans, a thing said stands. |
-| A grocery list from recipes | Default | **Built by code onto the family's list, asked for in chat or by a button** | The ingredients are already kept; turning "2 cups chopped onion" into "onion" on the shopping list is parsing, not judgement, so code does it (`familydb/groceries.py`), for one recipe or several at once, folding what two recipes share, leaving out the staples, and saying what was already on the list. It lands on the list the family already keeps (`shopping_list`), so the Lists page, `/list` and Undo work as they do. A page the paid worker read hands its ingredients back already split into item and amount in the same call, so no recipe ever costs a second call to be shoppable. |
+| A grocery list from recipes | Default | **Built by code onto the family's list, asked for in chat or by a button** | The ingredients are already kept; turning "2 cups chopped onion" into "onion" on the shopping list is parsing, not judgement, so code does it (`familydb/groceries.py`), for one recipe or several at once, folding what two recipes share, leaving off what the pantry has (the staples, dried spices, vinegars, the sauces in the fridge door, and whatever the family keeps on a list named pantry) and saying so, and saying what was already on the list. It lands on the list the family already keeps (`shopping_list`), so the Lists page, `/list` and Undo work as they do. A page the paid worker read hands its ingredients back already split into item and amount in the same call, so no recipe ever costs a second call to be shoppable. |
 | A pasted link is read by code first | Invariant (cost) | **schema.org Recipe from the page, no model; a worker only when a page has none** | Nearly every recipe site carries a `Recipe` block in JSON-LD (name, ingredients, steps, times, yield, cuisine). Reading it is deterministic and free, so a link costs nothing most of the time. A page with no block goes to a bounded worker turn (`fill_recipe`), the same way a place is looked up. The server fetches the page with the checks the calendar reader uses (public host only, http(s), checked redirects, size cap, timeout), sending nothing of the family. |
 | What is kept from a page | Family | **The ingredients, the steps, the times, the yield and the link; no picture** | A recipe kept only as a link is lost when the site goes or fills with ads: the steps are kept so the recipe's page is usable at the stove. A picture hotlinked from the site would tell that site the family's address every time the page is opened, so none is kept or drawn. To ask: whether the family wants the steps copied (a private copy for their own cooking) or the link alone. |
 | Where it lives on the page | Design | **Eat becomes "What should we eat?": Cook, then Eat out** | Eating is the most frequent decision and already has its door. Tonight's pick is a dish or a restaurant; the family decides which, so the page shows both: the cook pick for the next meal, the recipes ranked for it, then the restaurants as today. Chips narrow to one side. A recipe's own page is the idea page with its recipe section. |
@@ -319,9 +331,10 @@ the note's wording; an eval case that pastes a link with and without words and c
   minutes, the occasions as words, a guessed one as "looks like: weeknight" with **That's right**
   and **Not that** (`update_idea`), the prep note, the ingredients, the steps folded, the link and
   its site, when it was read; made N times and how it went. Buttons for whoever may change
-  things: **Had it tonight** (`record_outcome`), **Put ingredients on the list** (`shopping_list`
-  `from_recipes`, phase 3; its notice says what was added and what was on the list already, with
-  Undo), **Edit by hand** (the idea form with the recipe fields).
+  things: **Had it tonight** (`record_outcome`), **Shopping list** (its Shopping page, `/idea/N/shop`,
+  by the sections of the store with the pantry apart; **Put it all on the list** there is
+  `shopping_list` `from_recipes`, phase 3; its notice says what was added and what was on the
+  list already, with Undo), **Edit by hand** (the idea form with the recipe fields).
 - **Eat's Cook section** lets a grown-up tick several recipes and press **Grocery list for
   these** (one form, the same tool, phase 3), which is how a week's shopping is made until the
   week's meals exist. The Lists page draws each thing's note small under it.

@@ -2196,3 +2196,9 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
   .bd__someday { grid-area: someday; }
   .bd__day--first { min-height: 260px; }
 }
+
+/* A recipe's shopping, and the shopping list by section (shop.html, lists.html): a section's name is a quiet label
+   over its things; a stand-in folds under the thing it is for. */
+.list-items__sec { font-size: .8125rem; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; margin: var(--s4) 0 var(--s1); }
+.list-items .swap summary { font-size: .875rem; color: var(--ink-2); }
+.list-items .swap .fold__body { margin: var(--s1) 0 0; }

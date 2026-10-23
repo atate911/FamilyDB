@@ -923,6 +923,21 @@ def soon_summary(days: Sequence[dict[str, Any]], today: date) -> str:
     return f"{total} in the next few weeks."
 
 
+def list_groups(to_get: list[dict[str, Any]]) -> list[tuple[str, list[dict[str, Any]]]]:
+    """A list's things by the section of the store (groceries.section_of), in the order a store is
+    walked, once two sections besides Other have something; else nothing, and the list is drawn
+    whole in the order added (a hardware list has no sections)."""
+    from familydb import groceries
+
+    found: dict[str, list[dict[str, Any]]] = {section: [] for section in groceries.SECTIONS}
+    for thing in to_get:
+        found[groceries.section_of(thing["text"], thing.get("note"))].append(thing)
+    placed = [section for section in groceries.SECTIONS[:-1] if found[section]]
+    if len(placed) < 2:
+        return []
+    return [(section, found[section]) for section in groceries.SECTIONS if found[section]]
+
+
 def lists_summary(lists: Sequence[dict[str, Any]], shown: dict[str, Any]) -> str:
     """The list open, then what waits on the others: "6 to get. 5 more on Costco and Camping." """
     here = len(shown["to_get"])
@@ -948,6 +963,47 @@ def my_list_summary(kid: dict[str, Any]) -> str:
     if not open_count:
         return "Nothing on it yet."
     return _n(open_count, "thing", "things") + " on your lists."
+
+
+def shop_summary(shop: Any) -> str:
+    """The line under Shopping for a recipe (groceries.Shopping): what is to buy, and once it is
+    on the list how it stands, then what the pantry has."""
+    buy = shop.to_buy
+    on = [one for one in buy if one.on_list is not None]
+    if not buy:
+        said = "Nothing to buy"
+    elif on:
+        got = sum(1 for one in on if one.got)
+        said = f"{len(on) - got} to get" if len(on) > got else "All got"
+        if got and len(on) > got:
+            said += f", {got} got"
+        if len(on) < len(buy):
+            said += f", {len(buy) - len(on)} not on the list yet"
+    else:
+        n = len(shop.sections)
+        said = f"{len(buy)} to buy, in {n} section{'' if n == 1 else 's'} of the store"
+    if shop.pantry:
+        said += f"; {len(shop.pantry)} from the pantry"
+    return said + "."
+
+
+def shop_starters(shop: Any, *, all_on: bool, may_change: bool) -> list[str]:
+    """Three sentences a recipe's Shopping page offers the box: the list (what is left on it once
+    everything is there, or for a kid, who may not change it), a stand-in for the first thing
+    from the aisles the table knows none for (the family asks her), and what goes with it."""
+    odd = next(
+        (
+            one.item
+            for section, found in shop.sections
+            if section in ("Dry goods & cans", "Other")
+            for one in found
+            if not one.alternatives
+        ),
+        None,
+    )
+    second = f"What could stand in for {odd}?" if odd else "What goes with it?"
+    first = "What's left on the list?" if all_on or not may_change else "Put it all on the list"
+    return [first, second, "Can we make it ahead?"]
 
 
 # Quick sentences under an idea's box, filled in by a tap, never sent by themselves.

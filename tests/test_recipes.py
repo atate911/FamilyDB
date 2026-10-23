@@ -335,7 +335,7 @@ def test_recipes_go_on_the_list_with_their_amounts_and_without_the_staples(
     )
     assert said["added"] == ["onions", "chicken thighs"]
     assert said["already"] == ["broth"]
-    assert said["left_out_staples"] == ["salt and pepper", "olive oil"]
+    assert said["in_pantry"] == ["salt and pepper", "olive oil"]
     on_list = {item.text: item for item in lists.items(conn, lists.find(conn, "shopping"))}
     assert on_list["onions"].note == "2 (Sheet-pan fajitas), 1 (Tortilla soup)"
     assert on_list["broth"].note == "4 cups (Tortilla soup)"

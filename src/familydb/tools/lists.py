@@ -93,7 +93,7 @@ def shopping_list(ctx: ToolContext, args: ShoppingListInput) -> dict[str, Any]:
 
 def _from_recipes(ctx: ToolContext, name: str, idea_ids: list[int]) -> dict[str, Any]:
     """What the recipes need, put on the list by code (familydb/groceries.py): shared things once,
-    the staples left off, how much each recipe wants as the thing's note."""
+    what the pantry has left off and said, how much each recipe wants as the thing's note."""
     wanted = list(dict.fromkeys(idea_ids))
     if not wanted:
         raise ToolError("say which recipes, by number")
@@ -128,7 +128,7 @@ def _from_recipes(ctx: ToolContext, name: str, idea_ids: list[int]) -> dict[str,
         "recipes": shopped.recipes,
         "added": shopped.added,
         "already": shopped.there,
-        "left_out_staples": shopped.left_out,
+        "in_pantry": shopped.left_out,
         "open": _open(ctx, list_ref),
     }
     if unread:

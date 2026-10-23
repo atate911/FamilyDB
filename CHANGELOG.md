@@ -15,8 +15,12 @@
   chips of their own; a plan tonight shortens the time there is. A recipe's page leads with what it
   takes and its ingredients. "What's for dinner?", and `/dinner` on Telegram, are answered by code,
   and Now and the kitchen board name a recipe to cook in the afternoon. Tick recipes on Cook, or
-  ask, and what they need goes on the shopping list, shared things once and salt and oil left off,
-  with how much each wants under it. **Read a pasted recipe link straight away** (Settings,
+  ask, and what they need goes on the shopping list, shared things once and what the pantry has
+  left off (salt and oil, dried spices, vinegars, the sauces in the door, and whatever you keep on
+  a list named pantry), with how much each wants under it. **Shopping list** on a recipe's page is
+  for the store: what it needs by section in the order a store is walked, the pantry's things
+  apart to check, a tick on each once it is on the list, and a stand-in under an uncommon thing on
+  a tap; the Lists page walks the shopping list by the same sections once it spans two. **Read a pasted recipe link straight away** (Settings,
   Lookups) turns the server's own read off, and **Reading recipes** on the AI model page picks the
   model for a page code cannot read, or turns that off.
 - **The menu on the left is the same on every page.** On a computer or a tablet, opening Now, Eat or

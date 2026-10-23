@@ -68,7 +68,7 @@ Each find has a page of its own: its day (or **Any time**, for a place the assis
 
 ## Lists
 
-The shopping list, always, and the family's other lists as chips, each at its own address (`/lists/costco`). Each thing is a big tick, with the mark of whoever put it there at the end of its row, and under a thing a recipe put there, how much each recipe wants ("2 (Fajitas), 1 (Soup)"; [Recipes](/wiki/controls/ideas#recipes)); **Got** folds what was ticked, where a thing can be put back; **Add something** adds. Every tick and add is the same tool the assistant runs for "we need milk", and the kids are told what is on a list when they ask. `/list` on Telegram reads it.
+The shopping list, always, and the family's other lists as chips, each at its own address (`/lists/costco`). Each thing is a big tick, with the mark of whoever put it there at the end of its row, and under a thing a recipe put there, how much each recipe wants ("2 (Fajitas), 1 (Soup)"; [Recipes](/wiki/controls/ideas#recipes)); Once the shopping list spans two sections of the store, it is drawn by section in the order a store is walked (Produce, Bakery, Meat & fish, Dairy & eggs, Dry goods & cans, Frozen, Drinks), as a recipe's [Shopping page](/wiki/controls/ideas#recipes) is; a short list, or a hardware list, stays in the order added. A list named **pantry** is special: what is on it is taken as something you always have, so a recipe's shopping leaves it off. **Got** folds what was ticked, where a thing can be put back; **Add something** adds. Every tick and add is the same tool the assistant runs for "we need milk", and the kids are told what is on a list when they ask. `/list` on Telegram reads it.
 
 ## Did
 

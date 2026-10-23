@@ -78,7 +78,7 @@ def test_ticked_recipes_go_on_the_shopping_list_with_their_amounts(settings, clo
         follow_redirects=True,
     )
     assert "On the shopping list for Fajitas, Soup: onions." in _said(listed)
-    assert "Left off: salt." in _said(listed)
+    assert "In the pantry already: salt." in _said(listed)
     shown = browser.get("/lists").text
     assert "2 (Fajitas), 1 (Soup)" in shown
     assert [item.text for item in lists.items(conn, lists.find(conn, "shopping"))] == ["onions"]
@@ -175,7 +175,7 @@ def test_a_recipe_page_reads_as_a_recipe(settings, clock, conn, family):
     page = _client(settings, clock).get(f"/idea/{made['id']}").text
     assert "Not made yet" in page and "An idea" not in page
     assert "Takes" in page and "Plan it for a night" in page
-    assert page.index("Put the ingredients on the list") < page.index("Plan it for a night")
+    assert page.index("Shopping list") < page.index("Plan it for a night")
     assert "What goes with it?" in page  # her quick sentences are a recipe's
 
 
@@ -256,3 +256,87 @@ def test_an_idea_made_a_recipe_with_empty_boxes_keeps_its_undo(settings, clock, 
         follow_redirects=True,
     )
     assert "Changed #" in _said(changed) and ">Undo<" in changed.text
+
+
+def test_a_recipe_s_shopping_page_walks_the_store(settings, clock, conn, family):
+    """Shopping for a recipe (docs/RECIPES.md): by section in the order a store is walked, the
+    pantry apart, a stand-in folded under an uncommon thing; Put it all on the list, then each
+    thing has its tick, back here; a thing from the pantry has Need it. No model call."""
+    made = _recipe(
+        conn,
+        settings,
+        clock,
+        family["sam"],
+        "Fajitas",
+        ingredients=["1 cup buttermilk", "2 limes", "8 flour tortillas", "1 tsp smoked paprika"],
+    )
+    browser = _client(settings, clock)
+    recipe_page = browser.get(f"/idea/{made['id']}").text
+    assert f'href="/idea/{made["id"]}/shop"' in recipe_page
+    page = browser.get(f"/idea/{made['id']}/shop").text
+    assert "Shopping for Fajitas" in page
+    assert "3 to buy, in 3 sections of the store; 1 from the pantry." in page
+    assert page.index("Produce") < page.index("Bakery") < page.index("Dairy &amp; eggs")
+    assert page.index("limes") < page.index("flour tortillas") < page.index("buttermilk")
+    assert "No buttermilk?" in page and "Instead: milk with a spoon" in page
+    assert page.index("From the pantry") > page.index("buttermilk")
+    assert "smoked paprika" in page[page.index("From the pantry") :] and "Need it" in page
+    assert 'class="tick"' not in page  # nothing on the list yet: nothing to tick
+    assert "Put it all on the list" in page
+    listed = browser.post(
+        "/eat/grocery-list",
+        data={**_token(page), "idea_ids": str(made["id"]), "back": f"shop:{made['id']}"},
+        follow_redirects=True,
+    )
+    assert "Shopping for Fajitas" in listed.text and "3 to get; 1 from the pantry." in listed.text
+    assert listed.text.count('class="tick"') == 3
+    assert "Put it all on the list</button>" not in listed.text  # all on it: nothing to put
+    assert 'data-say="What&#39;s left on the list?"' in listed.text
+    got = browser.post(
+        "/lists/change",
+        data={
+            **_token(listed.text),
+            "action": "tick",
+            "name": "shopping",
+            "items": "limes",
+            "back": f"shop:{made['id']}",
+        },
+        follow_redirects=True,
+    )
+    assert "Shopping for Fajitas" in got.text and "2 to get, 1 got; 1 from the pantry." in got.text
+    assert "<s>limes</s>" in got.text and "Put back" in got.text
+    need = browser.post(
+        "/lists/change",
+        data={
+            **_token(got.text),
+            "action": "add",
+            "name": "shopping",
+            "items": "smoked paprika",
+            "back": f"shop:{made['id']}",
+        },
+        follow_redirects=True,
+    )
+    assert "Added to the shopping list: smoked paprika." in _said(need)
+    assert need.text.count('class="tick"') == 3  # two left to buy, and the paprika
+    assert "What could stand in for" not in need.text  # the table knows buttermilk's
+
+
+def test_a_kid_reads_the_shopping_with_no_forms(app, sam, conn, settings, clock, family):  # noqa: F811
+    _recipe(conn, settings, clock, family["sam"], "Tacos", ingredients=["8 tortillas", "cumin"])
+    kid = _browser_as(app, "the girls", _start(sam, family["girls"].id))
+    kid.post("/you", data={**_tokens(kid, "/you"), "new": KIDS, "again": KIDS})
+    page = kid.get("/idea/1/shop").text
+    assert "tortillas" in page and "From the pantry" in page
+    assert "Put it all on the list" not in page and "Need it" not in page
+    assert 'class="tick"' not in page and "lists/change" not in page
+    assert kid.get("/idea/99/shop").status_code == 404
+
+
+def test_the_shopping_list_is_walked_by_section_once_it_spans_two(settings, clock, conn, family):
+    ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    REGISTRY.dispatch("shopping_list", {"action": "add", "items": ["milk", "bread"]}, ctx)
+    page = _client(settings, clock).get("/lists").text
+    assert "list-items__sec" in page and page.index("Bakery") < page.index("Dairy &amp; eggs")
+    REGISTRY.dispatch("shopping_list", {"action": "remove", "items": ["bread"]}, ctx)
+    plain = _client(settings, clock).get("/lists").text
+    assert "list-items__sec" not in plain  # one section: the list whole, in the order added
