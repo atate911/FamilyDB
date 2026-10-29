@@ -56,11 +56,15 @@ def manifest() -> Response:
     """The home-screen manifest. Open before sign-in: a phone asks without the cookie, and it says
     nothing the sign-in page does not."""
     title = familydb_app().settings.web_title
-    large = url_for("static", filename="brand/icon-512.png")
     icons = [
         {"src": url_for("static", filename="brand/apple-touch-icon.png"), "sizes": "180x180"},
-        {"src": large, "sizes": "512x512"},
-        {"src": large, "sizes": "512x512", "purpose": "maskable"},
+        {"src": url_for("static", filename="brand/icon-512.png"), "sizes": "512x512"},
+        # Android's round and rounded masks: the same mark kept inside the inner 80 %.
+        {
+            "src": url_for("static", filename="brand/icon-maskable-512.png"),
+            "sizes": "512x512",
+            "purpose": "maskable",
+        },
     ]
     body = {
         "name": title,

@@ -320,7 +320,11 @@ lines never spell anything. Every persona is a she, by the family's decision (`d
 and her name is the one the persona in force gives.
 
 **The mark** is FamilyDB's, not hers: a little monitor with a smile, phosphor on a charcoal
-rounded square, never recolored, never without its square, never standing in for her. **The
+rounded square, never recolored, never without its square, never standing in for her. On a
+phone's home screen (`static/brand`, rendered from `mark-512.svg` at 512 and 180) it is the same
+drawing larger and heavier, its screen faintly lit with a soft glow behind, so it reads at 60
+pixels beside the phone's own icons; `mark-maskable-512.svg` is the same kept inside the inner
+80 % for Android's masks, and the tile's corners stay the charcoal the manifest names. **The
 wordmark** is "FamilyDB" in the display role, followed by a lit cursor block.
 
 ## Motion

@@ -44,6 +44,31 @@ def _png(data: bytes) -> tuple[int, int, int, bytes]:
     return width, height, colour, zlib.decompress(pixels)
 
 
+def _rows(width: int, height: int, colour: int, data: bytes) -> list[bytes]:
+    """The pixels row by row, each row's PNG filter (none, sub, up, average, Paeth) undone."""
+    bpp = {2: 3, 6: 4}[colour]
+    stride, at, rows, above = width * bpp, 0, [], bytearray(width * bpp)
+    for _ in range(height):
+        kind, row = data[at], bytearray(data[at + 1 : at + 1 + stride])
+        at += 1 + stride
+        for i in range(stride):
+            a, b = (row[i - bpp] if i >= bpp else 0), above[i]
+            c = above[i - bpp] if i >= bpp else 0
+            if kind == 1:
+                row[i] = (row[i] + a) & 255
+            elif kind == 2:
+                row[i] = (row[i] + b) & 255
+            elif kind == 3:
+                row[i] = (row[i] + (a + b) // 2) & 255
+            elif kind == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                row[i] = (row[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        rows.append(bytes(row))
+        above = row
+    return rows
+
+
 def test_a_phone_reads_the_manifest_before_signing_in(settings, clock) -> None:
     client = _client(settings, clock, web_password=PASSWORD, web_title="The Tates")
     response = client.get("/manifest.webmanifest")
@@ -80,6 +105,23 @@ def test_every_icon_a_phone_is_pointed_at_is_there(settings, clock) -> None:
         assert colour == 2  # RGB with nothing transparent, which a phone would fill with black
 
 
+def test_the_maskable_icon_keeps_the_mark_inside_the_mask() -> None:
+    """Android cuts a maskable icon to a circle (or rounder): nothing lit outside the inner 80 %
+    (W3C's safe zone), only the ground and its glow."""
+    width, height, colour, data = _png((STATIC / "brand" / "icon-maskable-512.png").read_bytes())
+    assert (width, height, colour) == (512, 512, 2)
+    rows, safe = _rows(width, height, colour, data), 0.4 * width
+    lit_outside = [
+        (x, y)
+        for y, row in enumerate(rows)
+        for x in range(width)
+        if row[x * 3 + 1] > 128  # the green of the phosphor
+        and ((x + 0.5 - 256) ** 2 + (y + 0.5 - 256) ** 2) ** 0.5 > safe
+    ]
+    assert not lit_outside, lit_outside[:5]
+    assert any(row[256 * 3 + 1] > 128 for row in rows)  # and the mark is there to keep inside
+
+
 def test_every_page_points_a_phone_at_the_manifest_and_the_icon(
     settings, clock, conn, family
 ) -> None:
@@ -102,8 +144,10 @@ def test_the_manifest_s_colours_are_the_icon_s() -> None:
     """The home screen opens in one colour from the icon to the manifest's splash."""
     from familydb.web.routes import ICON_GROUND
 
-    _, _, _, pixels = _png((STATIC / "brand" / "icon-512.png").read_bytes())
-    assert pixels[1:4] == bytes.fromhex(ICON_GROUND[1:])
+    width, height, colour, data = _png((STATIC / "brand" / "icon-512.png").read_bytes())
+    rows = _rows(width, height, colour, data)
+    corners = {rows[0][:3], rows[0][-3:], rows[-1][:3], rows[-1][-3:]}
+    assert corners == {bytes.fromhex(ICON_GROUND[1:])}
 
 
 def test_the_manifest_carries_the_icon_s_colour(settings, clock) -> None:
