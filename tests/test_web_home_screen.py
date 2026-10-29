@@ -105,6 +105,18 @@ def test_every_icon_a_phone_is_pointed_at_is_there(settings, clock) -> None:
         assert colour == 2  # RGB with nothing transparent, which a phone would fill with black
 
 
+def test_an_iphone_finds_the_icon_where_it_looks_on_its_own(settings, clock) -> None:
+    """Safari asks for /apple-touch-icon.png (and -precomposed) by itself when it did not take the
+    page's link to it; sent to sign in instead, it drew the first letter of the title."""
+    client = _client(settings, clock, web_password=PASSWORD)
+    icon = (STATIC / "brand" / "apple-touch-icon.png").read_bytes()
+    for path in ("/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"):
+        response = client.get(path)  # before signing in, as a phone asks
+        assert response.status_code == 200 and response.mimetype == "image/png", path
+        assert response.data == icon
+        assert "no-store" not in response.headers["Cache-Control"]  # a phone may keep it
+
+
 def test_the_maskable_icon_keeps_the_mark_inside_the_mask() -> None:
     """Android cuts a maskable icon to a circle (or rounder): nothing lit outside the inner 80 %
     (W3C's safe zone), only the ground and its glow."""

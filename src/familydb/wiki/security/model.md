@@ -21,7 +21,7 @@ Most of what a parent changes stays visible: an idea is dropped, not deleted, an
 
 In short: every page needs a sign-in, every form proves it came from the page, and the page runs no script that is not its own.
 
-- Every request passes a sign-in gate. Only sign-in, sign-out, the health check, the home-screen manifest and static files are open. Each part of the page then needs a permission, read from the database on every request, so a role change applies at once. With no password at all, nobody signs in and the gate lets everyone through.
+- Every request passes a sign-in gate. Only sign-in, sign-out, the health check, the home-screen manifest and icon, the service worker and static files are open. Each part of the page then needs a permission, read from the database on every request, so a role change applies at once. With no password at all, nobody signs in and the gate lets everyone through.
 - A form that changes something must pass an Origin check (the browser names the address that sent the form) and carry the session's CSRF token (a one-time proof that the form came from this page, not another site), on top of a `SameSite=Lax` cookie. Sign-in and sign-out have no token and rely on Origin and `SameSite`.
 - The `Referrer-Policy` is `same-origin`. A stricter policy makes browsers post `Origin: null`, which the check refuses, and nobody could sign in.
 - Templates escape output by default, and a link from chat or a fetched page is kept only if it is `http` or `https`.

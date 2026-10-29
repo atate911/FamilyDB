@@ -84,6 +84,8 @@ OPEN_ENDPOINTS = frozenset(
     {"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "web.manifest", "static"}
     # The service worker, which a phone fetches to show a notice, without the cookie (push.py).
     | {"web.service_worker"}
+    # The home-screen icon where an iPhone looks for it on its own (routes.touch_icon).
+    | {"web.touch_icon"}
 )
 # Where somebody signed in with a starting password may go before they have chosen their own.
 CHOOSING = frozenset({"family.you", "family.choose"})

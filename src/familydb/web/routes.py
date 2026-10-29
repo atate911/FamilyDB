@@ -10,6 +10,7 @@ from pathlib import Path
 from flask import (
     Response,
     current_app,
+    send_from_directory,
     url_for,
 )
 
@@ -48,6 +49,18 @@ def service_worker() -> Response:
     folder = Path(current_app.static_folder or "")
     response = Response((folder / "sw.js").read_text("utf-8"), mimetype="text/javascript")
     response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@bp.get("/apple-touch-icon.png")
+@bp.get("/apple-touch-icon-precomposed.png")
+def touch_icon() -> Response:
+    """The home-screen icon at the two addresses an iPhone tries on its own when it did not take
+    the page's link to it (Safari's convention). Open before sign-in, like the manifest: a phone
+    asks without the cookie, and sent to sign in instead it draws the first letter of the title."""
+    folder = Path(current_app.static_folder or "")
+    response = send_from_directory(folder, "brand/apple-touch-icon.png", mimetype="image/png")
+    response.headers["Cache-Control"] = "public, max-age=86400"
     return response
 
 

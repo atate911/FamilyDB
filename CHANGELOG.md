@@ -4,6 +4,12 @@
 
 ### New since v0.5.0
 
+- **A better icon on the home screen.** The mark is drawn larger and heavier with its
+  screen lit, so it reads beside the phone's other icons, and Android's round masks get one kept
+  inside them. An iPhone that did not take the page's own link to the icon finds it at the
+  addresses Safari tries by itself, which the page used to answer with the sign-in page, so the
+  phone drew a letter instead. Over a certificate the phone does not trust the icon still cannot
+  be fetched; the RUNBOOK says what shows and why.
 - **Recipes and dinner ideas.** Tell Vera a dish ("sheet-pan fajitas, 30 minutes, the kids
   liked them"), paste a link to a recipe, or add one by hand, and it is kept with how long it takes,
   how many it serves, what it is good for (a weeknight, prep ahead, a family dinner and more), its
