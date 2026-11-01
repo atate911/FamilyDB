@@ -5,7 +5,7 @@ description = "A private family planning assistant: an ideas log, calendar plans
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic>=1.7,<2",
+    "anthropic>=1.7,<3",
     "apscheduler>=3.11,<4",
     "flask>=3.1,<4",
     "google-api-python-client>=2.190,<3",
