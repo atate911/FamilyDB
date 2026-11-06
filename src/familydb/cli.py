@@ -530,6 +530,9 @@ def debug_cost(
         kinds = calls.usage_by_kind(conn, since=since)
         measured = calls.sections_since(conn, since=since)
         turns, warm = calls.warm_starts(conn, "chat", since=since)
+        caching = calls.cache_by_kind(conn, since=since)
+        gaps = calls.turn_gaps(conn, since=since)
+        answered = calls.per_message(conn, since=since)
 
     system_tokens = sum(len(block.text) for block in blocks) // 4
     tool_tokens = len(_json.dumps([t.schema for t in tools], ensure_ascii=False)) // 4
@@ -590,6 +593,7 @@ def debug_cost(
             f"  {warm / turns * 100:.0f}% of {turns:,d} message(s) answered found the prefix still "
             "cached on their first call; the rest paid for it in full."
         )
+    _cache_by_kind(caching, gaps, answered)
     for kind in gateway.KINDS:
         split = compose.breakdown(row for row in measured if row["kind"] == kind)
         if not split:
@@ -685,6 +689,60 @@ def debug_validate_tools() -> None:
         f"{len(everything)} tools accepted by {model} "
         f"via {provider.name}; prompt would be {tokens} input tokens"
     )
+
+
+def _cache_by_kind(
+    caching: list[dict[str, Any]], gaps: dict[str, dict[str, Any]], answered: dict[str, Any]
+) -> None:
+    """`debug cost`'s look at the cache by kind: how much of each kind's input it served, how
+    often a turn found it warm, and how far apart turns come against what a cache lasts."""
+    from familydb.agent import gateway
+
+    typer.echo("\nHow each kind of call uses the cache (a warm start found it on its first call):")
+    typer.echo(
+        f"  {'what for':<42} {'turns':>6} {'calls/turn':>10} {'from cache':>10} "
+        f"{'warm start':>10} {'written':>9}"
+    )
+    for row in caching:
+        sent = row["fresh"] + row["cache_read"] + row["cache_write"]
+        turns = row["turns"]
+        typer.echo(
+            f"  {gateway.purpose(row['kind']):<42} {turns:>6,d} "
+            f"{(row['calls'] / turns if turns else 0):>10.1f} "
+            f"{(row['cache_read'] / sent * 100 if sent else 0):>9.0f}% "
+            f"{(row['warm'] / turns * 100 if turns else 0):>9.0f}% {row['cache_write']:>9,d}"
+        )
+    if gaps:
+        lifetimes = calls.LIFETIMES
+        typer.echo(
+            "\nTime between one turn of a kind and the next, against what a cache lasts "
+            "(Claude 5 min or 1 h, OpenAI 30 min):"
+        )
+        heads = " ".join(f"{f'within {m} min':>14}" for m in lifetimes)
+        typer.echo(f"  {'what for':<42} {'median':>9} {heads}")
+        for row in caching:
+            kind = gaps.get(row["kind"])
+            if kind is None:
+                continue
+            shares = " ".join(f"{kind['within'][m] * 100:>13.0f}%" for m in lifetimes)
+            typer.echo(
+                f"  {gateway.purpose(row['kind']):<42} {_span(kind['median_minutes']):>9} {shares}"
+            )
+    if answered["messages"]:
+        typer.echo(
+            f"\nA message answered took {answered['calls'] / answered['messages']:.1f} model "
+            f"calls on average, US${answered['cost_usd'] / answered['messages']:.4f}, the search "
+            f"and choosing it asked for included ({answered['messages']:,d} messages)."
+        )
+
+
+def _span(minutes: float) -> str:
+    """A gap between turns as a person reads it: "12 min", "3.5 h", "2.0 d"."""
+    if minutes < 60:
+        return f"{minutes:.0f} min"
+    if minutes < 24 * 60:
+        return f"{minutes / 60:.1f} h"
+    return f"{minutes / (24 * 60):.1f} d"
 
 
 def _console_member(application: App, as_member: str | None) -> str:
