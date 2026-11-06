@@ -64,18 +64,27 @@
 {%- endmacro %}
 
 
-{# Save it and Not for us on something she found: `add_idea` with the find's number, and `pass_find`, each the tool
-   the assistant would call (a find's page, New ideas). `save` is views.find_save_fields; Not for us comes back to
-   `back` when given, else to the find's page. #}
-{% macro find_acts(save, title, back=none) -%}
+{# Save it, Plan it and Not for us on something she found: `add_idea` with the find's number, `create_event` for its
+   day (`plan`, views.find_plan_fields, when it has one) and `pass_find`, each the tool the assistant would call (a find's
+   page, Coming up, New ideas). `save` is views.find_save_fields; Plan it and Not for us come back to `back` when given,
+   else to the find's page. On a list of them (`quiet`) no button leads, so the page has no row of bright ones. #}
+{% macro find_acts(save, title, back=none, plan=none, quiet=false) -%}
   <form method="post" action="{{ url_for('edits.add_idea') }}">
     {{ guard(once=true) }}
     {% for key, value in save.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}" />{% endfor %}
-    <button class="btn btn--primary btn--sm" type="submit">{{ icon('bulb', size='sm') }}Save it<span class="sr"> {{ title }}</span></button>
+    <button class="btn {{ 'btn--quiet' if quiet else 'btn--primary' }} btn--sm" type="submit">{{ icon('bulb', size='sm') }}Save it<span class="sr"> {{ title }}</span></button>
   </form>
+  {% if plan %}
+    <form method="post" action="{{ url_for('edits.add_plan') }}">
+      {{ guard(once=true) }}
+      {% for key in ('find_id', 'title', 'location', 'start', 'all_day') %}{% if plan[key] %}<input type="hidden" name="{{ key }}" value="{{ plan[key] }}" />{% endif %}{% endfor %}
+      {% if back %}<input type="hidden" name="back" value="{{ back }}" />{% endif %}
+      <button class="btn btn--quiet btn--sm" type="submit">{{ icon('cal', size='sm') }}Plan it<span class="sr"> {{ title }}, {{ plan.when }}</span></button>
+    </form>
+  {% endif %}
   <form method="post" action="{{ url_for('edits.pass_find', find_id=save.find_id) }}">
     {{ guard(once=true) }}
     {% if back %}<input type="hidden" name="back" value="{{ back }}" />{% endif %}
-    <button class="btn btn--quiet btn--sm" type="submit">Not for us<span class="sr"> {{ title }}</span></button>
+    <button class="{{ 'q__lnk' if quiet else 'btn btn--quiet btn--sm' }}" type="submit">Not for us<span class="sr"> {{ title }}</span></button>
   </form>
 {%- endmacro %}
