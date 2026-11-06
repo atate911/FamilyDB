@@ -464,17 +464,27 @@ def test_today_and_tomorrow_are_one_line_each(calendar_settings, clock, conn, fa
     calendar.seed(
         "Dentist", datetime(2026, 9, 21, 9, tzinfo=TZ), datetime(2026, 9, 21, 10, tzinfo=TZ)
     )
+
+    def lines(home: str) -> list[tuple[str, str]]:
+        return [
+            (label, re.sub(r"<[^>]+>", "", words))
+            for label, words in re.findall(
+                r'<p class="today"><b>(\w+)</b><span>(.*?)</span></p>', home, re.S
+            )
+        ]
+
     home = _now(calendar_settings, clock, calendar).get("/").text
-    lines = [
-        (label, re.sub(r"<[^>]+>", "", words))
-        for label, words in re.findall(
-            r'<p class="today"><b>(\w+)</b><span>(.*?)</span></p>', home, re.S
-        )
-    ]
     assert 'href="/week/2026-09-21"' in home
-    assert lines[0][0] == "Today" and "Soccer practice 5\u00a0pm" in lines[0][1]
-    assert lines[1][0] == "Tomorrow" and "Dentist 9\u00a0am, then Swim 4\u00a0pm" in lines[1][1]
+    # Today's one thing is Next up, so today has no line to say it again; tomorrow's has both.
+    assert "Soccer practice" in home.split('class="todays"')[0]
+    (tomorrow,) = lines(home)
+    assert tomorrow[0] == "Tomorrow" and "Dentist 9\u00a0am, then Swim 4\u00a0pm" in tomorrow[1]
     assert "Brunch" not in home  # yesterday
+    calendar.seed(
+        "Pizza night", datetime(2026, 9, 20, 19, tzinfo=TZ), datetime(2026, 9, 20, 20, tzinfo=TZ)
+    )
+    today, _ = lines(_now(calendar_settings, clock, calendar).get("/").text)
+    assert today[0] == "Today" and "Soccer practice 5\u00a0pm, then Pizza night" in today[1]
 
 
 def test_a_free_day_says_so(settings, clock, conn, family) -> None:

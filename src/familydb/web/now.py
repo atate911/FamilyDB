@@ -121,7 +121,7 @@ def show() -> Response | str:
         others=views.others_words(others),
         my_list=my_list,
         picks=picks,
-        days=_days(rows, today, grown_up),
+        days=_days(rows, today, grown_up, shown=next_up["row"] if next_up else None),
         dinner=dinner,
         quiet=QUIET if grown_up else QUIET_KID,
         setup=setup,
@@ -225,12 +225,17 @@ def _rows(
     return [row for row in rows if row.status != "cancelled"]
 
 
-def _days(rows: list[PlanRow], today: date, grown_up: bool) -> list[dict[str, Any]]:
-    """Today's and tomorrow's lines: what is on each, in a sentence, or that nothing is."""
+def _days(
+    rows: list[PlanRow], today: date, grown_up: bool, shown: PlanRow | None = None
+) -> list[dict[str, Any]]:
+    """Today's and tomorrow's lines: what is on each, in a sentence, or that nothing is. A day
+    whose one thing is Next up's, `shown`, has no line: it would say the same thing twice."""
     lines = []
     for offset, label in ((0, "Today"), (1, "Tomorrow")):
         day = today + timedelta(days=offset)
         on = [row for row in rows if row.day <= day.isoformat() <= row.end]
+        if shown is not None and on == [shown]:
+            continue
         lines.append(
             {"label": label, "parts": views.day_line(on, url_for("go.day", day=day.isoformat()))}
         )
