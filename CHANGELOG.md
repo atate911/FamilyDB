@@ -4,6 +4,10 @@
 
 ### New since v0.5.0
 
+- **OpenAI's models keep their thinking between steps.** Nothing of a reply is stored with OpenAI,
+  so when a model that reasons used a tool and was asked again, its earlier reasoning went back
+  without the encrypted copy that lets it be read; the second call lost it, or was refused. Each
+  request now asks for that copy and hands it back with the tool's result.
 - **A better icon on the home screen.** The mark is drawn larger and heavier with its
   screen lit, so it reads beside the phone's other icons, and Android's round masks get one kept
   inside them. An iPhone that did not take the page's own link to the icon finds it at the

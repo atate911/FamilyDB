@@ -49,6 +49,7 @@ NO_REASONING_MODELS = ("gpt-3", "gpt-4", "chatgpt-")
 # Parts a model may refuse (providers/parts.py); capping effort is tried before dropping reasoning.
 TOP_EFFORT = parts.Part("the top effort levels", ("xhigh", "'max'", '"max"'))
 REASONING = parts.Part("reasoning settings", ("reasoning",))
+ENCRYPTED_REASONING = "reasoning.encrypted_content"
 CACHE_KEY = parts.Part("the prompt cache key", ("prompt_cache_key",))
 TOOL_CAP = parts.Part("the cap on tool calls", ("max_tool_calls",))
 PARTS = (TOP_EFFORT, REASONING, CACHE_KEY, TOOL_CAP)
@@ -248,12 +249,17 @@ class OpenAIProvider:
             "input": self.transcript(request),
             "tools": self.tools(request),
             "max_output_tokens": request.max_tokens or settings.max_output_tokens,
-            "store": False,  # the family's messages are not left on someone else's server
+            # Nothing of the response is kept for later requests to refer to by id; that is not a
+            # promise of zero retention (abuse monitoring is OpenAI's own).
+            "store": False,
         }
         if reasons(model):
             payload["reasoning"] = {
                 "effort": reasoning_effort(model, request.effort or settings.effort)
             }
+            # With nothing stored, a reasoning item replayed on the next step must carry its own
+            # encrypted copy, or the model's reasoning is lost (or the item refused) mid-turn.
+            payload["include"] = [ENCRYPTED_REASONING]
         left_out = parts.left_out(NAME, model)
         key = self.cache_key(request.system)
         if key and CACHE_KEY.name not in left_out:
