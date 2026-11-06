@@ -4,7 +4,7 @@
 
 The skeleton every screen is built on, for the web page on a phone, a big screen and a kitchen tablet. Second draft, October 2026, after the concept work in `CONCEPT.md`, three alternative paradigms weighed against it (section 12), and the family's answers to the questions that decide between them. Where this and the concept disagree, this document wins.
 
-**Where it stands (October 2026):** the web page is built on this skeleton: Now (section 3) with its first day; What about and the eight destinations, a kid's four (sections 4 and 9); every item of section 2's map, a place, a plan, a day, a kid, a list, a reminder, a happening and a memory (section 5); the box with its receipts, her reply over the page and search in the box (sections 3 and 6); her picks made ahead by an hourly job; the phone and big-screen frames, Vera's column carrying the thread's last lines; and the kitchen tablet's board with its faces (section 8). Of section 11's API only search (`/api/find`) is built: the rest was for the native app, and was built and then taken out (October 2026) when nothing used it. There is no native app, by the family's decision (section 8, On a phone): the installed page is the phone app. Also built: questions code can answer, answered by code in plain words on every channel (section 6, point 5); a reply pinned to a shelf of the person's own, beside the box and atop Chat (section 8); I'll handle it on a to-do that is everyone's; and who put each thing on a list (section 4). Not built: the plan taking shape on a plan's page (section 5), a kid's additions to a list for a parent to keep or drop (the family has not decided what a kid may do with the lists), and the second pass's other open decisions (section 12). `docs/STYLE.md` records the look; the guide (`/wiki`) says how to use each page.
+**Where it stands (November 2026):** the web page is built on this skeleton: Now (section 3) with its first day; What about and a grown-up's five places, Now, Eat, Do (its tabs Ideas, Coming up and We did), Week and Lists (its chips the lists, Presents and each kid's wishes), and a kid's four (sections 4 and 9), redrawn from the eight destinations of October on 6 November 2026 after three reviews found too many places for one family to learn; every item of section 2's map, a place, a plan, a day, a kid, a list, a reminder, a happening and a memory (section 5); the box with its receipts, her reply over the page and search in the box (sections 3 and 6); her picks made ahead by an hourly job; the phone and big-screen frames, Vera's column carrying the box, what came back and the pins; and the kitchen tablet's board with its faces (section 8). Of section 11's API only search (`/api/find`) is built: the rest was for the native app, and was built and then taken out (October 2026) when nothing used it. There is no native app, by the family's decision (section 8, On a phone): the installed page is the phone app. Also built: questions code can answer, answered by code in plain words on every channel (section 6, point 5); a reply pinned to a shelf of the person's own, beside the box and atop Chat (section 8); I'll handle it on a to-do that is everyone's; and who put each thing on a list (section 4). Not built: the plan taking shape on a plan's page (section 5), a kid's additions to a list for a parent to keep or drop (the family has not decided what a kid may do with the lists), and the second pass's other open decisions (section 12). `docs/STYLE.md` records the look; the guide (`/wiki`) says how to use each page.
 
 It is organized from the outside in: what the app is, the map, each level of the map, the Vera layer over all of it, how a person moves, the two platforms, the people, the awkward states, and what the server has to provide. Section 12 records the second pass: what was weighed, what changed, and what still needs a decision.
 
@@ -30,15 +30,15 @@ FIRST     Now                                        /
           the box · context line · her questions · her picks · today's line
           the destination row
 
-LEVEL 1   Destinations                               path
+LEVEL 1   Places (a grown-up's five)                 path
           What should we eat?         (Eat)          /eat
-          What could we do?           (Things)       /do
-          This week                   (Calendar)     /week
-          The kids                                   /kids
-          Happening soon                             /soon
+          What could we do?           (Do)           /do
+            tabs: Ideas · Coming up · We did         /do  /soon  /did
+          This week                   (Week)         /week
           Lists                                      /lists
-          What we did                                /did
+            chips: each list · Presents · each kid   /lists/NAME  /presents  /kids/NAME
           (What about… is Now itself, at /about when opened from elsewhere)
+          A kid's four: Now · Do · My week · My list
 
 LEVEL 2   Items
           a place        /place/57         a kid        /kids/maya
@@ -52,9 +52,10 @@ VERA      the box (every screen) → her reply (over the screen) → the thread 
           receipts (under the box, after an instruction)
 
 AVATAR    You · The family · Settings · Status · Guide        /you /family /settings /status /wiki
+MENU      Chat with Vera · What Vera knows, below the places   /chat /memory
 ```
 
-The paths are the deep links. Telegram, push notifications, the tablet and the page added to a phone's home screen all land on the same ones. Now is personal: each person's Now has their questions and picks weighted to their context, read from their own thread and the family's shared things.
+The paths are the deep links, and none was retired by the redesign: `/soon`, `/happening`, `/did`, `/kids`, `/ideas`, `/restaurants` and `/place/N` each open under the place they now belong to. Telegram, push notifications, the tablet and the page added to a phone's home screen all land on the same ones. Now is personal: each person's Now has their questions and picks weighted to their context, read from their own thread and the family's shared things.
 
 ## 3. Now
 
@@ -68,41 +69,43 @@ Now is the first screen. It is not a menu and not a dashboard: it is the box, th
 │ └──────────────────────────────────┘ │
 │ Friday 5 pm · dry through Sunday     │  one line of context
 │                                      │
-│ Maya asked for the trampoline park.  │  her questions, when any
-│ Saturday morning is free.            │
-│ Plan it · Later                      │
+│ NEXT UP                    The week  │
+│ 4:30  Swim lesson                    │  the one thing on soonest
+│       in 25 min · Pool · Maya        │
+│ Today     Swim lesson 4:30           │  today and tomorrow, a line each
+│ Tomorrow  Night Market 6 pm          │
+│ To cook   Sheet-pan fajitas          │
 │                                      │
-│ What about…         chosen at 4 pm   │  her picks for now and soon
-│ ┌───────────────┐ ┌───────────────┐  │
-│ │ TONIGHT       │ │ SAT MORNING   │  │
-│ │ Kenji's Ramen │ │ Sky High      │  │
-│ │ Open till 9,  │ │ Maya's pitch, │  │
-│ │ 12 min.       │ │ and it's dry. │  │
-│ └───────────────┘ └───────────────┘  │
-│ ┌───────────────┐ ┌───────────────┐  │
-│ │ SUNDAY        │ │ SOMETHING NEW │  │
-│ │ Powell Butte  │ │ Pumpkin       │  │
-│ │ kites         │ │ carving, free │  │
-│ └───────────────┘ └───────────────┘  │
+│ NEEDS YOU                 All to-dos │
+│ ○ Call the plumber · late            │  yours, then her questions,
+│ Maya asked for the trampoline park.  │  the first three
+│ Yes · Not this time                  │
+│ And 2 more ›                         │  the rest, a tap away
+│                                      │
+│ WHAT ABOUT…         chosen at 4 pm   │
+│ ┌──────────────────────────────────┐ │
+│ │ SAT MORNING                      │ │  her lead pick, large
+│ │ Sky High: Maya's pitch, and dry. │ │
+│ └──────────────────────────────────┘ │
+│ Tonight  Kenji's Ramen, open till 9  │  the other kinds, a line each
+│ Something new  Pumpkin carving       │
 │          Different ones              │
-│                                      │
-│ Swim lesson 4:30 · Night Market Sat  │  today and tomorrow, one line
 ├──────────────────────────────────────┤
-│ Eat · Do · Week · Kids · Lists · Did │  the destination row
+│ Now · Eat · Do · Week · Lists        │  the row
 └──────────────────────────────────────┘
 ```
 
 **Steady, as built:** the box at the top, the destination row at the bottom, and the first line under the box, which says the time and the one fact that shapes the picks. They stay put so the hand learns the screen; that is today's answer to goal 2, open to a better one.
 
-**Hers:** everything between. She decides what leads. An hour before a set plan, the plan leads with its leave-by time. At the store, the shopping list leads. On Friday afternoon, the weekend picks lead. On a quiet Tuesday morning, the screen is the box, the context line, "Nothing needs you", and the row. She may show six picks or two or none. The one promise is that anything waiting on this person is never pushed below the picks.
+**Between them, an answer rather than a dashboard** (`web/now.py`, rebuilt in November 2026): **Next up**, the one thing on soonest today or tomorrow with when, where and who ("on now" while it runs), and under it today's and tomorrow's lines and tonight's pick to cook; **Needs you**, what of this person's is late, her questions, then the rest due today, the first three shown and the rest folded under "And N more" (it opens without scripts), with everybody else's as one line; then **What about…**, her lead pick as the one large tile and the other kinds a line each. When nothing waits there are three ways in instead (choose dinner, find something to do, add a reminder), so a quiet morning is never a blank page. The one promise holds: anything waiting on this person is never pushed below the picks.
 
-**The picks** are the What about set described in section 4: one of each kind for this moment, each with a reason, made ahead and refreshed on open when stale (more than a few hours old and the budget allows). "Different ones" is a call made on purpose. Tapping a pick opens the thing with Plan it ready; swiping it away is "not now".
+**The picks** are the What about set described in section 4 (on Now the first is large and the rest a line each): one of each kind for this moment, each with a reason, made ahead and refreshed on open when stale (more than a few hours old and the budget allows). "Different ones" is a call made on purpose. Tapping a pick opens the thing with Plan it ready; swiping it away is "not now".
 
 **Setup** leads only while a step it needs or should have is left (an admin's only); the optional ones (Telegram, Google Calendar) wait in a quiet line at the foot, so a family that never connects a calendar is not asked to on every visit.
 
 **Her questions** are the only interruption: a kid's pitch, a plan to set, how an outing went. Each with its origin and its buttons. The same ones reach Telegram. How an outing went is asked, never owed: one at a time, after what only a parent can answer, nothing counts it, and the family can turn the asking off (`follow_ups`), leaving the plan's own page to take it.
 
-**Today's line** is the coordination that fits in one line. The week is one tap away in the row.
+**Today's and tomorrow's lines** are the coordination that fits in a line each, under Next up. The week is one tap away, beside Next up's heading and in the row.
 
 **Search** is inside the box: typing a name shows matches above the keyboard before anything is sent.
 
@@ -135,13 +138,14 @@ Nothing else appears on a destination. Her picks and her finds are marked as her
 
 ### What could we do? (`/do`)
 
-- **Opens on:** the saved pile, the best fits for the next free stretch on top, then everything newest first. Restaurants are not here; they have their own door.
+- **Opens on:** the saved pile, the best fits for the next free stretch on top, then everything newest first. Restaurants are not here; they have their own door. Presents are not here either: they are on Lists.
+- **Tabs:** Ideas (this page), **Coming up** (`/soon`) and **We did** (`/did`), one segmented row of links like Eat's and Week's, each its own address, so Do is the one place for what to do, what is on and what we did.
 - **Chips:** Outing · Day trip · Stay in · With the kids · Just us · Free · Close · Each person · Dropped.
 - **Each row:** name, kind, where or how far, who said it, a mark if it is closing soon or fading.
 - **Fading:** untouched things go paler after six weeks; at three months the row asks "still want this?" with keep and let go. Rested things are under the Dropped chip, never gone.
 - **Empty:** "Nothing saved yet. When someone says 'we should try…', it lands here."
 - **Kid:** her things and the family's, plain rows, nothing paler, no Dropped.
-- **New ideas:** under the pile, what she found on her own and judged worth putting forward (`docs/FINDS.md`), at most five, marked as found by her, each with when and why, **Save it** and **Not for us**. Not shown while a chip or a search narrows the page. A kid sees them without the buttons, never one for the grown-ups alone.
+- **New ideas:** under the pile, what she found on her own and judged worth putting forward (`docs/FINDS.md`), at most five, marked as found by her, each with when and why, **Save it**, **Plan it** and **Not for us**. Not shown while a chip or a search narrows the page. A kid sees them without the buttons, never one for the grown-ups alone.
 
 ### What about… (`/about`)
 
@@ -164,37 +168,38 @@ The picks on Now, as a destination of their own for a big screen, a deep link, o
 - **Empty:** without a calendar connected, the plans made here; a line above the days says so (free time then means nothing saved here, not a day checked) and offers the connection to an admin.
 - **Kid:** her days and the family's, in words ("after school"), no pencil, no plate.
 
-### The kids (`/kids`)
+### A kid's wishes (a chip on Lists; `/kids`, `/kids/NAME`)
 
+- **Where:** a chip on Lists for each kid, for a grown-up who may decide; `/kids` is every kid at once. What waits on a parent is counted on Lists in the row.
 - **Opens on:** each kid as a section, unanswered requests first.
 - **A request:** what she asked, when, in her words, with a scale in words rather than money where it helps ("needs planning", "could do at home"). Buttons: Yes · Not yet · Let's talk, and a note field that appears only on Not yet.
 - **Her lists:** every day, birthday, holiday, in her order, each item marked wanted, being considered, done. Being considered never looks like a promise. Her pitches for outings show their state: pitched, shaped, waiting on a parent, planned.
 - **Chips:** each kid, and Unanswered.
 - **Hidden:** no kid sees this screen. Only parents and admins may `decide`.
-- **With no kids on the list, the tile is not shown.** With one, it carries her name.
+- **With no kids on the list, there are no such chips.** With one, the chip carries her name.
 
-### Happening soon (`/soon`)
+### Coming up (`/soon`, Do's second tab)
 
-- **Opens on:** dated possibilities by date: what she found near home, the family's own things with a closing date, her weekend picks. "Vera found" is marked on hers.
+- **Opens on:** dated possibilities by date: what she found near home, the family's own things with a closing date, her weekend picks. "Vera found" is marked on hers. Its title is the family's name for it (`happening.NAME`, "What's going down?").
 - **Chips:** This weekend · Free · With the kids · Each source.
-- **Each row:** name, date, how far, cost, where it came from. Yes puts it in pencil on the day; Not this one teaches her.
+- **Each row:** name, date, how far, cost, where it came from; under one still hers to offer, **Save it**, **Plan it** (on its day and time, back to the list saying so) and **Not for us**, which teaches her.
 - **Finds fade out** the day after their date, kept only if someone said yes.
 - **Empty:** "Nothing found yet" with, for admins, the settings that turn finding on.
-- **Kid:** the same, without sources.
+- **Kid:** not shown (it needs `browse`); what is on near home reaches her through her picks.
 
 ### Lists (`/lists`)
 
 - **Opens on:** the list in use (shopping by default), big targets, ticks that need no conversation.
-- **Other lists** are chips: Costco, a packing list that belongs to a plan, anything created by naming it ("add sunscreen to the camping list" makes the list).
+- **Other lists** are chips: Costco, a packing list that belongs to a plan, anything created by naming it ("add sunscreen to the camping list" makes the list). After them, **Presents** (`/presents`: every gift idea the visitor may see, whom it is for and whom it is kept from, through `presents.kept_ids`; never a kid's) and a chip for each kid's wishes.
 - **Behind each item:** who asked, the photo of the exact thing if there was one, which plan it belongs to; under a thing a recipe put there, how much each recipe wants.
 - **By section of the store**, in the order a store is walked (Produce, Bakery, Meat & fish, Dairy & eggs, Dry goods & cans, Frozen, Drinks, Other), once the list spans two sections; a short list, or a hardware list, stays in the order added. The same sections as a recipe's Shopping page (`/idea/N/shop`, `docs/RECIPES.md`): that page is one recipe's needs laid over this list, with what the pantry has apart and a stand-in under an uncommon thing, for a phone in the store.
 - **A kid's additions** arrive with her face on them for a parent to keep or drop.
 - **Empty:** "Nothing on the list. Tell Vera 'we're out of milk'."
 
-### What we did (`/did`)
+### We did (`/did`, Do's third tab)
 
 - **Opens on:** recent outings, newest first: what, when, who went, the face each gave it, a photo if one was added.
-- **Each memory** offers "Again?", which puts the place back among the things to do, and "What made it good?", a few chips (early start, a friend came, short, cheap) that become what she remembers.
+- **Each memory** offers "Again?", which puts the place back among the things to do and lets go of an earlier "would not go again" (`ideas.reconsidered_at`), and "What made it good?", a few chips (early start, a friend came, short, cheap) that become what she remembers.
 - **Chips:** Loved · Each person · This time last year · Favorites.
 - **Rating** happens here, on Telegram, and on Home as her question the morning after. One of those, never all three nagging.
 - **Kid:** what she went to, with her own face on it.
@@ -274,22 +279,21 @@ The reference layout and the one most used. Now as drawn in section 3, the box a
 
 ```
 ┌──────────┬─────────────────────────────────┬──────────────────┐
-│ FamilyDB │                                 │ Vera             │
+│ FamilyDB │                                 │ ▸ Ask or tell…   │
 │          │                                 │                  │
-│ Eat      │   the current destination,      │ her reply, then  │
-│ Do       │   or Home's center:             │ the thread       │
-│ About    │   status · box · her questions  │                  │
-│ Week     │   · What about tiles            │                  │
-│ Kids     │                                 │                  │
-│ Soon     │                                 │                  │
-│ Lists    │                                 │                  │
-│ Did      │                                 │                  │
-│          │                                 │                  │
-│ (S) Sam  │                                 │ ▸ Ask or tell…   │
+│ Now      │   the current place,            │ what came back:  │
+│ Eat      │   or Now's center:              │ her reply, or a  │
+│ Do       │   next up · needs you ·         │ receipt and Undo │
+│ Week     │   What about                    │                  │
+│ Lists    │                                 │ pinned replies   │
+│ ──────── │                                 │                  │
+│ Chat     │                                 │                  │
+│ Knows    │                                 │                  │
+│ (S) Sam  │                                 │                  │
 └──────────┴─────────────────────────────────┴──────────────────┘
 ```
 
-The rail is the menu every page shares: the destination row with hints, then Chat, what she knows and, for a grown-up, the back office (Status, the guide, Settings, the family) and who is signed in, so going from Settings to Now never loses the way back. Now fills the center, and the right column is Vera's: her reply as a live object, the thread behind it, and a reply can be pinned to the rail as a shelf of this person's own. Selecting an item narrows the right column to it. The frame grows in steps as today, never by stretching words. This is also where the admin works, with the back office behind the avatar.
+The rail is the menu every page shares: the five places with their counts, then, below a rule, Chat and what she knows and, for a grown-up, the back office (Status, the guide, Settings, the family) and who is signed in, so going from Settings to Now never loses the way back. Now fills the center, and the right column is Vera's: the box, what the last message brought back (her reply, or a receipt with Undo), and the replies this person pinned; the thread itself is the Chat page, so the column stays short. Selecting an item narrows the right column to it. The frame grows in steps as today, never by stretching words. This is also where the admin works, with the back office behind the avatar.
 
 ### The kitchen tablet
 
@@ -339,7 +343,7 @@ Telegram stays the place where Vera may interrupt and where most capture happens
 | | Parent | Admin | Kid |
 |---|---|---|---|
 | First screen | Now, personal | Now, personal | A small Now: the box ("I want… / We should…"), her list with the answers on it, what's coming for her, and at most two picks (`picks.KID_MOST`), never one for the grown-ups alone |
-| The kids | yes | yes | no; her own things are on My list |
+| The kids' wishes (chips on Lists) and Presents | yes | yes | no; her own things are on My list |
 | Costs, models, settings, status | no | behind the avatar | never |
 | The box | general and scoped | same | general and scoped, with a daily message count said gently |
 | Her questions | pitches, plans, ratings | same, plus admin alerts | invitations and choices |
@@ -413,6 +417,20 @@ The family then answered the questions that decide between them, and the answers
 - A single Home is not needed, as long as an instruction can be given on first load. **So there is no launcher. There is Now, which is different every time, under a box that stays put.**
 
 What this changed from the first draft: Home the launcher became Now; What about became the first screen's content rather than a tile; the eight tiles became a fixed row of seven; the tablet became a third layout; the kid's app shrank; threads became per person; and the picks may refresh on open.
+
+### The fourth pass: fewer places (November 2026)
+
+Three reviews (5 November 2026) and the owner's own word ("complicated, hard to figure out how best to use") found the same thing: the app could do a lot, but asked a family to learn its organization before it helped. Under `docs/DESIGN_FREEDOM.md` the frame was redrawn:
+
+- **Changed: eight destinations became five places.** Now, Eat, Do, Week, Lists. Soon and Did became Do's tabs (Coming up, We did), the kids' wishes and the new Presents became chips on Lists, and Chat and What Vera knows moved below the places. Every old address still opens, under its new place.
+- **Changed: Now is an answer.** Next up, Needs you (three, the rest folded), one large pick and the others a line each, and three ways in when nothing waits, in place of a field of tiles.
+- **Changed: one main action on each item page,** and flows that finish where they start: Cook this on a recipe (the shopping list and the calendar in one press, each part said), Plan it on a place, Save it and Plan it on every row of Coming up; the rare actions folded under More.
+- **Changed: settings in two lists,** For the family and Advanced.
+- **Changed: Again? means it.** It lifts an earlier "would not go again" (section 4, We did).
+- **Kept: the box on every family page.** A reviewer proposed an "Ask Vera" button instead; the owner kept the box and trimmed around it (the column no longer repeats the thread's last lines).
+- **Kept: the names.** Renaming every place to a noun was weighed; the names were short and understood, and the count, not the words, was the trouble.
+- **Weighed, not built:** folding to-dos into the calendar only (they are used daily on their own), energy modes, a decision bar, a feedback questionnaire, an attention budget. Each is a new feature, and the simpler app should be lived with first.
+- **Not changed: the AI model page's shape.** It already opens on one line per use with its detail folded; a summary above it would have said the same thing twice. It moved under Advanced instead.
 
 **Still needs a decision from the family:**
 

@@ -74,14 +74,15 @@ what to check when a new page "feels off".
 There are two frames, with one menu. **The family's frame** (`frame.html`, docs/INTERFACE.md)
 carries Now, the destinations and each thing's own page: the box first, the page, and the row of
 destinations fixed at the foot on a phone; from a tablet up the menu stands on the left in the
-row's place, and from a desk up a third column on the right holds the box and what the last
-message brought back, with what the person pinned of hers above the conversation's last lines,
-kept in view while the page scrolls. **The back office's frame** (`base.html`) carries Status,
+row's place, and from a desk up a third column on the right holds the box, what the last
+message brought back and what the person pinned of hers, kept in view while the page scrolls;
+the conversation itself is the Chat page, so the column never repeats it. **The back office's frame** (`base.html`) carries Status,
 Settings, Family, the guide and the account pages: **the menu, the main column, and the rail**,
 as below. **The menu** (`_side.html`) is the same in both, so moving from Settings to Now keeps
 the left column and the way back: the mark, how she is, the family's places from the row's own
-list (so it marks what the row marks and leaves out what the family took out), Chat and What she
-knows, Behind the scenes for a grown-up, and who is signed in. A page that kept the menu only in the
+list (a grown-up's five: Now, Eat, Do, Week, Lists, each with its count; so it marks what the row
+marks and leaves out what the family took out), then below a hairline Chat and What she knows,
+Behind the scenes for a grown-up, and who is signed in. A page that kept the menu only in the
 back office left a person on Now with no way back but the small picture at the top. The two share
 the type, the tokens, the parts and the steps the columns grow in. The kitchen board keeps its row
 and no menu.
@@ -348,11 +349,15 @@ Every page is checked at 390 and 320 pixels in Phosphor, Kitchen Table and Ink.
 
 Each page names its focal element, what the main column holds, and what the rail holds.
 
-- **Now** (docs/INTERFACE.md section 3). Focal: the box. Then one line of the day, her questions
-  (each her screen, the words, where it came from, its buttons), the plate as checkbox rows, her
-  picks as tiles in pencil (a dashed edge, lighter ink: not set), and today and tomorrow one line
-  each. Nothing is drawn for a quiet part; "Nothing needs you." where nothing waits. What a role
-  may not do is not offered.
+- **Now** (docs/INTERFACE.md section 3). Focal: the box. Then one line of the day; **Next up** as
+  one set row (the time in the mono, the title, when, where and who), today's and tomorrow's lines
+  and To cook under it; **Needs you**: the plate's first rows as checkbox rows and her questions
+  (each her screen, the words, where it came from, its buttons), at most three, the rest in a
+  quiet fold ("And 2 more"); then **What about…**, the lead pick one tile in pencil (a dashed
+  edge, lighter ink: not set) and the other kinds a line each (`.pk-more`). With nothing waiting,
+  a quiet line and three chips into the day's jobs. Nothing is drawn for a quiet part. What a role
+  may not do is not offered. A kid's Now keeps its own shape: her questions, her to-dos, her list,
+  her picks.
 - **Chat.** The thread behind the box: the conversation, newest at the bottom, her messages beside
   her screen and the family's in their own color's soft; the conversations (the family's, and the
   kids', which grown-ups may read along) as a row of pills at every width, since the family's
@@ -360,8 +365,10 @@ Each page names its focal element, what the main column holds, and what the rail
   one line ("Pinned 2"), so the thread keeps the room however many are kept. The room is the
   window's height and the thread scrolls inside it. The page has its own box at the foot of the
   thread, so the frame draws none.
-- **A destination** (section 4): the question as the title, one line of the answer, a row of chips,
-  then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
+- **A destination** (section 4): the question as the title, one line of the answer, the place's
+  tab row where it has one (`.seg`, a row of links with the current one solid: Eat's overview,
+  Cook and Eat out; Do's Ideas, Coming up and We did, `do_tabs` in `_dest.html`; Week's List and
+  Month), a row of chips, then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
   one fact line and the people's marks at the edge; "by hand" last, as a quiet link. **Eat**: the
   next meal's picks, one to cook and one to eat out, each over its first few rows, with a
   segmented control (as Plans' List and Month) to Cook and Eat out, where the chips live; a
@@ -372,11 +379,13 @@ Each page names its focal element, what the main column holds, and what the rail
   us a text link; the
   family's own always first), the map under it. **Week**: a day a section, set things as set rows (a solid left edge,
   the time in the mono), the free time in words, a reminder a small bell line, her pick in pencil;
-  the plate above. **Kids**: a kid a section, what waits first. **Coming up** (Do's second tab): finds by day, Save it, Plan it and Not for us under each still
+  the plate above. **A kid's wishes** (a chip on Lists): a kid a section, what waits first. **Coming up** (Do's second tab): finds by day, Save it, Plan it and Not for us under each still
   on offer. **Lists**:
   big ticks, under a quiet uppercase label a section of the store once the list spans two
   (`.list-items__sec`); a recipe's Shopping page is the same ticks by section with the pantry
-  apart and a stand-in folded under a thing (`.swap`). **Did**: a face a row.
+  apart and a stand-in folded under a thing (`.swap`); its chips are the lists, then Presents
+  (a gift idea a row, whom it is for and whom it is kept from) and each kid's wishes. **We did**
+  (Do's third tab): a face a row, Again? a text link on it.
 - **What about** (`/about`): her picks as a destination, a section a set (the next few hours, the
   weekend), its tiles three across where there is room, each set with what drove it and when it was
   chosen; Different ones under them, a quiet link.
@@ -391,7 +400,10 @@ Each page names its focal element, what the main column holds, and what the rail
 - **A thing's own page** (section 5): a place, a plan, a reminder, a happening, an outing. The head with the way back, the
   facts that exist in two columns (caps key, bold value), where it came from as a quotation, what
   she found marked as hers and dated, what is planned or how it went as set rows, the box about it
-  with three quick sentences, then its actions and "Edit by hand" last, folded.
+  with three quick sentences, then its one main action as the page's one solid button (a place's
+  Plan it, folded open to its form; a recipe's Cook this, in a card under the facts), how it went
+  folded under it, and **More** last, a quiet fold (`.item-more`) holding Drop it, Look it up
+  again and Edit by hand.
 - **What Vera knows.** Main: each fact as a row under whom it is about, with how sure and where it
   came from, and Forget. Rail: telling her something, how she weighs it, what was forgotten.
 - **Family.** Focal: the list of people. Main: each person a row (avatar, name, role, how Vera
