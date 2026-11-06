@@ -9,7 +9,8 @@
   a repeating chore done twice skipped a round. The same message now saves each once.
 - **A recipe that asks twice gets both.** An onion for the sauce and another for the salsa put
   one onion on the shopping list, and a recipe's Shopping page showed only the first amount. Both
-  amounts are kept now ("1 + 1 (Tacos)"), and two recipes whose names begin alike stay apart.
+  amounts are kept now, added up where the units match ("2 (Tacos)") and said one after another
+  where not ("1 cup + 2 tbsp"), and two recipes whose names begin alike stay apart.
 - **"Not again" holds for recipes too.** Said of a dish after making it, it kept coming back
   as tonight's pick, in "what's for dinner?" and on `/dinner`; only outings honoured it. A recipe
   the family said not to make again is now left out, as an outing is, until they say otherwise.

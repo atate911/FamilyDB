@@ -54,9 +54,13 @@ the build differs from the plan below, the build is right and the plan is kept f
   store; what the pantry has apart, to check, each with **Need it**; and an uncommon thing opens
   on a tap to what could stand in (`groceries.SUBSTITUTES`, a table; for one the table does not
   know, the box offers "What could stand in for X?", a chat call only if sent). The pantry is
-  broader than the staples the plan left off (`groceries.pantry`: dried spices and herbs,
-  vinegars, the sauces in the door, the baking shelf, and the family's own list named pantry), so
-  "put the fajitas on the list" leaves those off too and says so. The Lists page walks the
+  broader than the staples the plan left off (`groceries.pantry`: dried spices and herbs, a spice
+  ground (`GROUND_SPICES`; ground almonds or flaxseed are bought), vinegars, the sauces in the
+  door, the baking shelf, and the family's own list named pantry), so "put the fajitas on the
+  list" leaves those off too and says so. A thing two lines ask for is one line, its amounts added
+  up where the unit is the same ("1 cup" for the filling and "1 cup" for the top is "2 cups") and
+  said one after another where not ("1 cup + 2 tbsp", `groceries.added_up`), so no line's share
+  is lost and asking again adds nothing. The Lists page walks the
   shopping list by the same sections once it spans two. A kid reads the page with no forms.
 - **Making a recipe leaves it one to cook.** Recording a dinner counts it as made and keeps its
   status an idea, where an outing becomes done (`ideas.apply_outcome`).
@@ -159,8 +163,9 @@ recipes (
   two share is one line ("onion" from both), the staples left out (`groceries.STAPLES`: salt,
   pepper, oil, water, sugar, flour and the like; a setting if the family wants their own), added
   through `lists.add` with a note of the amounts and which recipe ("2 cups (fajitas), 1 (soup)";
-  a recipe asking twice, an onion for the sauce and one for the salsa, says both, "1 + 1 (tacos)",
-  and a recipe's Shopping page the same, "2 + 2" limes);
+  a recipe asking twice, an onion for the sauce and one for the salsa, adds them up, "2 (tacos)",
+  and says them one after another where the units differ, "1 cup + 2 tbsp" (`groceries.added_up`);
+  a recipe's Shopping page the same, "4" limes);
   a thing already on the list keeps its place and gains the note, a ticked one is wanted again as
   `lists.add` already does. It returns what was added, what was there, what was left out, so the
   reply can say "Added 9 things for the fajitas; onions and limes were on it already; skipped
