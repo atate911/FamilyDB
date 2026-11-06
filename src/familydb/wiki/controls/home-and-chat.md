@@ -20,13 +20,13 @@ Everyone signed in sees Now and may chat ([Roles and permissions](/wiki/model/fa
 | The box | Ask, save an idea or set a reminder. Under it, what the last message brought back (below) |
 | The line | The day and the time, then how the day stands: "Free this evening", "Swim lesson 4:30 pm" |
 | Finish setting up | The steps left that it needs or should have (an AI model, your own password, where home is), for admins only, until they are done. Optional ones (Telegram, Google Calendar, the rest of the family) wait in a line at the foot, "When you like" |
-| Her questions | At most three things waiting on you: a kid's ask to answer (Yes, Not this time), a kid's pitch for an outing (See it, or Later, which rests it for a week), and after them one plan to say how it went (Loved it, OK, Not great), while [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) is on |
-| On your plate | What of yours, or everyone's, is late or due today, each with its tick, then a line for anybody else's ("Alex has 1 late", to the week); a kid sees all of her own things to do |
-| What about… | Her picks, chosen ahead by code, with when they were chosen. "Different ones" asks her for others, which is a message like any other |
-| My list | A kid's wishes, with the countdowns to Christmas and her birthday |
-| Today, Tomorrow | One line each, linking to the day |
+| Next up | The next thing on: one going on now ("on now") or still to come today, else tomorrow's first, with its time, place and who; then one line each for today and tomorrow, linking to the day, and tonight's pick to cook |
+| Needs you | What waits on you, most pressing first: what of yours (or everyone's) is late, her questions (a kid's ask to answer, Yes or Not this time; a kid's pitch for an outing, See it or Later, which rests it for a week; one plan to say how it went, Loved it, OK or Not great, while [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) is on), then what is due today. The first three show; **And N more** opens the rest. A line under them says anybody else's ("Alex has 1 late", to the week) |
+| What about… | Her pick for now, large, and the other kinds a line each under it, chosen ahead by code, with when they were chosen. "Different ones" asks her for others, which is a message like any other |
 
-When nothing waits on you, Now says so ("Nothing needs you.") and gets on with the picks.
+When nothing waits on you, Now says so ("Nothing needs you.") with three ways in: **Choose dinner**, **Find something to do** and **Add a reminder**, which starts the box for you.
+
+A kid's Now keeps its own order: her questions, her own things to do, her list (with the countdowns to Christmas and her birthday), at most two picks, and today's and tomorrow's lines.
 
 ### Her picks
 

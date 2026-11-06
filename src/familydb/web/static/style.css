@@ -886,13 +886,6 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .page-head__day { font-family: var(--font-head); font-size: var(--t-h1); font-weight: 700; font-stretch: var(--w-head); line-height: 1.15; color: var(--ink); }
 .page-head--day .lede a { font-weight: 400; color: var(--ink-2); text-decoration-color: currentColor; text-decoration-thickness: 1px; }
 /* the next plan: tile | what and when | who | the way to it, centred on each other */
-.next { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: var(--s4); align-items: center; }
-.next__body { display: grid; gap: var(--s1); min-width: 0; }
-.next h3 { font-size: var(--t-h3); margin: 0; }
-.next h3 a { color: var(--ink); text-decoration: none; }
-.next h3 a:hover { text-decoration: underline; }
-.next__go { font-weight: 700; color: var(--ink); text-decoration: none; white-space: nowrap; }
-.next__go:hover { text-decoration: underline; }
 .soon { margin-top: var(--s4); padding-top: var(--s2); border-top: 1px solid var(--line); }
 .soon .item { grid-template-columns: auto minmax(0, 1fr) auto auto; }
 .rate-line { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); }
@@ -1208,8 +1201,6 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
   .starter .short { display: inline; }
   .phone-hide { display: none !important; }
   /* the next plan: tile | what and when | who, the way to it under them */
-  .next { grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s2) var(--s4); }
-  .next__go { grid-column: 2 / -1; }
   .dt--lg { width: 64px; }
   /* the chat's conversations and the guide's sections have their phone places in the page; the rail's copies go */
   .page-chat .rail, .page-wiki .rail { display: none; }
@@ -1956,6 +1947,18 @@ li:target { border-radius: var(--r-md); }
 .today { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: var(--s3); color: var(--ink-2); }
 .today b { color: var(--ink); }
 .today a { color: var(--ink); text-decoration-color: var(--line-2); }
+/* Now, a grown-up's: what is next leads, then what needs them, then one pick with the others a line each. */
+.upnext .set { margin-bottom: var(--s3); }
+.upnext .set__t { font-size: var(--t-h3); font-stretch: var(--w-head); line-height: 1.2; }
+.needs .q + .q, .needs .todos + .q, .needs .q + .todos { margin-top: var(--s3); }
+.needs__more { margin-top: var(--s3); }
+.needs__more > summary { font-weight: 700; color: var(--ink); cursor: pointer; min-height: var(--target); display: flex; align-items: center; gap: var(--s2); }
+.ways__go { display: flex; flex-wrap: wrap; gap: 6px; margin: var(--s2) 0 0; }
+.picks--one { grid-template-columns: minmax(0, 1fr); }
+.picks--one .pk__t { font-size: var(--t-h3); font-stretch: var(--w-head); }
+.pk-more { list-style: none; margin: var(--s3) 0 0; padding: 0; display: grid; gap: var(--s2); font-size: var(--t-meta); }
+.pk-more__k { font-size: 0.72rem; font-weight: 700; font-stretch: var(--w-label); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); margin-right: var(--s2); }
+.pk-more a { color: var(--ink); font-weight: 700; }
 
 /* the row of destinations, fixed at the foot on a phone: words, the current one in ink and underlined */
 .row { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center; gap: var(--s1); min-height: var(--tabbar-total); padding: var(--s2) max(var(--s4), env(safe-area-inset-right, 0px)) calc(var(--s3) + env(safe-area-inset-bottom, 0px)) max(var(--s4), env(safe-area-inset-left, 0px)); background: var(--paper-2); border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
