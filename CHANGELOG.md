@@ -29,6 +29,12 @@
   once. Giving an idea a new location lets go of the old branch's hours and drive and looks the
   new one up. Canceling one of two plans for an idea leaves it planned for the other. A time an
   idea takes is at least a minute, its shortest no longer than its longest.
+- **Whose it is, and what it rests on.** On your plate is yours and everyone's; somebody else's to-dos
+  are under their own name on the week ("On Alex's plate") and a line on Now. Now leads with setup
+  only while something it needs is left; Telegram and Google Calendar wait in a quiet line at the
+  foot. Without a calendar connected, the week says so above the days rather than after them. A
+  recipe is one you would make again, and the choice says what not again does. Hours from details
+  gone stale are said as last checked.
 - **Each day of a weekend on its own.** A show needing three days' notice, asked about on a
   Thursday, is offered for Sunday rather than ruled out for Saturday. The weather is said to look
   fine only for a day that had a forecast. Snow for a snow day is no longer called rain.
