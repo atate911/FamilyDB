@@ -4,6 +4,9 @@
 
 ### New since v0.5.0
 
+- **An outing is counted once.** Had a reply failed after "we went to the zoo, 8/10" was saved,
+  or had the model said it twice, the visit could be counted twice and the average moved; marking
+  a repeating chore done twice skipped a round. The same message now saves each once.
 - **A recipe that asks twice gets both.** An onion for the sauce and another for the salsa put
   one onion on the shopping list, and a recipe's Shopping page showed only the first amount. Both
   amounts are kept now ("1 + 1 (Tacos)"), and two recipes whose names begin alike stay apart.

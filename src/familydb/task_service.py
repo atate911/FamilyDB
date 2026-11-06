@@ -121,10 +121,13 @@ def update(
     settings: Any = None,
     repeat: dict[str, Any] | None = None,
     stop_repeating: bool = False,
+    done_key: str | None = None,
 ) -> Task:
     """Change a task. `repeat` sets how it comes round, from `reminder` if given, else its reminder
     now; `stop_repeating` makes it a one-off. A plain new `reminder` on a repeating task snoozes
-    this time round only.
+    this time round only. `done_key` names the request marking it done (`request_key`): the same
+    request again does not finish a second round. A change that changes nothing writes nothing,
+    so a repeated one does not move the task's revision.
     """
     zone = settings.tzinfo if settings is not None else UTC
     with transaction(conn):
@@ -146,6 +149,8 @@ def update(
             columns = _repeat_columns(repeat, anchor=anchor)
         rule = None if stop_repeating else (columns or _rule_of(current))
         round_done = values.get("status") == "done" and rule is not None
+        if round_done and done_key and tasks.last_done_key(conn, task_id) == done_key:
+            return _read(conn, task_id)  # this request finished this round already
         if round_done:
             values = {**values, "status": "open"}
         resulting_status = values.get("status", current.status)
@@ -172,8 +177,15 @@ def update(
         changes.update(columns)
         if round_done:
             changes["last_done_at"] = now
-        changes["updated_at"] = now
-        tasks.update(conn, task_id, changes)
+            changes["last_done_key"] = done_key
+        was = current.model_dump()
+        if (
+            round_done
+            or replace_reminder
+            or any(key not in was or was[key] != value for key, value in changes.items())
+        ):
+            changes["updated_at"] = now
+            tasks.update(conn, task_id, changes)
         latest = _read(conn, task_id)
         if settings is not None:
             due_when = None

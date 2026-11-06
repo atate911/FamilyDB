@@ -255,6 +255,7 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
         settings=ctx.settings,
         repeat=_repeat(args),
         stop_repeating=args.stop_repeating,
+        done_key=ctx.request_key("done", args.task_id) if args.status == "done" else None,
     )
     if before is not None:
         _keep_undo(
