@@ -64,6 +64,8 @@ Otherwise one idea gets one [worker turn](/wiki/reference/glossary#worker-turn):
 
 FamilyDB reads the result from what the worker did, not what it said. No hand-back means failed ("worker ended without saving"). A retryable error, or the day's spending limit, leaves the idea pending and stops the run. Any other error marks it failed with the reason.
 
+Giving an idea another place (its location changed, not just respelled) lets go of the place looked up for the old one, so the old branch's hours and drive never stand for the new one, and sets the idea back to pending for a fresh lookup. What the family said of the idea stays, and the old place is left as it was for any other idea that shares it. A recipe's location is not a venue and changes nothing.
+
 To try a failed one again, use **Look it up again**, or run `familydb enrich --idea <number>` (run as in [The command line](/wiki/operations/command-line#how-to-run-it)). When lookups run, and the note sent afterwards, are on [Lookups](/wiki/controls/settings/lookups) and [The scheduled jobs](/wiki/behavior/jobs).
 
 ## How it went
