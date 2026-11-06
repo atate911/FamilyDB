@@ -1514,3 +1514,93 @@ def test_where_a_kid_reads_nothing_for_the_grown_ups_alone_is_offered(env, famil
     env.ctx.member, env.ctx.plain = family["sam"], True  # a shared chat with a kid in it
     said = {c.idea_id for c in run(env.ctx, asked).candidates}
     assert zoo.id in said and bar.id not in said
+
+
+# --- what the review of 5 November 2026 found: each day judged on its own
+
+
+def test_too_soon_to_book_for_saturday_still_leaves_sunday(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    """Thursday, three days' notice: Saturday is two days off, Sunday three (exactly enough)."""
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    show = _idea(conn, "Puppet show", kind="show", needs_booking=True, lead_time_days=3)
+    _seed_place(
+        conn,
+        show,
+        hours={
+            "sat": [{"open": "10:00", "close": "18:00"}],
+            "sun": [{"open": "10:00", "close": "18:00"}],
+        },
+    )
+    _, data = _suggest(registry, ctx)
+    (said,) = [c for c in data["candidates"] if c["idea_id"] == show.id]
+    assert said["verdict"] == "good" and said["fits_days"] == ["2026-09-27"]
+    assert said["checks"]["booking"] == "ok"
+    assert "too late to book for Saturday" in said["reasons"]
+    # A day's more notice than either day gives rules it out, said by the furthest day.
+    with db.transaction(conn):
+        ideas.update(conn, show.id, {"lead_time_days": 4}, now=NOW_ISO)
+    _, data = _suggest(registry, ctx)
+    (said,) = [c for c in data["candidates"] if c["idea_id"] == show.id]
+    assert said["verdict"] == "ruled_out" and said["checks"]["booking"] == "too_late"
+    assert said["reasons"][0] == "needs booking 4 days ahead, only 3 left"
+
+
+def test_a_day_with_no_forecast_is_not_vouched_for_by_another(
+    conn, full_settings, thursday_clock, family
+) -> None:
+    wet_sat = DayForecast(SAT, 63, "rain", 12.0, 7.0, 90, 12.0)
+    weather = fakes.FakeForecast([wet_sat])  # nothing yet for Sunday
+    ctx = _ctx(
+        conn,
+        full_settings,
+        thursday_clock,
+        family,
+        calendar=fakes.FakeCalendar(TZ),
+        weather=weather,
+    )
+    context = build_context(ctx, (SAT, SUN))
+    picnic = _idea(conn, "Picnic", setting="outdoor", duration_min=120)
+    kept, _ = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
+    (one,) = kept
+    assert one.fits_days == [SUN] and one.weather == "unknown"
+    assert one.notes == ["no forecast yet for Sunday"]
+    # A fine Saturday beside an unknown Sunday is said as each.
+    dry = fakes.FakeForecast([DRY_SAT])
+    ctx = _ctx(
+        conn, full_settings, thursday_clock, family, calendar=fakes.FakeCalendar(TZ), weather=dry
+    )
+    kept, _ = shortlist(
+        ideas.list_all(conn), build_context(ctx, (SAT, SUN)), Constraints(), full_settings
+    )
+    (one,) = kept
+    assert one.fits_days == [SAT, SUN] and one.weather == "unknown"
+    assert one.notes == ["weather looks fine Saturday; no forecast yet for Sunday"]
+    assert picnic.id == one.idea.id
+
+
+def test_snow_is_what_a_snow_idea_wants_not_rain(
+    conn, full_settings, thursday_clock, family
+) -> None:
+    snowy = DayForecast(SAT, 73, "snow", -2.0, -6.0, 85, 8.0)
+    ctx = _ctx(
+        conn,
+        full_settings,
+        thursday_clock,
+        family,
+        calendar=fakes.FakeCalendar(TZ),
+        weather=fakes.FakeForecast([snowy, DayForecast(SUN, 1, "clear", -1.0, -8.0, 0, 0.0)]),
+    )
+    context = build_context(ctx, (SAT, SUN))
+    sledding = _idea(conn, "Sledding", setting="outdoor", weather="snow", duration_min=90)
+    walk = _idea(conn, "Beach walk", setting="outdoor", duration_min=90)
+    museum = _idea(conn, "Museum", setting="indoor", duration_min=90)
+    kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
+    kept_ids = {one.idea.id: one for one in kept}
+    assert kept_ids[sledding.id].fits_days == [SAT] and kept_ids[sledding.id].weather == "ok"
+    assert kept_ids[sledding.id].caveats == []
+    # Snow falling still spoils a walk, and is called snow; indoors it is nothing.
+    assert kept_ids[walk.id].fits_days == [SUN]
+    assert kept_ids[museum.id].fits_days == [SAT, SUN] and kept_ids[museum.id].caveats == []
+    assert ruled_out == []

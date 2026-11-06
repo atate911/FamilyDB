@@ -243,13 +243,17 @@ def _weather_fit(
     no day fits outright: some families go out in the rain. When the family said rain is fine
     (`rain_ok` names the memory, suggest/rules.py), a wet day fits and the rain is said with
     the memory, lowering nothing. No snow for a snow idea is a fact: a day without it never
-    fits."""
-    needs_dry = idea.setting == "outdoor" or idea.weather == "dry"
-    needs_warm = idea.weather == "warm"
+    fits, and the snow it wants is not held against it as wet weather.
+
+    The weather is "ok" only when every day kept had a forecast to say so: a day with none is
+    not vouched for by a dry day dropped or kept beside it, and is named in the word that
+    lowers nothing."""
     needs_snow = idea.weather == "snow"
+    needs_dry = (idea.setting == "outdoor" and not needs_snow) or idea.weather == "dry"
+    needs_warm = idea.weather == "warm"
     fits: list[date] = []
     wet: list[date] = []  # days that fail only for rain or cold
-    known = False
+    unknown: set[date] = set()  # days with no forecast
     bad: list[str] = []
     snowless: list[str] = []
     rained: list[str] = []  # wet days that fit because the family said rain is fine
@@ -257,13 +261,14 @@ def _weather_fit(
         if not idea.on(day.date):
             continue
         forecast = day.forecast
-        if forecast is not None:
-            known = True
+        if forecast is None:
+            unknown.add(day.date)
         taste: str | None = None
         rain: str | None = None
         if needs_dry and day_is_dry(forecast) is False:
             chance = f" ({forecast.rain_chance}%)" if forecast and forecast.rain_chance else ""
-            rain = f"rain likely {day.date:%A}{chance}"
+            falls = "snow" if day_has_snow(forecast) else "rain"
+            rain = f"{falls} likely {day.date:%A}{chance}"
             taste = None if rain_ok else rain
         if taste is None and needs_warm and day_is_warm(forecast, settings) is False:
             taste = f"not warm enough {day.date:%A}"
@@ -281,10 +286,25 @@ def _weather_fit(
     if fits:
         if rained:
             return fits, "poor", None, None, f"{'; '.join(rained)}, and {rain_ok} says rain is fine"
-        return fits, ("ok" if known else "unknown"), None, None, None
+        unseen = [day for day in fits if day in unknown]
+        if not unseen:
+            return fits, "ok", None, None, None
+        forecast_for_some = len(unknown) < sum(1 for day in context.days if idea.on(day.date))
+        if not (needs_dry or needs_warm or needs_snow) or not forecast_for_some:
+            return fits, "unknown", None, None, None
+        seen = [day for day in fits if day not in unknown]
+        note = f"no forecast yet for {_days_named(unseen)}"
+        if seen:
+            note = f"weather looks fine {_days_named(seen)}; {note}"
+        return fits, "unknown", None, None, note
     if wet:
         return wet, "poor", None, "; ".join(bad), None
     return [], "poor", "; ".join(snowless or bad) or "weather does not fit", None, None
+
+
+def _days_named(days: Sequence[date]) -> str:
+    named = [f"{day:%A}" for day in days]
+    return named[0] if len(named) == 1 else f"{', '.join(named[:-1])} or {named[-1]}"
 
 
 # Said of a long day out on a day with something else on it, but time enough around it.
