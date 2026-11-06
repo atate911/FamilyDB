@@ -151,7 +151,7 @@ recipes (
   matches an asked one as a maybe, said so ("looks quick, 25 min; say if not"). Ranking is
   `familydb/meals.py` (domain, imports store only): facts first (minutes over the limit, an
   occasion asked for and missing, nobody it is for among those eating, the family's last word on
-  it "not again", as the outings' engine holds it; asked for by name it is still found, as a maybe
+  it "not again", as the outings' engine holds it, lifted once it is brought back; asked for by name it is still found, as a maybe
   with that said), then taste (made within its rest days lowers it; rating and times made raise
   it; an idea never made is "new to us"). The limit is the tighter of `most_minutes` and what
   tonight's plans leave (`meals.situation`): cooking starts at 5:30 pm or now, waits out a plan
