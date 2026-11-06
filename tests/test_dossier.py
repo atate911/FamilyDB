@@ -129,6 +129,32 @@ def test_it_carries_what_the_family_knows_and_cites_it(conn, full_settings, thur
     assert any(c.startswith("m") for c in made.cites) and any(c.startswith("o") for c in made.cites)
 
 
+def test_a_not_again_lifted_since_is_said_so(conn, full_settings, thursday_clock, family):
+    """Put back (Again?, Bring it back), an idea is offered again; the stronger call reads why,
+    rather than a bare "would not go again" beside an option it is offered."""
+    asked, _, zoo = _setup(conn, family)
+    with transaction(conn):
+        outcomes.insert(
+            conn,
+            idea_id=zoo.id,
+            plan_id=None,
+            happened_on="2026-09-19",  # in the last two weeks, which the dossier carries
+            rating=3,
+            would_repeat=False,
+            notes=None,
+            recorded_by=family["sam"].id,
+            now=NOW_ISO,
+        )
+    made, _ = _build(conn, full_settings, thursday_clock, family, asked)
+    assert "would not go again" in made.text and "then put back" not in made.text
+    assert f"idea:{zoo.id}" not in made.options
+    with transaction(conn):
+        ideas.update(conn, zoo.id, {"status": "idea", "reconsidered_at": "2026-09-21T09:00:00Z"})
+    made, _ = _build(conn, full_settings, thursday_clock, family, asked)
+    assert "would not go again, then put back on the list" in made.text
+    assert f"idea:{zoo.id}" in made.options
+
+
 def test_never_another_chat_and_never_what_was_ruled_out_as_an_option(
     conn, full_settings, thursday_clock, family
 ):

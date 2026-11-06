@@ -761,6 +761,42 @@ def test_a_recipe_is_made_again_and_not_again_says_what_it_does(
     )
 
 
+def test_again_on_an_outing_brings_a_not_again_back_and_says_so(
+    settings, clock, conn, family
+) -> None:
+    """Again? on an outing's page meant "back among the things to do" while a last "would not"
+    still kept it out of suggestions; now it means it, and the notice says so."""
+    from datetime import timedelta
+
+    with db.transaction(conn):
+        walk = ideas.insert(conn, title="Sea wall walk", kind="outing", now=NOW_ISO)
+        ideas.apply_outcome(conn, walk.id, happened_on="2026-09-12", avg_rating=3.0, now=NOW_ISO)
+        went = outcomes.insert(
+            conn,
+            idea_id=walk.id,
+            plan_id=None,
+            happened_on="2026-09-12",
+            rating=3,
+            would_repeat=False,
+            notes=None,
+            recorded_by=1,
+            now=NOW_ISO,
+        )
+    assert walk.id in outcomes.do_not_repeat(conn)
+    client = _client(settings, clock)
+    page = client.get(f"/did/{went.id}").text
+    assert "can suggest it again, whatever was said of it before" in page
+    form = page[: page.index('name="status" value="idea"')]
+    form = page[form.rindex("<form") :]
+    form = form[: form.index("</form>")]
+    fields = dict(re.findall(r'name="(csrf|once|status|back)" value="([^"]*)"', form))
+    clock.advance(timedelta(minutes=5))
+    back = client.post(f"/idea/{walk.id}/status", data=fields, follow_redirects=True)
+    assert "Back on the list: Sea wall walk. It can come up again." in back.text
+    assert ideas.get(conn, walk.id).status == "idea"
+    assert walk.id not in outcomes.do_not_repeat(conn)
+
+
 # -- five places (the redesign of November 2026): Do's tabs and Lists' chips
 
 

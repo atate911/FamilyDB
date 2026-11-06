@@ -53,6 +53,8 @@ ALREADY_THERE = "Already there: {ideas}."
 NOT_ADDED = "Not added: {ideas}."
 NEEDS_LINES = "Write one idea a line, and the kind they all are."
 CHANGED_IDEA = "Changed #{id} {title}."
+# Again? or Bring it back: whatever was said of not doing it again, it can come up again.
+PUT_BACK = "Back on the list: {title}. It can come up again."
 DUPLICATE = "There is already an idea called that: #{id}. Nothing was added."
 STALE_IDEA = (
     "#{id} was changed since you opened it, so nothing was saved. Here it is as it is now; "
@@ -467,7 +469,8 @@ def edit_idea(idea_id: int) -> Response:
 @bp.post("/idea/<int:idea_id>/status")
 @once
 def set_status(idea_id: int) -> Response:
-    """Drop an idea, or bring a dropped one back."""
+    """Drop an idea, or put a dropped or done one back (Bring it back, Again?): update_idea then
+    lets go of an earlier "would not again", and the notice says it can come up again."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.idea", idea_id=idea_id)
@@ -475,7 +478,9 @@ def set_status(idea_id: int) -> Response:
     if result is None:
         _say(complaint or "")
     else:
-        _say(CHANGED_IDEA.format(id=result["id"], title=result["title"]))
+        back = result["status"] == "idea" and _text(request.form, "status") == "idea"
+        words = PUT_BACK if back else CHANGED_IDEA
+        _say(words.format(id=result["id"], title=result["title"]))
     return _back_here("web.idea", idea_id=idea_id)
 
 

@@ -311,6 +311,35 @@ def test_do_not_repeat_is_honored_and_explicit_new_preference_can_override(env):
     assert data["id"] not in outcomes.do_not_repeat(env.conn)
 
 
+def test_putting_an_idea_back_lifts_an_earlier_not_again_and_a_later_one_stands(env):
+    """Again? and Bring it back (update_idea, done or dropped to an idea) mean the family would
+    go again: what they said before stops keeping it out. A "would not" said after it counts."""
+    _, data = call(env, "add_idea", title="Kenji's Ramen", kind="restaurant")
+    ramen = data["id"]
+    call(env, "record_outcome", idea_id=ramen, happened_on="2026-06-01", would_repeat=False)
+    assert ideas.get(env.conn, ramen).status == "done" and ramen in outcomes.do_not_repeat(env.conn)
+    asked = SuggestInput(window="someday", discover=False, question="What can we do?")
+
+    def verdict() -> str:
+        return next(c for c in run(env.ctx, asked).candidates if c.idea_id == ramen).verdict
+
+    assert verdict() == "ruled_out"
+    env.ctx.clock.advance(timedelta(minutes=5))
+    result, _ = call(env, "update_idea", id=ramen, status="idea")
+    assert not result.is_error and ramen not in outcomes.do_not_repeat(env.conn)
+    assert verdict() != "ruled_out"
+    # The record a model reads never carries when it was put back.
+    assert "reconsidered_at" not in ideas.get(env.conn, ramen).model_dump()
+    env.ctx.clock.advance(timedelta(minutes=5))
+    call(env, "record_outcome", idea_id=ramen, happened_on="2026-06-10", would_repeat=False)
+    assert ramen in outcomes.do_not_repeat(env.conn) and verdict() == "ruled_out"
+    # Planned, then back to an idea (a plan cancelled) is not putting it back.
+    env.ctx.clock.advance(timedelta(minutes=5))
+    call(env, "update_idea", id=ramen, status="planned")
+    call(env, "update_idea", id=ramen, status="idea")
+    assert ramen in outcomes.do_not_repeat(env.conn)
+
+
 def _longest(ranges, spans, travel=0) -> int:
     """The longest stretch `doable` leaves: how long the family could be there in one go."""
     return max((b - a for a, b in doable(ranges, spans, travel)), default=0)

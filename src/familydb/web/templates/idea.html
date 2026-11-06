@@ -207,7 +207,7 @@
           {% set cooked = idea.kind == 'recipe' %}{% set verb = 'make' if cooked else 'go' %}
           <div class="field"><label class="field__label" for="would_repeat">Again?</label>
             <select id="would_repeat" name="would_repeat" aria-describedby="would-repeat-said"><option value="">Not saying</option><option value="yes">Would {{ verb }} again</option><option value="no">Would not {{ verb }} again</option></select>
-            <p class="field__hint" id="would-repeat-said">Not again: {{ assistant }} stops {{ 'offering it for dinner' if cooked else 'suggesting it' }}, until a later time is recorded as worth {{ 'making' if cooked else 'doing' }} again.</p></div>
+            <p class="field__hint" id="would-repeat-said">Not again: {{ assistant }} stops {{ 'offering it for dinner' if cooked else 'suggesting it' }}, until a later time is recorded as worth {{ 'making' if cooked else 'doing' }} again{% if not cooked %}, or somebody presses Again? or Bring it back{% endif %}.</p></div>
           {{ asking('outcome') }}
         </div>
         <div class="field"><label class="field__label" for="notes">Notes <span class="opt">(optional)</span></label><textarea id="notes" name="notes" rows="2" data-dictate></textarea></div>

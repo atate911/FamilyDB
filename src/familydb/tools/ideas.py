@@ -436,6 +436,11 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
         _lead_time(args.lead_time_days)
         changes |= _dated(ctx, args.happens_from, args.happens_until, current)
         changes |= _moved(current, changes)
+        # Done or dropped, put back as an idea (Again?, Bring it back, or the family saying so):
+        # what anyone said before of not doing it again no longer keeps it out.
+        stamped = ideas.reconsidered_at(ctx.conn, args.id)
+        if changes.get("status") == "idea" and current.status in ("done", "dropped"):
+            changes["reconsidered_at"] = ctx.now_iso()
         idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
         if idea is not None:
             _keep_presents(ctx, idea)
@@ -448,13 +453,15 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
     if idea is None:
         raise ToolError(f"no idea #{args.id}")
     was, now_is = current.model_dump(mode="json"), idea.model_dump(mode="json")
+    was["reconsidered_at"] = stamped
     keep_undo(
         ctx,
         "restore_idea",
         f"changed idea #{idea.id} {idea.title}",
         idea=idea.id,
         before={key: was.get(key) for key in changes},
-        after={key: now_is.get(key) for key in changes},
+        # What the record shows; the stamp is not on it, and goes back with the status.
+        after={key: now_is.get(key) for key in changes if key in now_is},
     )
     return _with_recipe(ctx, idea)
 

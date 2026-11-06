@@ -67,7 +67,7 @@ Open it, open **More**, choose **Edit by hand**, then **Save changes**. Changing
 
 ## Drop an idea, or bring it back
 
-Open it, open **More** and choose **Drop it** or **Bring it back**. Dropping sets the status to Dropped: the idea leaves the list, the picks, suggestions and lookups, and keeps its outcomes and place. Bringing it back sets it to "An idea". The page cannot delete an idea.
+Open it, open **More** and choose **Drop it** or **Bring it back**. Dropping sets the status to Dropped: the idea leaves the list, the picks, suggestions and lookups, and keeps its outcomes and place. Bringing it back sets it to "An idea", and an earlier would not go again no longer keeps it out of suggestions. The page cannot delete an idea.
 
 ## Plan it
 
@@ -75,7 +75,7 @@ Open **Plan it** on the place's page, give when (or all day) and where, and save
 
 ## Record how it went
 
-Open the place, open **Record how it went by hand**, set the day (not in the future), a score out of ten and whether the family would go again (for a recipe, make again), and choose **Record it**. That marks the idea done, counts the visit and updates its average rating. Would not again leaves it out of suggestions, and a recipe out of dinner, until a later time is recorded as worth another go; the form says so under the choice. An idea can have many outcomes. The faces on Now and [Did](/wiki/controls/plans-and-tasks#did) record the same thing with one tap. Recording how it went on a dropped idea marks it Done again.
+Open the place, open **Record how it went by hand**, set the day (not in the future), a score out of ten and whether the family would go again (for a recipe, make again), and choose **Record it**. That marks the idea done, counts the visit and updates its average rating. Would not again leaves it out of suggestions, and a recipe out of dinner, until a later time is recorded as worth another go; a place also comes back when somebody presses **Again?** (on We did) or **Bring it back** (under More). The form says so under the choice. A would not again recorded after that keeps it out once more. A recipe is never marked done, so it comes back by recording that you would make it again. An idea can have many outcomes. The faces on Now and [Did](/wiki/controls/plans-and-tasks#did) record the same thing with one tap. Recording how it went on a dropped idea marks it Done again.
 
 ## Ask for a lookup
 

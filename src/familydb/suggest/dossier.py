@@ -265,6 +265,7 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
     since = (today - timedelta(days=LATELY_DAYS)).isoformat()
     ahead = (today + timedelta(days=LATELY_DAYS + 1)).isoformat()
     titles = {idea.id: idea.title for idea in ideas.list_all(conn, include_dropped=True)}
+    put_back = ideas.reconsidered(conn)
     lately: list[str] = []
     lately_marks: list[_Marks] = []
     for outcome in outcomes.recent(conn, since=since):
@@ -273,6 +274,10 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
         again = {True: ", would go again", False: ", would not go again"}.get(
             outcome.would_repeat, ""
         )
+        if outcome.would_repeat is False and outcome.created_at < put_back.get(
+            outcome.idea_id or -1, ""
+        ):
+            again += ", then put back on the list"
         note = f': "{" ".join(outcome.notes.split())[:200]}"' if outcome.notes else ""
         lately.append(f"o{outcome.id} {outcome.happened_on} {what}{rated}{again}{note}")
         lately_marks.append(_Marks(cites=frozenset({f"o{outcome.id}"})))

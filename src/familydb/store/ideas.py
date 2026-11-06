@@ -101,6 +101,9 @@ EDITABLE_FIELDS = frozenset(
         "enrichment",
         "enriched_at",
         "enrichment_note",
+        # When it last went from done or dropped back to an idea (0066); not on `Idea`, so the
+        # record a model reads never carries it.
+        "reconsidered_at",
     }
 )
 INSERT_FIELDS = EDITABLE_FIELDS | {"suggested_by", "source_message_id"}
@@ -240,6 +243,18 @@ def update(
 def get(conn: sqlite3.Connection, idea_id: int) -> Idea | None:
     row = conn.execute(f"{_SELECT} WHERE i.id = ?", (idea_id,)).fetchone()
     return Idea.from_row(row) if row else None
+
+
+def reconsidered_at(conn: sqlite3.Connection, idea_id: int) -> str | None:
+    """When the idea last went from done or dropped back to an idea, if it ever did."""
+    row = conn.execute("SELECT reconsidered_at FROM ideas WHERE id = ?", (idea_id,)).fetchone()
+    return row["reconsidered_at"] if row else None
+
+
+def reconsidered(conn: sqlite3.Connection) -> dict[int, str]:
+    """Every idea that went from done or dropped back to an idea, and when it last did."""
+    rows = conn.execute("SELECT id, reconsidered_at FROM ideas WHERE reconsidered_at IS NOT NULL")
+    return {row["id"]: row["reconsidered_at"] for row in rows}
 
 
 def list_for_prompt(conn: sqlite3.Connection) -> list[Idea]:
