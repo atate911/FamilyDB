@@ -28,7 +28,7 @@ The *kind* is free text, so a new kind needs no change to the software. The assi
 | done | An outcome is recorded, even for a dropped idea |
 | dropped | Somebody drops it. It leaves lists, suggestions and lookups and keeps its outcomes and place |
 
-Canceling a plan moves only a planned idea back; a done one stays done. **Didn't go** sets any idea that is not dropped back to idea, a done one included. **Bring it back** is only for dropped ones. Nothing deletes an idea ([Plans and the calendar](/wiki/model/plans-and-calendar)).
+Canceling a plan moves only a planned idea back, and only when none of its other plans is still to come; a done one stays done. **Didn't go** sets any idea that is not dropped back to idea, a done one included. **Bring it back** is only for dropped ones. Nothing deletes an idea ([Plans and the calendar](/wiki/model/plans-and-calendar)).
 
 ## Duplicates
 

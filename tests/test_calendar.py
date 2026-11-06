@@ -6,7 +6,7 @@ import pytest
 
 from familydb.free_time import free_blocks, on_day
 from familydb.integrations.google_calendar import CalendarEvent, event_body, parse_event
-from familydb.store import ideas, messages, plans
+from familydb.store import db, ideas, messages, plans
 from familydb.tools import ToolContext, ToolRegistry
 from familydb.tools.gcal import KEPT_HERE
 from tests import fakes
@@ -842,3 +842,43 @@ def test_google_reads_a_missing_event_as_deleted_only_while_the_calendar_is_ther
     with pytest.raises(ToolUnavailable):
         client.get_event("evt1")  # the calendar is not there for the bot: nothing is known
     assert said == [(LOST_ACCESS, True)]
+
+
+def test_an_idea_stays_planned_while_another_of_its_plans_is_to_come(env):
+    """Either of two plans cancelled leaves the idea planned; the last one frees it. In Google
+    the same: its event deleted is a cancel."""
+    first, idea_id = _plan_with_idea(env, title="Aquarium", start="2026-09-26T10:00")
+    _, second = call(
+        env, "create_event", title="Aquarium again", start="2026-10-03T10:00", idea_id=idea_id
+    )
+    _, data = call(env, "update_event", plan_id=second["plan"]["id"], status="cancelled")
+    assert data["idea"]["status"] == "planned"
+    call(env, "search_plans", query="")
+    _, third = call(
+        env, "create_event", title="Aquarium, cousins", start="2026-10-10T10:00", idea_id=idea_id
+    )
+    del env.cal.events[plans.get(env.conn, first).google_event_id]
+    call(env, "search_plans", query="")
+    assert plans.get(env.conn, first).status == "cancelled"
+    assert ideas.get(env.conn, idea_id).status == "planned"
+    _, data = call(env, "update_event", plan_id=third["plan"]["id"], status="cancelled")
+    assert data["idea"]["status"] == "idea"
+
+
+def test_a_plan_already_over_does_not_keep_its_idea_planned(env):
+    _, idea = call(env, "add_idea", title="Pottery class", kind="activity")
+    with db.transaction(env.conn):
+        plans.insert(
+            env.conn,
+            title="Pottery class",
+            start="2026-09-12T10:00:00-07:00",
+            end="2026-09-12T12:00:00-07:00",
+            all_day=False,
+            idea_id=idea["id"],
+            now=NOW_ISO,
+        )
+    _, made = call(
+        env, "create_event", title="Pottery class", start="2026-09-26T10:00", idea_id=idea["id"]
+    )
+    _, data = call(env, "update_event", plan_id=made["plan"]["id"], status="cancelled")
+    assert data["idea"]["status"] == "idea"
