@@ -52,7 +52,8 @@
   ("after soccer"), and busy until late is no time to cook. A recipe you said not to make again is
   left out of dinner until you say otherwise, and is still found by name. Ground almonds go on the
   list (ground spices stay in the pantry), and a recipe that asks twice for a cup of onion puts two
-  cups on it.
+  cups on it. Flour tortillas go on the tortillas already on the list, the note saying which, rather
+  than on a second line; sour cream is still its own line, never cream.
 - **A better icon on the home screen.** The mark is drawn larger and heavier with its
   screen lit, so it reads beside the phone's other icons, and Android's round masks get one kept
   inside them. An iPhone that did not take the page's own link to the icon finds it at the

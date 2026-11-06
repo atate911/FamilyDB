@@ -166,7 +166,12 @@ recipes (
   pepper, oil, water, sugar, flour and the like; a setting if the family wants their own), added
   through `lists.add` with a note of the amounts and which recipe ("2 cups (fajitas), 1 (soup)");
   a thing already on the list keeps its place and gains the note, a ticked one is wanted again as
-  `lists.add` already does. It returns what was added, what was there, what was left out, so the
+  `lists.add` already does. A kind of a thing is that thing (`groceries.same_thing`, a word table:
+  `ANY_KIND`, sizes and fresh, and `KINDS`, by the thing, such as flour and corn for tortillas):
+  "8 small flour tortillas" goes on the tortillas already there, its note saying which ("8 small
+  flour tortillas (Fajitas)"), and a recipe asking for tortillas is covered by flour tortillas on
+  the list. A word that makes it something else (sour cream, peanut butter, green onions) is in
+  neither table, and flour and corn tortillas are never one line between themselves. It returns what was added, what was there, what was left out, so the
   reply can say "Added 9 things for the fajitas; onions and limes were on it already; skipped
   salt, oil, pepper." Whoever may change things, as every list change; a kid is told to ask a
   parent (the family's open decision on kids and the lists). Undo takes the added things off and

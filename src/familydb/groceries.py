@@ -19,7 +19,7 @@ import re
 import sqlite3
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Any
+from typing import Any, TypeVar
 
 from familydb.store import lists
 from familydb.store.ideas import Idea
@@ -274,6 +274,65 @@ def key(item: str) -> str:
     elif last.endswith("s") and not last.endswith("ss") and len(last) > 3:
         last = last[:-1]
     return " ".join([*words[:-1], last])
+
+
+# Words before a thing that only say which kind of it, never another thing to buy: a list that
+# has tortillas has what "8 small flour tortillas" asks for, and its note says which. Any thing
+# may be sized or fresh; the rest belong to the thing they qualify, by its `key`. A word that
+# makes it something else (sour cream, peanut butter, green onions, sweet potatoes, coconut milk,
+# corn syrup) is in neither, so it stays a line of its own.
+ANY_KIND = frozenset(
+    {"small", "medium", "large", "extra", "extra-large", "jumbo", "fresh", "ripe", "organic"}
+)
+CUTS = frozenset({"boneless", "skinless", "bone-in", "skin-on"})
+KINDS: dict[str, frozenset[str]] = {
+    "tortilla": frozenset({"flour", "corn", "soft", "whole", "wheat", "taco", "fajita", "burrito"}),
+    "onion": frozenset({"yellow", "white", "brown", "red", "sweet", "spanish"}),
+    "potato": frozenset({"russet", "yukon", "gold", "red", "white", "baking", "new"}),
+    "tomato": frozenset({"roma", "plum", "vine", "vine-ripened", "beefsteak", "heirloom"}),
+    "bell pepper": frozenset({"red", "green", "yellow", "orange"}),
+    "chicken breast": CUTS,
+    "chicken thigh": CUTS,
+    "butter": frozenset({"unsalted", "salted"}),
+    "milk": frozenset({"whole", "skim", "2%", "low-fat", "reduced-fat"}),
+    "yogurt": frozenset({"plain", "greek", "whole-milk", "low-fat"}),
+    "cheddar": frozenset({"sharp", "mild", "aged", "white"}),
+    "spinach": frozenset({"baby"}),
+    "carrot": frozenset({"baby"}),
+}
+
+
+def same_thing(one: str, other: str) -> bool:
+    """Whether two things are one to buy: the same however written, or one the other with words
+    in front that only say which kind ("flour tortillas" and "tortillas"; never "sour cream" and
+    "cream", nor "flour tortillas" and "corn tortillas")."""
+    a, b = key(one).split(), key(other).split()
+    if a == b:
+        return bool(a)
+    short, long = (a, b) if len(a) < len(b) else (b, a)
+    if not short or len(short) == len(long) or long[-len(short) :] != short:
+        return False
+    allowed = ANY_KIND | KINDS.get(" ".join(short), frozenset())
+    return all(word in allowed for word in long[: -len(short)])
+
+
+def narrower(one: str, than: str) -> bool:
+    """Whether `one` says which kind of `than`: "flour tortillas" of "tortillas"."""
+    return len(key(one).split()) > len(key(than).split()) and same_thing(one, than)
+
+
+Held = TypeVar("Held")
+
+
+def held(item: str, on_list: dict[str, Held]) -> Held | None:
+    """What on the list (`on_list`, by `key`) stands for the item: itself, or the same thing
+    another way (`same_thing`), one still to get before one ticked off."""
+    found = [on_list[key(item)]] if key(item) in on_list else []
+    found += [
+        one for folded, one in on_list.items() if folded != key(item) and same_thing(folded, item)
+    ]
+    waiting = (one for one in found if getattr(one, "ticked_at", None) is None)
+    return next(waiting, found[0] if found else None)
 
 
 # Staples that are also something to buy: "pepper" with a spoon or a pinch is black pepper, but
@@ -893,7 +952,7 @@ def shopping(
             amount=ingredient.amount,
             text=ingredient.text,
             alternatives=alternatives(item),
-            on_list=on_list.get(key(item)),
+            on_list=held(item, on_list),
         )
         seen[key(item)] = one
         if pantry(item, ingredient.amount, have=have):
@@ -909,10 +968,17 @@ class Wanted:
     """One thing to buy across the recipes asked for, and how much each wants."""
 
     item: str
-    amounts: list[str] = field(default_factory=list)
+    # Each recipe's share in the order asked: the thing as it says it, how much, and the recipe.
+    shares: list[tuple[str, str | None, str]] = field(default_factory=list)
 
-    def note(self) -> str:
-        return ", ".join(self.amounts)[:MOST_NOTE]
+    def note(self, on: str | None = None) -> str:
+        """How much each wants, for the line it goes on (`on`, its own item unless said): a share
+        that says which kind names it, "8 small flour tortillas (Fajitas)" on tortillas."""
+        said = []
+        for item, total, name in self.shares:
+            words = [total, item] if narrower(item, on or self.item) else [total]
+            said.append(" ".join([*filter(None, words), f"({name})"]))
+        return ", ".join(said)[:MOST_NOTE]
 
 
 @dataclass
@@ -939,7 +1005,8 @@ def wanted(
     recipe's share is said once, its lines added up ("2 cups (Pie)" for two cups in two lines),
     so asking for the same recipes again says the same."""
     by_key: dict[str, Wanted] = {}
-    shares: dict[str, dict[str, list[str | None]]] = {}  # item, then recipe: each line's amount
+    # The line, then the recipe and the thing as it says it: how it is written, each amount.
+    shares: dict[str, dict[tuple[str, str], tuple[str, list[str | None]]]] = {}
     staples: list[str] = []
     for idea, recipe in chosen:
         name = short_name(idea)
@@ -951,14 +1018,16 @@ def wanted(
                 if item not in staples:
                     staples.append(item)
                 continue
-            by_key.setdefault(key(item), Wanted(item))
-            shares.setdefault(key(item), {}).setdefault(name, []).append(ingredient.amount)
-    for folded, one in by_key.items():
-        for name, amounts in shares[folded].items():
-            total = added_up(amounts)
-            said = f"{total} ({name})" if total else f"({name})"
-            if said not in one.amounts:
-                one.amounts.append(said)
+            # "Flour tortillas" for one recipe and "tortillas" for another are one line.
+            line = next((k for k in by_key if same_thing(k, item)), key(item))
+            by_key.setdefault(line, Wanted(item))
+            mine = shares.setdefault(line, {}).setdefault((name, key(item)), (item, []))
+            mine[1].append(ingredient.amount)
+    for line, one in by_key.items():
+        for (name, _), (item, amounts) in shares[line].items():
+            share = (item, added_up(amounts), name)
+            if share not in one.shares:
+                one.shares.append(share)
     return list(by_key.values()), staples
 
 
@@ -977,16 +1046,21 @@ def put_on(
     shopped = Shopped(left_out=staples, recipes=[idea.title for idea, _ in chosen])
     on_list = {key(item.text): item for item in lists.items(conn, list_ref)}
     for one in needed:
-        there = on_list.get(key(one.item))
+        # Tortillas on the list are what flour tortillas want: that line, its note saying which.
+        there = held(one.item, on_list)
         if there is not None and there.ticked_at is None:
-            lists.set_note(conn, there.id, _joined(there.note, one.note()))
-            shopped.there.append(there.text)
+            # Kept as written, so a second share on the same line (corn tortillas after flour
+            # ones, both on tortillas) adds to it rather than over it, and it is said once.
+            there.note = _joined(there.note, one.note(there.text))
+            lists.set_note(conn, there.id, there.note)
+            if there.text not in shopped.there:
+                shopped.there.append(there.text)
             continue
         added = lists.add(conn, list_ref, there.text if there else one.item, by=by, now=now)
         if added is None:  # written another way that folds the same: it is there
             shopped.there.append(one.item)
             continue
-        lists.set_note(conn, added.id, one.note())
+        lists.set_note(conn, added.id, one.note(added.text))
         shopped.added.append(added.text)
     return shopped
 
