@@ -4,6 +4,21 @@
 
 ### New since v0.5.0
 
+- **Records that keep to what happened.** A visit answered twice, after a failure part way through
+  a turn, is counted once; another day or another place in the same message is still another
+  visit. An outing can no longer be recorded against a plan for something else. Giving an idea a
+  new location lets go of the old branch's hours and drive and looks the new one up. Canceling
+  one of two plans for an idea leaves it planned for the other. A time an idea takes is at least a
+  minute, its shortest no longer than its longest.
+- **Each day of a weekend on its own.** A show needing three days' notice, asked about on a
+  Thursday, is offered for Sunday rather than ruled out for Saturday. The weather is said to look
+  fine only for a day that had a forecast. Snow for a snow day is no longer called rain.
+- **Dinner that keeps to the evening.** "Something under an hour" with fifteen minutes before the
+  recital offers what takes fifteen. A plan already going on when cooking would start is waited out
+  ("after soccer"), and busy until late is no time to cook. A recipe you said not to make again is
+  left out of dinner until you say otherwise, and is still found by name. Ground almonds go on the
+  list (ground spices stay in the pantry), and a recipe that asks twice for a cup of onion puts two
+  cups on it.
 - **A better icon on the home screen.** The mark is drawn larger and heavier with its
   screen lit, so it reads beside the phone's other icons, and Android's round masks get one kept
   inside them. An iPhone that did not take the page's own link to the icon finds it at the
