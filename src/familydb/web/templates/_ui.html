@@ -344,16 +344,6 @@
   </form>
 {%- endmacro %}
 
-{# The two views of the ideas: all of them, and the restaurants. `current` is 'all' or 'restaurants'; the counts are of what this person may see. #}
-{% macro idea_tabs(current, total, restaurants) -%}
-  <div class="toolbar">
-    <nav class="seg" aria-label="Which ideas">
-      <a href="{{ url_for('web.ideas') }}"{% if current == 'all' %} aria-current="page"{% endif %}>All ideas <span class="n">{{ total }}</span></a>
-      <a href="{{ url_for('web.restaurants') }}"{% if current == 'restaurants' %} aria-current="page"{% endif %}>{{ icon('utensils', size='sm') }}Restaurants <span class="n">{{ restaurants }}</span></a>
-    </nav>
-  </div>
-{%- endmacro %}
-
 {# The tag on a present, which says whom it is kept from wherever it shows. #}
 {% macro surprise(words) -%}
   <span class="tag tag--surprise">{{ icon('eyeoff') }}Surprise<span class="tag__more"> · hidden from {{ words }}</span></span>
