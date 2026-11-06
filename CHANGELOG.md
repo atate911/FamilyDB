@@ -24,6 +24,19 @@
   so when a model that reasons used a tool and was asked again, its earlier reasoning went back
   without the encrypted copy that lets it be read; the second call lost it, or was refused. Each
   request now asks for that copy and hands it back with the tool's result.
+- **Records that keep to what happened.** An outing can no longer be recorded against a plan for
+  something else, and a visit a retry names by its plan rather than its place is still counted
+  once. Giving an idea a new location lets go of the old branch's hours and drive and looks the
+  new one up. Canceling one of two plans for an idea leaves it planned for the other. A time an
+  idea takes is at least a minute, its shortest no longer than its longest.
+- **Each day of a weekend on its own.** A show needing three days' notice, asked about on a
+  Thursday, is offered for Sunday rather than ruled out for Saturday. The weather is said to look
+  fine only for a day that had a forecast. Snow for a snow day is no longer called rain.
+- **Dinner that keeps to the evening, more of it.** A plan straight after one under way is waited
+  out too, so swim, then a pick-up, then book club at eight leaves the hour between; a visit begun
+  on an earlier day no longer empties the evening; busy until late is said as no time to cook. A
+  recipe you said not to make again is still found when you ask for it by name. Ground almonds go
+  on the list (ground spices stay in the pantry).
 - **A better icon on the home screen.** The mark is drawn larger and heavier with its
   screen lit, so it reads beside the phone's other icons, and Android's round masks get one kept
   inside them. An iPhone that did not take the page's own link to the icon finds it at the
