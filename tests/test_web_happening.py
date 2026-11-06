@@ -179,3 +179,8 @@ def test_a_row_coming_up_is_saved_or_planned_where_it_is(page, conn) -> None:
     # An all-day one goes on its day.
     sale = again[again.index("Book sale") :].split('<div class="r">')[0]
     assert 'name="start" value="2026-09-26"' in sale and 'name="all_day" value="yes"' in sale
+    # Save it on a row comes back to the rows, so several can be saved one after another.
+    saving = re.search(r'<form method="post" action="/ideas/new">.*?</form>', sale, re.S).group(0)
+    kept = page.post("/ideas/new", data=dict(re.findall(r'name="(\w+)" value="([^"]*)"', saving)))
+    assert kept.status_code == 302 and kept.headers["Location"] == "/soon"
+    assert finds.get(conn, 2).state == "saved"
