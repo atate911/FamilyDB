@@ -73,20 +73,13 @@
   {# Somebody who uses only the page would not know she had written: her new messages, until the thread is opened. #}
   <p class="rcpt rcpt--new"><a href="{{ url_for('chat.show', _anchor='latest') }}">{{ badge('act', shell.unread, 'new') }}<span>{{ assistant }} wrote {{ 'something' if shell.unread == 1 else shell.unread ~ ' new messages' }}</span></a></p>
 {% endif %}
-{# Vera's column on a big screen (docs/INTERFACE.md section 8): what this person pinned of hers, then the thread behind
-   her reply, its last lines, drawn only where the box has a column of its own. #}
-{% if b.recent or b.pinned %}
-  <section class="vc" aria-labelledby="vc-h">
-    {% if b.pinned %}
-      <h2 class="label" id="vc-pins">Pinned</h2>
-      {{ pin_shelf(b.pinned, request.full_path.rstrip('?')) }}
-    {% endif %}
-    <h2 class="label" id="vc-h">Earlier with {{ assistant }}</h2>
-    <ol class="vc__lines">
-      {% for line in b.recent %}
-        <li class="vc__line{{ ' vc__line--her' if line.from_bot }}"><span class="vc__by">{{ line.who }} <time>{{ line.clock | figs }}</time></span><span class="vc__text">{{ line.text | truncate(240) }}</span></li>
-      {% endfor %}
-    </ol>
+{# Vera's column on a big screen (docs/INTERFACE.md section 8): what this person pinned of hers, drawn only where the
+   box has a column of its own. The conversation itself is the Chat page, a link away, so the column does not repeat
+   it on every page. #}
+{% if b.pinned %}
+  <section class="vc" aria-labelledby="vc-pins">
+    <h2 class="label" id="vc-pins">Pinned</h2>
+    {{ pin_shelf(b.pinned, request.full_path.rstrip('?')) }}
     <p class="vc__more"><a href="{{ url_for('chat.show', _anchor='latest') }}">The whole conversation</a></p>
   </section>
 {% endif %}

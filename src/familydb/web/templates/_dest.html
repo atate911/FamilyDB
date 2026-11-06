@@ -12,6 +12,17 @@
   </header>
 {%- endmacro %}
 
+{# Do's three views, one tab row on each (docs/INTERFACE.md section 4): the ideas saved, what is coming up near home and
+   what she found, and what we did. Each is its own page; the row marks Do on all three. A kid has no Coming up (what is
+   listed near home is the grown-ups' to weigh). `current` is 'ideas', 'soon' or 'did'. #}
+{% macro do_tabs(current) -%}
+  <nav class="seg" aria-label="Things to do">
+    <a href="{{ url_for('web.ideas') }}"{% if current == 'ideas' %} aria-current="page"{% endif %}>Ideas</a>
+    {% if visitor().may('browse') %}<a href="{{ url_for('web.happening_page') }}"{% if current == 'soon' %} aria-current="page"{% endif %}>Coming up</a>{% endif %}
+    <a href="{{ url_for('go.did') }}"{% if current == 'did' %} aria-current="page"{% endif %}>We did</a>
+  </nav>
+{%- endmacro %}
+
 {# Chips to narrow: each a link, the one in force filled. `items` are dicts with label, href, on. #}
 {% macro chip_row(items, label='Narrow it') -%}
   {% if items %}

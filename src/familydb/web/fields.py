@@ -209,7 +209,7 @@ def zones() -> tuple[str, ...]:
 
 YES_NO = (("true", "yes"), ("false", "no"))
 # Each place in the row by its word there; a kid's says its own beside it.
-ROW_WORDS = {"week": "Week (a kid's My week)", "kids": "Kids (a kid's My list)"}
+ROW_WORDS = {"week": "Week (a kid's My week)", "kids": "A kid's My list"}
 ROW_TICKS = tuple((place, ROW_WORDS.get(place, place.capitalize())) for place in ROW_PLACES)
 HOURS = tuple(str(hour) for hour in range(24))
 HOUR_WORDS = tuple((str(hour), hour_words(hour)) for hour in range(24))
