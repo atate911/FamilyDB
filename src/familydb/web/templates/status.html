@@ -304,7 +304,7 @@
       <div class="card__head"><h2 id="h-models">{{ icon('list') }}Models and prices</h2></div>
       {% if not model_watch.on %}
         <p class="muted">The daily check is switched off: prices are the ones this version was released with, and nobody is told when a model goes.
-          {% if visitor().may('manage') %}<a href="{{ url_for('settings.section', name='model', _anchor='watch') }}">Switch it on</a>{% endif %}</p>
+          {% if visitor().may('manage') %}<a href="{{ url_for('settings.section', name='model', _anchor='keeping') }}">Switch it on</a>{% endif %}</p>
       {% elif not model_watch.sources %}
         <p class="muted">Checked once a day, early in the morning: nothing has been read yet.</p>
       {% else %}
