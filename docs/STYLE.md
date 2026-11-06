@@ -1,7 +1,7 @@
 # How the page looks, and why
 
 > **This records the look as it is and why; it is a starting point, not a template.** Layout,
-> type, colour, the looks, the box's place and prominence, and what leads a page are all open to
+> type, color, the looks, the box's place and prominence, and what leads a page are all open to
 > redesign under `docs/DESIGN_FREEDOM.md`, which wins where this reads as fixing them. Only the
 > floors under "What does not move" are protected.
 
@@ -458,21 +458,23 @@ These are floors: they hold for every page, in every look, by day and by night, 
 - **Structure.** One `h1` a page, headings in order; the chat thread is `role="log"`.
 - **Motion** honors `prefers-reduced-motion`; **forced colors** get real borders wherever a
   background alone shows something; **reflow**: nothing scrolls sideways at 320 pixels.
-- **Scripts add, never require.** Every page and every form works with scripting off.
+- **Scripts add; today they never require.** Every page and every form works with scripting off.
+  That is a compatibility default, not a floor (`docs/DESIGN_FREEDOM.md`): a design that leans on a
+  script says so and tests what happens without it.
 
 ## What does not move
 
 - **The content policy**: `default-src 'self'; style-src 'self'; script-src 'self'; font-src
   'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'`. No inline style, no
   inline script, nothing from anywhere else. A size from data is an SVG attribute or a class.
-- **Works with scripting off**: read, every form, send a message.
 - **Kids never see costs or workings**: no pill, no money, no limit, no models, no setup, no
   Status (a family decision, `docs/DESIGN.md` section 16).
 - **Presents stay hidden from whom they are for**: left out entirely for them, tagged "Hidden from
   Theo" for everyone else; lists are filtered before anything is counted.
 - **The accessibility above**, measured, in every look; red for late or broken readable as such.
-- **Truthful status**: what the page says was done is what was done, and a fact it could not check
-  is not shown as checked (`docs/DESIGN_FREEDOM.md`).
+- **Honesty and control**: suggestions are told from commitments, checked facts from assumptions,
+  and what is pending from what is done; nothing consequential hides behind a cosmetic interaction
+  (`docs/DESIGN_FREEDOM.md`).
 - Nothing from an idea, a place or a fetched page is marked safe in a template.
 - No page view is a model call (`test_browsing_asks_nothing_of_a_model`).
 
