@@ -715,8 +715,8 @@ def _cache_by_kind(
     if gaps:
         lifetimes = calls.LIFETIMES
         typer.echo(
-            "\nTime between one turn of a kind and the next, against what a cache lasts "
-            "(Claude 5 min or 1 h, OpenAI 30 min):"
+            "\nTime between one turn of a kind and the next, against how long a company keeps "
+            "its cache (5 min, half an hour or an hour, by company and setting):"
         )
         heads = " ".join(f"{f'within {m} min':>14}" for m in lifetimes)
         typer.echo(f"  {'what for':<42} {'median':>9} {heads}")
