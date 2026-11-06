@@ -3,8 +3,58 @@
 {% from "_dest.html" import pick_tile %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-now{% endblock %}
-{# Now (docs/INTERFACE.md section 3): the box, one line of context, then whatever needs this person, her picks, and
-   today's line. Fixed: the box above, the row below, the context line. Hers: everything between. No model call. #}
+{# Now (docs/INTERFACE.md section 3), an answer rather than a dashboard. A grown-up's: what is next, what needs them (the
+   first few, the rest a tap away), one pick with the others in a line each, and three ways in when nothing waits. A
+   kid's keeps its own shape: her questions, her to-dos, her list, her picks. No model call. #}
+
+{# One of her questions, with where it came from and its buttons. #}
+{% macro question(q) -%}
+  <section class="q" aria-label="A question from {{ assistant }}">
+    {{ vera_screen() }}
+    <div class="q__body">
+      <p class="q__text">{{ q.text }}</p>
+      {% if q.origin %}<p class="q__org">{{ q.origin }}</p>{% endif %}
+      <div class="q__acts">
+        {% if q.kind == 'rate' %}
+          {{ faces(q, 'home') }}
+        {% elif q.kind == 'wish' %}
+          <form method="post" action="{{ url_for('edits.answer_wish', wish_id=q.wish_id) }}">
+            {{ guard(once=true) }}
+            <input type="hidden" name="kid" value="{{ q.kid_id }}" /><input type="hidden" name="back" value="home" />
+            <button class="btn btn--sm" type="submit" name="status" value="granted">Yes</button>
+            <button class="btn btn--sm btn--quiet" type="submit" name="status" value="declined">Not this time</button>
+          </form>
+          <a class="q__lnk" href="{{ url_for('web.wishes', name=q.kid_slug) }}">Her list</a>
+        {% elif q.kind == 'pitch' %}
+          <a class="btn btn--sm" href="{{ url_for('web.idea', idea_id=q.idea_id) }}">See it</a>
+          <form method="post" action="{{ url_for('web.later') }}">
+            {{ guard() }}<input type="hidden" name="idea" value="{{ q.idea_id }}" />
+            <button class="q__lnk" type="submit">Later</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{%- endmacro %}
+
+{% macro todos(rows) -%}
+  {% if rows %}
+    <ul class="todos todos--compact">
+      {% for row in rows %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup, everyone=shell.family) }}{% endfor %}
+    </ul>
+  {% endif %}
+{%- endmacro %}
+
+{# Today and tomorrow, one line each, and tonight's pick to cook (docs/RECIPES.md). #}
+{% macro day_lines() -%}
+  <div class="todays">
+    {% for line in days %}
+      <p class="today"><b>{{ line.label }}</b><span>{% for part in line.parts %}{% if part.href %}<a href="{{ part.href }}">{{ part.text | figs }}</a>{% else %}{{ part.text | figs }}{% endif %}{% endfor %}</span></p>
+    {% endfor %}
+    {% if dinner %}<p class="today"><b>To cook</b><span><a href="{{ dinner.href }}">{{ dinner.title }}</a>{% if dinner.why %}, {{ dinner.why | figs }}{% endif %}</span></p>{% endif %}
+  </div>
+{%- endmacro %}
+
 {% block content %}
   <h1 class="sr">{{ 'Now' if grownup else 'Now, for ' ~ visitor().name if visitor().name else 'Now' }}</h1>
   <p class="ctx">{{ context }}</p>
@@ -27,92 +77,117 @@
     </section>
   {% endif %}
 
-  {# Her questions: the only interruption. Each with where it came from and its buttons. #}
-  {% for q in questions %}
-    <section class="q" aria-label="A question from {{ assistant }}">
-      {{ vera_screen() }}
-      <div class="q__body">
-        <p class="q__text">{{ q.text }}</p>
-        {% if q.origin %}<p class="q__org">{{ q.origin }}</p>{% endif %}
-        <div class="q__acts">
-          {% if q.kind == 'rate' %}
-            {{ faces(q, 'home') }}
-          {% elif q.kind == 'wish' %}
-            <form method="post" action="{{ url_for('edits.answer_wish', wish_id=q.wish_id) }}">
-              {{ guard(once=true) }}
-              <input type="hidden" name="kid" value="{{ q.kid_id }}" /><input type="hidden" name="back" value="home" />
-              <button class="btn btn--sm" type="submit" name="status" value="granted">Yes</button>
-              <button class="btn btn--sm btn--quiet" type="submit" name="status" value="declined">Not this time</button>
-            </form>
-            <a class="q__lnk" href="{{ url_for('web.wishes', name=q.kid_slug) }}">Her list</a>
-          {% elif q.kind == 'pitch' %}
-            <a class="btn btn--sm" href="{{ url_for('web.idea', idea_id=q.idea_id) }}">See it</a>
-            <form method="post" action="{{ url_for('web.later') }}">
-              {{ guard() }}<input type="hidden" name="idea" value="{{ q.idea_id }}" />
-              <button class="q__lnk" type="submit">Later</button>
-            </form>
-          {% endif %}
+  {% if grownup %}
+    {# What is next: the one thing on soonest, with when, where and who; then today's and tomorrow's lines. #}
+    <section class="sec upnext" aria-labelledby="h-next">
+      <div class="sec__label"><h2 id="h-next" class="label">Next up</h2><a href="{{ url_for('go.week') }}">The week</a></div>
+      {% if next_up %}
+        {% set n = next_up.row %}
+        <div class="set upnext__row">
+          <span class="set__num num">{{ (n.time | figs) if n.time else 'All day' }}</span>
+          <div class="set__text">
+            <span class="set__t"><a href="{{ url_for('go.plan', plan_id=n.id) if n.id else url_for('go.day', day=n.day) }}">{{ n.title }}</a></span>
+            <span class="set__m">
+              {%- if next_up.on_now %}on now{% elif n.relative %}{{ n.relative }}{% endif -%}
+              {%- if n.location %} · {{ n.location }}{% endif -%}
+              {%- if n.away %} · {{ n.away }}{% endif -%}
+            </span>
+          </div>
+          {{ who(n.people, n.who, shell.family) }}
         </div>
-      </div>
-    </section>
-  {% else %}
-    {% if not picks and not plate and not others and not first_day %}<p class="nf__quiet">{{ quiet }}</p>{% endif %}
-  {% endfor %}
-
-  {# What waits on this person today: a kid's own to-dos, a grown-up's late or due ones. Ticked off here. #}
-  {% if plate or others %}
-    <section class="sec" aria-labelledby="h-todo">
-      <div class="sec__label"><h2 id="h-todo" class="label">{{ 'My to-dos' if not grownup else 'On your plate' }}</h2><a href="{{ url_for('web.tasks') }}">All</a></div>
-      {% if plate %}
-      <ul class="todos todos--compact">
-        {% for row in plate %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup, everyone=shell.family) }}{% endfor %}
-      </ul>
-      {% else %}<p class="sec__note">Nothing late or due today is yours.</p>{% endif %}
-      {# Everybody else's late and due today, in a line: seen, never put on this person's plate. #}
-      {% if others %}<p class="sec__note"><a href="{{ url_for('go.week', _anchor='h-plate-1') }}">{{ others }}</a>.</p>{% endif %}
-    </section>
-  {% endif %}
-
-  {# A kid's own list: what a parent said lately, her top three, and how far off the days are. #}
-  {% if my_list %}
-    <section class="sec" aria-labelledby="h-list">
-      <div class="sec__label"><h2 id="h-list" class="label">My list</h2><a href="{{ url_for('web.wishes') }}">{{ 'All ' ~ my_list.open if my_list.open else 'My list' }}</a></div>
-      {% if my_list.answered %}
-        <ul class="wish-news">
-          {% for row in my_list.answered %}
-            {% if row.status == 'granted' %}<li class="wish-news__yes">{{ icon('sparkle') }}<span><b>Yes</b> to {{ row.title }}!</span></li>
-            {% else %}<li class="wish-news__no">{{ icon('heart') }}<span>Not this time: {{ row.title }}.</span></li>{% endif %}
-          {% endfor %}
-        </ul>
       {% endif %}
-      <ol class="items wish-top">
-        {% for row in my_list.top %}
-          <li class="item"><span class="wish__n{{ ' wish__n--first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span><span class="item__title"><span class="sr">Number {{ row.rank }}: </span>{{ row.title }}</span></li>
-        {% else %}
-          <li class="item muted">Nothing on it yet. Tell {{ assistant }} what you’d like.</li>
-        {% endfor %}
-      </ol>
-      {% if my_list.soon %}<p class="list-soon">{% for list in my_list.soon %}<span class="tag tag--when">{{ icon('gift') }}{{ list.name }} {{ list.countdown | lower }}</span>{% endfor %}</p>{% endif %}
+      {{ day_lines() }}
     </section>
-  {% endif %}
 
-  {# Her picks for this moment (familydb/picks.py), made ahead: one of each kind, each with its reason. #}
-  {% if picks %}
-    <section class="sec" aria-labelledby="h-picks">
-      <div class="sec__label"><h2 id="h-picks" class="label"><a href="{{ url_for('go.about') }}">What about…</a></h2><small>{{ picks.made }}</small></div>
-      <div class="picks">{% for pick in picks.tiles %}{{ pick_tile(pick) }}{% endfor %}</div>
-      {% include "_different.html" %}
-    </section>
-  {% endif %}
+    {# What needs this grown-up: what of theirs is late, her questions, then the rest due today; the first few, the rest
+       folded (it opens without scripts). Everybody else's is a line, never on this person's plate. #}
+    {% if needs.any or others %}
+      <section class="sec needs" aria-labelledby="h-needs">
+        <div class="sec__label"><h2 id="h-needs" class="label">Needs you</h2><a href="{{ url_for('web.tasks') }}">All to-dos</a></div>
+        {{ todos(needs.first) }}
+        {% for q in needs.questions %}{{ question(q) }}{% endfor %}
+        {{ todos(needs.then) }}
+        {% if needs.more %}
+          <details class="fold fold--quiet needs__more">
+            <summary>And {{ needs.more }} more{{ icon('chev', size='sm', cls='chev') }}</summary>
+            <div class="fold__body">
+              {% for q in needs.more_questions %}{{ question(q) }}{% endfor %}
+              {{ todos(needs.more_todos) }}
+            </div>
+          </details>
+        {% endif %}
+        {% if others %}<p class="sec__note"><a href="{{ url_for('go.week', _anchor='h-plate-1') }}">{{ others }}</a>.</p>{% endif %}
+      </section>
+    {% elif not first_day %}
+      {# Nothing waits: three ways into the day's jobs, rather than an empty page. #}
+      <section class="sec ways" aria-labelledby="h-ways">
+        <p class="nf__quiet" id="h-ways">{{ quiet }}</p>
+        <p class="ways__go">{% for label, endpoint, args in ways_in %}<a class="chip" href="{{ url_for(endpoint, **args) }}">{{ label }}</a>{% endfor %}</p>
+      </section>
+    {% endif %}
 
-  {# Today and tomorrow, one line each. #}
-  <div class="todays">
-    {% for line in days %}
-      <p class="today"><b>{{ line.label }}</b><span>{% for part in line.parts %}{% if part.href %}<a href="{{ part.href }}">{{ part.text | figs }}</a>{% else %}{{ part.text | figs }}{% endif %}{% endfor %}</span></p>
+    {# Her pick for this moment (familydb/picks.py), made ahead: the first one large, the other kinds a line each. #}
+    {% if picks %}
+      <section class="sec" aria-labelledby="h-picks">
+        <div class="sec__label"><h2 id="h-picks" class="label"><a href="{{ url_for('go.about') }}">What about…</a></h2><small>{{ picks.made }}</small></div>
+        {% set lead = picks.tiles[0] %}
+        <div class="picks picks--one">{{ pick_tile(lead) }}</div>
+        {% if picks.tiles | length > 1 %}
+          <ul class="pk-more" aria-label="Other ideas">
+            {% for pick in picks.tiles[1:] %}
+              <li><a href="{{ pick.href }}"><span class="pk-more__k">{{ pick.kind }}</span>{{ pick.title }}</a>{% if pick.why %} <span class="muted">{{ pick.why }}</span>{% endif %}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        {% include "_different.html" %}
+      </section>
+    {% endif %}
+  {% else %}
+    {# A kid's Now: her questions, her to-dos, her list, her picks and today's lines. #}
+    {% for q in questions %}{{ question(q) }}
+    {% else %}
+      {% if not picks and not plate and not first_day %}<p class="nf__quiet">{{ quiet }}</p>{% endif %}
     {% endfor %}
-    {# Tonight's pick to cook, by code, from the family's recipes (docs/RECIPES.md). #}
-    {% if dinner %}<p class="today"><b>To cook</b><span><a href="{{ dinner.href }}">{{ dinner.title }}</a>{% if dinner.why %}, {{ dinner.why | figs }}{% endif %}</span></p>{% endif %}
-  </div>
+    {% if plate %}
+      <section class="sec" aria-labelledby="h-todo">
+        <div class="sec__label"><h2 id="h-todo" class="label">My to-dos</h2><a href="{{ url_for('web.tasks') }}">All</a></div>
+        {{ todos(plate) }}
+      </section>
+    {% endif %}
+
+    {# A kid's own list: what a parent said lately, her top three, and how far off the days are. #}
+    {% if my_list %}
+      <section class="sec" aria-labelledby="h-list">
+        <div class="sec__label"><h2 id="h-list" class="label">My list</h2><a href="{{ url_for('web.wishes') }}">{{ 'All ' ~ my_list.open if my_list.open else 'My list' }}</a></div>
+        {% if my_list.answered %}
+          <ul class="wish-news">
+            {% for row in my_list.answered %}
+              {% if row.status == 'granted' %}<li class="wish-news__yes">{{ icon('sparkle') }}<span><b>Yes</b> to {{ row.title }}!</span></li>
+              {% else %}<li class="wish-news__no">{{ icon('heart') }}<span>Not this time: {{ row.title }}.</span></li>{% endif %}
+            {% endfor %}
+          </ul>
+        {% endif %}
+        <ol class="items wish-top">
+          {% for row in my_list.top %}
+            <li class="item"><span class="wish__n{{ ' wish__n--first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span><span class="item__title"><span class="sr">Number {{ row.rank }}: </span>{{ row.title }}</span></li>
+          {% else %}
+            <li class="item muted">Nothing on it yet. Tell {{ assistant }} what you’d like.</li>
+          {% endfor %}
+        </ol>
+        {% if my_list.soon %}<p class="list-soon">{% for list in my_list.soon %}<span class="tag tag--when">{{ icon('gift') }}{{ list.name }} {{ list.countdown | lower }}</span>{% endfor %}</p>{% endif %}
+      </section>
+    {% endif %}
+
+    {% if picks %}
+      <section class="sec" aria-labelledby="h-picks">
+        <div class="sec__label"><h2 id="h-picks" class="label"><a href="{{ url_for('go.about') }}">What about…</a></h2><small>{{ picks.made }}</small></div>
+        <div class="picks">{% for pick in picks.tiles %}{{ pick_tile(pick) }}{% endfor %}</div>
+        {% include "_different.html" %}
+      </section>
+    {% endif %}
+
+    {{ day_lines() }}
+  {% endif %}
   {% if left is not none %}<p class="nf__quiet">{{ left }} message{{ '' if left == 1 else 's' }} left today.</p>{% endif %}
   {% if setup_later %}
     <p class="sec__note" id="setup-later">When you like: {% for step in setup_later %}<a href="{{ step.link }}">{{ step.short }}</a>{{ ' · ' if not loop.last }}{% endfor %}. Only admins see this.</p>
