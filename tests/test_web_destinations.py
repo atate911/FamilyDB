@@ -820,3 +820,32 @@ def test_presents_are_a_chip_of_lists_and_never_among_the_things_to_do(
     assert 'href="/lists/shopping"' in chips and 'href="/kids/the-girls"' in chips
     assert re.search(r'href="/presents"[^>]*aria-current', chips)
     assert 'href="/presents"' in client.get("/lists").text
+
+
+def test_a_place_leads_with_plan_it_and_keeps_the_rest_under_more(
+    settings, clock, conn, family
+) -> None:
+    with db.transaction(conn):
+        idea = ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
+        plans.insert(
+            conn,
+            title="Swim lesson",
+            start="2026-09-26T10:00:00-07:00",
+            end="2026-09-26T11:00:00-07:00",
+            all_day=False,
+            now=NOW_ISO,
+        )
+    client = _client(settings, clock)
+    page = client.get(f"/idea/{idea.id}").text
+    lead, more = page.split('<details class="fold fold--quiet item-more" id="more">')
+    assert 'class="btn btn--primary btn--sm">' in lead and "Plan it" in lead
+    assert "Drop it" not in lead and "Drop it" in more and "Edit by hand" in more
+    # Planned over something else, the notice says what it overlaps.
+    form = re.search(
+        r'<form class="form fold__body" method="post" action="/plans/new">.*?</form>', page, re.S
+    )
+    fields = dict(re.findall(r'name="(csrf|once|idea_id|title)" value="([^"]*)"', form.group(0)))
+    done = client.post(
+        "/plans/new", data={**fields, "start": "2026-09-26T10:30"}, follow_redirects=True
+    )
+    assert "Added to the plans: Zoo." in done.text and "It overlaps Swim lesson." in done.text
