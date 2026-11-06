@@ -1959,6 +1959,11 @@ li:target { border-radius: var(--r-md); }
 .pk-more { list-style: none; margin: var(--s3) 0 0; padding: 0; display: grid; gap: var(--s2); font-size: var(--t-meta); }
 .pk-more__k { font-size: 0.72rem; font-weight: 700; font-stretch: var(--w-label); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); margin-right: var(--s2); }
 .pk-more a { color: var(--ink); font-weight: 700; }
+/* A thing's own page: its one action leads (Cook this, Plan it); how it went, then More, are quieter. */
+.cook { margin-top: var(--s5); padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); }
+.cook .actions { align-items: center; }
+.item-more { margin-top: var(--s3); }
+.item-more .fold__body { display: grid; gap: var(--s2); justify-items: start; }
 
 /* the row of destinations, fixed at the foot on a phone: words, the current one in ink and underlined */
 .row { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center; gap: var(--s1); min-height: var(--tabbar-total); padding: var(--s2) max(var(--s4), env(safe-area-inset-right, 0px)) calc(var(--s3) + env(safe-area-inset-bottom, 0px)) max(var(--s4), env(safe-area-inset-left, 0px)); background: var(--paper-2); border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }

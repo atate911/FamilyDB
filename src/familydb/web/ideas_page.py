@@ -15,7 +15,7 @@ from flask import (
     url_for,
 )
 
-from familydb import groceries, personas, presents
+from familydb import groceries, meals, personas, presents
 from familydb.availability import calendar_available, enrichment_available
 from familydb.base import roles
 from familydb.base.dates import utc_iso
@@ -351,6 +351,7 @@ def idea(idea_id: int) -> str:
         original_message=message_store.as_said(original.text) if original else None,
         original_by=views.original_by(original, family, settings.tzinfo) if original else None,
         today=today.isoformat(),
+        dinner_at=meals.DINNER.strftime("%H:%M"),  # Cook this: dinner's hour, as tonight's reads it
         ratings=RATINGS,
         on_google=calendar_available(settings),
         can_look_up=enrichment_available(settings) and record.status != "dropped",

@@ -31,7 +31,7 @@ A recipe is an idea of kind recipe, kept with what it takes to cook it: minutes 
 - **Saving one.** Tell the assistant ("sheet-pan fajitas, 30 minutes, the kids liked them"), paste a link to a recipe, send a photo of a cookbook page, or use **Add a recipe by hand**, whose **Recipe** part takes the same facts.
 - **A pasted link** is read by this server from the recipe's own page within a few minutes, with nothing of the family sent and no model asked, and the chat it came from is told what was found. A page with no recipe data waits for the evening's lookups, which read it for a little; one this server will not reach (a home network address) is never read. What you said stands: a page fills only what you left empty, and its name replaces the title only when the title was the link's own words. The setting is [Read a pasted recipe link straight away](/wiki/controls/settings/lookups).
 - **What it is good for.** What you say is kept as yours. When nobody said, the assistant reads it from the facts (30 minutes or under looks like a weeknight one, "the night before" like prep ahead, eight servings like guests) and marks it as a guess: "Looks like weeknight". A guess helps a recipe come up but never keeps one out. **That's right** on the recipe's page makes it yours, **Not that** takes it away, and so does saying so in the chat.
-- **A recipe's page** says whether it has been made and when, then what it takes, how many it serves, what it is good for and where it is from, the guesses, the ingredients, the steps folded, and the link. **Put the ingredients on the list** comes first for whoever may change things, then **Plan it for a night** (a dinner on the calendar), **Record that you made it**, and **Read its page again**. Its quick sentences are a recipe's: what goes with it, whether it can be made ahead, put it on the list.
+- **A recipe's page** says whether it has been made and when, then what it takes, how many it serves, what it is good for and who it is for. Under those, for whoever may change things, is **Cook it**: the day (today unless you choose another), the dinner time for the calendar (5:30 pm to start with), **Put what is missing on the shopping list** (ticked) and **Put it on the calendar** (not ticked), and one button, **Cook this**. It does what is ticked, each the same tool the assistant would use, and the notice says what each part did: "On the shopping list for Fajitas: peppers, onion, tortillas. Already on it: limes. On the calendar: Fajitas." A part that did not go through is said too, and the other part stands. A dinner whose time has already gone by today goes on as all day, and one that overlaps something on the calendar says so. **Undo** is offered when only one part was ticked; with both, take back each where it is (the list, the plan's page). **Its shopping, by the store** is beside the button. Then come where it is from, the guesses, the ingredients, the steps folded and the link, what was made and when, **Record that you made it** folded, and **More**: **Drop it**, **Read its page again** and **Edit by hand**. Its quick sentences are a recipe's: what goes with it, whether it can be made ahead, put it on the list.
 - **On Now and the kitchen board**, from midday until eight, a line names tonight's pick to cook.
 - **The grocery list.** Tick recipes on Eat and press **Grocery list for these**, or ask ("put the fajitas and the soup on the list"). Code reads each ingredient line ("2 cups chopped onion" is onion), puts each thing on the [shopping list](/wiki/controls/plans-and-tasks) once however many recipes want it, with how much each wants under it ("2 (Fajitas), 1 (Soup)"; a recipe that asks twice adds them up, "2 (Tacos)", or says both where the units differ, "1 cup + 2 tbsp (Pie)"), and leaves off what the pantry has: salt, pepper, oil, water, sugar and flour, dried spices and herbs, vinegars, the sauces in the fridge door, the baking shelf, and whatever you keep on a list named **pantry** (add one on Lists, or say "add soy sauce to the pantry list"). A thing already there keeps its place; one ticked off is wanted again. Undo takes it back.
 - **Shopping for one recipe.** **Shopping list** on a recipe's page is what it needs by the section of the store, in the order a store is walked (Produce, Bakery, Meat & fish, Dairy & eggs, Dry goods & cans, Frozen, Drinks), with what the pantry has apart so you can check before you go; **Need it** puts one you are out of on the list. Press **Put it all on the list** once, and each thing has a tick to press in the store. An uncommon thing (buttermilk, gochujang, shallots) opens on a tap to what could stand in; for one the page does not know, the box offers "What could stand in for it?" to ask her. A kid reads it; the buttons are for whoever may change things. No model is asked for any of it.
@@ -55,7 +55,7 @@ Open a row for the place's own page (at `/idea/<number>`, or `/place/<number>`),
 - What the assistant found, marked as hers and dated: her summary, the address and a map link, the site, booking and phone, the opening hours folded, where she read it, and when she checked. Parents and admins see why a lookup failed; admins get **How it was looked up**, the calls behind it.
 - What is planned, each a link to the plan, and how it went.
 - The box, about this place, with three quick sentences under it that fill the box ("Plan it for this weekend", "Is it good for the kids?", "What else is near it?"). Nothing is sent until you press Send.
-- **Plan it**, **Drop it** (or **Bring it back**), **Look it up now**, **Record how it went by hand**, and **Edit by hand**, last.
+- **Plan it**, the one main button, then **Record how it went by hand** folded, then **More**, folded: **Drop it** (or **Bring it back**), **Look it up now** and **Edit by hand**.
 
 ## Add an idea
 
@@ -63,15 +63,15 @@ Choose **Add an idea by hand** on Do (**Add a place by hand** on Eat), give a ti
 
 ## Change an idea
 
-Open it, choose **Edit by hand**, then **Save changes**. Changing the place does not look it up again.
+Open it, open **More**, choose **Edit by hand**, then **Save changes**. Changing the place does not look it up again.
 
 ## Drop an idea, or bring it back
 
-Open it and choose **Drop it** or **Bring it back**. Dropping sets the status to Dropped: the idea leaves the list, the picks, suggestions and lookups, and keeps its outcomes and place. Bringing it back sets it to "An idea". The page cannot delete an idea.
+Open it, open **More** and choose **Drop it** or **Bring it back**. Dropping sets the status to Dropped: the idea leaves the list, the picks, suggestions and lookups, and keeps its outcomes and place. Bringing it back sets it to "An idea". The page cannot delete an idea.
 
 ## Plan it
 
-Open **Plan it** on the place's page, give when (or all day) and where, and save. The plan links to the place and the idea becomes Planned; it shows on [Week](/wiki/controls/plans-and-tasks) and has a page of its own.
+Open **Plan it** on the place's page, give when (or all day) and where, and save. The plan links to the place and the idea becomes Planned; it shows on [Week](/wiki/controls/plans-and-tasks) and has a page of its own. The notice says when it overlaps something already on the calendar; it is saved all the same. A recipe has **Cook this** instead, and a find on Coming up or under New ideas its own **Plan it**.
 
 ## Record how it went
 
@@ -79,7 +79,7 @@ Open the place, open **Record how it went by hand**, set the day (not in the fut
 
 ## Ask for a lookup
 
-Open the place and choose **Look it up now** (**Look it up again** once it was looked up). It runs on the next lookups job run, every 2 minutes by default ([Lookups](/wiki/controls/settings/lookups)), and the button is gone until it has. By default other ideas wait for the evening and are looked up together. A lookup counts toward [the daily limit](/wiki/controls/settings/spending). With lookups off, the buttons are hidden and the page says so. Details older than the stale setting on Lookups are marked "may be out of date".
+Open the place, open **More** and choose **Look it up now** (**Look it up again** once it was looked up). It runs on the next lookups job run, every 2 minutes by default ([Lookups](/wiki/controls/settings/lookups)), and the button is gone until it has. By default other ideas wait for the evening and are looked up together. A lookup counts toward [the daily limit](/wiki/controls/settings/spending). With lookups off, the buttons are hidden and the page says so. Details older than the stale setting on Lookups are marked "may be out of date".
 
 ## Rules for these pages
 
