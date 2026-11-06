@@ -2,6 +2,20 @@
 {% from "_ui.html" import icon, tile, tag, page_head with context %}
 {% from "_settings.html" import told with context %}
 {% block title %}Settings · {{ site_title }}{% endblock %}
+{# The family's own choices, then how it runs underneath (fields.Section.advanced), apart. #}
+{% macro srows(entries) -%}
+  <ul class="slist">
+    {% for entry in entries %}
+      {% set one = entry.section %}
+      <li><a class="srow" href="{{ url_for('settings.section', name=one.name) }}">
+        {{ tile(one.glyph) }}
+        <span class="srow__text"><b>{{ one.title }}</b>{% for line in entry.lines %}<span>{{ line }}</span>{% endfor %}</span>
+        {% if entry.look %}<span class="tag tag--look">{{ icon('alert') }}Needs a look</span>
+        {%- elif entry.off %}<span class="tag tag--off">{{ icon('offc') }}Off</span>{% endif %}
+        <span class="srow__go">{{ icon('chev', size='sm') }}</span></a></li>
+    {% endfor %}
+  </ul>
+{%- endmacro %}
 {% block content %}
   {% call page_head('Settings', 'Each part, how it stands now, and the way in to change it. Only an admin can change these.') %}
     <a class="btn btn--quiet" href="{{ url_for('wiki.page', page='controls/settings') }}">{{ icon('info') }}Guide</a>
@@ -9,17 +23,15 @@
   {{ told(said, error) }}
 
   <div class="stack">
-    <ul class="slist">
-      {% for entry in sections %}
-        {% set one = entry.section %}
-        <li><a class="srow" href="{{ url_for('settings.section', name=one.name) }}">
-          {{ tile(one.glyph) }}
-          <span class="srow__text"><b>{{ one.title }}</b>{% for line in entry.lines %}<span>{{ line }}</span>{% endfor %}</span>
-          {% if entry.look %}<span class="tag tag--look">{{ icon('alert') }}Needs a look</span>
-          {%- elif entry.off %}<span class="tag tag--off">{{ icon('offc') }}Off</span>{% endif %}
-          <span class="srow__go">{{ icon('chev', size='sm') }}</span></a></li>
-      {% endfor %}
-    </ul>
+    <section aria-labelledby="h-family">
+      <h2 class="label sgroups__h" id="h-family">For the family</h2>
+      {{ srows(sections | rejectattr('section.advanced') | list) }}
+    </section>
+    <section aria-labelledby="h-advanced">
+      <h2 class="label sgroups__h" id="h-advanced">Advanced</h2>
+      <p class="small muted sgroups__note">How it runs underneath: which models answer, looking things up, what went wrong and what changed. The defaults suit most families.</p>
+      {{ srows(sections | selectattr('section.advanced') | list) }}
+    </section>
   </div>
 {% endblock %}
 

@@ -70,6 +70,8 @@ class Section:
     title: str
     glyph: str  # its picture, in static/icons.svg
     blurb: str
+    # How it runs underneath rather than what the family chose: listed apart, under Advanced.
+    advanced: bool = False
 
 
 @dataclass(frozen=True)
@@ -222,30 +224,25 @@ EFFORT = (
 )
 
 
+# The family's own choices first, then, under Advanced, how it runs: which models answer, the
+# lookups, what went wrong and what changed. The landing and the side list draw them in this order.
 SECTIONS: tuple[Section, ...] = (
     Section("general", "General", "home", "Where home is, its clock and units, and this page."),
-    Section(
-        "model",
-        "AI model",
-        "sparkle",
-        "Which model answers what, what it costs, and who stands in when one cannot.",
-    ),
-    Section("spending", "Spending", "dollar", "The daily limit, and what one message may use."),
     Section("messages", "Messages", "bell", "What is sent without being asked, and when."),
-    Section("lookups", "Lookups", "search", "Filling ideas in, and taking off what is over."),
-    Section(
-        "happening",
-        happening.NAME,
-        "ticket",
-        "What is on near home: the calendars it reads, Ticketmaster, and her scouting.",
-    ),
     Section(
         "personality",
         "Personality and family",
         "smile",
         "Who she is, and who you are, in your own words.",
     ),
+    Section(
+        "happening",
+        happening.NAME,
+        "ticket",
+        "What is on near home: the calendars it reads, Ticketmaster, and her scouting.",
+    ),
     Section("connections", "Connections", "plug", "Telegram, and Google Calendar."),
+    Section("spending", "Spending", "dollar", "The daily limit, and what one message may use."),
     Section(
         "security",
         "Sign-in and security",
@@ -253,12 +250,33 @@ SECTIONS: tuple[Section, ...] = (
         "Passwords, how long a sign-in lasts, seeing a key, signing everyone out.",
     ),
     Section(
+        "model",
+        "AI model",
+        "sparkle",
+        "Which model answers what, what it costs, and who stands in when one cannot.",
+        advanced=True,
+    ),
+    Section(
+        "lookups",
+        "Lookups",
+        "search",
+        "Filling ideas in, and taking off what is over.",
+        advanced=True,
+    ),
+    Section(
         "troubleshooting",
         "Troubleshooting",
         "pulse",
         "What went wrong, how much is logged, and the words of every call to a model.",
+        advanced=True,
     ),
-    Section("history", "What has changed", "history", "Every change made here, and who made it."),
+    Section(
+        "history",
+        "What has changed",
+        "history",
+        "Every change made here, and who made it.",
+        advanced=True,
+    ),
 )
 SECTION_BY_NAME: dict[str, Section] = {one.name: one for one in SECTIONS}
 
@@ -487,6 +505,7 @@ GROUPS: tuple[Group, ...] = (
                 words=EFFORT,
             ),
         ),
+        folded=True,
     ),
     Group(
         "spending",
