@@ -1,6 +1,6 @@
 {% extends "frame.html" %}
 {% from "_ui.html" import icon %}
-{% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty %}
+{% from "_dest.html" import dest_head, do_tabs, chip_row, dest_row, dest_empty %}
 {% block title %}{{ name }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-soon{% endblock %}
 {# Happening soon (docs/INTERFACE.md section 4): dated possibilities by date, what the sources list near home and the
@@ -8,6 +8,7 @@
    the listing says is on its own page, a tap away. #}
 {% block content %}
   {{ dest_head(name, summary) }}
+  {{ do_tabs('soon') }}
   {{ chip_row(chips) }}
   {% for row in trouble %}<p class="sec__note">{{ icon('alert', size='sm') }}{{ row.label }}: {{ row.detail }}</p>{% endfor %}
   {% for day in days %}

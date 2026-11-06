@@ -141,7 +141,7 @@
 
 {% block content %}
   {% if parent %}
-    {{ dest_head('The kids', summary) }}
+    {{ dest_head('The kids', summary, back=('Lists', url_for('web.lists_page')) if visitor().may('change') else none) }}
     {{ chip_row(chips, 'Which kid') }}
     {% for kid in kids %}
       <section class="sec wkid" aria-labelledby="k-{{ kid.id }}">

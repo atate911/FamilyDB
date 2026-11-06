@@ -98,7 +98,7 @@ def test_a_parent_sees_every_kid_and_answers(app, family, sam, girls) -> None:  
     _add(girls["sister"], "Slime")
     overview = sam.get("/wishes").text
     assert "A cat" in overview and "Slime" in overview and "The kids" in overview
-    assert 'href="/kids">Kids' in sam.get("/").text  # the way there, in the row
+    assert 'href="/kids/the-girls"' in sam.get("/lists").text  # the way there, a chip of Lists
     cat = _open(app, family["girls"].id)[0]
     hers = sam.get(f"/wishes?who={family['girls'].id}").text
     assert "A cat" in hers and "Slime" not in hers

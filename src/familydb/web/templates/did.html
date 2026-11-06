@@ -1,12 +1,13 @@
 {% extends "frame.html" %}
 {% from "_ui.html" import icon, avatar, who, faces, guard with context %}
-{% from "_dest.html" import dest_head, chip_row, dest_row, dest_empty %}
+{% from "_dest.html" import dest_head, do_tabs, chip_row, dest_row, dest_empty %}
 {% block title %}What we did · {{ site_title }}{% endblock %}
 {% block body_class %}page-did{% endblock %}
 {# What we did (docs/INTERFACE.md section 4): recent outings newest first, what each got, who went; what is still to
    rate first, as her question; Again? puts a place back among the things to do. #}
 {% block content %}
   {{ dest_head('What we did', summary) }}
+  {{ do_tabs('did') }}
   {{ chip_row(chips) }}
   {% for r in rate %}
     <section class="q" aria-label="A question from {{ assistant }}">

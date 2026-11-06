@@ -603,7 +603,10 @@ def test_a_kid_is_never_shown_a_present_or_its_plan(app, sam, family) -> None:
         assert "Roller skates" not in page and "Pick up the skates" not in page, path
     assert "Zoo lights" in girls.get("/ideas").text
     assert girls.get(f"/idea/{gift.id}").status_code == 404
-    assert "Roller skates" in sam.get("/ideas").text
+    assert girls.get("/presents").status_code == 403
+    # The presents are Lists' chip now, not among the things to do.
+    assert "Roller skates" in sam.get("/presents").text
+    assert "Roller skates" not in sam.get("/ideas").text
     assert "Pick up the skates" in sam.get("/plans").text
     assert sam.get(f"/idea/{gift.id}").status_code == 200
 
@@ -817,7 +820,7 @@ def test_a_kid_sees_no_present_anywhere_and_a_grown_up_is_told_whom_it_is_kept_f
         assert kid.get(f"/idea/{lego.id}").status_code == 404
         for path in ("/", "/plans", "/restaurants", "/tasks"):
             assert "Lego set" not in kid.get(path).text, path
-    assert "hidden from the kids" in sam.get("/ideas").text.lower()
+    assert "hidden from the kids" in sam.get("/presents").text.lower()
 
 
 def test_a_grown_up_can_have_a_present_kept_from_them_too(app, sam, alex, family, conn) -> None:
@@ -827,8 +830,8 @@ def test_a_grown_up_can_have_a_present_kept_from_them_too(app, sam, alex, family
         scarf = idea_store.insert(
             conn, title="Silk scarf", kind="gift", participants=["Alex"], now=NOW_ISO
         )
-    assert "Silk scarf" in sam.get("/ideas").text
-    assert "Silk scarf" not in alex.get("/ideas").text
+    assert "Silk scarf" in sam.get("/presents").text
+    assert "Silk scarf" not in alex.get("/presents").text
     assert alex.get(f"/idea/{scarf.id}").status_code == 404
     assert alex.get(f"/idea/{scarf.id}/edit").status_code == 404
 
