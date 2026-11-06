@@ -36,11 +36,12 @@ def insert(
     would_repeat: bool | None,
     notes: str | None,
     recorded_by: int | None,
+    message_id: int | None = None,
     now: str | None = None,
 ) -> Outcome:
     cur = conn.execute(
         "INSERT INTO outcomes (idea_id, plan_id, happened_on, rating, would_repeat, notes, "
-        "recorded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "recorded_by, message_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             idea_id,
             plan_id,
@@ -49,11 +50,26 @@ def insert(
             None if would_repeat is None else int(would_repeat),
             notes,
             recorded_by,
+            message_id,
             now or utcnow_iso(),
         ),
     )
     row = conn.execute("SELECT * FROM outcomes WHERE id = ?", (cur.lastrowid,)).fetchone()
     return Outcome.from_row(row)
+
+
+def for_message(
+    conn: sqlite3.Connection, message_id: int, *, idea_id: int, happened_on: str
+) -> Outcome | None:
+    """The outcome already recorded for this message, idea and day: what a turn answered again
+    after a failure finds, so the visit is counted once however the call names it, by its plan
+    or its idea (tools/outcomes.py). Another day, or another idea, is another visit."""
+    row = conn.execute(
+        "SELECT * FROM outcomes WHERE message_id = ? AND idea_id = ? AND happened_on = ? "
+        "ORDER BY id LIMIT 1",
+        (message_id, idea_id, happened_on),
+    ).fetchone()
+    return Outcome.from_row(row) if row else None
 
 
 def list_for_idea(conn: sqlite3.Connection, idea_id: int) -> list[Outcome]:

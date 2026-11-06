@@ -188,6 +188,8 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         for table in ("ai_texts", "ai_blobs", "problems", "place_names", "pick_sets", "pins"):
             conn.execute(f"DROP TABLE {table}")
         conn.execute("DROP TABLE recipes")
+        conn.execute("DROP INDEX outcomes_message_idx")
+        conn.execute("ALTER TABLE outcomes DROP COLUMN message_id")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
         assert db.migrate(conn) == [v for v, _, _ in db.list_migrations() if v >= 8]
