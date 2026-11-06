@@ -4,6 +4,34 @@
 
 ### New since v0.5.0
 
+- **Five places, each with one job.** A grown-up's row and menu are Now, Eat, Do, Week and Lists.
+  Do has three tabs: Ideas, Coming up (what is on near home) and We did. Lists has the shopping
+  list and the family's other lists, then Presents (every gift idea, each kept from whom it is
+  for, and never shown to a kid) and each kid's wishes, and counts what waits on a parent. Gift
+  ideas left Do. Chat and What Vera knows sit lower in the menu with the back office, and the box
+  beside the page keeps only what came back and the pins. Every old address still opens, under
+  its place: `/soon`, `/happening`, `/did`, `/kids`, `/ideas`, `/restaurants`, `/place/N`. A kid
+  keeps her four.
+- **Now answers what is next.** Next up is the one thing on soonest, with when, where and who,
+  then today's and tomorrow's lines. Needs you is what of yours is late, her questions and the
+  rest due today, the first three shown and the rest a tap away. Her lead pick is large, the other
+  kinds a line each. When nothing waits, three ways in: choose dinner, find something to do, add
+  a reminder.
+- **One main thing on each page.** A recipe's page has Cook it under its facts: a day, a dinner
+  time, what is missing on the shopping list (ticked) and the calendar (not ticked), and Cook
+  this, which does each part as Vera would and says what each did, a part that failed included.
+  A place's page leads with Plan it; Drop it, Look it up again and Edit by hand are under More.
+  Every row of Coming up, and Do's New ideas, has Save it, Plan it and Not for us. Plan it says
+  when the new plan overlaps another. Eat's grocery list comes back to Cook.
+- **Again? means it.** Putting an outing back with Again?, or a dropped idea with Bring it back,
+  lets go of an earlier "would not go again", so it can be suggested again; a "would not" said
+  after it keeps it out once more, and Undo takes it back whole.
+- **Settings in two lists.** For the family (General, Messages, Personality, What's going down?,
+  Connections, Spending, Sign-in) and Advanced (AI model, Lookups, Troubleshooting, What has
+  changed), on the landing and down the side of every card; Spending's Thinking is folded with
+  the other fine-tuning. Links from Status, setup and the Lookups card into the AI model page land
+  on what they name again.
+
 - **An outing is counted once.** Had a reply failed after "we went to the zoo, 8/10" was saved,
   or had the model said it twice, the visit could be counted twice and the average moved; marking
   a repeating chore done twice skipped a round. The same message now saves each once.
@@ -92,8 +120,8 @@
 - **A day's own page opens when something is on it.** `/week/DATE` failed for a day whose line
   named the next plan.
 - **The family chooses which places are in the row.** Settings, General has a tick for each place
-  in the row at the foot of every page (down the left on a wider screen): Now, Eat, Do, Week, Kids,
-  Soon, Lists and Did. Untick one the family does not use and it leaves the row, for a kid's row too;
+  in the row at the foot of every page (down the left on a wider screen): Now, Eat, Do, Week and
+  Lists, and a kid's My list. Untick one the family does not use and it leaves the row, for a kid's row too;
   nothing is deleted, and its pages still open from a link. With Now unticked the page opens on the
   first place left, and with every one unticked Now stays (`row_hidden`).
 - **The family's pages, smoothed on a phone.** What's going down? drew each event a word a line
