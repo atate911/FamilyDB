@@ -1,6 +1,6 @@
 # The interface: map and architecture
 
-> **This records the interface as designed and built, not a specification.** Navigation, the box, Now, names and layout are open to redesign under `docs/DESIGN_FREEDOM.md`, which wins where this reads as fixing them. Keep this document true to what is built.
+> **Design authority — November 5, 2026:** [Design freedom and protected outcomes](DESIGN_FREEDOM.md) governs presentation and interaction choices in this document. The owner authorizes substantial interface redesign. Historical layout, navigation, chat placement, wording, and visual-style rules are revisable defaults, even when phrased as mandatory or previously agreed. Preserve the policy's privacy, access, security, accessibility, cost, and data-integrity outcomes; do not require fresh approval for ordinary design changes. Descriptions below are not claims that a proposed redesign has shipped.
 
 The skeleton every screen is built on, for the web page on a phone, a big screen and a kitchen tablet. Second draft, October 2026, after the concept work in `CONCEPT.md`, three alternative paradigms weighed against it (section 12), and the family's answers to the questions that decide between them. Where this and the concept disagree, this document wins.
 
@@ -16,12 +16,12 @@ Three things, and a person always knows which they want:
 - **Now, arranged by Vera.** Under the box, her picks for right now and the next day or two, and anything waiting on you. She arranges this part freely each time. It is the answer to the family's daily question, which is improvisational: "what should we do, now or soon?"
 - **Destinations to look at.** A short row of screens, each named for a want ("What should we eat?"), each one tap away, each opening on its answer with nothing to set first. Ranked by code, instant and free. Vera is there too, as a supporting assistant, through the same box scoped to the screen.
 
-Four goals shaped everything below. They are what the design is for, not a layout to keep; today's way of meeting each is in brackets, and a better way replaces it (`docs/DESIGN_FREEDOM.md`):
+The following four choices describe the October design. They are historical defaults, not constraints on redesign:
 
-1. **A useful action first.** Opening the app, a person can do the most common thing at once: tell Vera something, or see what needs them. (Today: the box first on every first screen.)
-2. **Predictable orientation.** However the content changes, a person knows where they are and how to get elsewhere. (Today: Vera arranges the middle of Now; the box and the destination row stay put.)
-3. **Names a person understands.** A place says what you would get there, in the family's words. (Today: destinations named for wants, "What should we eat?")
-4. **Few, accessible interactions.** A small set of moves, the same everywhere, each reachable by touch, keyboard and screen reader. (Today: tap to open, chips to narrow, back to go up, and the box.)
+1. **Make the next useful action obvious.** The October design led with the chat box. A direct action, task summary, launcher, or contextual assistant may serve the user better; choose by the task.
+2. **Keep orientation predictable.** Navigation and assistant placement may change in a redesign. Adapt content when useful without making familiar controls hard to find; a fixed box and destination row are not required.
+3. **Use names people understand.** Task phrases and familiar nouns are both valid. Choose labels that help people predict the destination.
+4. **Use understandable interactions.** Direct controls, filters, search, guided flows, and conversation are available choices. Support accessible ways to complete the task; no fixed gesture count is required.
 
 ## 2. The map
 
@@ -389,7 +389,7 @@ What was weighed again after the first draft, and what changed.
 
 **Kept: What we did as its own tile.** It was the weakest tile, and folding it into This week's past was tempting. It stays because ratings, favorites and "have we been?" need a place a person would look, and because the memory end of the ladder is where she learns taste.
 
-**Historical: no chat page.** The October decision was that the thread exists only behind her reply, as a record, because a destination for it would become the place people live. It no longer holds: there is a Chat page (`/chat`), with the thread and pinned replies. Where the conversation lives is open (`docs/DESIGN_FREEDOM.md`).
+**Historical decision, no longer binding: no chat page.** The thread exists behind her reply, as a record. Making it a destination would make it the place people live, and a thread never ends, which is the one thing Home must never be. (As built since: there is a Chat page, `/chat`, with the thread and pinned replies.)
 
 **Weighed: a kid's tab bar.** Four tiles fit a tab bar, and a kid might like one. Rejected for consistency: her app is the parents' app with less in it, and learning a different navigation from her parents is a cost for a family that shares devices.
 
