@@ -4,6 +4,12 @@
 
 ### New since v0.5.0
 
+- **Whose it is, and what it rests on.** On your plate is yours and everyone's; somebody else's to-dos
+  are under their own name on the week ("On Alex's plate") and a line on Now. Now leads with setup
+  only while something it needs is left; Telegram and Google Calendar wait in a quiet line at the
+  foot. Without a calendar connected, the week says so above the days rather than after them. A
+  recipe is one you would make again, and the choice says what not again does. Hours from details
+  gone stale are said as last checked.
 - **Records that keep to what happened.** A visit answered twice, after a failure part way through
   a turn, is counted once; another day or another place in the same message is still another
   visit. An outing can no longer be recorded against a plan for something else. Giving an idea a
