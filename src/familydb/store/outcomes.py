@@ -37,10 +37,11 @@ def insert(
     notes: str | None,
     recorded_by: int | None,
     now: str | None = None,
+    operation_key: str | None = None,
 ) -> Outcome:
     cur = conn.execute(
         "INSERT INTO outcomes (idea_id, plan_id, happened_on, rating, would_repeat, notes, "
-        "recorded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "recorded_by, created_at, operation_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             idea_id,
             plan_id,
@@ -50,10 +51,19 @@ def insert(
             notes,
             recorded_by,
             now or utcnow_iso(),
+            operation_key,
         ),
     )
     row = conn.execute("SELECT * FROM outcomes WHERE id = ?", (cur.lastrowid,)).fetchone()
     return Outcome.from_row(row)
+
+
+def by_operation(conn: sqlite3.Connection, operation_key: str) -> Outcome | None:
+    """The outcome an earlier attempt at the same request kept, if any."""
+    row = conn.execute(
+        "SELECT * FROM outcomes WHERE operation_key = ?", (operation_key,)
+    ).fetchone()
+    return Outcome.from_row(row) if row else None
 
 
 def list_for_idea(conn: sqlite3.Connection, idea_id: int) -> list[Outcome]:

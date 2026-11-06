@@ -359,12 +359,26 @@ def oa_response(
     return Response.model_validate(payload)
 
 
+class FakeInputTokens:
+    """Stand-in for `client.responses.input_tokens`: counts a request by its characters."""
+
+    def __init__(self) -> None:
+        self.counted: list[dict[str, Any]] = []
+
+    def count(self, **kwargs: Any) -> Any:
+        from types import SimpleNamespace
+
+        self.counted.append(kwargs)
+        return SimpleNamespace(input_tokens=len(json.dumps(kwargs, default=str)) // 4)
+
+
 class FakeResponsesAPI:
     """Scripted stand-in for `client.responses`, recording every request."""
 
     def __init__(self, *responses: Any) -> None:
         self.queue = list(responses)
         self.requests: list[dict[str, Any]] = []
+        self.input_tokens = FakeInputTokens()
 
     def create(self, **kwargs: Any) -> Any:
         self.requests.append({**kwargs, "input": list(kwargs.get("input", []))})

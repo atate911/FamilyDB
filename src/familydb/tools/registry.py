@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import inspect
 import json
 import logging
@@ -87,6 +88,16 @@ class ToolContext:
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())
+
+    def request_key(self, *parts: object) -> str | None:
+        """A key for one write of this request (a page's form, else the message being answered)
+        and what it is about, so the same request repeated finds what it did; None with neither,
+        when every call stands alone (tests/test_repeat_writes.py)."""
+        scope = self.operation_id or (f"message:{self.message_id}" if self.message_id else None)
+        if scope is None:
+            return None
+        said = "\x1f".join([scope, *(str(part) for part in parts)])
+        return hashlib.sha256(said.encode()).hexdigest()
 
     def offer_reply(self, text: str) -> None:
         """Hand the family's reply over with a tool's input; the loop may end the turn with it."""

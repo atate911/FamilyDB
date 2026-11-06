@@ -72,6 +72,16 @@ def test_an_unlisted_model_is_counted_dearer_than_any_listed_one() -> None:
     assert not listed and dollars > dearest
 
 
+def test_an_openai_cache_write_costs_a_quarter_more_than_input() -> None:
+    usage = {"cache_creation_input_tokens": 1_000_000}
+    assert prices.cost("openai", "gpt-6-luna", usage, cache_ttl="")[0] == pytest.approx(0.125)
+    # The AI model page hands Claude's lifetime to every company; OpenAI keeps its own.
+    assert prices.cost("openai", "gpt-6-luna", usage, cache_ttl="1h")[0] == pytest.approx(0.125)
+    assert prices.cost("gemini", "gemini-3.8-flash", usage)[0] == pytest.approx(
+        prices.cost("gemini", "gemini-3.8-flash", {"input_tokens": 1_000_000})[0]
+    )
+
+
 def test_a_claude_cache_write_costs_by_how_long_it_lasts() -> None:
     usage = {"cache_creation_input_tokens": 1_000_000}
     assert prices.cost("anthropic", "claude-sonnet-5", usage, cache_ttl="1h")[0] == 4.0

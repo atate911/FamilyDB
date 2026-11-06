@@ -50,6 +50,16 @@ def record_outcome(ctx: ToolContext, args: RecordOutcomeInput) -> dict[str, Any]
         raise ToolError(
             f"{day.isoformat()} is in the future; outcomes are for things that happened"
         )
+    # The same request again (a retry, or a second call in one turn) counts the visit once.
+    key = ctx.request_key("outcome", idea_id, args.plan_id, day.isoformat())
+    earlier = outcomes.by_operation(ctx.conn, key) if key else None
+    if earlier is not None:
+        idea = ideas.get(ctx.conn, idea_id)
+        return {
+            "outcome": earlier.model_dump(mode="json"),
+            "idea": idea.model_dump(mode="json") if idea else None,
+            "already": True,
+        }
     with transaction(ctx.conn):
         outcome = outcomes.insert(
             ctx.conn,
@@ -61,6 +71,7 @@ def record_outcome(ctx: ToolContext, args: RecordOutcomeInput) -> dict[str, Any]
             notes=args.notes,
             recorded_by=ctx.member.id if ctx.member else None,
             now=ctx.now_iso(),
+            operation_key=key,
         )
         idea = ideas.apply_outcome(
             ctx.conn,

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import sqlite3
+import statistics
+from datetime import datetime
+from itertools import pairwise
 from typing import Any
 
 from familydb.store.db import to_json, utcnow_iso
@@ -436,6 +439,71 @@ def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any
         (since,),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def cache_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
+    """Per kind since a timestamp, dearest first: its turns and calls, its input as paid fresh,
+    read from the cache and written to it, its output and cost, and how many of its turns found
+    the start of the request still cached on their first call (`warm_starts`, for every kind)."""
+    rows = conn.execute(
+        "SELECT kind, count(*) AS calls, "
+        "coalesce(sum(CASE WHEN iteration = 1 THEN 1 ELSE 0 END), 0) AS turns, "
+        "coalesce(sum(input_tokens), 0) AS fresh, "
+        "coalesce(sum(cache_read_input_tokens), 0) AS cache_read, "
+        "coalesce(sum(cache_creation_input_tokens), 0) AS cache_write, "
+        "coalesce(sum(output_tokens), 0) AS output_tokens, "
+        "coalesce(sum(cost_usd), 0) AS cost_usd, "
+        "coalesce(sum(CASE WHEN iteration = 1 AND coalesce(cache_read_input_tokens, 0) > 0 "
+        "THEN 1 ELSE 0 END), 0) AS warm "
+        "FROM llm_calls WHERE kind IS NOT NULL AND created_at >= ? "
+        "GROUP BY kind ORDER BY cost_usd DESC, calls DESC",
+        (since,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+# The cache lifetimes a gap between turns is held against, in minutes: Claude's five minutes,
+# OpenAI's half hour, Claude's hour.
+LIFETIMES = (5, 30, 60)
+
+
+def turn_gaps(conn: sqlite3.Connection, *, since: str) -> dict[str, dict[str, Any]]:
+    """Per kind since a timestamp, how far apart its turns began: the median gap in minutes, how
+    many gaps there were, and the share within each of `LIFETIMES`. What a cache kept that long
+    would have saved: a turn that comes sooner than the lifetime finds its prefix still there."""
+    starts: dict[str, list[datetime]] = {}
+    for row in conn.execute(
+        "SELECT kind, created_at FROM llm_calls "
+        "WHERE kind IS NOT NULL AND iteration = 1 AND created_at >= ? ORDER BY kind, id",
+        (since,),
+    ):
+        starts.setdefault(row["kind"], []).append(datetime.fromisoformat(row["created_at"]))
+    gaps: dict[str, dict[str, Any]] = {}
+    for kind, times in starts.items():
+        between = [(b - a).total_seconds() / 60 for a, b in pairwise(times)]
+        if not between:
+            continue
+        gaps[kind] = {
+            "gaps": len(between),
+            "median_minutes": statistics.median(between),
+            "within": {
+                minutes: sum(1 for gap in between if gap <= minutes) / len(between)
+                for minutes in LIFETIMES
+            },
+        }
+    return gaps
+
+
+def per_message(conn: sqlite3.Connection, *, since: str) -> dict[str, Any]:
+    """What answering a message took since a timestamp, every call made for it counted (the
+    chat's, and the search and choosing it asked for): calls, messages and cost."""
+    row = conn.execute(
+        "SELECT count(*) AS calls, count(DISTINCT message_id) AS messages, "
+        "coalesce(sum(cost_usd), 0) AS cost_usd "
+        "FROM llm_calls WHERE message_id IS NOT NULL AND created_at >= ?",
+        (since,),
+    ).fetchone()
+    return dict(row)
 
 
 def usage_rows(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:

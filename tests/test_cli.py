@@ -405,6 +405,88 @@ def test_debug_cost_reports_the_prefix_and_what_was_spent(env: Path) -> None:
     assert "No model calls in the last 30 days." in result.output
 
 
+def test_debug_cost_says_how_each_kind_uses_the_cache(env: Path) -> None:
+    """Two chat turns ten minutes apart (the second found the prefix cached) and a lookup: the
+    share each kind took from the cache, how often a turn started warm, how far apart they come,
+    and what a message took in all."""
+    from contextlib import closing
+    from datetime import timedelta
+
+    from familydb.app import build_app
+    from familydb.base.dates import utc_iso
+    from familydb.store import calls, messages
+
+    runner.invoke(app, ["db", "migrate"])
+    application = build_app()
+    now = application.clock.now()
+
+    def at(minutes: int) -> str:
+        return utc_iso(now - timedelta(minutes=minutes))
+
+    with closing(application.connect()) as conn, db.transaction(conn):
+        asked = [
+            messages.insert_in(
+                conn,
+                channel="console",
+                channel_update_id=f"c{n}",
+                chat_id="console",
+                member_id=None,
+                text="hello",
+                now=at(minutes),
+            )
+            for n, minutes in enumerate((40, 30))
+        ]
+        for message, minutes, read in ((asked[0], 40, 0), (asked[1], 30, 9000)):
+            for iteration in (1, 2):
+                calls.log_llm_call(
+                    conn,
+                    message_id=message.id,
+                    iteration=iteration,
+                    model="gpt-6-luna",
+                    served_model="gpt-6-luna",
+                    request_id=None,
+                    stop_reason="end",
+                    usage={
+                        "input_tokens": 1000,
+                        "cache_read_input_tokens": read if iteration == 1 else 9000,
+                        "cache_creation_input_tokens": 9000 if iteration == 1 and not read else 0,
+                        "output_tokens": 50,
+                    },
+                    duration_ms=900,
+                    now=at(minutes),
+                    provider="openai",
+                    cost_usd=0.001,
+                    kind="chat",
+                )
+        calls.log_llm_call(
+            conn,
+            message_id=None,
+            iteration=1,
+            model="gpt-6-luna",
+            served_model="gpt-6-luna",
+            request_id=None,
+            stop_reason="end",
+            usage={"input_tokens": 4000, "output_tokens": 300},
+            duration_ms=3000,
+            now=at(20),
+            provider="openai",
+            cost_usd=0.002,
+            kind="enrich",
+        )
+    result = runner.invoke(app, ["debug", "cost"])
+    assert result.exit_code == 0, result.output
+    lines = result.output.splitlines()
+    cache = lines[next(n for n, line in enumerate(lines) if "uses the cache" in line) :]
+    chat = next(line for line in cache if "answering the family" in line)
+    # 4 calls in 2 turns; 27,000 of 40,000 input tokens from the cache; one warm start of two.
+    assert chat.split()[-5:] == ["2", "2.0", "68%", "50%", "9,000"]
+    gap = next(line for line in cache if "answering the family" in line and "10 min" in line)
+    assert gap.split()[-3:] == ["0%", "100%", "100%"]  # ten minutes: past 5, within 30 and 60
+    lookups = next(line for line in cache if "looking ideas up" in line)
+    assert lookups.split()[-5:] == ["1", "1.0", "0%", "0%", "0"]
+    assert "A message answered took 2.0 model calls on average, US$0.0020" in result.output
+
+
 def test_debug_suggestions_says_when_there_were_none(env: Path) -> None:
     runner.invoke(app, ["db", "migrate"])
     result = runner.invoke(app, ["debug", "suggestions", "--days", "30"])
