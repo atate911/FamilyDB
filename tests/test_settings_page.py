@@ -590,6 +590,27 @@ def _drawn(text: str) -> set[str]:
     return {key for key in BEHAVIOUR if f'name="{key}"' in text}
 
 
+def test_the_family_s_own_cards_come_first_and_how_it_runs_under_advanced(page) -> None:
+    """The landing (the redesign of November 2026): what a family chooses for itself, then, apart,
+    which models answer, the lookups, what went wrong and what changed; the side list on every
+    card keeps the same two groups."""
+    text = page.get("/settings").text
+    family, advanced = text.split('id="h-advanced"')
+    for section in fields.SECTIONS:
+        where = advanced if section.advanced else family
+        assert f'href="/settings/{section.name}"' in where, section.name
+    assert {one.name for one in fields.SECTIONS if one.advanced} == {
+        "model",
+        "lookups",
+        "troubleshooting",
+        "history",
+    }
+    nav = page.get("/settings/general").text
+    nav = nav[nav.index('<nav class="settings-nav"') :]
+    assert nav.index('href="/settings/security"') < nav.index("Advanced")
+    assert nav.index("Advanced") < nav.index('href="/settings/model"')
+
+
 def test_every_setting_is_on_exactly_one_page_and_the_right_one(page) -> None:
     """Split into pages, a setting could fall between them, or turn up on two and be saved twice."""
     found: dict[str, list[str]] = {}

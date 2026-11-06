@@ -1387,6 +1387,9 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 .settings-nav a:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink); }
 .settings-nav a[aria-current] { background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); font-weight: 700; }
 .settings-nav .icon { color: var(--ink-3); }
+.settings-nav__h { margin: var(--s4) 0 var(--s1); color: var(--ink-3); }
+.sgroups__h { margin: 0 0 var(--s2); }
+.sgroups__note { margin: calc(-1 * var(--s1)) 0 var(--s2); }
 .settings-body, .sform { display: grid; gap: var(--s5); min-width: 0; }
 .told { display: grid; gap: var(--s2); margin-bottom: var(--s5); }
 /* a group of settings: a card with its heading, what it is for, and its boxes two to a row */
