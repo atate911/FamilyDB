@@ -1,8 +1,8 @@
 # Now and Chat
 
-Now is the first screen: the box to tell the assistant something, then whatever is waiting on you, her picks for right now, and today and tomorrow in one line each. Chat is the conversation behind the box, where every message and answer is kept. Reading either page makes no model call; nearly every message you send does, and it is paid for.
+Now is the first screen: the box to tell the assistant something, then what is next with today and tomorrow in a line each, whatever is waiting on you, and her picks for right now. Chat is the conversation behind the box, where every message and answer is kept. Reading either page makes no model call; nearly every message you send does, and it is paid for.
 
-The box is the same on every page of the family's: Now, Eat, Do, Week, Kids, Soon, Lists, Did and each thing's own page. A message sent from any of them lands in your conversation, and the answer comes back to the page you sent it from.
+The box is the same on every page of the family's: Now, Eat, Do and its tabs, Week, Lists and its chips, and each thing's own page. A message sent from any of them lands in your conversation, and the answer comes back to the page you sent it from.
 
 ## Who sees what
 
@@ -20,7 +20,7 @@ Everyone signed in sees Now and may chat ([Roles and permissions](/wiki/model/fa
 | The box | Ask, save an idea or set a reminder. Under it, what the last message brought back (below) |
 | The line | The day and the time, then how the day stands: "Free this evening", "Swim lesson 4:30 pm" |
 | Finish setting up | The steps left that it needs or should have (an AI model, your own password, where home is), for admins only, until they are done. Optional ones (Telegram, Google Calendar, the rest of the family) wait in a line at the foot, "When you like" |
-| Next up | The next thing on: one going on now ("on now") or still to come today, else tomorrow's first, with its time, place and who; then one line each for today and tomorrow, linking to the day, and tonight's pick to cook |
+| Next up | The next thing on: one going on now ("on now") or still to come today, else tomorrow's first, with its time, place and who; then one line each for today and tomorrow, linking to the day (a day whose one thing is Next up has no line, so nothing is said twice), and tonight's pick to cook |
 | Needs you | What waits on you, most pressing first: what of yours (or everyone's) is late, her questions (a kid's ask to answer, Yes or Not this time; a kid's pitch for an outing, See it or Later, which rests it for a week; one plan to say how it went, Loved it, OK or Not great, while [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) is on), then what is due today. The first three show; **And N more** opens the rest. A line under them says anybody else's ("Alex has 1 late", to the week) |
 | What about… | Her pick for now, large, and the other kinds a line each under it, chosen ahead by code, with when they were chosen. "Different ones" asks her for others, which is a message like any other |
 
