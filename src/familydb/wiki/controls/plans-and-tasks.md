@@ -34,7 +34,7 @@ A plan's row opens its page: when, in words and how far off; the time to leave, 
 
 > **Taking a plan off deletes the event from Google Calendar for everyone.** FamilyDB keeps the plan marked canceled but cannot bring the event back: add a new plan instead.
 
-- **Rate a plan.** On Now, on Did, on the day's page or the plan's own, choose Loved it, OK or Not great. These record 9, 6 and 3 out of ten. The question asks about confirmed plans linked to an idea that ended in the last 14 days and have no rating; Now asks about one at a time, after the kids' asks, and nothing counts them. With [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) off, only the plan's own page offers the faces.
+- **Rate a plan.** On Now, on We did, on the day's page or the plan's own, choose Loved it, OK or Not great. These record 9, 6 and 3 out of ten. The question asks about confirmed plans linked to an idea that ended in the last 14 days and have no rating; Now asks about one at a time, after the kids' asks, and nothing counts them. With [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) off, only the plan's own page offers the faces.
 
 ### Rules for plans
 
@@ -61,7 +61,7 @@ A reminder's page says when, whose, the window it suits, how it repeats and wher
 - If someone changed the thing while you had it open, or a reminder is being delivered, FamilyDB refuses the edit: reload and try again. A double click adds one thing.
 - A reminder made on the page appears in the page's chat while FamilyDB is running. It does not reach Telegram or phones ([How a reminder is delivered](/wiki/model/tasks-and-reminders#how-a-reminder-is-delivered)).
 
-## Soon
+## Coming up
 
 **Coming up**, a tab of Do: what is on near home in the weeks ahead, by day, with the family's own things that have a closing date among them. It is read from the family's sources, the calendars and the listings set on [its settings page](/wiki/controls/settings/happening), with no model call. Each row is the name and one line: the time (or all day), where, the cost and who listed it. Under a row still on offer, for whoever may change things, are **Save it** (keep it as an idea), **Plan it** (on the calendar on its day and time, or all day for an all-day one, and back to the list saying so) and **Not for us**, each the tool the assistant would use; one already saved or planned has none. Tap the name for the listing's own words. The chips are **This weekend**, **Free** (only what costs nothing) and each source.
 
@@ -71,7 +71,7 @@ Each find has a page of its own: its day (or **Any time**, for a place the assis
 
 The shopping list, always, and the family's other lists as chips, each at its own address (`/lists/costco`), then **Presents** (`/presents`: every gift idea you may see, whom it is for and whom it is kept from; one kept from you is not there at all, and a kid never sees the page) and a chip for each kid's wishes ([Wish lists](/wiki/controls/wish-lists)), where **Lists** in the row counts what waits on a parent. Each thing is a big tick, with the mark of whoever put it there at the end of its row, and under a thing a recipe put there, how much each recipe wants ("2 (Fajitas), 1 (Soup)"; [Recipes](/wiki/controls/ideas#recipes)); Once the shopping list spans two sections of the store, it is drawn by section in the order a store is walked (Produce, Bakery, Meat & fish, Dairy & eggs, Dry goods & cans, Frozen, Drinks), as a recipe's [Shopping page](/wiki/controls/ideas#recipes) is; a short list, or a hardware list, stays in the order added. A list named **pantry** is special: what is on it is taken as something you always have, so a recipe's shopping leaves it off. **Got** folds what was ticked, where a thing can be put back; **Add something** adds. Every tick and add is the same tool the assistant runs for "we need milk", and the kids are told what is on a list when they ask. `/list` on Telegram reads it.
 
-## Did
+## We did
 
 **We did**, a tab of Do: what we did, newest first: each outing with its face (Loved it from 8 out of ten, OK from 5, Not great below), when, who went and the note. What is still to rate comes first, with the faces to say, while Ask how a plan went is on. **Loved** keeps only the loved ones; **Favorites** shows one row a place the family loved on average, with how many times; **This time last year** shows the month either side of the day a year ago; each person's chip, what they were at.
 
