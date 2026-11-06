@@ -464,9 +464,10 @@ Tools.
    schema). New `tests/test_recipes_tools.py`: add with facts, add by link alone, the same link
    twice, facts on an outing refused, update moves a guess to the family's, undo of each, a kid
    adds one, `find_recipes` ranks and says why.
-6. `familydb/meals.py` (domain; imports `store`, `base`, `hours` only, held by
-   `tests/test_layering.py`): `Situation` (weekday, minutes free before the evening's first
-   plan, who is eating), `situation(conn, now, agenda)`, `guess_occasions(recipe)`, `rank(rows,
+6. `familydb/meals.py` (domain; imports `store`, `base`, `hours` and `saved_plans`' `UNTIMED`,
+   held by `tests/test_layering.py`): `Situation` (weekday, minutes free before the evening's
+   first plan, or after one still under way when cooking would start, until 21:00 or the next
+   plan; who is eating), `situation(conn, now, agenda)`, `guess_occasions(recipe)`, `rank(rows,
    situation, asked)` with reasons worded by code, `pick(rows, situation)` for the page. New
    `tests/test_meals.py`: a table of recipes against situations, guesses from facts, rest, rating,
    a guess as a maybe.

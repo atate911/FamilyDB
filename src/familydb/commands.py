@@ -613,8 +613,8 @@ def _dinner(
         + (f": {one.reason}" if one.reason else "")
         for one in offered
     ]
-    if tonight.minutes_free is not None and tonight.plan:
-        lines.append(f"About {tonight.minutes_free} min to cook before {tonight.plan}.")
+    if tonight.minutes_free is not None and tonight.cut_short():
+        lines.append(f"About {tonight.minutes_free} min to cook {tonight.cut_short()}.")
     return _under(voice.say(app.settings, "cmd_dinner", seed=seed), lines)
 
 

@@ -203,7 +203,12 @@ def _today(ctx: ToolContext, now: datetime) -> list[SimpleNamespace]:
         log.warning("the calendar could not be read for tonight's recipes; plans kept here used")
         events = saved.list_events(start, end)
     return [
-        SimpleNamespace(start=event.start.isoformat(), all_day=event.all_day, title=event.title)
+        SimpleNamespace(
+            start=event.start.isoformat(),
+            end=event.end.isoformat(),
+            all_day=event.all_day,
+            title=event.title,
+        )
         for event in events
         if event.busy and event.status != "cancelled"
     ]
@@ -268,7 +273,7 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
         ]
         said["ruled_out_more"] = max(0, len(out) - 3)
     if meals.time_limit(tonight, asked)[1]:
-        said["tonight"] = f"{tonight.minutes_free} min to cook before {tonight.plan}"
+        said["tonight"] = f"{tonight.minutes_free} min to cook {tonight.cut_short()}"
     if not ranked:
         said["note"] = "no recipes saved yet"
     return said

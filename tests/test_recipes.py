@@ -307,6 +307,50 @@ def test_tonight_is_read_from_the_plans_that_cut_it_short():
     assert meals.situation(datetime(2026, 10, 24, 12, 0, tzinfo=TZ)).weekend
 
 
+def test_a_plan_already_under_way_holds_cooking_back():
+    """At six, a game from five to eight: cooking waits for it, and the evening ends at nine."""
+
+    class Plan:
+        def __init__(self, start, end=None, title="Game"):
+            self.start, self.end, self.title, self.all_day = start, end, title, False
+
+    six = datetime(2026, 10, 21, 18, 0, tzinfo=TZ)
+    game = Plan("2026-10-21T17:00:00-07:00", "2026-10-21T20:00:00-07:00")
+    tonight = meals.situation(six, [game])
+    assert (tonight.minutes_free, tonight.after, tonight.plan) == (60, "Game", None)
+    assert tonight.cut_short() == "after Game"
+    late = meals.situation(six, [Plan("2026-10-21T17:00:00-07:00", "2026-10-21T22:00:00-07:00")])
+    assert late.minutes_free == 0
+    swim = Plan("2026-10-21T20:30:00-07:00", "2026-10-21T21:30:00-07:00", "Swim")
+    both = meals.situation(six, [swim, game])
+    assert both.minutes_free == 30 and both.cut_short() == "between Game and Swim"
+    # One with no end lasts as a saved plan is taken to (two hours): under way until seven.
+    unended = meals.situation(six, [Plan("2026-10-21T17:00:00-07:00")])
+    assert unended.minutes_free == 120 and unended.after == "Game"
+    # A plan starting as cooking would is one that cuts it short, as before.
+    starting = meals.situation(six, [Plan("2026-10-21T18:00:00-07:00", "2026-10-21T20:00:00")])
+    assert (starting.minutes_free, starting.plan, starting.after) == (0, "Game", None)
+
+
+def test_find_recipes_waits_for_a_plan_under_way(settings, clock, conn, family):
+    us = _as(conn, settings, clock, family["sam"])
+    _recipe(us, "Roast chicken", total_minutes=90)
+    _recipe(us, "Omelettes", total_minutes=15)
+    with db.transaction(conn):
+        plans.insert(
+            conn,
+            title="Soccer tournament",
+            start="2026-09-20T13:00:00-07:00",
+            end="2026-09-20T20:00:00-07:00",
+            all_day=False,
+            now=NOW_ISO,
+        )
+    _, found = _call(us, "find_recipes")
+    assert [one["title"] for one in found["recipes"]] == ["Omelettes"]
+    assert found["ruled_out"][0]["why"] == "takes 1.5 h, there are 1 h after Soccer tournament"
+    assert found["tonight"] == "60 min to cook after Soccer tournament"
+
+
 def test_the_page_pick_on_a_weeknight_is_a_weeknight_one(settings, clock, conn, family):
     us = _as(conn, settings, clock, family["sam"])
     _recipe(us, "Lasagne", total_minutes=120)

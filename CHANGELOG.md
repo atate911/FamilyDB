@@ -4,6 +4,9 @@
 
 ### New since v0.5.0
 
+- **A plan already going counts for dinner.** At six, with a tournament until eight, every recipe
+  was offered as if the evening were free, since only plans starting later counted. Cooking now
+  waits for a plan under way, and the time runs to the next plan or to nine.
 - **"Under an hour" does not move the recital.** Asked for a recipe within a time when a plan
   tonight leaves less, the plan's time was ignored and a 45-minute dish was offered with half an
   hour to cook. The tighter of the two now decides, and the reason names the plan.

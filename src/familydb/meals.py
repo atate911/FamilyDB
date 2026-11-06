@@ -20,6 +20,7 @@ from urllib.parse import unquote, urlsplit
 
 from familydb import groceries
 from familydb.base.dates import fmt_minutes
+from familydb.saved_plans import UNTIMED
 from familydb.store import ideas as idea_store
 from familydb.store import lists, memories
 from familydb.store import recipes as recipe_store
@@ -87,7 +88,7 @@ CLUES: dict[str, tuple[str, ...]] = {
 
 
 class Planned(Protocol):
-    """Something on the day, as `agenda.Entry` is."""
+    """Something on the day, as `agenda.Entry` is; its `end`, when it has one, is read too."""
 
     start: str
     all_day: bool
@@ -132,13 +133,24 @@ def guess_occasions(recipe: Recipe, idea: Idea | None = None) -> list[str]:
 class Situation:
     """The meal asked about: its day, how long there is to cook when a plan cuts the evening
     short (None when nothing does), and how long a recipe made rests (the family's, when they
-    said: `rest_days` for kind recipe)."""
+    said: `rest_days` for kind recipe). `plan` is the plan the time runs out at, `after` one
+    under way that cooking waits for (the time then runs out at `LATEST` if no plan comes
+    sooner)."""
 
     day: date
     weekend: bool
     minutes_free: int | None = None
     plan: str | None = None
     rest_days: int = REST_DAYS
+    after: str | None = None
+
+    def cut_short(self) -> str:
+        """What cuts the time short, said after "there are 20 min": "before Soccer"."""
+        if self.after and self.plan:
+            return f"between {self.after} and {self.plan}"
+        if self.plan:
+            return f"before {self.plan}"
+        return f"after {self.after}" if self.after else ""
 
 
 def rest_days(conn: sqlite3.Connection, today: date) -> int:
@@ -161,35 +173,55 @@ def situation(
     unnamed: frozenset[str] = frozenset(),
 ) -> Situation:
     """Tonight as code reads it: the weekday, and the minutes from when cooking starts (now, or
-    `DINNER` if earlier) to the first timed plan before `LATEST`. A plan whose title is in
-    `unnamed` (one made for a present, `presents.plan_titles`) still takes its time but is said
-    only as "a plan", whoever reads the reason."""
+    `DINNER` if earlier) to the first timed plan before `LATEST`. A plan already under way then
+    moves the start to its end, and the time runs out at the next plan or at `LATEST`, so a game
+    from five to eight leaves an hour and one past nine none. A plan with no end is taken to last
+    as long as a saved one does (`saved_plans.UNTIMED`). A plan whose title is in `unnamed` (one
+    made for a present, `presents.plan_titles`) still takes its time but is said only as "a
+    plan", whoever reads the reason."""
     today = now.date()
     start = max(now, datetime.combine(today, DINNER, tzinfo=now.tzinfo))
     latest = datetime.combine(today, LATEST, tzinfo=now.tzinfo)
-    first: tuple[datetime, str] | None = None
+    timed: list[tuple[datetime, datetime, str]] = []
     for entry in planned:
         if entry.all_day or len(entry.start) <= 10:
             continue
-        try:
-            begins = datetime.fromisoformat(entry.start)
-        except ValueError:
+        begins = _when(entry.start, now)
+        if begins is None:
             continue
-        if begins.tzinfo is None:
-            begins = begins.replace(tzinfo=now.tzinfo)
-        begins = begins.astimezone(now.tzinfo)
-        later = first is None or begins < first[0]
-        if begins.date() == today and start <= begins <= latest and later:
-            title = getattr(entry, "title", "") or ""
-            first = (begins, "a plan" if not title or title in unnamed else title)
-    free = int((first[0] - start).total_seconds() // 60) if first else None
+        ends = _when(getattr(entry, "end", None) or "", now)
+        title = getattr(entry, "title", "") or ""
+        name = "a plan" if not title or title in unnamed else title
+        timed.append((begins, ends if ends and ends > begins else begins + UNTIMED, name))
+    timed.sort()
+    after: str | None = None
+    for begins, ends, name in timed:  # in order of starting, so overlapping plans chain
+        if begins < start < ends:
+            start, after = ends, name
+    first = next(((begins, name) for begins, _, name in timed if start <= begins <= latest), None)
+    until = first[0] if first else (latest if after else None)
+    free = max(0, int((until - start).total_seconds() // 60)) if until else None
     return Situation(
         day=today,
         weekend=today.weekday() >= 5,
         minutes_free=free,
         plan=first[1] if first else None,
         rest_days=rest,
+        after=after,
     )
+
+
+def _when(text: str, now: datetime) -> datetime | None:
+    """A plan's time in the family's zone; one without an offset is the family's wall time."""
+    if len(text) <= 10:
+        return None
+    try:
+        moment = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=now.tzinfo)
+    return moment.astimezone(now.tzinfo)
 
 
 @dataclass(frozen=True)
@@ -280,8 +312,8 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
         reasons.append(fmt_minutes(minutes))
         if limit is not None and minutes > limit:
             why = f"takes {fmt_minutes(minutes)}, there are {fmt_minutes(max(limit, 0))}"
-            if now.plan and by_plan:
-                why += f" before {now.plan}"
+            if by_plan and now.cut_short():
+                why += f" {now.cut_short()}"
             out.append(why)
     elif limit is not None:
         maybe.append("how long it takes is not known")
