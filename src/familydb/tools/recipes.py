@@ -203,7 +203,12 @@ def _today(ctx: ToolContext, now: datetime) -> list[SimpleNamespace]:
         log.warning("the calendar could not be read for tonight's recipes; plans kept here used")
         events = saved.list_events(start, end)
     return [
-        SimpleNamespace(start=event.start.isoformat(), all_day=event.all_day, title=event.title)
+        SimpleNamespace(
+            start=event.start.isoformat(),
+            end=event.end.isoformat() if event.end else None,
+            all_day=event.all_day,
+            title=event.title,
+        )
         for event in events
         if event.busy and event.status != "cancelled"
     ]
@@ -232,6 +237,7 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
         _today(ctx, now),
         rest=meals.rest_days(ctx.conn, now.date()),
         unnamed=presents.plan_titles(ctx.conn, today, today, kept),
+        not_again=meals.not_again(ctx.conn),
     )
     occasion = args.occasion
     asked = meals.Asked(
@@ -267,8 +273,9 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
             {"id": one.idea.id, "title": one.idea.title, "why": one.reason} for one in out[:3]
         ]
         said["ruled_out_more"] = max(0, len(out) - 3)
-    if tonight.minutes_free is not None and not asked.most_minutes:
-        said["tonight"] = f"{tonight.minutes_free} min to cook before {tonight.plan}"
+    asked_more = asked.most_minutes is not None and asked.most_minutes < (tonight.minutes_free or 0)
+    if tonight.minutes_free is not None and tonight.limit_words and not asked_more:
+        said["tonight"] = f"{tonight.minutes_free} min to cook {tonight.limit_words}"
     if not ranked:
         said["note"] = "no recipes saved yet"
     return said

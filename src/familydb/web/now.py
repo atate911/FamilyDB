@@ -143,6 +143,7 @@ def dinner_pick(
         today_on,
         rest=meals.rest_days(conn, day),
         unnamed=presents.plan_titles(conn, day.isoformat(), day.isoformat(), kept),
+        not_again=meals.not_again(conn),
     )
     best = meals.pick(recipes, tonight)
     if best is None:

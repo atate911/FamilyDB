@@ -600,6 +600,7 @@ def _dinner(
         agenda.on(seen, today),
         rest=meals.rest_days(conn, today),
         unnamed=presents.plan_titles(conn, today.isoformat(), today.isoformat(), kept),
+        not_again=meals.not_again(conn),
     )
     ranked = meals.rank_for_meal(recipes, tonight)
     offered = [one for one in ranked if one.verdict != "out"][:MAX_DINNER]
@@ -613,8 +614,8 @@ def _dinner(
         + (f": {one.reason}" if one.reason else "")
         for one in offered
     ]
-    if tonight.minutes_free is not None and tonight.plan:
-        lines.append(f"About {tonight.minutes_free} min to cook before {tonight.plan}.")
+    if tonight.minutes_free is not None and tonight.limit_words:
+        lines.append(f"About {tonight.minutes_free} min to cook {tonight.limit_words}.")
     return _under(voice.say(app.settings, "cmd_dinner", seed=seed), lines)
 
 

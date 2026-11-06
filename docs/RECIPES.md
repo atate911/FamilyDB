@@ -146,8 +146,14 @@ recipes (
   ("35 min, had it 3 weeks ago, 8/10, serves 4") and the count left out. A guessed occasion
   matches an asked one as a maybe, said so ("looks quick, 25 min; say if not"). Ranking is
   `familydb/meals.py` (domain, imports store only): facts first (minutes over the limit, an
-  occasion asked for and missing, nobody it is for among those eating), then taste (made within
-  its rest days lowers it; rating and times made raise it; an idea never made is "new to us").
+  occasion asked for and missing, nobody it is for among those eating, the family's last word on
+  it "not again", as the outings' engine holds it; asked for by name it is still found, as a maybe
+  with that said), then taste (made within its rest days lowers it; rating and times made raise
+  it; an idea never made is "new to us"). The limit is the tighter of `most_minutes` and what
+  tonight's plans leave (`meals.situation`): cooking starts at 5:30 pm or now, waits out a plan
+  begun today that is going on then (and one straight after it), and ends at the first plan
+  after, or at 9 pm when it waited one out; the reason says which ("before the recital", "after
+  soccer").
   `describe_idea` on a recipe returns its full row, steps included, for "read me the fajitas".
 - `shopping_list` gains one action, `from_recipes`, with `idea_ids`: "put the fajitas on the
   list", "make a grocery list for the fajitas and the soup", "the shopping for this week's
