@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
+from fractions import Fraction
 from typing import Any
 
 from familydb.store import lists
@@ -254,6 +255,10 @@ def parse(line: str) -> Ingredient:
     return Ingredient(text=line.strip(), item=item, amount=amount)
 
 
+# Plurals of an f: leaves are a leaf, but cloves a clove and olives an olive.
+F_PLURALS = {"leaves": "leaf", "loaves": "loaf", "halves": "half", "calves": "calf"}
+
+
 def key(item: str) -> str:
     """One form for an item however many there are: onions and onion, tomatoes and tomato."""
     words = lists.fold(item).split()
@@ -262,8 +267,8 @@ def key(item: str) -> str:
     last = words[-1]
     if last.endswith("oes") and len(last) > 4:
         last = last[:-2]
-    elif last.endswith("ves") and len(last) > 4:
-        last = last[:-3] + "f"
+    elif last in F_PLURALS:
+        last = F_PLURALS[last]
     elif last.endswith("ies") and len(last) > 4:
         last = last[:-3] + "y"
     elif last.endswith("s") and not last.endswith("ss") and len(last) > 3:
@@ -581,6 +586,38 @@ PANTRY_WORDS = frozenset(
     }
 )
 FRESH = re.compile(r"^(?:fresh|whole|a bunch of)\b")
+# A spice that comes ground, by the word it ends with (one form, `key`): "ground ginger" is the
+# shelf's; "ground almonds" are not on this list, and are bought.
+GROUND_SPICES = frozenset(
+    {
+        "allspice",
+        "anise",
+        "caraway",
+        "cardamom",
+        "cayenne",
+        "chile",
+        "chili",
+        "chilli",
+        "chipotle",
+        "cinnamon",
+        "clove",
+        "coriander",
+        "cumin",
+        "fennel",
+        "fenugreek",
+        "ginger",
+        "juniper",
+        "mace",
+        "mustard",
+        "nutmeg",
+        "paprika",
+        "pepper",
+        "peppercorn",
+        "spice",
+        "sumac",
+        "turmeric",
+    }
+)
 
 
 def family_pantry(conn: sqlite3.Connection) -> frozenset[str]:
@@ -612,10 +649,16 @@ def pantry(item: str, amount: str | None = None, *, have: frozenset[str] = froze
         return True
     if len(words) < 2:
         return False
-    # A dried herb, a ground spice: the word before says so; ground beef is the meat case.
+    # A dried herb, a ground spice: the word before says so. Ground beef is the meat case, and
+    # ground almonds or flaxseed are bought by the cup: only a spice ground is the shelf's.
     if words[0] == "dried":
         return words[-1] in HERBS
-    return words[0] == "ground" and SECTION_WORDS.get(words[-1]) in ("Produce", "Dry goods & cans")
+    if words[0] != "ground":
+        return False
+    rest = words[1:]
+    if len(rest) > 1 and rest[-1] == "seed":  # ground fennel seed
+        rest = rest[:-1]
+    return rest[-1] in GROUND_SPICES or rest[-1] in HERBS
 
 
 # What could stand in for an uncommon thing, by the item (one form, `key`): each a short phrase
@@ -764,25 +807,86 @@ class Shopping:
         return [one for _, found in self.sections for one in found]
 
 
+# -- How much in all: one recipe's two "1 cup onion" lines are 2 cups -----------------------------
+QUANTITY = re.compile(rf"^(?P<n>{NUMBER})(?:\s+(?P<unit>.+))?$")
+# Units written short, which take no s however many there are.
+SHORT_UNITS = frozenset(
+    {"tsp", "tbsp", "tbs", "tb", "oz", "lb", "g", "kg", "mg", "ml", "l", "dl", "cl", "qt", "pt"}
+)
+
+
+def _quantity(amount: str) -> tuple[Fraction, str] | None:
+    """An amount read as a number and what it counts ("1 1/2 cups": 3/2, "cups"); None for one
+    that is a range, a word or anything else not added up by rule."""
+    found = QUANTITY.match(_plain(amount))
+    if found is None:
+        return None
+    unit = found.group("unit") or ""
+    if re.match(r"^(?:-|\u2013|to\b|or\b|x\b|/)", unit):
+        return None
+    total = Fraction(0)
+    for part in found.group("n").split():
+        total += Fraction(part)
+    return total, unit
+
+
+def _unit_key(unit: str) -> str:
+    words = unit.casefold().rstrip(".").split()
+    if words and words[-1] not in SHORT_UNITS:
+        words[-1] = key(words[-1])
+    return " ".join(words)
+
+
+def _number_text(total: Fraction, decimal: bool) -> str:
+    if decimal:
+        return f"{float(total):g}"
+    whole, part = divmod(total.numerator, total.denominator)
+    if not part:
+        return str(whole)
+    fraction = f"{part}/{total.denominator}"
+    return f"{whole} {fraction}" if whole else fraction
+
+
+def added_up(amounts: list[str | None]) -> str | None:
+    """How much in all, from each line's amount: the same unit added ("1 cup" and "1 cup" are
+    "2 cups"), anything else said one after another ("1 cup + 2 tbsp"), so no line's share is
+    lost. None when no line said."""
+    said = [amount for amount in amounts if amount]
+    if len(said) <= 1:
+        return said[0] if said else None
+    read = [_quantity(amount) for amount in said]
+    units = {_unit_key(one[1]) for one in read if one is not None}
+    if any(one is None for one in read) or len(units) != 1:
+        return " + ".join(said)
+    total = sum((one[0] for one in read if one is not None), Fraction(0))
+    decimal = any("." in amount for amount in said)
+    forms = [one[1] for one in read if one is not None]
+    # Said as one of them said it: a plural one for more than one, when one was.
+    plural = [form for form in forms if form.casefold() != _unit_key(form)]
+    unit = plural[0] if total > 1 and plural else forms[0]
+    last = unit.split()[-1] if unit else ""
+    if total > 1 and not plural and f"{last}s".casefold() in UNITS:
+        unit = f"{unit}s"
+    return f"{_number_text(total, decimal)} {unit}".strip()
+
+
 def shopping(
     recipe: Recipe, on_list: dict[str, Any], *, have: frozenset[str] = frozenset()
 ) -> Shopping:
     """The recipe's things by section, each laid over the family's list (`on_list`: by `key`,
-    the list's items), the pantry's apart. A thing asked for twice is one line with both
-    amounts ("2 + 2" limes, for the marinade and for serving), where its first line placed it."""
+    the list's items), the pantry's apart. A thing two lines ask for is one, with both lines'
+    amounts added up (`added_up`)."""
     found: dict[str, list[Buy]] = {section: [] for section in SECTIONS}
     kept = Shopping()
-    seen: dict[str, tuple[list[Buy], int]] = {}  # key -> the list it is in, and where
+    seen: dict[str, Buy] = {}
     for ingredient in recipe.ingredients:
         item = ingredient.item or parse(ingredient.text).item
         if not item:
             continue
-        if key(item) in seen:
-            where, at = seen[key(item)]
-            first = where[at]
-            if ingredient.amount:
-                more = f"{first.amount} + {ingredient.amount}" if first.amount else None
-                where[at] = replace(first, amount=more or ingredient.amount)
+        before = seen.get(key(item))
+        if before is not None:
+            before.amount = added_up([before.amount, ingredient.amount])
+            before.text = f"{before.text}; {ingredient.text}"
             continue
         one = Buy(
             item=item,
@@ -791,13 +895,11 @@ def shopping(
             alternatives=alternatives(item),
             on_list=on_list.get(key(item)),
         )
-        where = (
-            kept.pantry
-            if pantry(item, ingredient.amount, have=have)
-            else found[section_of(item, ingredient.amount)]
-        )
-        seen[key(item)] = (where, len(where))
-        where.append(one)
+        seen[key(item)] = one
+        if pantry(item, ingredient.amount, have=have):
+            kept.pantry.append(one)
+        else:
+            found[section_of(item, ingredient.amount)].append(one)
     kept.sections = [(section, found[section]) for section in SECTIONS if found[section]]
     return kept
 
@@ -834,10 +936,10 @@ def wanted(
 ) -> tuple[list[Wanted], list[str]]:
     """What the recipes need, one line an item however many ask for it, in the order first asked,
     and what the pantry has left out (`have` is the family's own pantry, `family_pantry`). Each
-    recipe's amounts are kept apart, and one that asks twice (an onion for the sauce and one for
-    the salsa) says both: "1 + 1 (Tacos)"."""
+    recipe's share is said once, its lines added up ("2 cups (Pie)" for two cups in two lines),
+    so asking for the same recipes again says the same."""
     by_key: dict[str, Wanted] = {}
-    asks: dict[str, dict[int, tuple[str, list[str]]]] = {}  # item -> recipe -> name, amounts
+    shares: dict[str, dict[str, list[str | None]]] = {}  # item, then recipe: each line's amount
     staples: list[str] = []
     for idea, recipe in chosen:
         name = short_name(idea)
@@ -850,14 +952,13 @@ def wanted(
                     staples.append(item)
                 continue
             by_key.setdefault(key(item), Wanted(item))
-            _, amounts = asks.setdefault(key(item), {}).setdefault(idea.id, (name, []))
-            if ingredient.amount:
-                amounts.append(ingredient.amount)
-    for item_key, one in by_key.items():
-        one.amounts = [
-            f"{' + '.join(amounts)} ({name})" if amounts else f"({name})"
-            for name, amounts in asks[item_key].values()
-        ]
+            shares.setdefault(key(item), {}).setdefault(name, []).append(ingredient.amount)
+    for folded, one in by_key.items():
+        for name, amounts in shares[folded].items():
+            total = added_up(amounts)
+            said = f"{total} ({name})" if total else f"({name})"
+            if said not in one.amounts:
+                one.amounts.append(said)
     return list(by_key.values()), staples
 
 
