@@ -8,7 +8,7 @@ A plan has a title, a start, an optional end, an all-day mark, a place and notes
 
 With a calendar connected, a plan has a Google event. With none, it is a *saved plan*, kept by FamilyDB alone until a calendar is connected.
 
-Making a plan for an idea sets the idea to planned. Canceling the plan, or deleting its event in Google, puts a planned idea back to idea ([Ideas and places](/wiki/model/ideas-and-places)).
+Making a plan for an idea sets the idea to planned. Canceling the plan, or deleting its event in Google, puts a planned idea back to idea, unless another of its plans is still to come ([Ideas and places](/wiki/model/ideas-and-places)).
 
 ## The calendar is the second copy
 
@@ -25,7 +25,7 @@ The sync asks Google one question for every plan: what changed since last time? 
 | Google did | The plan |
 |---|---|
 | Moved or edited the event | Takes the event's title, time, place, notes and tentative mark |
-| Deleted it | Is canceled, and a planned idea goes back to idea |
+| Deleted it | Is canceled, and a planned idea goes back to idea unless another of its plans is still to come |
 | Nothing | Is left alone |
 
 Only live plans with an event on the connected calendar are synced: not canceled ones, not ones already followed up, not plans on another calendar. An event added by hand in Google has no plan. It shows on the page, and the assistant can change or delete it by its event id.
@@ -34,7 +34,7 @@ Only live plans with an event on the connected calendar are synced: not canceled
 
 - **Create.** FamilyDB refuses a time in the past. With no end, a timed plan lasts 2 hours. A date alone makes an all-day plan. Google gets the plan as an event, and the idea becomes planned.
 - **Move.** FamilyDB checks the plan against its own event first. It refuses a new start in the past. A new start keeps the length unless an end is given or all-day is switched. Google is changed, then the plan. A canceled plan cannot be moved, and neither can one on a different calendar.
-- **Cancel.** The event is deleted from Google (one already gone counts as done), the plan is marked canceled, and a planned idea goes back to idea.
+- **Cancel.** The event is deleted from Google (one already gone counts as done), the plan is marked canceled, and a planned idea goes back to idea unless another of its plans is still to come.
 
 A retry does not make a second event. Before FamilyDB asks Google, it writes the event's id down, keyed by the request (the message or form it came from, plus title, time and idea). A retry after a crash, a lost answer or a resent form uses the same id and finds the event if Google made it. Without a calendar, asking twice for the same plan finds the one already saved.
 
