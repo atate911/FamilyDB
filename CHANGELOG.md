@@ -37,6 +37,12 @@
   so when a model that reasons used a tool and was asked again, its earlier reasoning went back
   without the encrypted copy that lets it be read; the second call lost it, or was refused. Each
   request now asks for that copy and hands it back with the tool's result.
+- **Whose it is, and what it rests on.** On your plate is yours and everyone's; somebody else's to-dos
+  are under their own name on the week ("On Alex's plate") and a line on Now. Now leads with setup
+  only while something it needs is left; Telegram and Google Calendar wait in a quiet line at the
+  foot. Without a calendar connected, the week says so above the days rather than after them. A
+  recipe is one you would make again, and the choice says what not again does. Hours from details
+  gone stale are said as last checked.
 - **Records that keep to what happened.** An outing can no longer be recorded against a plan for
   something else, and the same visit named by its place and then by its plan is counted once.
   Giving an idea a new location lets go of the old branch's hours and drive and looks the new one
