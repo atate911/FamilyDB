@@ -261,3 +261,99 @@ def test_two_recipes_whose_names_begin_alike_stay_apart():
     alike = [idea(3, "Chicken tikka masala"), idea(4, "Chicken tikka masala skewers")]
     needed, _ = groceries.wanted([(one, soup) for one in alike])
     assert needed[0].note() == "2 cups (Chicken tikka masala), 2 cups (Chicken tikka masala…)"
+
+
+@pytest.mark.parametrize(
+    ("one", "other", "same"),
+    [
+        ("flour tortillas", "tortillas", True),
+        ("Tortillas", "corn tortillas", True),
+        ("boneless skinless chicken thighs", "chicken thighs", True),
+        ("red bell peppers", "bell pepper", True),
+        ("large eggs", "eggs", True),
+        ("yellow onion", "onions", True),
+        # Words that make it another thing keep it a line of its own.
+        ("flour tortillas", "corn tortillas", False),
+        ("sour cream", "cream", False),
+        ("peanut butter", "butter", False),
+        ("green onions", "onion", False),
+        ("sweet potatoes", "potatoes", False),
+        ("coconut milk", "milk", False),
+        ("corn syrup", "syrup", False),
+        ("red bell peppers", "peppers", False),  # a pepper may be the pepper mill's
+    ],
+)
+def test_a_kind_of_a_thing_is_that_thing_and_another_thing_is_not(one, other, same):
+    assert groceries.same_thing(one, other) is same
+    assert groceries.same_thing(other, one) is same
+
+
+def test_tortillas_on_the_list_are_what_flour_tortillas_want(settings, clock, conn, family):
+    """The Fajitas' "8 small flour tortillas" went on as a second line under the tortillas
+    already there; now they go on that line, and its note says which kind."""
+    from familydb.store import ideas, lists
+    from familydb.store.recipes import Ingredient
+
+    with db.transaction(conn):
+        fajitas = ideas.insert(conn, title="Fajitas", kind="recipe", now=NOW_ISO)
+        tacos = ideas.insert(conn, title="Fish tacos", kind="recipe", now=NOW_ISO)
+        ref = lists.list_id(conn, "shopping", NOW_ISO)
+        lists.add(conn, ref, "tortillas", by=None, now=NOW_ISO)
+        lists.add(conn, ref, "cream", by=None, now=NOW_ISO)
+
+    def recipe(idea, *lines: str) -> tuple:
+        read = [groceries.parse(line) for line in lines]
+        return idea, Recipe(
+            idea_id=idea.id, ingredients=[Ingredient(**one.model_dump()) for one in read]
+        )
+
+    chosen = [
+        recipe(fajitas, "8 small flour tortillas", "1 cup sour cream"),
+        recipe(tacos, "12 corn tortillas", "4 tortillas"),
+    ]
+    with db.transaction(conn):
+        shopped = groceries.put_on(conn, ref, chosen, by=None, now=NOW_ISO)
+    assert shopped.there == ["tortillas"] and shopped.added == ["sour cream"]
+    held = {item.text: item.note for item in lists.items(conn, ref)}
+    assert sorted(held) == ["cream", "sour cream", "tortillas"]
+    assert held["tortillas"] == (
+        "8 small flour tortillas (Fajitas), 4 (Fish tacos), 12 corn tortillas (Fish tacos)"
+    )
+    # Asked again, nothing more is added and the note is not said twice.
+    with db.transaction(conn):
+        again = groceries.put_on(conn, ref, chosen, by=None, now=NOW_ISO)
+    after = {item.text: item.note for item in lists.items(conn, ref)}
+    assert again.added == [] and again.there == ["tortillas", "sour cream"] and after == held
+    # The recipe's Shopping page sees them on the list too.
+    on_list = {groceries.key(item.text): item for item in lists.items(conn, ref)}
+    shop = groceries.shopping(chosen[0][1], on_list)
+    assert [(one.item, one.on_list is not None) for one in shop.to_buy] == [
+        ("flour tortillas", True),
+        ("sour cream", True),
+    ]
+
+
+def test_flour_tortillas_on_the_list_cover_a_recipe_that_wants_tortillas(
+    settings, clock, conn, family
+):
+    from familydb.store import ideas, lists
+    from familydb.store.recipes import Ingredient
+
+    with db.transaction(conn):
+        tacos = ideas.insert(conn, title="Tacos", kind="recipe", now=NOW_ISO)
+        ref = lists.list_id(conn, "shopping", NOW_ISO)
+        lists.add(conn, ref, "flour tortillas", by=None, now=NOW_ISO)
+    chosen = [
+        (
+            tacos,
+            Recipe(
+                idea_id=tacos.id,
+                ingredients=[Ingredient(text="8 tortillas", item="tortillas", amount="8")],
+            ),
+        )
+    ]
+    with db.transaction(conn):
+        shopped = groceries.put_on(conn, ref, chosen, by=None, now=NOW_ISO)
+    assert shopped.there == ["flour tortillas"] and shopped.added == []
+    (only,) = lists.items(conn, ref)
+    assert only.note == "8 (Tacos)"
