@@ -59,6 +59,11 @@
   {% else %}
     {{ dest_head(week_name, summary) }}
     {{ chip_row(chips + [{'label': 'Month', 'href': url_for('web.plans_month'), 'on': false}, {'label': 'Past', 'href': url_for('go.did'), 'on': false}]) }}
+    {# Where the free time comes from, above the days it qualifies, when it is not the family's calendar: "free"
+       then means no plan kept here, not a day checked. #}
+    {% if grownup and source != 'google' %}
+      <p class="note" id="wk-source">{{ icon('cal') }}{{ source_note }}{% if managing %} <a href="{{ url_for('settings.section', name='connections') }}">Connect Google Calendar</a>{% endif %}</p>
+    {% endif %}
 
     {# On your plate stays whatever week is showing: nothing without a day can be lost by scrolling. #}
     {% if plate %}
@@ -69,13 +74,22 @@
         </ul>
       </section>
     {% endif %}
+    {# Everybody else's, each under their own name: seen, never said to be yours. #}
+    {% for group in others %}
+      <section class="sec" aria-labelledby="h-plate-{{ loop.index }}">
+        <div class="sec__label"><h2 id="h-plate-{{ loop.index }}" class="label">{{ group.label }}</h2>{% if not plate and loop.first %}<a href="{{ url_for('web.tasks') }}">All to-dos</a>{% endif %}</div>
+        <ul class="todos todos--compact">
+          {% for r in group.rows %}{{ todo(r, 'week', compact=true, edit=visitor().may('change'), everyone=shell.family) }}{% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
 
     <div class="wk">
       {% for day in days %}{{ day_block(day) }}{% endfor %}
     </div>
     <p class="wk__nav"><a href="{{ earlier }}">{{ icon('chevl', size='sm') }}Earlier</a>{% if this_week %}<a href="{{ this_week }}">This week</a>{% endif %}<a href="{{ later }}">Later{{ icon('chev', size='sm') }}</a></p>
     {% if grownup %}
-      <p class="sec__note">{{ source_note }}{% if source != 'google' and managing %} <a href="{{ url_for('settings.section', name='connections') }}">Connect Google Calendar</a>{% endif %}</p>
+      {% if source == 'google' %}<p class="sec__note">{{ source_note }}</p>{% endif %}
       {% if visitor().may('change') %}{{ by_hand('Put something on the calendar by hand', url_for('web.plans', _anchor='add')) }}{% endif %}
     {% endif %}
   {% endif %}

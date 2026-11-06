@@ -831,3 +831,61 @@ def test_a_shelf_keeps_the_newest_few(conn, family) -> None:
         family_rules.pin(conn, family["sam"], one.id, chat_id="web", now=at)
     kept = pins.for_member(conn, family["sam"].id, limit=20)
     assert [one.text for one in kept] == [f"#{n}" for n in range(family_rules.PINS_MOST, 0, -1)]
+
+
+# -- whose it is, and what leads (the usability review of 5 November 2026)
+
+
+def _section(page: str, heading_id: str) -> str:
+    found = re.search(
+        rf'<section class="sec" aria-labelledby="{heading_id}">.*?</section>', page, re.S
+    )
+    assert found is not None, heading_id
+    return found.group(0)
+
+
+def test_your_plate_is_yours_and_anyones_and_somebody_elses_is_said_by_name(
+    app, conn, family
+) -> None:
+    """A heading never calls somebody else's to-do yours: Sam's and everyone's are on Sam's
+    plate; Alex's is said by name, on Now as a line and on the week as Alex's plate."""
+    _task(conn, family, "Book the dentist", due="2026-09-18T17:00:00Z", owner="sam")
+    _task(conn, family, "Book flu shots", due="2026-09-18T17:00:00Z", owner="alex")
+    anyones = _task(conn, family, "Sign the field trip form", due="2026-09-19T17:00:00Z")
+    with db.transaction(conn):
+        tasks.update(conn, anyones, {"owner_id": None})
+    sam = _in_as(app, "Sam", "sam likes long sentences")
+    home = sam.get("/").text
+    plate = _section(home, "h-todo")
+    assert "Book the dentist" in plate and "Sign the field trip form" in plate
+    assert "Book flu shots" not in home
+    assert "Alex has 1 late" in plate and 'href="/week#h-plate-1"' in plate
+    week = sam.get("/week").text
+    mine = _section(week, "h-plate")
+    assert "Book the dentist" in mine and "Sign the field trip form" in mine
+    assert "Book flu shots" not in mine
+    theirs = _section(week, "h-plate-1")
+    assert "On Alex\u2019s plate" in theirs and "Book flu shots" in theirs
+    assert "2 on your plate, 2 late" in week
+    # Under the shared password nobody is "you": it is all one plate, as before.
+    rows = [{"owner_id": family["alex"].id, "person": {"name": "Alex"}, "everyone": False}]
+    assert views.plate_split(rows, None) == (rows, [])
+
+
+def test_now_leads_with_the_setup_it_needs_and_leaves_the_optional_for_the_foot(
+    app, conn, family
+) -> None:
+    home = _in_as(app, "Sam", "sam likes long sentences").get("/").text
+    card = re.search(r'<section class="sec sec--setup".*?</section>', home, re.S).group(0)
+    assert 'href="/setup/home"' in card  # recommended: where home is
+    assert 'href="/setup/calendar"' not in card and 'href="/setup/telegram"' not in card
+    later = re.search(r'<p class="sec__note" id="setup-later">.*?</p>', home, re.S).group(0)
+    assert 'href="/setup/calendar"' in later and "Google Calendar" in later
+    assert home.index('class="sec sec--setup"') < home.index('id="setup-later"')
+    # With only the optional left, nothing about setup leads the page.
+    placed = app.settings.model_copy(
+        update={"home_area": "Vancouver", "home_lat": 49.28, "home_lon": -123.12}
+    )
+    app.settings = placed
+    home = _in_as(app, "Sam", "sam likes long sentences").get("/").text
+    assert "Finish setting up" not in home and 'id="setup-later"' in home

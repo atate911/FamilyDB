@@ -96,6 +96,8 @@ Now is the first screen. It is not a menu and not a dashboard: it is the box, th
 
 **The picks** are the What about set described in section 4: one of each kind for this moment, each with a reason, made ahead and refreshed on open when stale (more than a few hours old and the budget allows). "Different ones" is a call made on purpose. Tapping a pick opens the thing with Plan it ready; swiping it away is "not now".
 
+**Setup** leads only while a step it needs or should have is left (an admin's only); the optional ones (Telegram, Google Calendar) wait in a quiet line at the foot, so a family that never connects a calendar is not asked to on every visit.
+
 **Her questions** are the only interruption: a kid's pitch, a plan to set, how an outing went. Each with its origin and its buttons. The same ones reach Telegram. How an outing went is asked, never owed: one at a time, after what only a parent can answer, nothing counts it, and the family can turn the asking off (`follow_ups`), leaving the plan's own page to take it.
 
 **Today's line** is the coordination that fits in one line. The week is one tap away in the row.
@@ -153,11 +155,11 @@ The picks on Now, as a destination of their own for a big screen, a deep link, o
 ### This week (`/week`)
 
 - **Opens on:** today, the week around it, free time drawn as space, the forecast on each day, reminders as small marks on their day.
-- **On your plate:** a strip that stays on screen whatever week is showing. Everything with no date yet ("some Saturday morning", "when it rains", "next free moment") and anything overdue, each with its owner or "I'll handle it". Nothing dateless can be lost by scrolling.
+- **On your plate:** a strip that stays on screen whatever week is showing. Everything with no date yet ("some Saturday morning", "when it rains", "next free moment") and anything overdue, each with its owner or "I'll handle it": yours, then everyone's; somebody else's under their name ("On Alex's plate"), so a heading never calls theirs yours. Nothing dateless can be lost by scrolling.
 - **Pencil:** a plan taking shape appears in pencil on the day being considered, once a day is being considered. At most one of Vera's own suggestions sits on a free stretch, and only on weekends; tapping a free stretch asks for more.
 - **Chips:** Each person · Month · Past.
 - **A day** (`/week/<date>`): everything on it, the free stretches, and after the day, how it went.
-- **Empty:** without a calendar connected, the plans made here; a line says so and offers the connection to an admin.
+- **Empty:** without a calendar connected, the plans made here; a line above the days says so (free time then means nothing saved here, not a day checked) and offers the connection to an admin.
 - **Kid:** her days and the family's, in words ("after school"), no pencil, no plate.
 
 ### The kids (`/kids`)

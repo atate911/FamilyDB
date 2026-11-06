@@ -118,8 +118,9 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
         if who:
             rows = [row for row in rows if views.names_in(row.people, _named(people, who))]
         due = _due(conn, visitor, first, last, tz, today, slots, grown_up)
-        plate = (
-            _plate(conn, visitor, today, tz, slots) if grown_up and first <= today <= last else []
+        plate, others = views.plate_split(
+            _plate(conn, visitor, today, tz, slots) if grown_up and first <= today <= last else [],
+            visitor.member,
         )
         pencil = _pencil(conn, kept, first, last, today) if grown_up else None
         went = _went(conn, first, last, slots) if last < today or first == last else []
@@ -170,6 +171,7 @@ def _days(app: App, first: date, last: date) -> dict[str, Any]:
     return {
         "days": days,
         "plate": plate,
+        "others": others,
         "summary": views.week_summary(days, plate, grown_up),
         "chips": people_chips,
         "source": seen.source,
