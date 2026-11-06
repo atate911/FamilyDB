@@ -1281,10 +1281,6 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 
   .form__row { grid-template-columns: minmax(0, 1fr); }
   /* the radar folds behind "Show the map", after the cards and before Quick idea */
-  .page-ideas .wrap { display: flex; flex-direction: column; }
-  .page-ideas .mapband { order: 5; margin-top: var(--s5); }
-  .page-ideas .jot { order: 6; }
-  .page-ideas .note { order: 7; }
   .mapband > h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
   .mapband__fold { border: 1.5px solid var(--line-2); border-radius: var(--r-md); background: var(--card); }
   .mapband__fold > summary { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s2); min-height: var(--target); padding: 10px var(--s4); cursor: pointer; font-weight: 700; font-size: var(--t-meta); }
