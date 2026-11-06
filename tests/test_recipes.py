@@ -233,6 +233,33 @@ def test_a_plan_tonight_leaves_less_time_to_cook(settings, clock, conn, family):
     assert "Recital" in found["ruled_out"][0]["why"]
 
 
+def test_asking_for_more_time_than_tonight_has_does_not_move_the_plan(
+    settings, clock, conn, family
+):
+    """'Under an hour' with a recital in an hour's time: the recital is what binds."""
+    us = _as(conn, settings, clock, family["sam"])
+    _recipe(us, "Chili", total_minutes=45)
+    _recipe(us, "Omelettes", total_minutes=15)
+    with db.transaction(conn):
+        plans.insert(
+            conn,
+            title="Recital",
+            start="2026-09-20T18:00:00-07:00",
+            end="2026-09-20T20:00:00-07:00",
+            all_day=False,
+            now=NOW_ISO,
+        )
+    _, found = _call(us, "find_recipes", most_minutes=60)
+    assert [one["title"] for one in found["recipes"]] == ["Omelettes"]
+    assert found["ruled_out"][0]["title"] == "Chili"
+    assert found["ruled_out"][0]["why"] == "takes 45 min, there are 30 min before Recital"
+    assert found["tonight"] == "30 min to cook before Recital"
+    # Asked for less than the evening has, what was asked binds, and the plan is not the reason.
+    _, quick = _call(us, "find_recipes", most_minutes=20)
+    assert quick["ruled_out"][0]["why"] == "takes 45 min, there are 20 min"
+    assert "tonight" not in quick
+
+
 def test_made_lately_rests_and_a_favourite_does_not(settings, clock, conn, family):
     us = _as(conn, settings, clock, family["sam"])
     tacos = _recipe(us, "Tacos", total_minutes=30)

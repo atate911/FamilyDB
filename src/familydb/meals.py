@@ -259,20 +259,28 @@ def _when_words(days: int) -> str:
     return f"{days // 30} months ago"
 
 
+def time_limit(now: Situation, asked: Asked) -> tuple[int | None, bool]:
+    """The most minutes cooking may take, and whether tonight's plan is what sets it: the tighter
+    of what was asked and the time before the plan, since saying "under an hour" does not move
+    soccer. Prep ahead is for another day, so tonight's plan does not bind it."""
+    tonight = now.minutes_free if asked.occasion != "prep_ahead" else None
+    if tonight is not None and (asked.most_minutes is None or tonight < asked.most_minutes):
+        return tonight, True
+    return asked.most_minutes, False
+
+
 def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
     """One recipe for the meal asked about."""
     reasons: list[str] = []
     out: list[str] = []
     maybe: list[str] = []
     minutes = recipe.minutes
-    limit = asked.most_minutes
-    if limit is None and now.minutes_free is not None and asked.occasion != "prep_ahead":
-        limit = now.minutes_free
+    limit, by_plan = time_limit(now, asked)
     if minutes is not None:
         reasons.append(fmt_minutes(minutes))
         if limit is not None and minutes > limit:
             why = f"takes {fmt_minutes(minutes)}, there are {fmt_minutes(max(limit, 0))}"
-            if now.plan and asked.most_minutes is None:
+            if now.plan and by_plan:
                 why += f" before {now.plan}"
             out.append(why)
     elif limit is not None:

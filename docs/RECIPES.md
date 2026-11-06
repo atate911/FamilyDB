@@ -145,7 +145,9 @@ recipes (
   ingredient), `for` (who is eating), `limit`. Returns the ranked few with each one's reason
   ("35 min, had it 3 weeks ago, 8/10, serves 4") and the count left out. A guessed occasion
   matches an asked one as a maybe, said so ("looks quick, 25 min; say if not"). Ranking is
-  `familydb/meals.py` (domain, imports store only): facts first (minutes over the limit, an
+  `familydb/meals.py` (domain, imports store only): facts first (minutes over the limit, which
+  is the tighter of `most_minutes` and the time before tonight's plan, `meals.time_limit`, so
+  asking for "under an hour" does not move the recital; an
   occasion asked for and missing, nobody it is for among those eating), then taste (made within
   its rest days lowers it; rating and times made raise it; an idea never made is "new to us").
   `describe_idea` on a recipe returns its full row, steps included, for "read me the fajitas".

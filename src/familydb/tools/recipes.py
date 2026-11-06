@@ -267,7 +267,7 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
             {"id": one.idea.id, "title": one.idea.title, "why": one.reason} for one in out[:3]
         ]
         said["ruled_out_more"] = max(0, len(out) - 3)
-    if tonight.minutes_free is not None and not asked.most_minutes:
+    if meals.time_limit(tonight, asked)[1]:
         said["tonight"] = f"{tonight.minutes_free} min to cook before {tonight.plan}"
     if not ranked:
         said["note"] = "no recipes saved yet"

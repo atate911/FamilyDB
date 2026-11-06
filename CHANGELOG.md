@@ -4,6 +4,9 @@
 
 ### New since v0.5.0
 
+- **"Under an hour" does not move the recital.** Asked for a recipe within a time when a plan
+  tonight leaves less, the plan's time was ignored and a 45-minute dish was offered with half an
+  hour to cook. The tighter of the two now decides, and the reason names the plan.
 - **OpenAI's models keep their thinking between steps.** Nothing of a reply is stored with OpenAI,
   so when a model that reasons used a tool and was asked again, its earlier reasoning went back
   without the encrypted copy that lets it be read; the second call lost it, or was refused. Each
