@@ -590,6 +590,6 @@ Page.
 
 Store, then tools, then prompt, then page, then jobs, then docs, each with its test as it goes:
 every step leaves the suite green, so a review can read the commits in order. Separate commits
-per step as CLAUDE.md asks ("separate concerns in separate commits"), with the PR description's
-`Rules:` line naming what moved: the next migration number, `needs_lookup` for a kind with a
+per step as CLAUDE.md asks ("separate concerns in separate commits"), with the PR description
+saying plainly what moved: the next migration number, `needs_lookup` for a kind with a
 link, the idea list leaving a kind out of the prefix, a worker kind with a fetch and no search.

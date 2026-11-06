@@ -2,6 +2,8 @@
 
 First draft, October 2026. One vision for how the family meets Vera on the web page and in Telegram, drawn from five rounds of brainstorming and a clean slate. Nothing here is final. It is the shot, not the rulebook.
 
+**Open under [DESIGN_FREEDOM.md](DESIGN_FREEDOM.md).** This concept, like `INTERFACE.md` and `STYLE.md`, records ideas and reasons, not a specification; a redesign takes what serves the family.
+
 **Superseded in part.** The rounds after this draft replaced the four-place layout and the fixed-order Home with a launcher of destinations and Vera's answering contract. That skeleton is `INTERFACE.md`, and it wins where the two disagree. Sections 5 to 13 here (the glimpse, how she behaves, kids, Telegram, the first days, what is out, the family's decisions, cost) still hold.
 
 ## 1. What it is, in one breath

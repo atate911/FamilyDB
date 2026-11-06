@@ -1,30 +1,38 @@
 # How the page looks, and why
 
-This is FamilyDB's design: what the page looks like, the few ideas that make it work, and how to
-draw any page from them. It was worked out on the first screen, screen by screen, until it looked
-*designed*: professional, modern, calm, a little technical, and unmistakably one thing. **Now is
-the model.** Every other page is drawn the way Now is. Where a page and this document disagree,
-one of them is wrong: bring the page back into line, or, if the page has found something better,
-change this document, and the other pages with it, in the same change.
+> **This records the look as it is and why; it is a starting point, not a template.** Layout,
+> type, colour, the looks, the box's place and prominence, and what leads a page are all open to
+> redesign under `docs/DESIGN_FREEDOM.md`, which wins where this reads as fixing them. Only the
+> floors under "What does not move" are protected.
+
+This is FamilyDB's design as of October 2026: what the page looks like, the few ideas that make it
+work, and how today's pages are drawn from them. It was worked out on the first screen, Now, screen
+by screen, until it looked *designed*: professional, modern, calm, a little technical, and
+unmistakably one thing. Now is where it was worked out and the other pages follow it today; a
+redesign may start from another page, or from nothing. Where a page and this document disagree,
+either bring the page back into line or, if the page has found something better, change this
+document, in the same change, so it stays true to what is built.
 
 The family's pages (Now, the destinations, each thing's own page) are built on it, on the frame
 `docs/INTERFACE.md` lays out; the back office (Status, Settings, Family, the guide) wears the same
 parts in its older frame. The mockups the look was agreed on are `docs/concept-mockups/`.
 
-This document records the design and why, so the next person (an AI agent included) can extend it
-without asking. Anything here may change when a better page needs it: change it in the same
-change, with the reason. Only the floors under "What does not move" stay put, because they are
-about people being able to use the page, its safety, and what kids see, not about taste.
+This document records the design and why, so the next person (an AI agent included) can extend it,
+or replace it, without asking. Anything here may change when a better page needs it: change it in
+the same change, with the reason. Only the floors under "What does not move" stay put, because they
+are about people being able to use the page, its safety, and what kids see, not about taste.
 
 ## The idea
 
 **One thing leads. Everything else is quiet, and ready when it is wanted.**
 
-The page is a way to talk to Vera, so on Now the one thing is her box and its Send. Every other
-part (what waits, what is on, what she picked) is laid out around it in one quiet voice,
-smaller, lighter and flatter, so the eye goes to the box first and finds the rest when it looks.
+Today the page is drawn as a way to talk to Vera, so on Now the one thing is her box and its Send.
+Every other part (what waits, what is on, what she picked) is laid out around it in one quiet
+voice, smaller, lighter and flatter, so the eye goes to the box first and finds the rest when it
+looks. A redesign may choose another one thing (the next plan, the one decision waiting); the
+principle is that something leads, not that the box does.
 
-Two sentences say how it looks:
+Two sentences say how it looks today (both are choices, open like the rest):
 
 - **Color is the family's.** People are the color on the page: each person's own, on their
   marks. The looks give the page its paper or its dark glass.
@@ -226,7 +234,7 @@ each person chooses theirs on the Look page and it follows them to every device 
 and the `fdb_look` cookie before sign-in). `static/themes-fallback.css`, written by
 `familydb/web/fallback.py`, gives a browser without `light-dark()` plain values. A look is color
 only, plus at most five effects (`--fx-page`, `--fx-scan`, `--fx-glow`, `--fx-title`,
-`--fx-title-adjust`); it never changes the layout, the type, the sizes or the words. The design is
+`--fx-title-adjust`); today it never changes the layout, the type, the sizes or the words, which keeps each look cheap to add and to check (a choice, open like the rest). The design is
 drawn on Phosphor, where it is at its best, and must hold in every look: a page is checked in at
 least Phosphor, Kitchen Table and Ink before it ships.
 
@@ -462,9 +470,9 @@ These are floors: they hold for every page, in every look, by day and by night, 
   Status (a family decision, `docs/DESIGN.md` section 16).
 - **Presents stay hidden from whom they are for**: left out entirely for them, tagged "Hidden from
   Theo" for everyone else; lists are filtered before anything is counted.
-- **Looks are color only**, plus the five effects, and keep Vera's glass and phosphor and red for
-  late or broken.
-- **The accessibility above**, measured, in every look.
+- **The accessibility above**, measured, in every look; red for late or broken readable as such.
+- **Truthful status**: what the page says was done is what was done, and a fact it could not check
+  is not shown as checked (`docs/DESIGN_FREEDOM.md`).
 - Nothing from an idea, a place or a fetched page is marked safe in a template.
 - No page view is a model call (`test_browsing_asks_nothing_of_a_model`).
 

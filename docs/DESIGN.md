@@ -2,6 +2,8 @@
 
 Living design, kept in step with the code. The [README](../README.md) says what works today, section 15 what comes next, section 16 what is decided and what is open. The module map is in [CLAUDE.md](../CLAUDE.md#layout).
 
+**How the page looks and how a person moves through it is governed by [DESIGN_FREEDOM.md](DESIGN_FREEDOM.md):** the interface is open to redesign, and what stays protected is a short list of outcomes (privacy, permissions, what kids see, consent, security, accessibility, cost, nothing lost or done twice, truthful status, and the family's decisions in section 16, whose outcomes hold while their presentation is open).
+
 ## Governing cost and memory decision
 
 Token economy is a core product constraint (rules in CLAUDE.md). Human replies are terse; machine-facing content carries only necessary structured fields; local code replaces paid inference where possible; the whole operation is budgeted, tool loops and retries included. How each model call is decided, what it sees, what it may do and how its answer is used: [AI_CALLS.md](AI_CALLS.md). Automatic household memory: [MEMORY.md](MEMORY.md), the governing memory design. Compact changes ride on already-required requests (one `remember` tool, whose reply can end the turn), with local storage and local choice of what each message needs; a separate AI memory pass per message is out of scope. A daily spending limit is checked before every model call (section 14).
@@ -323,6 +325,7 @@ A decided row is the call as made and why, so whoever comes to it later can tell
 | Decision | Kind | Status | Why |
 |---|---|---|---|
 | Chat channel | Family | **Decided: Telegram** | Easiest bot API, long polling, groups, voice notes, free. WhatsApp needs Meta's Business API and a public webhook; iMessage a Mac bridge; Signal signal-cli. Discord is a close second if the family already uses it. |
+| How the interface may change | Default | **Decided 2026-11-05 by the owner: open, under `DESIGN_FREEDOM.md`** | The family finds the app complicated, and the documents describing today's page had come to read as rules against changing it ("the box first, always", "Now is the model", a font as required). Navigation, the box's place, Now, names, layout, look and flows are design choices made on their merits, by anyone, AI agents included, saying why; what holds is a short list of protected outcomes (privacy, permissions, what kids see, consent, security, accessibility, cost, nothing lost or done twice, truthful status, and the Family rows here). `INTERFACE.md`, `STYLE.md` and `CONCEPT.md` record what was built and why, not a specification. |
 | Language | Default | **Decided: Python** | Official SDK for each provider, python-telegram-bot, google-api-python-client, SQLite in the standard library. |
 | Database | Default | Open, recommend SQLite | One file on our machine, trivial backups, FTS5 built in (section 3). The page and bot write at once, which write-ahead logging and short transactions handle; Postgres is for many concurrent writers, which a family does not have. |
 | Calendar owner | Family | **Decided: any account; the bot is a service account** | Whoever owns the family calendar shares it with the service account, so the bot holds no one's sign-in and no one's mail is within reach. A dedicated family account is still a tidy owner. |
