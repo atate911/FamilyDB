@@ -54,7 +54,7 @@
           <input type="hidden" name="status" value="idea" /><input type="hidden" name="back" value="{{ request.path }}" />
           <button class="btn btn--primary btn--sm" type="submit">Again?</button>
         </form>
-        <p class="small muted">Puts {{ idea.title }} back among the things to do.</p>
+        <p class="small muted">Puts {{ idea.title }} back among the things to do, and {{ assistant }} can suggest it again, whatever was said of it before.</p>
       </div>
     {% endif %}
   {% endif %}

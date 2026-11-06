@@ -107,12 +107,22 @@ def average_rating(conn: sqlite3.Connection, idea_id: int) -> float | None:
 
 
 def latest_preferences(conn: sqlite3.Connection) -> dict[int, bool]:
-    """Each idea's latest explicit word on doing it again; feedback without one keeps it."""
+    """Each idea's latest explicit word on doing it again; feedback without one keeps it. A
+    "would not" given before the idea was put back (Again?, Bring it back: `ideas.reconsidered_at`)
+    is no word at all; one given after it stands again."""
     rows = conn.execute(
-        "SELECT idea_id, would_repeat FROM outcomes "
-        "WHERE idea_id IS NOT NULL AND would_repeat IS NOT NULL ORDER BY happened_on, id"
+        "SELECT o.idea_id, o.would_repeat, o.created_at, i.reconsidered_at FROM outcomes o "
+        "JOIN ideas i ON i.id = o.idea_id "
+        "WHERE o.would_repeat IS NOT NULL ORDER BY o.happened_on, o.id"
     )
-    return {row["idea_id"]: bool(row["would_repeat"]) for row in rows}
+    latest = {row["idea_id"]: row for row in rows}
+    return {
+        idea_id: bool(row["would_repeat"])
+        for idea_id, row in latest.items()
+        if row["would_repeat"]
+        or not row["reconsidered_at"]
+        or row["created_at"] >= row["reconsidered_at"]
+    }
 
 
 def do_not_repeat(conn: sqlite3.Connection) -> set[int]:
