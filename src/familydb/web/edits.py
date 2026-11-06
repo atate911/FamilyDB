@@ -382,7 +382,8 @@ def add_idea() -> Response:
             _say(complaint)
             return _back("web.idea", idea_id=result["id"])
     _say(SAVED_IDEA.format(id=result["id"], title=result["title"]) + _kept_note(result["id"]))
-    return _back("web.idea", idea_id=result["id"])
+    # Saved from a row of finds (Coming up, New ideas), back to the rows, so several can be.
+    return _back_here("web.idea", idea_id=result["id"])
 
 
 @bp.post("/ideas/several")
