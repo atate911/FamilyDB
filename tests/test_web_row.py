@@ -65,7 +65,7 @@ def test_every_page_has_the_one_menu_with_the_back_office_in_it(app) -> None:
         in sam.get("/eat").text.split('<aside class="side"')[1].split("</aside>")[0]
     )
     kid = _in_as(app, KID)
-    assert _menu(kid.get("/").text)[:5] == ["Now", "Chat with Vera", "Do", "My week", "My list"]
+    assert _menu(kid.get("/").text)[:5] == ["Now", "Do", "My week", "My list", "Chat with Vera"]
     assert not {"Status", "Settings", "Family"} & set(_menu(kid.get("/").text))
 
 
@@ -88,7 +88,7 @@ def test_a_tick_for_each_place_and_unticking_takes_it_out_of_the_row(app, conn) 
     assert _ticks(page) == dict.fromkeys(ROW_PLACES, True)  # every one in the row to begin with
     assert 'name="row_hidden" value="ticked"' in page and 'role="group"' in page
     token = re.search(r'name="csrf" value="([^"]+)"', page).group(1)
-    shown = [place for place in ROW_PLACES if place not in ("soon", "did")]
+    shown = [place for place in ROW_PLACES if place not in ("eat", "lists")]
     saved = sam.post(
         "/settings",
         data={
@@ -99,23 +99,15 @@ def test_a_tick_for_each_place_and_unticking_takes_it_out_of_the_row(app, conn) 
         },
     )
     assert saved.status_code == 302
-    assert app.settings.row_hidden == "soon,did"
+    assert app.settings.row_hidden == "eat,lists"
     assert _ticks(sam.get("/settings/general").text) == {
-        place: place not in ("soon", "did") for place in ROW_PLACES
+        place: place not in ("eat", "lists") for place in ROW_PLACES
     }
-    assert _row(sam.get("/").text) == ["Now", "Eat", "Do", "Week", "Kids", "Lists"]
-    assert _menu(sam.get("/").text)[:7] == [
-        "Now",
-        "Chat with Vera",
-        "Eat",
-        "Do",
-        "Week",
-        "Kids",
-        "Lists",
-    ]
+    assert _row(sam.get("/").text) == ["Now", "Do", "Week"]
+    assert _menu(sam.get("/").text)[:4] == ["Now", "Do", "Week", "Chat with Vera"]
     assert _menu(sam.get("/settings").text) == _menu(sam.get("/").text)  # one menu everywhere
     # Nothing is gone: a place taken out still opens from a link.
-    assert sam.get("/soon").status_code == 200 and sam.get("/did").status_code == 200
+    assert sam.get("/eat").status_code == 200 and sam.get("/lists").status_code == 200
     # Every tick again is no setting at all, and the row is whole.
     sam.post(
         "/settings",
@@ -127,16 +119,16 @@ def test_a_tick_for_each_place_and_unticking_takes_it_out_of_the_row(app, conn) 
         },
     )
     assert "row_hidden" not in settings_store.overrides(conn)
-    assert _row(sam.get("/").text)[-1] == "Did"
+    assert _row(sam.get("/").text)[-1] == "Lists"
 
 
 def test_a_form_without_the_ticks_leaves_the_row_alone(app, conn) -> None:
     """Any other form posting to the settings (Setup's, an older page's) carries no ticks."""
-    _take_out(conn, "soon")
+    _take_out(conn, "eat")
     sam = _in_as(app, SAM)
     token = re.search(r'name="csrf" value="([^"]+)"', sam.get("/settings/general").text).group(1)
     sam.post("/settings", data={"csrf": token, "section": "general", "web_title": "The Lees"})
-    assert app.settings.row_hidden == "soon" and app.settings.web_title == "The Lees"
+    assert app.settings.row_hidden == "eat" and app.settings.web_title == "The Lees"
 
 
 def test_with_now_taken_out_the_page_opens_on_the_first_place_left(app, conn) -> None:
@@ -161,7 +153,9 @@ def test_with_every_place_taken_out_now_stays(app, conn) -> None:
 def test_the_setting_keeps_known_places_in_the_rows_order() -> None:
     """A place this version does not know is dropped, never refused: a value another version
     stored must not stop the app."""
-    said = Settings(_env_file=None, row_hidden="did, banana NOW  soon,did")
-    assert said.row_hidden == "now,soon,did"
-    assert said.row_hidden_places == {"now", "soon", "did"}
+    said = Settings(_env_file=None, row_hidden="lists, banana NOW  eat,lists")
+    assert said.row_hidden == "now,eat,lists"
+    assert said.row_hidden_places == {"now", "eat", "lists"}
+    # Places that left the row (Do's tabs and Lists' chips now) are let go the same way.
+    assert Settings(_env_file=None, row_hidden="soon,did").row_hidden == ""
     assert [value for value, _ in fields.BY_KEY["row_hidden"].ticks] == list(ROW_PLACES)

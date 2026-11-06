@@ -100,11 +100,9 @@ def test_a_message_sent_from_now_comes_back_to_now_with_her_answer_under_the_box
     assert 'href="/chat#latest"' in sheet  # the thread, one tap away
     assert len(api.requests) == 1  # one message, one call; none for the pages around it
     # Opened again without the message named, the page is quiet: the reply lives in the thread,
-    # whose last lines only Vera's column on a big screen shows.
+    # the Chat page, and no page repeats its last lines beside the box.
     again = client.get("/").text
-    assert "Saturday looks dry" not in again.split('<section class="vc"')[0]
-    column = re.search(r'<section class="vc".*?</section>', again, re.S).group(0)
-    assert "what should we do this weekend?" in column and "Saturday looks dry" in column
+    assert "Saturday looks dry" not in again and '<section class="vc"' not in again
     assert "Saturday looks dry" in client.get("/chat").text
 
 
@@ -578,7 +576,7 @@ def test_a_grown_up_signed_in_writes_as_themselves(app, conn, family) -> None:
     assert 'name="who"' not in _box(home)  # signed in as themselves: nobody else to be
     assert "Finish setting up" in home  # an admin's unfinished setup, each step a link
     row = _row(home)
-    assert "Kids" in row and "Lists" in row
+    assert "Lists" in row and "Kids" not in row  # the kids' wishes are Lists' chips
 
 
 def test_a_to_do_for_everyone_is_taken_on_with_i_will_handle_it(app, conn, family) -> None:

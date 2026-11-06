@@ -18,7 +18,8 @@ DOORS = (
         "title": "Sam, who runs it",
         "text": "Now opens on the box, then what waits on Sam: how the science center went, "
         "Maya's sketchbook, her pitch for the bounce hall. Under them, the plate and Vera's picks "
-        "for tonight and the weekend. The row leads to Eat, Do, Week, Kids, Soon, Lists and Did, "
+        "for tonight and the weekend. The row leads to Eat, Do, Week and Lists (Do holds what "
+        "is on nearby and what they did; Lists the presents and the kids' wishes), "
         "and every place, plan, reminder and outing has a page of its own.",
         "open": "Open Sam's FamilyDB",
         "more": (

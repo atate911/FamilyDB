@@ -593,7 +593,7 @@ def test_an_outing_has_a_page_with_the_times_before_and_what_made_it_good(
     assert "10/10" in page and "Would go again" in page
     assert f'href="/did/{first}"' in page and "The other times" in page
     assert _scope(page) == "About Zoo on 2026-09-12:"
-    assert 'aria-current="page">Did<' in page
+    assert 'aria-current="page">Do<' in page  # what we did is one of Do's tabs
     # What made it good becomes something she remembers.
     form = re.search(r'<form class="chips chips--form".*?</form>', page, re.S).group(0)
     fields = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', form))
@@ -620,7 +620,7 @@ def test_favorites_and_this_time_last_year(settings, clock, conn, family) -> Non
 def test_a_kid_has_her_own_address_and_a_list_has_its_own(settings, clock, conn, family) -> None:
     client = _client(settings, clock)
     kid = client.get("/kids/the-girls").text
-    assert "the girls" in kid and 'aria-current="page">Kids<' in kid
+    assert "the girls" in kid and 'aria-current="page">Lists<' in kid  # wishes are Lists' chips
     assert client.get("/kids/nobody").status_code == 404
     assert client.get("/kids/sam").status_code == 404  # a grown-up is not a kid
     with db.transaction(conn):
@@ -718,6 +718,10 @@ def test_what_she_found_and_judged_is_offered_under_new_ideas(
     kid.post("/login", data={"name": "the girls", "password": "a kid can choose one too"})
     hers = kid.get("/do").text
     assert "Rose garden" in hers and "Wine walk" not in hers and "/pass" not in hers
+    # A find's own page is the grown-ups', so a kid's row is not a link to it.
+    assert (
+        f'href="/soon/{roses.id}"' not in hers and kid.get(f"/soon/{roses.id}").status_code == 403
+    )
 
 
 # -- saying what a page's facts rest on (the usability review of 5 November 2026)
@@ -755,3 +759,64 @@ def test_a_recipe_is_made_again_and_not_again_says_what_it_does(
     assert (
         '<option value="yes">Would go again</option>' in outing and "stops suggesting it" in outing
     )
+
+
+# -- five places (the redesign of November 2026): Do's tabs and Lists' chips
+
+
+def _marked(page: str) -> str:
+    """The place the row marks."""
+    row = re.search(r'<nav class="row".*?</nav>', page, re.S).group(0)
+    return re.search(r'aria-current="page">([^<]+)<', row).group(1)
+
+
+def _tab(page: str) -> str | None:
+    tabs = re.search(r'<nav class="seg" aria-label="Things to do">.*?</nav>', page, re.S)
+    if tabs is None:
+        return None
+    found = re.search(r'aria-current="page">([^<]+)<', tabs.group(0))
+    return found.group(1) if found else ""
+
+
+def test_every_old_address_still_opens_under_its_place_now(settings, clock, conn, family) -> None:
+    with db.transaction(conn):
+        idea = ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
+    client = _client(settings, clock)
+    for path, place, tab in (
+        ("/do", "Do", "Ideas"),
+        ("/ideas", "Do", "Ideas"),
+        ("/soon", "Do", "Coming up"),
+        ("/happening", "Do", "Coming up"),
+        ("/did", "Do", "We did"),
+        ("/eat", "Eat", None),
+        ("/restaurants", "Eat", None),
+        ("/kids", "Lists", None),
+        ("/wishes", "Lists", None),
+        ("/presents", "Lists", None),
+        ("/lists", "Lists", None),
+        (f"/place/{idea.id}", "Do", None),
+    ):
+        page = client.get(path)
+        assert page.status_code == 200, path
+        assert _marked(page.text) == place, path
+        if tab is not None:
+            assert _tab(page.text) == tab, path
+
+
+def test_presents_are_a_chip_of_lists_and_never_among_the_things_to_do(
+    settings, clock, conn, family
+) -> None:
+    with db.transaction(conn):
+        ideas.insert(conn, title="Lego set", kind="gift", participants=["Theo"], now=NOW_ISO)
+        ideas.insert(conn, title="Zoo", kind="outing", now=NOW_ISO)
+    client = _client(settings, clock)
+    things = client.get("/do").text
+    assert "Zoo" in things and "Lego set" not in things
+    gone = client.get("/do?kind=gift")  # an older link to the presents among the ideas
+    assert gone.status_code == 302 and gone.headers["Location"] == "/presents"
+    page = client.get("/presents").text
+    assert _head(page)[0] == "Presents" and "Lego set" in page and "for Theo" in page
+    chips = re.search(r'<nav class="chips" aria-label="Which list">.*?</nav>', page, re.S).group(0)
+    assert 'href="/lists/shopping"' in chips and 'href="/kids/the-girls"' in chips
+    assert re.search(r'href="/presents"[^>]*aria-current', chips)
+    assert 'href="/presents"' in client.get("/lists").text

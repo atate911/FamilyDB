@@ -61,11 +61,11 @@ While you type a short name (one to four words), the box shows what the family a
 
 ## The box on a destination
 
-On Eat, Do, Week, Kids, Soon, Lists and Did the box says what it is about ("about: This week") and the message goes to her with that scope in front of it, so "anything cheaper?" on Eat is a question about restaurants. On a thing's own page the box is about that thing, and three quick sentences under it fill the box with the usual asks ("Plan it for this weekend", "Move it to Saturday"); nothing is sent until you press Send.
+On Eat, Do and its tabs, Week, Lists and a kid's wishes the box says what it is about ("about: This week") and the message goes to her with that scope in front of it, so "anything cheaper?" on Eat is a question about restaurants. On a thing's own page the box is about that thing, and three quick sentences under it fill the box with the usual asks ("Plan it for this weekend", "Move it to Saturday"); nothing is sent until you press Send.
 
 ## On a big screen, and the kitchen tablet
 
-From a tablet's width up, the row of destinations stands down the left as the menu, the same one Status, Settings and the guide have: your places, Chat, What Vera knows and, for grown-ups, Behind the scenes, with who is signed in at the foot. An admin can take a place the family does not use out of the row on [General](/wiki/controls/settings/general#this-page). From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and the last lines of your conversation under it, so her answer stays in view while you move between pages.
+From a tablet's width up, the row of destinations stands down the left as the menu, the same one Status, Settings and the guide have: your places, then Chat (the whole conversation) and What Vera knows under them, and, for grown-ups, Behind the scenes, with who is signed in at the foot. On a phone, Chat is on the menu behind your picture. An admin can take a place the family does not use out of the row on [General](/wiki/controls/settings/general#this-page). From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and your pinned replies under it, so her answer stays in view while you move between pages; the conversation itself is Chat, a link away.
 
 **Pin** under one of her replies keeps it at hand: signed in as yourself, it stays at the top of that column on a desk and under **Pinned** at the top of Chat on any screen (one line; open it to read them), newest first, until you press **Unpin** there (or **Pinned** under the reply) to take it off. A shelf holds eight; pinning a ninth lets the oldest go. Your pins are yours alone, and go with you if you are taken off the family list.
 
