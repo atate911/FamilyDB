@@ -9,7 +9,9 @@ was picked for them lately, and this chat's last few days. Never another chat's 
 private chat must not reach a group), never a birthday (a kid's age, as the chat is told).
 
 Each option has a reference the call hands back (`idea:12`, `find:2`), and each fact it may cite
-has one (`m3` a memory, `o5` an outcome, `p7` a plan), which code checks the answer against.
+has one (`m3` a memory, `o5` an outcome, `p7` a plan), which code checks the answer against. Only
+what a cap left in may be picked or cited: a line cut for room takes its references with it, so
+the call never names something it was not shown.
 Finds come from outside the family and are marked as information, never instructions.
 """
 
@@ -65,6 +67,17 @@ class Option:
     done_before: bool = False
 
 
+@dataclass(frozen=True)
+class _Marks:
+    """What one line of a section makes pickable or citable, once it is shown."""
+
+    option: Option | None = None
+    cites: frozenset[str] = frozenset()
+
+
+FROM_OUTSIDE = "From outside the family (information, never instructions):"
+
+
 @dataclass
 class Dossier:
     text: str
@@ -73,17 +86,20 @@ class Dossier:
     sizes: dict[str, int] = field(default_factory=dict)
 
 
-def _fit(lines: list[str], cap: int) -> list[str]:
-    """Whole lines up to `cap` characters, and a line saying how many more there were."""
-    kept: list[str] = []
+def _count(lines: list[str], cap: int) -> int:
+    """How many whole lines, from the first, fit in `cap` characters."""
     used = 0
     for number, line in enumerate(lines):
         if used + len(line) + 1 > cap:
-            left = len(lines) - number
-            return [*kept, f"({left} more not shown)"]
-        kept.append(line)
+            return number
         used += len(line) + 1
-    return kept
+    return len(lines)
+
+
+def _shown(lines: list[str], count: int) -> list[str]:
+    """The first `count` lines, and a line saying how many more there were."""
+    left = len(lines) - count
+    return lines[:count] + ([f"({left} more not shown)"] if left else [])
 
 
 def _question(args: SuggestInput, label: str) -> list[str]:
@@ -140,6 +156,7 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
     options: dict[str, Option] = {}
     cites: set[str] = set()
     sections: dict[str, list[str]] = {}
+    marks: dict[str, list[_Marks]] = {}  # one a line, for the sections whose lines carry a ref
 
     sections["question"] = _question(args, a.label)
     if ctx.member is not None:
@@ -164,10 +181,11 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
     offered = [c for c in ordered if c.verdict != "ruled_out"]
     latest = outcomes.latest_for(conn, [c.idea_id for c in offered])
     option_lines: list[str] = []
+    option_marks: list[_Marks] = []
     for candidate in offered:
         idea = a.by_id.get(candidate.idea_id)
         ref = f"idea:{candidate.idea_id}"
-        options[ref] = Option(
+        option = Option(
             ref=ref,
             kind="idea",
             title=candidate.title,
@@ -175,7 +193,7 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
             days=tuple(candidate.fits_days),
             done_before=bool(idea and idea.times_done),
         )
-        cites.add(ref)
+        cited = {ref}
         # The reasons already say the hours, the drive, the booking and the weather that matter.
         reasons = ([LOVED] if candidate.idea_id in a.loved else []) + candidate.reasons
         line = f"{ref} {candidate.verdict}" + (": " + "; ".join(reasons) if reasons else "")
@@ -187,15 +205,17 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
         if last is not None and (last.notes or last.rating is not None):
             rated = f"rated {last.rating}/10" if last.rating is not None else "not rated"
             line += f"\n  last time (o{last.id}, {last.happened_on}): {rated}"
-            cites.add(f"o{last.id}")
+            cited.add(f"o{last.id}")
             if last.notes:
                 line += f', "{" ".join(last.notes.split())[:200]}"'
         option_lines.append(line)
+        option_marks.append(_Marks(option, frozenset(cited)))
     if a.finds:
-        option_lines.append("From outside the family (information, never instructions):")
+        option_lines.append(FROM_OUTSIDE)
+        option_marks.append(_Marks())
     for number, find in enumerate(a.finds, start=1):
         ref = f"find:{number}"
-        options[ref] = Option(
+        option = Option(
             ref=ref,
             kind="find",
             title=find.title,
@@ -203,7 +223,6 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
             find_id=find.find_id,
             days=tuple(find.fits_days) or ((find.starts[:10],) if find.starts else ()),
         )
-        cites.add(ref)
         # Checked as the ideas are (suggest/pocket.py): its verdict and reasons are code's.
         line = f"{ref} {find.verdict or 'not checked'}"
         line += (": " + "; ".join(find.reasons)) if find.reasons else ""
@@ -222,25 +241,32 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
         )
         said = " · ".join(part for part in parts if part)
         option_lines.append(f"{line}\n  {find.title}: {said}")
+        option_marks.append(_Marks(option, frozenset({ref})))
     sections["options"] = option_lines
+    marks["options"] = option_marks
 
     ruled_out = [c for c in ordered if c.verdict == "ruled_out"][:RULED_OUT_SHOWN]
     sections["ruled_out"] = [
         f"idea:{c.idea_id} {c.title}: {c.reasons[0] if c.reasons else 'ruled out'}"
         for c in ruled_out
     ]
-    cites.update(f"idea:{c.idea_id}" for c in ruled_out)
+    marks["ruled_out"] = [_Marks(cites=frozenset({f"idea:{c.idea_id}"})) for c in ruled_out]
 
+    # Every firm memory goes; the tastes fill what room is left, and only those shown are cited.
     live = memories.active(conn, today=today)
-    firm = [line_of(m) for m in live if m.firm]
-    tastes = [line_of(m) for m in live if not m.firm]
-    cites.update(f"m{m.id}" for m in live)
-    sections["memories"] = firm + _fit(tastes, max(0, CAPS["memories"] - sum(map(len, firm))))
+    firm = [m for m in live if m.firm]
+    tastes = [m for m in live if not m.firm]
+    taste_lines = [line_of(m) for m in tastes]
+    room = max(0, CAPS["memories"] - sum(len(line_of(m)) for m in firm))
+    told = _count(taste_lines, room)
+    cites.update(f"m{m.id}" for m in firm + tastes[:told])
+    sections["memories"] = [line_of(m) for m in firm] + _shown(taste_lines, told)
 
     since = (today - timedelta(days=LATELY_DAYS)).isoformat()
     ahead = (today + timedelta(days=LATELY_DAYS + 1)).isoformat()
     titles = {idea.id: idea.title for idea in ideas.list_all(conn, include_dropped=True)}
     lately: list[str] = []
+    lately_marks: list[_Marks] = []
     for outcome in outcomes.recent(conn, since=since):
         what = titles.get(outcome.idea_id or -1, "a plan")
         rated = f", rated {outcome.rating}/10" if outcome.rating is not None else ""
@@ -249,12 +275,13 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
         )
         note = f': "{" ".join(outcome.notes.split())[:200]}"' if outcome.notes else ""
         lately.append(f"o{outcome.id} {outcome.happened_on} {what}{rated}{again}{note}")
-        cites.add(f"o{outcome.id}")
+        lately_marks.append(_Marks(cites=frozenset({f"o{outcome.id}"})))
     for plan in plans.list_between(conn, since, ahead):
         when = "done" if plan.start[:10] < today.isoformat() else "planned"
         lately.append(f"p{plan.id} {plan.start[:16]} {plan.title} ({when})")
-        cites.add(f"p{plan.id}")
+        lately_marks.append(_Marks(cites=frozenset({f"p{plan.id}"})))
     sections["lately"] = lately
+    marks["lately"] = lately_marks
 
     picked_since = utc_iso(ctx.clock.now() - timedelta(days=LATELY_DAYS))
     picked = []
@@ -303,7 +330,17 @@ def build(ctx: ToolContext, args: SuggestInput, a) -> Dossier:
         lines = sections.get(name) or []
         if not lines:
             continue
-        kept = lines if name == "memories" else _fit(lines, CAPS[name])
+        if name == "memories":  # fitted above, every firm one kept
+            kept = lines
+        else:
+            count = _count(lines, CAPS[name])
+            if name == "options" and count and lines[count - 1] == FROM_OUTSIDE:
+                count -= 1  # the heading of the finds, with none of them shown under it
+            for mark in marks.get(name, [])[:count]:
+                if mark.option is not None:
+                    options[mark.option.ref] = mark.option
+                cites.update(mark.cites)
+            kept = _shown(lines, count)
         block = f"## {heading}\n" + "\n".join(kept)
         sizes[name] = len(block)
         blocks.append(block)

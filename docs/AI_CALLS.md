@@ -199,7 +199,9 @@ updates the suggestion's row and hands back the new dossier, and the result tell
 what was looked at; a retry replays it with no call. It may
 only hand back picks among the options, which `give_picks` checks: each is an option, a
 favorite was done before and a new one never was, a day is inside the window and one the option
-fits, every cite is in the dossier. The picks lead what the chat model is given and it says
+fits, every cite is in the dossier. Options and citations are registered only from the lines a
+section's cap left in, so a pick or cite of something cut for room is refused like one never
+offered. The picks lead what the chat model is given and it says
 them in order; code has already checked every pick's hours, travel and weather. It is two calls
 at most, 6,000 output tokens, about six cents on Claude Opus; whatever goes wrong, the engine's
 own order is the answer and nobody is told, since a kid must not hear of budgets. Whether the
