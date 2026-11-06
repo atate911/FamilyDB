@@ -75,7 +75,7 @@ Open **Plan it** on the place's page, give when (or all day) and where, and save
 
 ## Record how it went
 
-Open the place, open **Record how it went by hand**, set the day (not in the future), a score out of ten and whether the family would go again, and choose **Record it**. That marks the idea done, counts the visit and updates its average rating. An idea can have many outcomes. The faces on Now and [Did](/wiki/controls/plans-and-tasks#did) record the same thing with one tap. Recording how it went on a dropped idea marks it Done again.
+Open the place, open **Record how it went by hand**, set the day (not in the future), a score out of ten and whether the family would go again (for a recipe, make again), and choose **Record it**. That marks the idea done, counts the visit and updates its average rating. Would not again leaves it out of suggestions, and a recipe out of dinner, until a later time is recorded as worth another go; the form says so under the choice. An idea can have many outcomes. The faces on Now and [Did](/wiki/controls/plans-and-tasks#did) record the same thing with one tap. Recording how it went on a dropped idea marks it Done again.
 
 ## Ask for a lookup
 
