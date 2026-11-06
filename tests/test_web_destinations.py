@@ -718,3 +718,21 @@ def test_what_she_found_and_judged_is_offered_under_new_ideas(
     kid.post("/login", data={"name": "the girls", "password": "a kid can choose one too"})
     hers = kid.get("/do").text
     assert "Rose garden" in hers and "Wine walk" not in hers and "/pass" not in hers
+
+
+# -- saying what a page's facts rest on (the usability review of 5 November 2026)
+
+
+def test_the_week_says_where_its_free_time_comes_from_before_the_days(
+    settings, calendar_settings, clock, conn, family
+) -> None:
+    """With no calendar connected, "Free all day" means nothing kept here: said above the days
+    it qualifies, not after them. From Google, the note stays at the foot."""
+    page = _client(settings, clock).get("/week").text
+    note = page.index('id="wk-source"')
+    assert note < page.index('class="wk"') and "Google Calendar is not connected" in page
+    assert page.count("Google Calendar is not connected") == 1
+    google = _client(calendar_settings, clock, fakes.FakeCalendar(TZ)).get("/week").text
+    assert 'id="wk-source"' not in google
+    assert google.index(views.AGENDA_NOTES["google"]) > google.index('class="wk"')
+

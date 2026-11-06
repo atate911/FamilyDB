@@ -83,9 +83,14 @@ def show() -> Response | str:
         on = presents.without(seen.entries, kept)
         rows = _rows(conn, app, on, visitor.member if not grown_up else None, today, slots)
         asked = questions(conn, app, visitor, today, slots, people)[:MOST_QUESTIONS]
-        todo = _todo(conn, app, visitor, today, slots, grown_up)
+        todo, others = views.plate_split(
+            _todo(conn, app, visitor, today, slots, grown_up), visitor.member if grown_up else None
+        )
         picks = _picks(conn, app, visitor, kept, today)
-        setup = status_page.setup_steps(app, conn) if visitor.manages else []
+        steps = status_page.setup_steps(app, conn) if visitor.manages else []
+        # What it needs, or should have, leads; what is only optional waits at the foot.
+        setup = [step for step in steps if step["need"] != "optional"]
+        later = [step for step in steps if step["need"] == "optional"]
         my_list = _my_list(conn, visitor, today) if kid else None
         dinner = dinner_pick(conn, now.astimezone(tz), agenda.on(seen, today), kept)
         # The first day (docs/INTERFACE.md section 10): nothing saved and nothing on, so the box
@@ -109,12 +114,14 @@ def show() -> Response | str:
         left=left,
         questions=asked,
         plate=todo,
+        others=views.others_words(others),
         my_list=my_list,
         picks=picks,
         days=_days(rows, today, grown_up),
         dinner=dinner,
         quiet=QUIET if grown_up else QUIET_KID,
         setup=setup,
+        setup_later=later,
         different=DIFFERENT,
         first_day=FIRST_DAY.format(name=personas.active(app.settings).name) if first_day else None,
     )

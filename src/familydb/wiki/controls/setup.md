@@ -68,7 +68,7 @@ The numbered steps are on [Connections](/wiki/controls/settings/connections#goog
 ## When setup is done, and before
 
 - **Until the two needed steps are done**, an admin who opens Now is sent to `/setup`. So is anybody, while the family still shares one password or has none, because nobody is known to be an admin yet. A parent signed in as themselves is not sent anywhere, but the pill reads "Can't answer yet" and [Status](/wiki/controls/status) names what is missing. Kids see no pill.
-- **After that**, Now carries "Finish setting up", listing each unfinished step with a link. Only admins see it, and it disappears when every step is done.
+- **After that**, Now carries "Finish setting up", listing each unfinished step it needs or should have with a link, and the optional ones in a quiet line at its foot ("When you like: Google Calendar"). Only admins see either, and each goes when its steps are done.
 - **The overview** says "Let's get FamilyDB ready" until the needed steps are done and "Nearly there" after. Its button reads Start, then "Carry on" with the next unfinished step, then "Everything is set up".
 - **The last page**, `/setup/done`, says whether the assistant can answer, suggests a first question, and lists what was left for later.
 

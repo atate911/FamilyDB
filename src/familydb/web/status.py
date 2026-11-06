@@ -1040,9 +1040,10 @@ def ready_to_answer(steps: list[SetupStep]) -> bool:
 
 
 def setup_steps(app: App, conn: sqlite3.Connection) -> list[dict[str, str]]:
-    """What is left to set up, most important first: a sentence and its setup page."""
+    """What is left to set up, most important first: a sentence, its setup page, its short name,
+    and whether it is needed, recommended or optional (Now leads only with the first two)."""
     return [
-        {"text": step.todo, "link": f"/setup/{step.name}"}
+        {"text": step.todo, "link": f"/setup/{step.name}", "short": step.title, "need": step.need}
         for step in setup_progress(app, conn)
         if not step.done
     ]
