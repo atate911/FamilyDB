@@ -1,16 +1,16 @@
 # CLAUDE.md
 
+> **Design authority — November 5, 2026:** [Design freedom and protected outcomes](docs/DESIGN_FREEDOM.md) governs presentation and interaction choices in this document. The owner authorizes substantial interface redesign. Historical layout, navigation, chat placement, wording, and visual-style rules are revisable defaults, even when phrased as mandatory or previously agreed. Preserve the policy's privacy, access, security, accessibility, cost, and data-integrity outcomes; do not require fresh approval for ordinary design changes. Descriptions below are not claims that a proposed redesign has shipped.
+
 FamilyDB is a family planning chat bot: Python 3.11+, SQLite, a model from Anthropic, OpenAI or Google behind one provider protocol, Telegram and the web page as chat channels, and a web surface for browsing, editing, status and settings. Design: `docs/DESIGN.md`. Server setup: `RUNBOOK.md`, `docs/INSTALL.md`.
 
 ## How to read the rules
-
-**How the app looks and how a person moves through it is open: `docs/DESIGN_FREEDOM.md` governs it, and wins over any passage here or in `docs/` that reads as fixing a layout, a name or a look.** It names the outcomes that stay protected (privacy and access, data integrity and recovery, security, accessibility, cost and external effects, honesty and control); everything else about the interface is a choice to make on its merits, interface choices once recorded as the family's preferences included. The family's decisions about data, access and spending stand; the policy authorizes no deployment, outside communication, deletion, new spending or wider access.
 
 Rules here exist so a change does not quietly cost money, break the prompt cache, open a hole, lose a message, or undo a choice the family made on purpose. Each says why; many are held by a test. They record what mattered most when they were written and are meant to change as the app does: improving one is part of the work, not a detour from it.
 
 When a rule stands between you and a better design:
 
-- Say so, whatever you then do. Meeting a rule's letter with a worse design and quietly breaking it are the same mistake: each hides a question the owner should see. A PR that changes a rule, or keeps one at a cost, says so plainly in its description.
+- Say so, whatever you then do. Meeting a rule's letter with a worse design and quietly breaking it are the same mistake: each hides a question the owner should see. Explain material rule changes and their user benefit in the normal change summary; no special heading, separate proposal, or additional approval is required for authorized design work.
 - Change the rule rather than work around it: in the same PR, the rule, the test that holds it, the documents that repeat it, and the new reason. An exception is a change too, named beside the rule with its reason, as `EXCEPTIONS` in `tests/test_layering.py` does.
 - A rule the task runs into is part of the task, so changing it is not widening the PR. One you think wrong elsewhere is a suggestion in the PR or your reply, not part of the diff.
 - When a rule and its reason disagree, the reason wins. A reason can also still be true and matter less than it did: weigh it by What matters most, below, and say what the change costs and gains.

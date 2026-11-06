@@ -1,8 +1,8 @@
 # FamilyDB: a concept for the page
 
-First draft, October 2026. One vision for how the family meets Vera on the web page and in Telegram, drawn from five rounds of brainstorming and a clean slate. Nothing here is final. It is the shot, not the rulebook.
+> **Design authority — November 5, 2026:** [Design freedom and protected outcomes](DESIGN_FREEDOM.md) governs presentation and interaction choices in this document. The owner authorizes substantial interface redesign. Historical layout, navigation, chat placement, wording, and visual-style rules are revisable defaults, even when phrased as mandatory or previously agreed. Preserve the policy's privacy, access, security, accessibility, cost, and data-integrity outcomes; do not require fresh approval for ordinary design changes. Descriptions below are not claims that a proposed redesign has shipped.
 
-**Open under [DESIGN_FREEDOM.md](DESIGN_FREEDOM.md).** This concept, like `INTERFACE.md` and `STYLE.md`, records ideas and reasons, not a specification; a redesign takes what serves the family.
+First draft, October 2026. One vision for how the family meets Vera on the web page and in Telegram, drawn from five rounds of brainstorming and a clean slate. Nothing here is final. It is the shot, not the rulebook.
 
 **Superseded in part.** The rounds after this draft replaced the four-place layout and the fixed-order Home with a launcher of destinations and Vera's answering contract. That skeleton is `INTERFACE.md`, and it wins where the two disagree. Sections 5 to 13 here (the glimpse, how she behaves, kids, Telegram, the first days, what is out, the family's decisions, cost) still hold.
 
