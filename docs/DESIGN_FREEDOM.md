@@ -1,119 +1,80 @@
-# Design freedom: what is open, what is protected
+# Design freedom and protected outcomes
 
-The owner's decision, 5 November 2026. This governs every choice about how FamilyDB is presented
-and how a person moves through it, on the page and in Telegram. Where another document (`CLAUDE.md`,
-`docs/DESIGN.md`, `docs/INTERFACE.md`, `docs/STYLE.md`, `docs/CONCEPT.md`, the mockups, the guide)
-reads as fixing a layout, a name, a look or an interaction, this document wins: that passage records
-what was chosen and why, and does not bind the next design.
+Effective November 5, 2026, at the owner's request to remove design constraints that limit improvement.
 
-## Why
+## Authority and scope
 
-The family finds the app complicated and hard to learn, and the documents that describe today's
-page had come to read as rules against changing it: "the box first, always", "the edges are
-fixed", "Now is the model", a font named as required. Those were good choices for October 2026
-and remain good reasons to weigh. They were never meant to stop the app from getting simpler or
-better, and they must not. What has to hold is a short list of outcomes, below; everything else is
-open.
+This policy governs interpretation of presentation and interaction rules in `CLAUDE.md` and the design documents. It supersedes conflicting historical design decisions, including ones previously described as fixed, mandatory, agreed with the family, or held by a test. New explicit owner instructions take precedence. This policy does not override platform instructions or authorize a production deployment, external communication, data deletion, new spending, or broader access.
 
-## What is open
+The owner authorizes redesign of the interface, not just small variations within the existing style. When asked to improve or implement the interface, agents may change the relevant design rules and their implementation without requesting separate permission for ordinary design choices. A request for critique or a prototype still does not authorize unrelated implementation work.
 
-Decide these on their merits, for how the app looks and feels to the family, without asking
-permission because an older document chose differently:
+## Goal
 
-- **Navigation and structure.** How many destinations there are, what they are called, what each
-  holds, what moves to a secondary menu, whether Now exists in its current form, the rail, the row,
-  tabs, the board, the frames for phone, big screen and tablet. Old addresses should keep working
-  or redirect, so links in messages and on home screens do not break.
-- **The assistant's place.** Whether the box is on every page, where it sits, whether it is a
-  composer or a button that opens a panel, the Chat page, the thread column, pins, the ways to
-  start. Natural-language capture stays possible; how it is offered is open.
-- **What leads a screen.** Its primary action, what is folded away, how many picks show, how
-  questions are grouped, what an empty screen offers.
-- **Flows.** Connecting steps that today take several pages ("make this tonight": the night, the
-  servings, the list, an optional plan), as long as each step is a tool call (below) and the
-  result says what was done.
-- **Look.** Type, colour, the looks and how far a look may go beyond colour, spacing, marks, icons,
-  motion, how Vera appears (today her screen of glyphs).
-- **Words.** Names, labels, headings, confirmations, empty states, examples, her lines.
-- **How it is built.** Templates, CSS, scripts within the content policy, view-models, which
-  module draws what. The layering, `answers.answer` and `web/views.py` for shared wording are
-  defaults (`CLAUDE.md`): follow them unless a better structure serves the change, and say why.
+Help the household remember, decide, coordinate, and follow through with less effort. Judge the interface by whether people can complete their tasks and understand the result. Familiarity with the current design, aesthetic consistency, and low running cost matter, but are not reasons to preserve an interaction that is confusing.
 
-A design choice here is reversible and cheap to try. Prototype in the example household
-(`uv run python -m examples`, static pages anybody can click through) before a large change, when
-the change is large enough that seeing it first would help.
+## Open design choices
 
-## What is protected
+The following are revisable defaults or historical descriptions, not restrictions:
 
-These are outcomes, not mechanisms: the code that keeps one may be redesigned as long as a test
-still holds the outcome. Changing an outcome is proposed to the owner (an invariant) or asked of
-the family (one of their decisions), as `CLAUDE.md` says, with what it costs and gains.
+- Page names, destination counts, hierarchy, routes, menus, tabs, launchers, home screens, and grouping of features.
+- Whether chat is the main experience, a separate destination, a contextual panel, or a supporting action. A composer need not be first or visible on every screen.
+- Where the assistant appears, its visual representation, tone, and prominence. Preserve truthful claims about what it knows and has done.
+- Fixed versus adaptive layouts, column counts, rails, cards, spacing, responsive breakpoints, typography, fonts, color, imagery, icons, animation, and themes.
+- Exact word counts, terse copy, one-line rows, icon-first controls, and fixed numbers of choices. Give enough explanation and visible labeling for the task.
+- Forms, guided flows, direct actions, conversational flows, search, filters, onboarding, empty states, and contextual help.
+- Frontend implementation mechanisms, including locally served scripts and progressive enhancement, provided security and accessible task completion remain protected. Existing no-script requirements are a compatibility default, not a blanket ban on richer interaction; disclose and test any changed fallback behavior.
+- Existing component boundaries, file placement, and markup conventions. Prefer reuse when it helps, but improve the shared components when reuse would preserve the problem.
 
-- **Privacy and what leaves the house.** What is sent to a model, a search, a push service or
-  anyone outside, as decided (`docs/DESIGN.md` sections 10, 13 and 16). A push says "she has a
-  message", never the words. Dictation goes browser to its maker, never through FamilyDB. A
-  position is sent only while somebody ticks to send it.
-- **Who may see and do what.** Roles and their permissions (`base/roles.py`, asked as
-  `visitor().may`), kids never shown costs, models, setup or how the bot works (`voice.PLAIN`,
-  `tests/test_kids_plain.py`), presents kept from whom they are for (`presents.py`), a kid's daily
-  messages. A new layout reads the same permissions; moving a page never widens who reaches it.
-- **Security.** The content policy (`script-src 'self'`, no inline script or style), escaping of
-  anything from an idea, place or fetched page, CSRF and the Origin check on every form, once-only
-  forms where a repeat would do harm, API keys write-only, sign-in as oneself.
-- **A form is a tool call.** The page changes things only through the code that owns the change
-  (`CLAUDE.md`, the web invariant held by `tests/test_web.py`). A new flow that does three things
-  calls three tools; it never writes round them.
-- **Accessibility.** Measured contrast in every look, labels a screen reader can use, keyboard
-  reach, sizes a thumb can hit, and reading, every form and sending a message working with
-  scripting off.
-- **Cost.** No page view is a model call (`test_browsing_asks_nothing_of_a_model`); every model
-  call goes through `gateway` and the day's limit; nothing volatile in the cached prompt. A design
-  that would add model calls (a "help me choose" that asks the model) says what it costs.
-- **Nothing lost or done twice.** A reply stored before it is sent, leases on messages, undo that
-  takes back only what it names, a repeated click or a revisited flow making nothing twice.
-- **Truthful status.** What the page says happened is what happened: a confirmation names what was
-  saved, planned, put on the list or done, and what did not go through; a fact the app could not
-  check (no calendar, no forecast, stale hours) is not shown as checked.
-- **The family's decisions** (`docs/DESIGN.md` section 16, rows marked Family). The outcome each
-  protects holds; where a row describes presentation ("a count on Chat"), the outcome (people who
-  use only the page are told she replied) is what holds, and how it is shown is open.
+These freedoms also apply to interface choices recorded as previous family preferences. Do not confuse a preferred font, a chat-first layout, or a navigation map with consent to share data or spend money. A proposal for a new platform or distribution channel is allowed; actually introducing new deployment, data handling, or operating costs must be assessed separately.
 
-`docs/STYLE.md` "What does not move" lists the page's share of these.
+## Protected outcomes
 
-## Older documents
+Preserve these while changing the design or its implementation:
 
-`docs/INTERFACE.md`, `docs/STYLE.md`, `docs/CONCEPT.md` and `docs/concept-mockups/` record what was
-built and why. Read them for the reasons, and keep them true: after a redesign, change them to
-describe what is built, in the same change. They are not a specification a new design must match.
+1. **Privacy and access:** authentication, authorization, child protections, private information, secrets, and existing consent for location, microphone, external services, and other data sharing. Changing where a control lives must not change who can use it or see its data.
+2. **Data integrity and recovery:** durable capture, validated writes, duplicate prevention, safe concurrency, truthful synchronization status, preservation of records, and appropriate recovery or reversal. An existing bug is not a protected behavior.
+3. **Security:** escaping, origin/CSRF protection, safe content handling, and the content security policy. Redesign mechanisms without quietly weakening these protections.
+4. **Accessibility:** readable contrast and type, keyboard operation, visible focus, meaningful names, understandable errors, usable touch controls, and reduced-motion support where relevant. Accessibility describes successful use, not one prescribed visual style.
+5. **Cost and external effects:** configured spending limits, accounting for paid work, and no paid model call merely to render or open a page. Do not increase budgets, add paid services, or transmit household data to new parties as an incidental design change.
+6. **Honesty and control:** distinguish suggestions from commitments, assumptions from checked facts, and pending actions from completed ones. Do not conceal consequential actions behind cosmetic interactions.
 
-The family's answers in `docs/INTERFACE.md` section 12 (phones first, Telegram for quick
-instructions, admin on a computer, kids on a tablet and mostly asking for things, an improvised
-daily plan, Vera as the front door for instructions) are evidence about this family. Weigh them
-like any evidence; they describe how the family lives, not where a box goes.
+Ask only when the proposed work materially changes one of these protected outcomes or exceeds the actual task authorization, and the session has not already authorized it. Explain the concrete change and consequence. Do not ask because an old layout rule uses the word “never,” a style test fails, or a previous mockup looks different.
 
-The reviews of 5 November 2026 (four destinations, an "Ask Vera" button in place of the box, one
-pick and two alternatives) are proposals too. Take what serves the family; none of it is the new
-rulebook.
+## Working method
 
-## Tests that hold presentation
+- Start from a user task and its difficulty, not from a list of rules to preserve.
+- Consider substantially different approaches when useful. No need to prove a redesign through a formal study before prototyping it; identify assumptions and use proportionate validation.
+- Choose a coherent direction for the affected journey. Changes across several screens are appropriate when needed to complete that journey; unrelated rewrites are not automatically in scope.
+- For reversible interface decisions, proceed with judgment and explain important tradeoffs in the handoff. A short reason is enough; no mandatory approval ceremony or special `Rules:` line is required.
+- Update the affected normative documentation and tests with the change. A historical rationale can remain if clearly marked as historical; it must not masquerade as a current restriction.
+- Tests that freeze labels, markup, layout, CSS classes, or component structure may change with an intentional redesign. Preserve or replace coverage for user behavior, accessibility, security, and data integrity. Never delete meaningful checks merely to obtain a green run.
+- Keep current and proposed behavior distinguishable. Do not update a capability description to claim an unimplemented redesign is already working.
+- Check representative tasks, empty/error/loading states, mobile layouts, keyboard use, and recovery as appropriate to the changed flow. Describe any untested behavior plainly.
+- Maintain useful deep links through stable routes or redirects when possible, and avoid losing drafts, selected context, or existing records during navigation changes.
 
-Many tests pin today's markup: an element's order, a heading's words, a class. When a change means
-to move what they pin, change them in the same change, with the reason in the commit. Keep, and
-carry over to the new design, every test that holds a protected outcome: permissions, kids'
-screens, presents, the content policy, CSRF and once-only forms, writes through tools, no model
-call for a page view, truthful receipts. When it is unclear which a test is, read what it asserts:
-if failing it would mean a person sees, pays for, loses or is told something they should not,
-it holds an outcome.
+## Examples of legitimate changes
 
-## How to work
+Replacing the always-visible chat box with “Ask Vera,” reducing eight destinations to four, adding a task-oriented home screen, changing the font, using labeled buttons instead of ambiguous icons, or introducing a short meal-planning flow are all permitted design changes. They do not require separate owner approval merely because earlier documents prescribe something else.
 
-- Do the task asked: critique when asked to critique, prototype when asked for a prototype, build
-  when asked to build. Within it, use judgement about layout, navigation, look, the assistant's
-  place and the code behind them.
-- Explain a material design decision in a sentence or two in the commit or the PR, and what it
-  gave up. No special line or form is required.
-- Check the journeys a change touches, end to end, in a real browser at phone and desktop width:
-  deciding dinner, finding something to do and planning it, saving an idea, adding and finishing a
-  to-do, seeing what is next and who acts. Rebuild the example household and look at it.
-- Ask only when a protected outcome, or the scope of the task, would change, and the session has
-  not already settled it.
+Allowing a child to see previously private household information, sending location without consent, raising spending limits, or making an irreversible action silent are not presentation changes and are not authorized by this policy.
+
+## How to read older documents
+
+`STYLE.md`, `INTERFACE.md`, `CONCEPT.md`, mockups, and design-related sections of other documents preserve useful context. Unless they describe a protected outcome above, read their “must,” “always,” “never,” “fixed,” and “only” language as a description of a previous design or a revisable default. Follow the reason when it still helps; replace the mechanism when a better design serves the user.
+
+The interface simplification critique is a set of candidate solutions, not a new set of rigid rules. Four destinations, one leading action, and a secondary chat panel must also remain open to better evidence and ideas.
+
+## Appendix: where the protected outcomes are held today
+
+The policy above is the owner's; this appendix is a map for whoever changes the code, kept in step with it. It names today's mechanisms, which may be redesigned like anything else as long as a test still holds the outcome (`CLAUDE.md`, How to read the rules).
+
+| Outcome | Held today by |
+|---|---|
+| Privacy and access | Roles and permissions in `familydb/base/roles.py`, asked by the page as `visitor().may(...)` (`web/auth.py` `NEEDS`); kids never shown costs, models, setup or the workings (`voice.PLAIN`, `tests/test_kids_plain.py`); presents kept from whom they are for (`familydb/presents.py`, `tests/test_presents.py`, `tests/test_gifts_private.py`); a position sent only while ticked, dictation browser-only, a push that never carries the words (`docs/DESIGN.md` sections 10 and 16, `familydb/push.py`). |
+| Data integrity and recovery | The page writes only through the tools and the few doors `CLAUDE.md` names (`tests/test_web.py`, `tests/writes.py`): a new flow that does three things calls three tools. Once-only forms (`guard(once=true)`, `@once`), idea and task revisions, the calendar operation log, undo (`familydb/undo.py`), a reply stored before it is sent (`delivery.py`). |
+| Security | The content policy and escaping (`web/__init__.py`, `tests/test_web.py`), CSRF and Origin (`auth.refused()`), keys write-only (`store/settings.py`). |
+| Accessibility | The measured floors in `docs/STYLE.md` (Accessibility), checked in every look. |
+| Cost and external effects | No page view is a model call (`test_browsing_asks_nothing_of_a_model`); every model call through `agent/gateway.py` and `spending.admit` (`tests/test_gateway.py`); nothing volatile in the cached prompt. |
+| Honesty and control | Receipts and Undo worded from what the tools did (`views.DID_WORDS`, `tests/test_tool_facts.py`); her picks and finds drawn as hers, never as plans; where the plans come from said beside free time (`views.AGENDA_NOTES`); stale or unknown facts said as such (`picks._why`, `suggest/shortlist.py`). |
+
+When unsure whether a failing test freezes presentation or holds an outcome, read what it asserts: if failing it would mean somebody sees, pays for, loses or is told something they should not, it holds an outcome, and the redesign carries it over. A larger change is easiest to judge in the example household first (`uv run python -m examples`, static pages anybody can click through; `--serve PORT` runs it live).
