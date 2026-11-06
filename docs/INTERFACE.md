@@ -210,8 +210,9 @@ Every item page reads in this order:
 3. **Where it came from:** who said it, when, their exact words, the photo or voice note if there was one.
 4. **What Vera found,** marked as hers and dated: "checked this morning" or "saved in March".
 5. **What's planned or how it went.**
-6. **The box, scoped to this thing,** with two or three quick sentences as chips ("Plan it for Friday", "Good for the kids?", "Drop it").
-7. **Edit by hand**, a quiet link, last.
+6. **One main action,** the page's one solid button: a place's **Plan it**, after what is planned; a recipe's **Cook this**, straight under the facts that decide it. How it went is folded under it.
+7. **The box, scoped to this thing,** with two or three quick sentences as chips ("Plan it for Friday", "Good for the kids?", "Drop it").
+8. **More**, folded and last: Drop it (or Bring it back), Look it up again, Edit by hand.
 
 ### The item types
 
@@ -222,9 +223,9 @@ Every item page reads in this order:
 | **A day** | This week | Everything on it, free stretches, pencil, and afterwards the memories. |
 | **A kid** | The kids | Her requests, her lists, her pitches, and for a parent her thread to read along. An admin sees the role and password forms here too. |
 | **A list** | Lists | The checklist itself is the page. |
-| **A recipe** | Eat, Cook; search | Takes, serves, good for (her guess to take or drop); the ingredients and steps; **Shopping list**, a page of its own by the sections of the store with the pantry apart, ticks once it is on the list, a stand-in under an uncommon thing; Plan it for a night; Record that you made it. |
+| **A recipe** | Eat, Cook; search | Takes, serves, good for (her guess to take or drop); the ingredients and steps; **Shopping list**, a page of its own by the sections of the store with the pantry apart, ticks once it is on the list, a stand-in under an uncommon thing; **Cook this** under the facts (a day and a dinner time; what is missing on the shopping list, ticked, and the dinner on the calendar, not ticked; the notice says what each part did); Record that you made it, folded. |
 | **A reminder** | This week, On your plate, a receipt | When or on what condition, owner, repeats, delivery rules in words. |
-| **A happening** | Happening soon, her picks | Date (or any time, for a place she found), source, the original listing, Yes in pencil; **Save it** and **Not for us** while it is hers to offer, and once it is not, what became of it. |
+| **A happening** | Happening soon, her picks | Date (or any time, for a place she found), source, the original listing, Yes in pencil; **Save it**, **Plan it** and **Not for us** while it is hers to offer (on its row on Coming up and under New ideas too), and once it is not, what became of it. |
 | **A memory** | What we did, a day | Faces, photo, what made it good, Again?. |
 
 ## 6. The Vera layer

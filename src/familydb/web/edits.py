@@ -13,6 +13,7 @@ import json
 import logging
 import re
 from contextlib import closing
+from datetime import date, datetime, time
 from typing import Any
 
 from flask import (
@@ -63,6 +64,10 @@ RECORDED_MADE = "Recorded: #{id} made once more."
 FACES = {"loved": 9, "ok": 6, "not-great": 3}
 RATED = "Thanks. That goes into the next suggestions."
 SCHEDULED = "On the calendar: {title}."
+OVERLAPS = "It overlaps {titles}."
+COOK_NOTHING = "Tick the shopping list, the calendar or both, then Cook this."
+COOK_NOT_LISTED = "Nothing went on the shopping list: {why}"
+COOK_NOT_PLANNED = "It is not on the calendar: {why}"
 PLANNED_HERE = "Added to the plans: {title}. Google Calendar isn't connected, so it is not on it."
 MOVED = "Moved to {when}."
 CANCELLED = "Canceled."
@@ -578,11 +583,7 @@ def add_plan() -> Response:
     if found.isascii() and found.isdigit() and len(found) <= 18:
         values["find_id"] = int(found)  # planning something she found (a happening's page)
     result, complaint = run("create_event", values)
-    if result is None:
-        _say(complaint or "")
-    else:
-        words = SCHEDULED if result.get("event") else PLANNED_HERE
-        _say(words.format(title=result["plan"]["title"]))
+    _say(_planned_words(result) if result is not None else complaint or "")
     return _back_here(back[0], **back[1])
 
 
@@ -812,25 +813,97 @@ def list_from_recipes() -> Response:
         _say(NEEDS_RECIPES)
         return _back("web.restaurants")
     result, complaint = run("shopping_list", {"action": "from_recipes", "idea_ids": wanted})
-    if result is None:
-        _say(complaint or "")
-    else:
-        recipes = ", ".join(result["recipes"])
-        said = [
-            LISTED.format(recipes=recipes, added=", ".join(result["added"]))
-            if result["added"]
-            else LISTED_NOTHING.format(recipes=recipes)
-        ]
-        if result["already"]:
-            said.append(LISTED_THERE.format(items=", ".join(result["already"])))
-        if result["in_pantry"]:
-            said.append(LISTED_LEFT.format(items=", ".join(result["in_pantry"])))
-        _say(" ".join(said))
+    _say(_listed_words(result) if result is not None else complaint or "")
     if (shop := _shop_back(back)) is not None:
         return _back("web.shop", idea_id=shop)
     if back.isdigit() and len(back) < 10:
         return _back("web.idea", idea_id=int(back))
+    if back == "cook":  # Eat's Cook tab, where the recipes were ticked
+        return _back("web.restaurants", side="cook")
     return _back("web.restaurants")
+
+
+def _listed_words(result: dict[str, Any]) -> str:
+    """What putting recipes on the shopping list did, said as the list's notice says it."""
+    recipes = ", ".join(result["recipes"])
+    said = [
+        LISTED.format(recipes=recipes, added=", ".join(result["added"]))
+        if result["added"]
+        else LISTED_NOTHING.format(recipes=recipes)
+    ]
+    if result["already"]:
+        said.append(LISTED_THERE.format(items=", ".join(result["already"])))
+    if result["in_pantry"]:
+        said.append(LISTED_LEFT.format(items=", ".join(result["in_pantry"])))
+    return " ".join(said)
+
+
+@bp.post("/idea/<int:idea_id>/cook")
+@once
+def cook_this(idea_id: int) -> Response:
+    """Cook this, on a recipe's page: what is missing on the shopping list, and, when ticked, the
+    dinner on the calendar, each the tool she would call (`shopping_list` from_recipes,
+    `create_event`), one after the other. The two are not one write, so the notice says each part,
+    what did not go through included; Undo is offered only when one part was asked for, so it never
+    takes back half of it."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.idea", idea_id=idea_id)
+    form = request.form
+    listing, planning = bool(form.get("list")), bool(form.get("calendar"))
+    if not (listing or planning):
+        _say(COOK_NOTHING)
+        return _back("web.idea", idea_id=idea_id)
+    said: list[str] = []
+    if listing:
+        listed, complaint = run(
+            "shopping_list",
+            {"action": "from_recipes", "idea_ids": [idea_id]},
+            offer_undo=not planning,
+        )
+        said.append(
+            _listed_words(listed) if listed is not None else COOK_NOT_LISTED.format(why=complaint)
+        )
+    if planning:
+        start, all_day = _dinner_start(_text(form, "day"), _text(form, "time"))
+        values = {"title": _text(form, "title"), "start": start, "all_day": all_day}
+        values["idea_id"] = idea_id
+        planned, complaint = run("create_event", values, offer_undo=not listing)
+        if planned is None:
+            said.append(COOK_NOT_PLANNED.format(why=complaint))
+        else:
+            said.append(_planned_words(planned))
+    _say(" ".join(said))
+    return _back("web.idea", idea_id=idea_id)
+
+
+def _dinner_start(day: str, hour: str) -> tuple[str, bool]:
+    """When a dinner goes on the calendar: the day and time asked for, the dinner hour by default
+    (meals.DINNER); all day on that day when no time was given or the time has gone by, since a
+    plan may not start in the past."""
+    app = _app()
+    today = app.clock.today()
+    try:
+        when = date.fromisoformat(day) if day else today
+    except ValueError:
+        when = today
+    when = max(when, today)
+    if not re.fullmatch(r"\d{2}:\d{2}", hour):
+        return when.isoformat(), True
+    local = datetime.combine(when, time.fromisoformat(hour), tzinfo=app.settings.tzinfo)
+    if local <= app.clock.now():
+        return when.isoformat(), True
+    return f"{when.isoformat()}T{hour}", False
+
+
+def _planned_words(result: dict[str, Any]) -> str:
+    """What putting something on the calendar did, and what it overlaps, said plainly."""
+    words = SCHEDULED if result.get("event") else PLANNED_HERE
+    said = words.format(title=result["plan"]["title"])
+    overlaps = [one["title"] for one in result.get("overlaps") or []]
+    if overlaps:
+        said += " " + OVERLAPS.format(titles=", ".join(overlaps))
+    return said
 
 
 def _shop_back(back: str) -> int | None:
