@@ -102,7 +102,7 @@ These show things and send nothing. On a database that has never been opened, or
 | `familydb debug prompt [TEXT] [--as NAME] [--kind KIND] [--idea N]` | The exact request that would be sent, without sending it. `--kind` is chat, digest, retry or enrich |
 | `familydb tool --list` | The tools, whether each is available and which write |
 | `familydb google events [--days N]` | The next 7 days (or N) on the family calendar, as a connection test |
-| `familydb debug validate-tools` | Asks the API to validate the tool definitions. It needs an Anthropic or Gemini key and fails on OpenAI |
+| `familydb debug validate-tools` | Asks the API to validate the tool definitions, by counting their tokens, which is free. It needs an Anthropic, OpenAI or Gemini key |
 
 ## Status commands
 

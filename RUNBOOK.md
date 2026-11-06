@@ -86,7 +86,7 @@ From the shell, `familydb doctor` checks all of it and says what to do about any
 3. `familydb members add NAME [--role admin|kid]` for everyone who will message the bot (parent is the default; kids need no channel). The Family page does the same.
 4. `familydb chat "we should try that new ramen place on Main St sometime"` then `familydb chat "tell me about #1"`.
 5. `familydb db status` shows `cache_read` above zero on the second call; if not, section 13.
-6. `familydb debug validate-tools`: the API accepts every tool schema. Claude and Gemini only; on OpenAI the first real message is the check.
+6. `familydb debug validate-tools`: the API accepts every tool schema (Claude, OpenAI and Gemini count tokens for free; a company added on the settings page cannot, so the first real message is its check).
 7. `familydb tool --list`: calendar and weather rows flip to `available` after sections 5 and 6.
 8. `familydb suggest --window this-weekend`: what the engine says about the ideas so far, with the checks it skipped.
 
@@ -344,7 +344,7 @@ Folded under "What one message may use": longest answer (at most 64,000 tokens),
 
 **Choosing the suggestions.** For a planning question ("what should we do this weekend?", "where should we eat tonight?") and the weekend digest, a stronger model chooses the picks from everything the family has told the bot and done, and the everyday model words them: about 3 to 13 cents a question, depending on the company, within US$5 a month unless changed (AI model, under "Choosing the suggestions"). It goes to the company that answers the chat, nowhere else. Over the month's amount, turned off, or failing, suggestions are made as before. On `/status` it is "choosing what to suggest".
 
-**What differs.** Claude's prompt cache is marked explicitly and lasts `ANTHROPIC_CACHE_TTL`; OpenAI and Gemini cache long prefixes themselves, so that setting does nothing there. Lookups and discovery work on all three. Conversations to OpenAI are sent with storage off. `familydb debug validate-tools` and `familydb doctor --online` check key and tools on Claude and Gemini (token counting, free); OpenAI has no such endpoint, so the first real message checks. Choosing the company and key on the settings page checks the key with the company for free, whichever it is.
+**What differs.** Claude's prompt cache is marked explicitly and lasts `ANTHROPIC_CACHE_TTL`; OpenAI and Gemini cache long prefixes themselves, so that setting does nothing there. Lookups and discovery work on all three. Conversations to OpenAI are sent with storage off. `familydb debug validate-tools` and `familydb doctor --online` check key and tools on all three (token counting, free). Choosing the company and key on the settings page checks the key with the company for free, whichever it is.
 
 ## 12. Looking after the server
 
@@ -408,7 +408,7 @@ When it is badly broken, `sudo scripts/maintain.sh doctor` works out what is wro
 - **"Sorry, I only talk to the family."** The sender is not on the family list for that channel; they appear on the Family page under "Asked to talk to the bot" with an add button, and the reply includes their id.
 - **A refusal.** Rare. `llm_calls.stop_reason` is `refusal`; Claude's server-side fallbacks are on by default (`ANTHROPIC_FALLBACKS`), so it means every model declined.
 - **Replies come from the wrong provider.** `/status` or `familydb debug cost` says who answers each surface. Probably another stands in because the chosen one has no key; the log says so at the time.
-- **"validation failed" from `debug validate-tools`.** That check counts tokens, which Claude and Gemini offer and OpenAI does not. With `PROVIDER=openai`, send a real message, or point `PROVIDER` elsewhere for the check.
+- **"validation failed" from `debug validate-tools`.** That check counts tokens, which Claude, OpenAI and Gemini offer for free; the line after it says what the API refused. A company added on the settings page cannot count tokens: send a real message to check it.
 - **"details: failed" on an idea.** The worker could not identify the place; `ideas list --json` shows the note. Fix the title or location ("actually it's the one in Vancouver", or the idea's page) and run `familydb enrich --idea N`.
 - **Suggestions say "web discovery off" or "hours unknown".** Lookups are off, the idea is not looked up yet, or the day's limit is used up; enrichment runs only in the long-running `familydb run`.
 - **The digest never arrives.** The Weekend digest row on `/status` and `familydb digest` show schedule and chat; the log says why a run was skipped (no chat, nothing to send, no admin). For a Telegram group the bot must be in it and see its messages (section 4, step 3).

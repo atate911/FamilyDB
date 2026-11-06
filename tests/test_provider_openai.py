@@ -169,6 +169,20 @@ def test_the_reasoning_goes_back_with_the_tool_result(settings, registry, ctx) -
     assert replayed == [reasoning]
 
 
+def test_counting_tokens_is_a_free_request_with_nothing_a_reply_needs(settings) -> None:
+    tool = ToolDef(name="now", description="the time", schema={"type": "object", "properties": {}})
+    request = TurnRequest(
+        system=[SystemBlock("rules", cacheable=True)],
+        messages=[Message("user", ["hello"])],
+        tools=[tool],
+    )
+    api = fakes.FakeResponsesAPI()
+    assert _provider(settings, api).count_tokens(request) > 0
+    assert api.requests == []  # nothing generated
+    [counted] = api.input_tokens.counted
+    assert set(counted) == {"model", "instructions", "input", "tools", "reasoning"}
+
+
 def test_a_refusal_and_a_cut_off_answer(settings, registry, ctx) -> None:
     api = fakes.FakeResponsesAPI(fakes.oa_response([fakes.oa_refusal("no")]))
     result = _run(api, settings, registry, ctx)
