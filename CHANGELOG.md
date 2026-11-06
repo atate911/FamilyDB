@@ -70,7 +70,9 @@
   out too, so swim, then a pick-up, then book club at eight leaves the hour between; a visit begun
   on an earlier day no longer empties the evening; busy until late is said as no time to cook. A
   recipe you said not to make again is still found when you ask for it by name. Ground almonds go
-  on the list (ground spices stay in the pantry).
+  on the list (ground spices stay in the pantry). Flour tortillas go on the
+  tortillas already on the list, the note saying which, rather than on a second line; sour cream
+  is still its own line, never cream.
 - **A better icon on the home screen.** The mark is drawn larger and heavier with its
   screen lit, so it reads beside the phone's other icons, and Android's round masks get one kept
   inside them. An iPhone that did not take the page's own link to the icon finds it at the
