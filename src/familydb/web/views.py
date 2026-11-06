@@ -564,12 +564,49 @@ def todo_row(
         "title": task.title,
         "revision": task.revision,
         "person": person_of(task.owner, slots),
+        "owner_id": task.owner_id,
         # Everyone's, so a grown-up may take it on (I'll handle it, web/edits.py).
         "everyone": task.owner_id is None,
         "when": when,
         "late": late,
         "reminder": local_moment(task.reminder.remind_at, tz) if task.reminder else None,
     }
+
+
+def plate_split(
+    rows: Sequence[dict[str, Any]], me: Member | None
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """A grown-up's plate, and everybody else's: what is theirs, then what is anyone's to take
+    on (I'll handle it), as "On your plate"; then each other person's under their name, as "On
+    Alex's plate", so a heading never says yours of somebody else's. Signed in under the shared
+    password, nobody is "you", and it is all one plate."""
+    if me is None:
+        return list(rows), []
+    mine = [row for row in rows if row.get("owner_id") == me.id]
+    anyones = [row for row in rows if row.get("everyone")]
+    others: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        if row.get("owner_id") not in (None, me.id):
+            others.setdefault(row["person"]["name"], []).append(row)
+    return mine + anyones, [
+        {"name": name, "label": f"On {name}\u2019s plate", "rows": theirs}
+        for name, theirs in others.items()
+    ]
+
+
+def others_words(groups: Sequence[dict[str, Any]]) -> str:
+    """Everybody else's late and due today in a line, for Now: "Alex has 1 late; Theo has 2"."""
+    said = []
+    for group in groups:
+        count = len(group["rows"])
+        late = sum(1 for row in group["rows"] if row.get("late"))
+        if late == count:
+            said.append(f"{group['name']} has {late} late")
+        elif late:
+            said.append(f"{group['name']} has {count}, {late} late")
+        else:
+            said.append(f"{group['name']} has {count} due today")
+    return "; ".join(said)
 
 
 def reminder_state(task: Task) -> str:

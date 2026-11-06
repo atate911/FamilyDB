@@ -9,7 +9,8 @@
   <h1 class="sr">{{ 'Now' if grownup else 'Now, for ' ~ visitor().name if visitor().name else 'Now' }}</h1>
   <p class="ctx">{{ context }}</p>
 
-  {# An admin's unfinished setup: each step a link, until it is done. #}
+  {# An admin's unfinished setup, what it needs or should have: each step a link, until it is done. What is only
+     optional (Telegram, Google Calendar) is a quiet line at the foot instead, so it never leads the page. #}
   {% if setup %}
     <section class="sec sec--setup" aria-labelledby="h-setup">
       <div class="sec__label"><h2 id="h-setup" class="label">Finish setting up</h2><small>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</small></div>
@@ -55,16 +56,20 @@
       </div>
     </section>
   {% else %}
-    {% if not picks and not plate and not first_day %}<p class="nf__quiet">{{ quiet }}</p>{% endif %}
+    {% if not picks and not plate and not others and not first_day %}<p class="nf__quiet">{{ quiet }}</p>{% endif %}
   {% endfor %}
 
   {# What waits on this person today: a kid's own to-dos, a grown-up's late or due ones. Ticked off here. #}
-  {% if plate %}
+  {% if plate or others %}
     <section class="sec" aria-labelledby="h-todo">
       <div class="sec__label"><h2 id="h-todo" class="label">{{ 'My to-dos' if not grownup else 'On your plate' }}</h2><a href="{{ url_for('web.tasks') }}">All</a></div>
+      {% if plate %}
       <ul class="todos todos--compact">
         {% for row in plate %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup, everyone=shell.family) }}{% endfor %}
       </ul>
+      {% else %}<p class="sec__note">Nothing late or due today is yours.</p>{% endif %}
+      {# Everybody else's late and due today, in a line: seen, never put on this person's plate. #}
+      {% if others %}<p class="sec__note"><a href="{{ url_for('go.week', _anchor='h-plate-1') }}">{{ others }}</a>.</p>{% endif %}
     </section>
   {% endif %}
 
@@ -109,4 +114,7 @@
     {% if dinner %}<p class="today"><b>To cook</b><span><a href="{{ dinner.href }}">{{ dinner.title }}</a>{% if dinner.why %}, {{ dinner.why | figs }}{% endif %}</span></p>{% endif %}
   </div>
   {% if left is not none %}<p class="nf__quiet">{{ left }} message{{ '' if left == 1 else 's' }} left today.</p>{% endif %}
+  {% if setup_later %}
+    <p class="sec__note" id="setup-later">When you like: {% for step in setup_later %}<a href="{{ step.link }}">{{ step.short }}</a>{{ ' · ' if not loop.last }}{% endfor %}. Only admins see this.</p>
+  {% endif %}
 {% endblock %}
