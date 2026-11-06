@@ -41,6 +41,10 @@ def record_outcome(ctx: ToolContext, args: RecordOutcomeInput) -> dict[str, Any]
     idea_id = args.idea_id if args.idea_id is not None else (plan.idea_id if plan else None)
     if idea_id is None:
         raise ToolError("give idea_id (or a plan_id that is linked to an idea)")
+    if plan is not None and plan.idea_id is not None and plan.idea_id != idea_id:
+        raise ToolError(
+            f"plan #{plan.id} is for idea #{plan.idea_id}, not #{idea_id}; nothing was recorded"
+        )
     if ideas.get(ctx.conn, idea_id) is None:
         raise ToolError(f"no idea #{idea_id}")
     if args.rating is not None and not 1 <= args.rating <= 10:
@@ -51,14 +55,17 @@ def record_outcome(ctx: ToolContext, args: RecordOutcomeInput) -> dict[str, Any]
             f"{day.isoformat()} is in the future; outcomes are for things that happened"
         )
     # The same request again (a retry, or a second call in one turn) counts the visit once.
-    key = ctx.request_key("outcome", idea_id, args.plan_id, day.isoformat())
+    # Named by its idea or by its plan, the same visit is the same: another idea or another day
+    # in one message is another visit.
+    key = ctx.request_key("outcome", idea_id, day.isoformat())
     earlier = outcomes.by_operation(ctx.conn, key) if key else None
     if earlier is not None:
         idea = ideas.get(ctx.conn, idea_id)
         return {
+            "duplicate_of": earlier.id,
+            "note": "Already recorded for this message; nothing was counted again.",
             "outcome": earlier.model_dump(mode="json"),
             "idea": idea.model_dump(mode="json") if idea else None,
-            "already": True,
         }
     with transaction(ctx.conn):
         outcome = outcomes.insert(
