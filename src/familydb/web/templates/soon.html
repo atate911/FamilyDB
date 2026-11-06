@@ -1,6 +1,6 @@
 {% extends "frame.html" %}
 {% from "_ui.html" import icon %}
-{% from "_dest.html" import dest_head, do_tabs, chip_row, dest_row, dest_empty %}
+{% from "_dest.html" import dest_head, do_tabs, chip_row, dest_row, dest_empty, find_acts %}
 {% block title %}{{ name }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-soon{% endblock %}
 {# Happening soon (docs/INTERFACE.md section 4): dated possibilities by date, what the sources list near home and the
@@ -19,6 +19,7 @@
           <div class="r">
             <span class="r__t">{% if r.href %}<a href="{{ r.href }}">{{ r.title }}</a>{% elif r.url %}<a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</span>
             <span class="r__m">{{ r.when | figs }}{% if r.where %} · {{ r.where }}{% endif %}{% if r.price %} · {{ r.price }}{% endif %}{% if r.source_words %} · {{ r.source_words }}{% endif %}</span>
+            {% if r.save and visitor().may('change') %}<div class="r__acts">{{ find_acts(r.save, r.title, back=request.full_path.rstrip('?'), plan=r.plan, quiet=true) }}</div>{% endif %}
           </div>
         {% endfor %}
       </div>
@@ -30,5 +31,4 @@
       <p class="empty">{{ icon('ticket') }}<span>Nothing near home is read yet.{% if visitor().may('manage') %} Add a calendar, a Ticketmaster key or her scouting <a href="{{ url_for('settings.section', name='happening') }}">in the settings</a>.{% endif %}</span></p>
     {% endif %}
   {% endfor %}
-  {% if days %}<p class="sec__note">Not on your list: tell {{ assistant }} to save one, or to put it on the calendar.</p>{% endif %}
 {% endblock %}

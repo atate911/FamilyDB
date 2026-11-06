@@ -1108,6 +1108,26 @@ def find_save_fields(find: Any) -> dict[str, str]:
     }
 
 
+def find_plan_fields(find: Any, today: date) -> dict[str, str] | None:
+    """What Plan it sends `create_event` for a find with a day (its page, Coming up, New ideas):
+    its day and time as the listing gives them, all day when it gives none or began before
+    today, its place, and its number. None for a place to go any time, which has no day yet."""
+    starts = find.starts_at or ""
+    if not starts:
+        return None
+    first = starts[:10]
+    timed = "T" in starts and first >= today.isoformat()
+    day = max(first, today.isoformat())
+    return {
+        "find_id": str(find.id),
+        "title": find.title,
+        "location": ", ".join(part for part in (find.venue, find.address) if part),
+        "start": starts[:16] if timed else day,
+        "all_day": "" if timed else "yes",
+        "when": f"{clock_time(starts)}" if timed else "all day",
+    }
+
+
 def new_idea_row(find: Any, today: date) -> dict[str, Any]:
     """Something she found and judged worth putting forward, as New ideas lists it: when it is
     on, when she would do it, and why it suits them."""
@@ -1119,6 +1139,7 @@ def new_idea_row(find: Any, today: date) -> dict[str, Any]:
         "title": find.title,
         "line": " · ".join(part for part in (when, find.judged_why or find.why) if part),
         "save": find_save_fields(find),
+        "plan": find_plan_fields(find, today),
     }
 
 
@@ -1829,6 +1850,10 @@ def happening_days(
         row = find_row(find, today)
         row["source_words"] = None if kid else f"listed by {row['who']}"
         row["href"] = f"/soon/{find.id}"
+        # Still hers to offer: Save it, Not for us and Plan it right on its row.
+        if not kid and find.state in ("new", "recommended"):
+            row["save"] = find_save_fields(find)
+            row["plan"] = find_plan_fields(find, today)
         row["free"] = bool(row["price"]) and "free" in row["price"].casefold()
         days.setdefault(day, []).append(row)
     for idea in own:
