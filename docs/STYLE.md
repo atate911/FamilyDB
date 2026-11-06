@@ -401,9 +401,12 @@ Each page names its focal element, what the main column holds, and what the rail
 - **Status.** Focal: the verdict, one sentence on a wash. Main: spent today, the last 30 days, how
   each part is doing as rows (a sentence, a tag, at most one action). Rail: recent activity, for an
   admin.
-- **Settings.** Main: a row per settings page with how it stands. Rail: setting up, how to read the
-  tags. Each settings page: its groups as cards, one Save in a bar that stays in reach; the rail
-  lists every settings page. **AI
+- **Settings.** Main: a row per settings page with how it stands, in two lists under quiet labels:
+  For the family (General, Messages, Personality, What's going down?, Connections, Spending,
+  Sign-in) and Advanced, how it runs underneath (AI model, Lookups, Troubleshooting, What has
+  changed; `fields.Section.advanced`). Rail: setting up, how to read the tags. Each settings page:
+  its groups as cards, fine-tuning folded (`Group.folded`), one Save in a bar that stays in reach;
+  the rail lists every settings page in the same two groups. **AI
   model** (`docs/MODELS_PAGE.md`) is a table, the one page dense by design. **Troubleshooting**
   lists what went wrong as sentences first, then the log.
 - **Setting up.** Focal: the step's one form. The steps along the top, Back and Next at the foot.

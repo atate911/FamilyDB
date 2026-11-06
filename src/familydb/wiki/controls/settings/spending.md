@@ -31,7 +31,7 @@ Christmas and birthday lists have no daily count, and a wish turned away shows o
 
 ## Thinking
 
-How long the model may think before it answers. More helps with hard questions and costs more. These two are the defaults: each use that thinks can be given its own on the [AI model](/wiki/controls/settings/ai-model#what-does-what) page, and its row says what it thinks at.
+Folded away on the card, under "Thinking". How long the model may think before it answers. More helps with hard questions and costs more. These two are the defaults: each use that thinks can be given its own on the [AI model](/wiki/controls/settings/ai-model#what-does-what) page, and its row says what it thinks at.
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|

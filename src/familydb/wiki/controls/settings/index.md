@@ -2,19 +2,28 @@
 
 Settings is where an admin changes how FamilyDB behaves, one card at a time, with no file to edit. This page says which card holds what, and how a value saved here beats the one in `.env`. Only admins can open it; a parent who follows a link to it is told it is for an admin.
 
+The cards come in two lists. **For the family** is what a family chooses for itself:
+
 | Card | What it holds |
 |---|---|
-| [General](/wiki/controls/settings/general) | Where home is, the time zone and units, the web page's name, dictation |
-| [AI model](/wiki/controls/settings/ai-model) | Which model company answers, its key, how strong a model each job uses, how suggestions are chosen, voice notes and photos |
-| [Spending](/wiki/controls/settings/spending) | The daily limit, each kid's limits, the wish-list limits, thinking and size limits |
+| [General](/wiki/controls/settings/general) | Where home is, the time zone and units, the web page's name, dictation, the places in the row |
 | [Messages](/wiki/controls/settings/messages) | What is sent without being asked, and when, including the morning message and notices on phones |
-| [Lookups](/wiki/controls/settings/lookups) | Filling ideas in from the web, places on the web, and taking off what is over |
-| [What is on near home](/wiki/controls/settings/happening) | The calendars, Ticketmaster and the scouting each evening that find what is on near home |
 | [Personality and family](/wiki/controls/settings/personality) | Who the assistant is, and the family's own words about itself |
+| [What is on near home](/wiki/controls/settings/happening) | The calendars, Ticketmaster and the scouting each evening that find what is on near home |
 | [Connections](/wiki/controls/settings/connections) | Telegram, the family's chat and Google Calendar |
+| [Spending](/wiki/controls/settings/spending) | The daily limit, each kid's limits and the wish-list limits; thinking and size limits are folded under them |
 | [Sign-in and security](/wiki/controls/settings/sign-in) | How long a sign-in lasts, how long messages are kept, seeing a key, signing everyone out |
+
+**Advanced** is how it runs underneath. The defaults suit most families, and nothing here needs changing to start:
+
+| Card | What it holds |
+|---|---|
+| [AI model](/wiki/controls/settings/ai-model) | Which model company answers, its key, which model each job uses, how suggestions are chosen, voice notes and photos |
+| [Lookups](/wiki/controls/settings/lookups) | Filling ideas in from the web, places on the web, and taking off what is over |
 | [Troubleshooting card](/wiki/controls/settings/troubleshooting) | What went wrong lately, how much is logged, and the words of every call to a model |
 | [What has changed](#what-has-changed) | Every change made on these cards (described below) |
+
+A card that needs something says **Needs a look** on the list, whichever list it is in.
 
 ## How a setting gets its value
 
