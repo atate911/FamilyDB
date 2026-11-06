@@ -307,7 +307,7 @@ by choosing what goes in, not by squeezing words:
   is what was billed. `/status` and `familydb debug cost` show per purpose how many tokens each part
   takes per call and its share.
 - **Budgets per part.** Code fits each: the history by recency (the newest messages within 6,000
-  characters, each cut to 1,500, `agent/history.within_budget`), the memories by what bears on the
+  characters, each cut to 1,500 keeping its start and its end, `agent/history.within_budget`), the memories by what bears on the
   message (`docs/MEMORY.md`), and, to come, the ideas the same way. A firm requirement (an allergy, a
   must-have) is never trimmed away; if requirements alone exceed a budget the composer says so rather
   than drop one quietly. Budgets are in characters; real tokens are to come.
