@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from familydb.store import lists
@@ -768,15 +768,22 @@ def shopping(
     recipe: Recipe, on_list: dict[str, Any], *, have: frozenset[str] = frozenset()
 ) -> Shopping:
     """The recipe's things by section, each laid over the family's list (`on_list`: by `key`,
-    the list's items), the pantry's apart."""
+    the list's items), the pantry's apart. A thing asked for twice is one line with both
+    amounts ("2 + 2" limes, for the marinade and for serving), where its first line placed it."""
     found: dict[str, list[Buy]] = {section: [] for section in SECTIONS}
     kept = Shopping()
-    seen: set[str] = set()
+    seen: dict[str, tuple[list[Buy], int]] = {}  # key -> the list it is in, and where
     for ingredient in recipe.ingredients:
         item = ingredient.item or parse(ingredient.text).item
-        if not item or key(item) in seen:
+        if not item:
             continue
-        seen.add(key(item))
+        if key(item) in seen:
+            where, at = seen[key(item)]
+            first = where[at]
+            if ingredient.amount:
+                more = f"{first.amount} + {ingredient.amount}" if first.amount else None
+                where[at] = replace(first, amount=more or ingredient.amount)
+            continue
         one = Buy(
             item=item,
             amount=ingredient.amount,
@@ -784,10 +791,13 @@ def shopping(
             alternatives=alternatives(item),
             on_list=on_list.get(key(item)),
         )
-        if pantry(item, ingredient.amount, have=have):
-            kept.pantry.append(one)
-        else:
-            found[section_of(item, ingredient.amount)].append(one)
+        where = (
+            kept.pantry
+            if pantry(item, ingredient.amount, have=have)
+            else found[section_of(item, ingredient.amount)]
+        )
+        seen[key(item)] = (where, len(where))
+        where.append(one)
     kept.sections = [(section, found[section]) for section in SECTIONS if found[section]]
     return kept
 
@@ -823,8 +833,11 @@ def wanted(
     chosen: list[tuple[Idea, Recipe]], *, have: frozenset[str] = frozenset()
 ) -> tuple[list[Wanted], list[str]]:
     """What the recipes need, one line an item however many ask for it, in the order first asked,
-    and what the pantry has left out (`have` is the family's own pantry, `family_pantry`)."""
+    and what the pantry has left out (`have` is the family's own pantry, `family_pantry`). Each
+    recipe's amounts are kept apart, and one that asks twice (an onion for the sauce and one for
+    the salsa) says both: "1 + 1 (Tacos)"."""
     by_key: dict[str, Wanted] = {}
+    asks: dict[str, dict[int, tuple[str, list[str]]]] = {}  # item -> recipe -> name, amounts
     staples: list[str] = []
     for idea, recipe in chosen:
         name = short_name(idea)
@@ -836,10 +849,15 @@ def wanted(
                 if item not in staples:
                     staples.append(item)
                 continue
-            one = by_key.setdefault(key(item), Wanted(item))
-            said = f"{ingredient.amount} ({name})" if ingredient.amount else f"({name})"
-            if said not in one.amounts:
-                one.amounts.append(said)
+            by_key.setdefault(key(item), Wanted(item))
+            _, amounts = asks.setdefault(key(item), {}).setdefault(idea.id, (name, []))
+            if ingredient.amount:
+                amounts.append(ingredient.amount)
+    for item_key, one in by_key.items():
+        one.amounts = [
+            f"{' + '.join(amounts)} ({name})" if amounts else f"({name})"
+            for name, amounts in asks[item_key].values()
+        ]
     return list(by_key.values()), staples
 
 

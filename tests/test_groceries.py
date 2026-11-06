@@ -173,5 +173,42 @@ def test_a_recipe_s_shopping_walks_the_store_with_the_pantry_apart():
     ]
     assert [one.item for one in shop.pantry] == ["smoked paprika", "salt"]
     limes, _, _, buttermilk = shop.to_buy
-    assert limes.on_list is not None and not limes.got and limes.amount == "2"  # once, the first
+    # Asked for twice (for the marinade and for serving): one line, both amounts.
+    assert limes.on_list is not None and not limes.got and limes.amount == "2 + 2"
     assert buttermilk.alternatives and buttermilk.on_list is None
+
+
+def _idea(number, title):
+    from familydb.store.ideas import Idea
+
+    return Idea(id=number, kind="recipe", title=title, created_at=NOW_ISO, updated_at=NOW_ISO)
+
+
+def test_a_recipe_asking_twice_keeps_both_amounts_on_the_list():
+    """An onion for the sauce and one for the salsa is two onions, not one."""
+    tacos = Recipe(
+        idea_id=1, ingredients=[groceries.parse(line) for line in ("1 onion", "1 onion")]
+    )
+    soup = Recipe(idea_id=2, ingredients=[groceries.parse("2 cups onion")])
+    needed, _ = groceries.wanted([(_idea(1, "Fish tacos"), tacos), (_idea(2, "Onion soup"), soup)])
+    assert [(one.item, one.note()) for one in needed] == [
+        ("onion", "1 + 1 (Fish tacos), 2 cups (Onion soup)")
+    ]
+    # Two recipes whose names start alike are still two.
+    long = [_idea(3, "Chicken tikka masala"), _idea(4, "Chicken tikka masala skewers")]
+    needed, _ = groceries.wanted([(idea, soup) for idea in long])
+    assert needed[0].note() == "2 cups (Chicken tikka masala), 2 cups (Chicken tikka masala…)"
+
+
+def test_putting_the_same_recipes_on_twice_changes_nothing(conn):
+    from familydb.store import lists
+
+    tacos = Recipe(
+        idea_id=1, ingredients=[groceries.parse(line) for line in ("1 onion", "1 onion")]
+    )
+    with db.transaction(conn):
+        ref = lists.list_id(conn, "shopping", NOW_ISO)
+        groceries.put_on(conn, ref, [(_idea(1, "Fish tacos"), tacos)], by=None, now=NOW_ISO)
+        groceries.put_on(conn, ref, [(_idea(1, "Fish tacos"), tacos)], by=None, now=NOW_ISO)
+    [onion] = lists.items(conn, ref)
+    assert onion.note == "1 + 1 (Fish tacos)"

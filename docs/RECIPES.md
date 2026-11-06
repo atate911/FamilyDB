@@ -157,7 +157,9 @@ recipes (
   dinners". The handler is `groceries.from_recipes` in code: each recipe's items, folded so what
   two share is one line ("onion" from both), the staples left out (`groceries.STAPLES`: salt,
   pepper, oil, water, sugar, flour and the like; a setting if the family wants their own), added
-  through `lists.add` with a note of the amounts and which recipe ("2 cups (fajitas), 1 (soup)");
+  through `lists.add` with a note of the amounts and which recipe ("2 cups (fajitas), 1 (soup)";
+  a recipe asking twice, an onion for the sauce and one for the salsa, says both, "1 + 1 (tacos)",
+  and a recipe's Shopping page the same, "2 + 2" limes);
   a thing already on the list keeps its place and gains the note, a ticked one is wanted again as
   `lists.add` already does. It returns what was added, what was there, what was left out, so the
   reply can say "Added 9 things for the fajitas; onions and limes were on it already; skipped
