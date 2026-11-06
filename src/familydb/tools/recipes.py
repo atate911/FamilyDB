@@ -205,7 +205,7 @@ def _today(ctx: ToolContext, now: datetime) -> list[SimpleNamespace]:
     return [
         SimpleNamespace(
             start=event.start.isoformat(),
-            end=event.end.isoformat(),
+            end=event.end.isoformat() if event.end else None,
             all_day=event.all_day,
             title=event.title,
         )
@@ -236,8 +236,8 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
         now,
         _today(ctx, now),
         rest=meals.rest_days(ctx.conn, now.date()),
-        not_again=meals.not_again(ctx.conn),
         unnamed=presents.plan_titles(ctx.conn, today, today, kept),
+        not_again=meals.not_again(ctx.conn),
     )
     occasion = args.occasion
     asked = meals.Asked(
@@ -273,8 +273,9 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
             {"id": one.idea.id, "title": one.idea.title, "why": one.reason} for one in out[:3]
         ]
         said["ruled_out_more"] = max(0, len(out) - 3)
-    if meals.time_limit(tonight, asked)[1]:
-        said["tonight"] = f"{tonight.minutes_free} min to cook {tonight.cut_short()}"
+    asked_more = asked.most_minutes is not None and asked.most_minutes < (tonight.minutes_free or 0)
+    if tonight.minutes_free is not None and tonight.limit_words and not asked_more:
+        said["tonight"] = f"{tonight.minutes_free} min to cook {tonight.limit_words}"
     if not ranked:
         said["note"] = "no recipes saved yet"
     return said
