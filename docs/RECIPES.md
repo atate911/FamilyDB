@@ -36,8 +36,8 @@ the build differs from the plan below, the build is right and the plan is kept f
   of each that fit), with Cook and Eat out as tabs carrying their own chips; the grocery boxes are
   on Cook. A recipe's page reads as a recipe (made or not, what it takes, the list first, a night
   on the calendar quieter), the kitchen board names tonight's pick, and Eat is a module of its own
-  (`web/eat_page.py`). The row of eight places is unchanged: a ninth for cooking would crowd a
-  phone's row, and Eat already asks the question.
+  (`web/eat_page.py`). No place was added to the row for cooking (eight then, five since November
+  2026): it would crowd a phone's row, and Eat already asks the question.
 - **A recipe's facts are on tools of their own** (after a review of the design, October 2026). The
   plan put them on `add_idea` and `update_idea` as a nested `recipe` field, which declared the same
   schema twice in the tools every message carries. Now `recipe` saves (through `add_idea`, so its

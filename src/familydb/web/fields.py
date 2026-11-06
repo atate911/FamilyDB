@@ -460,8 +460,8 @@ GROUPS: tuple[Group, ...] = (
                 "wish_daily_count",
                 "Everyday wishes a day",
                 "How many things a kid may add to her everyday list in a day. The next is kindly "
-                "turned away, and shows on the Kids card. Christmas and birthday lists have no "
-                "daily count.",
+                "turned away, and shows with her wishes on Lists. Christmas and birthday lists "
+                "have no daily count.",
             ),
             field(
                 "occasion_list_size",
