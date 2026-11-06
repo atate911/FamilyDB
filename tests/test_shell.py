@@ -79,9 +79,13 @@ def _late_task(conn, owner_id: int, title: str = "Call the dentist") -> None:
 
 def test_an_admin_sees_every_page_and_what_is_behind_the_scenes(sam) -> None:
     side = _sidebar(sam)
-    for page in ("Now", "Chat with Vera", "Eat", "Do", "Week", "Kids", "Soon", "Lists", "Did"):
+    for page in ("Now", "Eat", "Do", "Week", "Lists", "Chat with Vera"):
         assert f"<span>{page}</span>" in side, page
-    assert "What Vera knows" in side
+    for gone in ("Kids", "Soon", "Did"):  # Lists' chips and Do's tabs now
+        assert f"<span>{gone}</span>" not in side, gone
+    # The whole conversation and what she knows sit under the places.
+    then = side.split('class="nav nav--then"')[1]
+    assert "<span>Chat with Vera</span>" in then and "What Vera knows" in then
     assert 'class="overline nav-group"' in side and "Behind the scenes" in side
     for target in ('href="/status"', 'href="/settings"', 'href="/family"'):
         assert target in side, target
@@ -94,7 +98,7 @@ def test_a_parent_gets_status_but_not_settings_or_the_family_list(alex) -> None:
     side = _sidebar(alex)
     assert "Behind the scenes" in side and 'href="/status"' in side
     assert 'href="/settings"' not in side and 'href="/family"' not in side
-    assert "<span>Kids</span>" in side and "What Vera knows" in side
+    assert "<span>Lists</span>" in side and "What Vera knows" in side
     page = alex.get("/more").text
     assert 'href="/settings"' not in page and 'href="/family"' not in page
     assert "Status" in page
@@ -108,19 +112,19 @@ def test_a_kid_sees_her_own_pages_and_nothing_of_how_it_works(girl) -> None:
     assert "<span>My week</span>" in side and "<span>My list</span>" in side
     assert "pill-health" not in girl.get("/more").text  # never a pill, or money, for a kid
     row = _row(girl)
-    assert "My list" in row and "Eat" not in row  # her list, and no Eat, Soon, Lists or Did
+    assert "My list" in row and "Eat" not in row  # her list, and no Eat or Lists
     menu = girl.get("/more").text
-    assert 'href="/do"' in menu  # and Do is in her menu
+    assert 'href="/chat#latest"' in menu  # the whole conversation is on her menu
     assert "Behind the scenes" not in menu and "Settings" not in menu
     # No version number on a kid's footer.
     assert "Version" not in menu.split('<footer class="foot">')[1]
 
 
-def test_a_grown_up_s_row_has_the_eight_places_on_the_menu_too(sam) -> None:
+def test_a_grown_up_s_row_has_the_five_places_on_the_menu_too(sam) -> None:
     row = _row(sam)
-    for page in ("Now", "Eat", "Do", "Week", "Kids", "Soon", "Lists", "Did"):
+    for page in ("Now", "Eat", "Do", "Week", "Lists"):
         assert re.search(rf">{page}<", row), page
-    assert row.count("<a ") == 8
+    assert row.count("<a ") == 5
 
 
 def test_the_page_can_be_skipped_to_and_names_its_language(sam) -> None:
@@ -234,19 +238,21 @@ def test_the_page_you_are_on_is_marked_in_the_menu_and_the_tab_bar(sam, girl) ->
 
 
 def test_the_row_of_destinations_follows_the_role(sam, alex, girl, conn, family) -> None:
-    """A grown-up's row has the eight places (Kids only while a kid is on the list); a kid's has
-    her four, and never Lists, Kids or Soon (docs/INTERFACE.md section 9)."""
+    """A grown-up's row has the five places, Lists counting what waits on a parent while a kid
+    is on the list; a kid's has her four, and never Lists (docs/INTERFACE.md section 9)."""
 
     def places(client) -> list[str]:
         row = re.search(r'<nav class="row".*?</nav>', client.get("/").text, re.S).group(0)
         return re.findall(r"<a [^>]*>([^<]+)(?:<span|</a>)", row)
 
-    assert places(sam) == ["Now", "Eat", "Do", "Week", "Kids", "Soon", "Lists", "Did"]
-    assert places(alex) == ["Now", "Eat", "Do", "Week", "Kids", "Soon", "Lists", "Did"]
+    assert places(sam) == ["Now", "Eat", "Do", "Week", "Lists"]
+    assert places(alex) == ["Now", "Eat", "Do", "Week", "Lists"]
     assert places(girl) == ["Now", "Do", "My week", "My list"]
+    lists = sam.get("/lists").text
+    assert 'href="/kids/the-girls"' in lists and 'href="/presents"' in lists
     with db.transaction(conn):
         members.set_active(conn, family["girls"].id, False)
-    assert "Kids" not in places(sam)  # nobody to decide for
+    assert 'href="/kids/the-girls"' not in sam.get("/lists").text  # nobody to decide for
 
 
 def test_a_plan_made_for_a_present_is_not_asked_about_where_the_present_is_hidden(

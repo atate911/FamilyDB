@@ -259,8 +259,12 @@ def evaluate(
         if idea.needs_booking:
             checks.booking_url = place.booking_url if place else None
             if idea.lead_time_days is not None and fits and context.window is not None:
-                days_left = (min(fits) - context.today).days
-                if idea.lead_time_days > days_left:
+                # Each day on its own: too soon for Saturday may still be in time for Sunday.
+                bookable = [
+                    day for day in fits if (day - context.today).days >= idea.lead_time_days
+                ]
+                if not bookable:
+                    days_left = (max(fits) - context.today).days
                     hard_fail = True
                     checks.booking = "too_late"
                     out.append(
@@ -270,6 +274,12 @@ def evaluate(
                 else:
                     checks.booking = "ok"
                     reasons.append("needs booking")
+                    if len(bookable) < len(fits):
+                        soon = [day for day in fits if day not in bookable]
+                        reasons.append(
+                            f"too late to book for {', '.join(f'{day:%A}' for day in soon)}"
+                        )
+                        fits = bookable
             else:
                 checks.booking = "unknown"
                 soft = True

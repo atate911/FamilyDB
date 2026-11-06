@@ -261,7 +261,7 @@ EVENTS: dict[str, Event] = {
     ),
     "tap_later": Event(
         "A kid's ask left for later with its button",
-        "Left for later. It's on the Kids card on Home when you're ready.",
+        "Left for later. It's with her wishes on Lists when you're ready.",
         (),
     ),
     "tap_parents_only": Event(

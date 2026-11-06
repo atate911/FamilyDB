@@ -4,8 +4,12 @@ pick, `find_recipes` and "what's for dinner?" ask here; the model frames the que
 the reply, and never ranks.
 
 A fact rules a recipe out (longer than the time there is, a situation asked for that it is not,
-words asked for that it lacks); a matter of taste (made lately, a guessed situation) only lowers
-it to a maybe, said first. Situations the family said stand; guessed ones lean.
+words asked for that it lacks, the family's last word on it "not again"); a matter of taste (made
+lately, a guessed situation) only lowers it to a maybe, said first. Situations the family said
+stand; guessed ones lean.
+
+The time there is, is the tighter of what was asked and what tonight's plans leave: a plan going
+on when cooking would start is waited out, and one beginning later ends it.
 """
 
 from __future__ import annotations
@@ -21,7 +25,7 @@ from urllib.parse import unquote, urlsplit
 from familydb import groceries
 from familydb.base.dates import fmt_minutes
 from familydb.store import ideas as idea_store
-from familydb.store import lists, memories
+from familydb.store import lists, memories, outcomes
 from familydb.store import recipes as recipe_store
 from familydb.store.ideas import RECIPE, Idea
 from familydb.store.recipes import OCCASIONS, FilledBy, Ingredient, Recipe
@@ -87,7 +91,7 @@ CLUES: dict[str, tuple[str, ...]] = {
 
 
 class Planned(Protocol):
-    """Something on the day, as `agenda.Entry` is."""
+    """Something on the day, as `agenda.Entry` is; its `end`, when it has one, is read too."""
 
     start: str
     all_day: bool
@@ -130,15 +134,30 @@ def guess_occasions(recipe: Recipe, idea: Idea | None = None) -> list[str]:
 
 @dataclass(frozen=True)
 class Situation:
-    """The meal asked about: its day, how long there is to cook when a plan cuts the evening
-    short (None when nothing does), and how long a recipe made rests (the family's, when they
-    said: `rest_days` for kind recipe)."""
+    """The meal asked about: its day, how long there is to cook when plans cut the evening short
+    (None when nothing does): `plan` the one that ends it, `after` the one going on when cooking
+    would start, which it waits for; how long a recipe made rests (the family's, when they said:
+    `rest_days` for kind recipe); and the recipes whose last word is "not again"."""
 
     day: date
     weekend: bool
     minutes_free: int | None = None
     plan: str | None = None
     rest_days: int = REST_DAYS
+    after: str | None = None
+    not_again: frozenset[int] = frozenset()
+
+    @property
+    def limit_words(self) -> str:
+        """Where the time to cook comes from: "before Game", "after Swim", "between Swim and
+        Game"; empty when no plan cuts it."""
+        if self.after and self.plan:
+            return f"between {self.after} and {self.plan}"
+        if self.plan:
+            return f"before {self.plan}"
+        if self.after:
+            return f"after {self.after}"
+        return ""
 
 
 def rest_days(conn: sqlite3.Connection, today: date) -> int:
@@ -153,43 +172,75 @@ def rest_days(conn: sqlite3.Connection, today: date) -> int:
     return days
 
 
+def _when(text: str | None, tz: Any) -> datetime | None:
+    if not text or len(text) <= 10:
+        return None
+    try:
+        moment = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    return (moment if moment.tzinfo else moment.replace(tzinfo=tz)).astimezone(tz)
+
+
 def situation(
     now: datetime,
     planned: Iterable[Planned] = (),
     *,
     rest: int = REST_DAYS,
     unnamed: frozenset[str] = frozenset(),
+    not_again: frozenset[int] = frozenset(),
 ) -> Situation:
-    """Tonight as code reads it: the weekday, and the minutes from when cooking starts (now, or
-    `DINNER` if earlier) to the first timed plan before `LATEST`. A plan whose title is in
-    `unnamed` (one made for a present, `presents.plan_titles`) still takes its time but is said
-    only as "a plan", whoever reads the reason."""
+    """Tonight as code reads it: the weekday, and the minutes from when cooking starts to the
+    first timed plan before `LATEST`. Cooking starts now, or at `DINNER` if that is later, or
+    when a plan begun today and going on then is over (chained plans one after another); with
+    such a plan and none after it, the time runs to `LATEST`, and past it there is none. A plan
+    whose title is in `unnamed` (one made for a present, `presents.plan_titles`) still takes its
+    time but is said only as "a plan", whoever reads the reason. `not_again` is the recipes the
+    family last said not to make again (`not_again`)."""
     today = now.date()
     start = max(now, datetime.combine(today, DINNER, tzinfo=now.tzinfo))
     latest = datetime.combine(today, LATEST, tzinfo=now.tzinfo)
-    first: tuple[datetime, str] | None = None
+    timed: list[tuple[datetime, datetime | None, str]] = []
     for entry in planned:
-        if entry.all_day or len(entry.start) <= 10:
+        if entry.all_day:
             continue
-        try:
-            begins = datetime.fromisoformat(entry.start)
-        except ValueError:
+        begins = _when(entry.start, now.tzinfo)
+        if begins is None:
             continue
-        if begins.tzinfo is None:
-            begins = begins.replace(tzinfo=now.tzinfo)
-        begins = begins.astimezone(now.tzinfo)
-        later = first is None or begins < first[0]
-        if begins.date() == today and start <= begins <= latest and later:
-            title = getattr(entry, "title", "") or ""
-            first = (begins, "a plan" if not title or title in unnamed else title)
-    free = int((first[0] - start).total_seconds() // 60) if first else None
+        title = getattr(entry, "title", "") or ""
+        said = "a plan" if not title or title in unnamed else title
+        timed.append((begins, _when(getattr(entry, "end", None), now.tzinfo), said))
+    timed.sort(key=lambda one: one[0])
+    after: str | None = None
+    for begins, ends, said in timed:  # in order, so one straight after another is waited out too
+        if begins.date() == today and ends is not None and begins <= start < ends:
+            start, after = ends, said
+    first: tuple[datetime, str] | None = None
+    for begins, _, said in timed:
+        if begins.date() == today and start <= begins <= latest:
+            first = (begins, said)
+            break
+    if first is not None:
+        free: int | None = int((first[0] - start).total_seconds() // 60)
+    elif after is not None:
+        free = max(0, int((latest - start).total_seconds() // 60))
+    else:
+        free = None
     return Situation(
         day=today,
         weekend=today.weekday() >= 5,
         minutes_free=free,
         plan=first[1] if first else None,
         rest_days=rest,
+        after=after,
+        not_again=not_again,
     )
+
+
+def not_again(conn: sqlite3.Connection) -> frozenset[int]:
+    """The recipes whose latest word is not to make them again, as the outings' engine reads its
+    ideas' (suggest/engine.py): a meal leaves them out; a search for one finds it, said so."""
+    return frozenset(outcomes.do_not_repeat(conn))
 
 
 @dataclass(frozen=True)
@@ -238,6 +289,19 @@ def _matches(idea: Idea, recipe: Recipe, wanted: set[str]) -> bool:
     return bool(wanted & said)
 
 
+def _asked_for(idea: Idea, recipe: Recipe, asked: Asked) -> bool | None:
+    """Whether the words asked for are in it; None when no words were asked for."""
+    if not asked.text:
+        return None
+    wanted = _words(asked.text)
+    wanted |= {word[:-1] for word in wanted if word.endswith("s")}
+    return _matches(idea, recipe, wanted) if wanted else None
+
+
+# Said of a recipe the family last said not to make again.
+NOT_AGAIN = "you said not to make it again"
+
+
 def _ago(idea: Idea, today: date) -> int | None:
     if not idea.last_done_at:
         return None
@@ -265,18 +329,27 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
     out: list[str] = []
     maybe: list[str] = []
     minutes = recipe.minutes
-    limit = asked.most_minutes
-    if limit is None and now.minutes_free is not None and asked.occasion != "prep_ahead":
-        limit = now.minutes_free
+    # The tighter of what was asked and what tonight's plans leave; made ahead, the plans do not
+    # count.
+    plans_leave = now.minutes_free if asked.occasion != "prep_ahead" else None
+    limits = [one for one in (asked.most_minutes, plans_leave) if one is not None]
+    limit = min(limits) if limits else None
+    by_plans = plans_leave is not None and limit == plans_leave
     if minutes is not None:
         reasons.append(fmt_minutes(minutes))
         if limit is not None and minutes > limit:
-            why = f"takes {fmt_minutes(minutes)}, there are {fmt_minutes(max(limit, 0))}"
-            if now.plan and asked.most_minutes is None:
-                why += f" before {now.plan}"
+            if limit <= 0:
+                why = f"no time to cook {now.limit_words}".rstrip()
+            else:
+                why = f"takes {fmt_minutes(minutes)}, there are {fmt_minutes(limit)}"
+                if by_plans and now.limit_words:
+                    why += f" {now.limit_words}"
             out.append(why)
     elif limit is not None:
         maybe.append("how long it takes is not known")
+    if idea.id in now.not_again:
+        # Their last word on it; a search for it by name finds it, said so.
+        (maybe if _asked_for(idea, recipe, asked) else out).append(NOT_AGAIN)
     if recipe.serves:
         reasons.append(f"serves {recipe.serves}")
     if asked.occasion:
@@ -307,11 +380,8 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
         elif guessed & NOT_DINNERS:  # a guess only lowers it
             words = " or ".join(occasion_words(sorted(guessed & NOT_DINNERS)))
             maybe.append(f"looks like a {words} one")
-    if asked.text:
-        wanted = _words(asked.text)
-        wanted |= {word[:-1] for word in wanted if word.endswith("s")}
-        if wanted and not _matches(idea, recipe, wanted):
-            out.append(f"nothing of {asked.text}")
+    if asked.text and _asked_for(idea, recipe, asked) is False:
+        out.append(f"nothing of {asked.text}")
     days = _ago(idea, now.day)
     if idea.times_done:
         made = "made once" if idea.times_done == 1 else f"made {idea.times_done} times"

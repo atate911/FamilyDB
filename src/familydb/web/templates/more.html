@@ -13,21 +13,19 @@
   {% endif %}
 
   <ul class="slist mt-3">
+    {% if viewer.may('chat') %}
+      {# The whole conversation: the box on every page is where a message starts, and this is all of it. #}
+      {% set lead %}{{ tile('chat') }}{% endset %}
+      {% set trail %}{% if shell.unread %}{{ badge('act', shell.unread, 'new') }}{% endif %}{% endset %}
+      {{ srow(url_for('chat.show', _anchor='latest'), 'Chat with ' ~ assistant if has_persona else 'Chat', 'The whole conversation', lead=lead, trail=trail) }}
+    {% endif %}
     {% set lead %}{{ tile('palette') }}{% endset %}
     {{ srow(url_for('look.show'), 'Look', ('Yours, on every phone and computer you use' if not grownup else 'Yours, on every phone and computer you sign in on') if shell.me.name else 'How the page looks, in this browser', lead=lead) }}
-    {% if not grownup %}
-      {% set lead %}{{ tile('bulb') }}{% endset %}
-      {{ srow(url_for('web.ideas'), 'Do', 'Places to go and things to try', lead=lead) }}
-    {% endif %}
   </ul>
 
   {% if grownup %}
     <h2 class="group-h">For the family</h2>
     <ul class="slist">
-      {% if viewer.may('change') %}
-        {% set lead %}{{ tile('list') }}{% endset %}
-        {{ srow(url_for('web.lists_page'), 'Lists', 'What the family needs to get', lead=lead) }}
-      {% endif %}
       {% if wishing == 'decide' %}
         {% set lead %}{{ tile('gift') }}{% endset %}
         {% set trail %}{% if shell.decide %}{{ badge('act', shell.decide, 'to decide') }}{% endif %}{% endset %}

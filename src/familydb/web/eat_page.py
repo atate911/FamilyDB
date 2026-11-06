@@ -206,6 +206,7 @@ def _cook_rows(
         agenda.on(seen, today),
         rest=meals.rest_days(conn, today),
         unnamed=presents.plan_titles(conn, today.isoformat(), today.isoformat(), kept),
+        not_again=meals.not_again(conn),
     )
     meal = None if occasion in NOT_DINNER else "dinner"
     if occasion:

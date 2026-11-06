@@ -4,4 +4,4 @@
   <div class="banner banner--warn banner--slim"><span class="banner__ic">{{ icon('alert') }}</span><p class="banner__text">Looking ideas up is on, but there is no key for the company that does it, so nothing is looked up until there is one: see <a href="{{ url_for('settings.section', name='model') }}">AI model</a>.</p></div>
 {% endif %}
 {{ form('lookups', groups.values()) }}
-<p class="note">{{ icon('sparkle') }}<span>Which company and which model look things up is on the <a href="{{ url_for('settings.section', name='model', _anchor='models') }}">AI model</a> page.</span></p>
+<p class="note">{{ icon('sparkle') }}<span>Which company and which model look things up is on the <a href="{{ url_for('settings.section', name='model', _anchor='row-lookup') }}">AI model</a> page.</span></p>

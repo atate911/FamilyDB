@@ -1,8 +1,8 @@
 # Now and Chat
 
-Now is the first screen: the box to tell the assistant something, then whatever is waiting on you, her picks for right now, and today and tomorrow in one line each. Chat is the conversation behind the box, where every message and answer is kept. Reading either page makes no model call; nearly every message you send does, and it is paid for.
+Now is the first screen: the box to tell the assistant something, then what is next with today and tomorrow in a line each, whatever is waiting on you, and her picks for right now. Chat is the conversation behind the box, where every message and answer is kept. Reading either page makes no model call; nearly every message you send does, and it is paid for.
 
-The box is the same on every page of the family's: Now, Eat, Do, Week, Kids, Soon, Lists, Did and each thing's own page. A message sent from any of them lands in your conversation, and the answer comes back to the page you sent it from.
+The box is the same on every page of the family's: Now, Eat, Do and its tabs, Week, Lists and its chips, and each thing's own page. A message sent from any of them lands in your conversation, and the answer comes back to the page you sent it from.
 
 ## Who sees what
 
@@ -19,14 +19,14 @@ Everyone signed in sees Now and may chat ([Roles and permissions](/wiki/model/fa
 |---|---|
 | The box | Ask, save an idea or set a reminder. Under it, what the last message brought back (below) |
 | The line | The day and the time, then how the day stands: "Free this evening", "Swim lesson 4:30 pm" |
-| Finish setting up | The steps left, for admins only, until they are done |
-| Her questions | At most three things waiting on you: a kid's ask to answer (Yes, Not this time), a kid's pitch for an outing (See it, or Later, which rests it for a week), and after them one plan to say how it went (Loved it, OK, Not great), while [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) is on |
-| On your plate | What is late or due today, each with its tick; a kid sees all of her own things to do |
-| What about… | Her picks, chosen ahead by code, with when they were chosen. "Different ones" asks her for others, which is a message like any other |
-| My list | A kid's wishes, with the countdowns to Christmas and her birthday |
-| Today, Tomorrow | One line each, linking to the day |
+| Finish setting up | The steps left that it needs or should have (an AI model, your own password, where home is), for admins only, until they are done. Optional ones (Telegram, Google Calendar, the rest of the family) wait in a line at the foot, "When you like" |
+| Next up | The next thing on: one going on now ("on now") or still to come today, else tomorrow's first, with its time, place and who; then one line each for today and tomorrow, linking to the day (a day whose one thing is Next up has no line, so nothing is said twice), and tonight's pick to cook |
+| Needs you | What waits on you, most pressing first: what of yours (or everyone's) is late, her questions (a kid's ask to answer, Yes or Not this time; a kid's pitch for an outing, See it or Later, which rests it for a week; one plan to say how it went, Loved it, OK or Not great, while [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) is on), then what is due today. The first three show; **And N more** opens the rest. A line under them says anybody else's ("Alex has 1 late", to the week) |
+| What about… | Her pick for now, large, and the other kinds a line each under it, chosen ahead by code, with when they were chosen. "Different ones" asks her for others, which is a message like any other |
 
-When nothing waits on you, Now says so ("Nothing needs you.") and gets on with the picks.
+When nothing waits on you, Now says so ("Nothing needs you.") with three ways in: **Choose dinner**, **Find something to do** and **Add a reminder**, which starts the box for you.
+
+A kid's Now keeps its own order: her questions, her own things to do, her list (with the countdowns to Christmas and her birthday), at most two picks, and today's and tomorrow's lines.
 
 ### Her picks
 
@@ -61,11 +61,11 @@ While you type a short name (one to four words), the box shows what the family a
 
 ## The box on a destination
 
-On Eat, Do, Week, Kids, Soon, Lists and Did the box says what it is about ("about: This week") and the message goes to her with that scope in front of it, so "anything cheaper?" on Eat is a question about restaurants. On a thing's own page the box is about that thing, and three quick sentences under it fill the box with the usual asks ("Plan it for this weekend", "Move it to Saturday"); nothing is sent until you press Send.
+On Eat, Do and its tabs, Week, Lists and a kid's wishes the box says what it is about ("about: This week") and the message goes to her with that scope in front of it, so "anything cheaper?" on Eat is a question about restaurants. On a thing's own page the box is about that thing, and three quick sentences under it fill the box with the usual asks ("Plan it for this weekend", "Move it to Saturday"); nothing is sent until you press Send.
 
 ## On a big screen, and the kitchen tablet
 
-From a tablet's width up, the row of destinations stands down the left as the menu, the same one Status, Settings and the guide have: your places, Chat, What Vera knows and, for grown-ups, Behind the scenes, with who is signed in at the foot. An admin can take a place the family does not use out of the row on [General](/wiki/controls/settings/general#this-page). From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and the last lines of your conversation under it, so her answer stays in view while you move between pages.
+From a tablet's width up, the row of destinations stands down the left as the menu, the same one Status, Settings and the guide have: your places, then Chat (the whole conversation) and What Vera knows under them, and, for grown-ups, Behind the scenes, with who is signed in at the foot. On a phone, Chat is on the menu behind your picture. An admin can take a place the family does not use out of the row on [General](/wiki/controls/settings/general#this-page). From a desk's width up, the box keeps a column of its own on the right, with what the last message brought back and your pinned replies under it, so her answer stays in view while you move between pages; the conversation itself is Chat, a link away.
 
 **Pin** under one of her replies keeps it at hand: signed in as yourself, it stays at the top of that column on a desk and under **Pinned** at the top of Chat on any screen (one line; open it to read them), newest first, until you press **Unpin** there (or **Pinned** under the reply) to take it off. A shelf holds eight; pinning a ninth lets the oldest go. Your pins are yours alone, and go with you if you are taken off the family list.
 

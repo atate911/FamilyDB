@@ -84,6 +84,7 @@ PEOPLE = (
             "/kids",
             "/soon",
             "/lists",
+            "/presents",
             "/did",
             "/chat",
             "/more",

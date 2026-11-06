@@ -174,8 +174,10 @@ def test_a_recipe_page_reads_as_a_recipe(settings, clock, conn, family):
     )
     page = _client(settings, clock).get(f"/idea/{made['id']}").text
     assert "Not made yet" in page and "An idea" not in page
-    assert "Takes" in page and "Plan it for a night" in page
-    assert page.index("Shopping list") < page.index("Plan it for a night")
+    # Cook this leads: the shopping and, if wanted, the calendar, in one; the rest is quieter.
+    assert "Takes" in page and ">Cook this</button>" in page
+    assert page.index("Cook this") < page.index("Record that you made it") < page.index(">More")
+    assert "Plan it for a night" not in page
     assert "What goes with it?" in page  # her quick sentences are a recipe's
 
 
@@ -340,3 +342,96 @@ def test_the_shopping_list_is_walked_by_section_once_it_spans_two(settings, cloc
     REGISTRY.dispatch("shopping_list", {"action": "remove", "items": ["bread"]}, ctx)
     plain = _client(settings, clock).get("/lists").text
     assert "list-items__sec" not in plain  # one section: the list whole, in the order added
+
+
+# -- Cook this (the redesign of November 2026): one action that finishes the dinner
+
+
+def _cook(page: str) -> tuple[str, dict[str, str]]:
+    form = re.search(r'<form class="form cook".*?</form>', page, re.S).group(0)
+    return form, _token(form)
+
+
+def test_cook_this_puts_what_is_missing_on_the_list_and_the_dinner_on_the_plans(
+    settings, clock, conn, family
+):
+    from familydb.store import plans
+
+    made = _recipe(
+        conn,
+        settings,
+        clock,
+        family["sam"],
+        "Fajitas",
+        total_minutes=30,
+        ingredients=["2 onions", "salt"],
+    )
+    browser = _client(settings, clock)
+    form, fields = _cook(browser.get(f"/idea/{made['id']}").text)  # Sunday, 2:03 pm
+    assert 'name="list" value="yes" checked' in form and 'value="17:30"' in form
+    assert 'name="calendar" value="yes" />' in form  # the calendar only when asked for
+    asked = {**fields, "title": "Fajitas", "day": "2026-09-20", "time": "17:30"}
+    done = browser.post(
+        f"/idea/{made['id']}/cook",
+        data={**asked, "list": "yes", "calendar": "yes"},
+        follow_redirects=True,
+    )
+    said = _said(done)
+    assert "On the shopping list for Fajitas: onions." in said and "salt" in said
+    assert "Added to the plans: Fajitas." in said
+    assert ">Undo<" not in done.text  # two parts: one Undo never takes back half
+    (plan,) = plans.for_idea(conn, made["id"])
+    assert plan.start.startswith("2026-09-20T17:30") and not plan.all_day
+    # The same press again does nothing twice.
+    browser.post(f"/idea/{made['id']}/cook", data={**asked, "list": "yes", "calendar": "yes"})
+    assert len(plans.for_idea(conn, made["id"])) == 1
+    assert [item.text for item in lists.items(conn, lists.find(conn, "shopping"))] == ["onions"]
+
+
+def test_cook_this_with_only_the_list_can_be_taken_back(settings, clock, conn, family):
+    made = _recipe(conn, settings, clock, family["sam"], "Dal", ingredients=["1 cup red lentils"])
+    browser = _client(settings, clock)
+    _, fields = _cook(browser.get(f"/idea/{made['id']}").text)
+    done = browser.post(
+        f"/idea/{made['id']}/cook",
+        data={**fields, "title": "Dal", "list": "yes"},
+        follow_redirects=True,
+    )
+    assert "On the shopping list for Dal: red lentils." in _said(done) and ">Undo<" in done.text
+
+
+def test_a_dinner_whose_hour_has_gone_goes_on_the_day_and_nothing_ticked_is_said(
+    settings, clock, conn, family
+):
+    from familydb.store import plans
+
+    made = _recipe(conn, settings, clock, family["sam"], "Omelettes", total_minutes=10)
+    browser = _client(settings, clock)
+    form, fields = _cook(browser.get(f"/idea/{made['id']}").text)
+    assert 'name="list"' not in form  # no ingredients kept: nothing to put on the list
+    assert 'name="calendar" value="yes" checked' in form
+    nothing = browser.post(
+        f"/idea/{made['id']}/cook", data={**fields, "title": "Omelettes"}, follow_redirects=True
+    )
+    assert "Tick the shopping list, the calendar or both" in _said(nothing)
+    _, fields = _cook(browser.get(f"/idea/{made['id']}").text)
+    browser.post(
+        f"/idea/{made['id']}/cook",
+        data={
+            **fields,
+            "title": "Omelettes",
+            "day": "2026-09-20",
+            "time": "09:00",
+            "calendar": "yes",
+        },
+    )
+    (plan,) = plans.for_idea(conn, made["id"])
+    assert plan.all_day and plan.start == "2026-09-20"  # 9 am had gone by at 2:03 pm
+
+
+def test_a_kid_is_offered_no_cooking_forms(app, sam, conn, settings, clock, family):  # noqa: F811
+    made = _recipe(conn, settings, clock, family["sam"], "Stir fry", ingredients=["1 onion"])
+    kid = _browser_as(app, "the girls", _start(sam, family["girls"].id))
+    kid.post("/you", data={**_tokens(kid, "/you"), "new": KIDS, "again": KIDS})
+    page = kid.get(f"/idea/{made['id']}").text
+    assert 'class="form cook"' not in page and ">More<" not in page

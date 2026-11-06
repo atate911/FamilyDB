@@ -1,30 +1,18 @@
 # How the page looks, and why
 
-This is FamilyDB's design: what the page looks like, the few ideas that make it work, and how to
-draw any page from them. It was worked out on the first screen, screen by screen, until it looked
-*designed*: professional, modern, calm, a little technical, and unmistakably one thing. **Now is
-the model.** Every other page is drawn the way Now is. Where a page and this document disagree,
-one of them is wrong: bring the page back into line, or, if the page has found something better,
-change this document, and the other pages with it, in the same change.
+> **Design authority — November 5, 2026:** [Design freedom and protected outcomes](DESIGN_FREEDOM.md) governs presentation and interaction choices in this document. The owner authorizes substantial interface redesign. Historical layout, navigation, chat placement, wording, and visual-style rules are revisable defaults, even when phrased as mandatory or previously agreed. Preserve the policy's privacy, access, security, accessibility, cost, and data-integrity outcomes; do not require fresh approval for ordinary design changes. Descriptions below are not claims that a proposed redesign has shipped.
 
-The family's pages (Now, the destinations, each thing's own page) are built on it, on the frame
-`docs/INTERFACE.md` lays out; the back office (Status, Settings, Family, the guide) wears the same
-parts in its older frame. The mockups the look was agreed on are `docs/concept-mockups/`.
+This document records the October visual system and its rationale. It is a starting point for improvement, not a specification that every future page must resemble Now. Use shared components and consistent interactions where they help people; redesign them when they obstruct a better experience.
 
-This document records the design and why, so the next person (an AI agent included) can extend it
-without asking. Anything here may change when a better page needs it: change it in the same
-change, with the reason. Only the floors under "What does not move" stay put, because they are
-about people being able to use the page, its safety, and what kids see, not about taste.
+The examples, mockups (`docs/concept-mockups/`), exact measurements, and visual defaults below may be replaced under `DESIGN_FREEDOM.md`. Update the affected guidance with the redesign, and label retained historical descriptions clearly. Privacy, security, accessible use, data integrity, and spending protections remain in force; the existing composition and aesthetic do not.
 
 ## The idea
 
 **One thing leads. Everything else is quiet, and ready when it is wanted.**
 
-The page is a way to talk to Vera, so on Now the one thing is her box and its Send. Every other
-part (what waits, what is on, what she picked) is laid out around it in one quiet voice,
-smaller, lighter and flatter, so the eye goes to the box first and finds the rest when it looks.
+The page helps the family complete a task. The leading element can be a direct action, a useful summary, or the assistant. Supporting content should be easy to find and readable; making it faint, tiny, or hidden is not a requirement. Choose emphasis for the user's task, not automatically for the chat box.
 
-Two sentences say how it looks:
+Two sentences describe the earlier look, both open to change:
 
 - **Color is the family's.** People are the color on the page: each person's own, on their
   marks. The looks give the page its paper or its dark glass.
@@ -52,7 +40,7 @@ what to check when a new page "feels off".
   square to tick) is read in a glance. The words behind it are still there for a screen reader
   and on hover.
 
-## Principles
+## Revisable visual defaults
 
 1. **One thing leads.** Every page has one focal element and at most one primary action. It is
    the largest, highest-contrast thing on the page, and nothing else glows.
@@ -86,14 +74,15 @@ what to check when a new page "feels off".
 There are two frames, with one menu. **The family's frame** (`frame.html`, docs/INTERFACE.md)
 carries Now, the destinations and each thing's own page: the box first, the page, and the row of
 destinations fixed at the foot on a phone; from a tablet up the menu stands on the left in the
-row's place, and from a desk up a third column on the right holds the box and what the last
-message brought back, with what the person pinned of hers above the conversation's last lines,
-kept in view while the page scrolls. **The back office's frame** (`base.html`) carries Status,
+row's place, and from a desk up a third column on the right holds the box, what the last
+message brought back and what the person pinned of hers, kept in view while the page scrolls;
+the conversation itself is the Chat page, so the column never repeats it. **The back office's frame** (`base.html`) carries Status,
 Settings, Family, the guide and the account pages: **the menu, the main column, and the rail**,
 as below. **The menu** (`_side.html`) is the same in both, so moving from Settings to Now keeps
 the left column and the way back: the mark, how she is, the family's places from the row's own
-list (so it marks what the row marks and leaves out what the family took out), Chat and What she
-knows, Behind the scenes for a grown-up, and who is signed in. A page that kept the menu only in the
+list (a grown-up's five: Now, Eat, Do, Week, Lists, each with its count; so it marks what the row
+marks and leaves out what the family took out), then below a hairline Chat and What she knows,
+Behind the scenes for a grown-up, and who is signed in. A page that kept the menu only in the
 back office left a person on Now with no way back but the small picture at the top. The two share
 the type, the tokens, the parts and the steps the columns grow in. The kitchen board keeps its row
 and no menu.
@@ -226,7 +215,7 @@ each person chooses theirs on the Look page and it follows them to every device 
 and the `fdb_look` cookie before sign-in). `static/themes-fallback.css`, written by
 `familydb/web/fallback.py`, gives a browser without `light-dark()` plain values. A look is color
 only, plus at most five effects (`--fx-page`, `--fx-scan`, `--fx-glow`, `--fx-title`,
-`--fx-title-adjust`); it never changes the layout, the type, the sizes or the words. The design is
+`--fx-title-adjust`); today it never changes the layout, the type, the sizes or the words, which keeps each look cheap to add and to check (a choice, open like the rest). The design is
 drawn on Phosphor, where it is at its best, and must hold in every look: a page is checked in at
 least Phosphor, Kitchen Table and Ink before it ships.
 
@@ -360,11 +349,15 @@ Every page is checked at 390 and 320 pixels in Phosphor, Kitchen Table and Ink.
 
 Each page names its focal element, what the main column holds, and what the rail holds.
 
-- **Now** (docs/INTERFACE.md section 3). Focal: the box. Then one line of the day, her questions
-  (each her screen, the words, where it came from, its buttons), the plate as checkbox rows, her
-  picks as tiles in pencil (a dashed edge, lighter ink: not set), and today and tomorrow one line
-  each. Nothing is drawn for a quiet part; "Nothing needs you." where nothing waits. What a role
-  may not do is not offered.
+- **Now** (docs/INTERFACE.md section 3). Focal: the box. Then one line of the day; **Next up** as
+  one set row (the time in the mono, the title, when, where and who), today's and tomorrow's lines
+  and To cook under it; **Needs you**: the plate's first rows as checkbox rows and her questions
+  (each her screen, the words, where it came from, its buttons), at most three, the rest in a
+  quiet fold ("And 2 more"); then **What about…**, the lead pick one tile in pencil (a dashed
+  edge, lighter ink: not set) and the other kinds a line each (`.pk-more`). With nothing waiting,
+  a quiet line and three chips into the day's jobs. Nothing is drawn for a quiet part. What a role
+  may not do is not offered. A kid's Now keeps its own shape: her questions, her to-dos, her list,
+  her picks.
 - **Chat.** The thread behind the box: the conversation, newest at the bottom, her messages beside
   her screen and the family's in their own color's soft; the conversations (the family's, and the
   kids', which grown-ups may read along) as a row of pills at every width, since the family's
@@ -372,21 +365,27 @@ Each page names its focal element, what the main column holds, and what the rail
   one line ("Pinned 2"), so the thread keeps the room however many are kept. The room is the
   window's height and the thread scrolls inside it. The page has its own box at the foot of the
   thread, so the frame draws none.
-- **A destination** (section 4): the question as the title, one line of the answer, a row of chips,
-  then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
+- **A destination** (section 4): the question as the title, one line of the answer, the place's
+  tab row where it has one (`.seg`, a row of links with the current one solid: Eat's overview,
+  Cook and Eat out; Do's Ideas, Coming up and We did, `do_tabs` in `_dest.html`; Week's List and
+  Month), a row of chips, then the answer as rows (the top pick as a card, the rest as a hairline list), each row the name,
   one fact line and the people's marks at the edge; "by hand" last, as a quiet link. **Eat**: the
   next meal's picks, one to cook and one to eat out, each over its first few rows, with a
   segmented control (as Plans' List and Month) to Cook and Eat out, where the chips live; a
-  recipe's page leads with what it takes and its ingredients, Put the ingredients on the list the
-  one solid button and Plan it for a night quiet. **Do**: what fits the next free stretch, then the pile, the quiet ones
+  recipe's page leads with what it takes, then Cook it, a card holding the one solid button, Cook
+  this; the ingredients, how it went and More come under it. **Do**: what fits the next free stretch, then the pile, the quiet ones
   faded, then New ideas (what she found and judged worth putting forward, under a label saying she
-  found them, each a hairline row with its reason and Save it and Not for us under it, small; the
+  found them, each a hairline row with its reason and Save it, Plan it and Not for us under it, small, Not for
+  us a text link; the
   family's own always first), the map under it. **Week**: a day a section, set things as set rows (a solid left edge,
   the time in the mono), the free time in words, a reminder a small bell line, her pick in pencil;
-  the plate above. **Kids**: a kid a section, what waits first. **Soon**: finds by day. **Lists**:
+  the plate above. **A kid's wishes** (a chip on Lists): a kid a section, what waits first. **Coming up** (Do's second tab): finds by day, Save it, Plan it and Not for us under each still
+  on offer. **Lists**:
   big ticks, under a quiet uppercase label a section of the store once the list spans two
   (`.list-items__sec`); a recipe's Shopping page is the same ticks by section with the pantry
-  apart and a stand-in folded under a thing (`.swap`). **Did**: a face a row.
+  apart and a stand-in folded under a thing (`.swap`); its chips are the lists, then Presents
+  (a gift idea a row, whom it is for and whom it is kept from) and each kid's wishes. **We did**
+  (Do's third tab): a face a row, Again? a text link on it.
 - **What about** (`/about`): her picks as a destination, a section a set (the next few hours, the
   weekend), its tiles three across where there is room, each set with what drove it and when it was
   chosen; Different ones under them, a quiet link.
@@ -401,7 +400,10 @@ Each page names its focal element, what the main column holds, and what the rail
 - **A thing's own page** (section 5): a place, a plan, a reminder, a happening, an outing. The head with the way back, the
   facts that exist in two columns (caps key, bold value), where it came from as a quotation, what
   she found marked as hers and dated, what is planned or how it went as set rows, the box about it
-  with three quick sentences, then its actions and "Edit by hand" last, folded.
+  with three quick sentences, then its one main action as the page's one solid button (a place's
+  Plan it, folded open to its form; a recipe's Cook this, in a card under the facts), how it went
+  folded under it, and **More** last, a quiet fold (`.item-more`) holding Drop it, Look it up
+  again and Edit by hand.
 - **What Vera knows.** Main: each fact as a row under whom it is about, with how sure and where it
   came from, and Forget. Rail: telling her something, how she weighs it, what was forgotten.
 - **Family.** Focal: the list of people. Main: each person a row (avatar, name, role, how Vera
@@ -411,9 +413,12 @@ Each page names its focal element, what the main column holds, and what the rail
 - **Status.** Focal: the verdict, one sentence on a wash. Main: spent today, the last 30 days, how
   each part is doing as rows (a sentence, a tag, at most one action). Rail: recent activity, for an
   admin.
-- **Settings.** Main: a row per settings page with how it stands. Rail: setting up, how to read the
-  tags. Each settings page: its groups as cards, one Save in a bar that stays in reach; the rail
-  lists every settings page. **AI
+- **Settings.** Main: a row per settings page with how it stands, in two lists under quiet labels:
+  For the family (General, Messages, Personality, What's going down?, Connections, Spending,
+  Sign-in) and Advanced, how it runs underneath (AI model, Lookups, Troubleshooting, What has
+  changed; `fields.Section.advanced`). Rail: setting up, how to read the tags. Each settings page:
+  its groups as cards, fine-tuning folded (`Group.folded`), one Save in a bar that stays in reach;
+  the rail lists every settings page in the same two groups. **AI
   model** (`docs/MODELS_PAGE.md`) is a table, the one page dense by design. **Troubleshooting**
   lists what went wrong as sentences first, then the log.
 - **Setting up.** Focal: the step's one form. The steps along the top, Back and Next at the foot.
@@ -450,21 +455,23 @@ These are floors: they hold for every page, in every look, by day and by night, 
 - **Structure.** One `h1` a page, headings in order; the chat thread is `role="log"`.
 - **Motion** honors `prefers-reduced-motion`; **forced colors** get real borders wherever a
   background alone shows something; **reflow**: nothing scrolls sideways at 320 pixels.
-- **Scripts add, never require.** Every page and every form works with scripting off.
+- **Scripts add; today they never require.** Every page and every form works with scripting off.
+  That is a compatibility default, not a floor (`docs/DESIGN_FREEDOM.md`): a design that leans on a
+  script says so and tests what happens without it.
 
 ## What does not move
 
 - **The content policy**: `default-src 'self'; style-src 'self'; script-src 'self'; font-src
   'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'`. No inline style, no
   inline script, nothing from anywhere else. A size from data is an SVG attribute or a class.
-- **Works with scripting off**: read, every form, send a message.
 - **Kids never see costs or workings**: no pill, no money, no limit, no models, no setup, no
   Status (a family decision, `docs/DESIGN.md` section 16).
 - **Presents stay hidden from whom they are for**: left out entirely for them, tagged "Hidden from
   Theo" for everyone else; lists are filtered before anything is counted.
-- **Looks are color only**, plus the five effects, and keep Vera's glass and phosphor and red for
-  late or broken.
-- **The accessibility above**, measured, in every look.
+- **The accessibility above**, measured, in every look; red for late or broken readable as such.
+- **Honesty and control**: suggestions are told from commitments, checked facts from assumptions,
+  and what is pending from what is done; nothing consequential hides behind a cosmetic interaction
+  (`docs/DESIGN_FREEDOM.md`).
 - Nothing from an idea, a place or a fetched page is marked safe in a template.
 - No page view is a model call (`test_browsing_asks_nothing_of_a_model`).
 

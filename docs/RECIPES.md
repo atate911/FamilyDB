@@ -36,8 +36,8 @@ the build differs from the plan below, the build is right and the plan is kept f
   of each that fit), with Cook and Eat out as tabs carrying their own chips; the grocery boxes are
   on Cook. A recipe's page reads as a recipe (made or not, what it takes, the list first, a night
   on the calendar quieter), the kitchen board names tonight's pick, and Eat is a module of its own
-  (`web/eat_page.py`). The row of eight places is unchanged: a ninth for cooking would crowd a
-  phone's row, and Eat already asks the question.
+  (`web/eat_page.py`). No place was added to the row for cooking (eight then, five since November
+  2026): it would crowd a phone's row, and Eat already asks the question.
 - **A recipe's facts are on tools of their own** (after a review of the design, October 2026). The
   plan put them on `add_idea` and `update_idea` as a nested `recipe` field, which declared the same
   schema twice in the tools every message carries. Now `recipe` saves (through `add_idea`, so its
@@ -54,9 +54,13 @@ the build differs from the plan below, the build is right and the plan is kept f
   store; what the pantry has apart, to check, each with **Need it**; and an uncommon thing opens
   on a tap to what could stand in (`groceries.SUBSTITUTES`, a table; for one the table does not
   know, the box offers "What could stand in for X?", a chat call only if sent). The pantry is
-  broader than the staples the plan left off (`groceries.pantry`: dried spices and herbs,
-  vinegars, the sauces in the door, the baking shelf, and the family's own list named pantry), so
-  "put the fajitas on the list" leaves those off too and says so. The Lists page walks the
+  broader than the staples the plan left off (`groceries.pantry`: dried spices and herbs, a spice
+  ground (`GROUND_SPICES`; ground almonds or flaxseed are bought), vinegars, the sauces in the
+  door, the baking shelf, and the family's own list named pantry), so "put the fajitas on the
+  list" leaves those off too and says so. A thing two lines ask for is one line, its amounts added
+  up where the unit is the same ("1 cup" for the filling and "1 cup" for the top is "2 cups") and
+  said one after another where not ("1 cup + 2 tbsp", `groceries.added_up`), so no line's share
+  is lost and asking again adds nothing. The Lists page walks the
   shopping list by the same sections once it spans two. A kid reads the page with no forms.
 - **Making a recipe leaves it one to cook.** Recording a dinner counts it as made and keeps its
   status an idea, where an outing becomes done (`ideas.apply_outcome`).
@@ -146,8 +150,14 @@ recipes (
   ("35 min, had it 3 weeks ago, 8/10, serves 4") and the count left out. A guessed occasion
   matches an asked one as a maybe, said so ("looks quick, 25 min; say if not"). Ranking is
   `familydb/meals.py` (domain, imports store only): facts first (minutes over the limit, an
-  occasion asked for and missing, nobody it is for among those eating), then taste (made within
-  its rest days lowers it; rating and times made raise it; an idea never made is "new to us").
+  occasion asked for and missing, nobody it is for among those eating, the family's last word on
+  it "not again", as the outings' engine holds it, lifted once it is brought back; asked for by name it is still found, as a maybe
+  with that said), then taste (made within its rest days lowers it; rating and times made raise
+  it; an idea never made is "new to us"). The limit is the tighter of `most_minutes` and what
+  tonight's plans leave (`meals.situation`): cooking starts at 5:30 pm or now, waits out a plan
+  begun today that is going on then (and one straight after it), and ends at the first plan
+  after, or at 9 pm when it waited one out; the reason says which ("before the recital", "after
+  soccer").
   `describe_idea` on a recipe returns its full row, steps included, for "read me the fajitas".
 - `shopping_list` gains one action, `from_recipes`, with `idea_ids`: "put the fajitas on the
   list", "make a grocery list for the fajitas and the soup", "the shopping for this week's
@@ -156,7 +166,12 @@ recipes (
   pepper, oil, water, sugar, flour and the like; a setting if the family wants their own), added
   through `lists.add` with a note of the amounts and which recipe ("2 cups (fajitas), 1 (soup)");
   a thing already on the list keeps its place and gains the note, a ticked one is wanted again as
-  `lists.add` already does. It returns what was added, what was there, what was left out, so the
+  `lists.add` already does. A kind of a thing is that thing (`groceries.same_thing`, a word table:
+  `ANY_KIND`, sizes and fresh, and `KINDS`, by the thing, such as flour and corn for tortillas):
+  "8 small flour tortillas" goes on the tortillas already there, its note saying which ("8 small
+  flour tortillas (Fajitas)"), and a recipe asking for tortillas is covered by flour tortillas on
+  the list. A word that makes it something else (sour cream, peanut butter, green onions) is in
+  neither table, and flour and corn tortillas are never one line between themselves. It returns what was added, what was there, what was left out, so the
   reply can say "Added 9 things for the fajitas; onions and limes were on it already; skipped
   salt, oil, pepper." Whoever may change things, as every list change; a kid is told to ask a
   parent (the family's open decision on kids and the lists). Undo takes the added things off and
@@ -576,6 +591,6 @@ Page.
 
 Store, then tools, then prompt, then page, then jobs, then docs, each with its test as it goes:
 every step leaves the suite green, so a review can read the commits in order. Separate commits
-per step as CLAUDE.md asks ("separate concerns in separate commits"), with the PR description's
-`Rules:` line naming what moved: the next migration number, `needs_lookup` for a kind with a
+per step as CLAUDE.md asks ("separate concerns in separate commits"), with the PR description
+saying plainly what moved: the next migration number, `needs_lookup` for a kind with a
 link, the idea list leaving a kind out of the prefix, a worker kind with a fetch and no search.

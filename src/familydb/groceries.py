@@ -18,7 +18,8 @@ from __future__ import annotations
 import re
 import sqlite3
 from dataclasses import dataclass, field
-from typing import Any
+from fractions import Fraction
+from typing import Any, TypeVar
 
 from familydb.store import lists
 from familydb.store.ideas import Idea
@@ -254,6 +255,10 @@ def parse(line: str) -> Ingredient:
     return Ingredient(text=line.strip(), item=item, amount=amount)
 
 
+# Plurals of an f: leaves are a leaf, but cloves a clove and olives an olive.
+F_PLURALS = {"leaves": "leaf", "loaves": "loaf", "halves": "half", "calves": "calf"}
+
+
 def key(item: str) -> str:
     """One form for an item however many there are: onions and onion, tomatoes and tomato."""
     words = lists.fold(item).split()
@@ -262,13 +267,72 @@ def key(item: str) -> str:
     last = words[-1]
     if last.endswith("oes") and len(last) > 4:
         last = last[:-2]
-    elif last.endswith("ves") and len(last) > 4:
-        last = last[:-3] + "f"
+    elif last in F_PLURALS:
+        last = F_PLURALS[last]
     elif last.endswith("ies") and len(last) > 4:
         last = last[:-3] + "y"
     elif last.endswith("s") and not last.endswith("ss") and len(last) > 3:
         last = last[:-1]
     return " ".join([*words[:-1], last])
+
+
+# Words before a thing that only say which kind of it, never another thing to buy: a list that
+# has tortillas has what "8 small flour tortillas" asks for, and its note says which. Any thing
+# may be sized or fresh; the rest belong to the thing they qualify, by its `key`. A word that
+# makes it something else (sour cream, peanut butter, green onions, sweet potatoes, coconut milk,
+# corn syrup) is in neither, so it stays a line of its own.
+ANY_KIND = frozenset(
+    {"small", "medium", "large", "extra", "extra-large", "jumbo", "fresh", "ripe", "organic"}
+)
+CUTS = frozenset({"boneless", "skinless", "bone-in", "skin-on"})
+KINDS: dict[str, frozenset[str]] = {
+    "tortilla": frozenset({"flour", "corn", "soft", "whole", "wheat", "taco", "fajita", "burrito"}),
+    "onion": frozenset({"yellow", "white", "brown", "red", "sweet", "spanish"}),
+    "potato": frozenset({"russet", "yukon", "gold", "red", "white", "baking", "new"}),
+    "tomato": frozenset({"roma", "plum", "vine", "vine-ripened", "beefsteak", "heirloom"}),
+    "bell pepper": frozenset({"red", "green", "yellow", "orange"}),
+    "chicken breast": CUTS,
+    "chicken thigh": CUTS,
+    "butter": frozenset({"unsalted", "salted"}),
+    "milk": frozenset({"whole", "skim", "2%", "low-fat", "reduced-fat"}),
+    "yogurt": frozenset({"plain", "greek", "whole-milk", "low-fat"}),
+    "cheddar": frozenset({"sharp", "mild", "aged", "white"}),
+    "spinach": frozenset({"baby"}),
+    "carrot": frozenset({"baby"}),
+}
+
+
+def same_thing(one: str, other: str) -> bool:
+    """Whether two things are one to buy: the same however written, or one the other with words
+    in front that only say which kind ("flour tortillas" and "tortillas"; never "sour cream" and
+    "cream", nor "flour tortillas" and "corn tortillas")."""
+    a, b = key(one).split(), key(other).split()
+    if a == b:
+        return bool(a)
+    short, long = (a, b) if len(a) < len(b) else (b, a)
+    if not short or len(short) == len(long) or long[-len(short) :] != short:
+        return False
+    allowed = ANY_KIND | KINDS.get(" ".join(short), frozenset())
+    return all(word in allowed for word in long[: -len(short)])
+
+
+def narrower(one: str, than: str) -> bool:
+    """Whether `one` says which kind of `than`: "flour tortillas" of "tortillas"."""
+    return len(key(one).split()) > len(key(than).split()) and same_thing(one, than)
+
+
+Held = TypeVar("Held")
+
+
+def held(item: str, on_list: dict[str, Held]) -> Held | None:
+    """What on the list (`on_list`, by `key`) stands for the item: itself, or the same thing
+    another way (`same_thing`), one still to get before one ticked off."""
+    found = [on_list[key(item)]] if key(item) in on_list else []
+    found += [
+        one for folded, one in on_list.items() if folded != key(item) and same_thing(folded, item)
+    ]
+    waiting = (one for one in found if getattr(one, "ticked_at", None) is None)
+    return next(waiting, found[0] if found else None)
 
 
 # Staples that are also something to buy: "pepper" with a spoon or a pinch is black pepper, but
@@ -581,6 +645,38 @@ PANTRY_WORDS = frozenset(
     }
 )
 FRESH = re.compile(r"^(?:fresh|whole|a bunch of)\b")
+# A spice that comes ground, by the word it ends with (one form, `key`): "ground ginger" is the
+# shelf's; "ground almonds" are not on this list, and are bought.
+GROUND_SPICES = frozenset(
+    {
+        "allspice",
+        "anise",
+        "caraway",
+        "cardamom",
+        "cayenne",
+        "chile",
+        "chili",
+        "chilli",
+        "chipotle",
+        "cinnamon",
+        "clove",
+        "coriander",
+        "cumin",
+        "fennel",
+        "fenugreek",
+        "ginger",
+        "juniper",
+        "mace",
+        "mustard",
+        "nutmeg",
+        "paprika",
+        "pepper",
+        "peppercorn",
+        "spice",
+        "sumac",
+        "turmeric",
+    }
+)
 
 
 def family_pantry(conn: sqlite3.Connection) -> frozenset[str]:
@@ -612,10 +708,16 @@ def pantry(item: str, amount: str | None = None, *, have: frozenset[str] = froze
         return True
     if len(words) < 2:
         return False
-    # A dried herb, a ground spice: the word before says so; ground beef is the meat case.
+    # A dried herb, a ground spice: the word before says so. Ground beef is the meat case, and
+    # ground almonds or flaxseed are bought by the cup: only a spice ground is the shelf's.
     if words[0] == "dried":
         return words[-1] in HERBS
-    return words[0] == "ground" and SECTION_WORDS.get(words[-1]) in ("Produce", "Dry goods & cans")
+    if words[0] != "ground":
+        return False
+    rest = words[1:]
+    if len(rest) > 1 and rest[-1] == "seed":  # ground fennel seed
+        rest = rest[:-1]
+    return rest[-1] in GROUND_SPICES or rest[-1] in HERBS
 
 
 # What could stand in for an uncommon thing, by the item (one form, `key`): each a short phrase
@@ -764,26 +866,95 @@ class Shopping:
         return [one for _, found in self.sections for one in found]
 
 
+# -- How much in all: one recipe's two "1 cup onion" lines are 2 cups -----------------------------
+QUANTITY = re.compile(rf"^(?P<n>{NUMBER})(?:\s+(?P<unit>.+))?$")
+# Units written short, which take no s however many there are.
+SHORT_UNITS = frozenset(
+    {"tsp", "tbsp", "tbs", "tb", "oz", "lb", "g", "kg", "mg", "ml", "l", "dl", "cl", "qt", "pt"}
+)
+
+
+def _quantity(amount: str) -> tuple[Fraction, str] | None:
+    """An amount read as a number and what it counts ("1 1/2 cups": 3/2, "cups"); None for one
+    that is a range, a word or anything else not added up by rule."""
+    found = QUANTITY.match(_plain(amount))
+    if found is None:
+        return None
+    unit = found.group("unit") or ""
+    if re.match(r"^(?:-|\u2013|to\b|or\b|x\b|/)", unit):
+        return None
+    total = Fraction(0)
+    for part in found.group("n").split():
+        total += Fraction(part)
+    return total, unit
+
+
+def _unit_key(unit: str) -> str:
+    words = unit.casefold().rstrip(".").split()
+    if words and words[-1] not in SHORT_UNITS:
+        words[-1] = key(words[-1])
+    return " ".join(words)
+
+
+def _number_text(total: Fraction, decimal: bool) -> str:
+    if decimal:
+        return f"{float(total):g}"
+    whole, part = divmod(total.numerator, total.denominator)
+    if not part:
+        return str(whole)
+    fraction = f"{part}/{total.denominator}"
+    return f"{whole} {fraction}" if whole else fraction
+
+
+def added_up(amounts: list[str | None]) -> str | None:
+    """How much in all, from each line's amount: the same unit added ("1 cup" and "1 cup" are
+    "2 cups"), anything else said one after another ("1 cup + 2 tbsp"), so no line's share is
+    lost. None when no line said."""
+    said = [amount for amount in amounts if amount]
+    if len(said) <= 1:
+        return said[0] if said else None
+    read = [_quantity(amount) for amount in said]
+    units = {_unit_key(one[1]) for one in read if one is not None}
+    if any(one is None for one in read) or len(units) != 1:
+        return " + ".join(said)
+    total = sum((one[0] for one in read if one is not None), Fraction(0))
+    decimal = any("." in amount for amount in said)
+    forms = [one[1] for one in read if one is not None]
+    # Said as one of them said it: a plural one for more than one, when one was.
+    plural = [form for form in forms if form.casefold() != _unit_key(form)]
+    unit = plural[0] if total > 1 and plural else forms[0]
+    last = unit.split()[-1] if unit else ""
+    if total > 1 and not plural and f"{last}s".casefold() in UNITS:
+        unit = f"{unit}s"
+    return f"{_number_text(total, decimal)} {unit}".strip()
+
+
 def shopping(
     recipe: Recipe, on_list: dict[str, Any], *, have: frozenset[str] = frozenset()
 ) -> Shopping:
     """The recipe's things by section, each laid over the family's list (`on_list`: by `key`,
-    the list's items), the pantry's apart."""
+    the list's items), the pantry's apart. A thing two lines ask for is one, with both lines'
+    amounts added up (`added_up`)."""
     found: dict[str, list[Buy]] = {section: [] for section in SECTIONS}
     kept = Shopping()
-    seen: set[str] = set()
+    seen: dict[str, Buy] = {}
     for ingredient in recipe.ingredients:
         item = ingredient.item or parse(ingredient.text).item
-        if not item or key(item) in seen:
+        if not item:
             continue
-        seen.add(key(item))
+        before = seen.get(key(item))
+        if before is not None:
+            before.amount = added_up([before.amount, ingredient.amount])
+            before.text = f"{before.text}; {ingredient.text}"
+            continue
         one = Buy(
             item=item,
             amount=ingredient.amount,
             text=ingredient.text,
             alternatives=alternatives(item),
-            on_list=on_list.get(key(item)),
+            on_list=held(item, on_list),
         )
+        seen[key(item)] = one
         if pantry(item, ingredient.amount, have=have):
             kept.pantry.append(one)
         else:
@@ -797,10 +968,17 @@ class Wanted:
     """One thing to buy across the recipes asked for, and how much each wants."""
 
     item: str
-    amounts: list[str] = field(default_factory=list)
+    # Each recipe's share in the order asked: the thing as it says it, how much, and the recipe.
+    shares: list[tuple[str, str | None, str]] = field(default_factory=list)
 
-    def note(self) -> str:
-        return ", ".join(self.amounts)[:MOST_NOTE]
+    def note(self, on: str | None = None) -> str:
+        """How much each wants, for the line it goes on (`on`, its own item unless said): a share
+        that says which kind names it, "8 small flour tortillas (Fajitas)" on tortillas."""
+        said = []
+        for item, total, name in self.shares:
+            words = [total, item] if narrower(item, on or self.item) else [total]
+            said.append(" ".join([*filter(None, words), f"({name})"]))
+        return ", ".join(said)[:MOST_NOTE]
 
 
 @dataclass
@@ -823,8 +1001,12 @@ def wanted(
     chosen: list[tuple[Idea, Recipe]], *, have: frozenset[str] = frozenset()
 ) -> tuple[list[Wanted], list[str]]:
     """What the recipes need, one line an item however many ask for it, in the order first asked,
-    and what the pantry has left out (`have` is the family's own pantry, `family_pantry`)."""
+    and what the pantry has left out (`have` is the family's own pantry, `family_pantry`). Each
+    recipe's share is said once, its lines added up ("2 cups (Pie)" for two cups in two lines),
+    so asking for the same recipes again says the same."""
     by_key: dict[str, Wanted] = {}
+    # The line, then the recipe and the thing as it says it: how it is written, each amount.
+    shares: dict[str, dict[tuple[str, str], tuple[str, list[str | None]]]] = {}
     staples: list[str] = []
     for idea, recipe in chosen:
         name = short_name(idea)
@@ -836,10 +1018,16 @@ def wanted(
                 if item not in staples:
                     staples.append(item)
                 continue
-            one = by_key.setdefault(key(item), Wanted(item))
-            said = f"{ingredient.amount} ({name})" if ingredient.amount else f"({name})"
-            if said not in one.amounts:
-                one.amounts.append(said)
+            # "Flour tortillas" for one recipe and "tortillas" for another are one line.
+            line = next((k for k in by_key if same_thing(k, item)), key(item))
+            by_key.setdefault(line, Wanted(item))
+            mine = shares.setdefault(line, {}).setdefault((name, key(item)), (item, []))
+            mine[1].append(ingredient.amount)
+    for line, one in by_key.items():
+        for (name, _), (item, amounts) in shares[line].items():
+            share = (item, added_up(amounts), name)
+            if share not in one.shares:
+                one.shares.append(share)
     return list(by_key.values()), staples
 
 
@@ -858,16 +1046,21 @@ def put_on(
     shopped = Shopped(left_out=staples, recipes=[idea.title for idea, _ in chosen])
     on_list = {key(item.text): item for item in lists.items(conn, list_ref)}
     for one in needed:
-        there = on_list.get(key(one.item))
+        # Tortillas on the list are what flour tortillas want: that line, its note saying which.
+        there = held(one.item, on_list)
         if there is not None and there.ticked_at is None:
-            lists.set_note(conn, there.id, _joined(there.note, one.note()))
-            shopped.there.append(there.text)
+            # Kept as written, so a second share on the same line (corn tortillas after flour
+            # ones, both on tortillas) adds to it rather than over it, and it is said once.
+            there.note = _joined(there.note, one.note(there.text))
+            lists.set_note(conn, there.id, there.note)
+            if there.text not in shopped.there:
+                shopped.there.append(there.text)
             continue
         added = lists.add(conn, list_ref, there.text if there else one.item, by=by, now=now)
         if added is None:  # written another way that folds the same: it is there
             shopped.there.append(one.item)
             continue
-        lists.set_note(conn, added.id, one.note())
+        lists.set_note(conn, added.id, one.note(added.text))
         shopped.added.append(added.text)
     return shopped
 

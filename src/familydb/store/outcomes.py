@@ -36,11 +36,12 @@ def insert(
     would_repeat: bool | None,
     notes: str | None,
     recorded_by: int | None,
+    message_id: int | None = None,
     now: str | None = None,
 ) -> Outcome:
     cur = conn.execute(
         "INSERT INTO outcomes (idea_id, plan_id, happened_on, rating, would_repeat, notes, "
-        "recorded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "recorded_by, message_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             idea_id,
             plan_id,
@@ -49,11 +50,26 @@ def insert(
             None if would_repeat is None else int(would_repeat),
             notes,
             recorded_by,
+            message_id,
             now or utcnow_iso(),
         ),
     )
     row = conn.execute("SELECT * FROM outcomes WHERE id = ?", (cur.lastrowid,)).fetchone()
     return Outcome.from_row(row)
+
+
+def for_message(
+    conn: sqlite3.Connection, message_id: int, *, idea_id: int, happened_on: str
+) -> Outcome | None:
+    """The outcome already recorded for this message, idea and day: what a turn answered again
+    after a failure finds, so the visit is counted once however the call names it, by its plan
+    or its idea (tools/outcomes.py). Another day, or another idea, is another visit."""
+    row = conn.execute(
+        "SELECT * FROM outcomes WHERE message_id = ? AND idea_id = ? AND happened_on = ? "
+        "ORDER BY id LIMIT 1",
+        (message_id, idea_id, happened_on),
+    ).fetchone()
+    return Outcome.from_row(row) if row else None
 
 
 def list_for_idea(conn: sqlite3.Connection, idea_id: int) -> list[Outcome]:
@@ -91,12 +107,22 @@ def average_rating(conn: sqlite3.Connection, idea_id: int) -> float | None:
 
 
 def latest_preferences(conn: sqlite3.Connection) -> dict[int, bool]:
-    """Each idea's latest explicit word on doing it again; feedback without one keeps it."""
+    """Each idea's latest explicit word on doing it again; feedback without one keeps it. A
+    "would not" given before the idea was put back (Again?, Bring it back: `ideas.reconsidered_at`)
+    is no word at all; one given after it stands again."""
     rows = conn.execute(
-        "SELECT idea_id, would_repeat FROM outcomes "
-        "WHERE idea_id IS NOT NULL AND would_repeat IS NOT NULL ORDER BY happened_on, id"
+        "SELECT o.idea_id, o.would_repeat, o.created_at, i.reconsidered_at FROM outcomes o "
+        "JOIN ideas i ON i.id = o.idea_id "
+        "WHERE o.would_repeat IS NOT NULL ORDER BY o.happened_on, o.id"
     )
-    return {row["idea_id"]: bool(row["would_repeat"]) for row in rows}
+    latest = {row["idea_id"]: row for row in rows}
+    return {
+        idea_id: bool(row["would_repeat"])
+        for idea_id, row in latest.items()
+        if row["would_repeat"]
+        or not row["reconsidered_at"]
+        or row["created_at"] >= row["reconsidered_at"]
+    }
 
 
 def do_not_repeat(conn: sqlite3.Connection) -> set[int]:

@@ -28,7 +28,7 @@ The *kind* is free text, so a new kind needs no change to the software. The assi
 | done | An outcome is recorded, even for a dropped idea |
 | dropped | Somebody drops it. It leaves lists, suggestions and lookups and keeps its outcomes and place |
 
-Canceling a plan moves only a planned idea back; a done one stays done. **Didn't go** sets any idea that is not dropped back to idea, a done one included. **Bring it back** is only for dropped ones. Nothing deletes an idea ([Plans and the calendar](/wiki/model/plans-and-calendar)).
+Canceling a plan moves only a planned idea back, and only when none of its other plans is still to come; a done one stays done. **Didn't go** sets any idea that is not dropped back to idea, a done one included. **Bring it back** is only for dropped ones. Nothing deletes an idea ([Plans and the calendar](/wiki/model/plans-and-calendar)).
 
 ## Duplicates
 
@@ -64,6 +64,8 @@ Otherwise one idea gets one [worker turn](/wiki/reference/glossary#worker-turn):
 
 FamilyDB reads the result from what the worker did, not what it said. No hand-back means failed ("worker ended without saving"). A retryable error, or the day's spending limit, leaves the idea pending and stops the run. Any other error marks it failed with the reason.
 
+Giving an idea another place (its location changed, not just respelled) lets go of the place looked up for the old one, so the old branch's hours and drive never stand for the new one, and sets the idea back to pending for a fresh lookup. What the family said of the idea stays, and the old place is left as it was for any other idea that shares it. A recipe's location is not a venue and changes nothing.
+
 To try a failed one again, use **Look it up again**, or run `familydb enrich --idea <number>` (run as in [The command line](/wiki/operations/command-line#how-to-run-it)). When lookups run, and the note sent afterwards, are on [Lookups](/wiki/controls/settings/lookups) and [The scheduled jobs](/wiki/behavior/jobs).
 
 ## How it went
@@ -72,7 +74,7 @@ An [outcome](/wiki/reference/glossary#outcome) is one time the family did someth
 
 Recording one marks the idea done, adds one to its times done, and recomputes the average over the rated ones. The latest would-repeat answer decides: while it is "no" the idea stays out of suggestions, and an outcome with no answer changes nothing.
 
-What suggestions make of it: two ratings under 5 in the last year leave the idea out, and one is said as a caution; something never done comes before what was, and of what was, the best rated first; "our usual" and the Favorites chip on Did put what was loved ("again", or 8 or more last time) first; and the times done and the last visit are what "New to us" on Eat and "you haven't been" in her picks read. How long a done thing rests before it is offered again needs no answer: a plan's day counts as done once it is over.
+What suggestions make of it: two ratings under 5 in the last year leave the idea out, and one is said as a caution; something never done comes before what was, and of what was, the best rated first; "our usual" and the Favorites chip on We did put what was loved ("again", or 8 or more last time) first; and the times done and the last visit are what "New to us" on Eat and "you haven't been" in her picks read. How long a done thing rests before it is offered again needs no answer: a plan's day counts as done once it is over.
 
 ## Presents
 

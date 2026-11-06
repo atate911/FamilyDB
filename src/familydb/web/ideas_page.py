@@ -15,7 +15,7 @@ from flask import (
     url_for,
 )
 
-from familydb import groceries, personas, presents
+from familydb import groceries, meals, personas, presents
 from familydb.availability import calendar_available, enrichment_available
 from familydb.base import roles
 from familydb.base.dates import utc_iso
@@ -30,7 +30,7 @@ from familydb.store import picks as pick_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store import recipes as recipe_store
-from familydb.store.ideas import KIND_SUGGESTIONS, RECIPE
+from familydb.store.ideas import GIFT, KIND_SUGGESTIONS, RECIPE
 from familydb.suggest import people as who_for
 from familydb.web import (
     auth,
@@ -69,8 +69,9 @@ COSTS = ((0, "free"), (1, "cheap"), (2, "moderate"), (3, "pricey"), (4, "expensi
 RATINGS = tuple(range(10, 0, -1))
 
 
-# Kinds with a door of their own, Eat's (eat_page.py): restaurants and recipes are not on Do.
-ELSEWHERE = frozenset({RESTAURANT_KIND, RECIPE})
+# Kinds with a door of their own: restaurants and recipes are Eat's (eat_page.py), presents
+# Lists' (lists_page.py `presents_page`), so none of them is on Do.
+ELSEWHERE = frozenset({RESTAURANT_KIND, RECIPE, GIFT})
 
 
 @bp.get("/ideas")
@@ -88,6 +89,8 @@ def ideas() -> str:
     status = request.args.get("status", "").strip()
     who = request.args.get("who", "").strip()
     narrow = {key: request.args.get(key, "") == "1" for key in ("free", "close", "kids", "us")}
+    if kind == GIFT and grown_up:
+        return redirect(url_for("web.presents"))  # an older link to the presents among the ideas
     with closing(app.connect()) as conn:
         kept = presents.kept_ids(conn, visitor.member)
         found = idea_store.search(
@@ -310,7 +313,7 @@ def idea(idea_id: int) -> str:
         if record is None or presents.is_kept_from(conn, record, visitor.member):
             abort(404)
         if record.kind in ELSEWHERE and visitor.may("browse"):
-            shell.belongs_to("eat")
+            shell.belongs_to("lists" if idea_store.is_gift(record) else "eat")
         cooked = recipe_store.get(conn, idea_id) if record.kind == RECIPE else None
         original = (
             message_store.get(conn, record.source_message_id) if record.source_message_id else None
@@ -348,6 +351,7 @@ def idea(idea_id: int) -> str:
         original_message=message_store.as_said(original.text) if original else None,
         original_by=views.original_by(original, family, settings.tzinfo) if original else None,
         today=today.isoformat(),
+        dinner_at=meals.DINNER.strftime("%H:%M"),  # Cook this: dinner's hour, as tonight's reads it
         ratings=RATINGS,
         on_google=calendar_available(settings),
         can_look_up=enrichment_available(settings) and record.status != "dropped",

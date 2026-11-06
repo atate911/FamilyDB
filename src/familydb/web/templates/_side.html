@@ -1,11 +1,11 @@
 {% from "_ui.html" import icon, brand_mark, wordmark, avatar, badge, health_pill %}
 {# The menu down the left from a tablet's width up, one for every page, the family's and the back office's alike, so
    moving between them keeps it: the mark, how she is, the family's places (the same list as the row at the foot,
-   `shell.destinations`, so it leaves out what the family took out and marks the place the row marks), Chat and What
-   she knows, the back office for a grown-up, and who is signed in. Needs base.html's `shell`, `viewer`, `grownup`,
-   `managing` and `ns.section`. #}
-{% set GLYPHS = {'now': 'home', 'eat': 'utensils', 'do': 'bulb', 'week': 'cal', 'kids': 'gift', 'soon': 'ticket', 'lists': 'list', 'did': 'smile'} %}
-{% set BADGES = {'week': 'late', 'kids': 'act'} %}
+   `shell.destinations`, so it leaves out what the family took out and marks the place the row marks), then the whole
+   conversation and what she knows, the back office for a grown-up, and who is signed in. Needs base.html's `shell`,
+   `viewer`, `grownup`, `managing` and `ns.section`. #}
+{% set GLYPHS = {'now': 'home', 'eat': 'utensils', 'do': 'bulb', 'week': 'cal', 'lists': 'list', 'kids': 'gift'} %}
+{% set BADGES = {'week': 'late', 'lists': 'act'} %}
 {# One link of the menu. `count` is a ready-made badge. #}
 {% macro nav_item(label, target, current, glyph, count=none) %}
   <li><a href="{{ target }}"{% if current %} aria-current="page"{% endif %}>
@@ -20,9 +20,11 @@
       <ul class="nav">
         {% for place in places %}
           {{ nav_item(place.label, place.href, place.current, GLYPHS.get(place.key, 'chev'), count=(badge(BADGES.get(place.key, 'quiet'), place.count, place.word) if place.count else none)) }}
-          {# Chat sits under the first place, as it always has. #}
-          {% if loop.first and viewer.may('chat') %}{{ nav_item('Chat with ' ~ assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), ns.section == 'chat', 'chat', count=(badge('act', shell.unread, 'new') if shell.unread else none)) }}{% endif %}
         {% endfor %}
+      </ul>
+      {# The whole conversation and what she knows, under the places: the box on every page is where a message starts. #}
+      <ul class="nav nav--then">
+        {% if viewer.may('chat') %}{{ nav_item('Chat with ' ~ assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), ns.section == 'chat', 'chat', count=(badge('act', shell.unread, 'new') if shell.unread else none)) }}{% endif %}
         {% if grownup %}{{ nav_item('What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', url_for('web.memory'), ns.section == 'memory', 'memory') }}{% endif %}
       </ul>
       {% if grownup %}

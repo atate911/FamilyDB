@@ -195,6 +195,50 @@ def _ages(given_min: int | None, given_max: int | None, before: ideas.Idea | Non
         raise ToolError(f"min_age {low} is over max_age {high}")
 
 
+def _durations(
+    given_min: int | None, given_max: int | None, before: ideas.Idea | None = None
+) -> None:
+    """Refuse a time it takes that cannot be: under a minute, or the shortest over the longest
+    (with `before`'s, for the one not given). A wrong one would make every free stretch look
+    long enough, or none."""
+    for minutes in (given_min, given_max):
+        if minutes is not None and minutes < 1:
+            raise ToolError("a duration is in minutes, at least 1")
+    low = given_min if given_min is not None else (before.duration_min if before else None)
+    high = given_max if given_max is not None else (before.duration_max if before else None)
+    if low is not None and high is not None and low > high:
+        raise ToolError(f"duration_min {low} is over duration_max {high}")
+
+
+def _lead_time(days: int | None) -> None:
+    if days is not None and days < 0:
+        raise ToolError("lead_time_days is how many days ahead to book, 0 or more")
+
+
+def _same_place(before: str | None, after: str | None) -> bool:
+    return " ".join((before or "").casefold().split()) == " ".join((after or "").casefold().split())
+
+
+def _moved(current: ideas.Idea, changes: dict[str, Any]) -> dict[str, Any]:
+    """What else changes when an idea is given another place: the place looked up for the old
+    one (its hours, where it is, how far) is let go, and the new one is looked up afresh, or
+    marked as nothing to look up. What the family said of the idea stands. A recipe's place is
+    not a venue; its link is read again on its own (`_relinked`)."""
+    if "location_name" not in changes or current.kind == RECIPE:
+        return {}
+    if _same_place(current.location_name, changes["location_name"]):
+        return {}
+    if current.place_id is None and current.enrichment == "pending":
+        return {}
+    after = current.model_copy(update={**changes, "place_id": None})
+    return {
+        "place_id": None,
+        "enrichment": "pending" if ideas.needs_lookup(after) else "skipped",
+        "enriched_at": None,
+        "enrichment_note": None,
+    }
+
+
 def _first(ctx: ToolContext, text: str) -> str:
 
     text = text.strip()
@@ -259,6 +303,8 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
         }
     suggested_by = _resolve_member_name(ctx, args.suggested_by)
     _ages(args.min_age, args.max_age)
+    _durations(args.duration_min, args.duration_max)
+    _lead_time(args.lead_time_days)
     fields = args.model_dump(exclude={"title", "kind", "suggested_by", "find_id", *DATES})
     fields |= _dated(ctx, args.happens_from, args.happens_until)
     if cooked:
@@ -386,7 +432,15 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
         if current is None or _kept_from(ctx, current):
             raise ToolError(f"no idea #{args.id}")
         _ages(args.min_age, args.max_age, current)
+        _durations(args.duration_min, args.duration_max, current)
+        _lead_time(args.lead_time_days)
         changes |= _dated(ctx, args.happens_from, args.happens_until, current)
+        changes |= _moved(current, changes)
+        # Done or dropped, put back as an idea (Again?, Bring it back, or the family saying so):
+        # what anyone said before of not doing it again no longer keeps it out.
+        stamped = ideas.reconsidered_at(ctx.conn, args.id)
+        if changes.get("status") == "idea" and current.status in ("done", "dropped"):
+            changes["reconsidered_at"] = ctx.now_iso()
         idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
         if idea is not None:
             _keep_presents(ctx, idea)
@@ -399,13 +453,15 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
     if idea is None:
         raise ToolError(f"no idea #{args.id}")
     was, now_is = current.model_dump(mode="json"), idea.model_dump(mode="json")
+    was["reconsidered_at"] = stamped
     keep_undo(
         ctx,
         "restore_idea",
         f"changed idea #{idea.id} {idea.title}",
         idea=idea.id,
         before={key: was.get(key) for key in changes},
-        after={key: now_is.get(key) for key in changes},
+        # What the record shows; the stamp is not on it, and goes back with the status.
+        after={key: now_is.get(key) for key in changes if key in now_is},
     )
     return _with_recipe(ctx, idea)
 

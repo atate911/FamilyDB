@@ -4,6 +4,56 @@
 
 ### New since v0.5.0
 
+- **Five places, each with one job.** A grown-up's row and menu are Now, Eat, Do, Week and Lists.
+  Do has three tabs: Ideas, Coming up (what is on near home) and We did. Lists has the shopping
+  list and the family's other lists, then Presents (every gift idea, each kept from whom it is
+  for, and never shown to a kid) and each kid's wishes, and counts what waits on a parent. Gift
+  ideas left Do. Chat and What Vera knows sit lower in the menu with the back office, and the box
+  beside the page keeps only what came back and the pins. Every old address still opens, under
+  its place: `/soon`, `/happening`, `/did`, `/kids`, `/ideas`, `/restaurants`, `/place/N`. A kid
+  keeps her four.
+- **Now answers what is next.** Next up is the one thing on soonest, with when, where and who,
+  then today's and tomorrow's lines. Needs you is what of yours is late, her questions and the
+  rest due today, the first three shown and the rest a tap away. Her lead pick is large, the other
+  kinds a line each. When nothing waits, three ways in: choose dinner, find something to do, add
+  a reminder.
+- **One main thing on each page.** A recipe's page has Cook it under its facts: a day, a dinner
+  time, what is missing on the shopping list (ticked) and the calendar (not ticked), and Cook
+  this, which does each part as Vera would and says what each did, a part that failed included.
+  A place's page leads with Plan it; Drop it, Look it up again and Edit by hand are under More.
+  Every row of Coming up, and Do's New ideas, has Save it, Plan it and Not for us. Plan it says
+  when the new plan overlaps another. Eat's grocery list comes back to Cook.
+- **Again? means it.** Putting an outing back with Again?, or a dropped idea with Bring it back,
+  lets go of an earlier "would not go again", so it can be suggested again; a "would not" said
+  after it keeps it out once more, and Undo takes it back whole.
+- **Settings in two lists.** For the family (General, Messages, Personality, What's going down?,
+  Connections, Spending, Sign-in) and Advanced (AI model, Lookups, Troubleshooting, What has
+  changed), on the landing and down the side of every card; Spending's Thinking is folded with
+  the other fine-tuning. Links from Status, setup and the Lookups card into the AI model page land
+  on what they name again.
+
+- **Whose it is, and what it rests on.** On your plate is yours and everyone's; somebody else's to-dos
+  are under their own name on the week ("On Alex's plate") and a line on Now. Now leads with setup
+  only while something it needs is left; Telegram and Google Calendar wait in a quiet line at the
+  foot. Without a calendar connected, the week says so above the days rather than after them. A
+  recipe is one you would make again, and the choice says what not again does. Hours from details
+  gone stale are said as last checked.
+- **Records that keep to what happened.** A visit answered twice, after a failure part way through
+  a turn, is counted once; another day or another place in the same message is still another
+  visit. An outing can no longer be recorded against a plan for something else. Giving an idea a
+  new location lets go of the old branch's hours and drive and looks the new one up. Canceling
+  one of two plans for an idea leaves it planned for the other. A time an idea takes is at least a
+  minute, its shortest no longer than its longest.
+- **Each day of a weekend on its own.** A show needing three days' notice, asked about on a
+  Thursday, is offered for Sunday rather than ruled out for Saturday. The weather is said to look
+  fine only for a day that had a forecast. Snow for a snow day is no longer called rain.
+- **Dinner that keeps to the evening.** "Something under an hour" with fifteen minutes before the
+  recital offers what takes fifteen. A plan already going on when cooking would start is waited out
+  ("after soccer"), and busy until late is no time to cook. A recipe you said not to make again is
+  left out of dinner until you say otherwise, and is still found by name. Ground almonds go on the
+  list (ground spices stay in the pantry), and a recipe that asks twice for a cup of onion puts two
+  cups on it. Flour tortillas go on the tortillas already on the list, the note saying which, rather
+  than on a second line; sour cream is still its own line, never cream.
 - **A better icon on the home screen.** The mark is drawn larger and heavier with its
   screen lit, so it reads beside the phone's other icons, and Android's round masks get one kept
   inside them. An iPhone that did not take the page's own link to the icon finds it at the
@@ -53,8 +103,8 @@
 - **A day's own page opens when something is on it.** `/week/DATE` failed for a day whose line
   named the next plan.
 - **The family chooses which places are in the row.** Settings, General has a tick for each place
-  in the row at the foot of every page (down the left on a wider screen): Now, Eat, Do, Week, Kids,
-  Soon, Lists and Did. Untick one the family does not use and it leaves the row, for a kid's row too;
+  in the row at the foot of every page (down the left on a wider screen): Now, Eat, Do, Week and
+  Lists, and a kid's My list. Untick one the family does not use and it leaves the row, for a kid's row too;
   nothing is deleted, and its pages still open from a link. With Now unticked the page opens on the
   first place left, and with every one unticked Now stays (`row_hidden`).
 - **The family's pages, smoothed on a phone.** What's going down? drew each event a word a line

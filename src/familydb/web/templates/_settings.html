@@ -177,11 +177,14 @@
 {# The page's sections, down the side: where you are is marked. `sections` are `fields.SECTIONS`. #}
 {% macro settings_nav(sections, current) -%}
   <nav class="settings-nav" aria-label="Settings">
-    <ol>
-      {% for one in sections %}
-        <li><a href="{{ url_for('settings.section', name=one.name) }}"{% if one.name == current %} aria-current="page"{% endif %}>
-          {{- icon(one.glyph) }}<span>{{ one.title }}</span></a></li>
-      {% endfor %}
-    </ol>
+    {% for advanced in (false, true) %}
+      {% if advanced %}<p class="label settings-nav__h" id="nav-advanced">Advanced</p>{% endif %}
+      <ol{% if advanced %} aria-labelledby="nav-advanced"{% endif %}>
+        {% for one in sections if one.advanced == advanced %}
+          <li><a href="{{ url_for('settings.section', name=one.name) }}"{% if one.name == current %} aria-current="page"{% endif %}>
+            {{- icon(one.glyph) }}<span>{{ one.title }}</span></a></li>
+        {% endfor %}
+      </ol>
+    {% endfor %}
   </nav>
 {%- endmacro %}

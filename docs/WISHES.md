@@ -147,7 +147,7 @@ straight after her turn), and her Ask a parent (`update_wish` with `ask_parent`,
 was offered for). Each goes to every parent the bot reaches on Telegram, worded by `voice.EVENTS`
 `kid_flagged` or `kid_asks_parent`, with buttons (`buttons.WISH`: Yes!, Not this time, Later) that
 answer through `update_wish` as the parent who tapped, with no model call; Later only says it waits
-on the Kids card. A kid who taps is told only a parent can answer. Whatever the answer comes from (a
+with her wishes on Lists. A kid who taps is told only a parent can answer. Whatever the answer comes from (a
 tap, the chat, the page), she is told in her own conversation, worded by `wish_granted` or
 `wish_declined` with the day she may ask again.
 
