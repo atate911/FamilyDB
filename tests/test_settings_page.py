@@ -611,6 +611,28 @@ def test_the_family_s_own_cards_come_first_and_how_it_runs_under_advanced(page) 
     assert nav.index("Advanced") < nav.index('href="/settings/model"')
 
 
+def test_every_link_to_a_place_on_a_card_lands_on_something(page) -> None:
+    """A link from another page (Status, setup, a banner) to a place on a settings card names an
+    id that card draws; renamed or folded away, it would open the card at the top with nothing
+    said, as #watch, #levels and #models once did."""
+    from pathlib import Path
+
+    import familydb
+
+    shape = re.compile(
+        r"""["']settings\.section["'], name=["'](\w+)["'], _anchor=["']([\w-]+)["']"""
+    )
+    found = {
+        pair
+        for path in Path(familydb.__file__).parent.rglob("*")
+        if path.suffix in (".py", ".html")
+        for pair in shape.findall(path.read_text("utf-8"))
+    }
+    assert ("model", "keeping") in found
+    for name, place in sorted(found):
+        assert f'id="{place}"' in page.get(f"/settings/{name}").text, (name, place)
+
+
 def test_every_setting_is_on_exactly_one_page_and_the_right_one(page) -> None:
     """Split into pages, a setting could fall between them, or turn up on two and be saved twice."""
     found: dict[str, list[str]] = {}
