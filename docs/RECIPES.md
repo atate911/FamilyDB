@@ -54,9 +54,13 @@ the build differs from the plan below, the build is right and the plan is kept f
   store; what the pantry has apart, to check, each with **Need it**; and an uncommon thing opens
   on a tap to what could stand in (`groceries.SUBSTITUTES`, a table; for one the table does not
   know, the box offers "What could stand in for X?", a chat call only if sent). The pantry is
-  broader than the staples the plan left off (`groceries.pantry`: dried spices and herbs,
-  vinegars, the sauces in the door, the baking shelf, and the family's own list named pantry), so
-  "put the fajitas on the list" leaves those off too and says so. The Lists page walks the
+  broader than the staples the plan left off (`groceries.pantry`: dried spices and herbs, a spice
+  ground (`GROUND_SPICES`; ground almonds or flaxseed are bought), vinegars, the sauces in the
+  door, the baking shelf, and the family's own list named pantry), so "put the fajitas on the
+  list" leaves those off too and says so. A thing two lines ask for is one line, its amounts added
+  up where the unit is the same ("1 cup" for the filling and "1 cup" for the top is "2 cups") and
+  said one after another where not ("1 cup + 2 tbsp", `groceries.added_up`), so no line's share
+  is lost and asking again adds nothing. The Lists page walks the
   shopping list by the same sections once it spans two. A kid reads the page with no forms.
 - **Making a recipe leaves it one to cook.** Recording a dinner counts it as made and keeps its
   status an idea, where an outing becomes done (`ideas.apply_outcome`).
