@@ -1,38 +1,18 @@
 # How the page looks, and why
 
-> **This records the look as it is and why; it is a starting point, not a template.** Layout,
-> type, color, the looks, the box's place and prominence, and what leads a page are all open to
-> redesign under `docs/DESIGN_FREEDOM.md`, which wins where this reads as fixing them. Only the
-> floors under "What does not move" are protected.
+> **Design authority — November 5, 2026:** [Design freedom and protected outcomes](DESIGN_FREEDOM.md) governs presentation and interaction choices in this document. The owner authorizes substantial interface redesign. Historical layout, navigation, chat placement, wording, and visual-style rules are revisable defaults, even when phrased as mandatory or previously agreed. Preserve the policy's privacy, access, security, accessibility, cost, and data-integrity outcomes; do not require fresh approval for ordinary design changes. Descriptions below are not claims that a proposed redesign has shipped.
 
-This is FamilyDB's design as of October 2026: what the page looks like, the few ideas that make it
-work, and how today's pages are drawn from them. It was worked out on the first screen, Now, screen
-by screen, until it looked *designed*: professional, modern, calm, a little technical, and
-unmistakably one thing. Now is where it was worked out and the other pages follow it today; a
-redesign may start from another page, or from nothing. Where a page and this document disagree,
-either bring the page back into line or, if the page has found something better, change this
-document, in the same change, so it stays true to what is built.
+This document records the October visual system and its rationale. It is a starting point for improvement, not a specification that every future page must resemble Now. Use shared components and consistent interactions where they help people; redesign them when they obstruct a better experience.
 
-The family's pages (Now, the destinations, each thing's own page) are built on it, on the frame
-`docs/INTERFACE.md` lays out; the back office (Status, Settings, Family, the guide) wears the same
-parts in its older frame. The mockups the look was agreed on are `docs/concept-mockups/`.
-
-This document records the design and why, so the next person (an AI agent included) can extend it,
-or replace it, without asking. Anything here may change when a better page needs it: change it in
-the same change, with the reason. Only the floors under "What does not move" stay put, because they
-are about people being able to use the page, its safety, and what kids see, not about taste.
+The examples, mockups (`docs/concept-mockups/`), exact measurements, and visual defaults below may be replaced under `DESIGN_FREEDOM.md`. Update the affected guidance with the redesign, and label retained historical descriptions clearly. Privacy, security, accessible use, data integrity, and spending protections remain in force; the existing composition and aesthetic do not.
 
 ## The idea
 
 **One thing leads. Everything else is quiet, and ready when it is wanted.**
 
-Today the page is drawn as a way to talk to Vera, so on Now the one thing is her box and its Send.
-Every other part (what waits, what is on, what she picked) is laid out around it in one quiet
-voice, smaller, lighter and flatter, so the eye goes to the box first and finds the rest when it
-looks. A redesign may choose another one thing (the next plan, the one decision waiting); the
-principle is that something leads, not that the box does.
+The page helps the family complete a task. The leading element can be a direct action, a useful summary, or the assistant. Supporting content should be easy to find and readable; making it faint, tiny, or hidden is not a requirement. Choose emphasis for the user's task, not automatically for the chat box.
 
-Two sentences say how it looks today (both are choices, open like the rest):
+Two sentences describe the earlier look, both open to change:
 
 - **Color is the family's.** People are the color on the page: each person's own, on their
   marks. The looks give the page its paper or its dark glass.
@@ -60,7 +40,7 @@ what to check when a new page "feels off".
   square to tick) is read in a glance. The words behind it are still there for a screen reader
   and on hover.
 
-## Principles
+## Revisable visual defaults
 
 1. **One thing leads.** Every page has one focal element and at most one primary action. It is
    the largest, highest-contrast thing on the page, and nothing else glows.

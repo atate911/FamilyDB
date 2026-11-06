@@ -1,8 +1,8 @@
 # FamilyDB design
 
-Living design, kept in step with the code. The [README](../README.md) says what works today, section 15 what comes next, section 16 what is decided and what is open. The module map is in [CLAUDE.md](../CLAUDE.md#layout).
+> **Design authority — November 5, 2026:** [Design freedom and protected outcomes](DESIGN_FREEDOM.md) governs presentation and interaction choices in this document. The owner authorizes substantial interface redesign. Historical layout, navigation, chat placement, wording, and visual-style rules are revisable defaults, even when phrased as mandatory or previously agreed. Preserve the policy's privacy, access, security, accessibility, cost, and data-integrity outcomes; do not require fresh approval for ordinary design changes. Descriptions below are not claims that a proposed redesign has shipped.
 
-**How the page looks and how a person moves through it is governed by [DESIGN_FREEDOM.md](DESIGN_FREEDOM.md):** the interface is open to redesign, and what stays protected is six outcomes: privacy and access, data integrity and recovery, security, accessibility, cost and external effects, and honesty and control. The rows of section 16 about data, access and spending stand; where a row records an interface preference of the family's, the preference is open while any consent or limit it carries holds.
+Living design, kept in step with the code. The [README](../README.md) says what works today, section 15 what comes next, section 16 what is decided and what is open. The module map is in [CLAUDE.md](../CLAUDE.md#layout).
 
 ## Governing cost and memory decision
 
