@@ -230,7 +230,7 @@ Every item page reads in this order:
 | **A list** | Lists | The checklist itself is the page. |
 | **A recipe** | Eat, Cook; search | Takes, serves, good for (her guess to take or drop); the ingredients and steps; **Shopping list**, a page of its own by the sections of the store with the pantry apart, ticks once it is on the list, a stand-in under an uncommon thing; **Cook this** under the facts (a day and a dinner time; what is missing on the shopping list, ticked, and the dinner on the calendar, not ticked; the notice says what each part did); Record that you made it, folded. |
 | **A reminder** | This week, On your plate, a receipt | When or on what condition, owner, repeats, delivery rules in words. |
-| **A happening** | Happening soon, her picks | Date (or any time, for a place she found), source, the original listing, Yes in pencil; **Save it**, **Plan it** and **Not for us** while it is hers to offer (on its row on Coming up and under New ideas too), and once it is not, what became of it. |
+| **A happening** | Coming up, her picks | Date (or any time, for a place she found), source, the original listing, Yes in pencil; **Save it**, **Plan it** and **Not for us** while it is hers to offer (on its row on Coming up and under New ideas too), and once it is not, what became of it. |
 | **A memory** | What we did, a day | Faces, photo, what made it good, Again?. |
 
 ## 6. The Vera layer
@@ -359,7 +359,7 @@ Threads are per person. What anyone captures is shared with the family unless th
 - **A new tile's empty state** is one sentence and the box. Never a diagram of what will be here.
 - **Vera can't answer** (no key, out of credit, the company is down). The status line says so in plain words, and why: under the box on every page and above the conversation, "Vera can't answer right now: OpenAI refused its key", with the way to what to do. Only what stops the chat counts: trouble with a company the chat does not use, or one another may stand in for, is worth a look, not "can't answer". A kid is not told the workings. Every destination still works, because they are code. The box still accepts instructions: they are kept as scraps and filed when she is back, and the receipt says "Kept. I'll sort it when I'm back." Nothing a person types is ever lost.
 - **No calendar connected.** This week shows the plans made here and says so once.
-- **No kids.** The kids tile is absent. The kid chips are absent everywhere.
+- **No kids.** Lists has no chips for kids' wishes. The kid chips are absent everywhere.
 - **Offline.** The page needs the server, so a phone with no signal shows the browser's own page. What a person typed is not lost: the box keeps an unsent message in the tab (`ask.js`) until it is sent, and Telegram queues on the phone.
 - **A wrong guess.** The receipt is the fix, Undo is on every receipt, and "that's wrong" said to the box corrects the thing it was said about.
 - **A deep link to something gone.** "That plan was set for last Saturday; here's how it went." Never a 404 for a thing that existed.
