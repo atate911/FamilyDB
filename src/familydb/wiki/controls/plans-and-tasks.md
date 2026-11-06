@@ -75,7 +75,7 @@ The shopping list, always, and the family's other lists as chips, each at its ow
 
 What we did, newest first: each outing with its face (Loved it from 8 out of ten, OK from 5, Not great below), when, who went and the note. What is still to rate comes first, with the faces to say, while Ask how a plan went is on. **Loved** keeps only the loved ones; **Favorites** shows one row a place the family loved on average, with how many times; **This time last year** shows the month either side of the day a year ago; each person's chip, what they were at.
 
-Each outing opens a page of its own: when, who went, how it went out of ten and whether they would go again, the words said about it and who recorded it, and the other times at the same place. **What made it good?** offers a few chips (An early start, A friend came, Short, Cheap, Close to home, Outdoors); a tap becomes something the assistant remembers about the family, which you can see and forget on [What Vera knows](/wiki/controls/memory). **Again?** puts the place back among the things to do.
+Each outing opens a page of its own: when, who went, how it went out of ten and whether they would go again, the words said about it and who recorded it, and the other times at the same place. **What made it good?** offers a few chips (An early start, A friend came, Short, Cheap, Close to home, Outdoors); a tap becomes something the assistant remembers about the family, which you can see and forget on [What Vera knows](/wiki/controls/memory). **Again?** puts the place back among the things to do; while the last word recorded on it is would not go again, suggestions still leave it out.
 
 ## Birthdays and the same from chat
 

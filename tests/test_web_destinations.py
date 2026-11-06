@@ -736,3 +736,22 @@ def test_the_week_says_where_its_free_time_comes_from_before_the_days(
     assert 'id="wk-source"' not in google
     assert google.index(views.AGENDA_NOTES["google"]) > google.index('class="wk"')
 
+
+def test_a_recipe_is_made_again_and_not_again_says_what_it_does(
+    settings, clock, conn, family
+) -> None:
+    with db.transaction(conn):
+        dish = ideas.insert(conn, title="Dal", kind="recipe", now=NOW_ISO)
+        walk = ideas.insert(conn, title="Sea wall walk", kind="outing", now=NOW_ISO)
+    client = _client(settings, clock)
+    cooked = client.get(f"/idea/{dish.id}").text
+    assert '<option value="yes">Would make again</option>' in cooked
+    assert '<option value="no">Would not make again</option>' in cooked
+    assert (
+        "stops offering it for dinner" in cooked
+        and 'aria-describedby="would-repeat-said"' in cooked
+    )
+    outing = client.get(f"/idea/{walk.id}").text
+    assert (
+        '<option value="yes">Would go again</option>' in outing and "stops suggesting it" in outing
+    )

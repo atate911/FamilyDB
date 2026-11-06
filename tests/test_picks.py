@@ -391,3 +391,28 @@ def test_a_find_put_forward_lately_rests_unless_its_day_is_near(env, app) -> Non
     made = picks.make(app, env.conn, "weekend")
     (tile,) = [tile for tile in made.picks if tile["kind"] == picks.FOUND]
     assert tile["title"] == "Lego club"
+
+
+def test_hours_from_details_gone_stale_are_said_as_last_checked() -> None:
+    """A tile never passes an old fact off as today's (the usability review of 5 November)."""
+    from types import SimpleNamespace
+
+    from familydb.picks import _why
+    from familydb.suggest.types import Candidate, Checks
+
+    idea = SimpleNamespace(suggested_by=None, times_done=1, kind="restaurant", setting="indoor")
+    found = SimpleNamespace(kid_names={}, loved=set())
+    fresh = Candidate(
+        idea_id=1,
+        title="Kenji's",
+        verdict="good",
+        checks=Checks(open="open", hours="11:00-21:00", travel_minutes=12),
+    )
+    assert _why(fresh, idea, found) == "open till 9\u00a0pm, 12 min"
+    stale = Candidate(
+        idea_id=1,
+        title="Kenji's",
+        verdict="possible",
+        checks=Checks(open="open", hours="11:00-21:00", travel_minutes=12, stale=True),
+    )
+    assert _why(stale, idea, found) == "open till 9\u00a0pm last we checked, 12 min"
