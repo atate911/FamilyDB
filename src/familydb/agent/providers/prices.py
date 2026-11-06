@@ -21,8 +21,14 @@ class Price:
     minute: float = 0.0  # a minute of recording, for a model that hears by the minute
 
 
-# Claude writes the cache at 1.25x the input price for five minutes, 2x for an hour.
-CACHE_WRITE = {"5m": 1.25, "1h": 2.0}
+# What writing the cache costs, as times the input price, by company and how long it is kept.
+# Claude: 1.25x for five minutes, 2x for an hour (`anthropic_cache_ttl`). OpenAI: 1.25x for the
+# half hour GPT-5.6 and later keep it (the only lifetime they take; LiteLLM's list agrees for
+# GPT-6, and an older model reports no writes). A company not named writes at the input price.
+CACHE_WRITE: dict[str, dict[str, float]] = {
+    "anthropic": {"5m": 1.25, "1h": 2.0},
+    "openai": {"": 1.25},
+}
 UNLISTED = Price(input=15.0, output=75.0, cached=1.5, search=0.035, minute=0.1)
 
 
@@ -145,6 +151,15 @@ def hearing_suggestions(provider: str) -> tuple[str, ...]:
     return tuple(sorted(table, key=lambda name: (table[name].input, name)))
 
 
+def write_times(provider: str | None, cache_ttl: str = "") -> float:
+    """What writing the cache costs this company, as times its input price; a lifetime it does
+    not take (Claude's handed to every company on the AI model page) counts its dearest."""
+    by_lifetime = CACHE_WRITE.get(provider or "")
+    if not by_lifetime:
+        return 1.0
+    return by_lifetime.get(cache_ttl, max(by_lifetime.values()))
+
+
 def cost(
     provider: str | None,
     model: str | None,
@@ -156,7 +171,7 @@ def cost(
     part only; `audio_seconds` is for a model that bills by the minute."""
     listed = price(provider, model)
     rate = listed or UNLISTED
-    write = rate.input * CACHE_WRITE.get(cache_ttl, 2.0) if provider == "anthropic" else rate.input
+    write = rate.input * write_times(provider, cache_ttl)
     dollars = (
         (
             (usage.get("input_tokens") or 0) * rate.input
