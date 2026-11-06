@@ -4,6 +4,9 @@
 
 ### New since v0.5.0
 
+- **"Not again" holds for recipes too.** Said of a dish after making it, it kept coming back
+  as tonight's pick, in "what's for dinner?" and on `/dinner`; only outings honoured it. A recipe
+  the family said not to make again is now left out, as an outing is, until they say otherwise.
 - **A plan already going counts for dinner.** At six, with a tournament until eight, every recipe
   was offered as if the evening were free, since only plans starting later counted. Cooking now
   waits for a plan under way, and the time runs to the next plan or to nine.

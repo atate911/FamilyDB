@@ -86,7 +86,7 @@ the evening's plans, the weekday, what was had lately, what they said about food
 | A pasted link is read by code first | Invariant (cost) | **schema.org Recipe from the page, no model; a worker only when a page has none** | Nearly every recipe site carries a `Recipe` block in JSON-LD (name, ingredients, steps, times, yield, cuisine). Reading it is deterministic and free, so a link costs nothing most of the time. A page with no block goes to a bounded worker turn (`fill_recipe`), the same way a place is looked up. The server fetches the page with the checks the calendar reader uses (public host only, http(s), checked redirects, size cap, timeout), sending nothing of the family. |
 | What is kept from a page | Family | **The ingredients, the steps, the times, the yield and the link; no picture** | A recipe kept only as a link is lost when the site goes or fills with ads: the steps are kept so the recipe's page is usable at the stove. A picture hotlinked from the site would tell that site the family's address every time the page is opened, so none is kept or drawn. To ask: whether the family wants the steps copied (a private copy for their own cooking) or the link alone. |
 | Where it lives on the page | Design | **Eat becomes "What should we eat?": Cook, then Eat out** | Eating is the most frequent decision and already has its door. Tonight's pick is a dish or a restaurant; the family decides which, so the page shows both: the cook pick for the next meal, the recipes ranked for it, then the restaurants as today. Chips narrow to one side. A recipe's own page is the idea page with its recipe section. |
-| "What's for dinner?" is answered by code | Default | **A ranked pick in code, through one tool and later one command** | The pick weighs facts code has (minutes until the evening's first plan, weekday or weekend, what was made lately, ratings, who it is for, the occasions asked for), as the Eat page's restaurant pick does. The model frames the question and words the reply; the ranking is logged with its reasons. The suggestion engine is for going out and stays out of it. |
+| "What's for dinner?" is answered by code | Default | **A ranked pick in code, through one tool and later one command** | The pick weighs facts code has (minutes until the evening's first plan, weekday or weekend, what was made lately, ratings, a "not again" said of it, who it is for, the occasions asked for), as the Eat page's restaurant pick does. The model frames the question and words the reply; the ranking is logged with its reasons. The suggestion engine is for going out and stays out of it. |
 
 ## How it is built
 
@@ -148,7 +148,8 @@ recipes (
   `familydb/meals.py` (domain, imports store only): facts first (minutes over the limit, which
   is the tighter of `most_minutes` and the time before tonight's plan, `meals.time_limit`, so
   asking for "under an hour" does not move the recital; an
-  occasion asked for and missing, nobody it is for among those eating), then taste (made within
+  occasion asked for and missing, nobody it is for among those eating, the latest outcome saying
+  not to make it again, `meals.not_again`, as the engine rules out an idea), then taste (made within
   its rest days lowers it; rating and times made raise it; an idea never made is "new to us").
   `describe_idea` on a recipe returns its full row, steps included, for "read me the fajitas".
 - `shopping_list` gains one action, `from_recipes`, with `idea_ids`: "put the fajitas on the

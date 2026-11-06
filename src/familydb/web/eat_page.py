@@ -205,6 +205,7 @@ def _cook_rows(
         now.astimezone(app.settings.tzinfo),
         agenda.on(seen, today),
         rest=meals.rest_days(conn, today),
+        not_again=meals.not_again(conn),
         unnamed=presents.plan_titles(conn, today.isoformat(), today.isoformat(), kept),
     )
     meal = None if occasion in NOT_DINNER else "dinner"

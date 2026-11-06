@@ -4,8 +4,9 @@ pick, `find_recipes` and "what's for dinner?" ask here; the model frames the que
 the reply, and never ranks.
 
 A fact rules a recipe out (longer than the time there is, a situation asked for that it is not,
-words asked for that it lacks); a matter of taste (made lately, a guessed situation) only lowers
-it to a maybe, said first. Situations the family said stand; guessed ones lean.
+words asked for that it lacks, the family having said not to make it again); a matter of taste
+(made lately, a guessed situation) only lowers it to a maybe, said first. Situations the family
+said stand; guessed ones lean.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ from familydb import groceries
 from familydb.base.dates import fmt_minutes
 from familydb.saved_plans import UNTIMED
 from familydb.store import ideas as idea_store
-from familydb.store import lists, memories
+from familydb.store import lists, memories, outcomes
 from familydb.store import recipes as recipe_store
 from familydb.store.ideas import RECIPE, Idea
 from familydb.store.recipes import OCCASIONS, FilledBy, Ingredient, Recipe
@@ -42,6 +43,7 @@ GUESTS = 8
 DINNER = time(17, 30)
 LATEST = time(21, 0)
 MOST_SHOWN = 10
+NOT_AGAIN = "said not to make it again"
 
 OCCASION_WORDS = {
     "weeknight": "weeknight",
@@ -143,6 +145,7 @@ class Situation:
     plan: str | None = None
     rest_days: int = REST_DAYS
     after: str | None = None
+    not_again: frozenset[int] = frozenset()  # recipes the family said not to make again
 
     def cut_short(self) -> str:
         """What cuts the time short, said after "there are 20 min": "before Soccer"."""
@@ -151,6 +154,12 @@ class Situation:
         if self.plan:
             return f"before {self.plan}"
         return f"after {self.after}" if self.after else ""
+
+
+def not_again(conn: sqlite3.Connection) -> frozenset[int]:
+    """The recipes whose latest outcome said not to make them again, as the engine reads ideas;
+    a later "again" lifts it."""
+    return frozenset(outcomes.do_not_repeat(conn))
 
 
 def rest_days(conn: sqlite3.Connection, today: date) -> int:
@@ -171,6 +180,7 @@ def situation(
     *,
     rest: int = REST_DAYS,
     unnamed: frozenset[str] = frozenset(),
+    not_again: frozenset[int] = frozenset(),
 ) -> Situation:
     """Tonight as code reads it: the weekday, and the minutes from when cooking starts (now, or
     `DINNER` if earlier) to the first timed plan before `LATEST`. A plan already under way then
@@ -208,6 +218,7 @@ def situation(
         plan=first[1] if first else None,
         rest_days=rest,
         after=after,
+        not_again=not_again,
     )
 
 
@@ -306,6 +317,8 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
     reasons: list[str] = []
     out: list[str] = []
     maybe: list[str] = []
+    if idea.id in now.not_again:  # the family's word on it, a fact as the engine takes it
+        out.append(NOT_AGAIN)
     minutes = recipe.minutes
     limit, by_plan = time_limit(now, asked)
     if minutes is not None:

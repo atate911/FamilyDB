@@ -276,6 +276,22 @@ def test_made_lately_rests_and_a_favourite_does_not(settings, clock, conn, famil
     assert loved["recipes"][0]["title"] == "Tacos"
 
 
+def test_not_again_rules_a_recipe_out_until_the_family_says_otherwise(
+    settings, clock, conn, family
+):
+    us = _as(conn, settings, clock, family["sam"])
+    tacos = _recipe(us, "Tacos", total_minutes=30)
+    _recipe(us, "Curry", total_minutes=40)
+    _call(us, "record_outcome", idea_id=tacos["id"], happened_on="2026-08-01", would_repeat=False)
+    for asked in ({}, {"favorites": True}):
+        _, found = _call(us, "find_recipes", **asked)
+        assert [one["title"] for one in found["recipes"]] == ["Curry"]
+        assert found["ruled_out"][0]["why"] == meals.NOT_AGAIN
+    _call(us, "record_outcome", idea_id=tacos["id"], happened_on="2026-08-20", would_repeat=True)
+    _, found = _call(us, "find_recipes")
+    assert "Tacos" in [one["title"] for one in found["recipes"]]
+
+
 @pytest.mark.parametrize(
     ("facts", "guessed"),
     [

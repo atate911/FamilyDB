@@ -236,6 +236,7 @@ def find_recipes(ctx: ToolContext, args: FindRecipesInput) -> dict[str, Any]:
         now,
         _today(ctx, now),
         rest=meals.rest_days(ctx.conn, now.date()),
+        not_again=meals.not_again(ctx.conn),
         unnamed=presents.plan_titles(ctx.conn, today, today, kept),
     )
     occasion = args.occasion

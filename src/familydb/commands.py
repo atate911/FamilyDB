@@ -599,6 +599,7 @@ def _dinner(
         now,
         agenda.on(seen, today),
         rest=meals.rest_days(conn, today),
+        not_again=meals.not_again(conn),
         unnamed=presents.plan_titles(conn, today.isoformat(), today.isoformat(), kept),
     )
     ranked = meals.rank_for_meal(recipes, tonight)

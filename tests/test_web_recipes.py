@@ -7,9 +7,10 @@ from __future__ import annotations
 import json
 import re
 
-from familydb.store import lists
+from familydb.store import db, lists
 from familydb.store import recipes as store
 from familydb.tools import ToolContext, build_registry
+from tests.conftest import NOW_ISO
 from tests.test_lists import KIDS, _browser_as, _start, app, sam  # noqa: F401
 from tests.test_web_edits import _client, _said
 from tests.test_web_logins import _tokens
@@ -142,6 +143,31 @@ def test_dinner_in_plain_words_is_answered_by_code(settings, clock, conn, family
     assert lines[0] == "For dinner tonight, from your recipes:"
     assert lines[1].startswith("#1 Stir fry: 25 min, serves 4")
     assert conn.execute("SELECT COUNT(*) FROM llm_calls").fetchone()[0] == 0
+
+
+def test_dinner_leaves_out_what_the_family_would_not_make_again(settings, clock, conn, family):
+    from familydb import commands
+    from familydb.app import App
+    from familydb.channels.base import IncomingMessage
+    from familydb.store import outcomes
+
+    stir_fry = _recipe(conn, settings, clock, family["sam"], "Stir fry", total_minutes=25)
+    _recipe(conn, settings, clock, family["sam"], "Dal", total_minutes=40)
+    with db.transaction(conn):
+        outcomes.insert(
+            conn,
+            idea_id=stir_fry["id"],
+            plan_id=None,
+            happened_on="2026-08-01",
+            rating=3,
+            would_repeat=False,
+            notes=None,
+            recorded_by=family["sam"].id,
+            now=NOW_ISO,
+        )
+    running = App(settings, clock)
+    asked = commands.answer(running, IncomingMessage("telegram", "2", "1001", "1001", "/dinner"))
+    assert "Dal" in asked.text and "Stir fry" not in asked.text
 
 
 def test_with_both_kept_eat_has_tabs_and_each_its_own_chips(settings, clock, conn, family):
