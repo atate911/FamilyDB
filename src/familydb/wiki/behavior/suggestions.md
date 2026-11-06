@@ -31,13 +31,13 @@ Two kinds of check. A fact rules an idea out. A matter of taste only makes it po
 | Its last rating in the year under 5 out of 10, or its last two | Possible, said first ("rated 4 and 3/10 the last two times") |
 | Who is coming, the ages it suits, the season, and the cost, indoor or outdoor and duration limits asked for | Ruled out |
 | An idea tied to dates: over, or on days outside the window | Ruled out |
-| Forecast: an outdoor or dry-weather idea on a day with a 50% or higher chance of rain (rain and snow codes count only when no chance is given), a warm one under 18 °C (64 °F) | The days that fit; when none does, possible on the wet or cold days with the forecast said first |
-| Forecast: a snow idea with no snow forecast | Ruled out when no day has snow |
+| Forecast: an outdoor or dry-weather idea on a day with a 50% or higher chance of rain (rain and snow codes count only when no chance is given), a warm one under 18 °C (64 °F) | The days that fit; when none does, possible on the wet or cold days with the forecast said first. The weather is said to look fine only when every day kept had a forecast; a day kept with none is named as having no forecast yet |
+| Forecast: a snow idea with no snow forecast | Ruled out when no day has snow. The snow it wants is never held against it as wet weather |
 | Free time: the idea's length against the longest free stretch; an unknown length needs an hour; a trip needs the whole window | Ruled out |
 | A day trip, or anything of 8 hours or more: a day with nothing else on it | With nothing else on any day but 8 hours free around something, possible, "something else on that day"; with no 8 hours free, ruled out |
 | Opening hours saved by a lookup: open that day, long enough inside a free stretch, with travel at both ends | Closed is ruled out; unknown is possible ("hours unknown"). A stay-at-home idea with nothing to look up has no hours and is not held to any |
 | A saved place's details older than the stale limit (`place_stale_days`, 30 days) or never checked | Possible; a chat question also queues a refresh |
-| Booking: the lead time against the days left | Too late is ruled out; an unknown lead time is possible |
+| Booking: the lead time against the days left, each day on its own | A day too soon to book is dropped and said; with none left it is ruled out; an unknown lead time is possible |
 | Travel: a straight-line estimate times the road factor at the average speed, from home or where they are | Over the limit asked, or the round trip plus the visit longer than the free time, is ruled out |
 | Daylight for an outdoor idea, from sunrise and sunset | Possible, never ruled out, since lights and stars are outdoors too |
 
