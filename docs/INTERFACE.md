@@ -1,5 +1,7 @@
 # The interface: map and architecture
 
+> **This records the interface as designed and built, not a specification.** Navigation, the box, Now, names and layout are open to redesign under `docs/DESIGN_FREEDOM.md`, which wins where this reads as fixing them. Keep this document true to what is built.
+
 The skeleton every screen is built on, for the web page on a phone, a big screen and a kitchen tablet. Second draft, October 2026, after the concept work in `CONCEPT.md`, three alternative paradigms weighed against it (section 12), and the family's answers to the questions that decide between them. Where this and the concept disagree, this document wins.
 
 **Where it stands (October 2026):** the web page is built on this skeleton: Now (section 3) with its first day; What about and the eight destinations, a kid's four (sections 4 and 9); every item of section 2's map, a place, a plan, a day, a kid, a list, a reminder, a happening and a memory (section 5); the box with its receipts, her reply over the page and search in the box (sections 3 and 6); her picks made ahead by an hourly job; the phone and big-screen frames, Vera's column carrying the thread's last lines; and the kitchen tablet's board with its faces (section 8). Of section 11's API only search (`/api/find`) is built: the rest was for the native app, and was built and then taken out (October 2026) when nothing used it. There is no native app, by the family's decision (section 8, On a phone): the installed page is the phone app. Also built: questions code can answer, answered by code in plain words on every channel (section 6, point 5); a reply pinned to a shelf of the person's own, beside the box and atop Chat (section 8); I'll handle it on a to-do that is everyone's; and who put each thing on a list (section 4). Not built: the plan taking shape on a plan's page (section 5), a kid's additions to a list for a parent to keep or drop (the family has not decided what a kid may do with the lists), and the second pass's other open decisions (section 12). `docs/STYLE.md` records the look; the guide (`/wiki`) says how to use each page.
@@ -14,12 +16,12 @@ Three things, and a person always knows which they want:
 - **Now, arranged by Vera.** Under the box, her picks for right now and the next day or two, and anything waiting on you. She arranges this part freely each time. It is the answer to the family's daily question, which is improvisational: "what should we do, now or soon?"
 - **Destinations to look at.** A short row of screens, each named for a want ("What should we eat?"), each one tap away, each opening on its answer with nothing to set first. Ranked by code, instant and free. Vera is there too, as a supporting assistant, through the same box scoped to the screen.
 
-Four rules hold everything below:
+Four goals shaped everything below. They are what the design is for, not a layout to keep; today's way of meeting each is in brackets, and a better way replaces it (`docs/DESIGN_FREEDOM.md`):
 
-1. **The box first, always.** On every first screen, on every device, before anything else.
-2. **The middle is hers; the edges are fixed.** Vera may rearrange what is between the box and the destination row every time the screen opens. The box and the row never move, so the hand learns the screen even though its content changes.
-3. **Names are wants, not nouns.** A destination says what you'd get, not what table it reads.
-4. **Three gestures.** Tap to open, chips to narrow, back to go up. The box is the fourth thing, the same everywhere.
+1. **A useful action first.** Opening the app, a person can do the most common thing at once: tell Vera something, or see what needs them. (Today: the box first on every first screen.)
+2. **Predictable orientation.** However the content changes, a person knows where they are and how to get elsewhere. (Today: Vera arranges the middle of Now; the box and the destination row stay put.)
+3. **Names a person understands.** A place says what you would get there, in the family's words. (Today: destinations named for wants, "What should we eat?")
+4. **Few, accessible interactions.** A small set of moves, the same everywhere, each reachable by touch, keyboard and screen reader. (Today: tap to open, chips to narrow, back to go up, and the box.)
 
 ## 2. The map
 
@@ -62,7 +64,7 @@ Now is the first screen. It is not a menu and not a dashboard: it is the box, th
 ┌──────────────────────────────────────┐
 │ FamilyDB                         (S) │
 │ ┌──────────────────────────────────┐ │
-│ │ Tell Vera…                       │ │  the box, first, always
+│ │ Tell Vera…                       │ │  the box
 │ └──────────────────────────────────┘ │
 │ Friday 5 pm · dry through Sunday     │  one line of context
 │                                      │
@@ -86,11 +88,11 @@ Now is the first screen. It is not a menu and not a dashboard: it is the box, th
 │                                      │
 │ Swim lesson 4:30 · Night Market Sat  │  today and tomorrow, one line
 ├──────────────────────────────────────┤
-│ Eat · Do · Week · Kids · Lists · Did │  the destination row, fixed
+│ Eat · Do · Week · Kids · Lists · Did │  the destination row
 └──────────────────────────────────────┘
 ```
 
-**Fixed:** the box at the top, the destination row at the bottom, and the first line under the box, which says the time and the one fact that shapes the picks.
+**Steady, as built:** the box at the top, the destination row at the bottom, and the first line under the box, which says the time and the one fact that shapes the picks. They stay put so the hand learns the screen; that is today's answer to goal 2, open to a better one.
 
 **Hers:** everything between. She decides what leads. An hour before a set plan, the plan leads with its leave-by time. At the store, the shopping list leads. On Friday afternoon, the weekend picks lead. On a quiet Tuesday morning, the screen is the box, the context line, "Nothing needs you", and the row. She may show six picks or two or none. The one promise is that anything waiting on this person is never pushed below the picks.
 
@@ -387,7 +389,7 @@ What was weighed again after the first draft, and what changed.
 
 **Kept: What we did as its own tile.** It was the weakest tile, and folding it into This week's past was tempting. It stays because ratings, favorites and "have we been?" need a place a person would look, and because the memory end of the ladder is where she learns taste.
 
-**Kept: no chat page.** The thread exists behind her reply, as a record. Making it a destination would make it the place people live, and a thread never ends, which is the one thing Home must never be.
+**Historical: no chat page.** The October decision was that the thread exists only behind her reply, as a record, because a destination for it would become the place people live. It no longer holds: there is a Chat page (`/chat`), with the thread and pinned replies. Where the conversation lives is open (`docs/DESIGN_FREEDOM.md`).
 
 **Weighed: a kid's tab bar.** Four tiles fit a tab bar, and a kid might like one. Rejected for consistency: her app is the parents' app with less in it, and learning a different navigation from her parents is a cost for a family that shares devices.
 
@@ -397,17 +399,17 @@ What was weighed again after the first draft, and what changed.
 
 Before settling, three structurally different paradigms were drawn and weighed against the launcher: **the line of time** (one surface from the past through today to someday, free time and pencil on it), **the workspace** (the conversation as the app, every answer a live object, pins as shelves), and **the board** (one spatial surface of the family's things, arranged by Vera by importance). Each is the best design at one level of the map and a poor design for the whole: the line for This week, the workspace for Vera's column on a big screen, the board for a shared tablet.
 
-The family then answered the questions that decide between them, and the answers moved the skeleton:
+The family then answered the questions that decide between them, and the answers moved the skeleton. The answers are evidence about how this family lives, to weigh in any redesign; the conclusions drawn from them in bold are October's design, not rules (`docs/DESIGN_FREEDOM.md`):
 
 - Phones first; Telegram for quick instructions; admin on a PC; kids on a tablet. **So the phone layout is the reference, the big screen carries admin, and the tablet gets the board.**
 - The daily plan is improvisational: what to do now or in the next day or two. **So the first screen is Vera's picks, not a menu, and coordination is a destination.**
-- The app may rearrange itself freely. **So the middle of Now is hers; only the box and the row are fixed.**
+- The app may rearrange itself freely. **So the middle of Now is hers; the box and the row were kept steady** (October's reading; open since, `docs/DESIGN_FREEDOM.md`).
 - Vera is the front door for instructions, which are the default; a supporting assistant for questions. **So the box is first on every first screen, and the destinations stand on their own with the box scoped to them.**
 - The kids are eleven and thirteen and will mostly ask for things. **So the kid's app is a box, her list and what's coming, and nothing to browse.**
 - Threads are per person. **So Now is personal, capture is shared by default, and surprises are a sentence.**
 - Cost has some room. **So the picks refresh on open when stale, and "What now?" is a free call to make.**
 - A kitchen tablet is wanted, for "let's see what Vera thinks". **So the board is a real layout, built third, with faces along the top.**
-- A single Home is not needed, as long as an instruction can be given on first load. **So there is no launcher. There is Now, which is different every time, under a box that never moves.**
+- A single Home is not needed, as long as an instruction can be given on first load. **So there is no launcher. There is Now, which is different every time, under a box that stays put.**
 
 What this changed from the first draft: Home the launcher became Now; What about became the first screen's content rather than a tile; the eight tiles became a fixed row of seven; the tablet became a third layout; the kid's app shrank; threads became per person; and the picks may refresh on open.
 
