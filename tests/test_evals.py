@@ -447,6 +447,77 @@ def test_a_cases_seed_is_in_the_household_before_the_first_message(settings) -> 
     assert "never called suggest" in grade(case, run)
 
 
+def test_a_long_message_s_last_line_reaches_the_next_question(settings) -> None:
+    """An hour ago a long message planned Saturday and its last line called it off; the next
+    question's history still carries that line (agent/history.py keeps a long message's end)."""
+    case = by_name("correction_at_the_end")
+    api = _answer([fakes.text("Nothing: you said you're staying home Saturday.")])
+    run = run_case(case, settings, api=api)
+    assert "we're staying home Saturday, everyone is wiped" in _said(api.requests[0])
+    assert grade(case, run) == []
+    planned = _answer([fakes.text("The zoo, then lunch at the ramen place.")])
+    assert grade(case, run_case(case, settings, api=planned))
+
+
+def test_an_old_favorite_is_looked_for_not_carried(settings) -> None:
+    case = by_name("old_favorite_beyond_the_list")
+    api = _answer(
+        [fakes.tool_use("t1", "search_ideas", {"text": "mansion"})],
+        [fakes.text("That was Pittock Mansion.")],
+    )
+    run = run_case(case, settings, api=api)
+    system = " ".join(block["text"] for block in api.requests[0]["system"])
+    assert "Pittock" not in system  # older than the newest 150 every message carries
+    assert "Pittock Mansion" in json.dumps(run.calls[0].result)
+    assert grade(case, run) == []
+    guessed = _answer([fakes.text("I don't have a mansion saved.")])
+    assert "never called search_ideas" in grade(case, run_case(case, settings, api=guessed))
+
+
+def test_the_second_one_is_the_ramen_place_and_asking_which_fails(settings) -> None:
+    case = by_name("the_second_one")
+    right = _answer(
+        [
+            fakes.tool_use(
+                "t1",
+                "create_event",
+                {
+                    "title": "Ramen place on Main St",
+                    "start": "2026-09-27T12:00:00-07:00",
+                    "end": "2026-09-27T13:00:00-07:00",
+                },
+            )
+        ],
+        [fakes.text("Ramen place on Main St, Sunday at 12.")],
+    )
+    run = run_case(case, settings, api=right)
+    said = _said(right.requests[0])
+    assert "2. Ramen place on Main St for lunch" in said and "80% chance" in said
+    assert grade(case, run) == []
+    which = _answer([fakes.text("Which one did you mean?")])
+    problems = grade(case, run_case(case, settings, api=which))
+    assert "did not take the second one, the ramen place, for Sunday" in problems
+
+
+def test_a_kid_s_firm_rule_goes_when_a_parent_asks(settings) -> None:
+    """The memory is about Chloe, not Alex who asks: a firm one goes whoever it is about."""
+    case = by_name("firm_rule_of_a_kid_coming")
+    api = _answer([fakes.text("The ramen place on Main St, 12 minutes away.")])
+    run = run_case(case, settings, api=api)
+    assert "Gets carsick: no drives over 20 minutes" in _said(api.requests[0])
+    assert "never called suggest" in grade(case, run)
+
+
+def test_saying_what_went_on_the_list_in_a_second_call_is_a_gap(settings) -> None:
+    case = by_name("shopping_add_alone")
+    assert case.waits_for
+    api = _answer(
+        [fakes.tool_use("t1", "shopping_list", {"action": "add", "items": ["milk"]})],
+        [fakes.text("Milk is on the list.")],
+    )
+    assert grade(case, run_case(case, settings, api=api)) == ["2 model calls, over 1"]
+
+
 def test_a_firm_rule_broken_without_a_word_fails(settings) -> None:
     case = by_name("must_is_respected")
     frame = {"window": "this_weekend", "question": "anything fun?", "discover": False}
