@@ -2061,9 +2061,16 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .found__links { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4); }
 .found__links a { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); font-weight: 700; font-size: var(--t-meta); }
 .found__note, .found__by { font-size: var(--t-meta); color: var(--ink-2); margin: 0; }
+/* a recipe is cooked from: the ingredients a hairline list, in two columns where there is room; the steps numbered,
+   each with room to find again with a glance from the stove */
+.ingr { margin: 0; padding: 0; list-style: none; columns: 2 16rem; column-gap: var(--s6); }
+.ingr li { break-inside: avoid; padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.cook-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: var(--s4); max-width: 62ch; }
+.cook-steps li { counter-increment: step; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--s3); line-height: 1.5; }
+.cook-steps li::before { content: counter(step); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--paper-2); color: var(--ink); font-family: var(--font-num); font-size: var(--t-meta); font-weight: 700; font-stretch: 100%; }
 .acts { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) var(--s4); }
 .acts form { margin: 0; }
-.acts > details { flex-basis: 100%; }
+.acts > details[open] { flex-basis: 100%; }  /* closed, Plan it sits in the row with the rest */
 .acts > details > summary { list-style: none; width: max-content; }
 .acts > details > summary::-webkit-details-marker { display: none; }
 .acts > details[open] > summary { margin-bottom: var(--s3); }

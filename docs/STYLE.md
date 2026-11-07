@@ -381,8 +381,8 @@ Each page names its focal element, what the main column holds, and what the rail
   one fact line and the people's marks at the edge; "by hand" last, as a quiet link. **Eat**: the
   next meal's picks, one to cook and one to eat out, each over its first few rows, with a
   segmented control (as Plans' List and Month) to Cook and Eat out, where the chips live; a
-  recipe's page leads with what it takes and its ingredients, Put the ingredients on the list the
-  one solid button and Plan it for a night quiet. **Do**: what fits the next free stretch, then the pile, the quiet ones
+  recipe's page is cooked from: what it takes, then Shopping list, the one solid button, with Plan
+  it for a night quiet beside it, then its ingredients and numbered steps, open. **Do**: what fits the next free stretch, then the pile, the quiet ones
   faded, then New ideas (what she found and judged worth putting forward, under a label saying she
   found them, each a hairline row with its reason and Save it and Not for us under it, small; the
   family's own always first), the map under it. **Week**: a day a section, set things as set rows (a solid left edge,

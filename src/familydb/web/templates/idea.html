@@ -5,7 +5,9 @@
 {% block body_class %}page-place{% endblock %}
 {# A place, or any idea (docs/INTERFACE.md section 5), in this order: its name, kind and state in words; the facts that
    decide, only the ones that exist; where it came from, in their words; what she found, marked as hers and dated;
-   what is planned or how it went; the box scoped to it, with quick sentences; Plan it and Drop it; Edit by hand last. #}
+   what is planned or how it went; the box scoped to it, with quick sentences; Plan it and Drop it; Edit by hand last.
+   A recipe is cooked from, so what to do with it (its Shopping list, Plan it for a night) comes right under what it
+   takes, and its ingredients and numbered steps are open to read at the stove. #}
 {% macro asking(id) %}
   {% if not visitor().member %}
     <div class="field">
@@ -16,6 +18,35 @@
       </select>
     </div>
   {% endif %}
+{% endmacro %}
+{# Shopping list (a recipe's), Plan it, and Drop it: under the facts for a recipe, after what she found for the rest. #}
+{% macro plan_acts() %}
+    <div class="acts">
+      {# A recipe's first act is the shopping, by the sections of the store with the pantry apart (docs/RECIPES.md);
+         a dinner put on the calendar is the quieter one. #}
+      {% if recipe and recipe.shoppable %}
+        <a class="btn btn--primary btn--sm" href="{{ url_for('web.shop', idea_id=idea.id) }}">{{ icon('list', size='sm') }}Shopping list</a>
+      {% endif %}
+      <details class="fold fold--quiet" id="plan-it">
+        <summary class="btn {{ 'btn--quiet' if recipe else 'btn--primary' }} btn--sm">{{ icon('cal', size='sm') }}{{ 'Plan it for a night' if recipe else ('Plan it again' if plans else 'Plan it') }}</summary>
+        <form class="form fold__body" method="post" action="{{ url_for('edits.add_plan') }}">
+          {{ guard(once=true) }}
+          <input type="hidden" name="idea_id" value="{{ idea.id }}" /><input type="hidden" name="title" value="{{ idea.title }}" />
+          <div class="field"><label class="field__label" for="start">When <span class="req">(required)</span></label>
+            <input id="start" name="start" type="datetime-local" required value="{{ idea.happens_from if idea.happens_from and 'T' in idea.happens_from else '' }}" />
+            <label class="check"><input type="checkbox" name="all_day" value="yes" />All day</label></div>
+          <div class="field"><label class="field__label" for="location">Where <span class="opt">(optional)</span></label><input id="location" name="location" value="{{ row.where or '' }}" /></div>
+          {{ asking('plan') }}
+          <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ 'Put it on the calendar' if on_google else 'Add it to the plans' }}</button></div>
+        </form>
+      </details>
+      <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
+        {{ guard(once=true) }}
+        <input type="hidden" name="status" value="{{ 'idea' if idea.status == 'dropped' else 'dropped' }}" />
+        <button class="q__lnk" type="submit" aria-describedby="drop-h">{{ 'Bring it back' if idea.status == 'dropped' else 'Drop it' }}</button>
+      </form>
+      <p class="sr" id="drop-h">{{ 'It comes up in suggestions again.' if idea.status == 'dropped' else 'It stops coming up in suggestions; you can bring it back.' }}</p>
+    </div>
 {% endmacro %}
 {% block content %}
   <header class="dest">
@@ -31,6 +62,8 @@
   <dl class="facts">
     {% for k, v, tone in facts %}<div><dt class="facts__k">{{ k }}</dt><dd class="facts__v{{ ' facts__v--ok' if tone == 'ok' }}">{{ v | figs }}</dd></div>{% endfor %}
   </dl>
+
+  {% if recipe and visitor().may('change') %}{{ plan_acts() }}{% endif %}
 
   {# Where it came from: who said it, when, their exact words. #}
   {% if original_message %}
@@ -71,16 +104,16 @@
         </details>
       {% endif %}
       {% if recipe.ingredients %}
-        <details class="fold fold--quiet" open>
-          <summary>Ingredients{{ icon('chev', size='sm', cls='chev') }}</summary>
-          <ul class="fold__body">{% for line in recipe.ingredients %}<li>{{ line }}</li>{% endfor %}</ul>
-        </details>
+        <section class="sec" aria-labelledby="h-ingr">
+          <div class="sec__label"><h3 id="h-ingr" class="label">Ingredients</h3><small>{{ recipe.ingredients | length }}</small></div>
+          <ul class="ingr">{% for line in recipe.ingredients %}<li>{{ line }}</li>{% endfor %}</ul>
+        </section>
       {% endif %}
       {% if recipe.steps %}
-        <details class="fold fold--quiet">
-          <summary>Steps{{ icon('chev', size='sm', cls='chev') }}</summary>
-          <ol class="fold__body">{% for step in recipe.steps %}<li>{{ step }}</li>{% endfor %}</ol>
-        </details>
+        <section class="sec" aria-labelledby="h-steps">
+          <div class="sec__label"><h3 id="h-steps" class="label">Steps</h3></div>
+          <ol class="cook-steps">{% for step in recipe.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+        </section>
       {% endif %}
       {% if recipe.source_url or (recipe.shoppable and not visitor().may('change')) %}
         <p class="found__links">
@@ -154,38 +187,13 @@
 
   {# Plan it, and the rest, by hand. #}
   {% if visitor().may('change') %}
-    <div class="acts">
-      {# A recipe's first act is the shopping, by the sections of the store with the pantry apart (docs/RECIPES.md);
-         a dinner put on the calendar is the quieter one. #}
-      {% if recipe and recipe.shoppable %}
-        <a class="btn btn--primary btn--sm" href="{{ url_for('web.shop', idea_id=idea.id) }}">{{ icon('list', size='sm') }}Shopping list</a>
-      {% endif %}
-      <details class="fold fold--quiet" id="plan-it">
-        <summary class="btn {{ 'btn--quiet' if recipe else 'btn--primary' }} btn--sm">{{ icon('cal', size='sm') }}{{ 'Plan it for a night' if recipe else ('Plan it again' if plans else 'Plan it') }}</summary>
-        <form class="form fold__body" method="post" action="{{ url_for('edits.add_plan') }}">
-          {{ guard(once=true) }}
-          <input type="hidden" name="idea_id" value="{{ idea.id }}" /><input type="hidden" name="title" value="{{ idea.title }}" />
-          <div class="field"><label class="field__label" for="start">When <span class="req">(required)</span></label>
-            <input id="start" name="start" type="datetime-local" required value="{{ idea.happens_from if idea.happens_from and 'T' in idea.happens_from else '' }}" />
-            <label class="check"><input type="checkbox" name="all_day" value="yes" />All day</label></div>
-          <div class="field"><label class="field__label" for="location">Where <span class="opt">(optional)</span></label><input id="location" name="location" value="{{ row.where or '' }}" /></div>
-          {{ asking('plan') }}
-          <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ 'Put it on the calendar' if on_google else 'Add it to the plans' }}</button></div>
-        </form>
-      </details>
-      <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
+    {% if not recipe %}{{ plan_acts() }}{% endif %}
+    {% if can_look_up and not idea.lookup_wanted_at %}
+      <form method="post" action="{{ url_for('edits.look_up', idea_id=idea.id) }}">
         {{ guard(once=true) }}
-        <input type="hidden" name="status" value="{{ 'idea' if idea.status == 'dropped' else 'dropped' }}" />
-        <button class="q__lnk" type="submit" aria-describedby="drop-h">{{ 'Bring it back' if idea.status == 'dropped' else 'Drop it' }}</button>
+        <button class="q__lnk" type="submit">{% if recipe %}{{ 'Read its page now' if idea.enrichment == 'pending' else 'Read its page again' }}{% else %}{{ 'Look it up now' if idea.enrichment == 'pending' else 'Look it up again' }}{% endif %}</button>
       </form>
-      <p class="sr" id="drop-h">{{ 'It comes up in suggestions again.' if idea.status == 'dropped' else 'It stops coming up in suggestions; you can bring it back.' }}</p>
-      {% if can_look_up and not idea.lookup_wanted_at %}
-        <form method="post" action="{{ url_for('edits.look_up', idea_id=idea.id) }}">
-          {{ guard(once=true) }}
-          <button class="q__lnk" type="submit">{% if recipe %}{{ 'Read its page now' if idea.enrichment == 'pending' else 'Read its page again' }}{% else %}{{ 'Look it up now' if idea.enrichment == 'pending' else 'Look it up again' }}{% endif %}</button>
-        </form>
-      {% endif %}
-    </div>
+    {% endif %}
     <details class="fold fold--quiet">
       <summary>{{ 'Record that you made it' if idea.kind == 'recipe' else 'Record how it went by hand' }}{{ icon('chev', size='sm', cls='chev') }}</summary>
       <form class="form fold__body" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
