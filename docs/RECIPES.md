@@ -307,7 +307,7 @@ needed a worker, so the walker can be improved where it misses (a site's own JSO
 before anyone pays for the worker twice.
 
 **5. Afterwards.** The recipe's page shows the read facts marked as hers and dated ("read from
-seriouseats.com, 22 October"): serves, minutes, the ingredients, the steps folded, the link. Eat's
+seriouseats.com, 22 October"): serves, minutes, the ingredients, the numbered steps, the link. Eat's
 Cook section ranks it for the next meal, `find_recipes` finds it by name, tag or ingredient, "what's
 for dinner, quick?" can name it, "put the fajitas on the list" puts its eleven things on the
 shopping list less the staples, and "we had the fajitas, 8/10" records how it went. The link is
@@ -346,17 +346,21 @@ the note's wording; an eval case that pastes a link with and without words and c
   ahead**, **Family dinner**, the cuisines, the people. A kid sees the recipes and the rows as
   today, no cost, no buttons. The cook pick is `meals.pick` with the evening's plans from
   `app.calendar`, no model call (`test_browsing_asks_nothing_of_a_model` holds it).
-- **A recipe's page** (`/idea/N`): the recipe section after the facts: serves, active and total
-  minutes, the occasions as words, a guessed one as "looks like: weeknight" with **That's right**
-  and **Not that** (`update_idea`), the prep note, the ingredients, the steps folded, the link and
-  its site, when it was read; made N times and how it went. Buttons for whoever may change
-  things: **Had it tonight** (`record_outcome`), **Shopping list** (its Shopping page, `/idea/N/shop`,
+- **A recipe's page** (`/idea/N`): it is cooked from, so what to do with it comes right under the
+  facts (serves, active and total minutes, the occasions as words): **Cook it**, a day, a dinner
+  time, what is missing on the shopping list (ticked) and the calendar (not ticked), and **Cook
+  this**, which does each part as Vera would and says what each did (`edits.cook_this`). Then a
+  guessed occasion as "looks like: weeknight" with **That's right** and **Not that**
+  (`update_idea`), the prep note, the ingredients and the numbered steps, open, the link and its
+  site, when it was read; made N times and how it went. Buttons for whoever may change things:
+  **Had it tonight** (`record_outcome`), **Its shopping, by the store** (its Shopping page, `/idea/N/shop`,
   by the sections of the store with the pantry apart; **Put it all on the list** there is
   `shopping_list` `from_recipes`, phase 3; its notice says what was added and what was on the
   list already, with Undo), **Edit by hand** (the idea form with the recipe fields).
-- **Eat's Cook section** lets a grown-up tick several recipes and press **Grocery list for
-  these** (one form, the same tool, phase 3), which is how a week's shopping is made until the
-  week's meals exist. The Lists page draws each thing's note small under it.
+- **Eat's Cook section** lets a grown-up tick several recipes and press **Put these on the
+  list** (one form, the same tool, phase 3), which is how a week's shopping is made until the
+  week's meals exist. One action has one name: a quick sentence under the box never asks her to
+  do what a button on the page does by code (`views.idea_starters`, `views.shop_starters`). The Lists page draws each thing's note small under it.
 - **Do** leaves recipes out as it leaves restaurants out; search in the box finds them.
 - `shell.OWNS["eat"]` is unchanged; `docs/STYLE.md` and `docs/INTERFACE.md` section 4 record the
   new shape of Eat; the guide's "Eat and Do" page and the glossary say what a recipe is.

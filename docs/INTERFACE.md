@@ -132,7 +132,7 @@ Nothing else appears on a destination. Her picks and her finds are marked as her
 - **The restaurant pick:** chosen by code: open at the meal time, not done recently, how it was rated, drive time, weather for a patio. Its line says why: "Open till 9, 12 min, you haven't been."
 - **Chips, on Cook:** the situations some recipe has (Quick always; Prep ahead, Family dinner, Slow cook, Breakfast) · New to us · With the kids · Cuisines in the recipes. **On Eat out:** Open now · Close · New · Just us · With the kids · Cuisines in the pile · Each person. The overview has none.
 - **Each row:** a recipe's minutes, servings, times made and rating, what it is good for (a guess marked "looks like"); a restaurant's cuisine, one fact that decides (open till, how far, cost band), who suggested it, done before or not.
-- **Grocery list:** on Cook, a grown-up who may change things ticks recipes and presses **Grocery list for these**: what they need goes on the shopping list by code (`shopping_list`, `from_recipes`).
+- **Grocery list:** on Cook, a grown-up who may change things ticks recipes and presses **Put these on the list**: what they need goes on the shopping list by code (`shopping_list`, `from_recipes`).
 - **Empty:** "Nothing saved yet. Tell Vera a recipe you like or a place you've heard about."
 - **Kid:** the same lists without cost bands, "just us" or the boxes.
 

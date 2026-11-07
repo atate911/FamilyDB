@@ -1025,9 +1025,11 @@ def shop_summary(shop: Any) -> str:
 
 
 def shop_starters(shop: Any, *, all_on: bool, may_change: bool) -> list[str]:
-    """Three sentences a recipe's Shopping page offers the box: the list (what is left on it once
-    everything is there, or for a kid, who may not change it), a stand-in for the first thing
-    from the aisles the table knows none for (the family asks her), and what goes with it."""
+    """The sentences a recipe's Shopping page offers the box: what is left on the list once
+    everything is there (or for a kid, who may not change it), a stand-in for the first thing from
+    the aisles the table knows none for (the family asks her), and whether it can be made ahead.
+    Never what a button on the page does by code: putting it all on the list is the page's own
+    button, free, so it is not also a sentence for her to read and do at the price of a call."""
     odd = next(
         (
             one.item
@@ -1039,14 +1041,15 @@ def shop_starters(shop: Any, *, all_on: bool, may_change: bool) -> list[str]:
         None,
     )
     second = f"What could stand in for {odd}?" if odd else "What goes with it?"
-    first = "What's left on the list?" if all_on or not may_change else "Put it all on the list"
-    return [first, second, "Can we make it ahead?"]
+    first = ["What's left on the list?"] if all_on or not may_change else []
+    return [*first, second, "Can we make it ahead?"]
 
 
-# Quick sentences under an idea's box, filled in by a tap, never sent by themselves.
+# Quick sentences under an idea's box, filled in by a tap, never sent by themselves; never what a
+# button on the page does by code (a recipe's Cook this puts it on the list for nothing).
 def idea_starters(idea: Idea, today: date) -> list[str]:
     if idea.kind == "recipe":
-        return ["What goes with it?", "Can we make it ahead?", "Put it on the list"]
+        return ["What goes with it?", "Can we make it ahead?", "Is it good for the kids?"]
     weekend = "this weekend" if today.weekday() < 5 else "next weekend"
     first = "Plan it for " + weekend
     second = "Is it good for the kids?" if idea.kind != "gift" else "What would go with it?"

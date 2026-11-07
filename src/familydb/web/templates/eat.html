@@ -67,7 +67,7 @@
       {% if listing %}<form method="post" action="{{ url_for('edits.list_from_recipes') }}">{{ guard(once=true) }}<input type="hidden" name="back" value="cook" />{% endif %}
       {{ cook_rows(cooking, cook_top, listing) }}
       {% if listing %}
-        <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ icon('list', size='sm') }}Grocery list for these</button><span class="small muted">What the ticked recipes need goes on the shopping list, less salt, oil and the like.</span></div>
+        <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ icon('list', size='sm') }}Put these on the list</button><span class="small muted">What the ticked recipes need goes on the shopping list, less salt, oil and the like.</span></div>
       </form>{% endif %}
     </section>
   {% elif side == 'out' and cards %}

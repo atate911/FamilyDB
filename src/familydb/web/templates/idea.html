@@ -92,17 +92,18 @@
           </div>
         </details>
       {% endif %}
+      {# It is cooked from: the ingredients and the numbered steps open, under section titles, to read at the stove. #}
       {% if recipe.ingredients %}
-        <details class="fold fold--quiet" open>
-          <summary>Ingredients{{ icon('chev', size='sm', cls='chev') }}</summary>
-          <ul class="fold__body">{% for line in recipe.ingredients %}<li>{{ line }}</li>{% endfor %}</ul>
-        </details>
+        <section class="sec" aria-labelledby="h-ingr">
+          <div class="sec__label"><h3 id="h-ingr" class="label">Ingredients</h3><small>{{ recipe.ingredients | length }}</small></div>
+          <ul class="ingr">{% for line in recipe.ingredients %}<li>{{ line }}</li>{% endfor %}</ul>
+        </section>
       {% endif %}
       {% if recipe.steps %}
-        <details class="fold fold--quiet">
-          <summary>Steps{{ icon('chev', size='sm', cls='chev') }}</summary>
-          <ol class="fold__body">{% for step in recipe.steps %}<li>{{ step }}</li>{% endfor %}</ol>
-        </details>
+        <section class="sec" aria-labelledby="h-steps">
+          <div class="sec__label"><h3 id="h-steps" class="label">Steps</h3></div>
+          <ol class="cook-steps">{% for step in recipe.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+        </section>
       {% endif %}
       {% if recipe.source_url or (recipe.shoppable and not visitor().may('change')) %}
         <p class="found__links">

@@ -377,7 +377,7 @@ Each page names its focal element, what the main column holds, and what the rail
   next meal's picks, one to cook and one to eat out, each over its first few rows, with a
   segmented control (as Plans' List and Month) to Cook and Eat out, where the chips live; a
   recipe's page leads with what it takes, then Cook it, a card holding the one solid button, Cook
-  this; the ingredients, how it went and More come under it. **Do**: what fits the next free stretch, then the pile, the quiet ones
+  this; the ingredients and its numbered steps, open to cook from, how it went and More come under it. **Do**: what fits the next free stretch, then the pile, the quiet ones
   faded, then New ideas (what she found and judged worth putting forward, under a label saying she
   found them, each a hairline row with its reason and Save it, Plan it and Not for us under it, small, Not for
   us a text link; the

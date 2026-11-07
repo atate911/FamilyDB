@@ -72,7 +72,7 @@ def test_ticked_recipes_go_on_the_shopping_list_with_their_amounts(settings, clo
     two = _recipe(conn, settings, clock, family["sam"], "Soup", ingredients=["1 onion"])
     browser = _client(settings, clock)
     page = browser.get("/eat?side=cook").text
-    assert 'name="idea_ids"' in page and "Grocery list for these" in page
+    assert 'name="idea_ids"' in page and "Put these on the list" in page
     listed = browser.post(
         "/eat/grocery-list",
         data={**_token(page), "idea_ids": [str(one["id"]), str(two["id"])]},
@@ -195,8 +195,17 @@ def test_the_kitchen_board_names_a_recipe_to_cook(settings, clock, conn, family)
 
 
 def test_a_recipe_page_reads_as_a_recipe(settings, clock, conn, family):
+    """It is cooked from: what to do with it comes right under what it takes, then the ingredients
+    and the numbered steps, open, so nothing is a tap away at the stove."""
     made = _recipe(
-        conn, settings, clock, family["sam"], "Dal", total_minutes=30, ingredients=["1 onion"]
+        conn,
+        settings,
+        clock,
+        family["sam"],
+        "Dal",
+        total_minutes=30,
+        ingredients=["1 onion"],
+        steps=["Fry the onion.", "Add the lentils."],
     )
     page = _client(settings, clock).get(f"/idea/{made['id']}").text
     assert "Not made yet" in page and "An idea" not in page
@@ -204,7 +213,12 @@ def test_a_recipe_page_reads_as_a_recipe(settings, clock, conn, family):
     assert "Takes" in page and ">Cook this</button>" in page
     assert page.index("Cook this") < page.index("Record that you made it") < page.index(">More")
     assert "Plan it for a night" not in page
+    # Then it is cooked from: the ingredients and the numbered steps, open.
+    order = [">Cook this</button>", ">Ingredients<", ">Steps<", "Fry the onion."]
+    assert [page.index(one) for one in order] == sorted(page.index(one) for one in order)
+    assert '<ol class="cook-steps">' in page and "<summary>Steps" not in page
     assert "What goes with it?" in page  # her quick sentences are a recipe's
+    assert 'data-say="Put it on the list"' not in page  # Cook this does it, for nothing
 
 
 def test_one_undo_never_takes_back_half_an_edit(settings, clock, conn, family):
@@ -246,7 +260,7 @@ def test_a_grocery_tick_is_a_whole_target_and_the_one_action(settings, clock, co
     _recipe(conn, settings, clock, family["sam"], "Stir fry", ingredients=["1 onion"])
     page = _client(settings, clock).get("/eat?side=cook").text
     assert 'class="check check--tick"' in page
-    assert 'class="btn btn--primary btn--sm" type="submit">' in page  # Grocery list for these
+    assert 'class="btn btn--primary btn--sm" type="submit">' in page  # Put these on the list
 
 
 def test_tonight_s_pick_and_the_cook_list_agree(settings, thursday_clock, conn, family):
@@ -310,7 +324,9 @@ def test_a_recipe_s_shopping_page_walks_the_store(settings, clock, conn, family)
     assert page.index("From the pantry") > page.index("buttermilk")
     assert "smoked paprika" in page[page.index("From the pantry") :] and "Need it" in page
     assert 'class="tick"' not in page  # nothing on the list yet: nothing to tick
-    assert "Put it all on the list" in page
+    assert "Put it all on the list</button>" in page
+    # The button does it by code, for nothing: not also a sentence for her, at a call's price.
+    assert 'data-say="Put it all on the list"' not in page
     listed = browser.post(
         "/eat/grocery-list",
         data={**_token(page), "idea_ids": str(made["id"]), "back": f"shop:{made['id']}"},
