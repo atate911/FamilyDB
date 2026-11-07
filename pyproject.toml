@@ -60,4 +60,5 @@ testpaths = ["tests"]
 addopts = "-n auto"
 markers = [
     "live: hits the real Anthropic API (needs FAMILYDB_LIVE=1 and ANTHROPIC_API_KEY)",
+    "browser: drives a real browser on the example household (needs FAMILYDB_BROWSER=1 and playwright)",
 ]
