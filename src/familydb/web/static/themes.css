@@ -95,9 +95,9 @@
   --paper: light-dark(#F6F1E7, #0C100F);
   --paper-2: light-dark(#EFE7D7, #121816);
   --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
-  --card: light-dark(#FFFCF6, #161D1B);
-  --field: light-dark(#FFFFFF, #1B2321);
-  --line: light-dark(#E2D8C4, #24302C);
+  --card: light-dark(#FFFCF6, #1A2522);  /* by night a step off the page, so a card stands apart */
+  --field: light-dark(#FFFFFF, #1E2926);
+  --line: light-dark(#E2D8C4, #2B3934);
   --line-2: light-dark(#D3C6AC, #33413C);
   --edge: light-dark(#8A806C, #7E8C86);
   --ink: light-dark(#1D2526, #EEE8DA);

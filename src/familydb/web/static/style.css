@@ -38,14 +38,15 @@
   --font-code: "JetBrains Mono", ui-monospace, "Menlo", monospace;
   --font-mono: "JetBrains Mono", ui-monospace, "Menlo", monospace;
   /* Saira's widths for each role: words, headings and display, labels */
-  --w-text: 88%;  --w-head: 76%;  --w-label: 125%;
-  /* four roles: label 13 (capitals only), words 15, heading 22, display 28. The older names are kept,
+  /* words near the face's own width, so a long line of detail reads; headings and display narrow, labels wide */
+  --w-text: 96%;  --w-head: 76%;  --w-label: 125%;
+  /* four roles: label 13 (capitals only), words 16, heading 22, display 28. The older names are kept,
      each set to its role, so a part that asks for one gets the role it now belongs to. */
   --t-xs: 0.8125rem;  /* 13 label */
-  --t-sm: 0.9375rem;  /* 15 words */
-  --t-meta: 0.9375rem;/* 15 words */
-  --t-md: 0.9375rem;  /* 15 words */
-  --t-lede: 0.9375rem;/* 15 words */
+  --t-sm: 1rem;       /* 16 words */
+  --t-meta: 1rem;     /* 16 words */
+  --t-md: 1rem;       /* 16 words */
+  --t-lede: 1rem;     /* 16 words */
   --t-h3: 1.375rem;   /* 22 heading */
   --t-h2: 1.375rem;   /* 22 heading */
   --t-h1: 1.75rem;    /* 28 display */
@@ -1883,9 +1884,12 @@ li:target { border-radius: var(--r-md); }
 .box__send:hover { background: var(--send-2); }
 .box__send:not(:disabled) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--send) 80%, transparent), 0 0 16px color-mix(in srgb, var(--send) 55%, transparent); }
 .box__send:disabled { background: var(--paper-2); color: var(--ink-2); cursor: not-allowed; }
-.bar__where { display: flex; justify-content: flex-end; font-size: var(--t-xs); color: var(--ink-2); }
-.bar__where .check { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; cursor: pointer; }
-.bar__where input { width: 16px; height: 16px; margin: 0; }
+/* Where I am, beside the mic: the mark is the label, the checkbox lies over it whole (so the hit area is the mark's),
+   and on it is lit in the family's action color, which ask.js also says in words under the box */
+.box__where { position: relative; display: inline-grid; place-items: center; flex: none; min-width: 40px; min-height: 40px; border-radius: var(--r-md); color: var(--ink-2); cursor: pointer; }
+.box__where input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.box__where:has(input:checked) { color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.box__where:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 1px; }
 .bar #where:empty { display: none; }
 
 /* what came back: on its way, what she did (a receipt, with Undo), or her reply over the page */
@@ -1957,7 +1961,7 @@ li:target { border-radius: var(--r-md); }
 
 /* a set thing, in ink: a solid left edge, the time in the mono, the words */
 .set { display: flex; align-items: flex-start; gap: var(--s4); padding: var(--s3) var(--s4); border-left: 4px solid var(--primary); background: var(--card); border-radius: var(--r-md); }
-.set__num { flex: none; width: 60px; padding-top: 2px; color: var(--ink-2); }
+.set__num { flex: none; width: 72px; padding-top: 2px; color: var(--ink-2); }  /* "12:30 pm" with room */
 .set__t { font-weight: 700; }
 .set__m { color: var(--ink-2); }
 .set--big { flex-direction: column; gap: var(--s2); padding: var(--s4) var(--s5); }
@@ -1976,6 +1980,17 @@ li:target { border-radius: var(--r-md); }
 .row__n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: var(--r-pill); background: var(--amber); color: var(--paper); font-size: 0.72rem; font-weight: 700; line-height: 1; font-stretch: 100%; letter-spacing: 0; }
 .nf--kid .box { min-height: 56px; }
 .nf--kid .row a { font-size: var(--t-md); }
+/* On a phone each place is its mark over its word, as the menu has them, so a place is known before it is read; the
+   one you are on is lit in the family's action color. Elsewhere the row is words (the menu carries the marks). */
+.row a .icon { display: none; }
+@media (max-width: 820px) {
+  .row { justify-content: space-around; padding-top: 6px; }
+  .row a { flex-direction: column-reverse; justify-content: center; gap: 2px; min-width: 40px; padding: 2px 0 4px; font-size: 0.875rem; border-bottom: 0; }
+  .row a .icon { display: block; width: 22px; height: 22px; }
+  .row a[aria-current="page"] .icon { color: var(--primary); }
+  .row__n { position: absolute; top: 0; right: -6px; }
+  .nf--kid .row a { font-size: 0.9375rem; }
+}
 
 /* ---------- 18. The destinations: one skeleton for every answer (docs/INTERFACE.md section 4) ---------- */
 /* The title is the question, one line under it, chips in the same place, then the answer as rows. */
@@ -2162,6 +2177,7 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .pinned-fold .pins { max-height: 40vh; overflow-y: auto; padding-bottom: var(--s3); }
 @media (max-width: 820px) { .pinned-fold { padding: 0 var(--s4); border-top: 1px solid var(--line); border-bottom: 0; } }
 .vc .pins + .label { margin-top: var(--s3); }
+.vc .pinned-fold { margin-bottom: var(--s2); }
 
 /* Vera's column: the last lines of the thread behind her reply, only where the box has a column of its own */
 .vc { display: none; }

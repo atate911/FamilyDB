@@ -133,6 +133,7 @@ def happening_page() -> str:
             conn,
             people,
             scope={"label": "Happening soon", "text": "About what is on near home:"},
+            where=True,
         )
     sources = sorted({views.find_row(one, today)["who"] for one in found})
     if source:
@@ -201,6 +202,7 @@ def find(find_id: int) -> str:
                 "label": found.title,
                 "text": f"About {found.title} ({_on(found)}), listed near home:",
             },
+            where=True,
         )
     box["starters"] = views.find_starters(found, today)
     row = views.find_row(found, today)

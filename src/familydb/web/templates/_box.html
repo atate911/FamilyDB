@@ -36,19 +36,18 @@
   <div class="box">
     <label class="sr" for="text">Message to {{ assistant }}</label>
     <textarea id="text" name="text" data-dictate="ask-mic" rows="1" required placeholder="{{ b.placeholder }}" enterkeyhint="send"{% if b.locked %} disabled{% endif %}>{{ b.typed or '' }}</textarea>
+    {# Where I am, a toggle beside the mic: shown by ask.js (with scripts off there is no position to send), off until
+       tapped, offered only on a page where where you are bears on the answer (chat.page_box `where`); a kid is not
+       asked (docs/STYLE.md, "A kid's screen"). A real checkbox under the mark, with its words. #}
+    {% if b.where and visitor().may('browse') %}
+      <label class="box__where" id="locate" hidden title="Share where I am with this message"><input type="checkbox" name="send_where" value="1" {{ 'checked' if b.send_where }} /><span class="sr">Share where I am with this message</span>{{ icon('locate') }}</label>
+    {% endif %}
     <span class="mic-slot" id="ask-mic"></span>
     <button class="box__send" type="submit" aria-label="Send"{% if b.locked or not b.family %} disabled{% endif %}>{{ icon('send') }}</button>
   </div>
   {# A page's quick sentences, filled into the box by ask.js (never sent by themselves). #}
   {% if b.starters %}
     <p class="starters starters--bar">{% for say in b.starters %}<a class="chip chip--say" href="#text" data-say="{{ say }}">{{ say }}</a>{% endfor %}</p>
-  {% endif %}
-  {# Shown by ask.js; with scripts off there is no position to send, so no box. Off until ticked. A kid is not asked
-     (docs/STYLE.md, "A kid's screen"). #}
-  {% if visitor().may('browse') %}
-  <div class="bar__where" id="locate" hidden>
-    <label class="check"><input type="checkbox" name="send_where" value="1" {{ 'checked' if b.send_where }} /> {{ icon('pin', size='sm') }}Share where I am with this message</label>
-  </div>
   {% endif %}
   <p id="where" class="small muted"></p>
 </form>
@@ -77,11 +76,14 @@
    her reply, its last lines, drawn only where the box has a column of its own. #}
 {% if b.recent or b.pinned %}
   <section class="vc" aria-labelledby="vc-h">
+    {# What this person pinned, folded to a line as atop Chat (opened, the shelf), so the page leads. #}
     {% if b.pinned %}
-      <h2 class="label" id="vc-pins">Pinned</h2>
-      {{ pin_shelf(b.pinned, request.full_path.rstrip('?')) }}
+      <details class="pinned-fold">
+        <summary>{{ icon('pin', size='sm') }}Pinned<span class="chip__n">{{ b.pinned | length }}</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+        {{ pin_shelf(b.pinned, request.full_path.rstrip('?')) }}
+      </details>
     {% endif %}
-    <h2 class="label" id="vc-h">Earlier with {{ assistant }}</h2>
+    <h2 class="label" id="vc-h">Last with {{ assistant }}</h2>
     <ol class="vc__lines">
       {% for line in b.recent %}
         <li class="vc__line{{ ' vc__line--her' if line.from_bot }}"><span class="vc__by">{{ line.who }} <time>{{ line.clock | figs }}</time></span><span class="vc__text">{{ line.text | truncate(240) }}</span></li>

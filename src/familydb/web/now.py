@@ -97,7 +97,7 @@ def show() -> Response | str:
             and not idea_store.list_all(conn, include_dropped=True)
         )
         prompt = chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT
-        chat.page_box(app, conn, people, prompt=FIRST_PROMPT if first_day else prompt)
+        chat.page_box(app, conn, people, prompt=FIRST_PROMPT if first_day else prompt, where=True)
         left = chat.messages_left(app, conn, visitor.member)
         readers = chat.readers(people) if kid else ""
     fact = picks["header"] if picks else None

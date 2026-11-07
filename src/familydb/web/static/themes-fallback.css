@@ -187,9 +187,9 @@
     [data-theme="kitchen"]:where(:not([data-mode="light"])) {
       --paper: #0C100F;
       --paper-2: #121816;
-      --card: #161D1B;
-      --field: #1B2321;
-      --line: #24302C;
+      --card: #1A2522;
+      --field: #1E2926;
+      --line: #2B3934;
       --line-2: #33413C;
       --edge: #7E8C86;
       --ink: #EEE8DA;
@@ -255,9 +255,9 @@
   [data-theme="kitchen"]:where([data-mode="dark"]) {
     --paper: #0C100F;
     --paper-2: #121816;
-    --card: #161D1B;
-    --field: #1B2321;
-    --line: #24302C;
+    --card: #1A2522;
+    --field: #1E2926;
+    --line: #2B3934;
     --line-2: #33413C;
     --edge: #7E8C86;
     --ink: #EEE8DA;
