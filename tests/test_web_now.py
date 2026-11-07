@@ -513,14 +513,14 @@ def test_a_to_do_that_is_late_or_due_today_is_on_now_and_ticks_off_there(
     assert "clear the garage" not in home and "Next week" not in home  # the week's plate has those
     assert "2 days late" in plate and 'href="/tasks"' in plate
     tick = re.search(
-        rf'<form class="todo__tick" method="post" action="/task/{towels}/done">.*?</form>',
+        rf'<form class="todo__tick" method="post" action="/task/{towels}/done"[^>]*>.*?</form>',
         home,
         re.S,
     )
     assert tick is not None and 'aria-label="Mark done: Buy paper towels"' in tick.group(0)
     fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', tick.group(0)))
     done = client.post(f"/task/{towels}/done", data=fields)
-    assert done.headers["Location"] == "/"
+    assert done.headers["Location"].partition("#")[0] == "/"  # at the row after it
     assert tasks.get(conn, towels).status == "done"
     assert 'aria-label="Mark done: Buy paper towels"' not in client.get("/").text
 
@@ -599,7 +599,7 @@ def test_a_to_do_for_everyone_is_taken_on_with_i_will_handle_it(app, conn, famil
     sam = _in_as(app, "Sam", "sam likes long sentences")
     home = sam.get("/").text
     claim = re.search(
-        rf'<form class="todo__act" [^>]*action="/task/{task_id}/mine">.*?</form>', home, re.S
+        rf'<form class="todo__act" [^>]*action="/task/{task_id}/mine"[^>]*>.*?</form>', home, re.S
     )
     assert claim is not None and "I'll handle it" in claim.group(0)
     assert f"/task/{mine}/mine" not in home  # already somebody's

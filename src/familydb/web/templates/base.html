@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='themes-fallback.css') }}" />
     {# A mic beside each box that takes words, unless the family turned it off (web_dictation). #}
     {% if dictation %}<script src="{{ url_for('static', filename='dictate.js') }}" data-icons="{{ url_for('static', filename='icons.svg') }}" defer></script>{% endif %}
+    {# A tick, I'll handle it and Undo without leaving the page (data-in-place); the forms post as usual without it. #}
+    <script src="{{ url_for('static', filename='inplace.js') }}" defer></script>
     <link rel="icon" href="{{ url_for('static', filename='brand/favicon.svg') }}" type="image/svg+xml" />
     <link rel="icon" href="{{ url_for('static', filename='brand/favicon-32.png') }}" sizes="32x32" type="image/png" />
     <link rel="icon" href="{{ url_for('static', filename='brand/favicon-16.png') }}" sizes="16x16" type="image/png" />

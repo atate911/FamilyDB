@@ -134,6 +134,35 @@ def test_the_lists_page_adds_and_ticks_through_the_same_tool(settings, clock, co
     assert "Got: milk." in _said(ticked) and "<s>milk</s>" in ticked.text
 
 
+def test_a_tick_on_a_list_comes_back_at_the_thing_after_it(settings, clock, conn, family):
+    """A thing's id is its place on the list, so the thing after a ticked one takes its id and the
+    page comes back there; the last comes back at the one before it, the only one at the list."""
+    from tests.test_web_edits import _client
+
+    page = _client(settings, clock)
+    token = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', page.get("/lists").text))
+    page.post(
+        "/lists/change",
+        data={**token, "action": "add", "name": "shopping", "items": "milk\neggs\nbread"},
+    )
+    shown = page.get("/lists").text
+    ticks = re.findall(
+        r'<li id="li-(\d)">.*?name="items" value="([^"]+)".*?name="then" value="([^"]+)"',
+        shown,
+        re.S,
+    )
+    # in the order a store is walked: the bakery before the dairy
+    assert ticks == [("1", "bread", "li-1"), ("2", "milk", "li-2"), ("3", "eggs", "li-2")]
+    tick = {"csrf": token["csrf"], "action": "tick", "name": "shopping", "back": "shopping"}
+    ticked = page.post(
+        "/lists/change", data={**tick, "once": "t1", "items": "milk", "then": "li-2"}
+    )
+    assert ticked.headers["Location"].endswith("#li-2")
+    page.post("/lists/change", data={**tick, "once": "t2", "items": "eggs"})
+    alone = page.get("/lists").text
+    assert re.search(r'name="items" value="bread".*?name="then" value="l-shopping"', alone, re.S)
+
+
 def test_a_grown_up_finds_the_lists_on_a_phone_and_a_kid_does_not(app, sam, family):  # noqa: F811
     assert 'href="/lists"' in sam.get("/more").text  # the phone's menu: the list at the shop
     kid = _browser_as(app, "the girls", _start(sam, family["girls"].id))
@@ -150,7 +179,7 @@ def test_the_lists_page_says_who_put_each_thing_there(settings, clock, conn, fam
     nobody = _as(conn, settings, clock, None)  # nobody in particular: the shared password
     _list(nobody, action="add", items=["bin bags"])
     shown = _client(settings, clock).get("/lists").text
-    oat = re.search(r"<li>(?:(?!</li>).)*oat milk(?:(?!</li>).)*</li>", shown, re.S).group(0)
+    oat = re.search(r"<li[^>]*>(?:(?!</li>).)*oat milk(?:(?!</li>).)*</li>", shown, re.S).group(0)
     assert '<span class="who" title="Added by Alex">' in oat
-    bags = re.search(r"<li>(?:(?!</li>).)*bin bags(?:(?!</li>).)*</li>", shown, re.S).group(0)
+    bags = re.search(r"<li[^>]*>(?:(?!</li>).)*bin bags(?:(?!</li>).)*</li>", shown, re.S).group(0)
     assert 'class="who"' not in bags

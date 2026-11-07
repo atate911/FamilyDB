@@ -7,24 +7,24 @@
    is found in, in the order a store is walked; once on the family's list each thing has the Lists page's own tick, back
    here; what the pantry has apart, to check, with Need it for one they are out of; an uncommon thing opens on a tap to
    what could stand in. A kid reads it; the forms are for whoever may change things. No model call. #}
-{% macro tick(thing) -%}
-  <form method="post" action="{{ url_for('edits.change_list') }}">
+{% macro tick(thing, n) -%}
+  <form method="post" action="{{ url_for('edits.change_list') }}" data-in-place>
     {{ guard(once=true) }}
-    <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ list_name }}" /><input type="hidden" name="items" value="{{ thing.on_list.text }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" />
+    <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ list_name }}" /><input type="hidden" name="items" value="{{ thing.on_list.text }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" /><input type="hidden" name="then" value="shop-{{ n }}" />
     <button class="tick" type="submit"><span>{{ icon('check') }}</span><span class="sr">Got: {{ thing.item }}</span></button>
   </form>
 {%- endmacro %}
-{% macro put_back(thing) -%}
-  <form method="post" action="{{ url_for('edits.change_list') }}">
+{% macro put_back(thing, n) -%}
+  <form method="post" action="{{ url_for('edits.change_list') }}" data-in-place>
     {{ guard(once=true) }}
-    <input type="hidden" name="action" value="untick" /><input type="hidden" name="name" value="{{ list_name }}" /><input type="hidden" name="items" value="{{ thing.on_list.text }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" />
+    <input type="hidden" name="action" value="untick" /><input type="hidden" name="name" value="{{ list_name }}" /><input type="hidden" name="items" value="{{ thing.on_list.text }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" /><input type="hidden" name="then" value="shop-{{ n }}" />
     <button class="linkbtn" type="submit">Put back<span class="sr">: {{ thing.item }}</span></button>
   </form>
 {%- endmacro %}
-{% macro need_it(thing) -%}
-  <form method="post" action="{{ url_for('edits.change_list') }}">
+{% macro need_it(thing, n) -%}
+  <form method="post" action="{{ url_for('edits.change_list') }}" data-in-place>
     {{ guard(once=true) }}
-    <input type="hidden" name="action" value="add" /><input type="hidden" name="name" value="{{ list_name }}" /><input type="hidden" name="items" value="{{ thing.item }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" />
+    <input type="hidden" name="action" value="add" /><input type="hidden" name="name" value="{{ list_name }}" /><input type="hidden" name="items" value="{{ thing.item }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" /><input type="hidden" name="then" value="shop-{{ n }}" />
     <button class="btn btn--quiet btn--sm" type="submit">Need it<span class="sr">: {{ thing.item }}</span></button>
   </form>
 {%- endmacro %}
@@ -42,6 +42,8 @@
 {% block content %}
   {{ dest_head('Shopping for ' ~ idea.title, summary, back=(idea.title, url_for('web.idea', idea_id=idea.id))) }}
   {% set may = visitor().may('change') %}
+  {# Each thing's id is its place on the page; a tick there comes back to it, as a got thing stays, struck through. #}
+  {% set at = namespace(n=0) %}
   {% if may and shop.to_buy and not all_on %}
     <form class="acts" method="post" action="{{ url_for('edits.list_from_recipes') }}">
       {{ guard(once=true) }}<input type="hidden" name="idea_ids" value="{{ idea.id }}" /><input type="hidden" name="back" value="shop:{{ idea.id }}" />
@@ -54,10 +56,11 @@
       <div class="sec__label"><h2 id="s-{{ loop.index }}" class="label">{{ section }}</h2><small>{{ things | length }}</small></div>
       <ul class="list-items list-items--big">
         {% for thing in things %}
-          <li>
-            {% if may and thing.on_list and not thing.got %}{{ tick(thing) }}{% endif %}
+          {% set at.n = at.n + 1 %}
+          <li id="shop-{{ at.n }}">
+            {% if may and thing.on_list and not thing.got %}{{ tick(thing, at.n) }}{% endif %}
             {{ thing_text(thing) }}
-            {% if may and thing.got %}{{ put_back(thing) }}{% endif %}
+            {% if may and thing.got %}{{ put_back(thing, at.n) }}{% endif %}
           </li>
         {% endfor %}
       </ul>
@@ -69,10 +72,11 @@
       <p class="sec__note">You likely have these already{% if may %}; Need it puts one you are out of on the list{% endif %}.</p>
       <ul class="list-items">
         {% for thing in shop.pantry %}
-          <li>
-            {% if may and thing.on_list and not thing.got %}{{ tick(thing) }}{% endif %}
+          {% set at.n = at.n + 1 %}
+          <li id="shop-{{ at.n }}">
+            {% if may and thing.on_list and not thing.got %}{{ tick(thing, at.n) }}{% endif %}
             {{ thing_text(thing) }}
-            {% if may and thing.got %}{{ put_back(thing) }}{% elif may and not thing.on_list %}{{ need_it(thing) }}{% endif %}
+            {% if may and thing.got %}{{ put_back(thing, at.n) }}{% elif may and not thing.on_list %}{{ need_it(thing, at.n) }}{% endif %}
           </li>
         {% endfor %}
       </ul>

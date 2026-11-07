@@ -282,7 +282,10 @@ template builds one by hand. Person classes are slots (`.p0` to `.p8`), never na
   the first line of the title; its check shows faintly, and fully on hover or focus; done, it fills
   green and the row is struck through and stays. The detail line runs under it from the row's left
   edge, so the checkbox takes one line, not a column. It is a button in its own POST form, named
-  "Mark done: …", with a 44-pixel hit area.
+  "Mark done: …", with a 44-pixel hit area. **A tick keeps its place**: with scripts the page is not
+  left (`inplace.js`) and what was done is a note held at the foot of the screen with its Undo;
+  without them the page comes back at the next row, a third of the way down. Ticking down a list
+  never starts again from the top.
 - **Owner mark** (`.who`): a 20-pixel circle in the person's color with their initial. Several
   people overlap, three shown and then "+N". The names are its accessible name and its tooltip.
 - **Count dot** (`.badge`): a 20-pixel circle with the number, at the item's right edge: red when
@@ -331,7 +334,8 @@ wordmark** is "FamilyDB" in the display role, followed by a lit cursor block.
 
 Few motions, each meaning something, all in CSS, none for long where people read: her screen
 types once on Now, and loops only while she is writing back; the flash that says what you just
-did lights and fades over a second; where a link lands lights and fades; the wordmark's cursor
+did lights and fades over a second (where scripts run it is held at the foot of the screen, so its
+Undo is in reach wherever the page was scrolled); where a link lands lights and fades; the wordmark's cursor
 blinks for a few seconds and rests; the pill's dot breathes only while she writes back. Under
 `prefers-reduced-motion` nothing moves.
 

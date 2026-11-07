@@ -1,5 +1,5 @@
 {% extends "frame.html" %}
-{% from "_ui.html" import icon, avatar, vera_screen, faces, who, todo, guard with context %}
+{% from "_ui.html" import icon, avatar, vera_screen, faces, who, todos, guard with context %}
 {% from "_dest.html" import pick_tile %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-now{% endblock %}
@@ -63,7 +63,7 @@
     <section class="sec" aria-labelledby="h-todo">
       <div class="sec__label"><h2 id="h-todo" class="label">{{ 'My to-dos' if not grownup else 'On your plate' }}</h2><a href="{{ url_for('web.tasks') }}">All</a></div>
       <ul class="todos todos--compact">
-        {% for row in plate %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup, everyone=shell.family) }}{% endfor %}
+        {{ todos(plate, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup, everyone=shell.family, fallback='h-todo') }}
       </ul>
     </section>
   {% endif %}

@@ -313,11 +313,23 @@ def _back_here(target: str, **values: Any) -> Response:
 
 def _tick_back(task_id: int) -> Response:
     """Where a tick, a snooze or a reopening returns: the page its form named (TICK_PAGES), the
-    reminder's own page for `reminder`, else the list."""
+    reminder's own page for `reminder`, else the list; at the row the form named (`_then`)."""
     back = request.form.get("back", "")
     if back == "reminder":
         return _back("web.edit_task", task_id=task_id)
-    return _back(TICK_PAGES.get(back, "web.tasks"))
+    return _back(TICK_PAGES.get(back, "web.tasks"), _anchor=_then())
+
+
+# The rows a form may name to come back to: a to-do, a thing on a list or a recipe's Shopping
+# page, or a section's head. Only these, so a form cannot put anything else into the address.
+THEN = re.compile(r"(?:t|li|shop)-\d{1,19}|[a-z]-[a-z0-9-]{1,40}")
+
+
+def _then() -> str | None:
+    """The row a tick lands on when the page comes back (the next one, as a ticked one leaves), so
+    ticking down a list never starts again from the top."""
+    then = request.form.get("then", "")
+    return then if THEN.fullmatch(then) else None
 
 
 def _say(message: str) -> None:
@@ -897,8 +909,8 @@ def change_list() -> Response:
     if back == "board":  # ticked on the kitchen tablet
         return _back("go.board")
     if (shop := _shop_back(back)) is not None:  # ticked on a recipe's Shopping page, in the store
-        return _back("web.shop", idea_id=shop)
-    return _back("web.lists_page", name=back or None)
+        return _back("web.shop", idea_id=shop, _anchor=_then())
+    return _back("web.lists_page", name=back or None, _anchor=_then())
 
 
 @bp.post("/memory/new")

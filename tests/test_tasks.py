@@ -214,7 +214,7 @@ def test_an_open_task_ticks_off_where_it_is_listed(settings, clock, conn, family
     client.post("/tasks/new", data=form)
     task = tasks.list_all(conn)[0]
     page = client.get("/tasks").text
-    tick = re.search(rf'action="/task/{task.id}/done">(.*?)</form>', page, re.S)
+    tick = re.search(rf'action="/task/{task.id}/done"[^>]*>(.*?)</form>', page, re.S)
     assert tick is not None and "Mark done: Sharpen the knives" in tick.group(1)
     fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', tick.group(1)))
     assert fields["back"] == "tasks"
@@ -224,6 +224,31 @@ def test_an_open_task_ticks_off_where_it_is_listed(settings, clock, conn, family
     assert done.status == "done" and done.notes == "At the market"
     assert done.preferred_window == "Saturday"
     assert f"/task/{task.id}/done" not in client.get("/tasks?status=done").text  # no tick left
+
+
+def test_a_tick_comes_back_at_the_next_row(settings, clock, conn, family):
+    """Ticking down a list never starts again from the top: each tick names the row after it (the
+    one before it, for the last), and the page comes back there. Only a row's name goes into the
+    address, so a form cannot put anything else there."""
+    client = _client(settings, clock)
+    form = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', client.get("/tasks").text))
+    for n, title in enumerate(("Sharpen the knives", "Oil the hinges", "Wash the car")):
+        client.post("/tasks/new", data={**form, "once": f"new-{n}", "title": title})
+    page = client.get("/tasks").text
+    ticks = re.findall(r'action="/task/(\d+)/done"[^>]*>(.*?)</form>', page, re.S)
+    assert len(ticks) == 3
+    ids = [int(one) for one, _ in ticks]
+    named = [
+        dict(re.findall(r'name="(\w+)" value="([^"]*)"', body)).get("then") for _, body in ticks
+    ]
+    assert named == [f"t-{ids[1]}", f"t-{ids[2]}", f"t-{ids[1]}"]
+    fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', ticks[0][1]))
+    ticked = client.post(f"/task/{ids[0]}/done", data=fields)
+    assert ticked.headers["Location"] == f"/tasks#t-{ids[1]}"
+    fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', ticks[1][1])) | {
+        "then": 'x" onclick=y'
+    }
+    assert client.post(f"/task/{ids[1]}/done", data=fields).headers["Location"] == "/tasks"
 
 
 def test_a_reminder_in_the_page_chat_is_ticked_or_snoozed_there(settings, clock, conn, family):
@@ -260,7 +285,7 @@ def test_a_reminder_in_the_page_chat_is_ticked_or_snoozed_there(settings, clock,
     assert "#1 Call the plumber comes back at 2:03\u00a0pm tomorrow." in snoozed.text
     assert tasks.get(conn, task.id).reminder.remind_at == "2026-09-21T21:03:00Z"
     chat = client.get("/chat").text
-    done = re.search(rf'action="/task/{task.id}/done">(.*?)</form>', chat, re.S)
+    done = re.search(rf'action="/task/{task.id}/done"[^>]*>(.*?)</form>', chat, re.S)
     fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', done.group(1)))
     assert client.post(f"/task/{task.id}/done", data=fields).headers["Location"] == "/chat"
     assert tasks.get(conn, task.id).status == "done"
