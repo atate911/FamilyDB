@@ -1212,8 +1212,10 @@ def test_do_has_one_search_its_chips_and_the_way_to_the_form_last(
         idea_store.insert(conn, title="Zoo day", kind="outing", now=NOW_ISO)
     page = _signed_in(settings, clock).get("/do").text
     assert page.count(">Filter<") == 0 and ">Search</button>" in page  # one Search, not two Filters
-    chips = re.search(r'<nav class="chips".*?</nav>', page, re.S).group(0)
+    # What suits us now in a line, the rest folded under it: every chip is still on the page.
+    chips = "".join(re.findall(r'<nav class="chips".*?</nav>', page, re.S))
     assert "Outing" in chips and "Free" in chips and "Dropped" in chips and "Sam" in chips
+    assert page.index(">Free<") < page.index("More ways to narrow") < page.index(">Outing<")
     assert page.index("Zoo day") < page.index("Add an idea by hand")
 
 
@@ -1221,8 +1223,8 @@ def test_on_now_the_setup_strip_comes_after_the_box_and_before_the_rest(
     settings, clock, family
 ) -> None:
     page = _signed_in(settings, clock).get("/").text  # a model is not set up, so setup has steps
-    assert "Setup:" in page
-    assert page.index('id="ask"') < page.index("Setup:") < page.index('class="todays"')
+    assert 'class="setup-line"' in page  # one line: the next step, and how many more
+    assert page.index('id="ask"') < page.index('class="setup-line"') < page.index('class="todays"')
 
 
 def test_a_place_s_phone_number_is_a_link_a_phone_can_dial() -> None:
