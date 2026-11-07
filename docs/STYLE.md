@@ -350,7 +350,11 @@ The frame folds in order, keeping the focal element first and whole.
 - **Nothing scrolls sideways** at 390 or 320 pixels, except a row of conversation pills. Labels
   that shorten keep the long one as the control's name.
 
-Every page is checked at 390 and 320 pixels in Phosphor, Kitchen Table and Ink.
+Every page is checked at 390 and 320 pixels in Phosphor, Kitchen Table and Ink. **What a page is for
+is on a phone's first screen**: on a 390 by 844 phone, Now's next thing or what needs you, Eat's
+pick, Do's first idea, today on This week, a list's first thing and a recipe's Cook this each start above
+the row at the foot. `tests/test_first_screen.py` holds it in a real browser on the example
+household, with nothing scrolling sideways at 390 or 320; it is opt-in, as it needs one.
 
 ## Page by page
 
