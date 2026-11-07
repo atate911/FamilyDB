@@ -78,6 +78,8 @@
           if (here && there) here.replaceWith(document.adoptNode(there));
         });
         settle(then);
+        // The scripts that add to what was drawn (a mic, the screen switch) add to it again.
+        document.dispatchEvent(new CustomEvent("fdb:swapped"));
       })
       .catch(function () {
         // Posted as usual; its one-time token keeps a change that did arrive from being made twice.

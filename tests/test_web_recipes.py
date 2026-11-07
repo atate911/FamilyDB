@@ -217,6 +217,9 @@ def test_a_recipe_page_reads_as_a_recipe(settings, clock, conn, family):
     order = [">Cook this</button>", ">Ingredients<", ">Steps<", "Fry the onion."]
     assert [page.index(one) for one in order] == sorted(page.index(one) for one in order)
     assert '<ol class="cook-steps">' in page and "<summary>Steps" not in page
+    # Keep the screen on, beside the steps: drawn by its script where the browser can, so nothing
+    # stands there with scripts off.
+    assert '<p class="wake" id="wake" hidden></p>' in page and "wake.js" in page
     assert "What goes with it?" in page  # her quick sentences are a recipe's
     assert 'data-say="Put it on the list"' not in page  # Cook this does it, for nothing
 

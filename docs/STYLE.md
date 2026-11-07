@@ -380,7 +380,8 @@ Each page names its focal element, what the main column holds, and what the rail
   next meal's picks, one to cook and one to eat out, each over its first few rows, with a
   segmented control (as Plans' List and Month) to Cook and Eat out, where the chips live; a
   recipe's page leads with what it takes, then Cook it, a card holding the one solid button, Cook
-  this; the ingredients and its numbered steps, open to cook from, how it went and More come under it. **Do**: what fits the next free stretch, then the pile, the quiet ones
+  this; the ingredients and its numbered steps, open to cook from (with **Keep the screen on** beside the
+  steps where the browser can hold it, `wake.js`), how it went and More come under it. **Do**: what fits the next free stretch, then the pile, the quiet ones
   faded (the chips that say what suits us now in a line, the kinds, each person, Dropped and the
   search folded under it), then New ideas (what she found and judged worth putting forward, under a label saying she
   found them, each a hairline row with its reason and Save it, Plan it and Not for us under it, small, Not for
@@ -405,7 +406,10 @@ Each page names its focal element, what the main column holds, and what the rail
   display size), what waits on a person down the right as her questions, her picks under the days,
   and the saved ideas along the bottom as a line of names, the newest bold, the resting ones in the
   quiet tone. The row stays at the foot, small and centered, never a rail. On a phone it is one
-  column in that order.
+  column in that order. It is read from across the kitchen, so from a tablet up the whole page is
+  drawn larger (`html[data-surface="board"]`; every size is in rem, so the four roles stay four,
+  only bigger); a time on a day is a heading over its title, with whose it is under that, so a
+  narrow day never squeezes a title onto three lines; the list's ticks are the Lists page's big ones.
 - **A thing's own page** (section 5): a place, a plan, a reminder, a happening, an outing. The head with the way back, the
   facts that exist in two columns (caps key, bold value), where it came from as a quotation, what
   she found marked as hers and dated, what is planned or how it went as set rows, the box about it
