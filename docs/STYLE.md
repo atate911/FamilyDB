@@ -259,7 +259,7 @@ template builds one by hand. Person classes are slots (`.p0` to `.p8`), never na
   same on every page of the family's. One line that grows, the mic in it and **Send** lit, the one
   glowing thing; beside the mic, where where you are bears on the answer (Now, Eat, Do, a place,
   what is on near home: `chat.page_box` `where`), **Where I am** as a mark, a real checkbox under it
-  with its words, off until tapped, lit in the action color while on, never for a kid; above it "about:" and what this page is about, where a page gives the message a
+  with its words, off until tapped, lit in the link color while on, never for a kid; above it "about:" and what this page is about, where a page gives the message a
   scope; under it, while she cannot answer, why in red words for a grown-up ("can't answer right
   now: OpenAI refused its key", What to do); the quick sentences a thing's page offers as chips,
   and what the last message brought back: her screen and "thinking" while it is on its way, a
@@ -352,7 +352,7 @@ The frame folds in order, keeping the focal element first and whole.
 - **At 820 pixels and below** the family's frame is the phone's: the wordmark and the avatar, the
   box, the page, and the row of destinations (less any the family took out on Settings, General:
   `row_hidden`) fixed at the foot (`--tabbar-total`), each place its mark over its word (the menu's
-  own marks, 14 pixels for the words), the current one's mark lit in the action color and its word
+  own marks, 14 pixels for the words), the current one's mark lit in the link color and its word
   in ink, scrolling sideways if a kid's words are long. The back office is
   one column under a top bar (the mark, the pill, the account) over the same row. The guide's
   sections have their phone place in the page (a Sections button), so the rail's copy is not drawn

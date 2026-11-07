@@ -1885,10 +1885,11 @@ li:target { border-radius: var(--r-md); }
 .box__send:not(:disabled) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--send) 80%, transparent), 0 0 16px color-mix(in srgb, var(--send) 55%, transparent); }
 .box__send:disabled { background: var(--paper-2); color: var(--ink-2); cursor: not-allowed; }
 /* Where I am, beside the mic: the mark is the label, the checkbox lies over it whole (so the hit area is the mark's),
-   and on it is lit in the family's action color, which ask.js also says in words under the box */
+   and on it is lit in the link color (the family's action as words, so it reads on a box in every look; Kitchen
+   Table's action fill is 2.7:1 on its box by night, under a mark's 3:1), which ask.js also says in words */
 .box__where { position: relative; display: inline-grid; place-items: center; flex: none; min-width: 40px; min-height: 40px; border-radius: var(--r-md); color: var(--ink-2); cursor: pointer; }
 .box__where input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.box__where:has(input:checked) { color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.box__where:has(input:checked) { color: var(--link); background: color-mix(in srgb, var(--link) 14%, transparent); }
 .box__where:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 1px; }
 .bar #where:empty { display: none; }
 
@@ -1987,7 +1988,7 @@ li:target { border-radius: var(--r-md); }
   .row { justify-content: space-around; padding-top: 6px; }
   .row a { flex-direction: column-reverse; justify-content: center; gap: 2px; min-width: 40px; padding: 2px 0 4px; font-size: 0.875rem; border-bottom: 0; }
   .row a .icon { display: block; width: 22px; height: 22px; }
-  .row a[aria-current="page"] .icon { color: var(--primary); }
+  .row a[aria-current="page"] .icon { color: var(--link); }
   .row__n { position: absolute; top: 0; right: -6px; }
   .nf--kid .row a { font-size: 0.9375rem; }
 }
