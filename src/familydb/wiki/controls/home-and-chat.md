@@ -19,8 +19,8 @@ Everyone signed in sees Now and may chat ([Roles and permissions](/wiki/model/fa
 |---|---|
 | The box | Ask, save an idea or set a reminder. Under it, what the last message brought back (below) |
 | The line | The day and the time, then how the day stands: "Free this evening", "Swim lesson 4:30 pm" |
-| Finish setting up | The steps left, for admins only, until they are done |
-| Her questions | At most three things waiting on you: a kid's ask to answer (Yes, Not this time), a kid's pitch for an outing (See it, or Later, which rests it for a week), and after them one plan to say how it went (Loved it, OK, Not great), while [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) is on |
+| Finish setting up | One line, for admins only, until setup is done: the next step, and how many more |
+| Her questions | At most three things waiting on you: a kid's ask to answer (Yes, Not this time), a kid's pitch for an outing (See it, or Later, which rests it for a week), and after them one plan to say how it went (Loved it, OK, Not great), while [Ask how a plan went](/wiki/controls/settings/messages#follow-ups-and-notes) is on. Several from one kid are one block, a line each, with her list on her name |
 | On your plate | What is late or due today, each with its tick; a kid sees all of her own things to do |
 | What about… | Her picks, chosen ahead by code, with when they were chosen. "Different ones" asks her for others, which is a message like any other |
 | My list | A kid's wishes, with the countdowns to Christmas and her birthday |

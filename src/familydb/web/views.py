@@ -711,8 +711,9 @@ def did_summary(rows: Sequence[dict[str, Any]], rate: Sequence[Any]) -> str:
 
 
 def eat_line(card: dict[str, Any], idea: Idea, *, kid: bool = False) -> str:
-    """The one fact line under a restaurant: open till when, how far, the cost band, who
-    suggested it, been or not. A kid is told nothing of cost."""
+    """The one fact line under a restaurant: its hours today, how far, the cost band, and how the
+    family liked it (or that it is new to us). How often they went is on its page. A kid is told
+    nothing of cost."""
     parts = []
     if card["today"]:
         parts.append(card["today"].capitalize())
@@ -721,12 +722,12 @@ def eat_line(card: dict[str, Any], idea: Idea, *, kid: bool = False) -> str:
         parts.append(f"{minutes} min" if minutes < 999 else card["travel"])
     if card["cost"] and not kid:
         parts.append(card["cost"])
-    if idea.times_done:
-        times = "once" if idea.times_done == 1 else f"{idea.times_done} times"
-        rated = f", rated {idea.avg_rating:g}/10" if idea.avg_rating is not None else ""
-        parts.append(f"been {times}{rated}")
+    if idea.times_done and idea.avg_rating is not None:
+        parts.append(f"rated {idea.avg_rating:g}/10")
+    elif idea.times_done:
+        parts.append("been once" if idea.times_done == 1 else f"been {idea.times_done} times")
     else:
-        parts.append("not been yet")
+        parts.append("new to us")
     if card["pending"]:
         parts.append("not looked up yet")
     return " · ".join(parts)
@@ -800,22 +801,23 @@ COOK_CHIPS = (
 
 
 def cook_line(ranked: meals.Ranked) -> str:
-    """The one line under a recipe on Eat: its reasons as code gave them, and what it suits."""
-    said = list(ranked.reasons)
+    """The one line under a recipe on Eat: what decides it, as code gave its reasons. How long it
+    takes, how it was liked (or that it is new to us), when it was last had, and what only lowers
+    it, last, so a pick's line does not open with a reason against it. How many it serves and what
+    it suits (the chips' business) are on its page: a row that said everything was a report."""
     if ranked.verdict == "out":  # why it does not fit is the whole line
-        line = " · ".join(said)
+        line = " · ".join(ranked.reasons)
         return line[:1].upper() + line[1:]
-    # The facts, what it suits (two at most; the rest, and her guesses, are on its page), and
-    # what only lowers it last, so a pick's line does not open with a reason against it.
-    occasions = [one for one in meals.occasion_words(ranked.recipe.occasions) if one not in said]
-    if occasions:
-        said.append(", ".join(occasions[:ROW_OCCASIONS]))
-    said += ranked.caveats
-    line = " · ".join(said)
+    suits = set(meals.OCCASION_WORDS.values())
+    said = []
+    for one in ranked.reasons:
+        if one.startswith("serves ") or one in suits:
+            continue
+        if one.startswith("made ") and "/10" in one:  # "made 2 times, 8.5/10": the score decides
+            one = "rated " + one.rpartition(", ")[2]
+        said.append(one)
+    line = " · ".join([*said, *ranked.caveats])
     return line[:1].upper() + line[1:]
-
-
-ROW_OCCASIONS = 2
 
 
 def eat_short(card: dict[str, Any]) -> str:

@@ -5,16 +5,39 @@
 {% block body_class %}page-now{% endblock %}
 {# Now (docs/INTERFACE.md section 3): the box, one line of context, then whatever needs this person, her picks, and
    today's line. Fixed: the box above, the row below, the context line. Hers: everything between. No model call. #}
+{# A question's buttons: a pitch is seen or put off, a request answered here. #}
+{% macro q_acts(q, list_link=true) %}
+        <div class="q__acts">
+          {% if q.kind == 'rate' %}
+            {{ faces(q, 'home') }}
+          {% elif q.kind == 'wish' %}
+            <form method="post" action="{{ url_for('edits.answer_wish', wish_id=q.wish_id) }}">
+              {{ guard(once=true) }}
+              <input type="hidden" name="kid" value="{{ q.kid_id }}" /><input type="hidden" name="back" value="home" />
+              <button class="btn btn--sm" type="submit" name="status" value="granted">Yes<span class="sr">: {{ q.thing }}</span></button>
+              <button class="btn btn--sm btn--quiet" type="submit" name="status" value="declined">Not this time<span class="sr">: {{ q.thing }}</span></button>
+            </form>
+            {% if list_link %}<a class="q__lnk" href="{{ url_for('web.wishes', name=q.kid_slug) }}">Her list</a>{% endif %}
+          {% elif q.kind == 'pitch' %}
+            <a class="btn btn--sm" href="{{ url_for('web.idea', idea_id=q.idea_id) }}">See it<span class="sr">: {{ q.thing }}</span></a>
+            <form method="post" action="{{ url_for('web.later') }}">
+              {{ guard() }}<input type="hidden" name="idea" value="{{ q.idea_id }}" />
+              <button class="q__lnk" type="submit">Later<span class="sr">: {{ q.thing }}</span></button>
+            </form>
+          {% endif %}
+        </div>
+{% endmacro %}
 {% block content %}
   <h1 class="sr">{{ 'Now' if grownup else 'Now, for ' ~ visitor().name if visitor().name else 'Now' }}</h1>
   <p class="ctx">{{ context }}</p>
 
-  {# An admin's unfinished setup: each step a link, until it is done. #}
+  {# An admin's unfinished setup, one line until it is done: the next step, and the way to the rest. It needs a look,
+     so it wears amber; it never crowds out the day. Only admins see it. #}
   {% if setup %}
-    <section class="sec sec--setup" aria-labelledby="h-setup">
-      <div class="sec__label"><h2 id="h-setup" class="label">Finish setting up</h2><small>Setup: {{ setup | length }} step{{ '' if setup | length == 1 else 's' }} left</small></div>
-      <ol class="steps">{% for step in setup %}<li><a href="{{ step.link }}">{{ step.text }}</a></li>{% endfor %}</ol>
-      <p class="sec__note"><a href="{{ url_for('setup.overview') }}">All the setup steps</a> · Only admins see this.</p>
+    <section class="setup-line" aria-labelledby="h-setup">
+      <h2 id="h-setup" class="label">Finish setting up</h2>
+      <a href="{{ setup[0].link }}">{{ setup[0].text }}</a>
+      {% if setup | length > 1 %}<a class="setup-line__more" href="{{ url_for('setup.overview') }}">{{ setup | length - 1 }} more step{{ '' if setup | length == 2 else 's' }}</a>{% endif %}
     </section>
   {% endif %}
 
@@ -26,34 +49,33 @@
     </section>
   {% endif %}
 
-  {# Her questions: the only interruption. Each with where it came from and its buttons. #}
-  {% for q in questions %}
-    <section class="q" aria-label="A question from {{ assistant }}">
-      {{ vera_screen() }}
-      <div class="q__body">
-        <p class="q__text">{{ q.text }}</p>
-        {% if q.origin %}<p class="q__org">{{ q.origin }}</p>{% endif %}
-        <div class="q__acts">
-          {% if q.kind == 'rate' %}
-            {{ faces(q, 'home') }}
-          {% elif q.kind == 'wish' %}
-            <form method="post" action="{{ url_for('edits.answer_wish', wish_id=q.wish_id) }}">
-              {{ guard(once=true) }}
-              <input type="hidden" name="kid" value="{{ q.kid_id }}" /><input type="hidden" name="back" value="home" />
-              <button class="btn btn--sm" type="submit" name="status" value="granted">Yes</button>
-              <button class="btn btn--sm btn--quiet" type="submit" name="status" value="declined">Not this time</button>
-            </form>
-            <a class="q__lnk" href="{{ url_for('web.wishes', name=q.kid_slug) }}">Her list</a>
-          {% elif q.kind == 'pitch' %}
-            <a class="btn btn--sm" href="{{ url_for('web.idea', idea_id=q.idea_id) }}">See it</a>
-            <form method="post" action="{{ url_for('web.later') }}">
-              {{ guard() }}<input type="hidden" name="idea" value="{{ q.idea_id }}" />
-              <button class="q__lnk" type="submit">Later</button>
-            </form>
-          {% endif %}
+  {# Her questions: the only interruption. Each with where it came from and its buttons; a kid with several waiting is
+     one block, a line each (now.by_kid), with her list on her name. #}
+  {% for each in asks %}
+    {% if each.kid %}
+      {% set kid = each.kid %}
+      <section class="q q--group" aria-label="{{ kid.asks | length }} from {{ kid.name }}">
+        {{ vera_screen() }}
+        <div class="q__body">
+          <p class="q__text">{% if kid.slug %}<a href="{{ url_for('web.wishes', name=kid.slug) }}">{{ kid.name }}</a>{% else %}{{ kid.name }}{% endif %} has {{ kid.asks | length }} things for you to answer.</p>
+          <ul class="qrows">
+            {% for q in kid.asks %}
+              <li class="qrow"><p class="qrow__t"><b>{{ q.thing }}</b><span>{{ q.said }}</span></p>{{ q_acts(q, list_link=false) }}</li>
+            {% endfor %}
+          </ul>
         </div>
-      </div>
-    </section>
+      </section>
+    {% else %}
+      {% set q = each.one %}
+      <section class="q" aria-label="A question from {{ assistant }}">
+        {{ vera_screen() }}
+        <div class="q__body">
+          <p class="q__text">{{ q.text }}</p>
+          {% if q.origin %}<p class="q__org">{{ q.origin }}</p>{% endif %}
+          {{ q_acts(q) }}
+        </div>
+      </section>
+    {% endif %}
   {% else %}
     {% if not picks and not plate and not first_day %}<p class="nf__quiet">{{ quiet }}</p>{% endif %}
   {% endfor %}

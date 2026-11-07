@@ -108,6 +108,7 @@ def show() -> Response | str:
         context=views.context_line(now.astimezone(tz), fact),
         left=left,
         questions=asked,
+        asks=by_kid(asked),
         plate=todo,
         my_list=my_list,
         picks=picks,
@@ -268,6 +269,15 @@ def questions(
                     "kid_slug": views.slug(row["kid"]),
                     "text": f"{row['kid']} asked for {row['title']}."
                     + (f" {row['concern']}." if row.get("concern") else ""),
+                    "who": row["kid"],
+                    "thing": row["title"],
+                    "said": "asked for it"
+                    + (
+                        f", {views.day_words(row['asked_at'], today)}"
+                        if row.get("asked_at")
+                        else ""
+                    )
+                    + (f". {row['concern']}." if row.get("concern") else ""),
                     "origin": ASKED_ON.format(
                         who=row["kid"], when=views.day_words(row["asked_at"], today)
                     )
@@ -280,6 +290,26 @@ def questions(
         asked.extend(_pitches(conn, app, today, people, tz))
     asked.sort(key=lambda q: q["sort"])
     return asked + went
+
+
+def by_kid(asked: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Her questions as Now draws them: a kid with several requests and pitches waiting is one
+    block, a line each (the thing, and when she asked), where she first comes in the order; the
+    rest one block each. Repeating a whole block for every one of Maya's asks put the day below
+    the fold."""
+    mine: dict[str, list[dict[str, Any]]] = {}
+    for q in asked:
+        if q["kind"] in ("wish", "pitch"):
+            mine.setdefault(q["who"], []).append(q)
+    drawn: list[dict[str, Any]] = []
+    for q in asked:
+        theirs = mine.get(q.get("who", "")) if q["kind"] in ("wish", "pitch") else None
+        if theirs is None or len(theirs) < 2:
+            drawn.append({"one": q})
+        elif theirs[0] is q:
+            slug = next((one["kid_slug"] for one in theirs if one.get("kid_slug")), None)
+            drawn.append({"kid": {"name": q["who"], "slug": slug, "asks": theirs}})
+    return drawn
 
 
 def _pitches(
@@ -306,6 +336,10 @@ def _pitches(
                 "kind": "pitch",
                 "idea_id": idea.id,
                 "text": f"{kid.display_name} suggested {idea.title}.",
+                "who": kid.display_name,
+                "thing": idea.title,
+                "said": "suggested it, "
+                + views.day_words(views.local_day(idea.created_at, tz), today),
                 "origin": ASKED_ON.format(
                     who=kid.display_name,
                     when=views.day_words(views.local_day(idea.created_at, tz), today),

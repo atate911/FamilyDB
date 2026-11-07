@@ -60,13 +60,26 @@
     {{ dest_head(week_name, summary) }}
     {{ chip_row(chips + [{'label': 'Month', 'href': url_for('web.plans_month'), 'on': false}, {'label': 'Past', 'href': url_for('go.did'), 'on': false}]) }}
 
-    {# On your plate stays whatever week is showing: nothing without a day can be lost by scrolling. #}
+    {# On your plate stays whatever week is showing: nothing without a day can be lost by scrolling. What is late is
+       open, as it needs doing; what has no day yet is one line until opened, so the days lead. #}
     {% if plate %}
-      <section class="sec" aria-labelledby="h-plate">
+      {% set late = plate | selectattr('late') | list %}
+      {% set someday = plate | rejectattr('late') | list %}
+      <section class="sec plate" aria-labelledby="h-plate">
         <div class="sec__label"><h2 id="h-plate" class="label">On your plate</h2><a href="{{ url_for('web.tasks') }}">All to-dos</a></div>
-        <ul class="todos todos--compact">
-          {{ todos(plate, 'week', compact=true, edit=visitor().may('change'), everyone=shell.family, fallback='h-plate') }}
-        </ul>
+        {% if late %}
+          <ul class="todos todos--compact">
+            {{ todos(late, 'week', compact=true, edit=visitor().may('change'), everyone=shell.family, fallback='h-plate') }}
+          </ul>
+        {% endif %}
+        {% if someday %}
+          <details class="plate__later">
+            <summary>{{ someday | length }} with no day yet{{ icon('chev', size='sm', cls='chev') }}</summary>
+            <ul class="todos todos--compact">
+              {{ todos(someday, 'week', compact=true, edit=visitor().may('change'), everyone=shell.family, fallback='h-plate') }}
+            </ul>
+          </details>
+        {% endif %}
       </section>
     {% endif %}
 

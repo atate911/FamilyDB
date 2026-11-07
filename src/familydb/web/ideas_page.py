@@ -229,7 +229,9 @@ def _do_chips(
     narrow: dict[str, bool],
     grown_up: bool,
 ) -> list[dict[str, Any]]:
-    """Kinds that exist in the pile, who it is for, free, close, each person, and Dropped."""
+    """Kinds that exist in the pile, who it is for, free, close, each person, and Dropped. The
+    ones that answer what suits us now (with the kids, just us, free, close, and the way back
+    to everything) are `quick`, drawn in a line; the rest fold under it."""
     kinds = {idea.kind for idea in listed if idea.status != "dropped"}
     chips = [
         {"label": label, "href": url_for("web.ideas", kind=value), "on": kind == value}
@@ -238,11 +240,37 @@ def _do_chips(
     ]
     if grown_up:
         chips.append(
-            {"label": "With the kids", "href": url_for("web.ideas", kids="1"), "on": narrow["kids"]}
+            {
+                "label": "With the kids",
+                "href": url_for("web.ideas", kids="1"),
+                "on": narrow["kids"],
+                "quick": True,
+            }
         )
-        chips.append({"label": "Just us", "href": url_for("web.ideas", us="1"), "on": narrow["us"]})
-    chips.append({"label": "Free", "href": url_for("web.ideas", free="1"), "on": narrow["free"]})
-    chips.append({"label": "Close", "href": url_for("web.ideas", close="1"), "on": narrow["close"]})
+        chips.append(
+            {
+                "label": "Just us",
+                "href": url_for("web.ideas", us="1"),
+                "on": narrow["us"],
+                "quick": True,
+            }
+        )
+    chips.append(
+        {
+            "label": "Free",
+            "href": url_for("web.ideas", free="1"),
+            "on": narrow["free"],
+            "quick": True,
+        }
+    )
+    chips.append(
+        {
+            "label": "Close",
+            "href": url_for("web.ideas", close="1"),
+            "on": narrow["close"],
+            "quick": True,
+        }
+    )
     if grown_up:
         chips += [
             {
@@ -260,7 +288,9 @@ def _do_chips(
             }
         )
     if any(chip["on"] for chip in chips):
-        chips.insert(0, {"label": "Everything", "href": url_for("web.ideas"), "on": False})
+        chips.insert(
+            0, {"label": "Everything", "href": url_for("web.ideas"), "on": False, "quick": True}
+        )
     return chips
 
 

@@ -8,7 +8,15 @@
    under the Dropped chip, never gone. A kid sees plain rows, nothing paler, no Dropped. #}
 {% block content %}
   {{ dest_head('What could we do?', summary) }}
-  {{ chip_row(chips) }}
+  {# The chips that answer "what suits us now" are a line (scrolling sideways on a phone); the kinds, each person,
+     Dropped and the search fold under one line, open by itself while one of them is in force. #}
+  {{ chip_row(chips | selectattr('quick') | list) }}
+  {% set more = chips | rejectattr('quick') | list %}
+  {% set more_on = more | selectattr('on') | list or selected.q %}
+  {% if more or grownup %}
+  <details class="filters"{% if more_on %} open{% endif %}>
+    <summary>{{ icon('sliders', size='sm') }}More ways to narrow{% if more_on %}<span class="chip__n">on</span>{% endif %}{{ icon('chev', size='sm', cls='chev') }}</summary>
+  {{ chip_row(more, 'Kind and who') }}
   {% if grownup %}
     <form class="finder finder--line" method="get" action="{{ url_for('web.ideas') }}" role="search">
       {% for key, value in selected.items() if value and key != 'q' %}<input type="hidden" name="{{ key }}" value="{{ value }}" />{% endfor %}
@@ -16,6 +24,8 @@
       <button class="btn btn--quiet btn--sm finder__go" type="submit">Search</button>
       {% if filtered %}<a class="q__lnk" href="{{ url_for('web.ideas') }}">Clear</a>{% endif %}
     </form>
+  {% endif %}
+  </details>
   {% endif %}
   {% if rows %}
     <div class="rows">

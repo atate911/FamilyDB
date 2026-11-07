@@ -355,7 +355,12 @@ def test_once_ready_the_home_page_lists_what_was_left_for_later(settings, clock,
     client.post("/login", data={"password": INSTALLERS})
     text = client.get("/").text
     assert "Finish setting up" in text
-    assert 'href="/setup/home"' in text and 'href="/setup/calendar"' in text
+    # One line: the next step a link, the rest one tap away, so setup never pushes the day down.
+    line = re.search(r'<section class="setup-line".*?</section>', text, re.S).group(0)
+    assert len(re.findall(r'href="/setup/\w+"', line)) == 1
+    assert "3 more steps" in line and 'href="/setup"' in line
+    steps = client.get("/setup").text
+    assert 'href="/setup/home"' in steps and 'href="/setup/calendar"' in steps
     assert 'href="/setup/model"' not in text  # the test settings have a key
 
 

@@ -32,8 +32,9 @@ def _head(page: str) -> tuple[str, str]:
 
 
 def _chips(page: str) -> list[str]:
-    nav = re.search(r'<nav class="chips".*?</nav>', page, re.S)
-    return re.findall(r">([^<]+)(?:<span|</a>)", nav.group(0)) if nav else []
+    """Every chip on the page, in order, whichever row it is in."""
+    navs = re.findall(r'<nav class="chips".*?</nav>', page, re.S)
+    return [one for nav in navs for one in re.findall(r">([^<]+)(?:<span|</a>)", nav)]
 
 
 def _scope(page: str) -> str:
@@ -103,6 +104,11 @@ def test_the_week_is_seven_days_from_today_with_free_time_and_the_plate(
     # On your plate, whatever week is showing: what has no day, what is late.
     plate = re.search(r'aria-labelledby="h-plate".*?</section>', page, re.S).group(0)
     assert "Call the dentist" in plate and "Pay the bill" in plate and "Bins out" not in plate
+    # What is late is open; what has no day yet is one line until opened, so the days lead.
+    later = plate[plate.index('<details class="plate__later">') :]
+    assert (
+        "Pay the bill" not in later and "Call the dentist" in later and "1 with no day yet" in later
+    )
     assert _chips(page) == ["Sam", "Alex", "the girls", "Month", "Past"]
     assert _scope(page) == "About this week:"
     # Earlier and later weeks, and the day's own page.
@@ -394,19 +400,22 @@ def test_do_narrows_by_chips_and_leads_with_her_pick(settings, clock, conn, fami
     page = client.get("/do").text
     assert "3 ideas saved · Powell Butte kites fits Sat." in page
     assert '<span class="r__label">Fits Sat</span>' in page and "Ramen" not in page
+    # What suits us now in a line; the kinds, each person and Dropped fold under it.
     assert _chips(page) == [
-        "Day trip",
-        "Show",
-        "Stay in",
         "With the kids",
         "Just us",
         "Free",
         "Close",
+        "Day trip",
+        "Show",
+        "Stay in",
         "Sam",
         "Alex",
         "the girls",
         "Dropped",
     ]
+    assert '<details class="filters">' in page  # folded, as nothing in it is in force
+    assert '<details class="filters" open>' in client.get("/do?kind=show").text
     only_free = client.get("/do?free=1").text
     assert (
         "Powell Butte kites" in only_free
@@ -666,9 +675,9 @@ def test_a_restaurant_line_says_its_visits_once() -> None:
         card = {"today": None, "travel": None, "cost": "$", "rating": "done once", "pending": False}
         return views.eat_line(card, idea)
 
-    assert line(1, 8.5) == "$ · been once, rated 8.5/10"
+    assert line(1, 8.5) == "$ · rated 8.5/10"  # how they liked it decides, not how often
     assert line(3, None) == "$ · been 3 times"
-    assert line(0, None) == "$ · not been yet"
+    assert line(0, None) == "$ · new to us"
 
 
 def test_what_she_found_and_judged_is_offered_under_new_ideas(

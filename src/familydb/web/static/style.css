@@ -1925,6 +1925,16 @@ li:target { border-radius: var(--r-md); }
 .q__acts { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) var(--s3); }
 .q__acts form { display: contents; }
 .q__acts .faces { flex-wrap: nowrap; }
+/* several asks from one kid: one block, a line each, the thing in bold, when she asked under it, its buttons at the
+   line's end where there is room */
+.qrows { list-style: none; margin: 0; padding: 0; }
+.qrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2) var(--s3); padding: var(--s2) 0; border-top: 1px solid var(--line); }
+.qrow__t { display: grid; flex: 1 1 12rem; min-width: 0; margin: 0; line-height: 1.3; }
+.qrow__t span { color: var(--ink-2); font-size: var(--t-meta); }
+/* an admin's unfinished setup: one line, amber because it needs a look */
+.setup-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s3); padding: var(--s3) var(--s4); border-radius: var(--r-md); background: var(--amber-soft); border: 1px solid var(--amber-line); }
+.setup-line .label { color: var(--ink); }
+.setup-line__more { color: var(--ink-2); font-size: var(--t-meta); }
 .q__lnk { display: inline-flex; align-items: center; min-height: var(--target); padding: 0; border: 0; background: none; font: inherit; color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; cursor: pointer; }
 .q__lnk:hover { color: var(--ink); }
 
@@ -2026,6 +2036,20 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .set--done { border-left-color: var(--ok); }
 .set--done .set__num { color: var(--ok); display: grid; place-items: center; width: 32px; }
 .set > .who { align-self: center; }
+/* Do: the ways to narrow that are not "what suits us now" (the kinds, each person, Dropped, the search) fold under one
+   line, which opens by itself while one of them is in force */
+.filters { border-block: 1px solid var(--line); }
+.filters > summary { list-style: none; display: flex; align-items: center; gap: var(--s2); min-height: var(--target); cursor: pointer; color: var(--ink-2); font-size: var(--t-meta); font-weight: 700; }
+.filters > summary::-webkit-details-marker { display: none; }
+.filters > summary .chev { margin-left: auto; transition: transform .15s; }
+.filters[open] > summary .chev { transform: rotate(90deg); }
+.filters[open] { display: grid; gap: var(--s3); padding-bottom: var(--s4); }
+.filters .finder { margin-bottom: 0; }
+/* the week's plate: what is late open, what has no day yet one line until opened, so the days lead */
+.plate__later > summary { list-style: none; display: flex; align-items: center; gap: var(--s2); min-height: var(--target); cursor: pointer; color: var(--ink-2); font-size: var(--t-meta); font-weight: 700; border-top: 1px solid var(--line); }
+.plate__later > summary::-webkit-details-marker { display: none; }
+.plate__later > summary .chev { margin-left: auto; transition: transform .15s; }
+.plate__later[open] > summary .chev { transform: rotate(90deg); }
 /* this week: a day is a labelled block, the free time one quiet line, the reminders small marks */
 .wk { display: grid; gap: var(--s5); }
 .wk__day { display: grid; gap: var(--s3); }

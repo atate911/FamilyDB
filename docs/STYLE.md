@@ -364,8 +364,10 @@ Every page is checked at 390 and 320 pixels in Phosphor, Kitchen Table and Ink.
 
 Each page names its focal element, what the main column holds, and what the rail holds.
 
-- **Now** (docs/INTERFACE.md section 3). Focal: the box. Then one line of the day, her questions
-  (each her screen, the words, where it came from, its buttons), the plate as checkbox rows, her
+- **Now** (docs/INTERFACE.md section 3). Focal: the box. Then one line of the day, an admin's
+  unfinished setup as one amber line (its next step a link, the rest one tap away), her questions
+  (each her screen, the words, where it came from, its buttons; a kid with several waiting is one
+  block, a line each, so her asks never push the day down), the plate as checkbox rows, her
   picks as tiles in pencil (a dashed edge, lighter ink: not set), and today and tomorrow one line
   each. Nothing is drawn for a quiet part; "Nothing needs you." where nothing waits. What a role
   may not do is not offered.
@@ -383,11 +385,13 @@ Each page names its focal element, what the main column holds, and what the rail
   segmented control (as Plans' List and Month) to Cook and Eat out, where the chips live; a
   recipe's page is cooked from: what it takes, then Shopping list, the one solid button, with Plan
   it for a night quiet beside it, then its ingredients and numbered steps, open. **Do**: what fits the next free stretch, then the pile, the quiet ones
-  faded, then New ideas (what she found and judged worth putting forward, under a label saying she
+  faded (the chips that say what suits us now in a line, the kinds, each person, Dropped and the
+  search folded under it), then New ideas (what she found and judged worth putting forward, under a label saying she
   found them, each a hairline row with its reason and Save it and Not for us under it, small; the
   family's own always first), the map under it. **Week**: a day a section, set things as set rows (a solid left edge,
   the time in the mono), the free time in words, a reminder a small bell line, her pick in pencil;
-  the plate above. **Kids**: a kid a section, what waits first. **Soon**: finds by day. **Lists**:
+  the plate above, what is late open and what has no day yet one line until opened, so the days
+  lead. **Kids**: a kid a section, what waits first. **Soon**: finds by day. **Lists**:
   big ticks, under a quiet uppercase label a section of the store once the list spans two
   (`.list-items__sec`); a recipe's Shopping page is the same ticks by section with the pantry
   apart and a stand-in folded under a thing (`.swap`). **Did**: a face a row.

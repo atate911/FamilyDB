@@ -564,7 +564,7 @@ def test_a_wish_waiting_on_a_parent_is_asked_and_answered_from_now(app, conn, fa
     home = client.get("/").text
     question = re.search(r'<section class="q".*?</section>', home, re.S).group(0)
     assert "the girls asked for Roller skates." in question
-    assert 'value="granted">Yes</button>' in question and "Not this time" in question
+    assert 'value="granted">Yes<' in question and "Not this time" in question
     assert 'href="/kids/the-girls"' in question
     fields = dict(re.findall(r'name="(csrf|once|kid|back)" value="([^"]*)"', question))
     sent = client.post(f"/wish/{wish.id}/answer", data={**fields, "status": "granted"})
@@ -576,7 +576,7 @@ def test_a_wish_waiting_on_a_parent_is_asked_and_answered_from_now(app, conn, fa
 def test_a_grown_up_signed_in_writes_as_themselves(app, conn, family) -> None:
     home = _in_as(app, "Sam", "sam likes long sentences").get("/").text
     assert 'name="who"' not in _box(home)  # signed in as themselves: nobody else to be
-    assert "Finish setting up" in home  # an admin's unfinished setup, each step a link
+    assert "Finish setting up" in home  # an admin's unfinished setup, its next step a link
     row = _row(home)
     assert "Kids" in row and "Lists" in row
 
@@ -831,3 +831,22 @@ def test_a_shelf_keeps_the_newest_few(conn, family) -> None:
         family_rules.pin(conn, family["sam"], one.id, chat_id="web", now=at)
     kept = pins.for_member(conn, family["sam"].id, limit=20)
     assert [one.text for one in kept] == [f"#{n}" for n in range(family_rules.PINS_MOST, 0, -1)]
+
+
+def test_several_asks_from_one_kid_are_one_block_a_line_each() -> None:
+    """A block for every one of Maya's asks put the day below the fold: hers are one block, where
+    she first comes in the order, with her list on her name; a kid with one ask keeps its own."""
+    from familydb.web.now import by_kid
+
+    asks = [
+        {"kind": "pitch", "who": "Maya", "thing": "Overnight oats", "kid_slug": None},
+        {"kind": "rate", "text": "How did the zoo go?"},
+        {"kind": "wish", "who": "Maya", "thing": "Sketchbook", "kid_slug": "maya"},
+        {"kind": "pitch", "who": "Theo", "thing": "Lego night", "kid_slug": None},
+    ]
+    drawn = by_kid(asks)
+    assert [next(iter(each)) for each in drawn] == ["kid", "one", "one"]
+    maya = drawn[0]["kid"]
+    assert maya["name"] == "Maya" and maya["slug"] == "maya"
+    assert [q["thing"] for q in maya["asks"]] == ["Overnight oats", "Sketchbook"]
+    assert drawn[1]["one"]["kind"] == "rate" and drawn[2]["one"]["thing"] == "Lego night"
