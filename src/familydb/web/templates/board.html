@@ -71,11 +71,11 @@
           <ul class="bd__items">
             {% for thing in shopping['items'] %}
               <li>
-                <form method="post" action="{{ url_for('edits.change_list') }}">
+                <form method="post" action="{{ url_for('edits.change_list') }}" data-in-place>
                   {{ guard(once=true) }}
                   <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="shopping" />
                   <input type="hidden" name="items" value="{{ thing }}" /><input type="hidden" name="back" value="board" />
-                  <button class="tick" type="submit"><span>{{ icon('check') }}</span><span class="sr">Got: </span></button>
+                  <button class="tick" type="submit"><span>{{ icon('check') }}</span><span class="sr">Got: {{ thing }}</span></button>
                 </form>
                 <span>{{ thing }}</span>
               </li>

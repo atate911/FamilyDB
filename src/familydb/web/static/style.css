@@ -2206,3 +2206,15 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .list-items__sec { font-size: .8125rem; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; margin: var(--s4) 0 var(--s1); }
 .list-items .swap summary { font-size: .875rem; color: var(--ink-2); }
 .list-items .swap .fold__body { margin: var(--s1) 0 0; }
+
+/* ---------- 22. Ticking down a list (inplace.js, edits._then) ---------- */
+/* A tick keeps its place: with scripts the page is not left, and without them it comes back at the next row, held a
+   third of the way down so what was above it is still in sight. With scripts, what was done is a note held at the
+   foot of the screen with its Undo, wherever the page is scrolled, until it is closed or the next one replaces it. */
+.todo[id], .list-items li[id] { scroll-margin-top: 30vh; }
+.js-inplace .nf .flash { position: fixed; z-index: 30; left: var(--s4); right: var(--s4); bottom: calc(var(--tabbar-total) + var(--s2)); grid-template-columns: auto minmax(0, 1fr) auto auto; box-shadow: var(--shadow); }
+.flash__close { display: inline-grid; place-items: center; min-width: var(--target); min-height: var(--target); margin: calc(var(--s2) * -1) calc(var(--s3) * -1) calc(var(--s2) * -1) 0; border: 0; border-radius: var(--r-md); background: transparent; color: var(--ink-2); font: inherit; font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.flash__close:hover { color: var(--ink); }
+@media (min-width: 821px) {
+  .js-inplace .nf .flash { left: 50%; right: auto; bottom: var(--s5); width: min(560px, calc(100vw - var(--s6) * 2)); transform: translateX(-50%); }
+}

@@ -12,11 +12,16 @@
   {% set one = shown %}
   <section class="sec" aria-labelledby="l-{{ one.name }}">
     <div class="sec__label"><h2 id="l-{{ one.name }}" class="label">{{ one.title }}</h2><small>{{ one.to_get | length }} to get</small></div>
-    {% macro to_get(thing) -%}
-        <li>
-          <form method="post" action="{{ url_for('edits.change_list') }}">
+    {# A thing's id is its place on the list, so a tick lands on the one that takes its place (the one before it, for
+       the last; the list's head, for the only one). #}
+    {% set total = one.to_get | length %}
+    {% set at = namespace(n=0) %}
+    {% macro to_get(thing, n) -%}
+        <li id="li-{{ n }}">
+          <form method="post" action="{{ url_for('edits.change_list') }}" data-in-place>
             {{ guard(once=true) }}
             <input type="hidden" name="action" value="tick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing.text }}" /><input type="hidden" name="back" value="{{ one.name }}" />
+            <input type="hidden" name="then" value="{{ ('li-' ~ n) if n < total else (('li-' ~ (n - 1)) if n > 1 else 'l-' ~ one.name) }}" />
             <button class="tick" type="submit"><span>{{ icon('check') }}</span><span class="sr">Got: {{ thing.text }}</span></button>
           </form>
           <span>{{ thing.text }}{% if thing.note %} <span class="small muted">{{ thing.note }}</span>{% endif %}</span>
@@ -28,12 +33,12 @@
     {% if one.groups %}
       {% for section, things in one.groups %}
         <h3 class="list-items__sec">{{ section }}</h3>
-        <ul class="list-items list-items--big">{% for thing in things %}{{ to_get(thing) }}{% endfor %}</ul>
+        <ul class="list-items list-items--big">{% for thing in things %}{% set at.n = at.n + 1 %}{{ to_get(thing, at.n) }}{% endfor %}</ul>
       {% endfor %}
     {% else %}
     <ul class="list-items list-items--big">
       {% for thing in one.to_get %}
-        {{ to_get(thing) }}
+        {{ to_get(thing, loop.index) }}
       {% else %}
         <li class="muted">Nothing on it. Tell {{ assistant }} “we’re out of milk”.</li>
       {% endfor %}
@@ -55,7 +60,7 @@
         <ul class="list-items">
           {% for thing in one.ticked %}
             <li>
-              <form method="post" action="{{ url_for('edits.change_list') }}">
+              <form method="post" action="{{ url_for('edits.change_list') }}" data-in-place>
                 {{ guard(once=true) }}
                 <input type="hidden" name="action" value="untick" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="items" value="{{ thing }}" /><input type="hidden" name="back" value="{{ one.name }}" />
                 <button class="linkbtn" type="submit">Put back</button>
@@ -64,7 +69,7 @@
             </li>
           {% endfor %}
         </ul>
-        <form method="post" action="{{ url_for('edits.change_list') }}">
+        <form method="post" action="{{ url_for('edits.change_list') }}" data-in-place>
           {{ guard(once=true) }}
           <input type="hidden" name="action" value="clear_ticked" /><input type="hidden" name="name" value="{{ one.name }}" /><input type="hidden" name="back" value="{{ one.name }}" />
           <button class="btn btn--quiet btn--sm" type="submit">Clear what was got</button>

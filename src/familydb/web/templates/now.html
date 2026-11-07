@@ -37,10 +37,13 @@
   </section>
 {%- endmacro %}
 
-{% macro todos(rows) -%}
+{# A few to-dos, each tick landing on the row after it (the one before it for the last; `fallback`, its section's head,
+   for the only one), so ticking down them never starts again from the top. #}
+{% macro todos(rows, fallback='h-needs') -%}
   {% if rows %}
     <ul class="todos todos--compact">
-      {% for row in rows %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup, everyone=shell.family) }}{% endfor %}
+      {% for row in rows %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup, everyone=shell.family,
+          then=('t-' ~ rows[loop.index].id) if not loop.last else (('t-' ~ rows[loop.index0 - 1].id) if not loop.first else fallback)) }}{% endfor %}
     </ul>
   {% endif %}
 {%- endmacro %}
@@ -151,7 +154,7 @@
     {% if plate %}
       <section class="sec" aria-labelledby="h-todo">
         <div class="sec__label"><h2 id="h-todo" class="label">My to-dos</h2><a href="{{ url_for('web.tasks') }}">All</a></div>
-        {{ todos(plate) }}
+        {{ todos(plate, 'h-todo') }}
       </section>
     {% endif %}
 
