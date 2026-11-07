@@ -2106,6 +2106,8 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .ingr li { break-inside: avoid; padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
 .cook-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: var(--s4); max-width: 62ch; }
 .cook-steps li { counter-increment: step; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--s3); line-height: 1.5; }
+.wake { margin: 0; }
+.wake__btn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 .cook-steps li::before { content: counter(step); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--paper-2); color: var(--ink); font-family: var(--font-num); font-size: var(--t-meta); font-weight: 700; font-stretch: 100%; }
 .acts { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) var(--s4); }
 .acts form { margin: 0; }
@@ -2225,6 +2227,17 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .bd__idea a { color: var(--ink); text-decoration: none; font-size: var(--t-meta); }
 .bd__idea--fresh a { font-size: var(--t-md); font-weight: 700; }
 .bd__idea--resting a { color: var(--ink-2); opacity: .7; }
+/* The board is read from across the kitchen: from a tablet up the whole page is drawn larger (every size is in rem,
+   so the four roles stay four, only bigger); a time on a day is a heading, over its title, with whose it is under
+   that, so a narrow day never squeezes a title onto three lines; the list's ticks are the Lists page's big ones. */
+.bd .set { flex-direction: column; gap: 2px; }
+.bd .set__num { width: auto; padding-top: 0; color: var(--ink); font-size: var(--t-h3); line-height: 1.15; }
+.bd .set .who { align-self: flex-start; margin-top: var(--s1); }
+.bd__items li { min-height: 52px; font-size: var(--t-md); }
+.bd__items .tick { width: 28px; height: 28px; }
+.bd__items .tick > span:not(.sr) { width: 24px; height: 24px; border-radius: 6px; }
+.bd__items .tick .icon { width: 16px; height: 16px; }
+@media (min-width: 821px) { html[data-surface="board"] { font-size: 118.75%; } }
 @media (min-width: 821px) {
   .nf--board { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto auto; grid-template-areas: "top" "box" "main" "rail" "foot"; }
   /* the board is a shared screen: its row stays at the foot, small, and it has no menu */

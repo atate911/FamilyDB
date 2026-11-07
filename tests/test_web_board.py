@@ -60,6 +60,9 @@ def test_the_board_is_today_and_tomorrow_what_waits_and_the_list(
     assert days.index("Today") < days.index("Swim lesson") < days.index("Tomorrow")
     assert days.index("Tomorrow") < days.index("Night market")
     assert "bd__day--first" in page  # the nearer day is the largest
+    assert 'data-surface="board"' in page  # read from across the room: drawn larger
+    assert 'data-surface="page"' in client.get("/").text
+    assert "Got: milk</span>" in page  # the tick says what it ticks
     assert "How did Silver Falls hike go?" in page and 'name="back" value="board"' in page
     assert ">milk<" in page
     someday = re.search(r'<section class="bd__someday".*?</section>', page, re.S).group(0)

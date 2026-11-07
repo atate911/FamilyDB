@@ -111,9 +111,12 @@
       {% endif %}
       {% if recipe.steps %}
         <section class="sec" aria-labelledby="h-steps">
-          <div class="sec__label"><h3 id="h-steps" class="label">Steps</h3></div>
+          <div class="sec__label"><h3 id="h-steps" class="label">Steps</h3>
+            {# Keep the screen on while cooking: drawn by wake.js, only where the browser can (nothing is sent). #}
+            <p class="wake" id="wake" hidden></p></div>
           <ol class="cook-steps">{% for step in recipe.steps %}<li>{{ step }}</li>{% endfor %}</ol>
         </section>
+        <script src="{{ url_for('static', filename='wake.js') }}" defer></script>
       {% endif %}
       {% if recipe.source_url or (recipe.shoppable and not visitor().may('change')) %}
         <p class="found__links">

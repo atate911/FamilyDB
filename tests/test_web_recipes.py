@@ -196,6 +196,9 @@ def test_a_recipe_page_reads_as_a_recipe(settings, clock, conn, family):
     assert (
         '<ol class="cook-steps">' in page and "<summary>Steps" not in page
     )  # numbered, not folded
+    # Keep the screen on, beside the steps: drawn by its script where the browser can, so nothing
+    # stands there with scripts off.
+    assert '<p class="wake" id="wake" hidden></p>' in page and "wake.js" in page
     assert "What goes with it?" in page  # her quick sentences are a recipe's
     assert 'data-say="Put it on the list"' not in page  # Shopping list does it for nothing
 

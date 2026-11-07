@@ -5,8 +5,7 @@
 (() => {
   "use strict";
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const fields = document.querySelectorAll("[data-dictate]");
-  if (!Recognition || !fields.length) return;
+  if (!Recognition) return;
   const icons = document.currentScript && document.currentScript.dataset.icons;
   const SVG = "http://www.w3.org/2000/svg";
   let listening = null; // the recognition running, and its button
@@ -74,7 +73,15 @@
     button.classList.add("listening");
   }
 
-  for (const field of fields) {
+  // Each field once, at load and again when inplace.js draws part of the page anew (fdb:swapped).
+  function give() {
+    for (const field of document.querySelectorAll("[data-dictate]:not([data-mic])")) {
+      field.dataset.mic = "1";
+      attach(field);
+    }
+  }
+
+  function attach(field) {
     const button = mic();
     // Beside the box, or in the slot data-dictate names.
     const slot = field.dataset.dictate && document.getElementById(field.dataset.dictate);
@@ -87,6 +94,8 @@
       if (!mine && !field.disabled) listen(field, button);
     });
   }
+  give();
+  document.addEventListener("fdb:swapped", give);
   window.addEventListener("pagehide", stop);
   document.addEventListener("submit", stop, true);
 })();

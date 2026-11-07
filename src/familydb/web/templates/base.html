@@ -1,7 +1,8 @@
 {% from "_ui.html" import icon, brand_mark, wordmark, avatar, badge, health_pill, flash %}
 <!doctype html>
 {# The look this person chose (web/looks.py, themes.css): a theme on <html>, and a mode only when day or night was asked for. #}
-<html lang="en-US" data-theme="{{ look.key }}"{% if look_mode != 'auto' %} data-mode="{{ look_mode }}"{% endif %}>
+{# `data-surface` is board on the kitchen tablet, which is read from across the room and so drawn larger. #}
+<html lang="en-US" data-theme="{{ look.key }}"{% if look_mode != 'auto' %} data-mode="{{ look_mode }}"{% endif %} data-surface="{% block surface %}page{% endblock %}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
