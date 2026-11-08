@@ -149,7 +149,8 @@ recipes (
   is the tighter of `most_minutes` and the time before tonight's plan, `meals.time_limit`, so
   asking for "under an hour" does not move the recital; an
   occasion asked for and missing, nobody it is for among those eating, the latest outcome saying
-  not to make it again, `meals.not_again`, as the engine rules out an idea), then taste (made within
+  not to make it again, `meals.not_again`, as the engine rules out an idea, though asked for by
+  name it is still found, as a maybe with their word said), then taste (made within
   its rest days lowers it; rating and times made raise it; an idea never made is "new to us").
   `describe_idea` on a recipe returns its full row, steps included, for "read me the fajitas".
 - `shopping_list` gains one action, `from_recipes`, with `idea_ids`: "put the fajitas on the
@@ -469,8 +470,10 @@ Tools.
    adds one, `find_recipes` ranks and says why.
 6. `familydb/meals.py` (domain; imports `store`, `base`, `hours` and `saved_plans`' `UNTIMED`,
    held by `tests/test_layering.py`): `Situation` (weekday, minutes free before the evening's
-   first plan, or after one still under way when cooking would start, until 21:00 or the next
-   plan; who is eating), `situation(conn, now, agenda)`, `guess_occasions(recipe)`, `rank(rows,
+   first plan, or after one still under way when cooking would start (and one straight after it;
+   a plan begun on an earlier day is not waited out), until 21:00 or the next plan, said as
+   "after Soccer", "between Pick up and Book club" or, busy past nine, "no time to cook"; who is
+   eating), `situation(conn, now, agenda)`, `guess_occasions(recipe)`, `rank(rows,
    situation, asked)` with reasons worded by code, `pick(rows, situation)` for the page. New
    `tests/test_meals.py`: a table of recipes against situations, guesses from facts, rest, rating,
    a guess as a maybe.

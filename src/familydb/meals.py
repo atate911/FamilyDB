@@ -183,12 +183,15 @@ def situation(
     not_again: frozenset[int] = frozenset(),
 ) -> Situation:
     """Tonight as code reads it: the weekday, and the minutes from when cooking starts (now, or
-    `DINNER` if earlier) to the first timed plan before `LATEST`. A plan already under way then
-    moves the start to its end, and the time runs out at the next plan or at `LATEST`, so a game
-    from five to eight leaves an hour and one past nine none. A plan with no end is taken to last
-    as long as a saved one does (`saved_plans.UNTIMED`). A plan whose title is in `unnamed` (one
-    made for a present, `presents.plan_titles`) still takes its time but is said only as "a
-    plan", whoever reads the reason."""
+    `DINNER` if earlier) to the first timed plan before `LATEST`. A plan begun today and going
+    on when cooking would start, or straight after one that is, moves the start to its end (one
+    starting just as cooking would is what cuts it short, as before), and the time runs out at
+    the next plan or at `LATEST`: a game from five to eight leaves an hour, one past nine none,
+    and swim, then a pick-up, then book club at eight leaves the hour between. A plan begun on
+    an earlier day (a visit, a trip) does not empty the evening. A plan with no end is taken to
+    last as long as a saved one does (`saved_plans.UNTIMED`). A plan whose title is in `unnamed`
+    (one made for a present, `presents.plan_titles`) still takes its time but is said only as
+    "a plan", whoever reads the reason."""
     today = now.date()
     start = max(now, datetime.combine(today, DINNER, tzinfo=now.tzinfo))
     latest = datetime.combine(today, LATEST, tzinfo=now.tzinfo)
@@ -205,8 +208,9 @@ def situation(
         timed.append((begins, ends if ends and ends > begins else begins + UNTIMED, name))
     timed.sort()
     after: str | None = None
-    for begins, ends, name in timed:  # in order of starting, so overlapping plans chain
-        if begins < start < ends:
+    for begins, ends, name in timed:  # in order of starting, so plans back to back chain
+        going_on = begins < start < ends or (after is not None and begins == start)
+        if begins.date() == today and going_on:
             start, after = ends, name
     first = next(((begins, name) for begins, _, name in timed if start <= begins <= latest), None)
     until = first[0] if first else (latest if after else None)
@@ -265,6 +269,18 @@ def _words(text: str) -> set[str]:
     return {word for word in re.findall(r"[a-z]{3,}", text.casefold())}
 
 
+def _wanted(text: str) -> set[str]:
+    """The words asked for, each also without a plural s."""
+    wanted = _words(text)
+    return wanted | {word[:-1] for word in wanted if word.endswith("s")}
+
+
+def _asked_for(idea: Idea, recipe: Recipe, text: str) -> bool:
+    """Whether the words asked for name this recipe (its title, ingredients or the rest)."""
+    wanted = _wanted(text)
+    return bool(wanted) and _matches(idea, recipe, wanted)
+
+
 def _matches(idea: Idea, recipe: Recipe, wanted: set[str]) -> bool:
     said = _words(
         " ".join(
@@ -318,15 +334,19 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
     out: list[str] = []
     maybe: list[str] = []
     if idea.id in now.not_again:  # the family's word on it, a fact as the engine takes it
-        out.append(NOT_AGAIN)
+        # Asked for by name it is still found, as a maybe with their word said; otherwise out.
+        (maybe if asked.text and _asked_for(idea, recipe, asked.text) else out).append(NOT_AGAIN)
     minutes = recipe.minutes
     limit, by_plan = time_limit(now, asked)
     if minutes is not None:
         reasons.append(fmt_minutes(minutes))
         if limit is not None and minutes > limit:
-            why = f"takes {fmt_minutes(minutes)}, there are {fmt_minutes(max(limit, 0))}"
-            if by_plan and now.cut_short():
-                why += f" {now.cut_short()}"
+            if by_plan and limit <= 0:  # busy until too late: no time at all, and why
+                why = f"no time to cook {now.cut_short()}".strip()
+            else:
+                why = f"takes {fmt_minutes(minutes)}, there are {fmt_minutes(max(limit, 0))}"
+                if by_plan and now.cut_short():
+                    why += f" {now.cut_short()}"
             out.append(why)
     elif limit is not None:
         maybe.append("how long it takes is not known")
@@ -360,11 +380,8 @@ def judge(idea: Idea, recipe: Recipe, now: Situation, asked: Asked) -> Ranked:
         elif guessed & NOT_DINNERS:  # a guess only lowers it
             words = " or ".join(occasion_words(sorted(guessed & NOT_DINNERS)))
             maybe.append(f"looks like a {words} one")
-    if asked.text:
-        wanted = _words(asked.text)
-        wanted |= {word[:-1] for word in wanted if word.endswith("s")}
-        if wanted and not _matches(idea, recipe, wanted):
-            out.append(f"nothing of {asked.text}")
+    if asked.text and _wanted(asked.text) and not _asked_for(idea, recipe, asked.text):
+        out.append(f"nothing of {asked.text}")
     days = _ago(idea, now.day)
     if idea.times_done:
         made = "made once" if idea.times_done == 1 else f"made {idea.times_done} times"
