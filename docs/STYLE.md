@@ -378,12 +378,14 @@ Each page names its focal element, what the main column holds, and what the rail
   segmented control (as Plans' List and Month) to Cook and Eat out, where the chips live; a
   recipe's page leads with what it takes, then Cook it, a card holding the one solid button, Cook
   this; the ingredients and its numbered steps, open to cook from, how it went and More come under it. **Do**: what fits the next free stretch, then the pile, the quiet ones
-  faded, then New ideas (what she found and judged worth putting forward, under a label saying she
+  faded (the chips that say what suits us now in a line, the kinds, each person, Dropped and the
+  search folded under it), then New ideas (what she found and judged worth putting forward, under a label saying she
   found them, each a hairline row with its reason and Save it, Plan it and Not for us under it, small, Not for
   us a text link; the
   family's own always first), the map under it. **Week**: a day a section, set things as set rows (a solid left edge,
   the time in the mono), the free time in words, a reminder a small bell line, her pick in pencil;
-  the plate above. **A kid's wishes** (a chip on Lists): a kid a section, what waits first. **Coming up** (Do's second tab): finds by day, Save it, Plan it and Not for us under each still
+  the plate above, what is late open and what has no day yet one line until opened, so the days
+  lead. **A kid's wishes** (a chip on Lists): a kid a section, what waits first. **Coming up** (Do's second tab): finds by day, Save it, Plan it and Not for us under each still
   on offer. **Lists**:
   big ticks, under a quiet uppercase label a section of the store once the list spans two
   (`.list-items__sec`); a recipe's Shopping page is the same ticks by section with the pantry

@@ -1212,8 +1212,10 @@ def test_do_has_one_search_its_chips_and_the_way_to_the_form_last(
         idea_store.insert(conn, title="Zoo day", kind="outing", now=NOW_ISO)
     page = _signed_in(settings, clock).get("/do").text
     assert page.count(">Filter<") == 0 and ">Search</button>" in page  # one Search, not two Filters
-    chips = re.search(r'<nav class="chips".*?</nav>', page, re.S).group(0)
+    # What suits us now in a line, the rest folded under it: every chip is still on the page.
+    chips = "".join(re.findall(r'<nav class="chips".*?</nav>', page, re.S))
     assert "Outing" in chips and "Free" in chips and "Dropped" in chips and "Sam" in chips
+    assert page.index(">Free<") < page.index("More ways to narrow") < page.index(">Outing<")
     assert page.index("Zoo day") < page.index("Add an idea by hand")
 
 

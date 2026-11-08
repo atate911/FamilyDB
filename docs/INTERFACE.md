@@ -103,7 +103,7 @@ Now is the first screen. It is not a menu and not a dashboard: it is the box, th
 
 **Setup** leads only while a step it needs or should have is left (an admin's only); the optional ones (Telegram, Google Calendar) wait in a quiet line at the foot, so a family that never connects a calendar is not asked to on every visit.
 
-**Her questions** are the only interruption: a kid's pitch, a plan to set, how an outing went. Each with its origin and its buttons. The same ones reach Telegram. How an outing went is asked, never owed: one at a time, after what only a parent can answer, nothing counts it, and the family can turn the asking off (`follow_ups`), leaving the plan's own page to take it.
+**Her questions** are the only interruption: a kid's pitch, a plan to set, how an outing went. Each with its origin and its buttons; a kid with several waiting is one block, a line each, with her list on her name. The same ones reach Telegram. How an outing went is asked, never owed: one at a time, after what only a parent can answer, nothing counts it, and the family can turn the asking off (`follow_ups`), leaving the plan's own page to take it.
 
 **Today's and tomorrow's lines** are the coordination that fits in a line each, under Next up. The week is one tap away, beside Next up's heading and in the row.
 
@@ -131,7 +131,7 @@ Nothing else appears on a destination. Her picks and her finds are marked as her
 - **The cook pick:** chosen by code (`familydb/meals.py`): a weeknight one on a weeknight when there is one, short enough for the time before a plan on the calendar tonight, not had in the last ten days (or the family's own rest for recipes), how it was rated. A recipe that cannot fit is drawn faded at the foot with why.
 - **The restaurant pick:** chosen by code: open at the meal time, not done recently, how it was rated, drive time, weather for a patio. Its line says why: "Open till 9, 12 min, you haven't been."
 - **Chips, on Cook:** the situations some recipe has (Quick always; Prep ahead, Family dinner, Slow cook, Breakfast) · New to us · With the kids · Cuisines in the recipes. **On Eat out:** Open now · Close · New · Just us · With the kids · Cuisines in the pile · Each person. The overview has none.
-- **Each row:** a recipe's minutes, servings, times made and rating, what it is good for (a guess marked "looks like"); a restaurant's cuisine, one fact that decides (open till, how far, cost band), who suggested it, done before or not.
+- **Each row:** the facts that decide, and only those, so a row is read at a glance: a recipe's minutes, how it was rated (or "new to us") and when it was last had; a restaurant's hours today, how far, the cost band, how it was rated (or "new to us"), and who suggested it as their marks. How often, how many it serves and what it is good for are on its page.
 - **Grocery list:** on Cook, a grown-up who may change things ticks recipes and presses **Put these on the list**: what they need goes on the shopping list by code (`shopping_list`, `from_recipes`).
 - **Empty:** "Nothing saved yet. Tell Vera a recipe you like or a place you've heard about."
 - **Kid:** the same lists without cost bands, "just us" or the boxes.
@@ -140,7 +140,7 @@ Nothing else appears on a destination. Her picks and her finds are marked as her
 
 - **Opens on:** the saved pile, the best fits for the next free stretch on top, then everything newest first. Restaurants are not here; they have their own door. Presents are not here either: they are on Lists.
 - **Tabs:** Ideas (this page), **Coming up** (`/soon`) and **We did** (`/did`), one segmented row of links like Eat's and Week's, each its own address, so Do is the one place for what to do, what is on and what we did.
-- **Chips:** Outing · Day trip · Stay in · With the kids · Just us · Free · Close · Each person · Dropped.
+- **Chips:** With the kids · Just us · Free · Close in a line, as they say what suits us now; the kinds (Outing · Day trip · Stay in …), each person, Dropped and the search fold under **More ways to narrow**, open by itself while one of them is in force.
 - **Each row:** name, kind, where or how far, who said it, a mark if it is closing soon or fading.
 - **Fading:** untouched things go paler after six weeks; at three months the row asks "still want this?" with keep and let go. Rested things are under the Dropped chip, never gone.
 - **Empty:** "Nothing saved yet. When someone says 'we should try…', it lands here."
@@ -161,7 +161,7 @@ The picks on Now, as a destination of their own for a big screen, a deep link, o
 ### This week (`/week`)
 
 - **Opens on:** today, the week around it, free time drawn as space, the forecast on each day, reminders as small marks on their day.
-- **On your plate:** a strip that stays on screen whatever week is showing. Everything with no date yet ("some Saturday morning", "when it rains", "next free moment") and anything overdue, each with its owner or "I'll handle it": yours, then everyone's; somebody else's under their name ("On Alex's plate"), so a heading never calls theirs yours. Nothing dateless can be lost by scrolling.
+- **On your plate:** a strip that stays on screen whatever week is showing. Anything overdue, open, each with its owner or "I'll handle it"; everything with no date yet ("some Saturday morning", "when it rains", "next free moment") one line under it ("2 with no day yet"), opened with a tap, so the days lead. Yours, then everyone's; somebody else's under their name ("On Alex's plate"), so a heading never calls theirs yours. Nothing dateless can be lost by scrolling.
 - **Pencil:** a plan taking shape appears in pencil on the day being considered, once a day is being considered. At most one of Vera's own suggestions sits on a free stretch, and only on weekends; tapping a free stretch asks for more.
 - **Chips:** Each person · Month · Past.
 - **A day** (`/week/<date>`): everything on it, the free stretches, and after the day, how it went.
