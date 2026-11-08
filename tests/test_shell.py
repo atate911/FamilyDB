@@ -234,7 +234,7 @@ def test_the_page_you_are_on_is_marked_in_the_menu_and_the_tab_bar(sam, girl) ->
     for client in (sam, girl):
         row = re.search(r'<nav class="row".*?</nav>', client.get("/").text, re.S).group(0)
         assert row.count('aria-current="page"') == 1
-        assert re.search(r'<a href="/" aria-current="page">Now</a>', row)
+        assert re.search(r'<a href="/" aria-current="page">Now<svg [^>]*>.*?</svg></a>', row, re.S)
 
 
 def test_the_row_of_destinations_follows_the_role(sam, alex, girl, conn, family) -> None:
@@ -243,7 +243,7 @@ def test_the_row_of_destinations_follows_the_role(sam, alex, girl, conn, family)
 
     def places(client) -> list[str]:
         row = re.search(r'<nav class="row".*?</nav>', client.get("/").text, re.S).group(0)
-        return re.findall(r"<a [^>]*>([^<]+)(?:<span|</a>)", row)
+        return re.findall(r"<a [^>]*>([^<]+)(?:<span|<svg|</a>)", row)
 
     assert places(sam) == ["Now", "Eat", "Do", "Week", "Lists"]
     assert places(alex) == ["Now", "Eat", "Do", "Week", "Lists"]

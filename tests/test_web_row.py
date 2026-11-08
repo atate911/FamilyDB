@@ -42,7 +42,7 @@ def _row(page: str) -> list[str]:
     """The words of the row, in its order."""
     nav = re.search(r'<nav class="row".*?</nav>', page, re.S)
     assert nav is not None
-    return re.findall(r"<a [^>]*>([^<]+)(?:<span|</a>)", nav.group(0))
+    return re.findall(r"<a [^>]*>([^<]+)(?:<span|<svg|</a>)", nav.group(0))
 
 
 def _menu(page: str) -> list[str]:

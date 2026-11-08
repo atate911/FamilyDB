@@ -53,7 +53,7 @@ def test_the_box_is_first_and_posts_to_the_chat_to_come_back_here(settings, cloc
     assert body.index('id="ask"') < body.index('class="ctx"') < body.index('class="row"')
     box = _box(home)
     assert 'action="/chat"' in box and 'name="back" value="/"' in box
-    assert f'placeholder="{HOME_PROMPT}"' in box and "ask.js" in home
+    assert f'placeholder="{HOME_PROMPT.format(name="Vera")}"' in box and "ask.js" in home
     # What the script and the dictation look for.
     assert 'id="text"' in box and 'data-dictate="ask-mic"' in box and 'id="ask-mic"' in box
     assert 'id="locate"' in box and 'id="where"' in box and 'name="send_where"' in box
@@ -665,7 +665,7 @@ def test_a_kid_sees_only_what_is_hers_and_nothing_of_how_it_works(app, conn, fam
     assert "Sam and Alex can read this" in home and "20 messages left today." in home
     # Nobody asks a kid to send where she is, on Now or in her chat (docs/STYLE.md).
     assert 'name="send_where"' not in home and 'name="send_where"' not in kid.get("/chat").text
-    assert re.findall(r"<a [^>]*>([^<]+)(?:<span|</a>)", _row(home)) == [
+    assert re.findall(r"<a [^>]*>([^<]+)(?:<span|<svg|</a>)", _row(home)) == [
         "Now",
         "Do",
         "My week",
@@ -946,3 +946,17 @@ def test_what_needs_you_shows_the_first_few_and_folds_the_rest(settings, clock, 
     shown, folded = needs.split('<details class="fold fold--quiet needs__more">')
     assert shown.count('class="todo__title"') == 3
     assert "And 1 more" in folded and folded.count('class="todo__title"') == 1
+
+
+def test_where_i_am_is_offered_only_where_it_bears_on_the_answer(app, conn, family) -> None:
+    """Beside the mic on Now, Eat, Do and what is on near home, where "near here" and "open now"
+    are asked; not on the week, a list or what we did, where it would only be a thing to tap by
+    mistake. Off until tapped, as before, and a kid is never asked."""
+    sam = _in_as(app, "Sam", "sam likes long sentences")
+    for path in ("/", "/eat", "/do", "/soon"):
+        box = _box(sam.get(path).text)
+        assert 'class="box__where"' in box and 'name="send_where"' in box, path
+        assert "checked" not in box[box.index('name="send_where"') :].split(">")[0], path  # off
+        assert "Share where I am with this message" in box, path  # its words, behind the mark
+    for path in ("/week", "/lists", "/did"):
+        assert 'name="send_where"' not in sam.get(path).text, path

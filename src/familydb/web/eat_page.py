@@ -59,7 +59,9 @@ def restaurants() -> str:
         cooking = _cook_rows(app, conn, now, today, occasion, kid, kept)
         people = member_store.list_all(conn)
         cards = _restaurant_cards(app, conn, now, today, visitor, who, people, kid)
-        chat.page_box(app, conn, people, scope={"label": "Eat", "text": "About what to eat:"})
+        chat.page_box(
+            app, conn, people, scope={"label": "Eat", "text": "About what to eat:"}, where=True
+        )
     # With only one of the two kept, Eat is that list, whole, as it always was.
     if not side and not cooking:
         side = "out"

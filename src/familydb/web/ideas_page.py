@@ -123,7 +123,11 @@ def ideas() -> str:
             if grown_up or not who_for.grown_ups_only(one.participants, people)
         ]
         chat.page_box(
-            app, conn, people, scope={"label": "Things to do", "text": "About things to do:"}
+            app,
+            conn,
+            people,
+            scope={"label": "Things to do", "text": "About things to do:"},
+            where=True,
         )
     if kind != RESTAURANT_KIND:
         found = [idea for idea in found if idea.kind not in ELSEWHERE]
@@ -364,6 +368,7 @@ def idea(idea_id: int) -> str:
             family,
             prompt=chat.ITEM_PROMPT,
             scope={"label": record.title, "text": f"About #{record.id} {record.title}:"},
+            where=record.kind != "recipe",  # what else is near it; a recipe is cooked at home
         )
         box["starters"] = views.idea_starters(record, today)
     away = map_view.away_from_home(place, settings)

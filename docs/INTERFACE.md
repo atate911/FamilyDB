@@ -267,7 +267,7 @@ Vera has no tile. She is the box, her reply, her questions, her notes, and her r
 - **Deep links** are the paths in section 2. A push, a Telegram link, the tablet and the installed page all land on them. Opening a deep link from outside shows the item with the row beneath it, never a dead end.
 - **Scoped box state** is per screen: leaving a destination clears its scope.
 - **A reply over a screen** never navigates on its own. Only its pointer does, and only when tapped.
-- **Her questions** are the only global signal, and they are on Now. The row carries no badges.
+- **Her questions** are the only global signal, and they are on Now. The row's only counts are what is late, on Week, and what waits on a parent, on Kids.
 
 ## 8. Platforms
 

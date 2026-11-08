@@ -103,7 +103,9 @@ LOST = "That message was not answered. Send it again if it still matters."
 RETRYING_PLAIN = "{name} will answer that soon. The answer will show here when it arrives."
 PROMPT = "Message {name}"
 LOCKED = "You can write again once {name} has answered."
-HOME_PROMPT = "Ask, save an idea, set a reminder…"
+# Short, so it fits one line beside the mic and Where I am on a phone; the first day's
+# (now.FIRST_PROMPT) says what to tell her, and so teaches what the box is for.
+HOME_PROMPT = "Ask or tell {name}…"
 KID_HOME_PROMPT = "Something you\u2019d like, a question, something fun to do…"
 # Atop a kid's list: goes to her conversation, where it is sorted.
 KID_LIST_PROMPT = "Something you\u2019d like, a question, an idea… {name} will sort it out"
@@ -297,9 +299,12 @@ def page_box(
     prompt: str = DEST_PROMPT,
     scope: dict[str, Any] | None = None,
     faces: bool = False,
+    where: bool = False,
 ) -> dict[str, Any]:
     """Everything a page built on the frame gives its box: the box itself, closed while an
     answer is on its way, what came back under it, and the scope this page gives a message.
+    `where` is for a page where where you are bears on the answer (Now, Eat, Do, a place, what
+    is on near home): only there does the box offer to send it.
     Kept on the request (`g.box`), so the frame reads it wherever it draws it; the frame itself
     (`shell.frame`) is built here too, on the same connection."""
     visitor = auth.visitor()
@@ -317,6 +322,7 @@ def page_box(
         ),
         "typed": asked(),
         "scope": scope,
+        "where": where,
         "no_box": False,
         "pinned": pinned(app, conn, visitor),
         **under,
