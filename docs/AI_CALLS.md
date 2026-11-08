@@ -105,7 +105,7 @@ Context has three layers, and every piece of information belongs to exactly one:
 
 | Kind | Trigger | Model | Sees | May do | Returns |
 |---|---|---|---|---|---|
-| Chat | a family message (Telegram, page, console) | chat model, chat level | persona, prompt, family, up to 150 ideas in the prefix; date, who reads a shared chat, sender, a recently shared location, the memories chosen for the message, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 23 chat tools | a reply; tool writes |
+| Chat | a family message (Telegram, page, console) | chat model, chat level | persona, prompt, family, up to 150 ideas in the prefix; date, who reads a shared chat, sender, a recently shared location, the memories chosen for the message, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 28 chat tools | a reply; tool writes |
 | Digest | the weekly schedule, or catch-up after a restart; after a failure, the retry job, still as the digest | chat model, digest level | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
 | Retry | every 5 minutes, for a failed message other than the digest, 3 times at most; never after running out of steps | chat model, chat level | the chat context, plus which writes already ran | the chat tools | a reply |
 | Enrich | by default the evening's lookups after `lookup_hour`, up to 40 ideas in one run with one note per chat; an idea asked for with `look_up_now` on the next run, with a note of its own; with `lookups_when` "asap", up to `enrich_batch` each run (every `enrich_interval_minutes`); a home idea with no place, link or location, and a gift that names no place, are skipped in code (`store.ideas.needs_lookup`) | worker model, lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record, and the idea's empty details |
@@ -199,7 +199,9 @@ updates the suggestion's row and hands back the new dossier, and the result tell
 what was looked at; a retry replays it with no call. It may
 only hand back picks among the options, which `give_picks` checks: each is an option, a
 favorite was done before and a new one never was, a day is inside the window and one the option
-fits, every cite is in the dossier. The picks lead what the chat model is given and it says
+fits, every cite is in the dossier. Options and citations are registered only from the lines a
+section's cap left in, so a pick or cite of something cut for room is refused like one never
+offered. The picks lead what the chat model is given and it says
 them in order; code has already checked every pick's hours, travel and weather. It is two calls
 at most, 6,000 output tokens, about six cents on Claude Opus; whatever goes wrong, the engine's
 own order is the answer and nobody is told, since a kid must not hear of budgets. Whether the
@@ -305,7 +307,7 @@ by choosing what goes in, not by squeezing words:
   is what was billed. `/status` and `familydb debug cost` show per purpose how many tokens each part
   takes per call and its share.
 - **Budgets per part.** Code fits each: the history by recency (the newest messages within 6,000
-  characters, each cut to 1,500, `agent/history.within_budget`), the memories by what bears on the
+  characters, each cut to 1,500 keeping its start and its end, `agent/history.within_budget`), the memories by what bears on the
   message (`docs/MEMORY.md`), and, to come, the ideas the same way. A firm requirement (an allergy, a
   must-have) is never trimmed away; if requirements alone exceed a budget the composer says so rather
   than drop one quietly. Budgets are in characters; real tokens are to come.

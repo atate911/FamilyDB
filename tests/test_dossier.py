@@ -207,3 +207,49 @@ def test_plans_around_the_question_are_in_it(conn, full_settings, thursday_clock
         )
     made, _ = _build(conn, full_settings, thursday_clock, family, asked)
     assert "Soccer tournament (planned)" in made.text
+
+
+def test_only_what_is_shown_may_be_picked_or_cited(
+    conn, full_settings, thursday_clock, family, registry, monkeypatch
+):
+    """An option or memory cut for room is not one the call may name: it never saw it."""
+    asked, *_ = _setup(conn, family)
+    with transaction(conn):
+        for n in range(12):
+            ideas.insert(conn, title=f"Idea number {n}", kind="outing", now=NOW_ISO)
+        for n in range(6):
+            memories.insert(
+                conn,
+                member_id=None,
+                category="other",
+                fact=f"a taste of ours, number {n}",
+                firm=False,
+                inferred=False,
+                until=None,
+                source_message_id=None,
+                said_by=None,
+            )
+    monkeypatch.setitem(dossier.CAPS, "options", 400)
+    monkeypatch.setitem(dossier.CAPS, "memories", 120)
+    made, a = _build(conn, full_settings, thursday_clock, family, asked)
+    picked = made.text.split("## What may be picked\n")[1].split("\n## ")[0]
+    offered = [c for c in a.candidates if c.verdict != "ruled_out"]
+    assert 0 < len(made.options) < len(offered) and "more not shown)" in picked
+    for ref in made.options:
+        assert picked.startswith(f"{ref} ") or f"\n{ref} " in picked
+    for cite in made.cites:
+        assert f"{cite} " in made.text or f"{cite}," in made.text
+    told = made.text.split("## What the family has told you")[1]
+    left_out = [m for m in memories.active(conn, today=thursday_clock.today()) if not m.firm]
+    assert any(f"m{m.id}" not in made.cites and f"m{m.id} " not in told for m in left_out)
+    assert "From outside the family" not in made.text  # no finds asked for, no heading
+
+    cut = next(f"idea:{c.idea_id}" for c in offered if f"idea:{c.idea_id}" not in made.options)
+    ctx = ToolContext(conn=conn, settings=full_settings, clock=thursday_clock, member=None)
+    ctx.scratch.update({"options": made.options, "cites": made.cites, "window": a.context.window})
+    result = registry.dispatch(
+        "give_picks",
+        {"picks": [{"ref": cut, "slot": "favorite", "reason": "x"}], "framing": None},
+        ctx,
+    )
+    assert result.is_error and "not one of the options" in result.content

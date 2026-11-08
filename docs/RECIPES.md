@@ -86,7 +86,7 @@ the evening's plans, the weekday, what was had lately, what they said about food
 | A pasted link is read by code first | Invariant (cost) | **schema.org Recipe from the page, no model; a worker only when a page has none** | Nearly every recipe site carries a `Recipe` block in JSON-LD (name, ingredients, steps, times, yield, cuisine). Reading it is deterministic and free, so a link costs nothing most of the time. A page with no block goes to a bounded worker turn (`fill_recipe`), the same way a place is looked up. The server fetches the page with the checks the calendar reader uses (public host only, http(s), checked redirects, size cap, timeout), sending nothing of the family. |
 | What is kept from a page | Family | **The ingredients, the steps, the times, the yield and the link; no picture** | A recipe kept only as a link is lost when the site goes or fills with ads: the steps are kept so the recipe's page is usable at the stove. A picture hotlinked from the site would tell that site the family's address every time the page is opened, so none is kept or drawn. To ask: whether the family wants the steps copied (a private copy for their own cooking) or the link alone. |
 | Where it lives on the page | Design | **Eat becomes "What should we eat?": Cook, then Eat out** | Eating is the most frequent decision and already has its door. Tonight's pick is a dish or a restaurant; the family decides which, so the page shows both: the cook pick for the next meal, the recipes ranked for it, then the restaurants as today. Chips narrow to one side. A recipe's own page is the idea page with its recipe section. |
-| "What's for dinner?" is answered by code | Default | **A ranked pick in code, through one tool and later one command** | The pick weighs facts code has (minutes until the evening's first plan, weekday or weekend, what was made lately, ratings, who it is for, the occasions asked for), as the Eat page's restaurant pick does. The model frames the question and words the reply; the ranking is logged with its reasons. The suggestion engine is for going out and stays out of it. |
+| "What's for dinner?" is answered by code | Default | **A ranked pick in code, through one tool and later one command** | The pick weighs facts code has (minutes until the evening's first plan, weekday or weekend, what was made lately, ratings, a "not again" said of it, who it is for, the occasions asked for), as the Eat page's restaurant pick does. The model frames the question and words the reply; the ranking is logged with its reasons. The suggestion engine is for going out and stays out of it. |
 
 ## How it is built
 
@@ -145,8 +145,11 @@ recipes (
   ingredient), `for` (who is eating), `limit`. Returns the ranked few with each one's reason
   ("35 min, had it 3 weeks ago, 8/10, serves 4") and the count left out. A guessed occasion
   matches an asked one as a maybe, said so ("looks quick, 25 min; say if not"). Ranking is
-  `familydb/meals.py` (domain, imports store only): facts first (minutes over the limit, an
-  occasion asked for and missing, nobody it is for among those eating), then taste (made within
+  `familydb/meals.py` (domain, imports store only): facts first (minutes over the limit, which
+  is the tighter of `most_minutes` and the time before tonight's plan, `meals.time_limit`, so
+  asking for "under an hour" does not move the recital; an
+  occasion asked for and missing, nobody it is for among those eating, the latest outcome saying
+  not to make it again, `meals.not_again`, as the engine rules out an idea), then taste (made within
   its rest days lowers it; rating and times made raise it; an idea never made is "new to us").
   `describe_idea` on a recipe returns its full row, steps included, for "read me the fajitas".
 - `shopping_list` gains one action, `from_recipes`, with `idea_ids`: "put the fajitas on the
@@ -154,7 +157,9 @@ recipes (
   dinners". The handler is `groceries.from_recipes` in code: each recipe's items, folded so what
   two share is one line ("onion" from both), the staples left out (`groceries.STAPLES`: salt,
   pepper, oil, water, sugar, flour and the like; a setting if the family wants their own), added
-  through `lists.add` with a note of the amounts and which recipe ("2 cups (fajitas), 1 (soup)");
+  through `lists.add` with a note of the amounts and which recipe ("2 cups (fajitas), 1 (soup)";
+  a recipe asking twice, an onion for the sauce and one for the salsa, says both, "1 + 1 (tacos)",
+  and a recipe's Shopping page the same, "2 + 2" limes);
   a thing already on the list keeps its place and gains the note, a ticked one is wanted again as
   `lists.add` already does. It returns what was added, what was there, what was left out, so the
   reply can say "Added 9 things for the fajitas; onions and limes were on it already; skipped
@@ -462,9 +467,10 @@ Tools.
    schema). New `tests/test_recipes_tools.py`: add with facts, add by link alone, the same link
    twice, facts on an outing refused, update moves a guess to the family's, undo of each, a kid
    adds one, `find_recipes` ranks and says why.
-6. `familydb/meals.py` (domain; imports `store`, `base`, `hours` only, held by
-   `tests/test_layering.py`): `Situation` (weekday, minutes free before the evening's first
-   plan, who is eating), `situation(conn, now, agenda)`, `guess_occasions(recipe)`, `rank(rows,
+6. `familydb/meals.py` (domain; imports `store`, `base`, `hours` and `saved_plans`' `UNTIMED`,
+   held by `tests/test_layering.py`): `Situation` (weekday, minutes free before the evening's
+   first plan, or after one still under way when cooking would start, until 21:00 or the next
+   plan; who is eating), `situation(conn, now, agenda)`, `guess_occasions(recipe)`, `rank(rows,
    situation, asked)` with reasons worded by code, `pick(rows, situation)` for the page. New
    `tests/test_meals.py`: a table of recipes against situations, guesses from facts, rest, rating,
    a guess as a maybe.

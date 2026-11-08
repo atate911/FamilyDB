@@ -15,10 +15,12 @@ from familydb.store import members, messages
 
 # History is paid for on every call, so it is budgeted: the newest messages fitting HISTORY_CHARS
 # (about 1,500 tokens), each cut to MESSAGE_CHARS so one long paste is not re-paid for hours.
-# Characters, because this runs before any provider is chosen.
+# Characters, because this runs before any provider is chosen. A cut keeps the start and the end,
+# since a long message often ends on what matters most ("actually, cancel all that").
 HISTORY_CHARS = 6000
 MESSAGE_CHARS = 1500
-CUT = " [...]"
+CUT = " [...] "
+TAIL_SHARE = 3  # a third of what is kept is the end
 
 
 @dataclass(frozen=True)
@@ -71,10 +73,19 @@ def within_budget(
     kept: list[HistoryTurn] = []
     used = 0
     for turn in reversed(turns):
-        text = turn.text if len(turn.text) <= each else turn.text[: each - len(CUT)] + CUT
+        text = cut(turn.text, each)
         if used + len(text) > budget:
             break
         kept.append(HistoryTurn(turn.role, text))
         used += len(text)
     kept.reverse()
     return kept
+
+
+def cut(text: str, each: int = MESSAGE_CHARS) -> str:
+    """`text` within `each` characters: its start and its end, with `CUT` where the middle was."""
+    if len(text) <= each:
+        return text
+    room = each - len(CUT)
+    tail = room // TAIL_SHARE
+    return text[: room - tail].rstrip() + CUT + text[len(text) - tail :].lstrip()

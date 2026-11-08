@@ -147,10 +147,22 @@ def test_history_keeps_the_newest_turns_within_a_budget() -> None:
     kept = within_budget(turns, 2410)
     # The paste is cut to one message's share; the oldest no longer fits and is dropped.
     assert [t.text[:5] for t in kept] == ["xxxxx", "aaaaa", "newes"]
-    assert len(kept[0].text) == MESSAGE_CHARS and kept[0].text.endswith(CUT)
+    assert len(kept[0].text) <= MESSAGE_CHARS and CUT in kept[0].text
     assert within_budget(turns, 2410) == kept  # deterministic
     assert within_budget(turns, 5) == []
     assert within_budget(turns[-1:], 6000) == turns[-1:]
+
+
+def test_a_long_message_keeps_its_end_where_a_correction_usually_is() -> None:
+    from familydb.agent.history import CUT, MESSAGE_CHARS, cut
+
+    long = "Plan the zoo on Saturday, then lunch, then the park. " * 60
+    said = long + "Actually cancel all of that; do not schedule anything."
+    kept = cut(said)
+    assert len(kept) <= MESSAGE_CHARS and CUT in kept
+    assert kept.startswith("Plan the zoo on Saturday")
+    assert kept.endswith("Actually cancel all of that; do not schedule anything.")
+    assert cut("short") == "short"
 
 
 def test_load_history_applies_the_budget(conn, family, clock) -> None:

@@ -146,6 +146,13 @@ def finish_linked(conn: sqlite3.Connection, *, ended_before: str, now: str) -> i
     )
 
 
+def last_done_key(conn: sqlite3.Connection, task_id: int) -> str | None:
+    """The request that last finished a round of this task (migration 0065); not in the record
+    the model reads."""
+    row = conn.execute("SELECT last_done_key FROM tasks WHERE id=?", (task_id,)).fetchone()
+    return row["last_done_key"] if row else None
+
+
 def find_by_operation(conn: sqlite3.Connection, operation_key: str) -> Task | None:
     """The task an earlier attempt at the same request saved, if any."""
     row = conn.execute("SELECT id FROM tasks WHERE operation_key=?", (operation_key,)).fetchone()

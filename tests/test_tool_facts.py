@@ -22,6 +22,17 @@ def test_every_writing_tool_has_its_done_line_and_its_did_words() -> None:
     assert all(label and key for label, key in spending.DONE.values())
 
 
+def test_the_calls_table_counts_the_chat_tools_there_are() -> None:
+    """docs/AI_CALLS.md says how many tools a chat call carries; it said 23 long after it was 28."""
+    import re
+    from pathlib import Path
+
+    said = (Path(__file__).parents[1] / "docs" / "AI_CALLS.md").read_text()
+    number = int(re.search(r"\| (\d+) chat tools \|", said).group(1))
+    chat = [spec for spec in build_registry().specs() if not spec.worker_only]
+    assert number == len(chat), f"docs/AI_CALLS.md says {number} chat tools; there are {len(chat)}"
+
+
 def test_an_inverse_kept_by_another_version_is_left_alone(settings, clock, conn, family) -> None:
     registry = build_registry()
     ctx = ToolContext(

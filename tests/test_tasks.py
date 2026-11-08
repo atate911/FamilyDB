@@ -44,13 +44,13 @@ def test_deadlines_and_flexible_windows_do_not_schedule_reminders(ctx):
     assert task["due_at"] == "2026-09-22T09:00"  # the family's wall time, as the model writes it
     assert task["reminder"] is None
     assert task["owner"] == "Sam"
-    # The tool result is the task's columns, less its idempotency key and who made it (that is for
-    # the page's "Set by", not for the model), and the ones kept for code while they are empty,
-    # plus owner and reminder.
+    # The tool result is the task's columns, less its idempotency keys (what made it, what last
+    # finished a round) and who made it (that is for the page's "Set by", not for the model),
+    # and the ones kept for code while they are empty, plus owner and reminder.
     from familydb.tools.tasks import UNSAID_WHEN_EMPTY
 
     columns = {row["name"] for row in ctx.conn.execute("PRAGMA table_info(tasks)")}
-    unsaid = {"operation_key", "created_by_member_id", *UNSAID_WHEN_EMPTY}
+    unsaid = {"operation_key", "last_done_key", "created_by_member_id", *UNSAID_WHEN_EMPTY}
     assert set(task) == columns - unsaid | {"owner", "reminder"}
     assert not ctx.conn.execute("SELECT * FROM plans").fetchall()
 

@@ -69,8 +69,9 @@ def test_the_request_carries_instructions_tools_and_a_cache_key(settings) -> Non
     payload = _provider(settings).payload(request)
     assert payload["model"] == "gpt-6-luna"
     assert payload["instructions"] == "rules\n\ntoday"  # one string, not blocks
-    assert payload["store"] is False  # the family's messages stay off their servers
+    assert payload["store"] is False  # no response is kept for a later request to name
     assert payload["reasoning"] == {"effort": "medium"}
+    assert payload["include"] == ["reasoning.encrypted_content"]
     assert payload["prompt_cache_key"].startswith("familydb-")
     assert payload["tools"] == [
         {
@@ -143,6 +144,43 @@ def test_a_tool_call_then_a_reply(settings, registry, ctx) -> None:
         "output": second[-1]["output"],
     }
     assert json.loads(second[-1]["output"])["title"] == "Ramen place"
+
+
+def test_a_model_that_does_not_reason_is_not_asked_for_its_reasoning(settings) -> None:
+    request = TurnRequest(system=[], messages=[], model="gpt-4o")
+    payload = _provider(settings).payload(request)
+    assert "reasoning" not in payload and "include" not in payload
+
+
+def test_the_reasoning_goes_back_with_the_tool_result(settings, registry, ctx) -> None:
+    """Nothing is stored, so the next step carries the model's reasoning itself, encrypted."""
+    reasoning = {"type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "opaque"}
+    api = fakes.FakeResponsesAPI(
+        fakes.oa_response(
+            [reasoning, fakes.oa_tool_call("call_1", "add_idea", {"title": "Ramen place"})]
+        ),
+        fakes.oa_response([fakes.oa_text("Saved #1.")]),
+    )
+    result = _run(api, settings, registry, ctx, "we should try the ramen place")
+    assert result.status == "ok"
+    assert all(sent["include"] == ["reasoning.encrypted_content"] for sent in api.requests)
+    second = api.requests[1]["input"]
+    replayed = [item for item in second if item.get("type") == "reasoning"]
+    assert replayed == [reasoning]
+
+
+def test_counting_tokens_is_a_free_request_with_nothing_a_reply_needs(settings) -> None:
+    tool = ToolDef(name="now", description="the time", schema={"type": "object", "properties": {}})
+    request = TurnRequest(
+        system=[SystemBlock("rules", cacheable=True)],
+        messages=[Message("user", ["hello"])],
+        tools=[tool],
+    )
+    api = fakes.FakeResponsesAPI()
+    assert _provider(settings, api).count_tokens(request) > 0
+    assert api.requests == []  # nothing generated
+    [counted] = api.input_tokens.counted
+    assert set(counted) == {"model", "instructions", "input", "tools", "reasoning"}
 
 
 def test_a_refusal_and_a_cut_off_answer(settings, registry, ctx) -> None:

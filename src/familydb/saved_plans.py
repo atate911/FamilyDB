@@ -18,6 +18,9 @@ from familydb.integrations.google_calendar import CalendarChanges, CalendarEvent
 from familydb.store import plans
 from familydb.store.plans import Plan
 
+# How long a timed plan saved with no end is taken to last.
+UNTIMED = timedelta(hours=2)
+
 
 def as_event(plan: Plan, tz: ZoneInfo) -> CalendarEvent:
     """A saved plan as the event it would be, its id the one it holds for Google."""
@@ -29,7 +32,7 @@ def as_event(plan: Plan, tz: ZoneInfo) -> CalendarEvent:
     else:
         # The tools store a time with its offset; one without (seeded by hand) is wall time.
         start = parse_datetime(plan.start, tz)
-        end = parse_datetime(plan.end, tz) if plan.end else start + timedelta(hours=2)
+        end = parse_datetime(plan.end, tz) if plan.end else start + UNTIMED
     return CalendarEvent(
         id=plan.google_event_id or f"plan-{plan.id}",
         title=plan.title,

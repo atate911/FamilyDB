@@ -49,6 +49,9 @@ NO_REASONING_MODELS = ("gpt-3", "gpt-4", "chatgpt-")
 # Parts a model may refuse (providers/parts.py); capping effort is tried before dropping reasoning.
 TOP_EFFORT = parts.Part("the top effort levels", ("xhigh", "'max'", '"max"'))
 REASONING = parts.Part("reasoning settings", ("reasoning",))
+ENCRYPTED_REASONING = "reasoning.encrypted_content"
+# What counting a request's tokens takes of it (`responses.input_tokens.count`).
+COUNTED = ("model", "instructions", "input", "tools", "reasoning")
 CACHE_KEY = parts.Part("the prompt cache key", ("prompt_cache_key",))
 TOOL_CAP = parts.Part("the cap on tool calls", ("max_tool_calls",))
 PARTS = (TOP_EFFORT, REASONING, CACHE_KEY, TOOL_CAP)
@@ -248,12 +251,17 @@ class OpenAIProvider:
             "input": self.transcript(request),
             "tools": self.tools(request),
             "max_output_tokens": request.max_tokens or settings.max_output_tokens,
-            "store": False,  # the family's messages are not left on someone else's server
+            # Nothing of the response is kept for later requests to refer to by id; that is not a
+            # promise of zero retention (abuse monitoring is OpenAI's own).
+            "store": False,
         }
         if reasons(model):
             payload["reasoning"] = {
                 "effort": reasoning_effort(model, request.effort or settings.effort)
             }
+            # With nothing stored, a reasoning item replayed on the next step must carry its own
+            # encrypted copy, or the model's reasoning is lost (or the item refused) mid-turn.
+            payload["include"] = [ENCRYPTED_REASONING]
         left_out = parts.left_out(NAME, model)
         key = self.cache_key(request.system)
         if key and CACHE_KEY.name not in left_out:
@@ -381,9 +389,12 @@ class OpenAIProvider:
         return "works"
 
     def count_tokens(self, request: TurnRequest) -> int:
-        raise NotImplementedError(
-            "OpenAI has no token-counting endpoint; send a short message to check the schemas"
-        )
+        """The request's input tokens, counted by OpenAI for free (`responses.input_tokens`):
+        what it would send, less what only a reply needs. It checks the key and every tool's
+        schema with no answer generated."""
+        payload = self.payload(request)
+        counted = {key: payload[key] for key in COUNTED if payload.get(key)}
+        return int(self.api.input_tokens.count(**counted).input_tokens)
 
     def send(self, request: TurnRequest) -> ModelReply:
         response, dropped = self._create(lambda: self.payload(request))

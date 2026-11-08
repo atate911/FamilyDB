@@ -4,6 +4,25 @@
 
 ### New since v0.5.0
 
+- **An outing is counted once.** Had a reply failed after "we went to the zoo, 8/10" was saved,
+  or had the model said it twice, the visit could be counted twice and the average moved; marking
+  a repeating chore done twice skipped a round. The same message now saves each once.
+- **A recipe that asks twice gets both.** An onion for the sauce and another for the salsa put
+  one onion on the shopping list, and a recipe's Shopping page showed only the first amount. Both
+  amounts are kept now ("1 + 1 (Tacos)"), and two recipes whose names begin alike stay apart.
+- **"Not again" holds for recipes too.** Said of a dish after making it, it kept coming back
+  as tonight's pick, in "what's for dinner?" and on `/dinner`; only outings honoured it. A recipe
+  the family said not to make again is now left out, as an outing is, until they say otherwise.
+- **A plan already going counts for dinner.** At six, with a tournament until eight, every recipe
+  was offered as if the evening were free, since only plans starting later counted. Cooking now
+  waits for a plan under way, and the time runs to the next plan or to nine.
+- **"Under an hour" does not move the recital.** Asked for a recipe within a time when a plan
+  tonight leaves less, the plan's time was ignored and a 45-minute dish was offered with half an
+  hour to cook. The tighter of the two now decides, and the reason names the plan.
+- **OpenAI's models keep their thinking between steps.** Nothing of a reply is stored with OpenAI,
+  so when a model that reasons used a tool and was asked again, its earlier reasoning went back
+  without the encrypted copy that lets it be read; the second call lost it, or was refused. Each
+  request now asks for that copy and hands it back with the tool's result.
 - **A better icon on the home screen.** The mark is drawn larger and heavier with its
   screen lit, so it reads beside the phone's other icons, and Android's round masks get one kept
   inside them. An iPhone that did not take the page's own link to the icon finds it at the

@@ -11,12 +11,12 @@ import sqlite3
 from collections.abc import Callable
 from datetime import date, timedelta
 
-from evals.harness import GROUP, Call, Case, Check, Run
+from evals.harness import GROUP, SAM, Call, Case, Check, Run
 from evals.household import NOW, NOW_ISO, Household
 from familydb import personas, windows
 from familydb.base.errors import ToolError
 from familydb.routing import is_confirmation
-from familydb.store import db, finds, ideas, members, memories
+from familydb.store import db, finds, ideas, members, memories, messages, outcomes
 from familydb.suggest.engine import resolve_window
 from familydb.suggest.types import SuggestInput
 from familydb.tools.registry import without_nulls
@@ -385,6 +385,135 @@ def _night_market(conn: sqlite3.Connection, house: Household) -> None:
                 )
             ],
             now=NOW_ISO,
+        )
+
+
+# An hour before the case's "now" (NOW_ISO), inside the six hours the chat's history reaches.
+EARLIER = "2026-09-25T21:30:00Z"
+
+
+def _said_earlier(conn: sqlite3.Connection, *exchanges: tuple[str, str]) -> None:
+    """Earlier today in Sam's own chat: what he said and what she replied, kept as the messages
+    they would be, so the case's message carries them in its history with no paid turn."""
+    sam = members.find_by_name(conn, "Sam")
+    assert sam is not None
+    with db.transaction(conn):
+        for number, (said, replied) in enumerate(exchanges):
+            when = EARLIER.replace(":30:", f":{30 + number * 5}:")
+            asked = messages.insert_in(
+                conn,
+                channel="telegram",
+                channel_update_id=f"earlier-{number}",
+                chat_id=SAM,
+                member_id=sam.id,
+                text=said,
+                now=when,
+            )
+            messages.mark_processed(conn, asked.id, [], now=when)
+            messages.insert_out(
+                conn, channel="telegram", chat_id=SAM, text=replied, reply_to=asked.id, now=when
+            )
+
+
+# A long message whose last line takes everything before it back (agent/history.py keeps a long
+# message's start and its end; it used to keep the start alone).
+CANCELLED_SATURDAY = (
+    "Ok, thinking out loud about Saturday. "
+    + " ".join(
+        f"Option {n}: the zoo in the morning, then lunch at the ramen place, then the park by "
+        "the river if the weather holds, and maybe the board game cafe if the girls are not "
+        "worn out, home by five so there is time for dinner and baths."
+        for n in range(1, 13)
+    )
+    + " Actually, cancel all of that: we're staying home Saturday, everyone is wiped."
+)
+
+
+def _cancelled_saturday(conn: sqlite3.Connection, house: Household) -> None:
+    _said_earlier(conn, (CANCELLED_SATURDAY, "Got it."))
+
+
+def _old_favorite(conn: sqlite3.Connection, house: Household) -> None:
+    """A mansion they loved in the spring, and 160 ideas saved since: the newest 150 go with
+    every message (`prompt_idea_limit`), so it is not among them and has to be looked for."""
+    sam = members.find_by_name(conn, "Sam")
+    assert sam is not None
+    with db.transaction(conn):
+        mansion = ideas.insert(
+            conn,
+            title="Pittock Mansion",
+            kind="outing",
+            setting="indoor",
+            now="2026-03-14T18:00:00Z",
+            suggested_by=sam.id,
+        )
+        outcome = outcomes.insert(
+            conn,
+            idea_id=mansion.id,
+            plan_id=None,
+            happened_on="2026-03-21",
+            rating=10,
+            would_repeat=True,
+            notes="the girls loved the old rooms",
+            recorded_by=sam.id,
+            now="2026-03-21T23:00:00Z",
+        )
+        ideas.apply_outcome(
+            conn, mansion.id, happened_on=outcome.happened_on, avg_rating=10.0, now=NOW_ISO
+        )
+        for n in range(160):
+            ideas.insert(conn, title=f"Something to try, number {n}", kind="outing", now=NOW_ISO)
+
+
+def _three_for_saturday(conn: sqlite3.Connection, house: Household) -> None:
+    """She offered three things for Saturday, numbered, and the talk moved on to the weather."""
+    named = {key: ideas.get(conn, getattr(house, key)) for key in ("hopscotch", "ramen", "hike")}
+    assert all(named.values())
+    _said_earlier(
+        conn,
+        (
+            "What should we do Saturday?",
+            f"For Saturday:\n1. {named['hopscotch'].title} in the morning\n"
+            f"2. {named['ramen'].title} for lunch\n3. {named['hike'].title} in the afternoon",
+        ),
+        ("Is it meant to rain on Sunday?", "Light rain on Sunday, about an 80% chance."),
+    )
+
+
+def _second_one(run: Run) -> str | None:
+    """The second of the three she offered is the ramen place, and it is wanted on Sunday: a plan
+    for it on the 27th, or a question about the time that names it. Asking which one fails."""
+    word = run.house.words[run.house.ramen].casefold()
+    for call in run.named("create_event"):
+        about = (
+            call.input.get("idea_id") == run.house.ramen
+            or word in str(call.input.get("title", "")).casefold()
+        )
+        if about and str(call.input.get("start", "")).startswith("2026-09-27"):
+            return None
+    if "?" in run.reply and word in run.reply.casefold() and not run.writes:
+        return None
+    return "did not take the second one, the ramen place, for Sunday"
+
+
+def _carsick_chloe(conn: sqlite3.Connection, house: Household) -> None:
+    """Alex told her: Chloe gets carsick, nothing over 20 minutes away. Hopscotch is 35."""
+    alex = members.find_by_name(conn, "Alex")
+    chloe = members.find_by_name(conn, "Chloe")
+    assert alex is not None and chloe is not None
+    with db.transaction(conn):
+        memories.insert(
+            conn,
+            member_id=chloe.id,
+            category="health",
+            fact="Gets carsick: no drives over 20 minutes",
+            firm=True,
+            inferred=False,
+            until=None,
+            source_message_id=None,
+            said_by=alex.id,
+            now=NOW_ISO,
+            rule={"max_travel_minutes": 20},
         )
 
 
@@ -820,6 +949,19 @@ CASES: tuple[Case, ...] = (
         "away, is not offered, or only with the reason it is out.",
         seed=_bad_back,
     ),
+    Case(
+        "firm_rule_of_a_kid_coming",
+        ("What could Chloe and I do Saturday morning?",),
+        (
+            called("suggest"),
+            caveated("Hopscotch", "carsick", "drive", "far", "20 min", "minutes"),
+            wrote_only(),
+        ),
+        "A firm rule about a kid who is coming, not about whoever asks, is kept the same way: "
+        "Chloe gets carsick, so Hopscotch, 35 minutes away, is out or offered with why.",
+        sender="1002",
+        seed=_carsick_chloe,
+    ),
     # -- feedback, plans
     Case(
         "feedback",
@@ -949,6 +1091,71 @@ CASES: tuple[Case, ...] = (
             wrote_only("create_event", "update_event", "delete_event", "update_idea"),
         ),
         "A swap is the new plan first, then the old one cancelled, its idea back on the list.",
+    ),
+    # -- the conversation so far
+    Case(
+        "correction_at_the_end",
+        ("So what's on for Saturday?",),
+        (
+            either(
+                mentions("home"),
+                mentions("staying in"),
+                mentions("nothing planned"),
+                what="neither staying home nor nothing planned",
+            ),
+            wrote_only(),
+        ),
+        "An hour ago a long message planned Saturday and its last line called it all off: the "
+        "end of a long earlier message still reaches her, so she does not plan the zoo.",
+        seed=_cancelled_saturday,
+    ),
+    Case(
+        "old_favorite_beyond_the_list",
+        ("What was the name of that mansion we loved?",),
+        (called("search_ideas"), mentions("Pittock"), wrote_only()),
+        "An idea older than the newest 150 is not in what every message carries, so she looks "
+        "it up rather than guess or say there is none.",
+        seed=_old_favorite,
+    ),
+    Case(
+        "the_second_one",
+        ("The second one, but on Sunday",),
+        (_second_one, wrote_only("create_event")),
+        "Three things were offered for Saturday, numbered, and the talk moved on: the second "
+        "one is still the ramen place, now for Sunday, or a question about the time that names "
+        "it. Asking which one was meant fails.",
+        seed=_three_for_saturday,
+    ),
+    # -- in one call
+    Case(
+        "shopping_add_alone",
+        ("We're out of milk",),
+        (
+            called(
+                "shopping_list",
+                1,
+                lambda c: (
+                    c.input.get("action") == "add"
+                    and any("milk" in str(item).casefold() for item in c.input.get("items") or [])
+                ),
+                "adding milk",
+            ),
+            wrote_only("shopping_list"),
+            model_calls_at_most(1),
+        ),
+        "Putting a thing on the list and saying so costs one call, as remembering does.",
+        waits_for="the shopping list ending a turn that only added (stage 3.1 of the AI plan)",
+    ),
+    Case(
+        "reminder_alone",
+        ("Remind me at 5 to call the dentist",),
+        (
+            called("add_task", 1, starts("remind_at", "2026-09-25T17"), "for 5 pm today"),
+            wrote_only("add_task"),
+            model_calls_at_most(1),
+        ),
+        "A reminder for today at five, confirmed in the same call that saved it.",
+        waits_for="a reminder confirmed by code in the call that saved it (stage 3.2)",
     ),
     # -- remembering
     Case(
