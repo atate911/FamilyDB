@@ -1967,7 +1967,10 @@ li:target { border-radius: var(--r-md); }
 .pk-more__k { font-size: 0.72rem; font-weight: 700; font-stretch: var(--w-label); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); margin-right: var(--s2); }
 .pk-more a { color: var(--ink); font-weight: 700; }
 /* A thing's own page: its one action leads (Cook this, Plan it); how it went, then More, are quieter. */
-.cook { margin-top: var(--s5); padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); }
+.cook { padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); }
+/* what Cook this will do is a sentence, and its button under it, close, so it is in sight on a phone */
+.form.cook { gap: var(--s2); }
+.cook__does { margin: 0; }
 .cook .actions { align-items: center; }
 .item-more { margin-top: var(--s3); }
 .item-more .fold__body { display: grid; gap: var(--s2); justify-items: start; }
@@ -2059,11 +2062,16 @@ button.chip { font: inherit; font-size: var(--t-meta); cursor: pointer; }
 .filters[open] > summary .chev { transform: rotate(90deg); }
 .filters[open] { display: grid; gap: var(--s3); padding-bottom: var(--s4); }
 .filters .finder { margin-bottom: 0; }
-/* the week's plate: what is late open, what has no day yet one line until opened, so the days lead */
-.plate__later > summary { list-style: none; display: flex; align-items: center; gap: var(--s2); min-height: var(--target); cursor: pointer; color: var(--ink-2); font-size: var(--t-meta); font-weight: 700; border-top: 1px solid var(--line); }
-.plate__later > summary::-webkit-details-marker { display: none; }
-.plate__later > summary .chev { margin-left: auto; transition: transform .15s; }
-.plate__later[open] > summary .chev { transform: rotate(90deg); }
+/* the week's plates, each one line until opened (its name, how many and how many late, late in red), so the days lead */
+.plate-fold { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); padding: 0 var(--s4); }
+.plate-fold > summary { list-style: none; display: flex; align-items: center; gap: var(--s3); min-height: 52px; cursor: pointer; }
+.plate-fold > summary::-webkit-details-marker { display: none; }
+.plate-fold > summary .label { margin: 0; }
+.plate-fold > summary .chev { margin-left: auto; transition: transform .15s; }
+.plate-fold[open] > summary .chev { transform: rotate(90deg); }
+.plate-fold__n { color: var(--ink-2); }
+.plate-fold__late { color: var(--red); }
+.plate-fold[open] { padding-bottom: var(--s3); }
 /* this week: a day is a labelled block, the free time one quiet line, the reminders small marks */
 .wk { display: grid; gap: var(--s5); }
 .wk__day { display: grid; gap: var(--s3); }

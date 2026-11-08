@@ -51,6 +51,19 @@
     </div>
   </section>
 {% endmacro %}
+{# One plate as a line: its name, how many and how many late; opened, its to-dos with their ticks. #}
+{% macro plate_line(id, label, rows, all_link=true) %}
+  {% set late = rows | selectattr('late') | list %}
+  <section class="sec" aria-labelledby="{{ id }}">
+    <details class="plate-fold">
+      <summary><h2 id="{{ id }}" class="label">{{ label }}</h2><span class="plate-fold__n">{{ rows | length }} to do{% if late %}, <b class="plate-fold__late">{{ late | length }} late</b>{% endif %}</span>{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <ul class="todos todos--compact">
+        {{ todos(rows, 'week', compact=true, edit=visitor().may('change'), everyone=shell.family, fallback=id) }}
+      </ul>
+      {% if all_link %}<p class="sec__note"><a href="{{ url_for('web.tasks') }}">All to-dos</a></p>{% endif %}
+    </details>
+  </section>
+{% endmacro %}
 {% block content %}
   {% set week_name = 'This week' if grownup else 'My week' %}
   {% if one %}
@@ -65,37 +78,11 @@
       <p class="note" id="wk-source">{{ icon('cal') }}{{ source_note }}{% if managing %} <a href="{{ url_for('settings.section', name='connections') }}">Connect Google Calendar</a>{% endif %}</p>
     {% endif %}
 
-    {# On your plate stays whatever week is showing: nothing without a day can be lost by scrolling. What is late is
-       open, as it needs doing; what has no day yet is one line until opened, so the days lead. #}
-    {% if plate %}
-      {% set late = plate | selectattr('late') | list %}
-      {% set someday = plate | rejectattr('late') | list %}
-      <section class="sec" aria-labelledby="h-plate">
-        <div class="sec__label"><h2 id="h-plate" class="label">On your plate</h2><a href="{{ url_for('web.tasks') }}">All to-dos</a></div>
-        {% if late %}
-          <ul class="todos todos--compact">
-            {{ todos(late, 'week', compact=true, edit=visitor().may('change'), everyone=shell.family, fallback='h-plate') }}
-          </ul>
-        {% endif %}
-        {% if someday %}
-          <details class="plate__later">
-            <summary>{{ someday | length }} with no day yet{{ icon('chev', size='sm', cls='chev') }}</summary>
-            <ul class="todos todos--compact">
-              {{ todos(someday, 'week', compact=true, edit=visitor().may('change'), everyone=shell.family, fallback='h-plate') }}
-            </ul>
-          </details>
-        {% endif %}
-      </section>
-    {% endif %}
-    {# Everybody else's, each under their own name: seen, never said to be yours. #}
-    {% for group in others %}
-      <section class="sec" aria-labelledby="h-plate-{{ loop.index }}">
-        <div class="sec__label"><h2 id="h-plate-{{ loop.index }}" class="label">{{ group.label }}</h2>{% if not plate and loop.first %}<a href="{{ url_for('web.tasks') }}">All to-dos</a>{% endif %}</div>
-        <ul class="todos todos--compact">
-          {{ todos(group.rows, 'week', compact=true, edit=visitor().may('change'), everyone=shell.family, fallback='h-plate-' ~ loop.index) }}
-        </ul>
-      </section>
-    {% endfor %}
+    {# On your plate stays whatever week is showing: nothing without a day can be lost by scrolling. Yours, then each
+       other person's under their own name (seen, never said to be yours), each one line until opened, how many and
+       how many late, so the days lead; Now has what is late, in Needs you. #}
+    {% if plate %}{{ plate_line('h-plate', 'On your plate', plate) }}{% endif %}
+    {% for group in others %}{{ plate_line('h-plate-' ~ loop.index, group.label, group.rows, all_link=not plate and loop.first) }}{% endfor %}
 
     <div class="wk">
       {% for day in days %}{{ day_block(day) }}{% endfor %}

@@ -104,11 +104,9 @@ def test_the_week_is_seven_days_from_today_with_free_time_and_the_plate(
     # On your plate, whatever week is showing: what has no day, what is late.
     plate = re.search(r'aria-labelledby="h-plate".*?</section>', page, re.S).group(0)
     assert "Call the dentist" in plate and "Pay the bill" in plate and "Bins out" not in plate
-    # What is late is open; what has no day yet is one line until opened, so the days lead.
-    later = plate[plate.index('<details class="plate__later">') :]
-    assert (
-        "Pay the bill" not in later and "Call the dentist" in later and "1 with no day yet" in later
-    )
+    # One line until opened, how many and how many late, so the days lead (Now has what is late).
+    assert '<details class="plate-fold">' in plate
+    assert "2 to do" in plate and '<b class="plate-fold__late">1 late</b>' in plate
     assert _chips(page) == ["Sam", "Alex", "the girls", "Month", "Past"]
     assert _scope(page) == "About this week:"
     # Earlier and later weeks, and the day's own page.

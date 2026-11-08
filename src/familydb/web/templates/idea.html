@@ -19,18 +19,27 @@
 {% endmacro %}
 {% macro cook_form() %}
   {# Cook this: what is missing on the shopping list and, when ticked, the dinner on the calendar, each the tool she
-     would call (edits.cook_this); the notice says what each did. #}
+     would call (edits.cook_this); the notice says what each did. What it will do is one sentence and the button is
+     under it, in sight on a phone; the day, the time and the calendar fold under Change (sent with the form, open or
+     not, so it works without scripts). #}
+  {% set where_to = 'calendar' if on_google else 'plans' %}
   <form class="form cook" method="post" action="{{ url_for('edits.cook_this', idea_id=idea.id) }}" aria-labelledby="h-cook">
     {{ guard(once=true) }}
     <input type="hidden" name="title" value="{{ idea.title }}" />
     <h2 class="label" id="h-cook">Cook it</h2>
-    <div class="form__row">
-      <div class="field"><label class="field__label" for="cook-day">When</label><input id="cook-day" name="day" type="date" value="{{ today }}" min="{{ today }}" /></div>
-      <div class="field"><label class="field__label" for="cook-time">Dinner at <span class="opt">(for the calendar)</span></label><input id="cook-time" name="time" type="time" value="{{ dinner_at }}" /></div>
-    </div>
-    {% if recipe.shoppable %}<label class="check"><input type="checkbox" name="list" value="yes" checked />Put what is missing on the shopping list</label>{% endif %}
-    <label class="check"><input type="checkbox" name="calendar" value="yes"{% if not recipe.shoppable %} checked{% endif %} />Put it on the {{ 'calendar' if on_google else 'plans' }}</label>
-    {{ asking('cook') }}
+    <p class="cook__does">{% if recipe.shoppable %}Puts what is missing for it on the shopping list.{% else %}Puts it on the {{ where_to }} for tonight.{% endif %}</p>
+    <details class="fold fold--quiet cook__change">
+      <summary>{{ 'Change the day, or put it on the ' ~ where_to ~ ' too' if recipe.shoppable else 'Change the day or the time' }}{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <div class="fold__body">
+        <div class="form__row">
+          <div class="field"><label class="field__label" for="cook-day">When</label><input id="cook-day" name="day" type="date" value="{{ today }}" min="{{ today }}" /></div>
+          <div class="field"><label class="field__label" for="cook-time">Dinner at <span class="opt">(for the {{ where_to }})</span></label><input id="cook-time" name="time" type="time" value="{{ dinner_at }}" /></div>
+        </div>
+        {% if recipe.shoppable %}<label class="check"><input type="checkbox" name="list" value="yes" checked />Put what is missing on the shopping list</label>{% endif %}
+        <label class="check"><input type="checkbox" name="calendar" value="yes"{% if not recipe.shoppable %} checked{% endif %} />Put it on the {{ where_to }}</label>
+        {{ asking('cook') }}
+      </div>
+    </details>
     <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ icon('utensils', size='sm') }}Cook this</button>
       {% if recipe.shoppable %}<a class="q__lnk" href="{{ url_for('web.shop', idea_id=idea.id) }}">{{ icon('list', size='sm') }}Its shopping, by the store</a>{% endif %}</div>
   </form>

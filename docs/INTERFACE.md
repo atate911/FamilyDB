@@ -161,7 +161,7 @@ The picks on Now, as a destination of their own for a big screen, a deep link, o
 ### This week (`/week`)
 
 - **Opens on:** today, the week around it, free time drawn as space, the forecast on each day, reminders as small marks on their day.
-- **On your plate:** a strip that stays on screen whatever week is showing. Anything overdue, open, each with its owner or "I'll handle it"; everything with no date yet ("some Saturday morning", "when it rains", "next free moment") one line under it ("2 with no day yet"), opened with a tap, so the days lead. Yours, then everyone's; somebody else's under their name ("On Alex's plate"), so a heading never calls theirs yours. Nothing dateless can be lost by scrolling.
+- **On your plate:** a strip that stays on screen whatever week is showing. Everything with no date yet ("some Saturday morning", "when it rains", "next free moment") and anything overdue, each with its owner or "I'll handle it": yours, then everyone's; somebody else's under their name ("On Alex's plate"), so a heading never calls theirs yours. Each plate is one line until opened, how many and how many late ("2 to do, 1 late"), so the days lead on a phone; what is late is in Now's Needs you. Nothing dateless can be lost by scrolling.
 - **Pencil:** a plan taking shape appears in pencil on the day being considered, once a day is being considered. At most one of Vera's own suggestions sits on a free stretch, and only on weekends; tapping a free stretch asks for more.
 - **Chips:** Each person · Month · Past.
 - **A day** (`/week/<date>`): everything on it, the free stretches, and after the day, how it went.
@@ -215,7 +215,7 @@ Every item page reads in this order:
 3. **Where it came from:** who said it, when, their exact words, the photo or voice note if there was one.
 4. **What Vera found,** marked as hers and dated: "checked this morning" or "saved in March".
 5. **What's planned or how it went.**
-6. **One main action,** the page's one solid button: a place's **Plan it**, after what is planned; a recipe's **Cook this**, straight under the facts that decide it. How it went is folded under it.
+6. **One main action,** the page's one solid button: a place's **Plan it**, after what is planned; a recipe's **Cook this**, straight under the facts that decide it, with one sentence of what it will do and the day, the time and the calendar folded under Change, so the button is in sight on a phone. How it went is folded under it.
 7. **The box, scoped to this thing,** with two or three quick sentences as chips ("Plan it for Friday", "Good for the kids?", "Drop it").
 8. **More**, folded and last: Drop it (or Bring it back), Look it up again, Edit by hand.
 
