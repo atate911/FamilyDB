@@ -31,7 +31,6 @@
   changed), on the landing and down the side of every card; Spending's Thinking is folded with
   the other fine-tuning. Links from Status, setup and the Lookups card into the AI model page land
   on what they name again.
-
 - **An outing is counted once.** Had a reply failed after "we went to the zoo, 8/10" was saved,
   or had the model said it twice, the visit could be counted twice and the average moved; marking
   a repeating chore done twice skipped a round. The same message now saves each once.
