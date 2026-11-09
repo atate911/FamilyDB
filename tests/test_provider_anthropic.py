@@ -165,6 +165,23 @@ def test_tools_and_web_access_are_rendered(settings) -> None:
     assert "user_location" not in tools[2]
 
 
+def test_claude_holds_at_most_twenty_tools_strictly_the_writing_ones_first(settings) -> None:
+    """Claude refuses a request with more than 20 strict tools, and the chat carries 28: the
+    weekend digest and the fallback to Claude failed on every call until this held."""
+    from familydb.agent.providers.anthropic import STRICT_MOST
+    from familydb.tools import build_registry
+
+    tools = build_registry().tool_defs()
+    assert len(tools) > STRICT_MOST  # the case this is for
+    request = TurnRequest(system=[], messages=[Message("user", ["hi"])], tools=tools)
+    sent = _provider(settings).payload(request)["tools"]
+    strict = {tool["name"] for tool in sent if tool.get("strict")}
+    assert len(strict) == STRICT_MOST
+    assert {tool.name for tool in tools if tool.writes} <= strict
+    assert all("strict" not in tool for tool in sent if tool["name"] not in strict)
+    assert _provider(settings).payload(request)["tools"] == sent  # the same every time
+
+
 def test_the_model_per_surface(settings) -> None:
     provider = _provider(settings)
     assert provider.model_for("chat") == "claude-opus-5"

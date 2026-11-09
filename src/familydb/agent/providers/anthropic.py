@@ -24,6 +24,7 @@ from familydb.agent.providers.base import (
     Stop,
     Surface,
     ToolCall,
+    ToolDef,
     TurnRequest,
     WebAccess,
 )
@@ -69,12 +70,28 @@ NEWER_WEB = parts.Part(
     "the newer web tools", (WEB_SEARCH["type"], WEB_FETCH["type"], "dynamic filtering")
 )
 THINKING = parts.Part("thinking and effort", ("thinking", "effort", "output_config"))
-PARTS = (FALLBACK, NEWER_WEB, THINKING)
+STRICT = parts.Part("strict tool schemas", ("strict",))
+PARTS = (FALLBACK, NEWER_WEB, THINKING, STRICT)
+# Claude holds at most this many tools in a request to their schema strictly ("Too many strict
+# tools (28). The maximum number of strict tools supported is 20."): the chat carries more, so
+# the writing tools are strict first, then the rest in the order sent, and the others are
+# checked at dispatch as every tool is.
+STRICT_MOST = 20
 
 
 def thinks(model: str) -> bool:
     """Whether this model takes adaptive thinking and an effort level."""
     return not model.startswith(OLDER_MODELS) and THINKING.name not in parts.left_out(NAME, model)
+
+
+def strict_tools(tools: list[ToolDef], model: str) -> set[str]:
+    """The tools held to their schema strictly: at most `STRICT_MOST`, writing ones first, the
+    same set for the same list every time (the cached prefix holds the tools); none once this
+    model has refused strict tools."""
+    if STRICT.name in parts.left_out(NAME, model):
+        return set()
+    ranked = sorted(range(len(tools)), key=lambda at: (not tools[at].writes, at))
+    return {tools[at].name for at in ranked[:STRICT_MOST]}
 
 
 def falls_back(model: str) -> bool:
@@ -168,6 +185,8 @@ def _carried(payload: dict[str, Any]) -> set[str]:
         carried.add(NEWER_WEB.name)
     if "thinking" in payload or "output_config" in payload:
         carried.add(THINKING.name)
+    if any(tool.get("strict") for tool in payload.get("tools") or []):
+        carried.add(STRICT.name)
     return carried
 
 
@@ -226,16 +245,17 @@ class AnthropicProvider:
                 item["cache_control"] = self.cache_marker()
             system.append(item)
 
+        model = request.model or companies.ANTHROPIC.chat_model(settings)
+        strict = strict_tools(request.tools, model)
         tools: list[dict[str, Any]] = [
             {
                 "name": tool.name,
                 "description": tool.description,
                 "input_schema": tool.schema,
-                "strict": True,
+                **({"strict": True} if tool.name in strict else {}),
             }
             for tool in request.tools
         ]
-        model = request.model or companies.ANTHROPIC.chat_model(settings)
         if request.web is not None:
             tools += web_tools(request.web, model)
 

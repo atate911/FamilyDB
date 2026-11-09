@@ -143,7 +143,9 @@ class ToolSpec:
     def definition(self) -> ToolDef:
         """What the model is told of it, provider-neutral: each provider shapes its own request
         from this (and asks for strict schemas itself)."""
-        return ToolDef(self.name, self.description, strict_schema(self.input_model))
+        return ToolDef(
+            self.name, self.description, strict_schema(self.input_model), writes=self.writes
+        )
 
 
 def dump(value: Any) -> str:
