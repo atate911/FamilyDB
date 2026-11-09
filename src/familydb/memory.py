@@ -3,9 +3,12 @@
 Memories are kept by the `remember` tool (store/memories.py). Before each chat turn code chooses
 what goes with the message, in the uncached part of the request, so the cached prefix never moves
 when a memory does: every firm one in force (an allergy or a "never" is never dropped, not even
-for the budget), then as many of the rest as fit in `BUDGET` characters, those bearing on the
-message first (a shared word, a kind it touches on, about the asker or the whole family, then
-newest). No model is asked: at family scale everything usually fits. A guess the model made
+for the budget), then as many of the rest as fit in `BUDGET` characters of those that bear on the
+message: a word in common (the name of whoever it is about counts) or a kind it touches on (food
+for a question about dinner); among them, about the asker or the whole family first, then newest.
+A taste that bears on nothing said is not sent, however much room there is: it is noise to the
+model, and a planning question's chooser reads every taste anyway (suggest/dossier.py). No model
+is asked. A guess the model made
 (`inferred`) is marked so it only leans on it.
 """
 
@@ -88,6 +91,9 @@ def choose(
     chosen = list(firm)
     used = sum(len(line_of(memory)) for memory in firm)
     for memory in sorted(rest, key=bearing, reverse=True):
+        shared, touches, _, _ = bearing(memory)
+        if not (shared or touches):
+            continue  # a taste nothing in the message bears on
         size = len(line_of(memory))
         if used + size > budget:
             continue

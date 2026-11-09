@@ -258,8 +258,11 @@ def test_every_firm_one_goes_however_little_room_there_is(conn, clock, family) -
         conn, "anything on tonight?", sender_id=None, today=clock.today(), budget=0
     )
     assert [m.id for m in chosen.memories] == [allergy.id] and chosen.left_out == 1
-    everything = memory.choose(conn, "anything on tonight?", sender_id=None, today=clock.today())
+    everything = memory.choose(conn, "sushi tonight?", sender_id=None, today=clock.today())
     assert [m.id for m in everything.memories] == [allergy.id, sushi.id]
+    # A taste the message does not bear on stays home; the firm one goes regardless.
+    unrelated = memory.choose(conn, "anything on tonight?", sender_id=None, today=clock.today())
+    assert [m.id for m in unrelated.memories] == [allergy.id]
 
 
 def test_with_too_many_to_send_the_ones_that_bear_on_the_message_go(conn, clock, family) -> None:
@@ -269,17 +272,18 @@ def test_with_too_many_to_send_the_ones_that_bear_on_the_message_go(conn, clock,
     early = _keep(conn, "early riser", member_id=alex, category="routine")
     room = max(len(memory.line_of(m)) for m in (jazz, sushi, early))  # room for one
 
-    def chosen(text, sender=sam):
-        found = memory.choose(conn, text, sender_id=sender, today=clock.today(), budget=room)
-        assert found.left_out == 2
+    def chosen(text, sender=sam, budget=room):
+        found = memory.choose(conn, text, sender_id=sender, today=clock.today(), budget=budget)
+        assert found.left_out == 3 - len(found.memories)
         return [m.id for m in found.memories]
 
     assert chosen("any good sushi places?") == [sushi.id]  # a word in common
     assert chosen("somewhere with live jazz tonight") == [jazz.id]
     assert chosen("what's for dinner?") == [sushi.id]  # food, though it names none
     assert chosen("are we up early on friday?", sender=alex) == [early.id]
-    # Nothing bears on it: about whoever is asking, then the newest.
-    assert chosen("hello", sender=alex) == [early.id]
+    assert chosen("what does Alex like doing?", budget=1600) == [jazz.id, early.id]  # named
+    # Nothing bears on it: no taste goes, however much room there is.
+    assert chosen("hello", sender=alex, budget=1600) == []
 
 
 def test_what_has_run_its_course_is_not_sent(conn, clock, family) -> None:
@@ -293,7 +297,8 @@ def test_how_a_memory_is_told(conn, clock, family) -> None:
     _keep(conn, "vegetarian", member_id=family["girls"].id, firm=True)
     _keep(conn, "might like opera", member_id=family["alex"].id, inferred=True)
     _keep(conn, "no hiking", until="2026-10-31")
-    shown = render_memories(memory.choose(conn, "hi", sender_id=None, today=clock.today()))
+    asked = "would Alex rather go hiking or to the opera?"
+    shown = render_memories(memory.choose(conn, asked, sender_id=None, today=clock.today()))
     assert shown.splitlines()[1:] == [
         "- m1 the girls: vegetarian (must)",
         "- m2 Alex: might like opera (a guess)",
