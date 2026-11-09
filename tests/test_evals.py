@@ -508,14 +508,16 @@ def test_a_kid_s_firm_rule_goes_when_a_parent_asks(settings) -> None:
     assert "never called suggest" in grade(case, run)
 
 
-def test_saying_what_went_on_the_list_in_a_second_call_is_a_gap(settings) -> None:
+def test_adding_to_the_list_is_graded_on_what_it_cost(settings) -> None:
     case = by_name("shopping_add_alone")
-    assert case.waits_for
-    api = _answer(
-        [fakes.tool_use("t1", "shopping_list", {"action": "add", "items": ["milk"]})],
-        [fakes.text("Milk is on the list.")],
+    add = {"action": "add", "items": ["milk"]}
+    once = _answer([fakes.tool_use("t1", "shopping_list", {**add, "reply": "Milk's on the list."})])
+    run = run_case(case, settings, api=once)
+    assert grade(case, run) == [] and run.reply == "Milk's on the list."
+    twice = _answer(
+        [fakes.tool_use("t1", "shopping_list", add)], [fakes.text("Milk is on the list.")]
     )
-    assert grade(case, run_case(case, settings, api=api)) == ["2 model calls, over 1"]
+    assert grade(case, run_case(case, settings, api=twice)) == ["2 model calls, over 1"]
 
 
 def test_a_firm_rule_broken_without_a_word_fails(settings) -> None:

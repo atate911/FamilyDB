@@ -85,7 +85,10 @@ Context has three layers, and every piece of information belongs to exactly one:
   further paid call to say so. A hand-back that failed goes back to the model.
 - Durable facts the family states ride along on the call already happening (the memory deltas of
   `docs/MEMORY.md`): one `remember` tool, and when remembering is all a message needs, the reply
-  comes in that same call and ends the turn.
+  comes in that same call and ends the turn. A change to a list does the same (`shopping_list`'s
+  `reply`), but only when it went as asked: a thing already there, or not on the list, goes back
+  to the model to say. Two tools offering a reply in one step, or one that was not available,
+  end nothing (`ToolContext.take_reply`, `loop._closed`).
 - What the model claims that code can check, code checks (an idea id exists, a date is inside the
   window, a place is the one asked about). A failed check is reported, not silently corrected.
 - Every call is recorded: kind, model, tokens, estimated cost, outcome. A reply is stored before it
@@ -266,7 +269,7 @@ level           the setting naming how strong a model answers: everyday, better 
 prompt          which prompt file ("system" also brings the family and the idea list)
 tools           the fixed tool list (None: every chat tool)
 hand_back       the tools whose success is a worker's result, and ends its turn
-closes          the chat tools that may end a turn with the reply they carry (remember)
+closes          the chat tools that may end a turn with the reply they carry (remember, shopping_list)
 web_searches    the cap on hosted search; none means no web at all
 iterations      the setting that caps model calls in one turn
 effort          the setting naming the reasoning effort

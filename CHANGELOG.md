@@ -4,6 +4,10 @@
 
 ### New since v0.5.0
 
+- **"We're out of milk" is answered sooner.** Putting something on a list, ticking it or taking
+  it off now gets its reply in the same call that made the change, as remembering does, so the
+  answer comes back without a second trip to the model. Something already on the list, or not on
+  it, is still said after the change, as before.
 - **The weekend digest works on Claude again.** Claude takes at most 20 tools held strictly to
   their form in one request, and the chat carries 28, so every Claude call with them was refused:
   the weekend digest each week, and any message Claude was to answer when the first company could

@@ -18,6 +18,7 @@ from familydb.store import ideas, lists
 from familydb.store import recipes as recipe_store
 from familydb.store.db import transaction
 from familydb.store.ideas import RECIPE
+from familydb.tools.memory import MAX_REPLY
 from familydb.tools.registry import ToolContext, keep_undo, tool
 
 MAX_ITEMS = 30
@@ -37,6 +38,13 @@ class ShoppingListInput(BaseModel):
     name: str = Field(default="shopping", description="Which list, if another is named.")
     idea_ids: list[int] = Field(
         default_factory=list, description="For from_recipes: the recipes' numbers."
+    )
+    reply: str | None = Field(
+        default=None,
+        description=(
+            "When adding, ticking or taking off is all this message needs: your whole reply to "
+            "the family, which ends your turn. Leave it empty when doing anything else."
+        ),
     )
 
 
@@ -88,6 +96,11 @@ def shopping_list(ctx: ToolContext, args: ShoppingListInput) -> dict[str, Any]:
     said: dict[str, Any] = {"list": name, args.action: done, "open": _open(ctx, list_ref)}
     if other:
         said["already" if args.action == "add" else "not_on_it"] = other
+    # A reply written before the change ends the turn only when the change went as asked: a
+    # thing already there, or not on the list, is the model's to say after reading this.
+    reply = (args.reply or "").strip()[:MAX_REPLY]
+    if reply and done and not other:
+        ctx.offer_reply(reply)
     return said
 
 

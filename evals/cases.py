@@ -1144,7 +1144,6 @@ CASES: tuple[Case, ...] = (
             model_calls_at_most(1),
         ),
         "Putting a thing on the list and saying so costs one call, as remembering does.",
-        waits_for="the shopping list ending a turn that only added (stage 3.1 of the AI plan)",
     ),
     Case(
         "reminder_alone",
