@@ -49,8 +49,9 @@ class AddTaskInput(BaseModel):
     all_done: bool = Field(
         default=False,
         description=(
-            "True when setting this reminder, with its time, is all the message needs: the "
-            "confirmation is worded from what was saved and your turn ends. False otherwise."
+            "True when saving this is all the message needs: a reminder at a time, or anything "
+            "in the family group, is confirmed from what was saved and your turn ends. False "
+            "otherwise."
         ),
     )
 
@@ -103,17 +104,19 @@ def _owner_or_everyone(ctx: ToolContext, name: str) -> int | None:
 
 
 def _confirm(ctx: ToolContext, task: Task) -> None:
-    """The reply that ends a turn which only set a reminder, worded by code from what was saved
-    (voice `task_saved`): when, how often and where it will arrive, which the model would only
-    have repeated in a second call. Only for a reminder waiting to go; a to-do nothing will bring
-    up, or one about a present, is the model's to word. In the family's group a save is ✓."""
-    reminder = task.reminder
-    if task.status != "open" or reminder is None or reminder.delivered_at is not None:
-        return
-    if task.idea_id is not None or task.gift_for:
-        return  # it may name a present, and who reads is the model's to weigh
+    """The reply that ends a turn which only saved a task, worded by code from what was saved.
+    In the family's Telegram group a save is ✓, a reminder or a plain to-do alike (the family's
+    rule for a group, which the model kept only some of the time). Elsewhere only a reminder
+    waiting to go is (voice `task_saved`: when, how often and where it will arrive, which the
+    model would only have repeated in a second call); a to-do nothing will bring up is the
+    model's to word, since it offers a reminder. One about a present is always the model's."""
+    if task.status != "open" or task.idea_id is not None or task.gift_for:
+        return  # done or cancelled, or it may name a present: who reads is the model's to weigh
     if routing.is_group(task.channel, task.chat_id):
         ctx.offer_reply(routing.CONFIRMED)
+        return
+    reminder = task.reminder
+    if reminder is None or reminder.delivered_at is not None:
         return
     moment = datetime.fromisoformat(reminder.remind_at).astimezone(ctx.clock.tz)
     repeats = task_service.repeat_words(task)

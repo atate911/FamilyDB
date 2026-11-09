@@ -89,8 +89,9 @@ Context has three layers, and every piece of information belongs to exactly one:
   `reply`), but only when it went as asked: a thing already there, or not on the list, goes back
   to the model to say. A reminder set at a time does too, with `add_task`'s `all_done`: there the
   confirmation is worded by code from what was saved (`voice` `task_saved`: when, how often, where
-  it arrives; ✓ in a group), since the model would only have repeated it, and a to-do with nothing
-  to bring it up, or one about a present, goes back to the model. Two tools offering a reply in
+  it arrives; in the family's Telegram group ✓, for a plain to-do too), since the model would only
+  have repeated it, and elsewhere a to-do with nothing to bring it up, or anywhere one about a
+  present, goes back to the model. Two tools offering a reply in
   one step, or one that was not available, end nothing (`ToolContext.take_reply`, `loop._closed`).
 - What the model claims that code can check, code checks (an idea id exists, a date is inside the
   window, a place is the one asked about). A failed check is reported, not silently corrected.
