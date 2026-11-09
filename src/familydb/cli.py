@@ -104,6 +104,15 @@ def _ready(application: App) -> sqlite3.Connection:
     return conn
 
 
+def _migrated(application: App) -> App:
+    """Migrated, with the settings saved on the page in force, for a command that runs a job:
+    the keys, chats and toggles the family set there are what it checks and uses, not `.env`
+    alone (which on an install made from the page holds none of them)."""
+    application.migrate()
+    application.refresh()
+    return application
+
+
 def _push_key(application: App) -> None:
     """The key that signs pushes to the family's devices, made once at start (push.py), never on
     a page view."""
@@ -950,8 +959,7 @@ def db_retry_failed(
     """Retry failed messages now (the running bot also does this on a schedule)."""
     from familydb.jobs.retry_failed import run_retries
 
-    application = build_app()
-    application.migrate()
+    application = _migrated(build_app())
     _cli_senders(application)
     if reset:
         with closing(application.connect()) as conn, db.transaction(conn):
@@ -1144,7 +1152,7 @@ def digest(
     """Show the digest schedule, or send it now with --now (the running bot sends it weekly)."""
     from familydb.jobs.weekend_digest import digest_channel, run_digest
 
-    application = build_app()
+    application = _migrated(build_app())
     settings = application.settings
     if not digest_configured(settings):
         typer.echo("set DIGEST_CHAT_ID to the family chat to enable the weekend digest", err=True)
@@ -1156,10 +1164,9 @@ def digest(
             f"at {settings.digest_hour:02d}:00 {settings.tz}; add --now to send it now"
         )
         return
-    application.migrate()
     _cli_senders(application)
     application.senders["console"] = lambda _chat_id, text: typer.echo(text)
-    if not application.can_ask("chat"):
+    if not application.can_ask(kind="digest"):
         typer.echo("digest not sent: there is no model key yet to write it with")
         return
     reply = run_digest(application)
@@ -1180,7 +1187,7 @@ def follow_ups(
     """Ask how recent plans went (the running bot does this daily at FOLLOW_UP_HOUR)."""
     from familydb.jobs.follow_ups import run_follow_ups
 
-    application = build_app()
+    application = _migrated(build_app())
     settings = application.settings
     if not now:
         typer.echo(
@@ -1188,7 +1195,6 @@ def follow_ups(
             "chat each plan was made in; add --now to ask now"
         )
         return
-    application.migrate()
     _cli_senders(application)
     application.senders["console"] = lambda _chat_id, text: typer.echo(text)
     typer.echo(f"asked about {run_follow_ups(application)} plan(s)")
@@ -1202,8 +1208,7 @@ def enrich(
     """Look up place details for pending ideas now (the running bot does this on a schedule)."""
     from familydb.jobs.enrich import run_enrichment
 
-    application = build_app()
-    application.migrate()
+    application = _migrated(build_app())
     if not enrichment_available(application.settings):
         typer.echo("set WEB_TOOLS_ENABLED=true to look ideas up on the web", err=True)
         raise typer.Exit(code=1)
@@ -1224,8 +1229,7 @@ def happening_now(
     budget for them."""
     from familydb.jobs.happening import run_happening
 
-    application = build_app()
-    application.migrate()
+    application = _migrated(build_app())
     if not happening_available(application.settings):
         typer.echo(
             "nothing to read: add a calendar or a Ticketmaster key, or turn on web lookups, "
@@ -1246,8 +1250,7 @@ def picks_now(
     no model call."""
     from familydb.jobs.picks import run_picks
 
-    application = build_app()
-    application.migrate()
+    application = _migrated(build_app())
     made = run_picks(application, force=force)
     typer.echo(", ".join(f"{key}: {value}" for key, value in made.items()))
 
