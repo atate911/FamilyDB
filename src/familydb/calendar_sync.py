@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from familydb import plan_service
 from familydb.base.dates import iso_date, iso_datetime
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
-from familydb.store import calendar_sync_state, ideas, plans
+from familydb.store import calendar_sync_state, plans
 from familydb.store.db import transaction
 from familydb.store.plans import Plan
 
@@ -54,11 +54,8 @@ def apply_event(
     with transaction(conn):
         updated = plans.update(conn, plan.id, changes, now=now)
         if updated is not None:
+            # A deleted event's idea is an idea again, unless another plan for it is to come.
             plan_service.changed(conn, plan, updated, now=now, tz=tz)
-        if event is None and plan.idea_id:
-            idea = ideas.get(conn, plan.idea_id)
-            if idea is not None and idea.status == "planned":
-                ideas.update(conn, idea.id, {"status": "idea"}, now=now)
     return updated or plan
 
 

@@ -1,6 +1,6 @@
 {% extends "frame.html" %}
 {% from "_ui.html" import icon, avatar, who, map_plot, guard with context %}
-{% from "_dest.html" import find_acts, dest_head, chip_row, dest_row, dest_empty, by_hand %}
+{% from "_dest.html" import find_acts, dest_head, do_tabs, chip_row, dest_row, dest_empty, by_hand %}
 {% block title %}What could we do? · {{ site_title }}{% endblock %}
 {% block body_class %}page-do{% endblock %}
 {# What could we do? (docs/INTERFACE.md section 4): the saved pile, what fits the next free stretch on top, then
@@ -8,6 +8,7 @@
    under the Dropped chip, never gone. A kid sees plain rows, nothing paler, no Dropped. #}
 {% block content %}
   {{ dest_head('What could we do?', summary) }}
+  {{ do_tabs('ideas') }}
   {{ chip_row(chips) }}
   {% if grownup %}
     <form class="finder finder--line" method="get" action="{{ url_for('web.ideas') }}" role="search">
@@ -51,9 +52,9 @@
       <div class="rows">
         {% for n in new_ideas %}
           <div class="r">
-            <span class="r__t"><a href="{{ url_for('web.find', find_id=n.id) }}">{{ n.title }}</a></span>
+            <span class="r__t">{% if grownup %}<a href="{{ url_for('web.find', find_id=n.id) }}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</span>
             <span class="r__m">{{ n.line }}</span>
-            {% if deciding %}<div class="r__acts">{{ find_acts(n.save, n.title, back=request.full_path.rstrip('?')) }}</div>{% endif %}
+            {% if deciding %}<div class="r__acts">{{ find_acts(n.save, n.title, back=request.full_path.rstrip('?'), plan=n.plan, quiet=true) }}</div>{% endif %}
           </div>
         {% endfor %}
       </div>

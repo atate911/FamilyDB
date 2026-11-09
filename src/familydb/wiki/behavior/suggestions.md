@@ -31,13 +31,13 @@ Two kinds of check. A fact rules an idea out. A matter of taste only makes it po
 | Its last rating in the year under 5 out of 10, or its last two | Possible, said first ("rated 4 and 3/10 the last two times") |
 | Who is coming, the ages it suits, the season, and the cost, indoor or outdoor and duration limits asked for | Ruled out |
 | An idea tied to dates: over, or on days outside the window | Ruled out |
-| Forecast: an outdoor or dry-weather idea on a day with a 50% or higher chance of rain (rain and snow codes count only when no chance is given), a warm one under 18 °C (64 °F) | The days that fit; when none does, possible on the wet or cold days with the forecast said first |
-| Forecast: a snow idea with no snow forecast | Ruled out when no day has snow |
+| Forecast: an outdoor or dry-weather idea on a day with a 50% or higher chance of rain (rain and snow codes count only when no chance is given), a warm one under 18 °C (64 °F) | The days that fit; when none does, possible on the wet or cold days with the forecast said first. The weather is said to look fine only when every day kept had a forecast; a day kept with none is named as having no forecast yet |
+| Forecast: a snow idea with no snow forecast | Ruled out when no day has snow. The snow it wants is never held against it as wet weather |
 | Free time: the idea's length against the longest free stretch; an unknown length needs an hour; a trip needs the whole window | Ruled out |
 | A day trip, or anything of 8 hours or more: a day with nothing else on it | With nothing else on any day but 8 hours free around something, possible, "something else on that day"; with no 8 hours free, ruled out |
 | Opening hours saved by a lookup: open that day, long enough inside a free stretch, with travel at both ends | Closed is ruled out; unknown is possible ("hours unknown"). A stay-at-home idea with nothing to look up has no hours and is not held to any |
 | A saved place's details older than the stale limit (`place_stale_days`, 30 days) or never checked | Possible; a chat question also queues a refresh |
-| Booking: the lead time against the days left | Too late is ruled out; an unknown lead time is possible |
+| Booking: the lead time against the days left, each day on its own | A day too soon to book is dropped and said; with none left it is ruled out; an unknown lead time is possible |
 | Travel: a straight-line estimate times the road factor at the average speed, from home or where they are | Over the limit asked, or the round trip plus the visit longer than the free time, is ruled out |
 | Daylight for an outdoor idea, from sunrise and sunset | Possible, never ruled out, since lights and stars are outdoors too |
 
@@ -84,7 +84,7 @@ The search is told the question in your words and what is known about the family
 
 Everything found, by this search, an earlier one or the family's calendars, is checked by the same code as the ideas: a show's time against your free time, rain for something outdoors, who it is for and the ages of the kids coming, your musts against its words, and the drive when its place is known. Each gets a verdict and reasons in an event's words ("on Saturday 19:00-21:00", "busy while it is on"); a day the page gives only in words is possible at best. What is ruled out is logged but not offered.
 
-What it finds is kept, so nothing paid for is lost: each thing with a day, or a place to go any time, joins the finds listed on [Soon](/wiki/controls/plans-and-tasks#soon), where **Not for us** keeps it from being offered again. Something you already saved is marked with its idea; something you passed on is left out; where a kid reads, something for the grown-ups alone is left out.
+What it finds is kept, so nothing paid for is lost: each thing with a day, or a place to go any time, joins the finds listed on [Coming up](/wiki/controls/plans-and-tasks#coming-up), where **Not for us** keeps it from being offered again. Something you already saved is marked with its idea; something you passed on is left out; where a kid reads, something for the grown-ups alone is left out.
 
 It runs once for each message while lookups are on and a key serves lookups. The chat model can leave it off only when you ask for your own list alone. When it cannot run, the skipped checks say "web discovery off" or "web discovery waits for a model key". The same question in other words, for the same days, is searched once: results are kept 12 hours in memory and cleared on a restart or when a setting is saved. A failure is noted ("web discovery failed: ...") and not kept.
 

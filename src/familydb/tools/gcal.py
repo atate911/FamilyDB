@@ -442,12 +442,9 @@ def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
     with transaction(ctx.conn):
         updated = plans.update(ctx.conn, plan.id, {"status": "cancelled"}, now=ctx.now_iso())
         if updated is not None:
+            # Its idea is an idea again there, unless another of its plans is still to come.
             plan_service.changed(ctx.conn, plan, updated, now=ctx.now_iso(), tz=ctx.clock.tz)
-        idea = None
-        if plan.idea_id is not None:
-            current = ideas.get(ctx.conn, plan.idea_id)
-            if current is not None and current.status == "planned":
-                idea = ideas.update(ctx.conn, plan.idea_id, {"status": "idea"}, now=ctx.now_iso())
+        idea = ideas.get(ctx.conn, plan.idea_id) if plan.idea_id is not None else None
     return {
         "plan": updated.model_dump(mode="json") if updated else None,
         "idea": idea.model_dump(mode="json") if idea else None,

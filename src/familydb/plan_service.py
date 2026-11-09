@@ -8,7 +8,8 @@ transaction that stored the change, so what hangs on the plan never lags behind 
   (`checked_at`, `followed_up_at`);
 - a reminder tied to it ("a week before the concert": a task with `plan_id`, made with the plan's
   `remind_before`) moves with it, worked out again from the new start, and goes when the plan is
-  cancelled. Before, it stayed on the old day and went off for a plan nobody was going to.
+  cancelled. Before, it stayed on the old day and went off for a plan nobody was going to;
+- a cancelled plan's idea is an idea again, unless another of its plans is still to come.
 
 Such a reminder says when the plan is (`when_words`), and is done once the plan is over
 (`finish_over`, from the reminders job): it was a heads-up, not an errand left to tick.
@@ -100,6 +101,7 @@ def changed(conn: sqlite3.Connection, before: Plan, after: Plan, *, now: str, tz
         if before.status != "cancelled":
             for task in tasks.linked_to(conn, after.id):
                 tasks.cancel(conn, task.id, now)
+            _unplanned(conn, after, now=now, tz=tz)
         return
     if after.start == before.start:
         return
@@ -121,3 +123,23 @@ def changed(conn: sqlite3.Connection, before: Plan, after: Plan, *, now: str, tz
         else:
             tasks.add_reminder(conn, task.id, utc_iso(when))
             tasks.update(conn, task.id, {"updated_at": now})  # and its revision moves on
+
+
+def _unplanned(conn: sqlite3.Connection, cancelled: Plan, *, now: str, tz: ZoneInfo) -> None:
+    """A cancelled plan's idea is an idea again, unless another plan for it is still to come:
+    the idea is planned while any of its plans is."""
+    if cancelled.idea_id is None:
+        return
+    idea = ideas.get(conn, cancelled.idea_id)
+    if idea is None or idea.status != "planned":
+        return
+    today = datetime.fromisoformat(now).astimezone(tz).date().isoformat()
+    still = [
+        other
+        for other in plans.for_idea(conn, idea.id)
+        if other.id != cancelled.id
+        and other.status != "cancelled"
+        and (other.end or other.start)[:10] >= today
+    ]
+    if not still:
+        ideas.update(conn, idea.id, {"status": "idea"}, now=now)

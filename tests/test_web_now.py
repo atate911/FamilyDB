@@ -100,11 +100,9 @@ def test_a_message_sent_from_now_comes_back_to_now_with_her_answer_under_the_box
     assert 'href="/chat#latest"' in sheet  # the thread, one tap away
     assert len(api.requests) == 1  # one message, one call; none for the pages around it
     # Opened again without the message named, the page is quiet: the reply lives in the thread,
-    # whose last lines only Vera's column on a big screen shows.
+    # the Chat page, and no page repeats its last lines beside the box.
     again = client.get("/").text
-    assert "Saturday looks dry" not in again.split('<section class="vc"')[0]
-    column = re.search(r'<section class="vc".*?</section>', again, re.S).group(0)
-    assert "what should we do this weekend?" in column and "Saturday looks dry" in column
+    assert "Saturday looks dry" not in again and '<section class="vc"' not in again
     assert "Saturday looks dry" in client.get("/chat").text
 
 
@@ -393,17 +391,23 @@ def test_her_picks_are_tiles_with_a_reason_and_a_way_in(settings, clock, conn, f
         r'<section class="sec" aria-labelledby="h-picks">.*?</section>', home, re.S
     ).group(0)
     assert "What about…" in picks and "chosen 1\u00a0pm" in picks
+    # One pick leads, large; the other kinds are a line each under it.
     tiles = re.findall(r'<a class="pk" href="([^"]+)">(.*?)</a>', picks, re.S)
-    assert [href for href, _ in tiles] == [f"/idea/{ramen.id}", "/soon"]
+    assert [href for href, _ in tiles] == [f"/idea/{ramen.id}"]
     assert "Eat · tonight" in tiles[0][1] and "Open till 9 pm, 12 min" in tiles[0][1]
-    assert "New · Sat 26 Sep" in tiles[1][1]
+    more = re.search(r'<ul class="pk-more".*?</ul>', picks, re.S).group(0)
+    assert 'href="/soon"' in more and "Pumpkin carving" in more and ">New</span>" in more
+    assert "Free. Listed by Tryon Creek" in more
     assert '<p class="ctx">Sunday 2:03\u00a0pm · Dry, free this afternoon</p>' in home
     # Different ones is a message to her, sent on purpose.
     different = re.search(r'<form class="sec__more".*?</form>', picks, re.S).group(0)
     assert (
         'action="/chat"' in different and 'name="text" value="What else could we do?' in different
     )
-    assert "Nothing needs you" not in home
+    # Nothing waits on Sam: said, with three ways into the day's jobs beside the picks.
+    ways = re.search(r'<section class="sec ways".*?</section>', home, re.S).group(0)
+    assert "Nothing needs you." in ways and 'href="/eat">Choose dinner' in ways
+    assert 'href="/?ask=Remind+me+#ask">Add a reminder' in ways
 
 
 def test_a_present_never_shows_among_a_kids_picks(settings, clock, conn, family) -> None:
@@ -460,17 +464,27 @@ def test_today_and_tomorrow_are_one_line_each(calendar_settings, clock, conn, fa
     calendar.seed(
         "Dentist", datetime(2026, 9, 21, 9, tzinfo=TZ), datetime(2026, 9, 21, 10, tzinfo=TZ)
     )
+
+    def lines(home: str) -> list[tuple[str, str]]:
+        return [
+            (label, re.sub(r"<[^>]+>", "", words))
+            for label, words in re.findall(
+                r'<p class="today"><b>(\w+)</b><span>(.*?)</span></p>', home, re.S
+            )
+        ]
+
     home = _now(calendar_settings, clock, calendar).get("/").text
-    lines = [
-        (label, re.sub(r"<[^>]+>", "", words))
-        for label, words in re.findall(
-            r'<p class="today"><b>(\w+)</b><span>(.*?)</span></p>', home, re.S
-        )
-    ]
     assert 'href="/week/2026-09-21"' in home
-    assert lines[0][0] == "Today" and "Soccer practice 5\u00a0pm" in lines[0][1]
-    assert lines[1][0] == "Tomorrow" and "Dentist 9\u00a0am, then Swim 4\u00a0pm" in lines[1][1]
+    # Today's one thing is Next up, so today has no line to say it again; tomorrow's has both.
+    assert "Soccer practice" in home.split('class="todays"')[0]
+    (tomorrow,) = lines(home)
+    assert tomorrow[0] == "Tomorrow" and "Dentist 9\u00a0am, then Swim 4\u00a0pm" in tomorrow[1]
     assert "Brunch" not in home  # yesterday
+    calendar.seed(
+        "Pizza night", datetime(2026, 9, 20, 19, tzinfo=TZ), datetime(2026, 9, 20, 20, tzinfo=TZ)
+    )
+    today, _ = lines(_now(calendar_settings, clock, calendar).get("/").text)
+    assert today[0] == "Today" and "Soccer practice 5\u00a0pm, then Pizza night" in today[1]
 
 
 def test_a_free_day_says_so(settings, clock, conn, family) -> None:
@@ -507,9 +521,11 @@ def test_a_to_do_that_is_late_or_due_today_is_on_now_and_ticks_off_there(
     client = _now(settings, clock)
     home = client.get("/").text
     plate = re.search(
-        r'<section class="sec" aria-labelledby="h-todo">.*?</section>', home, re.S
+        r'<section class="sec needs" aria-labelledby="h-needs">.*?</section>', home, re.S
     ).group(0)
-    assert "On your plate" in plate and "Buy paper towels" in plate and "Book the dentist" in plate
+    assert "Needs you" in plate and "Buy paper towels" in plate and "Book the dentist" in plate
+    # What is late leads what is only due today.
+    assert plate.index("Buy paper towels") < plate.index("Book the dentist")
     assert "clear the garage" not in home and "Next week" not in home  # the week's plate has those
     assert "2 days late" in plate and 'href="/tasks"' in plate
     tick = re.search(
@@ -578,7 +594,7 @@ def test_a_grown_up_signed_in_writes_as_themselves(app, conn, family) -> None:
     assert 'name="who"' not in _box(home)  # signed in as themselves: nobody else to be
     assert "Finish setting up" in home  # an admin's unfinished setup, each step a link
     row = _row(home)
-    assert "Kids" in row and "Lists" in row
+    assert "Lists" in row and "Kids" not in row  # the kids' wishes are Lists' chips
 
 
 def test_a_to_do_for_everyone_is_taken_on_with_i_will_handle_it(app, conn, family) -> None:
@@ -831,3 +847,102 @@ def test_a_shelf_keeps_the_newest_few(conn, family) -> None:
         family_rules.pin(conn, family["sam"], one.id, chat_id="web", now=at)
     kept = pins.for_member(conn, family["sam"].id, limit=20)
     assert [one.text for one in kept] == [f"#{n}" for n in range(family_rules.PINS_MOST, 0, -1)]
+
+
+# -- whose it is, and what leads (the usability review of 5 November 2026)
+
+
+def _section(page: str, heading_id: str) -> str:
+    found = re.search(
+        rf'<section class="sec" aria-labelledby="{heading_id}">.*?</section>', page, re.S
+    )
+    assert found is not None, heading_id
+    return found.group(0)
+
+
+def test_your_plate_is_yours_and_anyones_and_somebody_elses_is_said_by_name(
+    app, conn, family
+) -> None:
+    """A heading never calls somebody else's to-do yours: Sam's and everyone's are on Sam's
+    plate; Alex's is said by name, on Now as a line and on the week as Alex's plate."""
+    _task(conn, family, "Book the dentist", due="2026-09-18T17:00:00Z", owner="sam")
+    _task(conn, family, "Book flu shots", due="2026-09-18T17:00:00Z", owner="alex")
+    anyones = _task(conn, family, "Sign the field trip form", due="2026-09-19T17:00:00Z")
+    with db.transaction(conn):
+        tasks.update(conn, anyones, {"owner_id": None})
+    sam = _in_as(app, "Sam", "sam likes long sentences")
+    home = sam.get("/").text
+    plate = re.search(r'<section class="sec needs".*?</section>', home, re.S).group(0)
+    assert "Book the dentist" in plate and "Sign the field trip form" in plate
+    assert "Book flu shots" not in home
+    assert "Alex has 1 late" in plate and 'href="/week#h-plate-1"' in plate
+    week = sam.get("/week").text
+    mine = _section(week, "h-plate")
+    assert "Book the dentist" in mine and "Sign the field trip form" in mine
+    assert "Book flu shots" not in mine
+    theirs = _section(week, "h-plate-1")
+    assert "On Alex\u2019s plate" in theirs and "Book flu shots" in theirs
+    assert "2 on your plate, 2 late" in week
+    # Under the shared password nobody is "you": it is all one plate, as before.
+    rows = [{"owner_id": family["alex"].id, "person": {"name": "Alex"}, "everyone": False}]
+    assert views.plate_split(rows, None) == (rows, [])
+
+
+def test_now_leads_with_the_setup_it_needs_and_leaves_the_optional_for_the_foot(
+    app, conn, family
+) -> None:
+    home = _in_as(app, "Sam", "sam likes long sentences").get("/").text
+    card = re.search(r'<section class="sec sec--setup".*?</section>', home, re.S).group(0)
+    assert 'href="/setup/home"' in card  # recommended: where home is
+    assert 'href="/setup/calendar"' not in card and 'href="/setup/telegram"' not in card
+    later = re.search(r'<p class="sec__note" id="setup-later">.*?</p>', home, re.S).group(0)
+    assert 'href="/setup/calendar"' in later and "Google Calendar" in later
+    assert home.index('class="sec sec--setup"') < home.index('id="setup-later"')
+    # With only the optional left, nothing about setup leads the page.
+    placed = app.settings.model_copy(
+        update={"home_area": "Vancouver", "home_lat": 49.28, "home_lon": -123.12}
+    )
+    app.settings = placed
+    home = _in_as(app, "Sam", "sam likes long sentences").get("/").text
+    assert "Finish setting up" not in home and 'id="setup-later"' in home
+
+
+# -- Now as an answer (the redesign of November 2026): what is next, what needs you, one pick
+
+
+def _plan(conn, title: str, start: str, end: str) -> None:
+    with db.transaction(conn):
+        plans.insert(conn, title=title, start=start, end=end, all_day=False, now=NOW_ISO)
+
+
+def test_next_up_is_the_next_thing_on_today_else_tomorrow_s_first(settings, clock, conn, family):
+    _plan(conn, "Swim lesson", "2026-09-20T16:30:00-07:00", "2026-09-20T17:15:00-07:00")
+    _plan(conn, "Breakfast run", "2026-09-20T08:00:00-07:00", "2026-09-20T09:00:00-07:00")
+    _plan(conn, "Soccer game", "2026-09-21T09:00:00-07:00", "2026-09-21T10:30:00-07:00")
+    home = _now(settings, clock).get("/").text  # Sunday, 2:03 pm
+    nxt = re.search(r'<section class="sec upnext".*?</section>', home, re.S).group(0)
+    lead = nxt.split('<div class="set upnext__row">')[1].split('<div class="todays">')[0]
+    assert "Swim lesson" in lead and "Breakfast run" not in lead  # gone by, so not next
+    assert '<p class="today"><b>Tomorrow</b>' in nxt and "Soccer game" in nxt
+    with db.transaction(conn):
+        for plan in plans.everything(conn):
+            if plan.title == "Swim lesson":
+                plans.update(conn, plan.id, {"status": "cancelled"}, now=NOW_ISO)
+    home = _now(settings, clock).get("/").text
+    lead = home.split('<div class="set upnext__row">')[1].split('<div class="todays">')[0]
+    assert "Soccer game" in lead
+    # Something going on now is what is next, and says so.
+    _plan(conn, "Pottery", "2026-09-20T13:30:00-07:00", "2026-09-20T15:00:00-07:00")
+    home = _now(settings, clock).get("/").text
+    lead = home.split('<div class="set upnext__row">')[1].split('<div class="todays">')[0]
+    assert "Pottery" in lead and "on now" in lead
+
+
+def test_what_needs_you_shows_the_first_few_and_folds_the_rest(settings, clock, conn, family):
+    for day in ("2026-09-15", "2026-09-16", "2026-09-17", "2026-09-18"):
+        _task(conn, family, f"Late since {day}", due=f"{day}T17:00:00Z")
+    home = _now(settings, clock).get("/").text
+    needs = re.search(r'<section class="sec needs".*?</section>', home, re.S).group(0)
+    shown, folded = needs.split('<details class="fold fold--quiet needs__more">')
+    assert shown.count('class="todo__title"') == 3
+    assert "And 1 more" in folded and folded.count('class="todo__title"') == 1

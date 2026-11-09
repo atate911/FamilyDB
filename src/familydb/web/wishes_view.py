@@ -1,5 +1,5 @@
 """A kid's wish lists as the page shows them (docs/WISHES.md): her three lists in her order, what
-was answered lately and the countdowns, for Now's glance and the Kids page alike, so the two
+was answered lately and the countdowns, for Now's glance and a kid's wishes page alike, so the two
 never disagree."""
 
 from __future__ import annotations

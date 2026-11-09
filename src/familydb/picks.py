@@ -319,12 +319,14 @@ def _tile(
 def _why(candidate: Candidate, idea: Idea, found: Assessment) -> str:
     """One line of why, as a person would say it, from what the engine checked: when it is open,
     how far, that they have not been, that they loved it, or who pitched it. Never the engine's
-    own words about missing details."""
+    own words about missing details; hours from details gone stale are said as last checked, so
+    an old fact is not passed off as today's."""
     parts = []
     checks = candidate.checks
     if checks.open == "open" and checks.hours:
         last = checks.hours.split(",")[-1].split("-")[-1].strip()
-        parts.append(f"open till {spoken_times(last)}" if last and last != "24:00" else "open")
+        said = f"open till {spoken_times(last)}" if last and last != "24:00" else "open"
+        parts.append(f"{said} last we checked" if checks.stale else said)
     if checks.travel_minutes:
         parts.append(f"{checks.travel_minutes} min")
     if idea.suggested_by in found.kid_names:

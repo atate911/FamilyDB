@@ -1,0 +1,26 @@
+{% extends "frame.html" %}
+{% from "_ui.html" import icon, who with context %}
+{% from "_dest.html" import dest_head, chip_row, dest_empty, by_hand %}
+{% block title %}Presents · {{ site_title }}{% endblock %}
+{% block body_class %}page-lists{% endblock %}
+{# Presents, a chip of Lists (docs/INTERFACE.md section 4): every gift idea this person may see, whom it is for and whom
+   it is kept from. A present kept from the visitor is not drawn at all, and a kid never reaches the page (presents.py,
+   auth.NEEDS_HERE). Each opens its own page; saving and changing one is the idea tools, as anywhere. #}
+{% block content %}
+  {{ dest_head('Presents', summary) }}
+  {{ chip_row(chips, 'Which list') }}
+  {% if rows %}
+    <div class="rows">
+      {% for r in rows %}
+        <div class="r">
+          <span class="r__t"><a href="{{ url_for('web.idea', idea_id=r.id) }}">{{ r.title }}</a></span>
+          <span class="r__m">{{ r.line }}</span>
+          <span class="r__tr">{{ who(r.people, r.who_words, shell.family) }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ dest_empty('No present ideas yet. Tell ' ~ assistant ~ ' “a Lego set for Theo’s birthday”: it is kept from Theo and from every kid.', 'gift') }}
+  {% endif %}
+  {% if visitor().may('change') %}{{ by_hand('Add a present by hand', url_for('web.new_idea', kind='gift')) }}{% endif %}
+{% endblock %}

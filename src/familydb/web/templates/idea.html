@@ -17,10 +17,30 @@
     </div>
   {% endif %}
 {% endmacro %}
+{% macro cook_form() %}
+  {# Cook this: what is missing on the shopping list and, when ticked, the dinner on the calendar, each the tool she
+     would call (edits.cook_this); the notice says what each did. #}
+  <form class="form cook" method="post" action="{{ url_for('edits.cook_this', idea_id=idea.id) }}" aria-labelledby="h-cook">
+    {{ guard(once=true) }}
+    <input type="hidden" name="title" value="{{ idea.title }}" />
+    <h2 class="label" id="h-cook">Cook it</h2>
+    <div class="form__row">
+      <div class="field"><label class="field__label" for="cook-day">When</label><input id="cook-day" name="day" type="date" value="{{ today }}" min="{{ today }}" /></div>
+      <div class="field"><label class="field__label" for="cook-time">Dinner at <span class="opt">(for the calendar)</span></label><input id="cook-time" name="time" type="time" value="{{ dinner_at }}" /></div>
+    </div>
+    {% if recipe.shoppable %}<label class="check"><input type="checkbox" name="list" value="yes" checked />Put what is missing on the shopping list</label>{% endif %}
+    <label class="check"><input type="checkbox" name="calendar" value="yes"{% if not recipe.shoppable %} checked{% endif %} />Put it on the {{ 'calendar' if on_google else 'plans' }}</label>
+    {{ asking('cook') }}
+    <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ icon('utensils', size='sm') }}Cook this</button>
+      {% if recipe.shoppable %}<a class="q__lnk" href="{{ url_for('web.shop', idea_id=idea.id) }}">{{ icon('list', size='sm') }}Its shopping, by the store</a>{% endif %}</div>
+  </form>
+{% endmacro %}
 {% block content %}
   <header class="dest">
     {% set eaten = idea.kind in ('restaurant', 'recipe') %}
-    <a class="back" href="{{ url_for('web.restaurants') if eaten else url_for('web.ideas') }}">{{ icon('chevl', size='sm') }}{{ 'What to eat' if eaten else 'Things to do' }}</a>
+    {% set present = idea.kind == 'gift' and grownup %}
+    {% if present %}<a class="back" href="{{ url_for('web.presents') }}">{{ icon('chevl', size='sm') }}Presents</a>
+    {% else %}<a class="back" href="{{ url_for('web.restaurants') if eaten else url_for('web.ideas') }}">{{ icon('chevl', size='sm') }}{{ 'What to eat' if eaten else 'Things to do' }}</a>{% endif %}
     <p class="label">{{ row.kind_name }}{% if grownup %} · #{{ idea.id }}{% endif %}</p>
     <h1 class="dest__q">{{ idea.title }}</h1>
     <p class="dest__sum">{{ state }}{% if row.hidden %} · {{ surprise(row.hidden) }}{% endif %}</p>
@@ -31,6 +51,8 @@
   <dl class="facts">
     {% for k, v, tone in facts %}<div><dt class="facts__k">{{ k }}</dt><dd class="facts__v{{ ' facts__v--ok' if tone == 'ok' }}">{{ v | figs }}</dd></div>{% endfor %}
   </dl>
+  {# A recipe's one action, under the facts that decide it: Cook this. #}
+  {% if recipe and visitor().may('change') %}{{ cook_form() }}{% endif %}
 
   {# Where it came from: who said it, when, their exact words. #}
   {% if original_message %}
@@ -152,16 +174,13 @@
     </section>
   {% endif %}
 
-  {# Plan it, and the rest, by hand. #}
+  {# One thing leads (docs/DESIGN_FREEDOM.md): a recipe's is Cook this, a place's Plan it. How it went is the fold
+     under it; dropping it, looking it up again and editing it by hand wait under More. #}
   {% if visitor().may('change') %}
-    <div class="acts">
-      {# A recipe's first act is the shopping, by the sections of the store with the pantry apart (docs/RECIPES.md);
-         a dinner put on the calendar is the quieter one. #}
-      {% if recipe and recipe.shoppable %}
-        <a class="btn btn--primary btn--sm" href="{{ url_for('web.shop', idea_id=idea.id) }}">{{ icon('list', size='sm') }}Shopping list</a>
-      {% endif %}
+    {% if not recipe %}
+      <div class="acts">
       <details class="fold fold--quiet" id="plan-it">
-        <summary class="btn {{ 'btn--quiet' if recipe else 'btn--primary' }} btn--sm">{{ icon('cal', size='sm') }}{{ 'Plan it for a night' if recipe else ('Plan it again' if plans else 'Plan it') }}</summary>
+        <summary class="btn btn--primary btn--sm">{{ icon('cal', size='sm') }}{{ 'Plan it again' if plans else 'Plan it' }}</summary>
         <form class="form fold__body" method="post" action="{{ url_for('edits.add_plan') }}">
           {{ guard(once=true) }}
           <input type="hidden" name="idea_id" value="{{ idea.id }}" /><input type="hidden" name="title" value="{{ idea.title }}" />
@@ -173,6 +192,31 @@
           <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ 'Put it on the calendar' if on_google else 'Add it to the plans' }}</button></div>
         </form>
       </details>
+      </div>
+    {% endif %}
+    <details class="fold fold--quiet">
+      <summary>{{ 'Record that you made it' if idea.kind == 'recipe' else 'Record how it went by hand' }}{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <form class="form fold__body" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
+        {{ guard(once=true) }}
+        <div class="form__row">
+          <div class="field"><label class="field__label" for="happened_on">When</label><input id="happened_on" name="happened_on" type="date" value="{{ today }}" max="{{ today }}" /></div>
+          <div class="field"><label class="field__label" for="rating">Out of ten</label>
+            <select id="rating" name="rating"><option value="">No score</option>{% for score in ratings %}<option value="{{ score }}">{{ score }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="form__row">
+          {% set cooked = idea.kind == 'recipe' %}{% set verb = 'make' if cooked else 'go' %}
+          <div class="field"><label class="field__label" for="would_repeat">Again?</label>
+            <select id="would_repeat" name="would_repeat" aria-describedby="would-repeat-said"><option value="">Not saying</option><option value="yes">Would {{ verb }} again</option><option value="no">Would not {{ verb }} again</option></select>
+            <p class="field__hint" id="would-repeat-said">Not again: {{ assistant }} stops {{ 'offering it for dinner' if cooked else 'suggesting it' }}, until a later time is recorded as worth {{ 'making' if cooked else 'doing' }} again{% if not cooked %}, or somebody presses Again? or Bring it back{% endif %}.</p></div>
+          {{ asking('outcome') }}
+        </div>
+        <div class="field"><label class="field__label" for="notes">Notes <span class="opt">(optional)</span></label><textarea id="notes" name="notes" rows="2" data-dictate></textarea></div>
+        <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ icon('check') }}Record it</button><span class="small muted">{{ 'Saving it counts it as made once more.' if recipe else 'Saving it marks the idea done.' }}</span></div>
+      </form>
+    </details>
+    <details class="fold fold--quiet item-more" id="more">
+      <summary>More{{ icon('chev', size='sm', cls='chev') }}</summary>
+      <div class="fold__body acts">
       <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
         {{ guard(once=true) }}
         <input type="hidden" name="status" value="{{ 'idea' if idea.status == 'dropped' else 'dropped' }}" />
@@ -185,26 +229,9 @@
           <button class="q__lnk" type="submit">{% if recipe %}{{ 'Read its page now' if idea.enrichment == 'pending' else 'Read its page again' }}{% else %}{{ 'Look it up now' if idea.enrichment == 'pending' else 'Look it up again' }}{% endif %}</button>
         </form>
       {% endif %}
-    </div>
-    <details class="fold fold--quiet">
-      <summary>{{ 'Record that you made it' if idea.kind == 'recipe' else 'Record how it went by hand' }}{{ icon('chev', size='sm', cls='chev') }}</summary>
-      <form class="form fold__body" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
-        {{ guard(once=true) }}
-        <div class="form__row">
-          <div class="field"><label class="field__label" for="happened_on">When</label><input id="happened_on" name="happened_on" type="date" value="{{ today }}" max="{{ today }}" /></div>
-          <div class="field"><label class="field__label" for="rating">Out of ten</label>
-            <select id="rating" name="rating"><option value="">No score</option>{% for score in ratings %}<option value="{{ score }}">{{ score }}</option>{% endfor %}</select></div>
-        </div>
-        <div class="form__row">
-          <div class="field"><label class="field__label" for="would_repeat">Again?</label>
-            <select id="would_repeat" name="would_repeat"><option value="">Not saying</option><option value="yes">Would go again</option><option value="no">Would not</option></select></div>
-          {{ asking('outcome') }}
-        </div>
-        <div class="field"><label class="field__label" for="notes">Notes <span class="opt">(optional)</span></label><textarea id="notes" name="notes" rows="2" data-dictate></textarea></div>
-        <div class="actions"><button class="btn btn--primary btn--sm" type="submit">{{ icon('check') }}Record it</button><span class="small muted">{{ 'Saving it counts it as made once more.' if recipe else 'Saving it marks the idea done.' }}</span></div>
-      </form>
+        {{ by_hand('Edit by hand', url_for('web.edit_idea', idea_id=idea.id)) }}
+      </div>
     </details>
-    {{ by_hand('Edit by hand', url_for('web.edit_idea', idea_id=idea.id)) }}
   {% endif %}
   {% if changed %}<p class="sec__note">{{ changed }}</p>{% endif %}
 {% endblock %}

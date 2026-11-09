@@ -83,9 +83,15 @@ def show() -> Response | str:
         on = presents.without(seen.entries, kept)
         rows = _rows(conn, app, on, visitor.member if not grown_up else None, today, slots)
         asked = questions(conn, app, visitor, today, slots, people)[:MOST_QUESTIONS]
-        todo = _todo(conn, app, visitor, today, slots, grown_up)
+        todo, others = views.plate_split(
+            _todo(conn, app, visitor, today, slots, grown_up), visitor.member if grown_up else None
+        )
+        next_up = _next_up(rows, now.astimezone(tz), today) if grown_up else None
         picks = _picks(conn, app, visitor, kept, today)
-        setup = status_page.setup_steps(app, conn) if visitor.manages else []
+        steps = status_page.setup_steps(app, conn) if visitor.manages else []
+        # What it needs, or should have, leads; what is only optional waits at the foot.
+        setup = [step for step in steps if step["need"] != "optional"]
+        later = [step for step in steps if step["need"] == "optional"]
         my_list = _my_list(conn, visitor, today) if kid else None
         dinner = dinner_pick(conn, now.astimezone(tz), agenda.on(seen, today), kept)
         # The first day (docs/INTERFACE.md section 10): nothing saved and nothing on, so the box
@@ -109,15 +115,64 @@ def show() -> Response | str:
         left=left,
         questions=asked,
         plate=todo,
+        needs=_needs(asked, todo) if grown_up else None,
+        next_up=next_up,
+        ways_in=WAYS_IN if grown_up else (),
+        others=views.others_words(others),
         my_list=my_list,
         picks=picks,
-        days=_days(rows, today, grown_up),
+        days=_days(rows, today, grown_up, shown=next_up["row"] if next_up else None),
         dinner=dinner,
         quiet=QUIET if grown_up else QUIET_KID,
         setup=setup,
+        setup_later=later,
         different=DIFFERENT,
         first_day=FIRST_DAY.format(name=personas.active(app.settings).name) if first_day else None,
     )
+
+
+# What needs a grown-up, shown at once; the rest waits a tap away under "and N more".
+NEEDS_SHOWN = 3
+# When nothing needs them, three ways in, each the start of a daily job.
+WAYS_IN = (
+    ("Choose dinner", "web.restaurants", {}),
+    ("Find something to do", "web.ideas", {}),
+    ("Add a reminder", "web.home", {"ask": "Remind me ", "_anchor": "ask"}),
+)
+
+
+def _next_up(rows: list[PlanRow], local_now: Any, today: date) -> dict[str, Any] | None:
+    """The next thing on: one going on now or still to start today, else tomorrow's first, and
+    whether it is on now. An all-day thing today is the day's, not what is next, and is left to
+    today's line."""
+    clock = local_now.strftime("%Y-%m-%dT%H:%M")
+    tomorrow = (today + timedelta(days=1)).isoformat()
+    for row in rows:
+        if row.day == today.isoformat() and not row.all_day:
+            running = row.start_value <= clock < (row.end_value or row.start_value)
+            if running or row.start_value >= clock:
+                return {"row": row, "on_now": running}
+    found = next((row for row in rows if row.day == tomorrow), None)
+    return {"row": found, "on_now": False} if found else None
+
+
+def _needs(asked: list[dict[str, Any]], plate: list[dict[str, Any]]) -> dict[str, Any]:
+    """What needs this grown-up, most pressing first: what of theirs is late, her questions, then
+    the rest due today; the first few shown, the rest folded as "and N more"."""
+    late = [row for row in plate if row.get("late")]
+    due = [row for row in plate if not row.get("late")]
+    ordered = [("todo", row) for row in late] + [("q", q) for q in asked]
+    ordered += [("todo", row) for row in due]
+    shown, more = ordered[:NEEDS_SHOWN], ordered[NEEDS_SHOWN:]
+    return {
+        "first": [row for kind, row in shown if kind == "todo" and row.get("late")],
+        "questions": [q for kind, q in shown if kind == "q"],
+        "then": [row for kind, row in shown if kind == "todo" and not row.get("late")],
+        "more_questions": [q for kind, q in more if kind == "q"],
+        "more_todos": [row for kind, row in more if kind == "todo"],
+        "more": len(more),
+        "any": bool(ordered),
+    }
 
 
 # From midday until the evening, Now names a recipe for dinner when the family keeps any.
@@ -170,12 +225,17 @@ def _rows(
     return [row for row in rows if row.status != "cancelled"]
 
 
-def _days(rows: list[PlanRow], today: date, grown_up: bool) -> list[dict[str, Any]]:
-    """Today's and tomorrow's lines: what is on each, in a sentence, or that nothing is."""
+def _days(
+    rows: list[PlanRow], today: date, grown_up: bool, shown: PlanRow | None = None
+) -> list[dict[str, Any]]:
+    """Today's and tomorrow's lines: what is on each, in a sentence, or that nothing is. A day
+    whose one thing is Next up's, `shown`, has no line: it would say the same thing twice."""
     lines = []
     for offset, label in ((0, "Today"), (1, "Tomorrow")):
         day = today + timedelta(days=offset)
         on = [row for row in rows if row.day <= day.isoformat() <= row.end]
+        if shown is not None and on == [shown]:
+            continue
         lines.append(
             {"label": label, "parts": views.day_line(on, url_for("go.day", day=day.isoformat()))}
         )

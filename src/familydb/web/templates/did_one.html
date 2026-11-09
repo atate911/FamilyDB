@@ -12,7 +12,7 @@
     <div><dt class="facts__k">When</dt><dd class="facts__v">{{ day_words }}</dd></div>
     <div><dt class="facts__k">Who went</dt><dd class="facts__v">{{ m.who }}</dd></div>
     <div><dt class="facts__k">How it went</dt><dd class="facts__v">{{ m.face_words or 'Not rated' }}{% if m.rating is not none and grownup %} · {{ m.rating }}/10{% endif %}</dd></div>
-    {% if m.again is not none %}<div><dt class="facts__k">Again?</dt><dd class="facts__v">{{ 'Would go again' if m.again else 'Would not' }}</dd></div>{% endif %}
+    {% if m.again is not none %}<div><dt class="facts__k">Again?</dt><dd class="facts__v">{% set verb = 'make' if m.kind == 'recipe' else 'go' %}{{ ('Would ' ~ verb ~ ' again') if m.again else ('Would not ' ~ verb ~ ' again') }}</dd></div>{% endif %}
   </dl>
   {% if m.notes %}
     <blockquote class="said">{{ m.notes }}{% if by %}<footer class="said__by">{{ by }}</footer>{% endif %}</blockquote>
@@ -54,7 +54,7 @@
           <input type="hidden" name="status" value="idea" /><input type="hidden" name="back" value="{{ request.path }}" />
           <button class="btn btn--primary btn--sm" type="submit">Again?</button>
         </form>
-        <p class="small muted">Puts {{ idea.title }} back among the things to do.</p>
+        <p class="small muted">Puts {{ idea.title }} back among the things to do, and {{ assistant }} can suggest it again, whatever was said of it before.</p>
       </div>
     {% endif %}
   {% endif %}

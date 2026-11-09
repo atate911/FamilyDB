@@ -137,6 +137,9 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "edits.undo": "own_tasks",
     # The lists are the grown-ups' until the family decides what a kid may do with them.
     "web.lists_page": "change",
+    # The presents, a chip beside them: a grown-up's; one kept from the visitor is left out
+    # (presents.py), and every present is kept from every kid.
+    "web.presents": "browse",
     # Notices on one's own devices, for anybody signed in as themselves (push.py).
     "family.push_on": "sign_in",
     "family.push_off": "sign_in",

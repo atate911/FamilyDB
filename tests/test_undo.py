@@ -45,6 +45,25 @@ def _run(ctx: ToolContext, name: str, **args):
     return result, json.loads(result.content)
 
 
+def test_undoing_again_keeps_the_family_s_not_again(settings, clock, conn, family):
+    """Again? lifts a "would not go again"; taking it back puts the idea back where it was, done
+    and kept out, rather than half undone."""
+    from familydb.store import outcomes
+
+    sam = family["sam"]
+    ctx = _as(settings, clock, conn, sam, _said(conn, sam, "save the ramen place", "u1"))
+    _, made = _run(ctx, "add_idea", title="Ramen", kind="restaurant")
+    _run(ctx, "record_outcome", idea_id=made["id"], happened_on="2026-09-01", would_repeat=False)
+    clock.advance(timedelta(minutes=5))
+    again = _as(settings, clock, conn, sam, _said(conn, sam, "we'd go back to the ramen", "u2"))
+    _run(again, "update_idea", id=made["id"], status="idea")
+    assert made["id"] not in outcomes.do_not_repeat(conn)
+    result, said = _run(_as(settings, clock, conn, sam, _said(conn, sam, "undo", "u3")), "undo")
+    assert not result.is_error and said["undone"].startswith("changed idea")
+    assert ideas.get(conn, made["id"]).status == "done"
+    assert made["id"] in outcomes.do_not_repeat(conn)
+
+
 def test_saying_undo_takes_back_the_last_change_in_this_chat_once(settings, clock, conn, family):
     sam = family["sam"]
     asked = _said(conn, sam, "remind me to call the plumber", "u1")

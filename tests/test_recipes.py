@@ -233,31 +233,97 @@ def test_a_plan_tonight_leaves_less_time_to_cook(settings, clock, conn, family):
     assert "Recital" in found["ruled_out"][0]["why"]
 
 
-def test_asking_for_more_time_than_tonight_has_does_not_move_the_plan(
-    settings, clock, conn, family
-):
-    """'Under an hour' with a recital in an hour's time: the recital is what binds."""
+def test_the_time_asked_for_never_outlasts_the_time_tonight_leaves(settings, clock, conn, family):
     us = _as(conn, settings, clock, family["sam"])
     _recipe(us, "Chili", total_minutes=45)
-    _recipe(us, "Omelettes", total_minutes=15)
+    _recipe(us, "Toast", total_minutes=10)
     with db.transaction(conn):
         plans.insert(
             conn,
             title="Recital",
-            start="2026-09-20T18:00:00-07:00",
-            end="2026-09-20T20:00:00-07:00",
+            start="2026-09-20T17:45:00-07:00",
+            end="2026-09-20T19:00:00-07:00",
             all_day=False,
             now=NOW_ISO,
         )
     _, found = _call(us, "find_recipes", most_minutes=60)
-    assert [one["title"] for one in found["recipes"]] == ["Omelettes"]
-    assert found["ruled_out"][0]["title"] == "Chili"
-    assert found["ruled_out"][0]["why"] == "takes 45 min, there are 30 min before Recital"
-    assert found["tonight"] == "30 min to cook before Recital"
-    # Asked for less than the evening has, what was asked binds, and the plan is not the reason.
-    _, quick = _call(us, "find_recipes", most_minutes=20)
-    assert quick["ruled_out"][0]["why"] == "takes 45 min, there are 20 min"
-    assert "tonight" not in quick
+    assert [one["title"] for one in found["recipes"]] == ["Toast"]
+    assert found["ruled_out"][0]["why"] == "takes 45 min, there are 15 min before Recital"
+    assert found["tonight"] == "15 min to cook before Recital"
+    # Asked for less than the evening leaves: what was asked is the limit, said as such.
+    _, found = _call(us, "find_recipes", most_minutes=5)
+    assert found["ruled_out"][0]["why"].endswith("there are 5 min")
+    assert "tonight" not in found
+
+
+class _Plan:
+    def __init__(self, start, end=None, title="Soccer", all_day=False):
+        self.start, self.end, self.title, self.all_day = start, end, title, all_day
+
+
+def test_a_plan_going_on_when_dinner_would_start_is_waited_out():
+    at_six = datetime(2026, 10, 21, 18, 0, tzinfo=TZ)
+    soccer = _Plan("2026-10-21T17:00:00-07:00", "2026-10-21T20:00:00-07:00")
+    tonight = meals.situation(at_six, [soccer])
+    assert (tonight.minutes_free, tonight.after, tonight.plan) == (60, "Soccer", None)
+    assert tonight.limit_words == "after Soccer"
+    # Busy until late: no time to cook at all, and that is said.
+    late = _Plan("2026-10-21T17:00:00-07:00", "2026-10-21T22:00:00-07:00")
+    tonight = meals.situation(at_six, [late])
+    assert tonight.minutes_free == 0
+    chili = store.Recipe(idea_id=1, total_minutes=45)
+    idea = ideas.Idea(id=1, kind="recipe", title="Chili", created_at=NOW_ISO, updated_at=NOW_ISO)
+    judged = meals.judge(idea, chili, tonight, meals.Asked())
+    assert judged.verdict == "out" and judged.reasons == ["no time to cook after Soccer"]
+    # One straight after another is waited out too, and a plan later ends the time.
+    chained = [
+        _Plan("2026-10-21T17:00:00-07:00", "2026-10-21T18:30:00-07:00", "Swim"),
+        _Plan("2026-10-21T18:30:00-07:00", "2026-10-21T19:00:00-07:00", "Pick up"),
+        _Plan("2026-10-21T20:00:00-07:00", "2026-10-21T21:00:00-07:00", "Book club"),
+    ]
+    tonight = meals.situation(at_six, chained)
+    assert tonight.minutes_free == 60
+    assert tonight.limit_words == "between Pick up and Book club"
+    # Asked earlier, a plan over dinner time counts though it begins before cooking would.
+    at_four = datetime(2026, 10, 21, 16, 0, tzinfo=TZ)
+    over_dinner = _Plan("2026-10-21T17:00:00-07:00", "2026-10-21T19:00:00-07:00")
+    assert meals.situation(at_four, [over_dinner]).minutes_free == 120
+    # A plan begun yesterday and still running (a visit, a trip) does not empty the evening.
+    away = _Plan("2026-10-20T09:00:00-07:00", "2026-10-23T09:00:00-07:00", "Grandma here")
+    assert meals.situation(at_six, [away]).minutes_free is None
+
+
+def test_not_again_leaves_a_recipe_out_of_dinner_until_they_change_their_mind(
+    settings, clock, conn, family
+):
+    us = _as(conn, settings, clock, family["sam"])
+    lasagne = _recipe(us, "Lasagne", total_minutes=30)
+    _recipe(us, "Stir fry", total_minutes=25)
+    _call(
+        us,
+        "record_outcome",
+        idea_id=lasagne["id"],
+        happened_on="2026-08-01",
+        rating=1,
+        would_repeat=False,
+    )
+    _, found = _call(us, "find_recipes")
+    assert [one["title"] for one in found["recipes"]] == ["Stir fry"]
+    assert found["ruled_out"][0]["why"] == "you said not to make it again"
+    tonight = meals.situation(
+        datetime(2026, 9, 21, 17, 0, tzinfo=TZ), not_again=meals.not_again(conn)
+    )
+    assert meals.pick(store.live(conn), tonight).idea.title == "Stir fry"
+    # Asked for by name, it is found, and their word on it said.
+    _, named = _call(us, "find_recipes", text="lasagne")
+    assert named["recipes"][0]["title"] == "Lasagne"
+    assert named["recipes"][0]["verdict"] == "maybe"
+    assert "you said not to make it again" in named["recipes"][0]["why"]
+    # A later "again" brings it back; what happened before is all still there.
+    _call(us, "record_outcome", idea_id=lasagne["id"], happened_on="2026-09-19", would_repeat=True)
+    _, found = _call(us, "find_recipes")
+    assert "Lasagne" in [one["title"] for one in found["recipes"]]
+    assert ideas.get(conn, lasagne["id"]).times_done == 2
 
 
 def test_made_lately_rests_and_a_favourite_does_not(settings, clock, conn, family):
@@ -321,31 +387,6 @@ def test_tonight_is_read_from_the_plans_that_cut_it_short():
     assert tonight.minutes_free == 90 and tonight.plan == "Game" and not tonight.weekend
     assert meals.situation(now).minutes_free is None
     assert meals.situation(datetime(2026, 10, 24, 12, 0, tzinfo=TZ)).weekend
-
-
-def test_a_plan_already_under_way_holds_cooking_back():
-    """At six, a game from five to eight: cooking waits for it, and the evening ends at nine."""
-
-    class Plan:
-        def __init__(self, start, end=None, title="Game"):
-            self.start, self.end, self.title, self.all_day = start, end, title, False
-
-    six = datetime(2026, 10, 21, 18, 0, tzinfo=TZ)
-    game = Plan("2026-10-21T17:00:00-07:00", "2026-10-21T20:00:00-07:00")
-    tonight = meals.situation(six, [game])
-    assert (tonight.minutes_free, tonight.after, tonight.plan) == (60, "Game", None)
-    assert tonight.cut_short() == "after Game"
-    late = meals.situation(six, [Plan("2026-10-21T17:00:00-07:00", "2026-10-21T22:00:00-07:00")])
-    assert late.minutes_free == 0
-    swim = Plan("2026-10-21T20:30:00-07:00", "2026-10-21T21:30:00-07:00", "Swim")
-    both = meals.situation(six, [swim, game])
-    assert both.minutes_free == 30 and both.cut_short() == "between Game and Swim"
-    # One with no end lasts as a saved plan is taken to (two hours): under way until seven.
-    unended = meals.situation(six, [Plan("2026-10-21T17:00:00-07:00")])
-    assert unended.minutes_free == 120 and unended.after == "Game"
-    # A plan starting as cooking would is one that cuts it short, as before.
-    starting = meals.situation(six, [Plan("2026-10-21T18:00:00-07:00", "2026-10-21T20:00:00")])
-    assert (starting.minutes_free, starting.plan, starting.after) == (0, "Game", None)
 
 
 def test_find_recipes_waits_for_a_plan_under_way(settings, clock, conn, family):

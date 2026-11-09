@@ -3,6 +3,7 @@ tab beside Plans' List and Month."""
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 
 import pytest
@@ -137,6 +138,49 @@ def test_a_row_is_one_line_in_the_familys_clock(page, conn) -> None:
     )
     text = page.get("/happening").text
     assert text.index("Book sale") < text.index("Story time") < text.index("Lantern walk")
-    assert "6\u00a0pm" in text and "18:00" not in text
-    assert "Bring a lantern" not in text and "Bring a lantern" in page.get("/soon/1").text
+    # What a person reads, not what Save it and Plan it carry for the tools.
+    shown = re.sub(r'<input type="hidden"[^>]*>', "", text)
+    assert "6\u00a0pm" in shown and "18:00" not in shown
+    assert "Bring a lantern" not in shown and "Bring a lantern" in page.get("/soon/1").text
     assert '<span class="tag tag--off">listed by' not in text
+
+
+def test_a_row_coming_up_is_saved_or_planned_where_it_is(page, conn) -> None:
+    """Coming up (the redesign of November 2026): Save it, Plan it and Not for us on each row
+    still hers to offer, each the tool she would call; Plan it takes the listing's day and time,
+    and comes back to the list saying it is on the plans."""
+    from familydb.store import plans
+
+    _listed(
+        conn,
+        FoundEvent(
+            external_id="late",
+            title="Lantern walk",
+            starts=datetime(2026, 9, 26, 18, 0, tzinfo=TZ),
+            venue="Cedar Park",
+        ),
+        FoundEvent(external_id="day", title="Book sale", starts=date(2026, 9, 26), all_day=True),
+    )
+    text = page.get("/soon").text
+    row = text[text.index("Lantern walk") :].split('<div class="r">')[0]
+    assert "Save it" in row and "Not for us" in row and "Plan it" in row
+    plan = re.search(r'<form method="post" action="/plans/new">.*?</form>', row, re.S).group(0)
+    assert 'name="start" value="2026-09-26T18:00"' in plan and 'name="all_day"' not in plan
+    assert 'name="back" value="/soon"' in plan and 'name="location" value="Cedar Park"' in plan
+    fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', plan))
+    back = page.post("/plans/new", data=fields, follow_redirects=True)
+    assert "Added to the plans: Lantern walk." in back.text
+    (made,) = [one for one in plans.everything(conn) if one.title == "Lantern walk"]
+    assert made.start.startswith("2026-09-26T18:00")
+    assert finds.get(conn, 1).state == "planned"
+    # Planned, it is no longer hers to offer: its row has no buttons.
+    again = page.get("/soon").text
+    assert "Plan it<span" not in again[again.index("Lantern walk") :].split('<div class="r">')[0]
+    # An all-day one goes on its day.
+    sale = again[again.index("Book sale") :].split('<div class="r">')[0]
+    assert 'name="start" value="2026-09-26"' in sale and 'name="all_day" value="yes"' in sale
+    # Save it on a row comes back to the rows, so several can be saved one after another.
+    saving = re.search(r'<form method="post" action="/ideas/new">.*?</form>', sale, re.S).group(0)
+    kept = page.post("/ideas/new", data=dict(re.findall(r'name="(\w+)" value="([^"]*)"', saving)))
+    assert kept.status_code == 302 and kept.headers["Location"] == "/soon"
+    assert finds.get(conn, 2).state == "saved"

@@ -27,11 +27,11 @@ How much the kids may ask for, and how the assistant guides how they ask. The ru
 | Ask a parent, times a week (`parent_asks_per_week`) | 2 | How often a kid may send a parent something the assistant said no to, when it offers. 0 means never. | 0 to 14 |
 | Nudge "we should" every day after (`wording_daily_after`) | 3 | After a kid has said "we should" for a want of their own this many times in a week, the assistant reflects "I want" back once a day instead of every few days. | 1 to 20 |
 
-Christmas and birthday lists have no daily count, and a wish turned away shows on the Kids' lists page for parents.
+Christmas and birthday lists have no daily count, and a wish turned away shows with her wishes on Lists, for parents.
 
 ## Thinking
 
-How long the model may think before it answers. More helps with hard questions and costs more. These two are the defaults: each use that thinks can be given its own on the [AI model](/wiki/controls/settings/ai-model#what-does-what) page, and its row says what it thinks at.
+Folded away on the card, under "Thinking". How long the model may think before it answers. More helps with hard questions and costs more. These two are the defaults: each use that thinks can be given its own on the [AI model](/wiki/controls/settings/ai-model#what-does-what) page, and its row says what it thinks at.
 
 | Label (`key`) | Default | What it does | Range last |
 |---|---|---|---|

@@ -8,7 +8,7 @@
    each the tool the assistant would call, while it is hers to offer, and what became of it once it is not. A kid sees
    it without its source or cost. #}
 {% block content %}
-  {{ dest_head(find.title, state, back=('Happening soon', url_for('web.happening_page'))) }}
+  {{ dest_head(find.title, state, back=('Coming up', url_for('web.happening_page'))) }}
   <dl class="facts">
     <div><dt class="facts__k">When</dt><dd class="facts__v">{{ state | figs }}</dd></div>
     {% if where %}<div><dt class="facts__k">Where</dt><dd class="facts__v">{{ where }}</dd></div>{% endif %}

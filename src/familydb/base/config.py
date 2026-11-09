@@ -126,8 +126,10 @@ CacheTTL = Literal["5m", "1h"]
 LookupsWhen = Literal["evening", "asap"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 # The places in the row of destinations at the foot of every family page, in its order
-# (web/shell.py `destinations`); `row_hidden` names those the family took out.
-ROW_PLACES = ("now", "eat", "do", "week", "kids", "soon", "lists", "did")
+# (web/shell.py `destinations`): a grown-up's five, and a kid's own list (`kids`, her My list);
+# `row_hidden` names those the family took out. What is on near home, what we did and the kids'
+# wishes are reached from Do and Lists, so a name stored by an older version is dropped.
+ROW_PLACES = ("now", "eat", "do", "week", "lists", "kids")
 Latitude = Annotated[float, Field(ge=-90, le=90)]
 Longitude = Annotated[float, Field(ge=-180, le=180)]
 

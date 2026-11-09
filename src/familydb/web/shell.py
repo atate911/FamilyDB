@@ -217,7 +217,19 @@ class Destination:
 OWNS: dict[str, frozenset[str]] = {
     "now": frozenset({"web.home", "go.about", "go.board"}),
     "eat": frozenset({"web.restaurants"}),
-    "do": frozenset({"web.ideas", "web.idea", "web.new_idea", "web.edit_idea"}),
+    # Do holds the ideas, what is on near home and what we did, as its three tabs.
+    "do": frozenset(
+        {
+            "web.ideas",
+            "web.idea",
+            "web.new_idea",
+            "web.edit_idea",
+            "web.happening_page",
+            "web.find",
+            "go.did",
+            "go.outing",
+        }
+    ),
     "week": frozenset(
         {
             "go.week",
@@ -229,10 +241,9 @@ OWNS: dict[str, frozenset[str]] = {
             "web.edit_task",
         }
     ),
+    # A grown-up reaches the kids' wishes and the presents from Lists; a kid's own list is hers.
+    "lists": frozenset({"web.lists_page", "web.presents", "web.wishes"}),
     "kids": frozenset({"web.wishes"}),
-    "soon": frozenset({"web.happening_page", "web.find"}),
-    "lists": frozenset({"web.lists_page"}),
-    "did": frozenset({"go.did", "go.outing"}),
 }
 
 
@@ -243,9 +254,10 @@ def belongs_to(key: str) -> None:
 
 
 def destinations(frame: Frame) -> list[Destination]:
-    """The row for this visitor: a grown-up's eight places, a kid's four (docs/INTERFACE.md
+    """The row for this visitor: a grown-up's five places, a kid's four (docs/INTERFACE.md
     section 9), less those the family took out on the settings (`Settings.row_hidden`); with
-    every one taken out, Now stays. Each is a want, not a table: Eat, Do, Week."""
+    every one taken out, Now stays. What is on near home and what we did are Do's tabs; the
+    kids' wishes and the presents are Lists' chips, which carries what waits on a parent."""
     visitor = auth.visitor()
     here = request.endpoint or ""
     chosen = g.get("destination")
@@ -255,13 +267,9 @@ def destinations(frame: Frame) -> list[Destination]:
         places.append(("eat", "Eat", url_for("web.restaurants"), 0, ""))
         places.append(("do", "Do", url_for("web.ideas"), 0, ""))
         places.append(("week", "Week", url_for("go.week"), frame.late, "late"))
-        if visitor.may("decide") and frame.kids:
-            places.append(("kids", "Kids", url_for("web.wishes"), frame.decide, "to decide"))
-        places.append(("soon", "Soon", url_for("web.happening_page"), 0, ""))
         if visitor.may("change"):
-            places.append(("lists", "Lists", url_for("web.lists_page"), 0, ""))
-        # How a plan went is never counted here: it is asked on Now, at most once (now.py).
-        places.append(("did", "Did", url_for("go.did"), 0, ""))
+            deciding = frame.decide if visitor.may("decide") and frame.kids else 0
+            places.append(("lists", "Lists", url_for("web.lists_page"), deciding, "to decide"))
     else:
         places.append(("do", "Do", url_for("web.ideas"), 0, ""))
         places.append(("week", "My week", url_for("go.week"), 0, ""))
