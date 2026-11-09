@@ -10,9 +10,9 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
-from familydb import personas, presents, routing, task_service, windows
+from familydb import personas, presents, routing, task_service, voice, windows
 from familydb.base import roles
-from familydb.base.dates import parse_datetime, utc_iso
+from familydb.base.dates import parse_datetime, utc_iso, when_text
 from familydb.base.errors import ToolError
 from familydb.store import members, messages, tasks
 from familydb.store.db import to_json
@@ -45,6 +45,13 @@ class AddTaskInput(BaseModel):
     )
     idea_id: int | None = Field(
         default=None, description="The idea this is about, e.g. the present it is to get."
+    )
+    all_done: bool = Field(
+        default=False,
+        description=(
+            "True when setting this reminder, with its time, is all the message needs: the "
+            "confirmation is worded from what was saved and your turn ends. False otherwise."
+        ),
     )
 
 
@@ -93,6 +100,35 @@ def _owner_or_everyone(ctx: ToolContext, name: str) -> int | None:
     if members.find_by_name(ctx.conn, name) is None and name.strip().casefold() in EVERYONE:
         return None
     return _owner(ctx, name)
+
+
+def _confirm(ctx: ToolContext, task: Task) -> None:
+    """The reply that ends a turn which only set a reminder, worded by code from what was saved
+    (voice `task_saved`): when, how often and where it will arrive, which the model would only
+    have repeated in a second call. Only for a reminder waiting to go; a to-do nothing will bring
+    up, or one about a present, is the model's to word. In the family's group a save is ✓."""
+    reminder = task.reminder
+    if task.status != "open" or reminder is None or reminder.delivered_at is not None:
+        return
+    if task.idea_id is not None or task.gift_for:
+        return  # it may name a present, and who reads is the model's to weigh
+    if routing.is_group(task.channel, task.chat_id):
+        ctx.offer_reply(routing.CONFIRMED)
+        return
+    moment = datetime.fromisoformat(reminder.remind_at).astimezone(ctx.clock.tz)
+    repeats = task_service.repeat_words(task)
+    ctx.offer_reply(
+        voice.say(
+            ctx.settings,
+            "task_saved",
+            seed=ctx.message_id,
+            plain=ctx.plain,
+            title=task.title,
+            when=when_text(moment, ctx.clock.today()),
+            repeats=f", then {repeats}" if repeats else "",
+            where=_destination(ctx, task),
+        )
+    )
 
 
 def _destination(ctx: ToolContext, task: Task) -> str:
@@ -145,9 +181,14 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
     scope = ctx.operation_id or (
         f"message:{ctx.message_id}" if ctx.message_id else uuid.uuid4().hex
     )
-    key = hashlib.sha256((scope + to_json(args.model_dump())).encode()).hexdigest()
+    # Whether the turn ends here is not part of what was asked for: a retry that says it
+    # differently is the same request.
+    asked = to_json(args.model_dump(exclude={"all_done"}))
+    key = hashlib.sha256((scope + asked).encode()).hexdigest()
     previous = tasks.find_by_operation(ctx.conn, key)
     if previous:
+        if args.all_done:
+            _confirm(ctx, previous)
         return _with_nudges(
             ctx,
             previous,
@@ -192,6 +233,8 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         task=task.id,
         revision=task.revision,
     )
+    if args.all_done:
+        _confirm(ctx, task)
     return _with_nudges(
         ctx,
         task,

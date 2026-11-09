@@ -56,6 +56,28 @@ def test_the_newer_web_tools_then_thinking_are_left_out_for_a_model_that_takes_n
     assert "thinking" not in last and "output_config" not in last
 
 
+def test_strict_tools_refused_are_left_out_and_the_request_sent_again(settings) -> None:
+    """The refusal the weekend digest met, word for word: should Claude take fewer strict tools
+    than `STRICT_MOST`, the request goes again with none, not as a 400 every week."""
+    from familydb.agent.providers.base import ToolDef
+
+    api = fakes.FakeMessagesAPI(
+        _refusal(
+            "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', "
+            "'message': 'Too many strict tools (28). The maximum number of strict tools "
+            "supported is 20. Try reducing the number of tools marked as strict.'}}"
+        ),
+        fakes.message([fakes.text("Here's the weekend.")]),
+    )
+    tools = [ToolDef("now", "the time", {"type": "object"}, writes=False)]
+    provider = build("anthropic", settings, api=api)
+    reply = provider.send(_asked("claude-haiku-5-5", tools=tools))
+    assert reply.dropped == ("strict tool schemas",)
+    assert api.requests[0]["tools"][0]["strict"] is True
+    assert "strict" not in api.requests[1]["tools"][0]
+    assert api.requests[1]["thinking"]  # the rest stays
+
+
 def test_a_refusal_that_names_nothing_it_carried_is_raised_as_it_came(settings) -> None:
     api = fakes.FakeMessagesAPI(_refusal("messages.0: content cannot be empty"))
     with pytest.raises(AgentError) as info:

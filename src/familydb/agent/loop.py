@@ -332,11 +332,21 @@ def _handed_back(exchange: Exchange, final_tools: frozenset[str]) -> bool:
 
 
 def _closed(exchange: Exchange, closing_tools: frozenset[str]) -> bool:
-    """Whether the step was only closing tools, all of which worked."""
+    """Whether the step was only closing tools, all of which worked: one that answered that it
+    is not available did nothing, and the model must say so."""
     outcomes = exchange.outcomes
     return bool(outcomes) and all(
-        outcome.name in closing_tools and not outcome.is_error for outcome in outcomes
+        outcome.name in closing_tools and not outcome.is_error and not _unavailable(outcome.content)
+        for outcome in outcomes
     )
+
+
+def _unavailable(content: str) -> bool:
+    try:
+        said = json.loads(content)
+    except ValueError:
+        return False
+    return isinstance(said, dict) and said.get("available") is False
 
 
 def _estimate(request: TurnRequest, provider: Provider, surface: str, settings: Settings) -> float:

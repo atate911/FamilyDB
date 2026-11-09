@@ -46,6 +46,17 @@ HERS = ("name",)
 
 
 EVENTS: dict[str, Event] = {
+    "task_saved": Event(
+        "A reminder just set, said in the call that set it",
+        "Set: {title}, at {when}{repeats}. It will come to {where}.",
+        ("title", "when", "repeats", "where"),
+        {
+            "title": "Call the dentist",
+            "when": "5 pm today",
+            "repeats": "",
+            "where": "your own chat on Telegram",
+        },
+    ),
     "reminder": Event(
         "A reminder",
         "Reminder: {title}{who}  -  task #{task}. Tell me when it's done or ask to snooze it.",

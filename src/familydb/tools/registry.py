@@ -101,10 +101,13 @@ class ToolContext:
 
     def offer_reply(self, text: str) -> None:
         """Hand the family's reply over with a tool's input; the loop may end the turn with it."""
-        self.scratch[OFFERED] = text
+        self.scratch.setdefault(OFFERED, []).append(text)
 
     def take_reply(self) -> str | None:
-        return self.scratch.pop(OFFERED, None)
+        """The reply offered in this step, once; none when two tools each offered one, since
+        neither knew what the other did and the model must say both."""
+        offered = self.scratch.pop(OFFERED, [])
+        return offered[0] if len(offered) == 1 else None
 
 
 @dataclass(frozen=True)
@@ -143,7 +146,9 @@ class ToolSpec:
     def definition(self) -> ToolDef:
         """What the model is told of it, provider-neutral: each provider shapes its own request
         from this (and asks for strict schemas itself)."""
-        return ToolDef(self.name, self.description, strict_schema(self.input_model))
+        return ToolDef(
+            self.name, self.description, strict_schema(self.input_model), writes=self.writes
+        )
 
 
 def dump(value: Any) -> str:

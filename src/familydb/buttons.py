@@ -22,7 +22,7 @@ from typing import Any
 
 from familydb import voice
 from familydb.base import roles
-from familydb.base.dates import clock_time, utc_iso
+from familydb.base.dates import utc_iso, when_text
 from familydb.store import (
     calls,
     ideas,
@@ -330,14 +330,3 @@ def snoozed_until(action: str, now: datetime) -> datetime:
     if not TOMORROW_FROM <= at <= TOMORROW_UNTIL:
         at = TOMORROW_AT
     return datetime.combine(now.date() + timedelta(days=1), at, tzinfo=now.tzinfo)
-
-
-def when_text(moment: datetime, today: date) -> str:
-    """When a snoozed reminder comes back, time first so it reads after "until" and "at": "8:05 pm
-    today", "9:30 am on Mon 28 Sep".
-    """
-    if moment.date() == today:
-        return f"{clock_time(moment)} today"
-    if moment.date() == today + timedelta(days=1):
-        return f"{clock_time(moment)} tomorrow"
-    return f"{clock_time(moment)} on {moment:%a %d %b}"

@@ -11,7 +11,7 @@ FamilyDB keeps everything the family says in one SQLite file on your server, and
 | Each model call: model, token counts, estimated cost, what it was for. Not the prompt or the reply | The database | Same | Parents and admins see totals on Status; admins see each call |
 | Ideas, places, plans, outcomes, things to do, reminders | The database | Kept; an idea is dropped, not deleted | Signed-in people by role. A kid sees only their own things to do |
 | Wish lists | The database | Kept | The kid who wrote them, parents and admins, not another kid |
-| What the assistant remembers, with a quote of the message it came from | The database | A forgotten or replaced memory keeps its words. See [What Vera knows](/wiki/controls/memory) | Parents and admins on the page. The model is sent every Must with each message, and other memories up to about 1,600 characters |
+| What the assistant remembers, with a quote of the message it came from | The database | A forgotten or replaced memory keeps its words. See [What Vera knows](/wiki/controls/memory) | Parents and admins on the page. The model is sent every Must with each message, and other memories that bear on it up to about 1,600 characters |
 | The family: name, role, Telegram id, birthday, male or female for a kid, page look | The database | Until the person is taken off | Admins on Family. Names and roles go to the model with every message |
 | Password hashes | The database | Until changed, taken away, or the person is taken off | Nobody through the page. A starting password is shown once to the admin who made it |
 | Settings, and model and Telegram keys as plain text | The database | Until changed or removed | Admins. A key is shown only after you retype your password, if the page has one |

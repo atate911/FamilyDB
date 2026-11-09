@@ -4,6 +4,19 @@
 
 ### New since v0.5.0
 
+- **"Remind me at 5 to call the dentist" is answered sooner.** A reminder set at a time is now
+  confirmed in the same step that saves it, saying when, how often and where it will arrive, so
+  there is no second trip to the model; in the family group it is only ✓. Her words for it are a
+  line of her own on the Personality page ("A reminder just set"), to change like the others.
+- **"We're out of milk" is answered sooner.** Putting something on a list, ticking it or taking
+  it off now gets its reply in the same call that made the change, as remembering does, so the
+  answer comes back without a second trip to the model. Something already on the list, or not on
+  it, is still said after the change, as before.
+- **The weekend digest works on Claude again.** Claude takes at most 20 tools held strictly to
+  their form in one request, and the chat carries 28, so every Claude call with them was refused:
+  the weekend digest each week, and any message Claude was to answer when the first company could
+  not. The writing tools are held strictly first and the rest checked as they always are; should
+  Claude refuse strict tools anyway, the request goes again without them and admins are told.
 - **An outing is counted once.** Had a reply failed after "we went to the zoo, 8/10" was saved,
   or had the model said it twice, the visit could be counted twice and the average moved; marking
   a repeating chore done twice skipped a round. The same message now saves each once.

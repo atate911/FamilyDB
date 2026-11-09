@@ -36,6 +36,9 @@ class ToolDef:
     name: str
     description: str
     schema: dict[str, Any]
+    # Whether calling it changes something: a provider that can hold only some tools to their
+    # schema strictly holds these first, since a malformed write is the one that costs.
+    writes: bool = False
 
 
 @dataclass(frozen=True)

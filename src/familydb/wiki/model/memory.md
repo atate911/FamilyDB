@@ -36,7 +36,7 @@ A guess is never a Must: code clears the flag if the model sets both. Memories b
 Code chooses, and no model is asked. It looks only at memories in force: not replaced, not forgotten, not past their last day.
 
 1. **Every Must goes**, however many and whatever the message is about.
-2. **The rest go while they fit** in what is left of 1,600 characters, about 400 [tokens](/wiki/reference/glossary#token), with the Musts counted first. Those that bear on the message come first: sharing a word with it, then of a kind it touches on (food for a question about dinner), then about the sender or the whole family, then newest. One too long to fit is skipped and a shorter one can still go.
+2. **The rest that bear on the message go while they fit** in what is left of 1,600 characters, about 400 [tokens](/wiki/reference/glossary#token), with the Musts counted first. A memory bears on a message when it shares a word with it (the name of whoever it is about counts) or is of a kind the message touches on (food for a question about dinner); one that shares neither is not sent at all, so "hello" carries the Musts alone. Among those that bear on it, the most words in common go first, then about the sender or the whole family, then newest. One too long to fit is skipped and a shorter one can still go. A planning question's stronger call reads every memory either way.
 
 Each goes as one line with its number, marked "must", "a guess" or "until <date>", and one more line says how many were left out. This block goes in the current turn, which is not cached, so adding or forgetting a memory never breaks the [prompt cache](/wiki/reference/glossary#prompt-cache). The cost is input tokens, bounded by the budget except that Musts are not cut for room.
 
