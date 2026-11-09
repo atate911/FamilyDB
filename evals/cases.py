@@ -1154,7 +1154,6 @@ CASES: tuple[Case, ...] = (
             model_calls_at_most(1),
         ),
         "A reminder for today at five, confirmed in the same call that saved it.",
-        waits_for="a reminder confirmed by code in the call that saved it (stage 3.2)",
     ),
     # -- remembering
     Case(

@@ -520,6 +520,16 @@ def test_adding_to_the_list_is_graded_on_what_it_cost(settings) -> None:
     assert grade(case, run_case(case, settings, api=twice)) == ["2 model calls, over 1"]
 
 
+def test_a_reminder_alone_is_graded_on_what_it_cost(settings) -> None:
+    case = by_name("reminder_alone")
+    set_it = {"title": "Call the dentist", "remind_at": "2026-09-25T17:00"}
+    once = _answer([fakes.tool_use("t1", "add_task", {**set_it, "all_done": True})])
+    run = run_case(case, settings, api=once)
+    assert grade(case, run) == [] and "5\u00a0pm today" in run.reply
+    twice = _answer([fakes.tool_use("t1", "add_task", set_it)], [fakes.text("Set for 5 pm.")])
+    assert grade(case, run_case(case, settings, api=twice)) == ["2 model calls, over 1"]
+
+
 def test_a_firm_rule_broken_without_a_word_fails(settings) -> None:
     case = by_name("must_is_respected")
     frame = {"window": "this_weekend", "question": "anything fun?", "discover": False}

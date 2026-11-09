@@ -55,6 +55,7 @@ A reminder's page says when, whose, the window it suits, how it repeats and wher
 ### Rules for reminders
 
 - A deadline sets no reminder and a window books nothing. Only a reminder time sends one.
+- Asked only to set a reminder at a time, the assistant answers in the same step that saves it, with when, how often and where it will arrive, in her line for a reminder set ([Personality](/wiki/controls/settings/personality)); in the family's Telegram group it is only ✓. Anything more (a question, a to-do with nothing to bring it up, a present) she words herself.
 - The repeat choices are every day, week, 2 weeks, month, 3 months, 6 months or year, and a repeat needs a first reminder. By default it keeps its schedule from that first reminder. With **Count from when it's done**, the next comes that long after each tick. Done on a repeating thing records this time round and keeps it coming; canceling ends it ([Repeats](/wiki/model/tasks-and-reminders#repeats)).
 - A window such as "Saturday morning" is read in code from a short word list. A window that does not read is kept but never nudged ([Preferred windows and nudges](/wiki/model/tasks-and-reminders#preferred-windows-and-nudges)). The nudge switch is on [Messages](/wiki/controls/settings/messages).
 - If someone changed the thing while you had it open, or a reminder is being delivered, FamilyDB refuses the edit: reload and try again. A double click adds one thing.

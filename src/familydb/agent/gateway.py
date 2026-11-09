@@ -85,7 +85,7 @@ _CHAT = {
     "surface": "chat",
     "prompt": "system",
     "tools": None,
-    "closes": ("remember", "shopping_list"),
+    "closes": ("add_task", "remember", "shopping_list"),
 }
 # A worker's output is one hand-back call; the cap bounds a runaway turn and leaves room for
 # the thinking vendors count against it.

@@ -5,6 +5,7 @@
 # Kept short on purpose: most of these arrive with nothing else around them.
 
 reminder = "Reminder: {title}{who}. Task #{task}; tell me when it's done, or I can snooze it."
+task_saved = "Set: {title}, {when}{repeats}, to {where}."
 reminder_late = "Reminder, a little late: {title}{who} was due {due}, while I was offline. Task #{task}; tell me when it's done, or I can snooze it."
 follow_up = [
   "How was {plan} on {day}? Worth doing again?",

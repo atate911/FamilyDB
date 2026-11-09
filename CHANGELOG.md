@@ -4,6 +4,10 @@
 
 ### New since v0.5.0
 
+- **"Remind me at 5 to call the dentist" is answered sooner.** A reminder set at a time is now
+  confirmed in the same step that saves it, saying when, how often and where it will arrive, so
+  there is no second trip to the model; in the family group it is only ✓. Her words for it are a
+  line of her own on the Personality page ("A reminder just set"), to change like the others.
 - **"We're out of milk" is answered sooner.** Putting something on a list, ticking it or taking
   it off now gets its reply in the same call that made the change, as remembering does, so the
   answer comes back without a second trip to the model. Something already on the list, or not on

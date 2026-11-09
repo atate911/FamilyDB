@@ -113,6 +113,16 @@ def clock_time(value: datetime | time | str) -> str:
     return f"{clock}\u00a0{'am' if hour < 12 else 'pm'}"
 
 
+def when_text(moment: datetime, today: date) -> str:
+    """When a reminder comes, time first so it reads after "until" and "at": "8:05 pm today",
+    "9:30 am on Mon 28 Sep" (a snoozed one coming back, a new one set)."""
+    if moment.date() == today:
+        return f"{clock_time(moment)} today"
+    if moment.date() == today + timedelta(days=1):
+        return f"{clock_time(moment)} tomorrow"
+    return f"{clock_time(moment)} on {moment:%a %d %b}"
+
+
 def hour_words(hour: int) -> str:
     """An hour on the dot, as the settings say it: "7 am", "12 pm"."""
     return clock_time(time(hour))

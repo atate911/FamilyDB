@@ -1396,6 +1396,7 @@ LINE_GROUPS = (
         False,
         (
             "reminder",
+            "task_saved",
             "reminder_late",
             "reminder_from",
             "reminder_plan",

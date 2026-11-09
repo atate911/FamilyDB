@@ -336,9 +336,7 @@ def _closed(exchange: Exchange, closing_tools: frozenset[str]) -> bool:
     is not available did nothing, and the model must say so."""
     outcomes = exchange.outcomes
     return bool(outcomes) and all(
-        outcome.name in closing_tools
-        and not outcome.is_error
-        and not _unavailable(outcome.content)
+        outcome.name in closing_tools and not outcome.is_error and not _unavailable(outcome.content)
         for outcome in outcomes
     )
 

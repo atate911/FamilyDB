@@ -380,3 +380,96 @@ def test_the_page_says_where_a_reminder_will_go(settings, clock, conn, family):
     assert views.task_saved(saved) == (
         "Added to your to-dos: Call the plumber. Its reminder goes to the chat on the page."
     )
+
+
+# -- a reminder that is all a message needs is confirmed by code, in the call that set it
+
+
+def _told(settings, clock, conn, chat: str, *answers):
+    from familydb.app import App
+    from familydb.channels.base import IncomingMessage
+    from familydb.pipeline import handle_incoming
+    from tests import fakes
+
+    api = fakes.FakeMessagesAPI(*answers)
+    reply = handle_incoming(
+        App(settings, clock),
+        IncomingMessage("telegram", f"u-{len(answers)}-{chat}", chat, "1001", "remind me at 5"),
+        api=api,
+        conn=conn,
+    )
+    return reply, api
+
+
+def _set(tool_id="tu_t", **fields):
+    from tests import fakes
+
+    return fakes.message(
+        [fakes.tool_use(tool_id, "add_task", {"title": "Call the dentist", **fields})],
+        stop_reason="tool_use",
+    )
+
+
+def test_a_reminder_alone_is_confirmed_in_one_call(settings, clock, conn, family) -> None:
+    reply, api = _told(
+        settings, clock, conn, "1001", _set(remind_at="2026-09-20T17:00", all_done=True)
+    )
+    assert len(api.requests) == 1
+    assert reply.text == (
+        "Got it: Call the dentist, at 5\u00a0pm today. I'll send it to your own chat on Telegram."
+    )
+
+
+def test_one_that_comes_round_says_how_often(settings, clock, conn, family) -> None:
+    reply, _ = _told(
+        settings,
+        clock,
+        conn,
+        "1001",
+        _set(remind_at="2026-09-21T09:00", repeat_every=1, repeat_unit="week", all_done=True),
+    )
+    assert ", at 9\u00a0am tomorrow, then every week." in reply.text
+
+
+def test_in_the_family_group_a_reminder_set_is_only_a_tick(settings, clock, conn, family):
+    reply, api = _told(
+        settings, clock, conn, "-100555", _set(remind_at="2026-09-20T17:00", all_done=True)
+    )
+    assert reply.text == "✓" and len(api.requests) == 1
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"remind_at": "2026-09-20T17:00"},  # the model did not say it was all
+        {"all_done": True},  # a to-do with nothing to bring it up: the model offers a reminder
+        {"remind_at": "2026-09-20T17:00", "all_done": True, "gift_for": "Mia"},  # a present
+    ],
+)
+def test_anything_else_goes_back_to_the_model(settings, clock, conn, family, fields) -> None:
+    from tests import fakes
+
+    reply, api = _told(
+        settings, clock, conn, "1001", _set(**fields), fakes.message([fakes.text("Saved.")])
+    )
+    assert reply.text == "Saved." and len(api.requests) == 2
+
+
+def test_saying_the_turn_ends_is_not_part_of_the_request(ctx) -> None:
+    """A retry may set all_done where the first try did not: it is the same reminder."""
+    from familydb.store import db, messages
+
+    with db.transaction(ctx.conn):
+        asked = messages.insert_in(
+            ctx.conn,
+            channel="telegram",
+            channel_update_id="r1",
+            chat_id="1001",
+            member_id=ctx.member.id,
+            text="remind me at 5",
+            now="2026-09-20T21:00:00Z",
+        )
+    ctx.message_id = asked.id
+    first = add(ctx, remind_at="2026-09-20T17:00")
+    again = add(ctx, remind_at="2026-09-20T17:00", all_done=True)
+    assert first["id"] == again["id"]
