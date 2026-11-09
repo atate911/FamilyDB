@@ -40,10 +40,13 @@ def test_the_top_section_is_what_is_new(tmp_path: Path) -> None:
 
 
 def test_the_status_page_says_it(settings, clock, conn) -> None:
+    from markupsafe import escape
+
     from tests.test_web import _signed_in
 
     page = _signed_in(settings, clock).get("/status").text
     shipped = whatsnew.latest()
     assert shipped is not None  # the repository's own changelog
     assert "What\u2019s new" in page and f"In the version running now: {shipped.heading}." in page
-    assert f"<dt>{shipped.items[0][0]}</dt>" in page
+    # As the page draws it, escaped: a title may quote what somebody says.
+    assert f"<dt>{escape(shipped.items[0][0])}</dt>" in page
