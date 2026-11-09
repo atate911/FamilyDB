@@ -438,6 +438,12 @@ def test_in_the_family_group_a_reminder_set_is_only_a_tick(settings, clock, conn
     assert reply.text == "✓" and len(api.requests) == 1
 
 
+def test_in_the_family_group_a_plain_to_do_saved_is_only_a_tick(settings, clock, conn, family):
+    """The family's rule for a group, which the model kept one time in three in the evals."""
+    reply, api = _told(settings, clock, conn, "-100555", _set(all_done=True))
+    assert reply.text == "✓" and len(api.requests) == 1
+
+
 @pytest.mark.parametrize(
     "fields",
     [

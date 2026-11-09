@@ -4,6 +4,9 @@
 
 ### New since v0.5.0
 
+- **In the family group, a save is ✓.** A to-do saved in the Telegram group ("make a dentist
+  appointment") is now answered with ✓ alone, as the family asked of a group, rather than a
+  sentence: in the evals the model kept to that one time in three.
 - **Five places, each with one job.** A grown-up's row and menu are Now, Eat, Do, Week and Lists.
   Do has three tabs: Ideas, Coming up (what is on near home) and We did. Lists has the shopping
   list and the family's other lists, then Presents (every gift idea, each kept from whom it is
