@@ -526,3 +526,27 @@ def test_doctor_fix_says_what_it_fixed(env: Path, monkeypatch: pytest.MonkeyPatc
     result = runner.invoke(app, ["doctor", "--fix"])
     assert "fixed: made .env readable only by its owner" in result.output, result.output
     assert dotenv.stat().st_mode & 0o777 == 0o600
+
+
+def test_a_job_command_uses_what_was_saved_on_the_settings_page(
+    env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An install set up from the page keeps its keys and chats there, not in `.env`: `digest
+    --now` said "there is no model key yet" on one whose bot answered every message."""
+    from contextlib import closing
+
+    from familydb.app import build_app
+    from familydb.store import settings as settings_store
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY")
+    monkeypatch.delenv("DIGEST_CHAT_ID", raising=False)
+    runner.invoke(app, ["db", "migrate"])
+    with closing(build_app().connect()) as conn, db.transaction(conn):
+        settings_store.set_many(
+            conn, {"anthropic_api_key": "sk-ant-saved", "digest_chat_id": "-100777"}
+        )
+    told = runner.invoke(app, ["digest"])
+    assert told.exit_code == 0, told.output
+    assert "chat -100777" in told.output  # the page's chat, not "set DIGEST_CHAT_ID"
+    sent = runner.invoke(app, ["digest", "--now"])
+    assert "no model key yet" not in sent.output
